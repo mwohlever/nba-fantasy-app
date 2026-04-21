@@ -45,7 +45,7 @@ export default function AppNav() {
         </div>
 
         {/* Bottom row → Main nav (centered) */}
-        <div className="flex justify-center gap-2 overflow-x-auto pb-1">
+	<div className="flex justify-start gap-2 overflow-x-auto pb-1">
           {leftLinks.map((link) => (
             <Link key={link.href} href={link.href} className={getLinkClass(link.href)}>
               {link.label}
