@@ -669,84 +669,91 @@ useEffect(() => {
     }
   }
 
-  async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
-    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
-    if (!targetTeam) return;
+async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
+  const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
+  if (!targetTeam) return;
 
-    const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
-    if (!assignmentStatus.canAssign) {
-      setSaveMessage(assignmentStatus.reason);
-      return;
-    }
-
-    const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
-    const targetPlayers = getPlayersForTeam(targetTeamId);
-
-    if (currentOwnerTeamId === targetTeamId) {
-      setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
-      return;
-    }
-
-    try {
-      setIsAssigningPlayer(true);
-
-      if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
-        const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
-          (item) => item.id !== player.id
-        );
-
-        const removed = await persistLineupForTeam(
-          currentOwnerTeamId,
-          ownerPlayers,
-          undefined,
-          { allowEmpty: true }
-        );
-
-        if (!removed) return;
-      }
-
-      const added = await persistLineupForTeam(
-        targetTeamId,
-        [...targetPlayers, player],
-        `${player.name} drafted to ${targetTeam.name}.`
-      );
-
-      if (!added) return;
-
-      setDraftingPlayer(null);
-    } finally {
-      setIsAssigningPlayer(false);
-    }
+  const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
+  if (!assignmentStatus.canAssign) {
+    setSaveMessage(assignmentStatus.reason);
+    return;
   }
 
-  async function handleRemovePlayerFromTeam(player: Player) {
-    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
-    const ownerTeam = getOwnerTeamForPlayer(player.id);
+  const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
+  const targetPlayers = getPlayersForTeam(targetTeamId);
 
-    if (!ownerTeamId || !ownerTeam) return;
+  if (currentOwnerTeamId === targetTeamId) {
+    setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
+    return;
+  }
 
-    try {
-      setIsAssigningPlayer(true);
+  try {
+    setIsAssigningPlayer(true);
 
-      const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
+    if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
+      const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
         (item) => item.id !== player.id
       );
 
       const removed = await persistLineupForTeam(
-        ownerTeamId,
-        nextPlayers,
-        `${player.name} removed from ${ownerTeam.name}.`,
+        currentOwnerTeamId,
+        ownerPlayers,
+        undefined,
         { allowEmpty: true }
       );
 
       if (!removed) return;
-
-      setDraftingPlayer(null);
-    } finally {
-      setIsAssigningPlayer(false);
     }
-  }
 
+    const added = await persistLineupForTeam(
+      targetTeamId,
+      [...targetPlayers, player],
+      `${player.name} drafted to ${targetTeam.name}.`
+    );
+
+    if (!added) return;
+
+    if (selectedSlateIdNumber) {
+      await loadSlateLineups(selectedSlateIdNumber);
+    }
+
+    setDraftingPlayer(null);
+  } finally {
+    setIsAssigningPlayer(false);
+  }
+}
+
+async function handleRemovePlayerFromTeam(player: Player) {
+  const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+  const ownerTeam = getOwnerTeamForPlayer(player.id);
+
+  if (!ownerTeamId || !ownerTeam) return;
+
+  try {
+    setIsAssigningPlayer(true);
+
+    const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
+      (item) => item.id !== player.id
+    );
+
+    const removed = await persistLineupForTeam(
+      ownerTeamId,
+      nextPlayers,
+      `${player.name} removed from ${ownerTeam.name}.`,
+      { allowEmpty: true }
+    );
+
+    if (!removed) return;
+
+    if (selectedSlateIdNumber) {
+      await loadSlateLineups(selectedSlateIdNumber);
+    }
+
+    setDraftingPlayer(null);
+  } finally {
+    setIsAssigningPlayer(false);
+  }
+}
   const pillBase =
     "rounded-full border px-3 py-1.5 text-xs font-medium transition";
   const activePill = "border-sky-300 bg-sky-100 text-sky-900";

@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";

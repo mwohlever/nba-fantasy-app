@@ -109,13 +109,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (playerIds.length < 1 || playerIds.length > 5) {
-      return NextResponse.json(
-        { error: "A lineup must include between 1 and 5 players." },
-        { status: 400 }
-      );
-    }
-
+if (playerIds.length > 5) {
+  return NextResponse.json(
+    { error: "A lineup can include at most 5 players." },
+    { status: 400 }
+  );
+}
     const uniquePlayerIds = [...new Set(playerIds)];
 
     if (uniquePlayerIds.length !== playerIds.length) {
