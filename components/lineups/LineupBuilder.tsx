@@ -841,14 +841,18 @@ export default function LineupBuilder({
                   Stats
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => refreshStatsForSelectedSlate(false)}
-                    disabled={!selectedSlateIdNumber || isRefreshingStats}
-                    className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {isRefreshingStats ? "Refreshing..." : "Refresh Stats"}
-                  </button>
+<button
+  type="button"
+  onClick={() => refreshStatsForSelectedSlate(false)}
+  disabled={!selectedSlateIdNumber || isRefreshingStats || selectedSlate?.is_locked}
+  className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {selectedSlate?.is_locked
+    ? "Locked"
+    : isRefreshingStats
+    ? "Refreshing..."
+    : "Refresh Stats"}
+</button>
 
                   <button
                     type="button"

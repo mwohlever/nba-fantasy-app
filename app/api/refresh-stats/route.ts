@@ -204,6 +204,13 @@ export async function POST(request: Request) {
 
     const safeSlate = slate as SlateRecord;
 
+   if (safeSlate.is_locked) {
+  return NextResponse.json(
+    { error: "This slate is locked. Historical stats cannot be refreshed." },
+    { status: 400 }
+  );
+}
+
     const { data: players, error: playersError } = await supabaseAdmin
       .from("players")
       .select("id, name, position_group, is_active, nba_player_id, team_abbreviation")
