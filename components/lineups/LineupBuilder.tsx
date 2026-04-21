@@ -101,8 +101,6 @@ export default function LineupBuilder({
   playerStats,
   teamResults,
 }: Props) {
-  const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
-  const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [selectedSlateId, setSelectedSlateId] = useState<string>(
     initialSelectedSlateId ? String(initialSelectedSlateId) : ""
   );
@@ -112,12 +110,18 @@ export default function LineupBuilder({
   const [isSlateLoading, setIsSlateLoading] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
   const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+  const [isAssigningPlayer, setIsAssigningPlayer] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
   const [onSlateOnly, setOnSlateOnly] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("scoring");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+
+  const [compactView, setCompactView] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+
   const [lineupsState, setLineupsState] = useState<SavedLineup[]>(
     savedLineupsForInitialSlate
   );
@@ -126,19 +130,27 @@ export default function LineupBuilder({
   const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] = useState<number[]>(
     []
   );
+  const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+
   const [lastRefreshSummary, setLastRefreshSummary] = useState<{
     gamesFound?: number;
     playerStatsUpserted?: number;
     teamResultsUpserted?: number;
   } | null>(null);
 
-  const selectedTeamIdNumber = selectedTeamId ? Number(selectedTeamId) : null;
   const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
   const selectedSlate =
     slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
 
   const selectedSlateDisplay =
     selectedSlate?.label ?? selectedSlate?.date ?? "No slate selected";
+
+  useEffect(() => {
+    setHasMounted(true);
+    if (window.innerWidth < 768) {
+      setCompactView(true);
+    }
+  }, []);
 
   useEffect(() => {
     setPlayerStatsState(playerStats);
@@ -225,8 +237,8 @@ export default function LineupBuilder({
         };
       })
       .filter(Boolean) as Array<
-      Team & { is_participating: boolean; draft_order: number }
-    >;
+        Team & { is_participating: boolean; draft_order: number }
+      >;
 
     const missingTeams = teams
       .filter((team) => !configuredIds.includes(team.id))
@@ -246,60 +258,6 @@ export default function LineupBuilder({
         .map((team) => team.id)
     );
   }, [orderedTeamsForSlate]);
-
-  const currentTeamSavedLineup = useMemo(() => {
-    if (!selectedTeamIdNumber) return null;
-
-    return (
-      lineupsState.find((lineup) => lineup.team_id === selectedTeamIdNumber) ?? null
-    );
-  }, [lineupsState, selectedTeamIdNumber]);
-
-  const takenPlayerIdsByOtherTeams = useMemo(() => {
-    if (!selectedTeamIdNumber) {
-      return new Set(lineupsState.flatMap((lineup) => lineup.player_ids));
-    }
-
-    return new Set(
-      lineupsState
-        .filter((lineup) => lineup.team_id !== selectedTeamIdNumber)
-        .flatMap((lineup) => lineup.player_ids)
-    );
-  }, [lineupsState, selectedTeamIdNumber]);
-
-  useEffect(() => {
-    if (!selectedTeamIdNumber) {
-      setSelectedPlayers([]);
-      setMessage("");
-      setSaveMessage("");
-      return;
-    }
-
-    if (!currentTeamSavedLineup) {
-      setSelectedPlayers([]);
-      setMessage("");
-      setSaveMessage("");
-      return;
-    }
-
-    const savedPlayers = players.filter((player) =>
-      currentTeamSavedLineup.player_ids.includes(player.id)
-    );
-
-    setSelectedPlayers(savedPlayers);
-    setMessage("");
-    setSaveMessage("Loaded saved lineup for this team.");
-  }, [selectedTeamIdNumber, currentTeamSavedLineup, players]);
-
-  const guardCount = useMemo(
-    () => selectedPlayers.filter((player) => player.position_group === "G").length,
-    [selectedPlayers]
-  );
-
-  const fcCount = useMemo(
-    () => selectedPlayers.filter((player) => player.position_group === "F/C").length,
-    [selectedPlayers]
-  );
 
   const filteredPlayers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -334,11 +292,26 @@ export default function LineupBuilder({
     playerAverageMap,
   ]);
 
+  function getLineupForTeam(teamId: number) {
+    return lineupsState.find((item) => item.team_id === teamId) ?? null;
+  }
+
   function getPlayersForTeam(teamId: number) {
-    const lineup = lineupsState.find((item) => item.team_id === teamId);
+    const lineup = getLineupForTeam(teamId);
     if (!lineup) return [];
 
     return players.filter((player) => lineup.player_ids.includes(player.id));
+  }
+
+  function getOwnerTeamIdForPlayer(playerId: number) {
+    const owner = lineupsState.find((lineup) => lineup.player_ids.includes(playerId));
+    return owner?.team_id ?? null;
+  }
+
+  function getOwnerTeamForPlayer(playerId: number) {
+    const ownerTeamId = getOwnerTeamIdForPlayer(playerId);
+    if (!ownerTeamId) return null;
+    return orderedTeamsForSlate.find((team) => team.id === ownerTeamId) ?? null;
   }
 
   function getTeamStats(teamId: number) {
@@ -426,15 +399,61 @@ export default function LineupBuilder({
       };
     });
 
-    const leader = rows
-      .filter((row) => row.is_participating)
-      .sort((a, b) => b.total - a.total)[0] ?? null;
+    const leader =
+      rows
+        .filter((row) => row.is_participating)
+        .sort((a, b) => b.total - a.total)[0] ?? null;
 
     return {
       leader,
       rows,
     };
   }, [orderedTeamsForSlate, teamResultsState, playerStatsState, lineupsState]);
+
+  function getTeamAssignmentStatus(teamId: number, player: Player) {
+    const team = orderedTeamsForSlate.find((item) => item.id === teamId);
+    const teamPlayers = getPlayersForTeam(teamId);
+    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const isParticipating = (team as any)?.is_participating !== false;
+
+    if (!selectedSlateIdNumber) {
+      return { canAssign: false, reason: "No slate selected" };
+    }
+
+    if (selectedSlate?.is_locked) {
+      return { canAssign: false, reason: "Slate locked" };
+    }
+
+    if (!isParticipating) {
+      return { canAssign: false, reason: "Out" };
+    }
+
+    if (ownerTeamId === teamId) {
+      return { canAssign: false, reason: "Already here" };
+    }
+
+    const nextPlayers = [...teamPlayers, player];
+    const nextGuardCount = nextPlayers.filter(
+      (item) => item.position_group === "G"
+    ).length;
+    const nextFcCount = nextPlayers.filter(
+      (item) => item.position_group === "F/C"
+    ).length;
+
+    if (nextPlayers.length > 5) {
+      return { canAssign: false, reason: "Lineup full" };
+    }
+
+    if (nextGuardCount > 2) {
+      return { canAssign: false, reason: "Too many G" };
+    }
+
+    if (nextFcCount > 3) {
+      return { canAssign: false, reason: "Too many F/C" };
+    }
+
+    return { canAssign: true, reason: "" };
+  }
 
   async function loadSlateAvailability(nextSlateId: number) {
     try {
@@ -486,8 +505,6 @@ export default function LineupBuilder({
       setPlayerStatsState(statsResult.playerStats ?? []);
       setTeamResultsState(resultsResult.teamResults ?? []);
       setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
-      setSelectedPlayers([]);
-      setSelectedTeamId("");
       setSaveMessage("Loaded slate.");
     } catch (error) {
       console.error(error);
@@ -563,20 +580,21 @@ export default function LineupBuilder({
     }
   }
 
-  async function saveLineup(playerList: Player[], successMessage?: string) {
+  async function persistLineupForTeam(
+    teamId: number,
+    playerList: Player[],
+    successMessage?: string,
+    options?: { allowEmpty?: boolean }
+  ) {
     setSaveMessage("");
-
-    if (!selectedTeamIdNumber) {
-      setSaveMessage("Please choose a team before saving.");
-      return false;
-    }
+    setMessage("");
 
     if (!selectedSlateIdNumber) {
       setSaveMessage("Please choose a slate before saving.");
       return false;
     }
 
-    if (!participatingTeamIds.has(selectedTeamIdNumber)) {
+    if (!participatingTeamIds.has(teamId)) {
       setSaveMessage("That team is not participating in this slate.");
       return false;
     }
@@ -586,7 +604,7 @@ export default function LineupBuilder({
       return false;
     }
 
-    if (playerList.length === 0) {
+    if (!options?.allowEmpty && playerList.length === 0) {
       setSaveMessage("Select at least 1 player before saving.");
       return false;
     }
@@ -618,7 +636,7 @@ export default function LineupBuilder({
         },
         body: JSON.stringify({
           slateId: selectedSlateIdNumber,
-          teamId: selectedTeamIdNumber,
+          teamId,
           playerIds: playerList.map((player) => player.id),
         }),
       });
@@ -631,20 +649,20 @@ export default function LineupBuilder({
       }
 
       setLineupsState((prev) => {
-        const otherTeams = prev.filter(
-          (lineup) => lineup.team_id !== selectedTeamIdNumber
-        );
+        const otherTeams = prev.filter((lineup) => lineup.team_id !== teamId);
 
         return [
           ...otherTeams,
           {
-            team_id: selectedTeamIdNumber,
+            team_id: teamId,
             player_ids: playerList.map((player) => player.id),
           },
         ];
       });
 
-      setSaveMessage(successMessage ?? "Lineup auto-saved.");
+      if (successMessage) {
+        setSaveMessage(successMessage);
+      }
       return true;
     } catch (error) {
       console.error(error);
@@ -655,90 +673,82 @@ export default function LineupBuilder({
     }
   }
 
-  async function handlePlayerClick(player: Player) {
-    if (!selectedTeamIdNumber) {
-      setMessage("Choose a team before selecting players.");
-      setSaveMessage("");
+  async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
+    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
+    if (!targetTeam) return;
+
+    const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
+    if (!assignmentStatus.canAssign) {
+      setSaveMessage(assignmentStatus.reason);
       return;
     }
 
-    if (!selectedSlateIdNumber) {
-      setMessage("Choose a slate first.");
-      setSaveMessage("");
+    const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const targetPlayers = getPlayersForTeam(targetTeamId);
+
+    if (currentOwnerTeamId === targetTeamId) {
+      setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
       return;
     }
 
-    if (!participatingTeamIds.has(selectedTeamIdNumber)) {
-      setMessage("That team is not participating in this slate.");
-      setSaveMessage("");
-      return;
-    }
+    try {
+      setIsAssigningPlayer(true);
 
-    if (selectedSlate?.is_locked) {
-      setMessage("This slate is locked.");
-      setSaveMessage("");
-      return;
-    }
-
-    const isAlreadySelected = selectedPlayers.some(
-      (selectedPlayer) => selectedPlayer.id === player.id
-    );
-
-    if (isAlreadySelected) {
-      const nextPlayers = selectedPlayers.filter(
-        (selectedPlayer) => selectedPlayer.id !== player.id
-      );
-
-      if (nextPlayers.length === 0) {
-        setMessage(
-          "At least 1 player must remain before auto-save. Add another player first."
+      if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
+        const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
+          (item) => item.id !== player.id
         );
-        setSaveMessage("");
-        return;
+
+        const removed = await persistLineupForTeam(
+          currentOwnerTeamId,
+          ownerPlayers,
+          undefined,
+          { allowEmpty: true }
+        );
+
+        if (!removed) return;
       }
 
-      setSelectedPlayers(nextPlayers);
-      setMessage("");
-      await saveLineup(nextPlayers, "Lineup auto-saved.");
-      return;
+      const added = await persistLineupForTeam(
+        targetTeamId,
+        [...targetPlayers, player],
+        `${player.name} drafted to ${targetTeam.name}.`
+      );
+
+      if (!added) return;
+
+      setDraftingPlayer(null);
+    } finally {
+      setIsAssigningPlayer(false);
     }
-
-    if (takenPlayerIdsByOtherTeams.has(player.id)) {
-      setMessage("That player is already used in another saved lineup for this slate.");
-      setSaveMessage("");
-      return;
-    }
-
-    if (selectedPlayers.length >= 5) {
-      setMessage("You can only select up to 5 players.");
-      setSaveMessage("");
-      return;
-    }
-
-    const nextGuardCount = guardCount + (player.position_group === "G" ? 1 : 0);
-    const nextFcCount = fcCount + (player.position_group === "F/C" ? 1 : 0);
-
-    if (nextGuardCount > 2) {
-      setMessage("You can only select up to 2 Guards.");
-      setSaveMessage("");
-      return;
-    }
-
-    if (nextFcCount > 3) {
-      setMessage("You can only select up to 3 F/C players.");
-      setSaveMessage("");
-      return;
-    }
-
-    const nextPlayers = [...selectedPlayers, player];
-
-    setSelectedPlayers(nextPlayers);
-    setMessage("");
-    await saveLineup(nextPlayers, "Lineup auto-saved.");
   }
 
-  async function handleSaveLineup() {
-    await saveLineup(selectedPlayers, "Lineup saved successfully.");
+  async function handleRemovePlayerFromTeam(player: Player) {
+    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const ownerTeam = getOwnerTeamForPlayer(player.id);
+
+    if (!ownerTeamId || !ownerTeam) return;
+
+    try {
+      setIsAssigningPlayer(true);
+
+      const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
+        (item) => item.id !== player.id
+      );
+
+      const removed = await persistLineupForTeam(
+        ownerTeamId,
+        nextPlayers,
+        `${player.name} removed from ${ownerTeam.name}.`,
+        { allowEmpty: true }
+      );
+
+      if (!removed) return;
+
+      setDraftingPlayer(null);
+    } finally {
+      setIsAssigningPlayer(false);
+    }
   }
 
   const pillBase =
@@ -747,88 +757,133 @@ export default function LineupBuilder({
   const inactivePill =
     "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
 
+  const bigModeBase =
+    "rounded-2xl border px-5 py-3 text-sm font-semibold transition sm:px-6 sm:py-3.5 sm:text-base";
+  const bigModeActive = "border-sky-300 bg-sky-100 text-sky-900 shadow-sm";
+  const bigModeInactive =
+    "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
+
+  const ownerTeamForDraftingPlayer = draftingPlayer
+    ? getOwnerTeamForPlayer(draftingPlayer.id)
+    : null;
+
+  const scoreTableCellClass = compactView
+    ? "px-2 py-1 text-xs"
+    : "px-3 py-2 text-sm";
+
+  const scoreTableHeaderClass = compactView
+    ? "border-b border-slate-200 px-2 py-1 font-semibold"
+    : "border-b border-slate-200 px-3 py-2 font-semibold";
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="flex flex-col gap-5">
             <div>
-              <label
-                htmlFor="slate-select"
-                className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500"
-              >
-                Slate / Day
-              </label>
-              <select
-                id="slate-select"
-                value={selectedSlateId}
-                onChange={async (e) => {
-                  const nextId = e.target.value;
-                  setSelectedSlateId(nextId);
-                  if (nextId) {
-                    await loadSlateLineups(Number(nextId));
-                  }
-                }}
-                className="min-w-[210px] rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
-              >
-                {slates.map((slate) => (
-                  <option key={slate.id} value={slate.id}>
-                    {slate.label ?? slate.date}
-                    {slate.is_locked ? " (Locked)" : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+              <div className="mb-2 block text-xs font-medium uppercase tracking-wide text-slate-500">
                 Page Mode
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {(["scoring", "draft"] as ViewMode[]).map((mode) => {
-                  const isActive = viewMode === mode;
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {([
+                  { value: "draft", label: "Draft Board" },
+                  { value: "scoring", label: "Scores" },
+                ] as Array<{ value: ViewMode; label: string }>).map((mode) => {
+                  const isActive = viewMode === mode.value;
 
                   return (
                     <button
-                      key={mode}
+                      key={mode.value}
                       type="button"
-                      onClick={() => setViewMode(mode)}
-                      className={`${pillBase} ${isActive ? activePill : inactivePill}`}
+                      onClick={() => setViewMode(mode.value)}
+                      className={`${bigModeBase} ${
+                        isActive ? bigModeActive : bigModeInactive
+                      }`}
                     >
-                      {mode === "draft" ? "Draft" : "Scores"}
+                      {mode.label}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                Stats
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => refreshStatsForSelectedSlate(false)}
-                  disabled={!selectedSlateIdNumber || isRefreshingStats}
-                  className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+            <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+              <div>
+                <label
+                  htmlFor="slate-select"
+                  className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500"
                 >
-                  {isRefreshingStats ? "Refreshing..." : "Refresh Stats"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setAutoRefreshEnabled((prev) => !prev)}
-                  disabled={!selectedSlateIdNumber}
-                  className={`rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                    autoRefreshEnabled
-                      ? "border-sky-300 bg-sky-100 text-sky-900 hover:bg-sky-200"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"
-                  }`}
+                  Slate / Day
+                </label>
+                <select
+                  id="slate-select"
+                  value={selectedSlateId}
+                  onChange={async (e) => {
+                    const nextId = e.target.value;
+                    setSelectedSlateId(nextId);
+                    if (nextId) {
+                      await loadSlateLineups(Number(nextId));
+                    }
+                  }}
+                  className="min-w-[210px] rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
                 >
-                  {autoRefreshEnabled ? "Auto Refresh On" : "Auto Refresh Off"}
-                </button>
+                  {slates.map((slate) => (
+                    <option key={slate.id} value={slate.id}>
+                      {slate.label ?? slate.date}
+                      {slate.is_locked ? " (Locked)" : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Stats
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => refreshStatsForSelectedSlate(false)}
+                    disabled={!selectedSlateIdNumber || isRefreshingStats}
+                    className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isRefreshingStats ? "Refreshing..." : "Refresh Stats"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAutoRefreshEnabled((prev) => !prev)}
+                    disabled={!selectedSlateIdNumber}
+                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                      autoRefreshEnabled
+                        ? "border-sky-300 bg-sky-100 text-sky-900 hover:bg-sky-200"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"
+                    }`}
+                  >
+                    {autoRefreshEnabled ? "Auto Refresh On" : "Auto Refresh Off"}
+                  </button>
+                </div>
+              </div>
+
+              {viewMode === "scoring" ? (
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                    View
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setCompactView((prev) => !prev)}
+                    disabled={!hasMounted}
+                    className={`${pillBase} ${
+                      compactView
+                        ? "border-emerald-300 bg-emerald-100 text-emerald-900"
+                        : inactivePill
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    {hasMounted ? (compactView ? "Compact On" : "Compact Off") : "View"}
+                  </button>
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -854,13 +909,175 @@ export default function LineupBuilder({
         </div>
       </section>
 
+      {message ? (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+          {message}
+        </div>
+      ) : null}
+
+      {saveMessage ? (
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm ${
+            saveMessage.toLowerCase().includes("success") ||
+            saveMessage.toLowerCase().includes("loaded") ||
+            saveMessage.toLowerCase().includes("drafted") ||
+            saveMessage.toLowerCase().includes("removed") ||
+            saveMessage.toLowerCase().includes("refreshed")
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      ) : null}
+
       {viewMode === "draft" ? (
         <>
           <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-4">
+              <h2 className="text-2xl font-semibold text-slate-900">Player Pool</h2>
+              <p className="text-sm text-slate-600">
+                Search a player, click them, then choose which team gets them.
+              </p>
+            </div>
+
+            <div className="mb-4 flex flex-col gap-3">
+              <div>
+                <label
+                  htmlFor="player-search"
+                  className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500"
+                >
+                  Search players
+                </label>
+                <input
+                  id="player-search"
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by player name"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-sky-300"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Position
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {(["All", "G", "F/C"] as PositionFilter[]).map((filter) => {
+                      const isActive = positionFilter === filter;
+
+                      return (
+                        <button
+                          key={filter}
+                          type="button"
+                          onClick={() => setPositionFilter(filter)}
+                          className={`${pillBase} ${isActive ? activePill : inactivePill}`}
+                        >
+                          {filter}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+                    Availability
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setOnSlateOnly((prev) => !prev)}
+                    className={`${pillBase} ${
+                      onSlateOnly
+                        ? "border-emerald-300 bg-emerald-100 text-emerald-900"
+                        : inactivePill
+                    }`}
+                  >
+                    {onSlateOnly ? "On This Slate" : "All Players"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4 flex flex-wrap gap-4 text-xs text-slate-500">
+              <span>
+                Showing {filteredPlayers.length} of {players.length} active players
+              </span>
+              <span>
+                On this slate:{" "}
+                {isAvailabilityLoading ? "Loading..." : availablePlayerIdsForSlate.length}
+              </span>
+            </div>
+
+            {filteredPlayers.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
+                No players match your current search/filter.
+              </div>
+            ) : (
+              <div className="max-h-[305px] overflow-y-auto pr-1">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredPlayers.map((player) => {
+                    const ownerTeam = getOwnerTeamForPlayer(player.id);
+                    const isOnSlate = availablePlayerIdSet.has(player.id);
+                    const avgScore = playerAverageMap.get(player.id) ?? 0;
+
+                    return (
+                      <button
+                        key={player.id}
+                        type="button"
+                        onClick={() => setDraftingPlayer(player)}
+                        disabled={isSlateLoading || isSaving || isAssigningPlayer}
+                        className={`rounded-2xl border px-4 py-3 text-left transition ${
+                          ownerTeam
+                            ? "border-red-200 bg-red-50 hover:border-red-300"
+                            : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50"
+                        } disabled:cursor-not-allowed disabled:opacity-60`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium text-slate-900">
+                              {player.name}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
+                                Avg {avgScore.toFixed(1)}
+                              </span>
+                              {isOnSlate ? (
+                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-800">
+                                  On this slate
+                                </span>
+                              ) : null}
+                              {ownerTeam ? (
+                                <span className="text-[11px] text-red-600">
+                                  Used by {ownerTeam.name}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-sky-700">
+                                  Click to draft
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
+                            {player.position_group}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-4">
               <h2 className="text-2xl font-semibold text-slate-900">Slate Lineups</h2>
               <p className="text-sm text-slate-600">
-                Pick a team, build the lineup, and search the player pool.
+                Current draft board for this slate.
               </p>
             </div>
 
@@ -868,17 +1085,14 @@ export default function LineupBuilder({
               {orderedTeamsForSlate.map((team) => {
                 const teamPlayers = getPlayersForTeam(team.id);
                 const stats = getTeamStats(team.id);
-                const isSelectedTeam = selectedTeamIdNumber === team.id;
                 const isParticipating = (team as any).is_participating !== false;
 
                 return (
                   <div
                     key={team.id}
                     className={`rounded-2xl border p-4 transition ${
-                      isSelectedTeam
-                        ? "border-sky-300 bg-sky-50"
-                        : "border-slate-200 bg-white"
-                    } ${!isParticipating ? "opacity-70" : ""}`}
+                      !isParticipating ? "opacity-70" : ""
+                    } border-slate-200 bg-white`}
                   >
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <div>
@@ -889,23 +1103,15 @@ export default function LineupBuilder({
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!isParticipating) return;
-                          setSelectedTeamId(String(team.id));
-                          setMessage("");
-                          setSaveMessage("");
-                        }}
-                        disabled={!isParticipating}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                          isSelectedTeam
-                            ? "border-sky-300 bg-sky-100 text-sky-900"
-                            : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"
-                        } disabled:cursor-not-allowed disabled:opacity-50`}
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                          isParticipating
+                            ? "border-slate-200 bg-white text-slate-700"
+                            : "border-slate-200 bg-slate-100 text-slate-500"
+                        }`}
                       >
-                        {isSelectedTeam ? "Selected" : isParticipating ? "Open" : "Out"}
-                      </button>
+                        {isParticipating ? "Open" : "Out"}
+                      </span>
                     </div>
 
                     <div className="mb-3 flex flex-wrap gap-2 text-xs text-slate-600">
@@ -927,17 +1133,19 @@ export default function LineupBuilder({
                     ) : (
                       <div className="space-y-2">
                         {teamPlayers.map((player) => (
-                          <div
+                          <button
                             key={player.id}
-                            className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                            type="button"
+                            onClick={() => setDraftingPlayer(player)}
+                            className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left transition hover:border-sky-200 hover:bg-sky-50"
                           >
                             <span className="truncate pr-2 text-sm text-slate-800">
                               {player.name}
                             </span>
-                            <span className="rounded-full bg-white px-2 py-0.5 text-[11px] text-slate-600 border border-slate-200">
+                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600">
                               {player.position_group}
                             </span>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -946,535 +1154,307 @@ export default function LineupBuilder({
               })}
             </div>
           </section>
+        </>
+      ) : (
+        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-900">Scores</h2>
+              <p className="text-sm text-slate-600">
+                Lineups and live totals for the selected slate.
+              </p>
+            </div>
 
-          <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex flex-col gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-900">Selected Lineup</h2>
-                  <p className="text-sm text-slate-600">Auto-saves on each change.</p>
+            {dailySummary.leader ? (
+              <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-slate-700">
+                <div className="text-xs uppercase tracking-wide text-orange-700">
+                  Leader
                 </div>
+                <div className="font-semibold text-slate-900">
+                  {dailySummary.leader.teamName} •{" "}
+                  {dailySummary.leader.total.toFixed(1)}
+                </div>
+              </div>
+            ) : null}
+          </div>
 
-                <div className="flex flex-col gap-3 md:flex-row md:items-end">
-                  <div className="min-w-[190px]">
-                    <label
-                      htmlFor="team-select"
-                      className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500"
-                    >
-                      Team
-                    </label>
-                    <select
-                      id="team-select"
-                      value={selectedTeamId}
-                      onChange={(e) => {
-                        setSelectedTeamId(e.target.value);
-                        setMessage("");
-                        setSaveMessage("");
-                      }}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
-                    >
-                      <option value="">Select a team</option>
-                      {orderedTeamsForSlate.map((team) => {
-                        const isParticipating = (team as any).is_participating !== false;
+          {lastRefreshSummary ? (
+            <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Refresh complete — Games found: {lastRefreshSummary.gamesFound ?? 0},
+              Players updated: {lastRefreshSummary.playerStatsUpserted ?? 0}, Teams
+              updated: {lastRefreshSummary.teamResultsUpserted ?? 0}
+            </div>
+          ) : null}
 
-                        return (
-                          <option
-                            key={team.id}
-                            value={team.id}
-                            disabled={!isParticipating}
-                          >
-                            {team.name}
-                            {(team as any).draft_order
-                              ? ` (#${(team as any).draft_order})`
-                              : ""}
-                            {!isParticipating ? " - Out" : ""}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
+          <div className="overflow-x-auto -mx-4 px-4">
+            <div className={`${compactView ? "min-w-[820px]" : "min-w-[1100px]"} space-y-4`}>
+              {orderedTeamsForSlate.map((team) => {
+                const teamPlayers = getPlayersForTeam(team.id);
+                const stats = getTeamStats(team.id);
 
-                  <button
-                    type="button"
-                    onClick={handleSaveLineup}
-                    disabled={
-                      isSaving ||
-                      selectedSlate?.is_locked ||
-                      !selectedTeamIdNumber ||
-                      !participatingTeamIds.has(selectedTeamIdNumber)
-                    }
-                    className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                const guards = teamPlayers.filter((p) => p.position_group === "G");
+                const fcs = teamPlayers.filter((p) => p.position_group === "F/C");
+
+                const rosterRows: Array<{
+                  slot: string;
+                  player: Player | null;
+                }> = [
+                  { slot: "G", player: guards[0] ?? null },
+                  { slot: "G", player: guards[1] ?? null },
+                  { slot: "F/C", player: fcs[0] ?? null },
+                  { slot: "F/C", player: fcs[1] ?? null },
+                  { slot: "F/C", player: fcs[2] ?? null },
+                ];
+
+                const isParticipating = (team as any).is_participating !== false;
+
+                return (
+                  <div
+                    key={team.id}
+                    className={`overflow-hidden rounded-2xl border border-slate-200 bg-white ${
+                      !isParticipating ? "opacity-70" : ""
+                    }`}
                   >
-                    {isSaving ? "Saving..." : "Save"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mb-4 flex flex-wrap gap-2 text-xs text-slate-600">
-                <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                  Total: {selectedPlayers.length}/5
-                </span>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                  Guards: {guardCount}/2
-                </span>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                  F/C: {fcCount}/3
-                </span>
-              </div>
-
-              {message ? (
-                <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-                  {message}
-                </div>
-              ) : null}
-
-              {saveMessage ? (
-                <div
-                  className={`mb-4 rounded-2xl px-4 py-3 text-sm ${
-                    saveMessage.toLowerCase().includes("success") ||
-                    saveMessage.toLowerCase().includes("loaded") ||
-                    saveMessage.toLowerCase().includes("auto-saved")
-                      ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
-                      : "border border-red-200 bg-red-50 text-red-700"
-                  }`}
-                >
-                  {saveMessage}
-                </div>
-              ) : null}
-
-              {selectedPlayers.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
-                  {!selectedTeamId
-                    ? "Select a team to start building a lineup."
-                    : "No players selected yet."}
-                </div>
-              ) : (
-                <div className="grid gap-3">
-                  {selectedPlayers.map((player) => (
-                    <button
-                      key={player.id}
-                      type="button"
-                      onClick={() => handlePlayerClick(player)}
-                      className="flex items-center justify-between rounded-2xl border border-sky-300 bg-sky-50 px-4 py-3 text-left transition hover:bg-sky-100"
+                    <div
+                      className={`flex items-center justify-between bg-slate-50 ${
+                        compactView ? "px-3 py-2" : "px-4 py-3"
+                      }`}
                     >
-                      <span className="truncate pr-2 text-sm font-medium text-slate-900">
-                        {player.name}
-                      </span>
-                      <span className="rounded-full border border-sky-200 bg-white px-2 py-0.5 text-[11px] text-slate-600">
-                        {player.position_group}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex flex-col gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-900">Player Pool</h2>
-                  <p className="text-sm text-slate-600">
-                    Search first, then pick from a tighter list sorted by best average.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <label
-                      htmlFor="player-search"
-                      className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500"
-                    >
-                      Search players
-                    </label>
-                    <input
-                      id="player-search"
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search by player name"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-sky-300"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Position
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {(["All", "G", "F/C"] as PositionFilter[]).map((filter) => {
-                          const isActive = positionFilter === filter;
-
-                          return (
-                            <button
-                              key={filter}
-                              type="button"
-                              onClick={() => setPositionFilter(filter)}
-                              className={`${pillBase} ${isActive ? activePill : inactivePill}`}
-                            >
-                              {filter}
-                            </button>
-                          );
-                        })}
+                      <div className={`${compactView ? "text-base" : "text-lg"} font-semibold text-slate-900`}>
+                        {team.name}
+                        {!isParticipating ? " (Out)" : ""}
+                        {(team as any).draft_order
+                          ? ` • #${(team as any).draft_order}`
+                          : ""}
+                      </div>
+                      <div className={`${compactView ? "text-xs" : "text-sm"} text-slate-600`}>
+                        Total:{" "}
+                        {typeof stats.total === "number"
+                          ? stats.total.toFixed(1)
+                          : "0.0"}{" "}
+                        • C: {stats.games_completed} • P: {stats.games_in_progress} •
+                        R: {stats.games_remaining}
                       </div>
                     </div>
 
-                    <div>
-                      <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Availability
-                      </label>
+                    <table
+                      className={`w-full border-collapse ${
+                        compactView ? "table-fixed text-xs" : "text-sm"
+                      }`}
+                    >
+                      <thead className="bg-slate-100 text-slate-700">
+                        {compactView ? (
+                          <tr className="text-left">
+                            <th className={`${scoreTableHeaderClass} w-[42px]`}>Pos</th>
+                            <th className={`${scoreTableHeaderClass} w-[120px]`}>Player</th>
+                            <th className={`${scoreTableHeaderClass} w-[44px] text-right`}>PTS</th>
+                            <th className={`${scoreTableHeaderClass} w-[44px] text-right`}>REB</th>
+                            <th className={`${scoreTableHeaderClass} w-[44px] text-right`}>AST</th>
+                            <th className={`${scoreTableHeaderClass} w-[44px] text-right`}>STL</th>
+                            <th className={`${scoreTableHeaderClass} w-[44px] text-right`}>BLK</th>
+                            <th className={`${scoreTableHeaderClass} w-[44px] text-right`}>TO</th>
+                            <th className={`${scoreTableHeaderClass} w-[48px] text-right`}>TOT</th>
+                          </tr>
+                        ) : (
+                          <tr className="text-left">
+                            <th className={scoreTableHeaderClass}>Position</th>
+                            <th className={scoreTableHeaderClass}>Player</th>
+                            <th className={scoreTableHeaderClass}>Points (1)</th>
+                            <th className={scoreTableHeaderClass}>Rebounds (1.2)</th>
+                            <th className={scoreTableHeaderClass}>Assists (1.5)</th>
+                            <th className={scoreTableHeaderClass}>Steals (2)</th>
+                            <th className={scoreTableHeaderClass}>Blocks (2)</th>
+                            <th className={scoreTableHeaderClass}>Turnovers (-1)</th>
+                            <th className={scoreTableHeaderClass}>Total</th>
+                          </tr>
+                        )}
+                      </thead>
+
+                      <tbody className="text-slate-800">
+                        {rosterRows.map((row, index) => {
+                          const stat = row.player ? getPlayerStat(row.player.id) : null;
+
+                          return (
+                            <tr key={`${team.id}-${index}`} className="border-b border-slate-100">
+                              <td className={scoreTableCellClass}>{row.slot}</td>
+                              <td className={scoreTableCellClass}>
+                                {row.player ? (
+                                  <span className={compactView ? "block truncate" : ""}>
+                                    {row.player.name}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                              <td className={`${scoreTableCellClass} text-right`}>
+                                {stat ? stat.points : 0}
+                              </td>
+                              <td className={`${scoreTableCellClass} text-right`}>
+                                {stat ? stat.rebounds : 0}
+                              </td>
+                              <td className={`${scoreTableCellClass} text-right`}>
+                                {stat ? stat.assists : 0}
+                              </td>
+                              <td className={`${scoreTableCellClass} text-right`}>
+                                {stat ? stat.steals : 0}
+                              </td>
+                              <td className={`${scoreTableCellClass} text-right`}>
+                                {stat ? stat.blocks : 0}
+                              </td>
+                              <td className={`${scoreTableCellClass} text-right`}>
+                                {stat ? stat.turnovers : 0}
+                              </td>
+                              <td className={`${scoreTableCellClass} text-right`}>
+                                {stat ? Number(stat.fantasy_points).toFixed(1) : "0.0"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                        <tr className="bg-slate-50 font-semibold text-slate-900">
+                          <td className={scoreTableCellClass}></td>
+                          <td className={scoreTableCellClass}>
+                            <span className={compactView ? "block truncate" : ""}>Totals</span>
+                          </td>
+                          <td className={`${scoreTableCellClass} text-right`}>{stats.points}</td>
+                          <td className={`${scoreTableCellClass} text-right`}>{stats.rebounds}</td>
+                          <td className={`${scoreTableCellClass} text-right`}>{stats.assists}</td>
+                          <td className={`${scoreTableCellClass} text-right`}>{stats.steals}</td>
+                          <td className={`${scoreTableCellClass} text-right`}>{stats.blocks}</td>
+                          <td className={`${scoreTableCellClass} text-right`}>{stats.turnovers}</td>
+                          <td className={`${scoreTableCellClass} text-right`}>
+                            {typeof stats.total === "number"
+                              ? stats.total.toFixed(1)
+                              : "0.0"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {draftingPlayer ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-semibold text-slate-900">
+                  {draftingPlayer.name}
+                </h3>
+                <div className="mt-1 flex flex-wrap gap-2 text-sm text-slate-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    {draftingPlayer.position_group}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    Avg {(playerAverageMap.get(draftingPlayer.id) ?? 0).toFixed(1)}
+                  </span>
+                  {availablePlayerIdSet.has(draftingPlayer.id) ? (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">
+                      On this slate
+                    </span>
+                  ) : null}
+                  {ownerTeamForDraftingPlayer ? (
+                    <span className="rounded-full bg-red-100 px-2.5 py-1 text-red-700">
+                      Currently on {ownerTeamForDraftingPlayer.name}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-sky-100 px-2.5 py-1 text-sky-700">
+                      Not drafted yet
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDraftingPlayer(null)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+
+            {ownerTeamForDraftingPlayer ? (
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRemovePlayerFromTeam(draftingPlayer)}
+                  disabled={isAssigningPlayer || isSaving}
+                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isAssigningPlayer ? "Working..." : `Remove from ${ownerTeamForDraftingPlayer.name}`}
+                </button>
+              </div>
+            ) : null}
+
+            <div className="mb-2 text-sm font-medium text-slate-700">
+              Choose lineup
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {orderedTeamsForSlate.map((team) => {
+                const stats = getTeamStats(team.id);
+                const status = getTeamAssignmentStatus(team.id, draftingPlayer);
+                const isCurrentOwner = getOwnerTeamIdForPlayer(draftingPlayer.id) === team.id;
+                const isParticipating = (team as any).is_participating !== false;
+
+                return (
+                  <div
+                    key={team.id}
+                    className={`rounded-2xl border p-4 ${
+                      isCurrentOwner
+                        ? "border-sky-300 bg-sky-50"
+                        : "border-slate-200 bg-white"
+                    } ${!isParticipating ? "opacity-70" : ""}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold text-slate-900">{team.name}</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          {(team as any).draft_order
+                            ? `Order #${(team as any).draft_order}`
+                            : ""}
+                          {!isParticipating ? " • Out" : ""}
+                        </div>
+                      </div>
+
+                      <div className="text-right text-xs text-slate-600">
+                        <div>{stats.totalPlayers}/5</div>
+                        <div>G {stats.guards}/2</div>
+                        <div>F/C {stats.fcPlayers}/3</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
                       <button
                         type="button"
-                        onClick={() => setOnSlateOnly((prev) => !prev)}
-                        className={`${pillBase} ${
-                          onSlateOnly
-                            ? "border-emerald-300 bg-emerald-100 text-emerald-900"
-                            : inactivePill
+                        onClick={() => handleAssignPlayerToTeam(draftingPlayer, team.id)}
+                        disabled={!status.canAssign || isAssigningPlayer || isSaving}
+                        className={`w-full rounded-xl border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                          status.canAssign
+                            ? "border-emerald-300 bg-emerald-100 text-emerald-900 hover:bg-emerald-200"
+                            : "border-slate-200 bg-slate-100 text-slate-500"
                         }`}
                       >
-                        {onSlateOnly ? "On This Slate" : "All Players"}
+                        {isCurrentOwner
+                          ? "Already here"
+                          : status.canAssign
+                          ? "Assign to this team"
+                          : status.reason}
                       </button>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="mb-4 flex flex-wrap gap-4 text-xs text-slate-500">
-                <span>
-                  Showing {filteredPlayers.length} of {players.length} active players
-                </span>
-                <span>
-                  On this slate:{" "}
-                  {isAvailabilityLoading ? "Loading..." : availablePlayerIdsForSlate.length}
-                </span>
-              </div>
-
-              {filteredPlayers.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
-                  No players match your current search/filter.
-                </div>
-              ) : (
-                <div className="max-h-[320px] overflow-y-auto pr-1">
-                  <div className="grid gap-3">
-                    {filteredPlayers.map((player) => {
-                      const isSelected = selectedPlayers.some(
-                        (selectedPlayer) => selectedPlayer.id === player.id
-                      );
-
-                      const isTakenByOtherTeam = takenPlayerIdsByOtherTeams.has(player.id);
-                      const ownerTeam = orderedTeamsForSlate.find((team) =>
-                        lineupsState.some(
-                          (lineup) =>
-                            lineup.team_id === team.id &&
-                            lineup.team_id !== selectedTeamIdNumber &&
-                            lineup.player_ids.includes(player.id)
-                        )
-                      );
-
-                      const isOnSlate = availablePlayerIdSet.has(player.id);
-                      const avgScore = playerAverageMap.get(player.id) ?? 0;
-
-                      const isDisabled =
-                        !selectedTeamId ||
-                        !selectedTeamIdNumber ||
-                        !participatingTeamIds.has(selectedTeamIdNumber) ||
-                        (!isSelected && isTakenByOtherTeam);
-
-                      return (
-                        <button
-                          key={player.id}
-                          type="button"
-                          onClick={() => handlePlayerClick(player)}
-                          disabled={isDisabled || isSaving || isSlateLoading}
-                          className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${
-                            isSelected
-                              ? "border-emerald-300 bg-emerald-50"
-                              : isTakenByOtherTeam
-                              ? "cursor-not-allowed border-red-200 bg-red-50 opacity-60"
-                              : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50"
-                          } ${
-                            !selectedTeamId || isSaving || isSlateLoading
-                              ? "cursor-not-allowed opacity-60"
-                              : ""
-                          }`}
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium text-slate-900">
-                              {player.name}
-                            </div>
-                            <div className="mt-1 flex flex-wrap gap-1.5">
-                              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
-                                Avg {avgScore.toFixed(1)}
-                              </span>
-                              {isOnSlate ? (
-                                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-800">
-                                  On this slate
-                                </span>
-                              ) : null}
-                              {isTakenByOtherTeam && !isSelected ? (
-                                <span className="text-[11px] text-red-600">
-                                  Used by {ownerTeam?.name ?? "another team"}
-                                </span>
-                              ) : null}
-                            </div>
-                          </div>
-
-                          <span className="ml-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
-                            {player.position_group}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </section>
-          </section>
-        </>
-      ) : (
-        <>
-          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-slate-900">Slate Summary</h2>
-              <p className="text-sm text-slate-600">Quick view of the current slate totals.</p>
+                );
+              })}
             </div>
-
-            <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
-                <div className="text-xs uppercase tracking-wide text-orange-700">Leader</div>
-                <div className="mt-2 text-2xl font-bold text-slate-900">
-                  {dailySummary.leader ? dailySummary.leader.teamName : "—"}
-                </div>
-                <div className="mt-1 text-sm text-slate-600">
-                  {dailySummary.leader ? dailySummary.leader.total.toFixed(1) : "0.0"}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">
-                  Games Completed
-                </div>
-                <div className="mt-2 text-2xl font-bold text-slate-900">
-                  {dailySummary.rows
-                    .filter((row) => row.is_participating)
-                    .reduce((sum, row) => sum + row.games_completed, 0)}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">
-                  In Progress
-                </div>
-                <div className="mt-2 text-2xl font-bold text-slate-900">
-                  {dailySummary.rows
-                    .filter((row) => row.is_participating)
-                    .reduce((sum, row) => sum + row.games_in_progress, 0)}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-500">
-                  Remaining
-                </div>
-                <div className="mt-2 text-2xl font-bold text-slate-900">
-                  {dailySummary.rows
-                    .filter((row) => row.is_participating)
-                    .reduce((sum, row) => sum + row.games_remaining, 0)}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {dailySummary.rows.map((row, index) => (
-                <div
-                  key={row.teamId}
-                  className={`rounded-2xl border px-4 py-3 ${
-                    index === 0 && row.is_participating
-                      ? "border-orange-200 bg-orange-50"
-                      : "border-slate-200 bg-white"
-                  } ${!row.is_participating ? "opacity-70" : ""}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-900">
-                      {row.teamName}
-                      {!row.is_participating ? " (Out)" : ""}
-                    </span>
-                    <span className="text-sm text-slate-600">{row.total.toFixed(1)}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    C: {row.games_completed} • P: {row.games_in_progress} • R:{" "}
-                    {row.games_remaining}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {lastRefreshSummary ? (
-              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                Refresh complete — Games found: {lastRefreshSummary.gamesFound ?? 0},
-                Players updated: {lastRefreshSummary.playerStatsUpserted ?? 0}, Teams
-                updated: {lastRefreshSummary.teamResultsUpserted ?? 0}
-              </div>
-            ) : null}
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold text-slate-900">Scores</h2>
-                <p className="text-sm text-slate-600">
-                  Spreadsheet-style roster grid for the selected slate.
-                </p>
-              </div>
-
-              {dailySummary.leader ? (
-                <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-slate-700">
-                  <div className="text-xs uppercase tracking-wide text-orange-700">
-                    Leader
-                  </div>
-                  <div className="font-semibold text-slate-900">
-                    {dailySummary.leader.teamName} •{" "}
-                    {dailySummary.leader.total.toFixed(1)}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className="overflow-x-auto -mx-4 px-4">
-              <div className="min-w-[1100px] space-y-4">
-                {orderedTeamsForSlate.map((team) => {
-                  const teamPlayers = getPlayersForTeam(team.id);
-                  const stats = getTeamStats(team.id);
-
-                  const guards = teamPlayers.filter((p) => p.position_group === "G");
-                  const fcs = teamPlayers.filter((p) => p.position_group === "F/C");
-
-                  const rosterRows: Array<{
-                    slot: string;
-                    player: Player | null;
-                  }> = [
-                    { slot: "G", player: guards[0] ?? null },
-                    { slot: "G", player: guards[1] ?? null },
-                    { slot: "F/C", player: fcs[0] ?? null },
-                    { slot: "F/C", player: fcs[1] ?? null },
-                    { slot: "F/C", player: fcs[2] ?? null },
-                  ];
-
-                  const isParticipating = (team as any).is_participating !== false;
-
-                  return (
-                    <div
-                      key={team.id}
-                      className={`rounded-2xl border border-slate-200 bg-white overflow-hidden ${
-                        !isParticipating ? "opacity-70" : ""
-                      }`}
-                    >
-                      <div className="flex items-center justify-between bg-slate-50 px-4 py-3">
-                        <div className="text-lg font-semibold text-slate-900">
-                          {team.name}
-                          {!isParticipating ? " (Out)" : ""}
-                          {(team as any).draft_order
-                            ? ` • #${(team as any).draft_order}`
-                            : ""}
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          Total:{" "}
-                          {typeof stats.total === "number"
-                            ? stats.total.toFixed(1)
-                            : "0.0"}{" "}
-                          • C: {stats.games_completed} • P: {stats.games_in_progress} •
-                          R: {stats.games_remaining}
-                        </div>
-                      </div>
-
-                      <table className="w-full border-collapse text-sm">
-                        <thead className="bg-slate-100 text-slate-700">
-                          <tr className="text-left">
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Position
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Player
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Points (1)
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Rebounds (1.2)
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Assists (1.5)
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Steals (2)
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Blocks (2)
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Turnovers (-1)
-                            </th>
-                            <th className="border-b border-slate-200 px-3 py-2 font-semibold">
-                              Total
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-slate-800">
-                          {rosterRows.map((row, index) => {
-                            const stat = row.player ? getPlayerStat(row.player.id) : null;
-
-                            return (
-                              <tr key={`${team.id}-${index}`} className="border-b border-slate-100">
-                                <td className="px-3 py-2">{row.slot}</td>
-                                <td className="px-3 py-2">
-                                  {row.player ? (
-                                    row.player.name
-                                  ) : (
-                                    <span className="text-slate-400">—</span>
-                                  )}
-                                </td>
-                                <td className="px-3 py-2 text-right">{stat ? stat.points : 0}</td>
-                                <td className="px-3 py-2 text-right">
-                                  {stat ? stat.rebounds : 0}
-                                </td>
-                                <td className="px-3 py-2 text-right">{stat ? stat.assists : 0}</td>
-                                <td className="px-3 py-2 text-right">{stat ? stat.steals : 0}</td>
-                                <td className="px-3 py-2 text-right">{stat ? stat.blocks : 0}</td>
-                                <td className="px-3 py-2 text-right">
-                                  {stat ? stat.turnovers : 0}
-                                </td>
-                                <td className="px-3 py-2 text-right">
-                                  {stat ? Number(stat.fantasy_points).toFixed(1) : "0.0"}
-                                </td>
-                              </tr>
-                            );
-                          })}
-
-                          <tr className="bg-slate-50 font-semibold text-slate-900">
-                            <td className="px-3 py-2"></td>
-                            <td className="px-3 py-2">Totals</td>
-                            <td className="px-3 py-2 text-right">{stats.points}</td>
-                            <td className="px-3 py-2 text-right">{stats.rebounds}</td>
-                            <td className="px-3 py-2 text-right">{stats.assists}</td>
-                            <td className="px-3 py-2 text-right">{stats.steals}</td>
-                            <td className="px-3 py-2 text-right">{stats.blocks}</td>
-                            <td className="px-3 py-2 text-right">{stats.turnovers}</td>
-                            <td className="px-3 py-2 text-right">
-                              {typeof stats.total === "number"
-                                ? stats.total.toFixed(1)
-                                : "0.0"}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        </>
-      )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
