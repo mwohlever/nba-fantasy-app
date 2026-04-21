@@ -33,8 +33,8 @@ export default function AppNav() {
 
   return (
     <nav className="mb-6 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-sm backdrop-blur">
-      <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:gap-3">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {leftLinks.map((link) => (
             <Link key={link.href} href={link.href} className={getLinkClass(link.href)}>
               {link.label}
@@ -42,7 +42,7 @@ export default function AppNav() {
           ))}
         </div>
 
-        <div className="flex gap-2 pl-2">
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:justify-end">
           {rightLinks.map((link) => (
             <Link key={link.href} href={link.href} className={getLinkClass(link.href)}>
               {link.label}
