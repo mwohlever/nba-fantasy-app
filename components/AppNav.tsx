@@ -33,8 +33,30 @@ export default function AppNav() {
 
   return (
     <nav className="mb-6 rounded-2xl border border-slate-200 bg-white/90 p-2 shadow-sm backdrop-blur">
-      <div className="flex flex-col gap-2 sm:gap-3">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* MOBILE */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {/* Top row → Admin */}
+        <div className="flex justify-end gap-2 overflow-x-auto pb-1">
+          {rightLinks.map((link) => (
+            <Link key={link.href} href={link.href} className={getLinkClass(link.href)}>
+              {link.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Bottom row → Main nav (centered) */}
+        <div className="flex justify-center gap-2 overflow-x-auto pb-1">
+          {leftLinks.map((link) => (
+            <Link key={link.href} href={link.href} className={getLinkClass(link.href)}>
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* DESKTOP */}
+      <div className="hidden sm:flex sm:items-center sm:justify-between">
+        <div className="flex gap-2">
           {leftLinks.map((link) => (
             <Link key={link.href} href={link.href} className={getLinkClass(link.href)}>
               {link.label}
@@ -42,7 +64,7 @@ export default function AppNav() {
           ))}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:justify-end">
+        <div className="flex gap-2">
           {rightLinks.map((link) => (
             <Link key={link.href} href={link.href} className={getLinkClass(link.href)}>
               {link.label}
