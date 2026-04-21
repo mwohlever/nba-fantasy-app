@@ -1031,7 +1031,7 @@ onChange={(e) => {
                         key={player.id}
                         type="button"
                         onClick={() => setDraftingPlayer(player)}
-                        disabled={isSlateLoading || isSaving || isAssigningPlayer}
+                        disabled={isAssigningPlayer}
                         className={`rounded-2xl border px-4 py-3 text-left transition ${
                           ownerTeam
                             ? "border-red-200 bg-red-50 hover:border-red-300"
