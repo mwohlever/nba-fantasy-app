@@ -1,22 +1,17 @@
 "use client";
 
-import AppNav from "@/components/AppNav";
 import { useEffect, useMemo, useState } from "react";
+import AppNav from "@/components/AppNav";
 
 type PlayerHistoryRow = {
   player_id: number;
   player_name: string;
   times_drafted: number;
-  avg_score: number | null;
-  high_score: number | null;
-  low_score: number | null;
+  avg_score: number;
+  high_score: number;
+  low_score: number;
   winning_lineups: number;
   runner_up_lineups: number;
-};
-
-type PlayerHistoryResponse = {
-  success: boolean;
-  playerHistory: PlayerHistoryRow[];
 };
 
 type SortKey =
@@ -30,34 +25,18 @@ type SortKey =
 
 type SortDirection = "asc" | "desc";
 
-function formatNumber(value: number | null, digits = 2) {
-  if (value === null || value === undefined) return "—";
-  return value.toFixed(digits);
-}
-
-function compareValues(
-  a: string | number | null,
-  b: string | number | null,
-  direction: SortDirection
-) {
-  const multiplier = direction === "asc" ? 1 : -1;
-
-  if (typeof a === "string" && typeof b === "string") {
-    return a.localeCompare(b) * multiplier;
-  }
-
-  const aValue = a === null ? Number.NEGATIVE_INFINITY : Number(a);
-  const bValue = b === null ? Number.NEGATIVE_INFINITY : Number(b);
-
-  if (aValue < bValue) return -1 * multiplier;
-  if (aValue > bValue) return 1 * multiplier;
-  return 0;
-}
+type ApiResponse = {
+  success: boolean;
+  season: number;
+  playerHistory: PlayerHistoryRow[];
+};
 
 export default function PlayerHistoryPage() {
   const [rows, setRows] = useState<PlayerHistoryRow[]>([]);
+  const [season, setSeason] = useState<number>(2026);
+  const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [message, setMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("times_drafted");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
@@ -68,15 +47,13 @@ export default function PlayerHistoryPage() {
   async function loadPlayerHistory() {
     try {
       setIsLoading(true);
-      setErrorMessage("");
+      setMessage("");
 
-      const response = await fetch("/api/player-history");
-      const result = (await response.json()) as
-        | PlayerHistoryResponse
-        | { error?: string };
+      const response = await fetch("/api/player-history?season=2026");
+      const result = (await response.json()) as ApiResponse | { error?: string };
 
       if (!response.ok) {
-        setErrorMessage(
+        setMessage(
           "error" in result && result.error
             ? result.error
             : "Failed to load player history."
@@ -84,11 +61,12 @@ export default function PlayerHistoryPage() {
         return;
       }
 
-      const safeResult = result as PlayerHistoryResponse;
+      const safeResult = result as ApiResponse;
       setRows(safeResult.playerHistory ?? []);
+      setSeason(safeResult.season ?? 2026);
     } catch (error) {
       console.error(error);
-      setErrorMessage("Something went wrong while loading player history.");
+      setMessage("Something went wrong while loading player history.");
     } finally {
       setIsLoading(false);
     }
@@ -104,18 +82,68 @@ export default function PlayerHistoryPage() {
     setSortDirection(nextKey === "player_name" ? "asc" : "desc");
   }
 
-  function getSortArrow(key: SortKey) {
+  const filteredRows = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    const filtered = rows.filter((row) => {
+      if (!normalizedSearch) return true;
+      return row.player_name.toLowerCase().includes(normalizedSearch);
+    });
+
+    filtered.sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortKey) {
+        case "player_name":
+          comparison = a.player_name.localeCompare(b.player_name);
+          break;
+        case "times_drafted":
+          comparison = a.times_drafted - b.times_drafted;
+          break;
+        case "avg_score":
+          comparison = a.avg_score - b.avg_score;
+          break;
+        case "high_score":
+          comparison = a.high_score - b.high_score;
+          break;
+        case "low_score":
+          comparison = a.low_score - b.low_score;
+          break;
+        case "winning_lineups":
+          comparison = a.winning_lineups - b.winning_lineups;
+          break;
+        case "runner_up_lineups":
+          comparison = a.runner_up_lineups - b.runner_up_lineups;
+          break;
+      }
+
+      if (comparison === 0) {
+        comparison = a.player_name.localeCompare(b.player_name);
+      }
+
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+
+    return filtered;
+  }, [rows, searchTerm, sortKey, sortDirection]);
+
+  function sortIndicator(key: SortKey) {
     if (sortKey !== key) return "";
     return sortDirection === "asc" ? " ↑" : " ↓";
   }
 
-  const sortedRows = useMemo(() => {
-    const copy = [...rows];
-    copy.sort((a, b) => compareValues(a[sortKey], b[sortKey], sortDirection));
-    return copy;
-  }, [rows, sortKey, sortDirection]);
-
-  const headerButtonClass = "font-semibold transition hover:text-slate-900";
+  function headerButton(label: string, key: SortKey) {
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(key)}
+        className="font-semibold text-left transition hover:text-sky-700"
+      >
+        {label}
+        {sortIndicator(key)}
+      </button>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
@@ -123,95 +151,97 @@ export default function PlayerHistoryPage() {
         <AppNav />
 
         <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Drafted Player History</h1>
+              <p className="text-sm font-medium uppercase tracking-wide text-sky-700">
+                Player History
+              </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight">
+                2026 Player Results
+              </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Season-long stats for players used in lineups this year.
+                Live-calculated from saved lineups and slate results.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => void loadPlayerHistory()}
-              className="rounded-xl border border-sky-300 bg-sky-100 px-4 py-2.5 text-sm font-medium text-sky-900 transition hover:bg-sky-200"
+              className="rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200"
             >
-              Refresh
+              Refresh Player History
             </button>
           </div>
         </section>
 
-        {errorMessage ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
-            {errorMessage}
-          </div>
-        ) : null}
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+            <div>
+              <label
+                htmlFor="player-search"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Search players
+              </label>
+              <input
+                id="player-search"
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by player name"
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+              />
+            </div>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="text-sm text-slate-500">
+              Season: <span className="font-medium text-slate-900">{season}</span>
+            </div>
+          </div>
+
+          {message ? (
+            <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+              {message}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           {isLoading ? (
-            <div className="px-2 py-6 text-sm text-slate-600">Loading player history...</div>
-          ) : sortedRows.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              No drafted player history yet.
+              Loading player history...
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              No player history found.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse text-sm">
-                  <thead className="bg-slate-100 text-slate-700">
-                    <tr className="text-left">
-                      <th className="px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleSort("player_name")}>
-                          Player{getSortArrow("player_name")}
-                        </button>
-                      </th>
-                      <th className="px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleSort("times_drafted")}>
-                          Times Drafted{getSortArrow("times_drafted")}
-                        </button>
-                      </th>
-                      <th className="px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleSort("avg_score")}>
-                          Avg Score{getSortArrow("avg_score")}
-                        </button>
-                      </th>
-                      <th className="px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleSort("high_score")}>
-                          High Score{getSortArrow("high_score")}
-                        </button>
-                      </th>
-                      <th className="px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleSort("low_score")}>
-                          Low Score{getSortArrow("low_score")}
-                        </button>
-                      </th>
-                      <th className="px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleSort("winning_lineups")}>
-                          Winning Lineups{getSortArrow("winning_lineups")}
-                        </button>
-                      </th>
-                      <th className="px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleSort("runner_up_lineups")}>
-                          Runner-up Lineups{getSortArrow("runner_up_lineups")}
-                        </button>
-                      </th>
+            <div className="overflow-x-auto -mx-4 px-4">
+              <table className="min-w-full border-collapse text-sm">
+                <thead className="bg-slate-100 text-slate-700">
+                  <tr className="text-left">
+                    <th className="px-4 py-3">{headerButton("Player", "player_name")}</th>
+                    <th className="px-4 py-3">{headerButton("Times Drafted", "times_drafted")}</th>
+                    <th className="px-4 py-3">{headerButton("Avg Score", "avg_score")}</th>
+                    <th className="px-4 py-3">{headerButton("High Score", "high_score")}</th>
+                    <th className="px-4 py-3">{headerButton("Low Score", "low_score")}</th>
+                    <th className="px-4 py-3">{headerButton("Winning Lineups", "winning_lineups")}</th>
+                    <th className="px-4 py-3">{headerButton("Runner-up Lineups", "runner_up_lineups")}</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white text-slate-800">
+                  {filteredRows.map((row) => (
+                    <tr key={row.player_id} className="border-t border-slate-100">
+                      <td className="px-4 py-3 font-medium">{row.player_name}</td>
+                      <td className="px-4 py-3">{row.times_drafted}</td>
+                      <td className="px-4 py-3">{row.avg_score.toFixed(2)}</td>
+                      <td className="px-4 py-3">{row.high_score.toFixed(2)}</td>
+                      <td className="px-4 py-3">{row.low_score.toFixed(2)}</td>
+                      <td className="px-4 py-3">{row.winning_lineups}</td>
+                      <td className="px-4 py-3">{row.runner_up_lineups}</td>
                     </tr>
-                  </thead>
-                  <tbody className="bg-white text-slate-800">
-                    {sortedRows.map((row) => (
-                      <tr key={row.player_id} className="border-t border-slate-100">
-                        <td className="px-3 py-3 font-medium">{row.player_name}</td>
-                        <td className="px-3 py-3">{row.times_drafted}</td>
-                        <td className="px-3 py-3">{formatNumber(row.avg_score, 2)}</td>
-                        <td className="px-3 py-3">{formatNumber(row.high_score, 2)}</td>
-                        <td className="px-3 py-3">{formatNumber(row.low_score, 2)}</td>
-                        <td className="px-3 py-3">{row.winning_lineups}</td>
-                        <td className="px-3 py-3">{row.runner_up_lineups}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
