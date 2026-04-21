@@ -152,6 +152,11 @@ export default function LineupBuilder({
     }
   }, []);
 
+useEffect(() => {
+  if (!selectedSlateIdNumber) return;
+  void loadSlateLineups(selectedSlateIdNumber);
+}, [selectedSlateIdNumber]);
+
   useEffect(() => {
     setPlayerStatsState(playerStats);
   }, [playerStats]);
@@ -159,15 +164,6 @@ export default function LineupBuilder({
   useEffect(() => {
     setTeamResultsState(teamResults);
   }, [teamResults]);
-
-  useEffect(() => {
-    if (!selectedSlateIdNumber) {
-      setAvailablePlayerIdsForSlate([]);
-      return;
-    }
-
-    void loadSlateAvailability(selectedSlateIdNumber);
-  }, [selectedSlateIdNumber]);
 
   useEffect(() => {
     if (!autoRefreshEnabled || !selectedSlateIdNumber) return;
@@ -818,13 +814,9 @@ export default function LineupBuilder({
                 <select
                   id="slate-select"
                   value={selectedSlateId}
-                  onChange={async (e) => {
-                    const nextId = e.target.value;
-                    setSelectedSlateId(nextId);
-                    if (nextId) {
-                      await loadSlateLineups(Number(nextId));
-                    }
-                  }}
+onChange={(e) => {
+  setSelectedSlateId(e.target.value);
+}}
                   className="min-w-[210px] rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
                 >
                   {slates.map((slate) => (
