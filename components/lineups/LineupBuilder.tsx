@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Player = {
   id: number;
@@ -105,7 +105,8 @@ export default function LineupBuilder({
     initialSelectedSlateId ? String(initialSelectedSlateId) : ""
   );
   const [message, setMessage] = useState("");
-  const [saveMessage, setSaveMessage] = useState("");
+const latestSlateLoadRef = useRef(0);  
+const [saveMessage, setSaveMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSlateLoading, setIsSlateLoading] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
@@ -195,6 +196,12 @@ useEffect(() => {
 
     return () => window.clearInterval(interval);
   }, [autoRefreshEnabled, selectedSlateIdNumber]);
+
+
+useEffect(() => {
+  if (!selectedSlateIdNumber) return;
+  void loadSlateLineups(selectedSlateIdNumber);
+}, [selectedSlateIdNumber]);
 
   const playerStatsMap = useMemo(() => {
     const map = new Map<number, PlayerStat>();
@@ -327,12 +334,36 @@ const filteredPlayers = useMemo(() => {
 function getLineupForTeam(teamId: number) {
     return lineupsState.find((item) => item.team_id === teamId) ?? null;
   }
+const playersById = useMemo(() => {
+  const map = new Map<number, Player>();
+  players.forEach((player) => {
+    map.set(player.id, player);
+  });
+  return map;
+}, [players]);
+console.log("CURRENT selectedSlateIdNumber", selectedSlateIdNumber);
+console.log("CURRENT lineupsState", JSON.stringify(lineupsState));
 
-  function getPlayersForTeam(teamId: number) {
-    const lineup = getLineupForTeam(teamId);
-    if (!lineup) return [];
-    return players.filter((player) => lineup.player_ids.includes(player.id));
-  }
+function getPlayersForTeam(teamId: number) {
+  const lineup = getLineupForTeam(teamId);
+  if (!lineup) return [];
+
+  return lineup.player_ids
+    .map((playerId) => {
+      const player = playersById.get(playerId);
+
+      if (player) return player;
+
+      return {
+        id: playerId,
+        name: `Player ${playerId}`,
+        position_group: "G" as "G" | "F/C",
+        is_active: false,
+        is_playing_today: null,
+      };
+    })
+    .filter((p): p is Player => Boolean(p));
+}
 
   function getOwnerTeamIdForPlayer(playerId: number) {
     const owner = lineupsState.find((lineup) =>
@@ -471,73 +502,96 @@ function getLineupForTeam(teamId: number) {
     return { canAssign: true, reason: "" };
   }
 
-  async function loadSlateLineups(nextSlateId: number) {
-    try {
-      setIsSlateLoading(true);
-      setMessage("");
-      setSaveMessage("");
+async function loadSlateLineups(nextSlateId: number) {
+  const loadId = ++latestSlateLoadRef.current;
 
-      const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
-        fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
-        fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
-        fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
-      ]);
+  setLineupsState([]);
+  setPlayerStatsState([]);
+  setTeamResultsState([]);
+  setAvailablePlayerIdsForSlate([]);
 
-      const lineupsResult = await lineupsResponse.json();
-      const statsResult = await statsResponse.json();
-      const resultsResult = await resultsResponse.json();
+  try {
+    setIsSlateLoading(true);
+    setMessage("");
+    setSaveMessage("");
 
-      if (!lineupsResponse.ok) {
-        setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
-        return;
-      }
-      if (!statsResponse.ok) {
-        setSaveMessage(statsResult.error || "Failed to load player stats.");
-        return;
-      }
-      if (!resultsResponse.ok) {
-        setSaveMessage(resultsResult.error || "Failed to load team results.");
-        return;
-      }
+    const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
+      fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
+      fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
+      fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
+    ]);
 
-      setLineupsState(lineupsResult.lineups ?? []);
-      setPlayerStatsState(statsResult.playerStats ?? []);
-      setTeamResultsState(resultsResult.teamResults ?? []);
-      setSaveMessage("Loaded slate.");
-    } catch (error) {
-      console.error(error);
-      setSaveMessage("Something went wrong while loading the slate.");
-    } finally {
-      setIsSlateLoading(false);
+    const lineupsResult = await lineupsResponse.json();
+    const statsResult = await statsResponse.json();
+    const resultsResult = await resultsResponse.json();
+
+    if (loadId !== latestSlateLoadRef.current) return;
+
+    if (!lineupsResponse.ok) {
+      setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
+      return;
     }
 
-    try {
-      setIsAvailabilityLoading(true);
+    if (!statsResponse.ok) {
+      setSaveMessage(statsResult.error || "Failed to load player stats.");
+      return;
+    }
 
-      const availabilityResponse = await fetch(
-        `/api/slate-availability?slateId=${nextSlateId}`,
-        { cache: "no-store" }
-      );
+    if (!resultsResponse.ok) {
+      setSaveMessage(resultsResult.error || "Failed to load team results.");
+      return;
+    }
 
-      const availabilityResult = await availabilityResponse.json();
-
-      if (!availabilityResponse.ok) {
-        console.error(
-          availabilityResult.error || "Failed to load slate availability."
-        );
-        setAvailablePlayerIdsForSlate([]);
-        return;
-      }
-
-      setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
-    } catch (error) {
-      console.error(error);
-      setAvailablePlayerIdsForSlate([]);
-    } finally {
-      setIsAvailabilityLoading(false);
+console.log("LOAD SLATE", nextSlateId);
+console.log("LINEUPS RESULT", lineupsResult.lineups);
+console.log("PLAYER STATS RESULT COUNT", statsResult.playerStats?.length ?? 0);
+console.log("TEAM RESULTS RESULT COUNT", resultsResult.teamResults?.length ?? 0);
+    setLineupsState(lineupsResult.lineups ?? []);
+console.log("SETTING lineupsState for slate", nextSlateId);
+    setPlayerStatsState(statsResult.playerStats ?? []);
+    setTeamResultsState(resultsResult.teamResults ?? []);
+    setSaveMessage("Loaded slate.");
+  } catch (error) {
+    if (loadId !== latestSlateLoadRef.current) return;
+    console.error(error);
+    setSaveMessage("Something went wrong while loading the slate.");
+  } finally {
+    if (loadId === latestSlateLoadRef.current) {
+      setIsSlateLoading(false);
     }
   }
 
+  try {
+    setIsAvailabilityLoading(true);
+
+    const availabilityResponse = await fetch(
+      `/api/slate-availability?slateId=${nextSlateId}`,
+      { cache: "no-store" }
+    );
+
+    const availabilityResult = await availabilityResponse.json();
+
+    if (loadId !== latestSlateLoadRef.current) return;
+
+    if (!availabilityResponse.ok) {
+      console.error(
+        availabilityResult.error || "Failed to load slate availability."
+      );
+      setAvailablePlayerIdsForSlate([]);
+      return;
+    }
+
+    setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+  } catch (error) {
+    if (loadId !== latestSlateLoadRef.current) return;
+    console.error(error);
+    setAvailablePlayerIdsForSlate([]);
+  } finally {
+    if (loadId === latestSlateLoadRef.current) {
+      setIsAvailabilityLoading(false);
+    }
+  }
+}
   async function refreshStatsForSelectedSlate(isSilent = false) {
     if (!selectedSlateIdNumber) {
       if (!isSilent) alert("No slate selected.");
