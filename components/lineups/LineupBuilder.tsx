@@ -162,11 +162,29 @@ export default function LineupBuilder({
     setTeamResultsState(teamResults);
   }, [teamResults]);
 
-  useEffect(() => {
-    if (!selectedSlateIdNumber) return;
-    void loadSlateLineups(selectedSlateIdNumber);
-  }, [selectedSlateIdNumber]);
+useEffect(() => {
+  if (!selectedSlateIdNumber) return;
 
+  async function loadAvailability() {
+    try {
+      setIsAvailabilityLoading(true);
+
+      const res = await fetch(
+        `/api/slate-availability?slateId=${selectedSlateIdNumber}`
+      );
+      const data = await res.json();
+
+      setAvailablePlayerIdsForSlate(data.availablePlayerIds || []);
+    } catch (err) {
+      console.error("Failed to load availability", err);
+      setAvailablePlayerIdsForSlate([]);
+    } finally {
+      setIsAvailabilityLoading(false);
+    }
+  }
+
+  loadAvailability();
+}, [selectedSlateIdNumber]);
   useEffect(() => {
     if (!autoRefreshEnabled || !selectedSlateIdNumber) return;
 
@@ -206,7 +224,7 @@ export default function LineupBuilder({
     () => new Set(availablePlayerIdsForSlate),
     [availablePlayerIdsForSlate]
   );
-
+console.log("availablePlayerIdsForSlate", availablePlayerIdsForSlate.length);
   const teamsById = useMemo(() => {
     const map = new Map<number, Team>();
     teams.forEach((team) => map.set(team.id, team));
@@ -257,39 +275,43 @@ export default function LineupBuilder({
     );
   }, [orderedTeamsForSlate]);
 
-  const filteredPlayers = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+const filteredPlayers = useMemo(() => {
+  return players.filter((player) => {
+    // Search
+    if (
+      searchTerm &&
+      !player.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ) {
+      return false;
+    }
 
-    return players
-      .filter((player) => {
-        const matchesSearch =
-          normalizedSearch === "" ||
-          player.name.toLowerCase().includes(normalizedSearch);
+    // Position
+    if (positionFilter !== "All" && player.position_group !== positionFilter) {
+      return false;
+    }
 
-        const matchesPosition =
-          positionFilter === "All" || player.position_group === positionFilter;
+    // 🔥 AVAILABILITY FIX (THIS IS THE KEY)
+    if (onSlateOnly) {
+      // 🚨 Don't filter until availability data is loaded
+      if (availablePlayerIdsForSlate.length === 0) {
+        return true;
+      }
 
-        const matchesSlateAvailability =
-          !onSlateOnly || availablePlayerIdSet.has(player.id);
+      if (!availablePlayerIdSet.has(player.id)) {
+        return false;
+      }
+    }
 
-        return matchesSearch && matchesPosition && matchesSlateAvailability;
-      })
-      .sort((a, b) => {
-        const aAvg = playerAverageMap.get(a.id) ?? 0;
-        const bAvg = playerAverageMap.get(b.id) ?? 0;
-
-        if (bAvg !== aAvg) return bAvg - aAvg;
-        return a.name.localeCompare(b.name);
-      });
-  }, [
-    players,
-    searchTerm,
-    positionFilter,
-    onSlateOnly,
-    availablePlayerIdSet,
-    playerAverageMap,
-  ]);
-
+    return true;
+  });
+}, [
+  players,
+  searchTerm,
+  positionFilter,
+  onSlateOnly,
+  availablePlayerIdSet,
+  availablePlayerIdsForSlate, // 👈 ADD THIS
+]);
   function getLineupForTeam(teamId: number) {
     return lineupsState.find((item) => item.team_id === teamId) ?? null;
   }
