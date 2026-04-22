@@ -9,25 +9,27 @@ type SlateRecord = {
   end_date: string;
 };
 
-type ScoreboardV3Team = {
+type ScoreboardTeam = {
   teamTricode?: string;
   tricode?: string;
   teamCode?: string;
 };
 
-type ScoreboardV3Game = {
-  homeTeam?: ScoreboardV3Team;
-  awayTeam?: ScoreboardV3Team;
+type ScoreboardGame = {
+  gameId?: string;
+  gameCode?: string;
+  homeTeam?: ScoreboardTeam;
+  awayTeam?: ScoreboardTeam;
 };
 
-type ScoreboardV3Payload = {
+type ScoreboardPayload = {
   scoreboard?: {
-    games?: ScoreboardV3Game[];
+    games?: ScoreboardGame[];
   };
-  games?: ScoreboardV3Game[];
+  games?: ScoreboardGame[];
 };
 
-function buildDateRange(startDate: string, endDate: string) {
+function buildDateCodeRange(startDate: string, endDate: string) {
   const result: string[] = [];
   const current = new Date(`${startDate}T00:00:00`);
   const end = new Date(`${endDate}T00:00:00`);
@@ -36,53 +38,39 @@ function buildDateRange(startDate: string, endDate: string) {
     const year = current.getFullYear();
     const month = String(current.getMonth() + 1).padStart(2, "0");
     const day = String(current.getDate()).padStart(2, "0");
-    result.push(`${year}-${month}-${day}`);
+    result.push(`${year}${month}${day}`);
     current.setDate(current.getDate() + 1);
   }
 
   return result;
 }
 
-function getGamesFromPayload(payload: ScoreboardV3Payload) {
+function getGamesFromPayload(payload: ScoreboardPayload) {
   return payload.scoreboard?.games ?? payload.games ?? [];
 }
 
-function getTeamTricode(team?: ScoreboardV3Team) {
+function getTeamTricode(team?: ScoreboardTeam) {
   const raw = team?.teamTricode ?? team?.tricode ?? team?.teamCode ?? null;
 
   if (!raw || typeof raw !== "string") return null;
 
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().toUpperCase();
   return trimmed === "" ? null : trimmed;
 }
 
-async function fetchScoreboardForDate(gameDate: string) {
-  const url = `https://stats.nba.com/stats/scoreboardv3?GameDate=${encodeURIComponent(
-    gameDate
-  )}&LeagueID=00`;
+async function fetchScoreboardForDate(dateCode: string) {
+  const url = `https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_${dateCode}.json`;
 
   const response = await fetch(url, {
     method: "GET",
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Accept-Language": "en-US,en;q=0.9",
-      Connection: "keep-alive",
-      Origin: "https://www.nba.com",
-      Referer: "https://www.nba.com/",
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    },
     cache: "no-store",
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(
-      `Scoreboard request failed for ${gameDate} with status ${response.status}: ${text}`
-    );
+    return null;
   }
 
-  return (await response.json()) as ScoreboardV3Payload;
+  return (await response.json()) as ScoreboardPayload;
 }
 
 export async function GET(request: NextRequest) {
@@ -134,13 +122,15 @@ export async function GET(request: NextRequest) {
     }
 
     const safeSlate = slate as SlateRecord;
-    const dates = buildDateRange(safeSlate.start_date, safeSlate.end_date);
+    const dateCodes = buildDateCodeRange(safeSlate.start_date, safeSlate.end_date);
 
     const activeTeamCodes = new Set<string>();
 
-    for (const gameDate of dates) {
+    for (const dateCode of dateCodes) {
       try {
-        const payload = await fetchScoreboardForDate(gameDate);
+        const payload = await fetchScoreboardForDate(dateCode);
+        if (!payload) continue;
+
         const games = getGamesFromPayload(payload);
 
         for (const game of games) {
@@ -151,7 +141,7 @@ export async function GET(request: NextRequest) {
           if (awayCode) activeTeamCodes.add(awayCode);
         }
       } catch (error) {
-        console.error(`Failed loading scoreboard for ${gameDate}:`, error);
+        console.error(`Failed loading scoreboard for ${dateCode}:`, error);
       }
     }
 
