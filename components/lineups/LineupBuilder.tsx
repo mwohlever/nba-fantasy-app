@@ -276,43 +276,55 @@ console.log("availablePlayerIdsForSlate", availablePlayerIdsForSlate.length);
   }, [orderedTeamsForSlate]);
 
 const filteredPlayers = useMemo(() => {
-  return players.filter((player) => {
-    // Search
-    if (
-      searchTerm &&
-      !player.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ) {
-      return false;
-    }
-
-    // Position
-    if (positionFilter !== "All" && player.position_group !== positionFilter) {
-      return false;
-    }
-
-    // 🔥 AVAILABILITY FIX (THIS IS THE KEY)
-    if (onSlateOnly) {
-      // 🚨 Don't filter until availability data is loaded
-      if (availablePlayerIdsForSlate.length === 0) {
-        return true;
-      }
-
-      if (!availablePlayerIdSet.has(player.id)) {
+  return players
+    .filter((player) => {
+      // Search
+      if (
+        searchTerm &&
+        !player.name.toLowerCase().includes(searchTerm.toLowerCase())
+      ) {
         return false;
       }
-    }
 
-    return true;
-  });
+      // Position
+      if (positionFilter !== "All" && player.position_group !== positionFilter) {
+        return false;
+      }
+
+      // Availability
+      if (onSlateOnly) {
+        if (availablePlayerIdsForSlate.length === 0) {
+          return true;
+        }
+
+        if (!availablePlayerIdSet.has(player.id)) {
+          return false;
+        }
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const avgA = playerAverageMap.get(a.id);
+      const avgB = playerAverageMap.get(b.id);
+
+      if (avgA == null && avgB == null) return 0;
+      if (avgA == null) return 1;
+      if (avgB == null) return -1;
+
+      return avgB - avgA;
+    });
 }, [
   players,
   searchTerm,
   positionFilter,
   onSlateOnly,
   availablePlayerIdSet,
-  availablePlayerIdsForSlate, // 👈 ADD THIS
+  availablePlayerIdsForSlate,
+  playerAverageMap,
 ]);
-  function getLineupForTeam(teamId: number) {
+  
+function getLineupForTeam(teamId: number) {
     return lineupsState.find((item) => item.team_id === teamId) ?? null;
   }
 
