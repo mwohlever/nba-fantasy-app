@@ -175,7 +175,10 @@ useEffect(() => {
       );
       const data = await res.json();
 
-      setAvailablePlayerIdsForSlate(data.availablePlayerIds || []);
+const nextIds = data.availablePlayerIds || [];
+console.log("SETTING availablePlayerIdsForSlate", nextIds.length);
+setAvailablePlayerIdsForSlate(nextIds);
+console.log("SETTING availablePlayerIdsForSlate", data.availablePlayerIds?.length ?? 0);
     } catch (err) {
       console.error("Failed to load availability", err);
       setAvailablePlayerIdsForSlate([]);
@@ -508,7 +511,6 @@ async function loadSlateLineups(nextSlateId: number) {
   setLineupsState([]);
   setPlayerStatsState([]);
   setTeamResultsState([]);
-  setAvailablePlayerIdsForSlate([]);
 
   try {
     setIsSlateLoading(true);
