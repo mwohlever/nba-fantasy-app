@@ -235,8 +235,8 @@ export default function LineupBuilder({
         };
       })
       .filter(Boolean) as Array<
-      Team & { is_participating: boolean; draft_order: number }
-    >;
+        Team & { is_participating: boolean; draft_order: number }
+      >;
 
     const missingTeams = teams
       .filter((team) => !configuredIds.includes(team.id))
@@ -297,7 +297,6 @@ export default function LineupBuilder({
   function getPlayersForTeam(teamId: number) {
     const lineup = getLineupForTeam(teamId);
     if (!lineup) return [];
-
     return players.filter((player) => lineup.player_ids.includes(player.id));
   }
 
@@ -418,21 +417,10 @@ export default function LineupBuilder({
     const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
     const isParticipating = (team as any)?.is_participating !== false;
 
-    if (!selectedSlateIdNumber) {
-      return { canAssign: false, reason: "No slate selected" };
-    }
-
-    if (selectedSlate?.is_locked) {
-      return { canAssign: false, reason: "Slate locked" };
-    }
-
-    if (!isParticipating) {
-      return { canAssign: false, reason: "Out" };
-    }
-
-    if (ownerTeamId === teamId) {
-      return { canAssign: false, reason: "Already here" };
-    }
+    if (!selectedSlateIdNumber) return { canAssign: false, reason: "No slate selected" };
+    if (selectedSlate?.is_locked) return { canAssign: false, reason: "Slate locked" };
+    if (!isParticipating) return { canAssign: false, reason: "Out" };
+    if (ownerTeamId === teamId) return { canAssign: false, reason: "Already here" };
 
     const nextPlayers = [...teamPlayers, player];
     const nextGuardCount = nextPlayers.filter(
@@ -442,17 +430,9 @@ export default function LineupBuilder({
       (item) => item.position_group === "F/C"
     ).length;
 
-    if (nextPlayers.length > 5) {
-      return { canAssign: false, reason: "Lineup full" };
-    }
-
-    if (nextGuardCount > 2) {
-      return { canAssign: false, reason: "Too many G" };
-    }
-
-    if (nextFcCount > 3) {
-      return { canAssign: false, reason: "Too many F/C" };
-    }
+    if (nextPlayers.length > 5) return { canAssign: false, reason: "Lineup full" };
+    if (nextGuardCount > 2) return { canAssign: false, reason: "Too many G" };
+    if (nextFcCount > 3) return { canAssign: false, reason: "Too many F/C" };
 
     return { canAssign: true, reason: "" };
   }
@@ -464,15 +444,9 @@ export default function LineupBuilder({
       setSaveMessage("");
 
       const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
-        fetch(`/api/lineups?slateId=${nextSlateId}`, {
-          cache: "no-store",
-        }),
-        fetch(`/api/player-stats?slateId=${nextSlateId}`, {
-          cache: "no-store",
-        }),
-        fetch(`/api/team-results?slateId=${nextSlateId}`, {
-          cache: "no-store",
-        }),
+        fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
+        fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
+        fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
       ]);
 
       const lineupsResult = await lineupsResponse.json();
@@ -483,12 +457,10 @@ export default function LineupBuilder({
         setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
         return;
       }
-
       if (!statsResponse.ok) {
         setSaveMessage(statsResult.error || "Failed to load player stats.");
         return;
       }
-
       if (!resultsResponse.ok) {
         setSaveMessage(resultsResult.error || "Failed to load team results.");
         return;
@@ -510,9 +482,7 @@ export default function LineupBuilder({
 
       const availabilityResponse = await fetch(
         `/api/slate-availability?slateId=${nextSlateId}`,
-        {
-          cache: "no-store",
-        }
+        { cache: "no-store" }
       );
 
       const availabilityResult = await availabilityResponse.json();
@@ -549,9 +519,7 @@ export default function LineupBuilder({
 
       const refreshResponse = await fetch("/api/refresh-stats", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slateId: selectedSlateIdNumber }),
         cache: "no-store",
       });
@@ -605,9 +573,7 @@ export default function LineupBuilder({
         });
     } catch (error) {
       console.error(error);
-      if (!isSilent) {
-        alert("Something went wrong while refreshing stats.");
-      }
+      if (!isSilent) alert("Something went wrong while refreshing stats.");
     } finally {
       setIsRefreshingStats(false);
     }
@@ -626,17 +592,14 @@ export default function LineupBuilder({
       setSaveMessage("Please choose a slate before saving.");
       return false;
     }
-
     if (!participatingTeamIds.has(teamId)) {
       setSaveMessage("That team is not participating in this slate.");
       return false;
     }
-
     if (selectedSlate?.is_locked) {
       setSaveMessage("This slate is locked.");
       return false;
     }
-
     if (!options?.allowEmpty && playerList.length === 0) {
       setSaveMessage("Select at least 1 player before saving.");
       return false;
@@ -653,7 +616,6 @@ export default function LineupBuilder({
       setSaveMessage("A lineup can have at most 5 players.");
       return false;
     }
-
     if (nextGuardCount > 2 || nextFcCount > 3) {
       setSaveMessage("A lineup can have at most 2 Guards and 3 F/C players.");
       return false;
@@ -664,9 +626,7 @@ export default function LineupBuilder({
 
       const response = await fetch("/api/lineups", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           slateId: selectedSlateIdNumber,
           teamId,
@@ -684,7 +644,6 @@ export default function LineupBuilder({
 
       setLineupsState((prev) => {
         const otherTeams = prev.filter((lineup) => lineup.team_id !== teamId);
-
         return [
           ...otherTeams,
           {
@@ -694,9 +653,7 @@ export default function LineupBuilder({
         ];
       });
 
-      if (successMessage) {
-        setSaveMessage(successMessage);
-      }
+      if (successMessage) setSaveMessage(successMessage);
       return true;
     } catch (error) {
       console.error(error);
@@ -810,11 +767,11 @@ export default function LineupBuilder({
     : null;
 
   const scoreTableCellClass = compactView
-    ? "px-2 py-1 text-xs"
+    ? "px-0 py-0 text-xs"
     : "px-3 py-2 text-sm";
 
   const scoreTableHeaderClass = compactView
-    ? "border-b border-slate-200 px-2 py-1 font-semibold"
+    ? "border-b border-slate-200 px-0 py-0 font-semibold"
     : "border-b border-slate-200 px-3 py-2 font-semibold";
 
   return (
@@ -918,11 +875,7 @@ export default function LineupBuilder({
                         : inactivePill
                     } disabled:cursor-not-allowed disabled:opacity-60`}
                   >
-                    {hasMounted
-                      ? compactView
-                        ? "Compact On"
-                        : "Compact Off"
-                      : "View"}
+                    {hasMounted ? (compactView ? "Compact On" : "Compact Off") : "View"}
                   </button>
                 </div>
               ) : null}
@@ -977,9 +930,7 @@ export default function LineupBuilder({
         <>
           <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Player Pool
-              </h2>
+              <h2 className="text-2xl font-semibold text-slate-900">Player Pool</h2>
               <p className="text-sm text-slate-600">
                 Search a player, click them, then choose which team gets them.
               </p>
@@ -1017,9 +968,7 @@ export default function LineupBuilder({
                           key={filter}
                           type="button"
                           onClick={() => setPositionFilter(filter)}
-                          className={`${pillBase} ${
-                            isActive ? activePill : inactivePill
-                          }`}
+                          className={`${pillBase} ${isActive ? activePill : inactivePill}`}
                         >
                           {filter}
                         </button>
@@ -1121,12 +1070,8 @@ export default function LineupBuilder({
 
           <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Slate Lineups
-              </h2>
-              <p className="text-sm text-slate-600">
-                Current draft board for this slate.
-              </p>
+              <h2 className="text-2xl font-semibold text-slate-900">Slate Lineups</h2>
+              <p className="text-sm text-slate-600">Current draft board for this slate.</p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -1144,13 +1089,9 @@ export default function LineupBuilder({
                   >
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <div>
-                        <h3 className="text-lg font-semibold text-slate-900">
-                          {team.name}
-                        </h3>
+                        <h3 className="text-lg font-semibold text-slate-900">{team.name}</h3>
                         <div className="text-xs text-slate-500">
-                          {(team as any).draft_order
-                            ? `Order #${(team as any).draft_order}`
-                            : ""}
+                          {(team as any).draft_order ? `Order #${(team as any).draft_order}` : ""}
                           {!isParticipating ? " • Out" : ""}
                         </div>
                       </div>
@@ -1223,8 +1164,7 @@ export default function LineupBuilder({
                   Leader
                 </div>
                 <div className="font-semibold text-slate-900">
-                  {dailySummary.leader.teamName} •{" "}
-                  {dailySummary.leader.total.toFixed(1)}
+                  {dailySummary.leader.teamName} • {dailySummary.leader.total.toFixed(1)}
                 </div>
               </div>
             ) : null}
@@ -1239,19 +1179,13 @@ export default function LineupBuilder({
           ) : null}
 
           <div className="overflow-x-auto -mx-4 px-4">
-            <div
-              className={`${compactView ? "min-w-[820px]" : "min-w-[1100px]"} space-y-4`}
-            >
+<div className={`${compactView ? "min-w-[720px]" : "min-w-[1100px]"} space-y-4`}>
               {orderedTeamsForSlate.map((team) => {
                 const teamPlayers = getPlayersForTeam(team.id);
                 const stats = getTeamStats(team.id);
 
-                const guards = teamPlayers.filter(
-                  (p) => p.position_group === "G"
-                );
-                const fcs = teamPlayers.filter(
-                  (p) => p.position_group === "F/C"
-                );
+                const guards = teamPlayers.filter((p) => p.position_group === "G");
+                const fcs = teamPlayers.filter((p) => p.position_group === "F/C");
 
                 const rosterRows: Array<{
                   slot: string;
@@ -1269,7 +1203,7 @@ export default function LineupBuilder({
                 return (
                   <div
                     key={team.id}
-                    className={`overflow-hidden rounded-2xl border border-slate-200 bg-white ${
+                    className={`rounded-2xl border border-slate-200 bg-white ${
                       !isParticipating ? "opacity-70" : ""
                     }`}
                   >
@@ -1278,76 +1212,44 @@ export default function LineupBuilder({
                         compactView ? "px-3 py-2" : "px-4 py-3"
                       }`}
                     >
-                      <div
-                        className={`${compactView ? "text-base" : "text-lg"} font-semibold text-slate-900`}
-                      >
+                      <div className={`${compactView ? "text-base" : "text-lg"} font-semibold text-slate-900`}>
                         {team.name}
                         {!isParticipating ? " (Out)" : ""}
-                        {(team as any).draft_order
-                          ? ` • #${(team as any).draft_order}`
-                          : ""}
+                        {(team as any).draft_order ? ` • #${(team as any).draft_order}` : ""}
                       </div>
-                      <div
-                        className={`${compactView ? "text-xs" : "text-sm"} text-slate-600`}
-                      >
+                      <div className={`${compactView ? "text-xs" : "text-sm"} text-slate-600`}>
                         Total:{" "}
-                        {typeof stats.total === "number"
-                          ? stats.total.toFixed(1)
-                          : "0.0"}{" "}
-                        • C: {stats.games_completed} • P: {stats.games_in_progress} •
-                        R: {stats.games_remaining}
+                        {typeof stats.total === "number" ? stats.total.toFixed(1) : "0.0"} • C:{" "}
+                        {stats.games_completed} • P: {stats.games_in_progress} • R:{" "}
+                        {stats.games_remaining}
                       </div>
                     </div>
 
                     <table
-                      className={`w-full border-collapse ${
+                      className={`w-full border-separate border-spacing-0 ${
                         compactView ? "table-fixed text-xs" : "text-sm"
                       }`}
                     >
                       <thead className="bg-slate-100 text-slate-700">
                         {compactView ? (
                           <tr className="text-left">
-                            <th className={`${scoreTableHeaderClass} w-[42px]`}>
-                              Pos
-                            </th>
-                            <th className={`${scoreTableHeaderClass} w-[120px]`}>
-                              Player
-                            </th>
-                            <th
-                              className={`${scoreTableHeaderClass} w-[44px] text-right`}
-                            >
-                              PTS
-                            </th>
-                            <th
-                              className={`${scoreTableHeaderClass} w-[44px] text-right`}
-                            >
-                              REB
-                            </th>
-                            <th
-                              className={`${scoreTableHeaderClass} w-[44px] text-right`}
-                            >
-                              AST
-                            </th>
-                            <th
-                              className={`${scoreTableHeaderClass} w-[44px] text-right`}
-                            >
-                              STL
-                            </th>
-                            <th
-                              className={`${scoreTableHeaderClass} w-[44px] text-right`}
-                            >
-                              BLK
-                            </th>
-                            <th
-                              className={`${scoreTableHeaderClass} w-[44px] text-right`}
-                            >
-                              TO
-                            </th>
-                            <th
-                              className={`${scoreTableHeaderClass} w-[48px] text-right`}
-                            >
-                              TOT
-                            </th>
+<th className={`${scoreTableHeaderClass} sticky left-0 z-30 w-[40px]`}>
+  <div className="w-[40px] min-w-[40px] border-b border-r border-slate-200 bg-slate-100 px-2 py-1 font-semibold">
+    Pos
+  </div>
+</th>
+<th className={`${scoreTableHeaderClass} sticky left-[40px] z-30 w-[128px]`}>
+  <div className="w-[128px] min-w-[128px] border-b border-r border-slate-200 bg-slate-100 px-2 py-1 font-semibold">
+    Player
+  </div>
+</th>
+<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>PTS</th>
+<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>REB</th>
+<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>AST</th>
+<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>STL</th>
+<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>BLK</th>
+<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>TO</th>
+<th className={`${scoreTableHeaderClass} w-[42px] text-right px-1 py-1`}>TOT</th>
                           </tr>
                         ) : (
                           <tr className="text-left">
@@ -1369,39 +1271,52 @@ export default function LineupBuilder({
                           const stat = row.player ? getPlayerStat(row.player.id) : null;
 
                           return (
-                            <tr
-                              key={`${team.id}-${index}`}
-                              className="border-b border-slate-100"
-                            >
-                              <td className={scoreTableCellClass}>{row.slot}</td>
-                              <td className={scoreTableCellClass}>
-                                {row.player ? (
-                                  <span className={compactView ? "block truncate" : ""}>
-                                    {row.player.name}
-                                  </span>
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
-                              </td>
-                              <td className={`${scoreTableCellClass} text-right`}>
+                            <tr key={`${team.id}-${index}`} className="border-b border-slate-100">
+<td className={compactView ? "sticky left-0 z-20 w-[40px] p-0" : scoreTableCellClass}>
+  {compactView ? (
+    <div className="w-[40px] min-w-[40px] border-r border-slate-200 bg-white px-2 py-1">
+      {row.slot}
+    </div>
+  ) : (
+    row.slot
+  )}
+</td>
+
+<td className={compactView ? "sticky left-[40px] z-20 w-[128px] p-0" : scoreTableCellClass}>
+  {compactView ? (
+    <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-white px-2 py-1">
+      {row.player ? (
+        <span className="block truncate">{row.player.name}</span>
+      ) : (
+        <span className="text-slate-400">—</span>
+      )}
+    </div>
+  ) : row.player ? (
+    row.player.name
+  ) : (
+    <span className="text-slate-400">—</span>
+  )}
+</td>
+
+                              <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? stat.points : 0}
                               </td>
-                              <td className={`${scoreTableCellClass} text-right`}>
+                              <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? stat.rebounds : 0}
                               </td>
-                              <td className={`${scoreTableCellClass} text-right`}>
+                              <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? stat.assists : 0}
                               </td>
-                              <td className={`${scoreTableCellClass} text-right`}>
+                              <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? stat.steals : 0}
                               </td>
-                              <td className={`${scoreTableCellClass} text-right`}>
+                              <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? stat.blocks : 0}
                               </td>
-                              <td className={`${scoreTableCellClass} text-right`}>
+                              <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? stat.turnovers : 0}
                               </td>
-                              <td className={`${scoreTableCellClass} text-right`}>
+                              <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? Number(stat.fantasy_points).toFixed(1) : "0.0"}
                               </td>
                             </tr>
@@ -1409,34 +1324,40 @@ export default function LineupBuilder({
                         })}
 
                         <tr className="bg-slate-50 font-semibold text-slate-900">
-                          <td className={scoreTableCellClass}></td>
-                          <td className={scoreTableCellClass}>
-                            <span className={compactView ? "block truncate" : ""}>
-                              Totals
-                            </span>
-                          </td>
-                          <td className={`${scoreTableCellClass} text-right`}>
+<td className={compactView ? "sticky left-0 z-20 w-[40px] p-0" : scoreTableCellClass}>
+  {compactView ? (
+    <div className="w-[40px] min-w-[40px] border-r border-slate-200 bg-slate-50 px-2 py-1"></div>
+  ) : null}
+</td>
+<td className={compactView ? "sticky left-[40px] z-20 w-[128px] p-0" : scoreTableCellClass}>
+  {compactView ? (
+    <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-slate-50 px-2 py-1">
+      <span className="block truncate">Totals</span>
+    </div>
+  ) : (
+    <span>Totals</span>
+  )}
+</td>
+                          <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                             {stats.points}
                           </td>
-                          <td className={`${scoreTableCellClass} text-right`}>
+                          <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                             {stats.rebounds}
                           </td>
-                          <td className={`${scoreTableCellClass} text-right`}>
+                          <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                             {stats.assists}
                           </td>
-                          <td className={`${scoreTableCellClass} text-right`}>
+                          <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                             {stats.steals}
                           </td>
-                          <td className={`${scoreTableCellClass} text-right`}>
+                          <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                             {stats.blocks}
                           </td>
-                          <td className={`${scoreTableCellClass} text-right`}>
+                          <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                             {stats.turnovers}
                           </td>
-                          <td className={`${scoreTableCellClass} text-right`}>
-                            {typeof stats.total === "number"
-                              ? stats.total.toFixed(1)
-                              : "0.0"}
+                          <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
+                            {typeof stats.total === "number" ? stats.total.toFixed(1) : "0.0"}
                           </td>
                         </tr>
                       </tbody>
@@ -1498,9 +1419,7 @@ export default function LineupBuilder({
                   disabled={isAssigningPlayer || isSaving}
                   className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isAssigningPlayer
-                    ? "Working..."
-                    : `Remove from ${ownerTeamForDraftingPlayer.name}`}
+                  {isAssigningPlayer ? "Working..." : `Remove from ${ownerTeamForDraftingPlayer.name}`}
                 </button>
               </div>
             ) : null}
@@ -1528,13 +1447,9 @@ export default function LineupBuilder({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="font-semibold text-slate-900">
-                          {team.name}
-                        </div>
+                        <div className="font-semibold text-slate-900">{team.name}</div>
                         <div className="mt-1 text-xs text-slate-500">
-                          {(team as any).draft_order
-                            ? `Order #${(team as any).draft_order}`
-                            : ""}
+                          {(team as any).draft_order ? `Order #${(team as any).draft_order}` : ""}
                           {!isParticipating ? " • Out" : ""}
                         </div>
                       </div>
@@ -1549,9 +1464,7 @@ export default function LineupBuilder({
                     <div className="mt-3">
                       <button
                         type="button"
-                        onClick={() =>
-                          handleAssignPlayerToTeam(draftingPlayer, team.id)
-                        }
+                        onClick={() => handleAssignPlayerToTeam(draftingPlayer, team.id)}
                         disabled={!status.canAssign || isAssigningPlayer || isSaving}
                         className={`w-full rounded-xl border px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
                           status.canAssign
