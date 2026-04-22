@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -46,11 +48,7 @@ function getGamesFromPayload(payload: ScoreboardV3Payload) {
 }
 
 function getTeamTricode(team?: ScoreboardV3Team) {
-  const raw =
-    team?.teamTricode ??
-    team?.tricode ??
-    team?.teamCode ??
-    null;
+  const raw = team?.teamTricode ?? team?.tricode ?? team?.teamCode ?? null;
 
   if (!raw || typeof raw !== "string") return null;
 
@@ -94,7 +92,12 @@ export async function GET(request: NextRequest) {
     if (!slateIdParam) {
       return NextResponse.json(
         { error: "slateId is required." },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
       );
     }
 
@@ -103,7 +106,12 @@ export async function GET(request: NextRequest) {
     if (!Number.isFinite(slateId)) {
       return NextResponse.json(
         { error: "slateId must be a valid number." },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
       );
     }
 
@@ -116,7 +124,12 @@ export async function GET(request: NextRequest) {
     if (slateError || !slate) {
       return NextResponse.json(
         { error: "Slate not found." },
-        { status: 404 }
+        {
+          status: 404,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
       );
     }
 
@@ -143,14 +156,21 @@ export async function GET(request: NextRequest) {
     }
 
     if (activeTeamCodes.size === 0) {
-      return NextResponse.json({
-        success: true,
-        slateId,
-        startDate: safeSlate.start_date,
-        endDate: safeSlate.end_date,
-        activeTeamAbbreviations: [],
-        availablePlayerIds: [],
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          slateId,
+          startDate: safeSlate.start_date,
+          endDate: safeSlate.end_date,
+          activeTeamAbbreviations: [],
+          availablePlayerIds: [],
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
     }
 
     const { data: matchingPlayers, error: playersError } = await supabaseAdmin
@@ -162,7 +182,12 @@ export async function GET(request: NextRequest) {
     if (playersError) {
       return NextResponse.json(
         { error: `Failed to load players for slate: ${playersError.message}` },
-        { status: 500 }
+        {
+          status: 500,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
       );
     }
 
@@ -170,19 +195,31 @@ export async function GET(request: NextRequest) {
       .map((player) => player.id)
       .filter((id): id is number => typeof id === "number");
 
-    return NextResponse.json({
-      success: true,
-      slateId,
-      startDate: safeSlate.start_date,
-      endDate: safeSlate.end_date,
-      activeTeamAbbreviations: Array.from(activeTeamCodes).sort(),
-      availablePlayerIds,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        slateId,
+        startDate: safeSlate.start_date,
+        endDate: safeSlate.end_date,
+        activeTeamAbbreviations: Array.from(activeTeamCodes).sort(),
+        availablePlayerIds,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error(error);
     return NextResponse.json(
       { error: "Unexpected server error while loading slate availability." },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
     );
   }
 }

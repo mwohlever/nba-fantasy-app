@@ -548,12 +548,17 @@ useEffect(() => {
         teamResultsUpserted: refreshResult.teamResultsUpserted,
       });
 
-      const [statsResponse, resultsResponse, availabilityResponse] = await Promise.all([
-        fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`),
-        fetch(`/api/team-results?slateId=${selectedSlateIdNumber}`),
-        fetch(`/api/slate-availability?slateId=${selectedSlateIdNumber}`),
-      ]);
-
+const [statsResponse, resultsResponse, availabilityResponse] = await Promise.all([
+  fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, {
+    cache: "no-store",
+  }),
+  fetch(`/api/team-results?slateId=${selectedSlateIdNumber}`, {
+    cache: "no-store",
+  }),
+  fetch(`/api/slate-availability?slateId=${selectedSlateIdNumber}`, {
+    cache: "no-store",
+  }),
+]);
       const statsResult = await statsResponse.json();
       const resultsResult = await resultsResponse.json();
       const availabilityResult = await availabilityResponse.json();

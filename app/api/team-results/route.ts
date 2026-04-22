@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -8,7 +10,12 @@ export async function GET(request: NextRequest) {
     if (!slateIdParam) {
       return NextResponse.json(
         { error: "slateId is required." },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
       );
     }
 
@@ -17,7 +24,12 @@ export async function GET(request: NextRequest) {
     if (!Number.isFinite(slateId)) {
       return NextResponse.json(
         { error: "slateId must be a valid number." },
-        { status: 400 }
+        {
+          status: 400,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
       );
     }
 
@@ -39,19 +51,38 @@ export async function GET(request: NextRequest) {
     if (error) {
       return NextResponse.json(
         { error: `Failed to load team results: ${error.message}` },
-        { status: 500 }
+        {
+          status: 500,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      teamResults: data ?? [],
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        teamResults: data ?? [],
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch (error) {
     console.error(error);
     return NextResponse.json(
       { error: "Unexpected server error while loading team results." },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
     );
   }
 }
+
+
