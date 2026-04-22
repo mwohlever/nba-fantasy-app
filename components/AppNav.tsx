@@ -11,7 +11,7 @@ const leftLinks = [
 ];
 
 const rightLinks = [
-  { href: "/admin/players", label: "Admin" },
+  { href: "/admin", label: "Admin" },
   { href: "/slates/new", label: "Create Slate" },
 ];
 
