@@ -115,23 +115,25 @@ export default function LineupControls({
             </div>
           ) : null}
 
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
-              View
-            </label>
-            <button
-              type="button"
-              onClick={() => setCompactView((prev) => !prev)}
-              disabled={!hasMounted}
-              className={`${pillBase} ${
-                compactView
-                  ? "border-emerald-300 bg-emerald-100 text-emerald-900"
-                  : inactivePill
-              } disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              {hasMounted ? (compactView ? "Compact On" : "Compact Off") : "View"}
-            </button>
-          </div>
+{!isDraftPage ? (
+  <div>
+    <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">
+      View
+    </label>
+    <button
+      type="button"
+      onClick={() => setCompactView((prev) => !prev)}
+      disabled={!hasMounted}
+      className={`${pillBase} ${
+        compactView
+          ? "border-emerald-300 bg-emerald-100 text-emerald-900"
+          : inactivePill
+      } disabled:cursor-not-allowed disabled:opacity-60`}
+    >
+      {hasMounted ? (compactView ? "Compact On" : "Compact Off") : "View"}
+    </button>
+  </div>
+) : null}
         </div>
 
         <div className="flex flex-col items-start gap-1 text-sm text-slate-600 xl:items-end">
