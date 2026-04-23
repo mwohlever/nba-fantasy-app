@@ -137,28 +137,38 @@ const response = await fetch(
 useEffect(() => {
   if (!selectedSlateIdNumber) return;
 
+  let isActive = true;
+
   async function loadAvailability() {
     try {
       setIsAvailabilityLoading(true);
 
       const res = await fetch(
-        `/api/slate-availability?slateId=${selectedSlateIdNumber}`
+        `/api/slate-availability?slateId=${selectedSlateIdNumber}`,
+        { cache: "no-store" }
       );
       const data = await res.json();
 
-const nextIds = data.availablePlayerIds || [];
-console.log("SETTING availablePlayerIdsForSlate", nextIds.length);
-setAvailablePlayerIdsForSlate(nextIds);
-console.log("SETTING availablePlayerIdsForSlate", data.availablePlayerIds?.length ?? 0);
+      if (!isActive) return;
+
+      const nextIds = data.availablePlayerIds || [];
+      setAvailablePlayerIdsForSlate(nextIds);
     } catch (err) {
       console.error("Failed to load availability", err);
+      if (!isActive) return;
       setAvailablePlayerIdsForSlate([]);
     } finally {
-      setIsAvailabilityLoading(false);
+      if (isActive) {
+        setIsAvailabilityLoading(false);
+      }
     }
   }
 
-  loadAvailability();
+  void loadAvailability();
+
+  return () => {
+    isActive = false;
+  };
 }, [selectedSlateIdNumber]);
   useEffect(() => {
     if (!autoRefreshEnabled || !selectedSlateIdNumber) return;
@@ -256,7 +266,6 @@ console.log("availablePlayerIdsForSlate", availablePlayerIdsForSlate.length);
 const filteredPlayers = useMemo(() => {
   return players
     .filter((player) => {
-      // Search
       if (
         searchTerm &&
         !player.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -264,20 +273,12 @@ const filteredPlayers = useMemo(() => {
         return false;
       }
 
-      // Position
       if (positionFilter !== "All" && player.position_group !== positionFilter) {
         return false;
       }
 
-      // Availability
-      if (onSlateOnly) {
-        if (availablePlayerIdsForSlate.length === 0) {
-          return true;
-        }
-
-        if (!availablePlayerIdSet.has(player.id)) {
-          return false;
-        }
+      if (onSlateOnly && !isAvailabilityLoading) {
+        return availablePlayerIdSet.has(player.id);
       }
 
       return true;
@@ -297,11 +298,10 @@ const filteredPlayers = useMemo(() => {
   searchTerm,
   positionFilter,
   onSlateOnly,
+  isAvailabilityLoading,
   availablePlayerIdSet,
-  availablePlayerIdsForSlate,
   playerAverageMap,
-]);
-  
+]);  
 function getLineupForTeam(teamId: number) {
     return lineupsState.find((item) => item.team_id === teamId) ?? null;
   }
