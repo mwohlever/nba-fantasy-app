@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
+import Link from "next/link";
 
 type SlateListRow = {
   id: number;
@@ -75,10 +76,16 @@ export default function AdminSlatesPage() {
       setMessage("");
 
       const response = await fetch(`/api/admin/slates/${slateId}`);
-      const result = (await response.json()) as SlateDetailResponse | { error?: string };
+      const result = (await response.json()) as
+        | SlateDetailResponse
+        | { error?: string };
 
       if (!response.ok) {
-        setMessage("error" in result ? result.error || "Failed to load slate." : "Failed to load slate.");
+        setMessage(
+          "error" in result
+            ? result.error || "Failed to load slate."
+            : "Failed to load slate."
+        );
         return;
       }
 
@@ -146,9 +153,12 @@ export default function AdminSlatesPage() {
       setIsSaving(true);
       setMessage("");
 
-      const response = await fetch(`/api/admin/slates/${selectedSlateId}/reseed`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}/reseed`,
+        {
+          method: "POST",
+        }
+      );
 
       const result = await response.json();
 
@@ -215,34 +225,50 @@ export default function AdminSlatesPage() {
         <AppNav />
 
         <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Slate Manager</h1>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Slate Manager
+              </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Edit participation, draft order, lock status, reseed, or delete a slate.
+                Edit participation, draft order, lock status, reseed, or delete
+                a slate.
               </p>
             </div>
 
-            <div className="min-w-[240px]">
-              <label
-                htmlFor="slate-select"
-                className="mb-1 block text-xs font-medium text-slate-600"
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/admin"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
               >
-                Select Slate
-              </label>
-              <select
-                id="slate-select"
-                value={selectedSlateId}
-                onChange={(e) => setSelectedSlateId(e.target.value ? Number(e.target.value) : "")}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
-              >
-                {slates.map((slate) => (
-                  <option key={slate.id} value={slate.id}>
-                    {slate.label}
-                    {slate.is_locked ? " (Locked)" : ""}
-                  </option>
-                ))}
-              </select>
+                ← Back
+              </Link>
+
+              <div className="min-w-[240px]">
+                <label
+                  htmlFor="slate-select"
+                  className="mb-1 block text-xs font-medium text-slate-600"
+                >
+                  Select Slate
+                </label>
+                <select
+                  id="slate-select"
+                  value={selectedSlateId}
+                  onChange={(e) =>
+                    setSelectedSlateId(
+                      e.target.value ? Number(e.target.value) : ""
+                    )
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
+                >
+                  {slates.map((slate) => (
+                    <option key={slate.id} value={slate.id}>
+                      {slate.label}
+                      {slate.is_locked ? " (Locked)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </section>
@@ -299,8 +325,13 @@ export default function AdminSlatesPage() {
                     </thead>
                     <tbody className="bg-white text-slate-800">
                       {sortedTeams.map((team) => (
-                        <tr key={team.team_id} className="border-t border-slate-100">
-                          <td className="px-3 py-3 font-medium">{team.team_name}</td>
+                        <tr
+                          key={team.team_id}
+                          className="border-t border-slate-100"
+                        >
+                          <td className="px-3 py-3 font-medium">
+                            {team.team_name}
+                          </td>
                           <td className="px-3 py-3">
                             <input
                               type="checkbox"

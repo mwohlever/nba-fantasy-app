@@ -1,6 +1,7 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 type PlayerRow = {
@@ -77,7 +78,9 @@ export default function AdminPlayersPage() {
   }
 
   const changedPlayerIds = useMemo(() => {
-    const originalMap = new Map(originalPlayers.map((player) => [player.id, player]));
+    const originalMap = new Map(
+      originalPlayers.map((player) => [player.id, player])
+    );
 
     return new Set(
       players
@@ -101,8 +104,12 @@ export default function AdminPlayersPage() {
       const matchesSearch =
         normalizedSearch === "" ||
         player.name.toLowerCase().includes(normalizedSearch) ||
-        (player.nba_display_name ?? "").toLowerCase().includes(normalizedSearch) ||
-        (player.team_abbreviation ?? "").toLowerCase().includes(normalizedSearch);
+        (player.nba_display_name ?? "")
+          .toLowerCase()
+          .includes(normalizedSearch) ||
+        (player.team_abbreviation ?? "")
+          .toLowerCase()
+          .includes(normalizedSearch);
 
       const matchesInactive = !showInactiveOnly || !player.is_active;
       const matchesChanged = !showChangedOnly || changedPlayerIds.has(player.id);
@@ -112,7 +119,9 @@ export default function AdminPlayersPage() {
   }, [players, searchTerm, showInactiveOnly, showChangedOnly, changedPlayerIds]);
 
   async function handleSave() {
-    const originalMap = new Map(originalPlayers.map((player) => [player.id, player]));
+    const originalMap = new Map(
+      originalPlayers.map((player) => [player.id, player])
+    );
 
     const updates = players
       .filter((player) => {
@@ -170,18 +179,26 @@ export default function AdminPlayersPage() {
         <AppNav />
 
         <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-sm font-medium uppercase tracking-wide text-sky-700">
                 Admin
               </p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight">Players</h1>
               <p className="mt-2 text-sm text-slate-600">
-                Edit positions and active/inactive status without using the raw table editor.
+                Edit positions and active/inactive status without using the raw
+                table editor.
               </p>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/admin"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+              >
+                ← Back
+              </Link>
+
               <button
                 type="button"
                 onClick={() => void loadPlayers()}
@@ -221,7 +238,9 @@ export default function AdminPlayersPage() {
                   : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"
               }`}
             >
-              {showInactiveOnly ? "Showing Inactive Only" : "All Active + Inactive"}
+              {showInactiveOnly
+                ? "Showing Inactive Only"
+                : "All Active + Inactive"}
             </button>
 
             <button
@@ -252,7 +271,9 @@ export default function AdminPlayersPage() {
 
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           {isLoading ? (
-            <div className="px-2 py-6 text-sm text-slate-600">Loading players...</div>
+            <div className="px-2 py-6 text-sm text-slate-600">
+              Loading players...
+            </div>
           ) : filteredPlayers.length === 0 ? (
             <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               No players match your current filters.
@@ -311,11 +332,17 @@ export default function AdminPlayersPage() {
                                 type="checkbox"
                                 checked={player.is_active}
                                 onChange={(e) =>
-                                  updatePlayer(player.id, "is_active", e.target.checked)
+                                  updatePlayer(
+                                    player.id,
+                                    "is_active",
+                                    e.target.checked
+                                  )
                                 }
                                 className="h-4 w-4 rounded border-slate-300"
                               />
-                              <span>{player.is_active ? "Active" : "Inactive"}</span>
+                              <span>
+                                {player.is_active ? "Active" : "Inactive"}
+                              </span>
                             </label>
                           </td>
                           <td className="px-3 py-3">

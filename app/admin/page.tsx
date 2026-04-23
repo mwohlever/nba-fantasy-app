@@ -28,14 +28,23 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-            Admin
-          </h1>
-          <p className="max-w-3xl text-sm text-slate-600">
-            League setup and maintenance tools. Use this area for player
-            management, slate management, and creating new slates.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Admin
+            </h1>
+            <p className="max-w-3xl text-sm text-slate-600">
+              League setup and maintenance tools. Use this area for player
+              management, slate management, and creating new slates.
+            </p>
+          </div>
+
+          <Link
+            href="/lineups"
+            className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+          >
+            ← Back
+          </Link>
         </div>
       </section>
 
