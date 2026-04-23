@@ -11,6 +11,7 @@ type SlateListRow = {
   end_date: string | null;
   is_locked: boolean;
   label: string;
+  nba_team_abbreviations?: string[] | null;
 };
 
 type SlateTeamRow = {
@@ -22,14 +23,18 @@ type SlateTeamRow = {
 
 type SlateDetailResponse = {
   success: boolean;
-  slate: SlateListRow;
+  slate: SlateListRow & {
+    nba_team_abbreviations?: string[] | null;
+  };
   teams: SlateTeamRow[];
 };
 
 export default function AdminSlatesPage() {
   const [slates, setSlates] = useState<SlateListRow[]>([]);
   const [selectedSlateId, setSelectedSlateId] = useState<number | "">("");
-  const [selectedSlate, setSelectedSlate] = useState<SlateListRow | null>(null);
+  const [selectedSlate, setSelectedSlate] = useState<
+    (SlateListRow & { nbaTeamsInput?: string }) | null
+  >(null);
   const [teams, setTeams] = useState<SlateTeamRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -90,7 +95,10 @@ export default function AdminSlatesPage() {
       }
 
       const safeResult = result as SlateDetailResponse;
-      setSelectedSlate(safeResult.slate);
+      setSelectedSlate({
+        ...safeResult.slate,
+        nbaTeamsInput: (safeResult.slate.nba_team_abbreviations ?? []).join(", "),
+      });
       setTeams(safeResult.teams);
     } catch (error) {
       console.error(error);
@@ -120,6 +128,11 @@ export default function AdminSlatesPage() {
         },
         body: JSON.stringify({
           is_locked: selectedSlate.is_locked,
+          nba_team_abbreviations:
+            selectedSlate.nbaTeamsInput
+              ?.split(",")
+              .map((value) => value.trim().toUpperCase())
+              .filter(Boolean) ?? [],
           teams: teams.map((team) => ({
             team_id: team.team_id,
             draft_order: Number(team.draft_order),
@@ -231,8 +244,8 @@ export default function AdminSlatesPage() {
                 Slate Manager
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Edit participation, draft order, lock status, reseed, or delete
-                a slate.
+                Edit participation, draft order, lock status, NBA team codes,
+                reseed, or delete a slate.
               </p>
             </div>
 
@@ -295,6 +308,33 @@ export default function AdminSlatesPage() {
                   </div>
                   <div className="mt-1 text-xl font-semibold text-slate-900">
                     {selectedSlate.label}
+                  </div>
+
+                  <div className="mt-4 max-w-xl">
+                    <label className="mb-1 block text-xs font-medium text-slate-600">
+                      NBA Team Codes
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedSlate.nbaTeamsInput ?? ""}
+                      onChange={(e) =>
+                        setSelectedSlate((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                nbaTeamsInput: e.target.value,
+                              }
+                            : prev
+                        )
+                      }
+                      placeholder="DEN, MIN, NYK, ATL, CLE, TOR"
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">
+                      This is the fallback/edit field. Once we wire the create
+                      slate flow, this should auto-populate and only need edits
+                      occasionally.
+                    </p>
                   </div>
                 </div>
 
