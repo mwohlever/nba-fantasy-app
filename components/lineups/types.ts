@@ -81,6 +81,7 @@ export type Props = {
   savedLineupsForInitialSlate: SavedLineup[];
   playerStats: PlayerStat[];
   teamResults: TeamResult[];
+  defaultViewMode?: ViewMode;
 };
 
 export type PositionFilter = "All" | "G" | "F/C";

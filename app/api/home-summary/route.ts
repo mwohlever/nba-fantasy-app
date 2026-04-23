@@ -130,11 +130,18 @@ export async function GET() {
     const safePlayerSlateStats = (playerSlateStats ?? []) as PlayerSlateStat[];
     const safeSeasonTeamSummary = (seasonTeamSummary ?? []) as SeasonTeamSummary[];
 
-    const normalizedSlates = safeSlates.map((slate) => ({
-      ...slate,
-      start_date: slate.start_date ?? slate.date,
-      end_date: slate.end_date ?? slate.date,
-    }));
+    const normalizedSlates = safeSlates
+      .map((slate) => ({
+        ...slate,
+        start_date: slate.start_date ?? slate.date,
+        end_date: slate.end_date ?? slate.date,
+      }))
+      .sort((a, b) => {
+        if (a.start_date !== b.start_date) {
+          return b.start_date.localeCompare(a.start_date);
+        }
+        return b.end_date.localeCompare(a.end_date);
+      });
 
     const resultsBySlateId = new Map<number, TeamSlateResult[]>();
     safeResults.forEach((row) => {
@@ -151,13 +158,20 @@ export async function GET() {
 
       return rows.some(
         (row) =>
-          (row.games_in_progress ?? 0) > 0 || (row.games_remaining ?? 0) > 0
+          (row.games_in_progress ?? 0) > 0 ||
+          (row.games_completed ?? 0) > 0
       );
     };
 
     const isCompletedSlate = (slateId: number) => {
       const rows = rowsForSlate(slateId);
       if (rows.length === 0) return false;
+
+      const hasAnyCompletedGames = rows.some(
+        (row) => (row.games_completed ?? 0) > 0
+      );
+
+      if (!hasAnyCompletedGames) return false;
 
       return rows.every(
         (row) =>
@@ -220,7 +234,9 @@ export async function GET() {
           runner_ups: playedRows.filter((row) => row.finish_position === 2).length,
           avg_finish:
             finishes.length > 0
-              ? roundTo(finishes.reduce((sum, value) => sum + value, 0) / finishes.length)
+              ? roundTo(
+                  finishes.reduce((sum, value) => sum + value, 0) / finishes.length
+                )
               : null,
           avg_score:
             scores.length > 0
@@ -426,7 +442,8 @@ export async function GET() {
         ? {
             label: "Highest Score (All Time)",
             value: `${
-              safeTeams.find((team) => team.id === highestScoreRow.team_id)?.name ?? "Unknown"
+              safeTeams.find((team) => team.id === highestScoreRow.team_id)?.name ??
+              "Unknown"
             } • ${roundTo(Number(highestScoreRow.fantasy_points ?? 0))}`,
             detail: "Single-slate peak score",
           }
@@ -435,7 +452,8 @@ export async function GET() {
         ? {
             label: "Lowest Score (All Time)",
             value: `${
-              safeTeams.find((team) => team.id === lowestScoreRow.team_id)?.name ?? "Unknown"
+              safeTeams.find((team) => team.id === lowestScoreRow.team_id)?.name ??
+              "Unknown"
             } • ${roundTo(Number(lowestScoreRow.fantasy_points ?? 0))}`,
             detail: "Lowest non-zero single-slate team score",
           }

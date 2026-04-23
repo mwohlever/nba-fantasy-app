@@ -93,8 +93,49 @@ export default function HomePage() {
 
   const leader = latestSlateRows[0] ?? null;
 
+  const hasLiveGames = latestSlateRows.some(
+    (row) => Number(row.games_in_progress ?? 0) > 0
+  );
+
+  const hasCompletedGames = latestSlateRows.some(
+    (row) => Number(row.games_completed ?? 0) > 0
+  );
+
+  const hasRemainingGames = latestSlateRows.some(
+    (row) => Number(row.games_remaining ?? 0) > 0
+  );
+
+  const slateHeading = hasLiveGames
+    ? "Live Slate"
+    : hasCompletedGames && !hasRemainingGames
+      ? "Latest Results"
+      : "Current Slate";
+
+  const slateBadge = hasLiveGames
+    ? "LIVE"
+    : hasCompletedGames && !hasRemainingGames
+      ? "FINAL"
+      : null;
+
+  const leaderLabel =
+    hasCompletedGames && !hasRemainingGames ? "Winner" : "Leader";
+
+  const slateStatusLabel = hasLiveGames
+    ? "Live"
+    : hasCompletedGames && !hasRemainingGames
+      ? "Final"
+      : latestSlate?.is_locked
+        ? "Locked"
+        : "Open";
+
+  const teamsTrackedLabel = hasLiveGames
+    ? "Live slate leaderboard"
+    : hasCompletedGames && !hasRemainingGames
+      ? "Completed slate results"
+      : "Upcoming slate overview";
+
   return (
-	<main className="min-h-screen bg-slate-50 px-3 sm:px-4 py-5 sm:py-6 text-slate-900">
+    <main className="min-h-screen bg-slate-50 px-3 py-5 text-slate-900 sm:px-4 sm:py-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
@@ -108,7 +149,8 @@ export default function HomePage() {
                 NBA Fantasy Playoffs
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Quick pulse check for the current slate, season snapshot, and a rotating fun fact.
+                Quick pulse check for the current slate, season snapshot, and a
+                rotating fun fact.
               </p>
             </div>
 
@@ -131,34 +173,33 @@ export default function HomePage() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-<div className="flex items-center gap-2">
-  <h2 className="text-2xl font-semibold text-slate-900">
-    {latestSlate?.is_locked ? "Latest Results" : "Live Slate"}
-  </h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  {slateHeading}
+                </h2>
 
-  {!latestSlate?.is_locked && (
-    <span className="flex items-center gap-1 text-xs font-medium text-red-600">
-      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
-      LIVE
-    </span>
-  )}
+                {slateBadge === "LIVE" ? (
+                  <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
+                    LIVE
+                  </span>
+                ) : slateBadge === "FINAL" ? (
+                  <span className="text-xs font-medium text-slate-500">
+                    FINAL
+                  </span>
+                ) : null}
+              </div>
 
-  {latestSlate?.is_locked && (
-    <span className="text-xs font-medium text-slate-500">
-      FINAL
-    </span>
-  )}
-</div>
               <div className="mt-1 text-sm text-slate-500">
                 {latestSlate ? latestSlate.label : "No slate available"}
               </div>
             </div>
 
             <Link
-              href="/lineups"
+              href="/lineups/scores"
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
             >
-              Open Lineups
+              Open Scores
             </Link>
           </div>
 
@@ -174,14 +215,16 @@ export default function HomePage() {
             <>
               <div className="mb-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
-<div className="text-xs uppercase tracking-wide text-orange-700">
-  {latestSlate?.is_locked ? "Winner" : "Leader"}
-</div>
+                  <div className="text-xs uppercase tracking-wide text-orange-700">
+                    {leaderLabel}
+                  </div>
                   <div className="mt-2 text-2xl font-bold text-slate-900">
                     {leader ? leader.teamName : "—"}
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    {leader ? `${roundTo(Number(leader.fantasy_points ?? 0))} pts` : "—"}
+                    {leader
+                      ? `${roundTo(Number(leader.fantasy_points ?? 0))} pts`
+                      : "—"}
                   </div>
                 </div>
 
@@ -195,7 +238,7 @@ export default function HomePage() {
                       : "—"}
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    {latestSlate?.is_locked ? "Locked" : "Open"}
+                    {slateStatusLabel}
                   </div>
                 </div>
 
@@ -206,7 +249,9 @@ export default function HomePage() {
                   <div className="mt-2 text-2xl font-bold text-slate-900">
                     {latestSlateRows.length}
                   </div>
-                  <div className="mt-1 text-sm text-slate-600">Live slate leaderboard</div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {teamsTrackedLabel}
+                  </div>
                 </div>
               </div>
 
@@ -230,13 +275,21 @@ export default function HomePage() {
                             index === 0 ? "bg-orange-50/50" : ""
                           }`}
                         >
-                          <td className="px-4 py-3 font-medium">{row.teamName}</td>
+                          <td className="px-4 py-3 font-medium">
+                            {row.teamName}
+                          </td>
                           <td className="px-4 py-3">
                             {roundTo(Number(row.fantasy_points ?? 0))}
                           </td>
-                          <td className="px-4 py-3">{row.games_completed ?? 0}</td>
-                          <td className="px-4 py-3">{row.games_in_progress ?? 0}</td>
-                          <td className="px-4 py-3">{row.games_remaining ?? 0}</td>
+                          <td className="px-4 py-3">
+                            {row.games_completed ?? 0}
+                          </td>
+                          <td className="px-4 py-3">
+                            {row.games_in_progress ?? 0}
+                          </td>
+                          <td className="px-4 py-3">
+                            {row.games_remaining ?? 0}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -251,7 +304,9 @@ export default function HomePage() {
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-semibold text-slate-900">Season Snapshot</h2>
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  Season Snapshot
+                </h2>
                 <p className="mt-1 text-sm text-slate-600">
                   {latestSeason} quick leaderboard
                 </p>
@@ -286,7 +341,9 @@ export default function HomePage() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="font-semibold text-slate-900">{row.name}</div>
+                        <div className="font-semibold text-slate-900">
+                          {row.name}
+                        </div>
                         <div className="mt-1 text-xs text-slate-500">
                           {row.wins} wins • Avg finish {row.avg_finish ?? "—"}
                         </div>
@@ -307,7 +364,9 @@ export default function HomePage() {
 
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-slate-900">Fun Fact</h2>
+              <h2 className="text-2xl font-semibold text-slate-900">
+                Fun Fact
+              </h2>
               <p className="mt-1 text-sm text-slate-600">
                 Tap through some extra stats.
               </p>

@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 
 const leftLinks = [
   { href: "/", label: "Home" },
-  { href: "/lineups", label: "Lineups" },
+  { href: "/lineups/draft", label: "Draft" },
+  { href: "/lineups/scores", label: "Scores" },
   { href: "/standings", label: "Standings" },
   { href: "/player-history", label: "Player History" },
 ];

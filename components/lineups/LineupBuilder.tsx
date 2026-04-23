@@ -1,21 +1,16 @@
 "use client";
 
-import ScoringBoard from "@/components/lineups/ScoringBoard";
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
 import PlayerPool from "@/components/lineups/PlayerPool";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LineupControls from "@/components/lineups/LineupControls";
 import type {
-  OrderedTeam,
   Player,
-  PlayerAverage,
   PlayerHistoryDetailRow,
   PlayerStat,
   PositionFilter,
   Props,
   SavedLineup,
-  Slate,
-  SlateTeamConfig,
   Team,
   TeamResult,
   ViewMode,
@@ -31,25 +26,30 @@ export default function LineupBuilder({
   savedLineupsForInitialSlate,
   playerStats,
   teamResults,
+  defaultViewMode,
 }: Props) {
   const [selectedSlateId, setSelectedSlateId] = useState<string>(
     initialSelectedSlateId ? String(initialSelectedSlateId) : ""
   );
   const [message, setMessage] = useState("");
-const latestSlateLoadRef = useRef(0);  
-const [saveMessage, setSaveMessage] = useState("");
+  const latestSlateLoadRef = useRef(0);
+  const [saveMessage, setSaveMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSlateLoading, setIsSlateLoading] = useState(false);
   const [isRefreshingStats, setIsRefreshingStats] = useState(false);
   const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
   const [isAssigningPlayer, setIsAssigningPlayer] = useState(false);
-const [draftingPlayerHistory, setDraftingPlayerHistory] = useState<PlayerHistoryDetailRow[]>([]);
-const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] = useState(false);
+  const [draftingPlayerHistory, setDraftingPlayerHistory] = useState<
+    PlayerHistoryDetailRow[]
+  >([]);
+  const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] =
+    useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
+  const [positionFilter, setPositionFilter] =
+    useState<PositionFilter>("All");
   const [onSlateOnly, setOnSlateOnly] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("scoring");
+  const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
@@ -63,9 +63,8 @@ const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] = useS
     useState<PlayerStat[]>(playerStats);
   const [teamResultsState, setTeamResultsState] =
     useState<TeamResult[]>(teamResults);
-  const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] = useState<
-    number[]
-  >([]);
+  const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
+    useState<number[]>([]);
   const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
 
   const [lastRefreshSummary, setLastRefreshSummary] = useState<{
@@ -88,43 +87,43 @@ const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] = useS
     }
   }, []);
 
-useEffect(() => {
-  if (!draftingPlayer) {
-    setDraftingPlayerHistory([]);
-    setIsDraftingPlayerHistoryLoading(false);
-    return;
-  }
-
-  async function loadDraftingPlayerHistory() {
-    try {
-      setIsDraftingPlayerHistoryLoading(true);
-
-if (!draftingPlayer) return;
-
-const response = await fetch(
-  `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
-        { cache: "no-store" }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error(result.error || "Failed to load player history detail.");
-        setDraftingPlayerHistory([]);
-        return;
-      }
-
-      setDraftingPlayerHistory(result.history ?? []);
-    } catch (error) {
-      console.error(error);
+  useEffect(() => {
+    if (!draftingPlayer) {
       setDraftingPlayerHistory([]);
-    } finally {
       setIsDraftingPlayerHistoryLoading(false);
+      return;
     }
-  }
 
-  void loadDraftingPlayerHistory();
-}, [draftingPlayer]);
+    async function loadDraftingPlayerHistory() {
+      try {
+        setIsDraftingPlayerHistoryLoading(true);
+
+        if (!draftingPlayer) return;
+
+        const response = await fetch(
+          `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
+          { cache: "no-store" }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error(result.error || "Failed to load player history detail.");
+          setDraftingPlayerHistory([]);
+          return;
+        }
+
+        setDraftingPlayerHistory(result.history ?? []);
+      } catch (error) {
+        console.error(error);
+        setDraftingPlayerHistory([]);
+      } finally {
+        setIsDraftingPlayerHistoryLoading(false);
+      }
+    }
+
+    void loadDraftingPlayerHistory();
+  }, [draftingPlayer]);
 
   useEffect(() => {
     setPlayerStatsState(playerStats);
@@ -134,42 +133,43 @@ const response = await fetch(
     setTeamResultsState(teamResults);
   }, [teamResults]);
 
-useEffect(() => {
-  if (!selectedSlateIdNumber) return;
+  useEffect(() => {
+    if (!selectedSlateIdNumber) return;
 
-  let isActive = true;
+    let isActive = true;
 
-  async function loadAvailability() {
-    try {
-      setIsAvailabilityLoading(true);
+    async function loadAvailability() {
+      try {
+        setIsAvailabilityLoading(true);
 
-      const res = await fetch(
-        `/api/slate-availability?slateId=${selectedSlateIdNumber}`,
-        { cache: "no-store" }
-      );
-      const data = await res.json();
+        const res = await fetch(
+          `/api/slate-availability?slateId=${selectedSlateIdNumber}`,
+          { cache: "no-store" }
+        );
+        const data = await res.json();
 
-      if (!isActive) return;
+        if (!isActive) return;
 
-      const nextIds = data.availablePlayerIds || [];
-      setAvailablePlayerIdsForSlate(nextIds);
-    } catch (err) {
-      console.error("Failed to load availability", err);
-      if (!isActive) return;
-      setAvailablePlayerIdsForSlate([]);
-    } finally {
-      if (isActive) {
-        setIsAvailabilityLoading(false);
+        const nextIds = data.availablePlayerIds || [];
+        setAvailablePlayerIdsForSlate(nextIds);
+      } catch (err) {
+        console.error("Failed to load availability", err);
+        if (!isActive) return;
+        setAvailablePlayerIdsForSlate([]);
+      } finally {
+        if (isActive) {
+          setIsAvailabilityLoading(false);
+        }
       }
     }
-  }
 
-  void loadAvailability();
+    void loadAvailability();
 
-  return () => {
-    isActive = false;
-  };
-}, [selectedSlateIdNumber]);
+    return () => {
+      isActive = false;
+    };
+  }, [selectedSlateIdNumber]);
+
   useEffect(() => {
     if (!autoRefreshEnabled || !selectedSlateIdNumber) return;
 
@@ -181,11 +181,10 @@ useEffect(() => {
     return () => window.clearInterval(interval);
   }, [autoRefreshEnabled, selectedSlateIdNumber]);
 
-
-useEffect(() => {
-  if (!selectedSlateIdNumber) return;
-  void loadSlateLineups(selectedSlateIdNumber);
-}, [selectedSlateIdNumber]);
+  useEffect(() => {
+    if (!selectedSlateIdNumber) return;
+    void loadSlateLineups(selectedSlateIdNumber);
+  }, [selectedSlateIdNumber]);
 
   const playerStatsMap = useMemo(() => {
     const map = new Map<number, PlayerStat>();
@@ -215,6 +214,7 @@ useEffect(() => {
     () => new Set(availablePlayerIdsForSlate),
     [availablePlayerIdsForSlate]
   );
+
   const teamsById = useMemo(() => {
     const map = new Map<number, Team>();
     teams.forEach((team) => map.set(team.id, team));
@@ -242,7 +242,10 @@ useEffect(() => {
           draft_order: config.draft_order,
         };
       })
-.filter(Boolean) as OrderedTeam[];
+      .filter(Boolean) as Array<
+      Team & { is_participating?: boolean; draft_order?: number }
+    >;
+
     const missingTeams = teams
       .filter((team) => !configuredIds.includes(team.id))
       .map((team, index) => ({
@@ -262,76 +265,78 @@ useEffect(() => {
     );
   }, [orderedTeamsForSlate]);
 
-const filteredPlayers = useMemo(() => {
-  return players
-    .filter((player) => {
-      if (
-        searchTerm &&
-        !player.name.toLowerCase().includes(searchTerm.toLowerCase())
-      ) {
-        return false;
-      }
+  const filteredPlayers = useMemo(() => {
+    return players
+      .filter((player) => {
+        if (
+          searchTerm &&
+          !player.name.toLowerCase().includes(searchTerm.toLowerCase())
+        ) {
+          return false;
+        }
 
-      if (positionFilter !== "All" && player.position_group !== positionFilter) {
-        return false;
-      }
+        if (positionFilter !== "All" && player.position_group !== positionFilter) {
+          return false;
+        }
 
-      if (onSlateOnly && !isAvailabilityLoading) {
-        return availablePlayerIdSet.has(player.id);
-      }
+        if (onSlateOnly && !isAvailabilityLoading) {
+          return availablePlayerIdSet.has(player.id);
+        }
 
-      return true;
-    })
-    .sort((a, b) => {
-      const avgA = playerAverageMap.get(a.id);
-      const avgB = playerAverageMap.get(b.id);
+        return true;
+      })
+      .sort((a, b) => {
+        const avgA = playerAverageMap.get(a.id);
+        const avgB = playerAverageMap.get(b.id);
 
-      if (avgA == null && avgB == null) return 0;
-      if (avgA == null) return 1;
-      if (avgB == null) return -1;
+        if (avgA == null && avgB == null) return 0;
+        if (avgA == null) return 1;
+        if (avgB == null) return -1;
 
-      return avgB - avgA;
-    });
-}, [
-  players,
-  searchTerm,
-  positionFilter,
-  onSlateOnly,
-  isAvailabilityLoading,
-  availablePlayerIdSet,
-  playerAverageMap,
-]);  
-function getLineupForTeam(teamId: number) {
+        return avgB - avgA;
+      });
+  }, [
+    players,
+    searchTerm,
+    positionFilter,
+    onSlateOnly,
+    isAvailabilityLoading,
+    availablePlayerIdSet,
+    playerAverageMap,
+  ]);
+
+  function getLineupForTeam(teamId: number) {
     return lineupsState.find((item) => item.team_id === teamId) ?? null;
   }
-const playersById = useMemo(() => {
-  const map = new Map<number, Player>();
-  players.forEach((player) => {
-    map.set(player.id, player);
-  });
-  return map;
-}, [players]);
 
-function getPlayersForTeam(teamId: number) {
-  const lineup = getLineupForTeam(teamId);
-  if (!lineup) return [];
+  const playersById = useMemo(() => {
+    const map = new Map<number, Player>();
+    players.forEach((player) => {
+      map.set(player.id, player);
+    });
+    return map;
+  }, [players]);
 
-  return lineup.player_ids
-    .map((playerId) => {
-      const player = playersById.get(playerId);
+  function getPlayersForTeam(teamId: number) {
+    const lineup = getLineupForTeam(teamId);
+    if (!lineup) return [];
 
-      if (player) return player;
+    return lineup.player_ids
+      .map((playerId) => {
+        const player = playersById.get(playerId);
 
-      return {
-        id: playerId,
-        name: `Player ${playerId}`,
-        position_group: "G" as "G" | "F/C",
-        is_active: false,
-        is_playing_today: null,
-      };
-    })
-    .filter((p): p is Player => Boolean(p));
-}
+        if (player) return player;
+
+        return {
+          id: playerId,
+          name: `Player ${playerId}`,
+          position_group: "G" as "G" | "F/C",
+          is_active: false,
+          is_playing_today: null,
+        };
+      })
+      .filter((p): p is Player => Boolean(p));
+  }
 
   function getOwnerTeamIdForPlayer(playerId: number) {
     const owner = lineupsState.find((lineup) =>
@@ -450,10 +455,16 @@ function getPlayersForTeam(teamId: number) {
     const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
     const isParticipating = (team as any)?.is_participating !== false;
 
-    if (!selectedSlateIdNumber) return { canAssign: false, reason: "No slate selected" };
-    if (selectedSlate?.is_locked) return { canAssign: false, reason: "Slate locked" };
+    if (!selectedSlateIdNumber) {
+      return { canAssign: false, reason: "No slate selected" };
+    }
+    if (selectedSlate?.is_locked) {
+      return { canAssign: false, reason: "Slate locked" };
+    }
     if (!isParticipating) return { canAssign: false, reason: "Out" };
-    if (ownerTeamId === teamId) return { canAssign: false, reason: "Already here" };
+    if (ownerTeamId === teamId) {
+      return { canAssign: false, reason: "Already here" };
+    }
 
     const nextPlayers = [...teamPlayers, player];
     const nextGuardCount = nextPlayers.filter(
@@ -463,97 +474,104 @@ function getPlayersForTeam(teamId: number) {
       (item) => item.position_group === "F/C"
     ).length;
 
-    if (nextPlayers.length > 5) return { canAssign: false, reason: "Lineup full" };
-    if (nextGuardCount > 2) return { canAssign: false, reason: "Too many G" };
-    if (nextFcCount > 3) return { canAssign: false, reason: "Too many F/C" };
+    if (nextPlayers.length > 5) {
+      return { canAssign: false, reason: "Lineup full" };
+    }
+    if (nextGuardCount > 2) {
+      return { canAssign: false, reason: "Too many G" };
+    }
+    if (nextFcCount > 3) {
+      return { canAssign: false, reason: "Too many F/C" };
+    }
 
     return { canAssign: true, reason: "" };
   }
 
-async function loadSlateLineups(nextSlateId: number) {
-  const loadId = ++latestSlateLoadRef.current;
+  async function loadSlateLineups(nextSlateId: number) {
+    const loadId = ++latestSlateLoadRef.current;
 
-  setLineupsState([]);
-  setPlayerStatsState([]);
-  setTeamResultsState([]);
+    setLineupsState([]);
+    setPlayerStatsState([]);
+    setTeamResultsState([]);
 
-  try {
-    setIsSlateLoading(true);
-    setMessage("");
-    setSaveMessage("");
+    try {
+      setIsSlateLoading(true);
+      setMessage("");
+      setSaveMessage("");
 
-    const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
-      fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
-      fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
-      fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
-    ]);
+      const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
+        fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
+        fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
+        fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
+      ]);
 
-    const lineupsResult = await lineupsResponse.json();
-    const statsResult = await statsResponse.json();
-    const resultsResult = await resultsResponse.json();
+      const lineupsResult = await lineupsResponse.json();
+      const statsResult = await statsResponse.json();
+      const resultsResult = await resultsResponse.json();
 
-    if (loadId !== latestSlateLoadRef.current) return;
+      if (loadId !== latestSlateLoadRef.current) return;
 
-    if (!lineupsResponse.ok) {
-      setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
-      return;
+      if (!lineupsResponse.ok) {
+        setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
+        return;
+      }
+
+      if (!statsResponse.ok) {
+        setSaveMessage(statsResult.error || "Failed to load player stats.");
+        return;
+      }
+
+      if (!resultsResponse.ok) {
+        setSaveMessage(resultsResult.error || "Failed to load team results.");
+        return;
+      }
+
+      setLineupsState(lineupsResult.lineups ?? []);
+      setPlayerStatsState(statsResult.playerStats ?? []);
+      setTeamResultsState(resultsResult.teamResults ?? []);
+      setSaveMessage("Loaded slate.");
+    } catch (error) {
+      if (loadId !== latestSlateLoadRef.current) return;
+      console.error(error);
+      setSaveMessage("Something went wrong while loading the slate.");
+    } finally {
+      if (loadId === latestSlateLoadRef.current) {
+        setIsSlateLoading(false);
+      }
     }
 
-    if (!statsResponse.ok) {
-      setSaveMessage(statsResult.error || "Failed to load player stats.");
-      return;
-    }
+    try {
+      setIsAvailabilityLoading(true);
 
-    if (!resultsResponse.ok) {
-      setSaveMessage(resultsResult.error || "Failed to load team results.");
-      return;
-    }
-
-    setLineupsState(lineupsResult.lineups ?? []);
-    setPlayerStatsState(statsResult.playerStats ?? []);
-    setTeamResultsState(resultsResult.teamResults ?? []);
-    setSaveMessage("Loaded slate.");
-  } catch (error) {
-    if (loadId !== latestSlateLoadRef.current) return;
-    console.error(error);
-    setSaveMessage("Something went wrong while loading the slate.");
-  } finally {
-    if (loadId === latestSlateLoadRef.current) {
-      setIsSlateLoading(false);
-    }
-  }
-
-  try {
-    setIsAvailabilityLoading(true);
-
-    const availabilityResponse = await fetch(
-      `/api/slate-availability?slateId=${nextSlateId}`,
-      { cache: "no-store" }
-    );
-
-    const availabilityResult = await availabilityResponse.json();
-
-    if (loadId !== latestSlateLoadRef.current) return;
-
-    if (!availabilityResponse.ok) {
-      console.error(
-        availabilityResult.error || "Failed to load slate availability."
+      const availabilityResponse = await fetch(
+        `/api/slate-availability?slateId=${nextSlateId}`,
+        { cache: "no-store" }
       );
-      setAvailablePlayerIdsForSlate([]);
-      return;
-    }
 
-    setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
-  } catch (error) {
-    if (loadId !== latestSlateLoadRef.current) return;
-    console.error(error);
-    setAvailablePlayerIdsForSlate([]);
-  } finally {
-    if (loadId === latestSlateLoadRef.current) {
-      setIsAvailabilityLoading(false);
+      const availabilityResult = await availabilityResponse.json();
+
+      if (loadId !== latestSlateLoadRef.current) return;
+
+      if (!availabilityResponse.ok) {
+        console.error(
+          availabilityResult.error || "Failed to load slate availability."
+        );
+        setAvailablePlayerIdsForSlate([]);
+        return;
+      }
+
+      setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+    } catch (error) {
+      if (loadId !== latestSlateLoadRef.current) return;
+      console.error(error);
+      setAvailablePlayerIdsForSlate([]);
+    } finally {
+      if (loadId === latestSlateLoadRef.current) {
+        setIsAvailabilityLoading(false);
+      }
     }
   }
-}
+
   async function refreshStatsForSelectedSlate(isSilent = false) {
     if (!selectedSlateIdNumber) {
       if (!isSilent) alert("No slate selected.");
@@ -714,112 +732,99 @@ async function loadSlateLineups(nextSlateId: number) {
     }
   }
 
-async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
-  const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
-  if (!targetTeam) return;
+  async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
+    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
+    if (!targetTeam) return;
 
-  const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
-  if (!assignmentStatus.canAssign) {
-    setSaveMessage(assignmentStatus.reason);
-    return;
+    const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
+    if (!assignmentStatus.canAssign) {
+      setSaveMessage(assignmentStatus.reason);
+      return;
+    }
+
+    const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const targetPlayers = getPlayersForTeam(targetTeamId);
+
+    if (currentOwnerTeamId === targetTeamId) {
+      setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
+      return;
+    }
+
+    try {
+      setIsAssigningPlayer(true);
+
+      if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
+        const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
+          (item) => item.id !== player.id
+        );
+
+        const removed = await persistLineupForTeam(
+          currentOwnerTeamId,
+          ownerPlayers,
+          undefined,
+          { allowEmpty: true }
+        );
+
+        if (!removed) return;
+      }
+
+      const added = await persistLineupForTeam(
+        targetTeamId,
+        [...targetPlayers, player],
+        `${player.name} drafted to ${targetTeam.name}.`
+      );
+
+      if (!added) return;
+
+      setDraftingPlayer(null);
+      setSearchTerm("");
+
+      if (selectedSlateIdNumber) {
+        void loadSlateLineups(selectedSlateIdNumber);
+      }
+    } finally {
+      setIsAssigningPlayer(false);
+    }
   }
 
-  const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
-  const targetPlayers = getPlayersForTeam(targetTeamId);
+  async function handleRemovePlayerFromTeam(player: Player) {
+    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const ownerTeam = getOwnerTeamForPlayer(player.id);
 
-  if (currentOwnerTeamId === targetTeamId) {
-    setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
-    return;
-  }
+    if (!ownerTeamId || !ownerTeam) return;
 
-  try {
-    setIsAssigningPlayer(true);
+    try {
+      setIsAssigningPlayer(true);
 
-    if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
-      const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
+      const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
         (item) => item.id !== player.id
       );
 
       const removed = await persistLineupForTeam(
-        currentOwnerTeamId,
-        ownerPlayers,
-        undefined,
+        ownerTeamId,
+        nextPlayers,
+        `${player.name} removed from ${ownerTeam.name}.`,
         { allowEmpty: true }
       );
 
       if (!removed) return;
+
+      setDraftingPlayer(null);
+      setSearchTerm("");
+
+      if (selectedSlateIdNumber) {
+        void loadSlateLineups(selectedSlateIdNumber);
+      }
+    } finally {
+      setIsAssigningPlayer(false);
     }
-
-    const added = await persistLineupForTeam(
-      targetTeamId,
-      [...targetPlayers, player],
-      `${player.name} drafted to ${targetTeam.name}.`
-    );
-
-    if (!added) return;
-
-    // close / reset immediately
-    setDraftingPlayer(null);
-    setSearchTerm("");
-
-    // reload in background so UI doesn't stay locked
-    if (selectedSlateIdNumber) {
-      void loadSlateLineups(selectedSlateIdNumber);
-    }
-  } finally {
-    setIsAssigningPlayer(false);
   }
-}
 
-async function handleRemovePlayerFromTeam(player: Player) {
-  const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
-  const ownerTeam = getOwnerTeamForPlayer(player.id);
-
-  if (!ownerTeamId || !ownerTeam) return;
-
-  try {
-    setIsAssigningPlayer(true);
-
-    const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
-      (item) => item.id !== player.id
-    );
-
-    const removed = await persistLineupForTeam(
-      ownerTeamId,
-      nextPlayers,
-      `${player.name} removed from ${ownerTeam.name}.`,
-      { allowEmpty: true }
-    );
-
-    if (!removed) return;
-
-    // close / reset immediately
-    setDraftingPlayer(null);
-    setSearchTerm("");
-
-    // reload in background so UI doesn't stay locked
-    if (selectedSlateIdNumber) {
-      void loadSlateLineups(selectedSlateIdNumber);
-    }
-  } finally {
-    setIsAssigningPlayer(false);
-  }
-}
   const pillBase =
     "rounded-full border px-3 py-1.5 text-xs font-medium transition";
   const activePill = "border-sky-300 bg-sky-100 text-sky-900";
   const inactivePill =
     "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
-
-  const bigModeBase =
-    "rounded-2xl border px-5 py-3 text-sm font-semibold transition sm:px-6 sm:py-3.5 sm:text-base";
-  const bigModeActive = "border-sky-300 bg-sky-100 text-sky-900 shadow-sm";
-  const bigModeInactive =
-    "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
-
-  const ownerTeamForDraftingPlayer = draftingPlayer
-    ? getOwnerTeamForPlayer(draftingPlayer.id)
-    : null;
 
   const scoreTableCellClass = compactView
     ? "px-0 py-0 text-xs"
@@ -829,84 +834,153 @@ async function handleRemovePlayerFromTeam(player: Player) {
     ? "border-b border-slate-200 px-0 py-0 font-semibold"
     : "border-b border-slate-200 px-3 py-2 font-semibold";
 
-return (
-  <div className="space-y-6">
-    <LineupControls
-      viewMode={viewMode}
-      setViewMode={setViewMode}
-      selectedSlateId={selectedSlateId}
-      setSelectedSlateId={setSelectedSlateId}
-      slates={slates}
-      selectedSlate={selectedSlate}
-      selectedSlateDisplay={selectedSlateDisplay}
-      selectedSlateIdNumber={selectedSlateIdNumber}
-      isRefreshingStats={isRefreshingStats}
-      refreshStatsForSelectedSlate={refreshStatsForSelectedSlate}
-      autoRefreshEnabled={autoRefreshEnabled}
-      setAutoRefreshEnabled={setAutoRefreshEnabled}
-      compactView={compactView}
-      setCompactView={setCompactView}
-      hasMounted={hasMounted}
-      isSlateLoading={isSlateLoading}
-      lastUpdatedAt={lastUpdatedAt}
-    />
+  const ownerTeamForDraftingPlayer = draftingPlayer
+    ? getOwnerTeamForPlayer(draftingPlayer.id)
+    : null;
 
-    {message ? (
-      <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-        {message}
-      </div>
-    ) : null}
+  return (
+    <div className="space-y-6">
+      <LineupControls
+        selectedSlateId={selectedSlateId}
+        setSelectedSlateId={setSelectedSlateId}
+        slates={slates}
+        selectedSlate={selectedSlate}
+        selectedSlateDisplay={selectedSlateDisplay}
+        selectedSlateIdNumber={selectedSlateIdNumber}
+        isRefreshingStats={isRefreshingStats}
+        refreshStatsForSelectedSlate={refreshStatsForSelectedSlate}
+        autoRefreshEnabled={autoRefreshEnabled}
+        setAutoRefreshEnabled={setAutoRefreshEnabled}
+        compactView={compactView}
+        setCompactView={setCompactView}
+        hasMounted={hasMounted}
+        isSlateLoading={isSlateLoading}
+        lastUpdatedAt={lastUpdatedAt}
+      />
 
-    {saveMessage ? (
-      <div
-        className={`rounded-2xl px-4 py-3 text-sm ${
-          saveMessage.toLowerCase().includes("success") ||
-          saveMessage.toLowerCase().includes("loaded") ||
-          saveMessage.toLowerCase().includes("drafted") ||
-          saveMessage.toLowerCase().includes("removed") ||
-          saveMessage.toLowerCase().includes("refreshed")
-            ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
-            : "border border-red-200 bg-red-50 text-red-700"
-        }`}
-      >
-        {saveMessage}
-      </div>
-    ) : null}
+      {message ? (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+          {message}
+        </div>
+      ) : null}
 
-    {viewMode === "draft" ? (
-      <>
-<PlayerPool
-  players={players}
-  filteredPlayers={filteredPlayers}
-  searchTerm={searchTerm}
-  setSearchTerm={setSearchTerm}
-  positionFilter={positionFilter}
-  setPositionFilter={setPositionFilter}
-  onSlateOnly={onSlateOnly}
-  setOnSlateOnly={setOnSlateOnly}
-  isAvailabilityLoading={isAvailabilityLoading}
-  availablePlayerIdsForSlate={availablePlayerIdsForSlate}
-  availablePlayerIdSet={availablePlayerIdSet}
-  playerAverageMap={playerAverageMap}
-  getOwnerTeamForPlayer={getOwnerTeamForPlayer}
-  setDraftingPlayer={setDraftingPlayer}
-  isAssigningPlayer={isAssigningPlayer}
-  pillBase={pillBase}
-  activePill={activePill}
-  inactivePill={inactivePill}
-/>
+      {saveMessage ? (
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm ${
+            saveMessage.toLowerCase().includes("success") ||
+            saveMessage.toLowerCase().includes("loaded") ||
+            saveMessage.toLowerCase().includes("drafted") ||
+            saveMessage.toLowerCase().includes("removed") ||
+            saveMessage.toLowerCase().includes("refreshed")
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      ) : null}
 
-<ScoringBoard
-  orderedTeamsForSlate={orderedTeamsForSlate}
-  compactView={compactView}
-  dailySummary={dailySummary}
-  lastRefreshSummary={lastRefreshSummary}
-  getPlayersForTeam={getPlayersForTeam}
-  getTeamStats={getTeamStats}
-  getPlayerStat={getPlayerStat}
-  scoreTableCellClass={scoreTableCellClass}
-  scoreTableHeaderClass={scoreTableHeaderClass}
-/>
+      {viewMode === "draft" ? (
+        <>
+          <PlayerPool
+            players={players}
+            filteredPlayers={filteredPlayers}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            positionFilter={positionFilter}
+            setPositionFilter={setPositionFilter}
+            onSlateOnly={onSlateOnly}
+            setOnSlateOnly={setOnSlateOnly}
+            isAvailabilityLoading={isAvailabilityLoading}
+            availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+            availablePlayerIdSet={availablePlayerIdSet}
+            playerAverageMap={playerAverageMap}
+            getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+            setDraftingPlayer={setDraftingPlayer}
+            isAssigningPlayer={isAssigningPlayer}
+            pillBase={pillBase}
+            activePill={activePill}
+            inactivePill={inactivePill}
+          />
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-4">
+              <h2 className="text-2xl font-semibold text-slate-900">Rosters</h2>
+              <p className="text-sm text-slate-600">
+                Current rosters and draft positions for this slate.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {orderedTeamsForSlate.map((team) => {
+                const rosterPlayers = getPlayersForTeam(team.id);
+                const draftOrder = (team as any).draft_order;
+                const isParticipating = (team as any).is_participating !== false;
+
+                const guards = rosterPlayers.filter(
+                  (p) => p.position_group === "G"
+                );
+                const fcs = rosterPlayers.filter(
+                  (p) => p.position_group === "F/C"
+                );
+
+                const rosterRows: Array<{ slot: string; player: Player | null }> = [
+                  { slot: "G", player: guards[0] ?? null },
+                  { slot: "G", player: guards[1] ?? null },
+                  { slot: "F/C", player: fcs[0] ?? null },
+                  { slot: "F/C", player: fcs[1] ?? null },
+                  { slot: "F/C", player: fcs[2] ?? null },
+                ];
+
+                return (
+                  <div
+                    key={team.id}
+                    className={`rounded-2xl border border-slate-200 bg-white ${
+                      !isParticipating ? "opacity-70" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between bg-slate-50 px-4 py-3">
+                      <div className="text-lg font-semibold text-slate-900">
+                        {team.name}
+                        {!isParticipating ? " (Out)" : ""}
+                      </div>
+
+                      <div className="text-sm text-slate-600">
+                        Draft Position #{draftOrder ?? "—"}
+                      </div>
+                    </div>
+
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Position</th>
+                          <th className="px-3 py-2 text-left">Player</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {rosterRows.map((row, index) => (
+                          <tr
+                            key={`${team.id}-${index}`}
+                            className="border-b border-slate-100"
+                          >
+                            <td className="px-3 py-2">{row.slot}</td>
+                            <td className="px-3 py-2">
+                              {row.player ? (
+                                row.player.name
+                              ) : (
+                                <span className="text-slate-400">Empty</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </>
       ) : (
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -939,7 +1013,7 @@ return (
           ) : null}
 
           <div className="overflow-x-auto -mx-4 px-4">
-<div className={`${compactView ? "min-w-[720px]" : "min-w-[1100px]"} space-y-4`}>
+            <div className={`${compactView ? "min-w-[720px]" : "min-w-[1100px]"} space-y-4`}>
               {orderedTeamsForSlate.map((team) => {
                 const teamPlayers = getPlayersForTeam(team.id);
                 const stats = getTeamStats(team.id);
@@ -947,10 +1021,7 @@ return (
                 const guards = teamPlayers.filter((p) => p.position_group === "G");
                 const fcs = teamPlayers.filter((p) => p.position_group === "F/C");
 
-                const rosterRows: Array<{
-                  slot: string;
-                  player: Player | null;
-                }> = [
+                const rosterRows: Array<{ slot: string; player: Player | null }> = [
                   { slot: "G", player: guards[0] ?? null },
                   { slot: "G", player: guards[1] ?? null },
                   { slot: "F/C", player: fcs[0] ?? null },
@@ -972,16 +1043,28 @@ return (
                         compactView ? "px-3 py-2" : "px-4 py-3"
                       }`}
                     >
-                      <div className={`${compactView ? "text-base" : "text-lg"} font-semibold text-slate-900`}>
+                      <div
+                        className={`${
+                          compactView ? "text-base" : "text-lg"
+                        } font-semibold text-slate-900`}
+                      >
                         {team.name}
                         {!isParticipating ? " (Out)" : ""}
-                        {(team as any).draft_order ? ` • #${(team as any).draft_order}` : ""}
+                        {(team as any).draft_order
+                          ? ` • #${(team as any).draft_order}`
+                          : ""}
                       </div>
-                      <div className={`${compactView ? "text-xs" : "text-sm"} text-slate-600`}>
+                      <div
+                        className={`${
+                          compactView ? "text-xs" : "text-sm"
+                        } text-slate-600`}
+                      >
                         Total:{" "}
-                        {typeof stats.total === "number" ? stats.total.toFixed(1) : "0.0"} • C:{" "}
-                        {stats.games_completed} • P: {stats.games_in_progress} • R:{" "}
-                        {stats.games_remaining}
+                        {typeof stats.total === "number"
+                          ? stats.total.toFixed(1)
+                          : "0.0"}{" "}
+                        • C: {stats.games_completed} • P: {stats.games_in_progress} •
+                        R: {stats.games_remaining}
                       </div>
                     </div>
 
@@ -993,23 +1076,39 @@ return (
                       <thead className="bg-slate-100 text-slate-700">
                         {compactView ? (
                           <tr className="text-left">
-<th className={`${scoreTableHeaderClass} sticky left-0 z-30 w-[40px]`}>
-  <div className="w-[40px] min-w-[40px] border-b border-r border-slate-200 bg-slate-100 px-2 py-1 font-semibold">
-    Pos
-  </div>
-</th>
-<th className={`${scoreTableHeaderClass} sticky left-[40px] z-30 w-[128px]`}>
-  <div className="w-[128px] min-w-[128px] border-b border-r border-slate-200 bg-slate-100 px-2 py-1 font-semibold">
-    Player
-  </div>
-</th>
-<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>PTS</th>
-<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>REB</th>
-<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>AST</th>
-<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>STL</th>
-<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>BLK</th>
-<th className={`${scoreTableHeaderClass} w-[36px] text-right px-1 py-1`}>TO</th>
-<th className={`${scoreTableHeaderClass} w-[42px] text-right px-1 py-1`}>TOT</th>
+                            <th className={`${scoreTableHeaderClass} sticky left-0 z-30 w-[40px]`}>
+                              <div className="w-[40px] min-w-[40px] border-b border-r border-slate-200 bg-slate-100 px-2 py-1 font-semibold">
+                                Pos
+                              </div>
+                            </th>
+                            <th
+                              className={`${scoreTableHeaderClass} sticky left-[40px] z-30 w-[128px]`}
+                            >
+                              <div className="w-[128px] min-w-[128px] border-b border-r border-slate-200 bg-slate-100 px-2 py-1 font-semibold">
+                                Player
+                              </div>
+                            </th>
+                            <th className={`${scoreTableHeaderClass} w-[36px] px-1 py-1 text-right`}>
+                              PTS
+                            </th>
+                            <th className={`${scoreTableHeaderClass} w-[36px] px-1 py-1 text-right`}>
+                              REB
+                            </th>
+                            <th className={`${scoreTableHeaderClass} w-[36px] px-1 py-1 text-right`}>
+                              AST
+                            </th>
+                            <th className={`${scoreTableHeaderClass} w-[36px] px-1 py-1 text-right`}>
+                              STL
+                            </th>
+                            <th className={`${scoreTableHeaderClass} w-[36px] px-1 py-1 text-right`}>
+                              BLK
+                            </th>
+                            <th className={`${scoreTableHeaderClass} w-[36px] px-1 py-1 text-right`}>
+                              TO
+                            </th>
+                            <th className={`${scoreTableHeaderClass} w-[42px] px-1 py-1 text-right`}>
+                              TOT
+                            </th>
                           </tr>
                         ) : (
                           <tr className="text-left">
@@ -1032,31 +1131,45 @@ return (
 
                           return (
                             <tr key={`${team.id}-${index}`} className="border-b border-slate-100">
-<td className={compactView ? "sticky left-0 z-20 w-[40px] p-0" : scoreTableCellClass}>
-  {compactView ? (
-    <div className="w-[40px] min-w-[40px] border-r border-slate-200 bg-white px-2 py-1">
-      {row.slot}
-    </div>
-  ) : (
-    row.slot
-  )}
-</td>
+                              <td
+                                className={
+                                  compactView
+                                    ? "sticky left-0 z-20 w-[40px] p-0"
+                                    : scoreTableCellClass
+                                }
+                              >
+                                {compactView ? (
+                                  <div className="w-[40px] min-w-[40px] border-r border-slate-200 bg-white px-2 py-1">
+                                    {row.slot}
+                                  </div>
+                                ) : (
+                                  row.slot
+                                )}
+                              </td>
 
-<td className={compactView ? "sticky left-[40px] z-20 w-[128px] p-0" : scoreTableCellClass}>
-  {compactView ? (
-    <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-white px-2 py-1">
-      {row.player ? (
-        <span className="block truncate">{row.player.name}</span>
-      ) : (
-        <span className="text-slate-400">—</span>
-      )}
-    </div>
-  ) : row.player ? (
-    row.player.name
-  ) : (
-    <span className="text-slate-400">—</span>
-  )}
-</td>
+                              <td
+                                className={
+                                  compactView
+                                    ? "sticky left-[40px] z-20 w-[128px] p-0"
+                                    : scoreTableCellClass
+                                }
+                              >
+                                {compactView ? (
+                                  <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-white px-2 py-1">
+                                    {row.player ? (
+                                      <span className="block truncate">
+                                        {row.player.name}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400">—</span>
+                                    )}
+                                  </div>
+                                ) : row.player ? (
+                                  row.player.name
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
 
                               <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                                 {stat ? stat.points : 0}
@@ -1084,20 +1197,32 @@ return (
                         })}
 
                         <tr className="bg-slate-50 font-semibold text-slate-900">
-<td className={compactView ? "sticky left-0 z-20 w-[40px] p-0" : scoreTableCellClass}>
-  {compactView ? (
-    <div className="w-[40px] min-w-[40px] border-r border-slate-200 bg-slate-50 px-2 py-1"></div>
-  ) : null}
-</td>
-<td className={compactView ? "sticky left-[40px] z-20 w-[128px] p-0" : scoreTableCellClass}>
-  {compactView ? (
-    <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-slate-50 px-2 py-1">
-      <span className="block truncate">Totals</span>
-    </div>
-  ) : (
-    <span>Totals</span>
-  )}
-</td>
+                          <td
+                            className={
+                              compactView
+                                ? "sticky left-0 z-20 w-[40px] p-0"
+                                : scoreTableCellClass
+                            }
+                          >
+                            {compactView ? (
+                              <div className="w-[40px] min-w-[40px] border-r border-slate-200 bg-slate-50 px-2 py-1"></div>
+                            ) : null}
+                          </td>
+                          <td
+                            className={
+                              compactView
+                                ? "sticky left-[40px] z-20 w-[128px] p-0"
+                                : scoreTableCellClass
+                            }
+                          >
+                            {compactView ? (
+                              <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-slate-50 px-2 py-1">
+                                <span className="block truncate">Totals</span>
+                              </div>
+                            ) : (
+                              <span>Totals</span>
+                            )}
+                          </td>
                           <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
                             {stats.points}
                           </td>
@@ -1117,7 +1242,9 @@ return (
                             {stats.turnovers}
                           </td>
                           <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
-                            {typeof stats.total === "number" ? stats.total.toFixed(1) : "0.0"}
+                            {typeof stats.total === "number"
+                              ? stats.total.toFixed(1)
+                              : "0.0"}
                           </td>
                         </tr>
                       </tbody>
@@ -1130,23 +1257,23 @@ return (
         </section>
       )}
 
-<DraftPlayerModal
-  draftingPlayer={draftingPlayer}
-  setDraftingPlayer={setDraftingPlayer}
-  playerAverageMap={playerAverageMap}
-  availablePlayerIdSet={availablePlayerIdSet}
-  ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
-  isAssigningPlayer={isAssigningPlayer}
-  isSaving={isSaving}
-  handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
-  draftingPlayerHistory={draftingPlayerHistory}
-  isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
-  orderedTeamsForSlate={orderedTeamsForSlate}
-  getTeamStats={getTeamStats}
-  getTeamAssignmentStatus={getTeamAssignmentStatus}
-  getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
-  handleAssignPlayerToTeam={handleAssignPlayerToTeam}
-/>
+      <DraftPlayerModal
+        draftingPlayer={draftingPlayer}
+        setDraftingPlayer={setDraftingPlayer}
+        playerAverageMap={playerAverageMap}
+        availablePlayerIdSet={availablePlayerIdSet}
+        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+        isAssigningPlayer={isAssigningPlayer}
+        isSaving={isSaving}
+        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+        draftingPlayerHistory={draftingPlayerHistory}
+        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+        orderedTeamsForSlate={orderedTeamsForSlate}
+        getTeamStats={getTeamStats}
+        getTeamAssignmentStatus={getTeamAssignmentStatus}
+        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+      />
     </div>
   );
 }
