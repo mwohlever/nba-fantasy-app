@@ -178,7 +178,8 @@ function buildDateCodeRange(startDate: string, endDate: string) {
 }
 
 async function fetchScoreboardForDate(dateCode: string) {
-  const url = `https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_${dateCode}.json`;
+  const url =
+    "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
 
   const response = await fetch(url, {
     method: "GET",
@@ -190,9 +191,13 @@ async function fetchScoreboardForDate(dateCode: string) {
   }
 
   const payload = (await response.json()) as NbaScoreboardPayload;
-  return payload.scoreboard?.games ?? [];
-}
+  const games = payload.scoreboard?.games ?? [];
 
+  return games.filter((game) => {
+    const gameCode = game.gameCode ?? "";
+    return gameCode.includes(dateCode);
+  });
+}
 async function fetchBoxScore(gameId: string) {
   const url = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`;
 
