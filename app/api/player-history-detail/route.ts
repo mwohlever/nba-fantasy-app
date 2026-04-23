@@ -70,19 +70,23 @@ export async function GET(request: NextRequest) {
     }
 
 const history = (data ?? [])
-  .map((row) => ({
-    slateId: row.slate_id,
-    playerId: row.player_id,
-    date: row.slates?.date ?? null,
-    fantasyPoints: Number(row.fantasy_points ?? 0),
-    points: Number(row.points ?? 0),
-    rebounds: Number(row.rebounds ?? 0),
-    assists: Number(row.assists ?? 0),
-    steals: Number(row.steals ?? 0),
-    blocks: Number(row.blocks ?? 0),
-    turnovers: Number(row.turnovers ?? 0),
-    isLocked: !!row.slates?.is_locked,
-  }))
+  .map((row) => {
+    const slate = Array.isArray(row.slates) ? row.slates[0] : row.slates;
+
+    return {
+      slateId: row.slate_id,
+      playerId: row.player_id,
+      date: slate?.date ?? null,
+      fantasyPoints: Number(row.fantasy_points ?? 0),
+      points: Number(row.points ?? 0),
+      rebounds: Number(row.rebounds ?? 0),
+      assists: Number(row.assists ?? 0),
+      steals: Number(row.steals ?? 0),
+      blocks: Number(row.blocks ?? 0),
+      turnovers: Number(row.turnovers ?? 0),
+      isLocked: !!slate?.is_locked,
+    };
+  })
   .sort((a, b) => {
     const aTime = a.date ? new Date(a.date).getTime() : 0;
     const bTime = b.date ? new Date(b.date).getTime() : 0;
