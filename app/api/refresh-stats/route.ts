@@ -340,20 +340,27 @@ export async function POST(request: Request) {
       gamesForSlateDateRange.push(...gamesForDate);
     }
 
-    if (gamesForSlateDateRange.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "No games found for this slate. Skipping update to avoid overwriting data.",
-        slateId,
-        slateStartDate: safeSlate.start_date,
-        slateEndDate: safeSlate.end_date,
-        playerStatsUpserted: 0,
-        teamResultsUpserted: 0,
-        gamesFound: 0,
-        autoLocked: false,
-      });
-    }
+console.log("DATE RANGE", safeSlate.start_date, safeSlate.end_date);
+console.log("DATE CODES", dateCodes);
+console.log("GAMES FOUND", gamesForSlateDateRange.length);
+console.log("DATE RANGE", safeSlate.start_date, safeSlate.end_date);
+console.log("DATE CODES", dateCodes);
+console.log("GAMES FOUND", gamesForSlateDateRange.length);
 
+if (gamesForSlateDateRange.length === 0) {
+  return NextResponse.json({
+    success: true,
+    message: "No games found for this slate. Skipping update to avoid overwriting data.",
+    slateId,
+    slateStartDate: safeSlate.start_date,
+    slateEndDate: safeSlate.end_date,
+    playerStatsUpserted: 0,
+    teamResultsUpserted: 0,
+    gamesFound: gamesForSlateDateRange.length,
+    autoLocked: false,
+    skipped: true, // 👈 add this
+  });
+}
     const aggregatedByPlayerId = new Map<number, AggregatedPlayerStat>();
 
     for (const game of gamesForSlateDateRange) {
@@ -531,7 +538,8 @@ export async function POST(request: Request) {
           onConflict: "slate_id,team_id",
         });
 
-      if (teamResultsError) {
+      if
+ (teamResultsError) {
         return NextResponse.json(
           { error: `Failed to upsert team results: ${teamResultsError.message}` },
           { status: 500 }
