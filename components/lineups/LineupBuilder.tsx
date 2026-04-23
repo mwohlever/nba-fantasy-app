@@ -99,8 +99,10 @@ useEffect(() => {
     try {
       setIsDraftingPlayerHistoryLoading(true);
 
-      const response = await fetch(
-        `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
+if (!draftingPlayer) return;
+
+const response = await fetch(
+  `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
         { cache: "no-store" }
       );
 
