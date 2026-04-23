@@ -119,20 +119,31 @@ export default function DraftPlayerModal({
             <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white">
               <div className="divide-y divide-slate-100">
                 {draftingPlayerHistory.map((item) => (
-                  <div
-                    key={`${item.slateId}-${item.playerId}`}
-                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <div className="font-medium text-slate-900">
-                        {item.date ?? "Unknown date"}
-                      </div>
-                    </div>
+<div
+  key={`${item.slateId}-${item.playerId}`}
+  className="flex items-start justify-between gap-3 px-3 py-2 text-sm"
+>
+  <div className="min-w-0">
+    <div className="font-medium text-slate-900">
+      {item.date ?? "Unknown date"}
+    </div>
 
-                    <div className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
-                      {Number(item.fantasyPoints).toFixed(1)}
-                    </div>
-                  </div>
+    {item.points !== 0 ||
+    item.rebounds !== 0 ||
+    item.assists !== 0 ||
+    item.steals !== 0 ||
+    item.blocks !== 0 ||
+    item.turnovers !== 0 ? (
+      <div className="mt-0.5 text-xs text-slate-500">
+        PTS {item.points} • REB {item.rebounds} • AST {item.assists} • STL {item.steals} • BLK {item.blocks} • TO {item.turnovers}
+      </div>
+    ) : null}
+  </div>
+
+  <div className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+    {Number(item.fantasyPoints).toFixed(1)}
+  </div>
+</div>
                 ))}
               </div>
             </div>

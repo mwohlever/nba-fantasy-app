@@ -1,0 +1,622 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type BackfillBody = {
+  slateId?: number;
+  all?: boolean;
+};
+
+type SlateRecord = {
+  id: number;
+  date: string;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+};
+
+type PlayerRecord = {
+  id: number;
+  name: string;
+  position_group: "G" | "F/C";
+  is_active: boolean;
+  nba_player_id?: number | null;
+  team_abbreviation?: string | null;
+};
+
+type LineupWithPlayers = {
+  id: number;
+  team_id: number;
+  lineup_players: { player_id: number }[] | null;
+};
+
+type NbaScoreboardGame = {
+  gameId?: string;
+  gameCode?: string;
+  gameStatus?: number;
+  gameStatusText?: string;
+  homeTeam?: {
+    teamId?: number;
+    teamName?: string;
+    teamTricode?: string;
+    score?: number | string;
+  };
+  awayTeam?: {
+    teamId?: number;
+    teamName?: string;
+    teamTricode?: string;
+    score?: number | string;
+  };
+};
+
+type NbaScoreboardPayload = {
+  scoreboard?: {
+    games?: NbaScoreboardGame[];
+  };
+  games?: NbaScoreboardGame[];
+};
+
+type NbaBoxScorePlayer = {
+  personId?: number;
+  firstName?: string;
+  familyName?: string;
+  name?: string;
+  statistics?: {
+    points?: number | string;
+    reboundsTotal?: number | string;
+    assists?: number | string;
+    steals?: number | string;
+    blocks?: number | string;
+    turnovers?: number | string;
+  };
+};
+
+type NbaBoxScorePayload = {
+  game?: {
+    gameId?: string;
+    gameStatus?: number;
+    gameStatusText?: string;
+    homeTeam?: {
+      players?: NbaBoxScorePlayer[];
+    };
+    awayTeam?: {
+      players?: NbaBoxScorePlayer[];
+    };
+  };
+};
+
+type AggregatedPlayerStat = {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+  fantasy_points: number;
+  games_completed: number;
+  games_in_progress: number;
+  games_remaining: number;
+  game_status_text: string | null;
+  source_game_ids: string[];
+};
+
+type SlateBackfillResult = {
+  slateId: number;
+  slateStartDate: string;
+  slateEndDate: string;
+  gamesFound: number;
+  playerStatsUpserted: number;
+  teamResultsUpserted: number;
+  unmatchedLocalPlayers: {
+    id: number;
+    name: string;
+    nba_player_id: number | null;
+    team_abbreviation: string | null;
+  }[];
+  skipped?: boolean;
+  message?: string;
+};
+
+function normalizeName(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toNumber(value: unknown) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function calculateFantasyPoints(stats: {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+}) {
+  return (
+    stats.points * 1 +
+    stats.rebounds * 1.2 +
+    stats.assists * 1.5 +
+    stats.steals * 2 +
+    stats.blocks * 2 -
+    stats.turnovers * 1
+  );
+}
+
+function getGameBuckets(gameStatus: number | undefined) {
+  if (gameStatus === 3) {
+    return {
+      games_completed: 1,
+      games_in_progress: 0,
+      games_remaining: 0,
+    };
+  }
+
+  if (gameStatus === 2) {
+    return {
+      games_completed: 0,
+      games_in_progress: 1,
+      games_remaining: 0,
+    };
+  }
+
+  return {
+    games_completed: 0,
+    games_in_progress: 0,
+    games_remaining: 1,
+  };
+}
+
+function buildDateRange(startDate: string, endDate: string) {
+  const result: string[] = [];
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    result.push(`${year}-${month}-${day}`);
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+}
+
+async function fetchHistoricalScoreboardForDate(gameDate: string) {
+  const url = `https://stats.nba.com/stats/scoreboardv3?GameDate=${gameDate}&LeagueID=00`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json, text/plain, */*",
+      Origin: "https://www.nba.com",
+      Referer: "https://www.nba.com/",
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+    },
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const payload = (await response.json()) as NbaScoreboardPayload;
+  return payload.scoreboard?.games ?? payload.games ?? [];
+}
+
+async function fetchBoxScore(gameId: string) {
+  const url = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return (await response.json()) as NbaBoxScorePayload;
+}
+
+async function backfillSlate(slateId: number): Promise<SlateBackfillResult> {
+  const { data: slate, error: slateError } = await supabaseAdmin
+    .from("slates")
+    .select("id, date, start_date, end_date, is_locked")
+    .eq("id", slateId)
+    .single();
+
+  if (slateError || !slate) {
+    throw new Error(`Slate ${slateId} not found.`);
+  }
+
+  const safeSlate = slate as SlateRecord;
+
+  const { data: lineupsData, error: lineupsError } = await supabaseAdmin
+    .from("lineups")
+    .select(
+      `
+      id,
+      team_id,
+      lineup_players (
+        player_id
+      )
+    `
+    )
+    .eq("slate_id", slateId);
+
+  if (lineupsError || !lineupsData) {
+    throw new Error(`Failed to load lineups for slate ${slateId}.`);
+  }
+
+  const safeLineups = lineupsData as LineupWithPlayers[];
+
+  const lineupPlayerIds = [
+    ...new Set(
+      safeLineups.flatMap((lineup) =>
+        (lineup.lineup_players ?? []).map((lp) => lp.player_id)
+      )
+    ),
+  ];
+
+  if (lineupPlayerIds.length === 0) {
+    return {
+      slateId,
+      slateStartDate: safeSlate.start_date,
+      slateEndDate: safeSlate.end_date,
+      gamesFound: 0,
+      playerStatsUpserted: 0,
+      teamResultsUpserted: 0,
+      unmatchedLocalPlayers: [],
+      skipped: true,
+      message: "No lineup players found for this slate.",
+    };
+  }
+
+  const { data: players, error: playersError } = await supabaseAdmin
+    .from("players")
+    .select("id, name, position_group, is_active, nba_player_id, team_abbreviation")
+    .in("id", lineupPlayerIds);
+
+  if (playersError || !players) {
+    throw new Error(`Failed to load players for slate ${slateId}.`);
+  }
+
+  const safePlayers = (players as PlayerRecord[]).filter(
+    (player) => player.is_active && player.nba_player_id
+  );
+
+  if (safePlayers.length === 0) {
+    return {
+      slateId,
+      slateStartDate: safeSlate.start_date,
+      slateEndDate: safeSlate.end_date,
+      gamesFound: 0,
+      playerStatsUpserted: 0,
+      teamResultsUpserted: 0,
+      unmatchedLocalPlayers: [],
+      skipped: true,
+      message: "No valid lineup players with NBA ids found for this slate.",
+    };
+  }
+
+  const localPlayersByNormalizedName = new Map<string, PlayerRecord>();
+  const localPlayersByNbaId = new Map<number, PlayerRecord>();
+
+  for (const player of safePlayers) {
+    localPlayersByNormalizedName.set(normalizeName(player.name), player);
+
+    if (player.nba_player_id) {
+      localPlayersByNbaId.set(Number(player.nba_player_id), player);
+    }
+  }
+
+  const gameDates = buildDateRange(safeSlate.start_date, safeSlate.end_date);
+
+  const gamesForSlateDateRange: NbaScoreboardGame[] = [];
+  for (const gameDate of gameDates) {
+    const gamesForDate = await fetchHistoricalScoreboardForDate(gameDate);
+    gamesForSlateDateRange.push(...gamesForDate);
+  }
+
+  if (gamesForSlateDateRange.length === 0) {
+    return {
+      slateId,
+      slateStartDate: safeSlate.start_date,
+      slateEndDate: safeSlate.end_date,
+      gamesFound: 0,
+      playerStatsUpserted: 0,
+      teamResultsUpserted: 0,
+      unmatchedLocalPlayers: [],
+      skipped: true,
+      message: "No historical games found for this slate date range.",
+    };
+  }
+
+  const aggregatedByPlayerId = new Map<number, AggregatedPlayerStat>();
+  const matchedLocalPlayerIds = new Set<number>();
+
+  for (const game of gamesForSlateDateRange) {
+    const gameId = game.gameId;
+    if (!gameId) continue;
+
+    const boxScorePayload = await fetchBoxScore(gameId);
+    const boxGame = boxScorePayload?.game;
+    if (!boxGame) continue;
+
+    const gameStatus = boxGame.gameStatus ?? game.gameStatus;
+    const gameStatusText = boxGame.gameStatusText ?? game.gameStatusText ?? null;
+    const bucket = getGameBuckets(gameStatus);
+
+    const allPlayers = [
+      ...(boxGame.homeTeam?.players ?? []),
+      ...(boxGame.awayTeam?.players ?? []),
+    ];
+
+    for (const nbaPlayer of allPlayers) {
+      let matchedPlayer: PlayerRecord | undefined;
+
+      if (nbaPlayer.personId && localPlayersByNbaId.has(Number(nbaPlayer.personId))) {
+        matchedPlayer = localPlayersByNbaId.get(Number(nbaPlayer.personId));
+      } else {
+        const fullName =
+          nbaPlayer.name ||
+          `${nbaPlayer.firstName ?? ""} ${nbaPlayer.familyName ?? ""}`.trim();
+
+        matchedPlayer = localPlayersByNormalizedName.get(normalizeName(fullName));
+      }
+
+      if (!matchedPlayer) continue;
+
+      matchedLocalPlayerIds.add(matchedPlayer.id);
+
+      const stats = {
+        points: toNumber(nbaPlayer.statistics?.points),
+        rebounds: toNumber(nbaPlayer.statistics?.reboundsTotal),
+        assists: toNumber(nbaPlayer.statistics?.assists),
+        steals: toNumber(nbaPlayer.statistics?.steals),
+        blocks: toNumber(nbaPlayer.statistics?.blocks),
+        turnovers: toNumber(nbaPlayer.statistics?.turnovers),
+      };
+
+      const existing = aggregatedByPlayerId.get(matchedPlayer.id) ?? {
+        points: 0,
+        rebounds: 0,
+        assists: 0,
+        steals: 0,
+        blocks: 0,
+        turnovers: 0,
+        fantasy_points: 0,
+        games_completed: 0,
+        games_in_progress: 0,
+        games_remaining: 0,
+        game_status_text: null,
+        source_game_ids: [],
+      };
+
+      existing.points += stats.points;
+      existing.rebounds += stats.rebounds;
+      existing.assists += stats.assists;
+      existing.steals += stats.steals;
+      existing.blocks += stats.blocks;
+      existing.turnovers += stats.turnovers;
+      existing.fantasy_points = calculateFantasyPoints({
+        points: existing.points,
+        rebounds: existing.rebounds,
+        assists: existing.assists,
+        steals: existing.steals,
+        blocks: existing.blocks,
+        turnovers: existing.turnovers,
+      });
+
+      existing.games_completed += bucket.games_completed;
+      existing.games_in_progress += bucket.games_in_progress;
+      existing.games_remaining += bucket.games_remaining;
+      existing.game_status_text = gameStatusText;
+
+      if (!existing.source_game_ids.includes(gameId)) {
+        existing.source_game_ids.push(gameId);
+      }
+
+      aggregatedByPlayerId.set(matchedPlayer.id, existing);
+    }
+  }
+
+  const playerStatsPayload = lineupPlayerIds.map((playerId) => {
+    const stat = aggregatedByPlayerId.get(playerId);
+
+    return {
+      slate_id: slateId,
+      player_id: playerId,
+      points: stat?.points ?? 0,
+      rebounds: stat?.rebounds ?? 0,
+      assists: stat?.assists ?? 0,
+      steals: stat?.steals ?? 0,
+      blocks: stat?.blocks ?? 0,
+      turnovers: stat?.turnovers ?? 0,
+      fantasy_points: stat?.fantasy_points ?? 0,
+    };
+  });
+
+  let playerStatsUpserted = 0;
+
+  if (playerStatsPayload.length > 0) {
+    const { error: playerStatsError } = await supabaseAdmin
+      .from("player_slate_stats")
+      .upsert(playerStatsPayload, {
+        onConflict: "slate_id,player_id",
+      });
+
+    if (playerStatsError) {
+      throw new Error(
+        `Failed to upsert player stats for slate ${slateId}: ${playerStatsError.message}`
+      );
+    }
+
+    playerStatsUpserted = playerStatsPayload.length;
+  }
+
+  const teamResultsPayload = safeLineups.map((lineup) => {
+    const teamPlayerIds = (lineup.lineup_players ?? []).map((lp) => lp.player_id);
+
+    let fantasyPoints = 0;
+    let gamesCompleted = 0;
+    let gamesInProgress = 0;
+    let gamesRemaining = 0;
+
+    for (const playerId of teamPlayerIds) {
+      const stat = aggregatedByPlayerId.get(playerId);
+
+      fantasyPoints += stat?.fantasy_points ?? 0;
+      gamesCompleted += stat?.games_completed ?? 0;
+      gamesInProgress += stat?.games_in_progress ?? 0;
+      gamesRemaining += stat?.games_remaining ?? 0;
+    }
+
+    return {
+      slate_id: slateId,
+      team_id: lineup.team_id,
+      fantasy_points: Number(fantasyPoints.toFixed(1)),
+      games_completed: gamesCompleted,
+      games_in_progress: gamesInProgress,
+      games_remaining: gamesRemaining,
+    };
+  });
+
+  const sortedParticipating = [...teamResultsPayload]
+    .filter(
+      (row) =>
+        row.fantasy_points > 0 ||
+        row.games_completed > 0 ||
+        row.games_in_progress > 0 ||
+        row.games_remaining > 0
+    )
+    .sort((a, b) => b.fantasy_points - a.fantasy_points);
+
+  const finishPositionMap = new Map<number, number>();
+  sortedParticipating.forEach((row, index) => {
+    finishPositionMap.set(row.team_id, index + 1);
+  });
+
+  const finalTeamResultsPayload = teamResultsPayload.map((row) => ({
+    ...row,
+    finish_position: finishPositionMap.get(row.team_id) ?? null,
+  }));
+
+  let teamResultsUpserted = 0;
+
+  if (finalTeamResultsPayload.length > 0) {
+    const { error: teamResultsError } = await supabaseAdmin
+      .from("team_slate_results")
+      .upsert(finalTeamResultsPayload, {
+        onConflict: "slate_id,team_id",
+      });
+
+    if (teamResultsError) {
+      throw new Error(
+        `Failed to upsert team results for slate ${slateId}: ${teamResultsError.message}`
+      );
+    }
+
+    teamResultsUpserted = finalTeamResultsPayload.length;
+  }
+
+  const unmatchedLocalPlayers = safePlayers
+    .filter((player) => !matchedLocalPlayerIds.has(player.id))
+    .map((player) => ({
+      id: player.id,
+      name: player.name,
+      nba_player_id: player.nba_player_id ?? null,
+      team_abbreviation: player.team_abbreviation ?? null,
+    }));
+
+  return {
+    slateId,
+    slateStartDate: safeSlate.start_date,
+    slateEndDate: safeSlate.end_date,
+    gamesFound: gamesForSlateDateRange.length,
+    playerStatsUpserted,
+    teamResultsUpserted,
+    unmatchedLocalPlayers,
+  };
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as BackfillBody;
+
+    if (body.all) {
+      const { data: slates, error: slatesError } = await supabaseAdmin
+        .from("slates")
+        .select("id, date, start_date, end_date, is_locked")
+        .order("date", { ascending: true });
+
+      if (slatesError || !slates) {
+        return NextResponse.json(
+          { error: "Failed to load slates for backfill." },
+          { status: 500 }
+        );
+      }
+
+      const safeSlates = slates as SlateRecord[];
+      const results: SlateBackfillResult[] = [];
+
+      for (const slate of safeSlates) {
+        const result = await backfillSlate(slate.id);
+        results.push(result);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Historical player stats backfill completed for all slates.",
+        slatesProcessed: results.length,
+        totalGamesFound: results.reduce((sum, r) => sum + r.gamesFound, 0),
+        totalPlayerStatsUpserted: results.reduce(
+          (sum, r) => sum + r.playerStatsUpserted,
+          0
+        ),
+        totalTeamResultsUpserted: results.reduce(
+          (sum, r) => sum + r.teamResultsUpserted,
+          0
+        ),
+        totalUnmatchedLocalPlayers: results.reduce(
+          (sum, r) => sum + r.unmatchedLocalPlayers.length,
+          0
+        ),
+        results,
+      });
+    }
+
+    if (!body.slateId) {
+      return NextResponse.json(
+        { error: "slateId is required unless all=true." },
+        { status: 400 }
+      );
+    }
+
+    const result = await backfillSlate(body.slateId);
+
+    return NextResponse.json({
+      success: true,
+      message: "Historical player stats backfill completed.",
+      ...result,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while backfilling player stats." },
+      { status: 500 }
+    );
+  }
+}

@@ -69,20 +69,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const history = ((data ?? []) as any[]).map((row) => ({
-      slateId: row.slate_id,
-      playerId: row.player_id,
-      date: row.slates?.date ?? null,
-      fantasyPoints: Number(row.fantasy_points ?? 0),
-      points: Number(row.points ?? 0),
-      rebounds: Number(row.rebounds ?? 0),
-      assists: Number(row.assists ?? 0),
-      steals: Number(row.steals ?? 0),
-      blocks: Number(row.blocks ?? 0),
-      turnovers: Number(row.turnovers ?? 0),
-      isLocked: Boolean(row.slates?.is_locked ?? false),
-    }));
-
+const history = (data ?? [])
+  .map((row) => ({
+    slateId: row.slate_id,
+    playerId: row.player_id,
+    date: row.slates?.date ?? null,
+    fantasyPoints: Number(row.fantasy_points ?? 0),
+    points: Number(row.points ?? 0),
+    rebounds: Number(row.rebounds ?? 0),
+    assists: Number(row.assists ?? 0),
+    steals: Number(row.steals ?? 0),
+    blocks: Number(row.blocks ?? 0),
+    turnovers: Number(row.turnovers ?? 0),
+    isLocked: !!row.slates?.is_locked,
+  }))
+  .sort((a, b) => {
+    const aTime = a.date ? new Date(a.date).getTime() : 0;
+    const bTime = b.date ? new Date(b.date).getTime() : 0;
+    return bTime - aTime;
+  });
     return NextResponse.json(
       { success: true, history },
       { headers: { "Cache-Control": "no-store, max-age=0" } }
