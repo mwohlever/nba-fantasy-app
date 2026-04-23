@@ -79,12 +79,15 @@ export default function AppNav() {
   function AdminDropdown({ mobile = false }: { mobile?: boolean }) {
     return (
       <div
-        ref={mobile ? undefined : adminRef}
+        ref={adminRef}
         className={`relative ${mobile ? "shrink-0" : ""}`}
       >
         <button
           type="button"
-          onClick={() => setAdminOpen((prev) => !prev)}
+onClick={(e) => {
+  e.stopPropagation();
+  setAdminOpen((prev) => !prev);
+}}
           className={adminButtonClass}
           aria-haspopup="menu"
           aria-expanded={adminOpen}
@@ -92,11 +95,11 @@ export default function AppNav() {
           Admin ▾
         </button>
 
-        {adminOpen ? (
-          <div
-            className={`z-30 mt-2 min-w-[190px] rounded-2xl border border-slate-200 bg-white p-2 shadow-lg ${
-              mobile ? "absolute right-0" : "absolute right-0"
-            }`}
+{adminOpen ? (
+  <div
+    className={`absolute z-50 mt-2 w-56 rounded-xl border bg-white shadow-lg ${
+      mobile ? "left-0 right-auto" : "right-0"
+    }`}
           >
             <div className="flex flex-col gap-1">
               {adminLinks.map((link) => (
