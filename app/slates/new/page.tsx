@@ -337,7 +337,7 @@ export default function NewSlatePage() {
                           <label className="inline-flex items-center gap-3 text-sm">
                             <input
                               type="checkbox"
-                              checked={team.is_participating}
+checked={!!team.is_participating}
                               onChange={() => toggleParticipation(team.id)}
                               className="h-4 w-4 rounded border-slate-300"
                             />
