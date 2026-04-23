@@ -116,10 +116,10 @@ export default function PlayerPool({
         <span>
           Showing {filteredPlayers.length} of {players.length} active players
         </span>
-        <span>
-          On this slate:{" "}
-          {isAvailabilityLoading ? "Loading..." : availablePlayerIdsForSlate.length}
-        </span>
+<span>
+  On this slate:{" "}
+  {isAvailabilityLoading ? "Loading..." : availablePlayerIdSet.size}
+</span>
       </div>
 
       {filteredPlayers.length === 0 ? (
