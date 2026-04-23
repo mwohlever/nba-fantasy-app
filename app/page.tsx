@@ -131,7 +131,24 @@ export default function HomePage() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900">Current Slate</h2>
+<div className="flex items-center gap-2">
+  <h2 className="text-2xl font-semibold text-slate-900">
+    {latestSlate?.is_locked ? "Latest Results" : "Live Slate"}
+  </h2>
+
+  {!latestSlate?.is_locked && (
+    <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+      LIVE
+    </span>
+  )}
+
+  {latestSlate?.is_locked && (
+    <span className="text-xs font-medium text-slate-500">
+      FINAL
+    </span>
+  )}
+</div>
               <div className="mt-1 text-sm text-slate-500">
                 {latestSlate ? latestSlate.label : "No slate available"}
               </div>
@@ -157,7 +174,9 @@ export default function HomePage() {
             <>
               <div className="mb-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
-                  <div className="text-xs uppercase tracking-wide text-orange-700">Leader</div>
+<div className="text-xs uppercase tracking-wide text-orange-700">
+  {latestSlate?.is_locked ? "Winner" : "Leader"}
+</div>
                   <div className="mt-2 text-2xl font-bold text-slate-900">
                     {leader ? leader.teamName : "—"}
                   </div>

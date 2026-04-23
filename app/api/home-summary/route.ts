@@ -74,8 +74,8 @@ export async function GET() {
       { data: lineupPlayers, error: lineupPlayersError },
       { data: players, error: playersError },
       { data: playerSlateStats, error: playerSlateStatsError },
-      { data: seasonTeamSummary, error: seasonTeamSummaryError }, 
-   ] = await Promise.all([
+      { data: seasonTeamSummary, error: seasonTeamSummaryError },
+    ] = await Promise.all([
       supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
       supabaseAdmin
         .from("slates")
@@ -91,8 +91,8 @@ export async function GET() {
       supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
       supabaseAdmin.from("players").select("id, name").order("name", { ascending: true }),
       supabaseAdmin.from("player_slate_stats").select("slate_id, player_id, fantasy_points"),
-      supabaseAdmin.from("season_team_summary").select("season, team_id, runner_ups"),   
- ]);
+      supabaseAdmin.from("season_team_summary").select("season, team_id, runner_ups"),
+    ]);
 
     if (
       teamsError ||
@@ -114,10 +114,9 @@ export async function GET() {
             lineupPlayersError?.message ||
             playersError?.message ||
             playerSlateStatsError?.message ||
-           seasonTeamSummaryError?.message ||         
-           "Failed to load home summary data.",
-	  
-       },
+            seasonTeamSummaryError?.message ||
+            "Failed to load home summary data.",
+        },
         { status: 500 }
       );
     }
@@ -137,7 +136,43 @@ export async function GET() {
       end_date: slate.end_date ?? slate.date,
     }));
 
-    const latestSlate = normalizedSlates[0] ?? null;
+    const resultsBySlateId = new Map<number, TeamSlateResult[]>();
+    safeResults.forEach((row) => {
+      const existing = resultsBySlateId.get(row.slate_id) ?? [];
+      existing.push(row);
+      resultsBySlateId.set(row.slate_id, existing);
+    });
+
+    const rowsForSlate = (slateId: number) => resultsBySlateId.get(slateId) ?? [];
+
+    const isLiveSlate = (slateId: number) => {
+      const rows = rowsForSlate(slateId);
+      if (rows.length === 0) return false;
+
+      return rows.some(
+        (row) =>
+          (row.games_in_progress ?? 0) > 0 || (row.games_remaining ?? 0) > 0
+      );
+    };
+
+    const isCompletedSlate = (slateId: number) => {
+      const rows = rowsForSlate(slateId);
+      if (rows.length === 0) return false;
+
+      return rows.every(
+        (row) =>
+          (row.games_in_progress ?? 0) === 0 &&
+          (row.games_remaining ?? 0) === 0
+      );
+    };
+
+    const liveSlate =
+      normalizedSlates.find((slate) => isLiveSlate(slate.id)) ?? null;
+
+    const lastCompletedSlate =
+      normalizedSlates.find((slate) => isCompletedSlate(slate.id)) ?? null;
+
+    const latestSlate = liveSlate ?? lastCompletedSlate ?? normalizedSlates[0] ?? null;
 
     const latestSlateRows = latestSlate
       ? safeResults
@@ -235,14 +270,15 @@ export async function GET() {
       (a, b) => (a.fantasy_points ?? 0) - (b.fantasy_points ?? 0)
     )[0];
 
-const allTimeRunnerUps = safeTeams
-  .map((team) => ({
-    name: team.name,
-    runnerUps: safeSeasonTeamSummary
-      .filter((row) => row.team_id === team.id)
-      .reduce((sum, row) => sum + Number(row.runner_ups ?? 0), 0),
-  }))
-  .sort((a, b) => b.runnerUps - a.runnerUps)[0];
+    const allTimeRunnerUps = safeTeams
+      .map((team) => ({
+        name: team.name,
+        runnerUps: safeSeasonTeamSummary
+          .filter((row) => row.team_id === team.id)
+          .reduce((sum, row) => sum + Number(row.runner_ups ?? 0), 0),
+      }))
+      .sort((a, b) => b.runnerUps - a.runnerUps)[0];
+
     const allTimeAverageScores = safeTeams
       .map((team) => {
         const rows = allTimePlayedResults.filter((row) => row.team_id === team.id);
@@ -259,7 +295,6 @@ const allTimeRunnerUps = safeTeams
       .filter((row) => row.count > 0)
       .sort((a, b) => b.avg - a.avg)[0];
 
-    // Longest win streak
     const lockedWinners = lockedSlatesAscending
       .map((slate) => {
         const winner = safeResults.find(
@@ -316,7 +351,6 @@ const allTimeRunnerUps = safeTeams
       }
     }
 
-    // Favorite players by drafter
     const lineupMap = new Map<number, Lineup>();
     safeLineups.forEach((lineup) => {
       lineupMap.set(lineup.id, lineup);
@@ -361,7 +395,6 @@ const allTimeRunnerUps = safeTeams
       })
       .filter(Boolean) as Array<{ label: string; value: string }>;
 
-    // Lowest drafted player score
     const lockedLineupIds = new Set(lockedLineups.map((lineup) => lineup.id));
     const draftedPlayerSlatePairs = new Set<string>();
 

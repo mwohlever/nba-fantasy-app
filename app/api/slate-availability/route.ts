@@ -7,50 +7,8 @@ type SlateRecord = {
   id: number;
   start_date: string;
   end_date: string;
+  nba_team_abbreviations: string[] | null;
 };
-
-type ScoreboardV3Team = {
-  teamTricode?: string;
-  tricode?: string;
-  teamCode?: string;
-};
-
-type ScoreboardV3Game = {
-  homeTeam?: ScoreboardV3Team;
-  awayTeam?: ScoreboardV3Team;
-};
-
-type ScoreboardV3Payload = {
-  scoreboard?: {
-    games?: ScoreboardV3Game[];
-  };
-  games?: ScoreboardV3Game[];
-};
-
-function buildDateRange(startDate: string, endDate: string) {
-  const result: string[] = [];
-  const current = new Date(`${startDate}T00:00:00`);
-  const end = new Date(`${endDate}T00:00:00`);
-
-  while (current <= end) {
-    const year = current.getFullYear();
-    const month = String(current.getMonth() + 1).padStart(2, "0");
-    const day = String(current.getDate()).padStart(2, "0");
-    result.push(`${year}-${month}-${day}`);
-    current.setDate(current.getDate() + 1);
-  }
-
-  return result;
-}
-
-function formatForNbaStats(gameDateIso: string) {
-  const [year, month, day] = gameDateIso.split("-");
-  return `${month}/${day}/${year}`;
-}
-
-function getGamesFromPayload(payload: ScoreboardV3Payload) {
-  return payload.scoreboard?.games ?? payload.games ?? [];
-}
 
 function normalizeTeamCode(raw: string | null) {
   if (!raw) return null;
@@ -68,42 +26,6 @@ function normalizeTeamCode(raw: string | null) {
   };
 
   return aliasMap[code] ?? code;
-}
-
-function getTeamTricode(team?: ScoreboardV3Team) {
-  const raw = team?.teamTricode ?? team?.tricode ?? team?.teamCode ?? null;
-  return normalizeTeamCode(typeof raw === "string" ? raw : null);
-}
-
-async function fetchScoreboardForDate(gameDateIso: string) {
-  const formattedDate = formatForNbaStats(gameDateIso);
-
-  const url = `https://stats.nba.com/stats/scoreboardv3?GameDate=${encodeURIComponent(
-    formattedDate
-  )}&LeagueID=00`;
-
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Accept-Language": "en-US,en;q=0.9",
-      Connection: "keep-alive",
-      Origin: "https://www.nba.com",
-      Referer: "https://www.nba.com/",
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(
-      `Scoreboard request failed for ${formattedDate} with status ${response.status}: ${text}`
-    );
-  }
-
-  return (await response.json()) as ScoreboardV3Payload;
 }
 
 export async function GET(request: NextRequest) {
@@ -138,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
-      .select("id, start_date, end_date")
+      .select("id, start_date, end_date, nba_team_abbreviations")
       .eq("id", slateId)
       .single();
 
@@ -155,28 +77,10 @@ export async function GET(request: NextRequest) {
     }
 
     const safeSlate = slate as SlateRecord;
-    const dates = buildDateRange(safeSlate.start_date, safeSlate.end_date);
 
-    const activeTeamCodes = new Set<string>();
-
-    for (const gameDate of dates) {
-      try {
-        const payload = await fetchScoreboardForDate(gameDate);
-        const games = getGamesFromPayload(payload);
-
-        for (const game of games) {
-          const homeCode = getTeamTricode(game.homeTeam);
-          const awayCode = getTeamTricode(game.awayTeam);
-
-          if (homeCode) activeTeamCodes.add(homeCode);
-          if (awayCode) activeTeamCodes.add(awayCode);
-        }
-      } catch (error) {
-        console.error(`Failed loading scoreboard for ${gameDate}:`, error);
-      }
-    }
-
-    const normalizedTeamCodes = Array.from(activeTeamCodes).sort();
+    const normalizedTeamCodes = (safeSlate.nba_team_abbreviations ?? [])
+      .map((code) => normalizeTeamCode(code))
+      .filter((code): code is string => Boolean(code));
 
     if (normalizedTeamCodes.length === 0) {
       return NextResponse.json(
@@ -185,6 +89,7 @@ export async function GET(request: NextRequest) {
           slateId,
           startDate: safeSlate.start_date,
           endDate: safeSlate.end_date,
+          source: "database",
           debugTeamAbbreviations: [],
           availablePlayerIds: [],
         },
@@ -224,6 +129,7 @@ export async function GET(request: NextRequest) {
         slateId,
         startDate: safeSlate.start_date,
         endDate: safeSlate.end_date,
+        source: "database",
         debugTeamAbbreviations: normalizedTeamCodes,
         availablePlayerIds,
       },
