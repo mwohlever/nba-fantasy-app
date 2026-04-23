@@ -340,12 +340,6 @@ export async function POST(request: Request) {
       gamesForSlateDateRange.push(...gamesForDate);
     }
 
-console.log("DATE RANGE", safeSlate.start_date, safeSlate.end_date);
-console.log("DATE CODES", dateCodes);
-console.log("GAMES FOUND", gamesForSlateDateRange.length);
-console.log("DATE RANGE", safeSlate.start_date, safeSlate.end_date);
-console.log("DATE CODES", dateCodes);
-console.log("GAMES FOUND", gamesForSlateDateRange.length);
 
 if (gamesForSlateDateRange.length === 0) {
   return NextResponse.json({

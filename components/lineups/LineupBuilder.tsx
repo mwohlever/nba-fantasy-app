@@ -215,7 +215,6 @@ useEffect(() => {
     () => new Set(availablePlayerIdsForSlate),
     [availablePlayerIdsForSlate]
   );
-console.log("availablePlayerIdsForSlate", availablePlayerIdsForSlate.length);
   const teamsById = useMemo(() => {
     const map = new Map<number, Team>();
     teams.forEach((team) => map.set(team.id, team));
@@ -312,8 +311,6 @@ const playersById = useMemo(() => {
   });
   return map;
 }, [players]);
-console.log("CURRENT selectedSlateIdNumber", selectedSlateIdNumber);
-console.log("CURRENT lineupsState", JSON.stringify(lineupsState));
 
 function getPlayersForTeam(teamId: number) {
   const lineup = getLineupForTeam(teamId);
@@ -512,12 +509,7 @@ async function loadSlateLineups(nextSlateId: number) {
       return;
     }
 
-console.log("LOAD SLATE", nextSlateId);
-console.log("LINEUPS RESULT", lineupsResult.lineups);
-console.log("PLAYER STATS RESULT COUNT", statsResult.playerStats?.length ?? 0);
-console.log("TEAM RESULTS RESULT COUNT", resultsResult.teamResults?.length ?? 0);
     setLineupsState(lineupsResult.lineups ?? []);
-console.log("SETTING lineupsState for slate", nextSlateId);
     setPlayerStatsState(statsResult.playerStats ?? []);
     setTeamResultsState(resultsResult.teamResults ?? []);
     setSaveMessage("Loaded slate.");
