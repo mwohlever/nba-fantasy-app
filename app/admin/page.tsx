@@ -1,80 +1,72 @@
-"use client";
-
 import Link from "next/link";
-import AppNav from "@/components/AppNav";
+
+const adminCards = [
+  {
+    href: "/admin/players",
+    title: "Manage Players",
+    description:
+      "Edit player names, NBA ids, team abbreviations, active status, and slate availability support data.",
+    cta: "Go to Player Admin →",
+  },
+  {
+    href: "/admin/slates",
+    title: "Manage Slates",
+    description:
+      "Edit slate dates, lock status, participating teams, draft order, reseeding, and slate cleanup tools.",
+    cta: "Go to Slate Admin →",
+  },
+  {
+    href: "/slates/new",
+    title: "Create Slate",
+    description:
+      "Create a new slate, set the date range, choose participating teams, and establish draft order.",
+    cta: "Create New Slate →",
+  },
+];
 
 export default function AdminPage() {
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <AppNav />
-
-        {/* HEADER */}
-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <h1 className="text-3xl font-bold tracking-tight">Admin</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Manage players, slates, and league settings.
+    <div className="space-y-6">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            Admin
+          </h1>
+          <p className="max-w-3xl text-sm text-slate-600">
+            League setup and maintenance tools. Use this area for player
+            management, slate management, and creating new slates.
           </p>
-        </section>
+        </div>
+      </section>
 
-        {/* ADMIN CARDS */}
-        <section className="grid gap-4 sm:grid-cols-2">
-          {/* MANAGE PLAYERS */}
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {adminCards.map((card) => (
           <Link
-            href="/admin/players"
-            className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+            key={card.href}
+            href={card.href}
+            className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-sky-200 hover:bg-sky-50"
           >
-            <div className="flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Players
-              </div>
-
-              <div className="text-lg font-semibold text-slate-900">
-                Manage Players
-              </div>
-
-              <p className="text-sm text-slate-600">
-                Edit player positions, activate/deactivate players, and manage
-                your player pool.
+            <div className="space-y-3">
+              <h2 className="text-xl font-semibold text-slate-900">
+                {card.title}
+              </h2>
+              <p className="text-sm leading-6 text-slate-600">
+                {card.description}
               </p>
-
-              <div className="pt-2 text-sm font-medium text-sky-700 group-hover:underline">
-                Go to Player Admin →
+              <div className="text-sm font-medium text-sky-700 group-hover:text-sky-900">
+                {card.cta}
               </div>
             </div>
           </Link>
+        ))}
+      </section>
 
-          {/* MANAGE SLATES */}
-          <Link
-            href="/admin/slates"
-            className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
-          >
-            <div className="flex flex-col gap-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Slates
-              </div>
-
-              <div className="text-lg font-semibold text-slate-900">
-                Manage Slates
-              </div>
-
-              <p className="text-sm text-slate-600">
-                Edit participation, adjust draft order, reseed based on results,
-                or delete slates.
-              </p>
-
-              <div className="pt-2 text-sm font-medium text-sky-700 group-hover:underline">
-                Go to Slate Manager →
-              </div>
-            </div>
-          </Link>
-        </section>
-
-        {/* OPTIONAL FUTURE SECTION */}
-        <section className="rounded-3xl border border-dashed border-slate-300 bg-slate-100 px-5 py-6 text-sm text-slate-500">
-          More admin tools coming soon (league settings, scoring tweaks, etc.)
-        </section>
-      </div>
-    </main>
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm text-slate-500">
+          More admin tools can live here later, like scoring settings, lock
+          rules, roster maintenance, and season controls.
+        </p>
+      </section>
+    </div>
   );
 }
