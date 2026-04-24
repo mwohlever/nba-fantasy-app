@@ -362,15 +362,6 @@ export async function POST(request: NextRequest) {
 
     const nbaTeamAbbreviations = Array.from(nbaTeamSet).sort();
 
-    if (nbaTeamAbbreviations.length === 0) {
-      return NextResponse.json(
-        {
-          error:
-            "Could not auto-detect NBA team codes for this slate. Please try again or enter team codes manually from Admin → Slates.",
-        },
-        { status: 502 }
-      );
-    }
 
     const { data: newSlate, error: insertSlateError } = await supabaseAdmin
       .from("slates")
