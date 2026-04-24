@@ -93,6 +93,7 @@ export default function DraftPlayerModal({
       return;
     }
 
+    const currentPlayer = draftingPlayer;
     let isActive = true;
 
     async function loadProfile() {
@@ -100,7 +101,7 @@ export default function DraftPlayerModal({
         setIsProfileLoading(true);
 
         const response = await fetch(
-          `/api/player-league-profile?playerId=${draftingPlayer!.id}`,
+          `/api/player-league-profile?playerId=${currentPlayer.id}`,
           { cache: "no-store" }
         );
 
@@ -138,10 +139,10 @@ export default function DraftPlayerModal({
       onClick={() => setDraftingPlayer(null)}
     >
       <div
-        className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+        className="flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+        <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
               Draft Player
@@ -187,7 +188,7 @@ export default function DraftPlayerModal({
           </button>
         </div>
 
-        <div className="max-h-[calc(90vh-100px)] overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-28">
           {ownerTeamForDraftingPlayer ? (
             <div className="mb-4 flex flex-wrap gap-2">
               <button
