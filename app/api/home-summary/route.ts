@@ -515,7 +515,7 @@ export async function GET() {
 
       highestScoreRow
         ? {
-            label: "Highest Score (All Time)",
+            label: "Season High Score",
             value: `${
               safeTeams.find((team) => team.id === highestScoreRow.team_id)
                 ?.name ?? "Unknown"
@@ -526,7 +526,7 @@ export async function GET() {
 
       lowestScoreRow
         ? {
-            label: "Lowest Score (All Time)",
+            label: "Season Low Score",
             value: `${
               safeTeams.find((team) => team.id === lowestScoreRow.team_id)
                 ?.name ?? "Unknown"
@@ -544,7 +544,7 @@ export async function GET() {
 
       allTimeAverageScores
         ? {
-            label: "Best Average Score (All Time)",
+            label: "Best Average Score (The Season)",
             value: `${allTimeAverageScores.name} • ${allTimeAverageScores.avg}`,
             detail: `${allTimeAverageScores.count} locked slates`,
           }
