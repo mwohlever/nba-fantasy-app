@@ -219,11 +219,14 @@ setTeams(
         body: JSON.stringify({
           startDate,
           endDate: effectiveEndDate,
-          teamSelections: orderedTeams.map((team, index) => ({
-            team_id: team.id,
-            draft_order: index + 1,
-            is_participating: team.is_participating,
-          })),
+teamSelections: teams
+  .filter((team) => team.is_participating)
+  .sort((a, b) => a.draft_order - b.draft_order)
+  .map((team, index) => ({
+    team_id: team.id,
+    draft_order: index + 1,
+    is_participating: true,
+  })),
         }),
       });
 
@@ -234,7 +237,7 @@ setTeams(
         return;
       }
 
-      router.push("/lineups");
+router.push("/lineups/draft");
       router.refresh();
     } catch (error) {
       console.error(error);
