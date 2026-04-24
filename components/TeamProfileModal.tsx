@@ -46,6 +46,13 @@ type Props = {
   setTeam: (team: { id: number; name: string } | null) => void;
 };
 
+const TEAM_HEADSHOTS: Record<string, string> = {
+  Andy: "/team-headshots/andy.jpg",
+  Jon: "/team-headshots/jon.jpg",
+  Josh: "/team-headshots/josh.jpg",
+  Mark: "/team-headshots/mark.jpg",
+};
+
 function fmt(value: number | null | undefined, digits = 1) {
   if (value === null || value === undefined) return "—";
   return Number(value).toFixed(digits);
@@ -87,20 +94,19 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-if (!team) {
-  setData(null);
-  setLoading(false);
-  return;
-}
+    if (!team) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
 
-const currentTeam = team;
-let active = true;
+    const currentTeam = team;
+    let active = true;
 
-async function load() {
-  try {
-    setLoading(true);
-
-    const response = await fetch(`/api/team-profile?teamId=${currentTeam.id}`, {
+    async function load() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/team-profile?teamId=${currentTeam.id}`, {
           cache: "no-store",
         });
         const json = await response.json();
@@ -122,6 +128,7 @@ async function load() {
 
   if (!team) return null;
 
+  const headshot = TEAM_HEADSHOTS[team.name];
   const hasAnyDraftPosition =
     data?.recentSlates?.some((row) => row.draftPosition !== null) ?? false;
 
@@ -135,14 +142,30 @@ async function load() {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-              Team Profile
+          <div className="flex items-center gap-4">
+            {headshot ? (
+              <img
+                src={headshot}
+                alt={`${team.name} headshot`}
+                className="h-20 w-20 rounded-2xl border border-slate-200 object-cover shadow-sm"
+              />
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-2xl font-bold text-slate-500">
+                {team.name.slice(0, 1)}
+              </div>
+            )}
+
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                Team Profile
+              </div>
+              <h2 className="mt-1 text-3xl font-bold text-slate-900">
+                {team.name}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Owner trends, recent slate results, and draft personality.
+              </p>
             </div>
-            <h2 className="mt-1 text-3xl font-bold text-slate-900">{team.name}</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Owner trends, recent slate results, and draft personality.
-            </p>
           </div>
 
           <button
@@ -154,7 +177,7 @@ async function load() {
           </button>
         </div>
 
-        <div className="max-h-[calc(90vh-92px)] overflow-y-auto p-5">
+        <div className="max-h-[calc(90vh-112px)] overflow-y-auto p-5">
           {loading || !data ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               Loading team profile...
