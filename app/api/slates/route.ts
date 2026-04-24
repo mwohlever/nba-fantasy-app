@@ -309,21 +309,34 @@ export async function POST(request: NextRequest) {
     const previousCompleted = await getMostRecentCompletedSlateSetup();
     const suggestedOrderIds = buildSuggestedOrderIds(previousCompleted.results, safeTeams);
 
-    const normalizedTeamConfigs = normalizeTeamConfigs(
-      teamConfigs.length > 0
-        ? (teamConfigs as TeamConfigInput[]).map((config) => ({
-            team_id: Number(config.team_id),
-            draft_order: Number(config.draft_order),
-            is_participating: Boolean(config.is_participating),
-          }))
-        : safeTeams.map((team) => ({
-            team_id: team.id,
-            draft_order: 0,
-            is_participating: true,
-          })),
-      safeTeams,
-      suggestedOrderIds
-    );
+const normalizedTeamConfigs =
+  teamConfigs.length > 0
+    ? (teamConfigs as TeamConfigInput[])
+        .map((config) => ({
+          team_id: Number(config.team_id),
+          draft_order: Number(config.draft_order),
+          is_participating: Boolean(config.is_participating),
+        }))
+        .sort((a, b) => {
+          if (a.is_participating !== b.is_participating) {
+            return a.is_participating ? -1 : 1;
+          }
+
+          return a.draft_order - b.draft_order;
+        })
+        .map((config, index) => ({
+          ...config,
+          draft_order: index + 1,
+        }))
+    : normalizeTeamConfigs(
+        safeTeams.map((team) => ({
+          team_id: team.id,
+          draft_order: 0,
+          is_participating: true,
+        })),
+        safeTeams,
+        suggestedOrderIds
+      );
 
     const dates = buildDateRange(startDate, endDate);
     const nbaTeamSet = new Set<string>();
