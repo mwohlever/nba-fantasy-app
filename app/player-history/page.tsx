@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
+import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import type { Player } from "@/components/lineups/types";
 
 type PlayerHistoryRow = {
   player_id: number;
@@ -39,6 +41,7 @@ export default function PlayerHistoryPage() {
   const [message, setMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("times_drafted");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
 
   useEffect(() => {
     void loadPlayerHistory();
@@ -49,7 +52,9 @@ export default function PlayerHistoryPage() {
       setIsLoading(true);
       setMessage("");
 
-      const response = await fetch("/api/player-history?season=2026");
+      const response = await fetch("/api/player-history?season=2026", {
+        cache: "no-store",
+      });
       const result = (await response.json()) as ApiResponse | { error?: string };
 
       if (!response.ok) {
@@ -127,6 +132,14 @@ export default function PlayerHistoryPage() {
     return filtered;
   }, [rows, searchTerm, sortKey, sortDirection]);
 
+  const playerAverageMap = useMemo(() => {
+    const map = new Map<number, number>();
+    rows.forEach((row) => {
+      map.set(row.player_id, row.avg_score);
+    });
+    return map;
+  }, [rows]);
+
   function sortIndicator(key: SortKey) {
     if (sortKey !== key) return "";
     return sortDirection === "asc" ? " ↑" : " ↓";
@@ -137,12 +150,22 @@ export default function PlayerHistoryPage() {
       <button
         type="button"
         onClick={() => handleSort(key)}
-        className="font-semibold text-left transition hover:text-sky-700"
+        className="text-left font-semibold transition hover:text-sky-700"
       >
         {label}
         {sortIndicator(key)}
       </button>
     );
+  }
+
+  function openPlayerProfile(row: PlayerHistoryRow) {
+    setProfilePlayer({
+      id: row.player_id,
+      name: row.player_name,
+      position_group: "G",
+      is_active: true,
+      is_playing_today: null,
+    });
   }
 
   return (
@@ -194,7 +217,8 @@ export default function PlayerHistoryPage() {
             </div>
 
             <div className="text-sm text-slate-500">
-              Season: <span className="font-medium text-slate-900">{season}</span>
+              Season:{" "}
+              <span className="font-medium text-slate-900">{season}</span>
             </div>
           </div>
 
@@ -215,23 +239,45 @@ export default function PlayerHistoryPage() {
               No player history found.
             </div>
           ) : (
-            <div className="overflow-x-auto -mx-4 px-4">
+            <div className="-mx-4 overflow-x-auto px-4">
               <table className="min-w-full border-collapse text-sm">
                 <thead className="bg-slate-100 text-slate-700">
                   <tr className="text-left">
-                    <th className="px-4 py-3">{headerButton("Player", "player_name")}</th>
-                    <th className="px-4 py-3">{headerButton("Times Drafted", "times_drafted")}</th>
-                    <th className="px-4 py-3">{headerButton("Avg Score", "avg_score")}</th>
-                    <th className="px-4 py-3">{headerButton("High Score", "high_score")}</th>
-                    <th className="px-4 py-3">{headerButton("Low Score", "low_score")}</th>
-                    <th className="px-4 py-3">{headerButton("Winning Lineups", "winning_lineups")}</th>
-                    <th className="px-4 py-3">{headerButton("Runner-up Lineups", "runner_up_lineups")}</th>
+                    <th className="px-4 py-3">
+                      {headerButton("Player", "player_name")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {headerButton("Times Drafted", "times_drafted")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {headerButton("Avg Score", "avg_score")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {headerButton("High Score", "high_score")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {headerButton("Low Score", "low_score")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {headerButton("Winning Lineups", "winning_lineups")}
+                    </th>
+                    <th className="px-4 py-3">
+                      {headerButton("Runner-up Lineups", "runner_up_lineups")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white text-slate-800">
                   {filteredRows.map((row) => (
                     <tr key={row.player_id} className="border-t border-slate-100">
-                      <td className="px-4 py-3 font-medium">{row.player_name}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <button
+                          type="button"
+                          onClick={() => openPlayerProfile(row)}
+                          className="font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                        >
+                          {row.player_name}
+                        </button>
+                      </td>
                       <td className="px-4 py-3">{row.times_drafted}</td>
                       <td className="px-4 py-3">{row.avg_score.toFixed(2)}</td>
                       <td className="px-4 py-3">{row.high_score.toFixed(2)}</td>
@@ -246,6 +292,12 @@ export default function PlayerHistoryPage() {
           )}
         </section>
       </div>
+
+      <ReadOnlyPlayerModal
+        player={profilePlayer}
+        setPlayer={setProfilePlayer}
+        playerAverageMap={playerAverageMap}
+      />
     </main>
   );
 }

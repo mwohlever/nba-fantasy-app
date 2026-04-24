@@ -1,6 +1,7 @@
 "use client";
 
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
+import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import PlayerPool from "@/components/lineups/PlayerPool";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LineupControls from "@/components/lineups/LineupControls";
@@ -46,8 +47,7 @@ export default function LineupBuilder({
     useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [positionFilter, setPositionFilter] =
-    useState<PositionFilter>("All");
+  const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
   const [onSlateOnly, setOnSlateOnly] = useState(false);
   const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
@@ -66,6 +66,7 @@ export default function LineupBuilder({
   const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
     useState<number[]>([]);
   const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
 
   const [lastRefreshSummary, setLastRefreshSummary] = useState<{
     gamesFound?: number;
@@ -421,6 +422,29 @@ export default function LineupBuilder({
       turnovers: stat?.turnovers ?? 0,
       fantasy_points: stat?.fantasy_points ?? 0,
     };
+  }
+
+  function getDraftNeeds(teamId: number) {
+    const teamPlayers = getPlayersForTeam(teamId);
+    const guards = teamPlayers.filter(
+      (player) => player.position_group === "G"
+    ).length;
+    const fcs = teamPlayers.filter(
+      (player) => player.position_group === "F/C"
+    ).length;
+
+    const neededGuards = Math.max(0, 2 - guards);
+    const neededFcs = Math.max(0, 3 - fcs);
+
+    if (neededGuards === 0 && neededFcs === 0) {
+      return "Roster full";
+    }
+
+    const parts: string[] = [];
+    if (neededGuards > 0) parts.push(`${neededGuards} G`);
+    if (neededFcs > 0) parts.push(`${neededFcs} F/C`);
+
+    return `Needs ${parts.join(" • ")}`;
   }
 
   const dailySummary = useMemo(() => {
@@ -905,9 +929,11 @@ export default function LineupBuilder({
 
           <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-slate-900">Rosters</h2>
+              <h2 className="text-2xl font-semibold text-slate-900">
+                Draft Board
+              </h2>
               <p className="text-sm text-slate-600">
-                Current rosters and draft positions for this slate.
+                Team rosters, draft positions, and remaining positional needs.
               </p>
             </div>
 
@@ -935,25 +961,30 @@ export default function LineupBuilder({
                 return (
                   <div
                     key={team.id}
-                    className={`rounded-2xl border border-slate-200 bg-white ${
+                    className={`overflow-hidden rounded-2xl border border-slate-200 bg-white ${
                       !isParticipating ? "opacity-70" : ""
                     }`}
                   >
-                    <div className="flex items-center justify-between bg-slate-50 px-4 py-3">
-                      <div className="text-lg font-semibold text-slate-900">
-                        {team.name}
-                        {!isParticipating ? " (Out)" : ""}
+                    <div className="flex flex-col gap-2 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-lg font-semibold text-slate-900">
+                          {team.name}
+                          {!isParticipating ? " (Out)" : ""}
+                        </div>
+                        <div className="text-sm text-slate-600">
+                          Draft Position #{draftOrder ?? "—"}
+                        </div>
                       </div>
 
-                      <div className="text-sm text-slate-600">
-                        Draft Position #{draftOrder ?? "—"}
+                      <div className="text-sm font-medium text-sky-700">
+                        {getDraftNeeds(team.id)}
                       </div>
                     </div>
 
                     <table className="w-full text-sm">
                       <thead className="bg-slate-100 text-slate-700">
                         <tr>
-                          <th className="px-3 py-2 text-left">Position</th>
+                          <th className="px-3 py-2 text-left">Slot</th>
                           <th className="px-3 py-2 text-left">Player</th>
                         </tr>
                       </thead>
@@ -964,14 +995,22 @@ export default function LineupBuilder({
                             key={`${team.id}-${index}`}
                             className="border-b border-slate-100"
                           >
-                            <td className="px-3 py-2">{row.slot}</td>
+                            <td className="px-3 py-2 font-medium">{row.slot}</td>
+
                             <td className="px-3 py-2">
                               {row.player ? (
-                                row.player.name
+                                <button
+                                  type="button"
+                                  onClick={() => setProfilePlayer(row.player)}
+                                  className="font-medium text-sky-700 hover:underline"
+                                >
+                                  {row.player.name}
+                                </button>
                               ) : (
                                 <span className="text-slate-400">Empty</span>
                               )}
                             </td>
+
                           </tr>
                         ))}
                       </tbody>
@@ -1013,7 +1052,11 @@ export default function LineupBuilder({
           ) : null}
 
           <div className="overflow-x-auto -mx-4 px-4">
-            <div className={`${compactView ? "min-w-[720px]" : "min-w-[1100px]"} space-y-4`}>
+            <div
+              className={`${
+                compactView ? "min-w-[720px]" : "min-w-[1100px]"
+              } space-y-4`}
+            >
               {orderedTeamsForSlate.map((team) => {
                 const teamPlayers = getPlayersForTeam(team.id);
                 const stats = getTeamStats(team.id);
@@ -1130,7 +1173,10 @@ export default function LineupBuilder({
                           const stat = row.player ? getPlayerStat(row.player.id) : null;
 
                           return (
-                            <tr key={`${team.id}-${index}`} className="border-b border-slate-100">
+                            <tr
+                              key={`${team.id}-${index}`}
+                              className="border-b border-slate-100"
+                            >
                               <td
                                 className={
                                   compactView
@@ -1164,11 +1210,17 @@ export default function LineupBuilder({
                                       <span className="text-slate-400">—</span>
                                     )}
                                   </div>
-                                ) : row.player ? (
-                                  row.player.name
-                                ) : (
-                                  <span className="text-slate-400">—</span>
-                                )}
+) : row.player ? (
+  <button
+    type="button"
+    onClick={() => setProfilePlayer(row.player)}
+    className="font-medium text-sky-700 hover:underline"
+  >
+    {row.player.name}
+  </button>
+) : (
+  <span className="text-slate-400">—</span>
+)}
                               </td>
 
                               <td className={`${compactView ? "px-2 py-1" : scoreTableCellClass} text-right`}>
@@ -1256,6 +1308,12 @@ export default function LineupBuilder({
           </div>
         </section>
       )}
+
+      <ReadOnlyPlayerModal
+        player={profilePlayer}
+        setPlayer={setProfilePlayer}
+        playerAverageMap={playerAverageMap}
+      />
 
       <DraftPlayerModal
         draftingPlayer={draftingPlayer}
