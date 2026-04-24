@@ -87,18 +87,20 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!team) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
+if (!team) {
+  setData(null);
+  setLoading(false);
+  return;
+}
 
-    let active = true;
+const currentTeam = team;
+let active = true;
 
-    async function load() {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/team-profile?teamId=${team.id}`, {
+async function load() {
+  try {
+    setLoading(true);
+
+    const response = await fetch(`/api/team-profile?teamId=${currentTeam.id}`, {
           cache: "no-store",
         });
         const json = await response.json();
