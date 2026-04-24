@@ -156,11 +156,7 @@ export async function GET() {
       const rows = rowsForSlate(slateId);
       if (rows.length === 0) return false;
 
-      return rows.some(
-        (row) =>
-          (row.games_in_progress ?? 0) > 0 ||
-          (row.games_completed ?? 0) > 0
-      );
+      return rows.some((row) => (row.games_in_progress ?? 0) > 0);
     };
 
     const isCompletedSlate = (slateId: number) => {
@@ -186,7 +182,8 @@ export async function GET() {
     const lastCompletedSlate =
       normalizedSlates.find((slate) => isCompletedSlate(slate.id)) ?? null;
 
-    const latestSlate = liveSlate ?? lastCompletedSlate ?? normalizedSlates[0] ?? null;
+    const latestSlate =
+      liveSlate ?? lastCompletedSlate ?? normalizedSlates[0] ?? null;
 
     const latestSlateRows = latestSlate
       ? safeResults
@@ -194,7 +191,8 @@ export async function GET() {
           .map((row) => ({
             ...row,
             teamName:
-              safeTeams.find((team) => team.id === row.team_id)?.name ?? "Unknown Team",
+              safeTeams.find((team) => team.id === row.team_id)?.name ??
+              "Unknown Team",
           }))
           .sort((a, b) => {
             const aFinish = a.finish_position ?? 999;
@@ -263,9 +261,9 @@ export async function GET() {
     const lockedSlatesAscending = [...normalizedSlates]
       .filter((slate) => slate.is_locked)
       .sort((a, b) => {
-        const aStart = a.start_date;
-        const bStart = b.start_date;
-        if (aStart !== bStart) return aStart.localeCompare(bStart);
+        if (a.start_date !== b.start_date) {
+          return a.start_date.localeCompare(b.start_date);
+        }
         return a.end_date.localeCompare(b.end_date);
       });
 
@@ -276,13 +274,11 @@ export async function GET() {
         (row.fantasy_points ?? 0) > 0
     );
 
-    const allTimePlayedResults = lockedResults;
-
-    const highestScoreRow = [...allTimePlayedResults].sort(
+    const highestScoreRow = [...lockedResults].sort(
       (a, b) => (b.fantasy_points ?? 0) - (a.fantasy_points ?? 0)
     )[0];
 
-    const lowestScoreRow = [...allTimePlayedResults].sort(
+    const lowestScoreRow = [...lockedResults].sort(
       (a, b) => (a.fantasy_points ?? 0) - (b.fantasy_points ?? 0)
     )[0];
 
@@ -297,8 +293,9 @@ export async function GET() {
 
     const allTimeAverageScores = safeTeams
       .map((team) => {
-        const rows = allTimePlayedResults.filter((row) => row.team_id === team.id);
+        const rows = lockedResults.filter((row) => row.team_id === team.id);
         const scores = rows.map((row) => Number(row.fantasy_points ?? 0));
+
         return {
           name: team.name,
           avg:
@@ -326,7 +323,8 @@ export async function GET() {
           slate_id: slate.id,
           team_id: winner.team_id,
           team_name:
-            safeTeams.find((team) => team.id === winner.team_id)?.name ?? "Unknown Team",
+            safeTeams.find((team) => team.id === winner.team_id)?.name ??
+            "Unknown Team",
           start_date: slate.start_date,
           end_date: slate.end_date,
         };
@@ -377,93 +375,173 @@ export async function GET() {
       playerMap.set(player.id, player);
     });
 
-    const lockedLineups = safeLineups.filter((lineup) => lockedSlateIds.has(lineup.slate_id));
+    const topLivePerformer =
+      liveSlate
+        ? safePlayerSlateStats
+            .filter(
+              (row) =>
+                row.slate_id === liveSlate.id &&
+                (row.fantasy_points ?? 0) > 0
+            )
+            .sort(
+              (a, b) => (b.fantasy_points ?? 0) - (a.fantasy_points ?? 0)
+            )[0]
+        : null;
 
-    const favoritePlayerFacts = ["Andy", "Jon", "Mark", "Josh"]
-      .map((teamName) => {
-        const team = safeTeams.find((t) => t.name === teamName);
-        if (!team) return null;
+    const topLatestCompletedPerformer =
+      lastCompletedSlate
+        ? safePlayerSlateStats
+            .filter(
+              (row) =>
+                row.slate_id === lastCompletedSlate.id &&
+                (row.fantasy_points ?? 0) > 0
+            )
+            .sort(
+              (a, b) => (b.fantasy_points ?? 0) - (a.fantasy_points ?? 0)
+            )[0]
+        : null;
 
-        const lineupIds = lockedLineups
-          .filter((lineup) => lineup.team_id === team.id)
-          .map((lineup) => lineup.id);
-
-        if (lineupIds.length === 0) return null;
-
-        const playerCounts = new Map<number, number>();
-
-        safeLineupPlayers.forEach((row) => {
-          if (!lineupIds.includes(row.lineup_id)) return;
-          playerCounts.set(row.player_id, (playerCounts.get(row.player_id) ?? 0) + 1);
-        });
-
-        if (playerCounts.size === 0) return null;
-
-        const topEntry = [...playerCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-        const favoritePlayer = playerMap.get(topEntry[0]);
-
-        if (!favoritePlayer) return null;
-
-        return {
-          label: `${teamName}'s Favorite Player`,
-          value: `${favoritePlayer.name} • ${topEntry[1]} drafts`,
-        };
-      })
-      .filter(Boolean) as Array<{ label: string; value: string }>;
-
-    const lockedLineupIds = new Set(lockedLineups.map((lineup) => lineup.id));
-    const draftedPlayerSlatePairs = new Set<string>();
-
+    const playerDraftCounts = new Map<number, number>();
     safeLineupPlayers.forEach((row) => {
-      if (!lockedLineupIds.has(row.lineup_id)) return;
-      const lineup = lineupMap.get(row.lineup_id);
-      if (!lineup) return;
-      draftedPlayerSlatePairs.add(`${lineup.slate_id}-${row.player_id}`);
+      playerDraftCounts.set(
+        row.player_id,
+        (playerDraftCounts.get(row.player_id) ?? 0) + 1
+      );
     });
 
-    const lowestDraftedPlayerRow = safePlayerSlateStats
-      .filter((row) => {
-        const key = `${row.slate_id}-${row.player_id}`;
-        return draftedPlayerSlatePairs.has(key) && (row.fantasy_points ?? 0) > 0;
-      })
-      .sort((a, b) => Number(a.fantasy_points ?? 0) - Number(b.fantasy_points ?? 0))[0];
+    const mostDraftedPlayer = [...playerDraftCounts.entries()].sort(
+      (a, b) => b[1] - a[1]
+    )[0];
 
-    const lowestDraftedPlayerFact = lowestDraftedPlayerRow
-      ? {
-          label: "Lowest Drafted Player Score",
-          value: `${
-            playerMap.get(lowestDraftedPlayerRow.player_id)?.name ?? "Unknown Player"
-          } • ${roundTo(Number(lowestDraftedPlayerRow.fantasy_points ?? 0))}`,
-        }
-      : null;
+    const playerScores = new Map<number, number[]>();
+    safePlayerSlateStats.forEach((row) => {
+      if ((row.fantasy_points ?? 0) <= 0) return;
+
+      const existing = playerScores.get(row.player_id) ?? [];
+      existing.push(Number(row.fantasy_points ?? 0));
+      playerScores.set(row.player_id, existing);
+    });
+
+    const highestAveragePlayer = [...playerScores.entries()]
+      .map(([playerId, scores]) => ({
+        playerId,
+        avg: scores.reduce((sum, value) => sum + value, 0) / scores.length,
+        count: scores.length,
+      }))
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.avg - a.avg)[0];
+
+    const winsWhenDrafted = new Map<number, number>();
+
+    safeResults
+      .filter((row) => row.finish_position === 1)
+      .forEach((winningResult) => {
+        const winningLineup = safeLineups.find(
+          (lineup) =>
+            lineup.slate_id === winningResult.slate_id &&
+            lineup.team_id === winningResult.team_id
+        );
+
+        if (!winningLineup) return;
+
+        safeLineupPlayers
+          .filter((row) => row.lineup_id === winningLineup.id)
+          .forEach((row) => {
+            winsWhenDrafted.set(
+              row.player_id,
+              (winsWhenDrafted.get(row.player_id) ?? 0) + 1
+            );
+          });
+      });
+
+    const mostWinsWhenDraftedPlayer = [...winsWhenDrafted.entries()].sort(
+      (a, b) => b[1] - a[1]
+    )[0];
 
     const funFacts = [
+      topLivePerformer && liveSlate
+        ? {
+            label: "⚡ Top Performer (Live)",
+            value: `${
+              playerMap.get(topLivePerformer.player_id)?.name ?? "Unknown Player"
+            } • ${roundTo(Number(topLivePerformer.fantasy_points ?? 0))}`,
+            detail: formatSlateLabel(liveSlate.start_date, liveSlate.end_date),
+          }
+        : null,
+
+      topLatestCompletedPerformer && lastCompletedSlate
+        ? {
+            label: "🔥 Top Performer (Latest Final)",
+            value: `${
+              playerMap.get(topLatestCompletedPerformer.player_id)?.name ??
+              "Unknown Player"
+            } • ${roundTo(Number(topLatestCompletedPerformer.fantasy_points ?? 0))}`,
+            detail: formatSlateLabel(
+              lastCompletedSlate.start_date,
+              lastCompletedSlate.end_date
+            ),
+          }
+        : null,
+
+      mostDraftedPlayer
+        ? {
+            label: "Most Drafted Player",
+            value: `${
+              playerMap.get(mostDraftedPlayer[0])?.name ?? "Unknown Player"
+            } • ${mostDraftedPlayer[1]} drafts`,
+          }
+        : null,
+
+      highestAveragePlayer
+        ? {
+            label: "Highest Avg Player",
+            value: `${
+              playerMap.get(highestAveragePlayer.playerId)?.name ??
+              "Unknown Player"
+            } • ${roundTo(highestAveragePlayer.avg)} FP`,
+            detail: `${highestAveragePlayer.count} recorded games`,
+          }
+        : null,
+
+      mostWinsWhenDraftedPlayer
+        ? {
+            label: "Most Wins When Drafted",
+            value: `${
+              playerMap.get(mostWinsWhenDraftedPlayer[0])?.name ??
+              "Unknown Player"
+            } • ${mostWinsWhenDraftedPlayer[1]} wins`,
+          }
+        : null,
+
       highestScoreRow
         ? {
             label: "Highest Score (All Time)",
             value: `${
-              safeTeams.find((team) => team.id === highestScoreRow.team_id)?.name ??
-              "Unknown"
+              safeTeams.find((team) => team.id === highestScoreRow.team_id)
+                ?.name ?? "Unknown"
             } • ${roundTo(Number(highestScoreRow.fantasy_points ?? 0))}`,
-            detail: "Single-slate peak score",
+            detail: "Single-slate team score",
           }
         : null,
+
       lowestScoreRow
         ? {
             label: "Lowest Score (All Time)",
             value: `${
-              safeTeams.find((team) => team.id === lowestScoreRow.team_id)?.name ??
-              "Unknown"
+              safeTeams.find((team) => team.id === lowestScoreRow.team_id)
+                ?.name ?? "Unknown"
             } • ${roundTo(Number(lowestScoreRow.fantasy_points ?? 0))}`,
             detail: "Lowest non-zero single-slate team score",
           }
         : null,
+
       allTimeRunnerUps
         ? {
             label: "Most Runner-Ups (All Time)",
             value: `${allTimeRunnerUps.name} • ${allTimeRunnerUps.runnerUps}`,
           }
         : null,
+
       allTimeAverageScores
         ? {
             label: "Best Average Score (All Time)",
@@ -471,14 +549,13 @@ export async function GET() {
             detail: `${allTimeAverageScores.count} locked slates`,
           }
         : null,
+
       longestWinStreak
         ? {
             label: "Longest Win Streak",
             value: `${longestWinStreak.team_name} • ${longestWinStreak.streak} in a row`,
           }
         : null,
-      ...favoritePlayerFacts,
-      lowestDraftedPlayerFact,
     ].filter(Boolean);
 
     return NextResponse.json({
