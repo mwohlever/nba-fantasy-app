@@ -69,8 +69,41 @@ export default function NewSlatePage() {
         return;
       }
 
-      const safeResult = result as SetupResponse;
-      setTeams(safeResult.teams ?? []);
+const safeResult = result as SetupResponse & {
+  suggestedTeamConfigs?: Array<{
+    team_id: number;
+    draft_order: number;
+    is_participating: boolean;
+  }>;
+};
+
+const configMap = new Map(
+  (safeResult.suggestedTeamConfigs ?? []).map((config) => [
+    config.team_id,
+    config,
+  ])
+);
+
+const mergedTeams = (safeResult.teams ?? []).map((team) => {
+  const config = configMap.get(team.id);
+
+  return {
+    ...team,
+    draft_order: config?.draft_order ?? team.draft_order ?? 999,
+    is_participating:
+      config?.is_participating ?? team.is_participating ?? true,
+  };
+});
+
+setTeams(
+  mergedTeams.sort((a, b) => {
+    if (a.is_participating !== b.is_participating) {
+      return a.is_participating ? -1 : 1;
+    }
+
+    return a.draft_order - b.draft_order;
+  })
+);
 
       if (safeResult.previousSlate) {
         const label = formatSlateLabel(

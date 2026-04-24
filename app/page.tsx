@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
 import FunFactCarousel from "@/components/home/FunFactCarousel";
+import TeamProfileModal from "@/components/TeamProfileModal";
 
 type LatestSlate = {
   id: number;
@@ -58,6 +59,7 @@ export default function HomePage() {
   const [data, setData] = useState<HomeSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [profileTeam, setProfileTeam] = useState<{ id: number; name: string } | null>(null);
 
   async function loadHomeSummary() {
     try {
@@ -218,9 +220,18 @@ export default function HomePage() {
                   <div className="text-xs uppercase tracking-wide text-orange-700">
                     {leaderLabel}
                   </div>
-                  <div className="mt-2 text-2xl font-bold text-slate-900">
+                  <button
+                    onClick={() =>
+                      leader &&
+                      setProfileTeam({
+                        id: leader.team_id,
+                        name: leader.teamName,
+                      })
+                    }
+                    className="mt-2 text-2xl font-bold text-slate-900 hover:text-sky-700 hover:underline"
+                  >
                     {leader ? leader.teamName : "—"}
-                  </div>
+                  </button>
                   <div className="mt-1 text-sm text-slate-600">
                     {leader
                       ? `${roundTo(Number(leader.fantasy_points ?? 0))} pts`
@@ -276,7 +287,17 @@ export default function HomePage() {
                           }`}
                         >
                           <td className="px-4 py-3 font-medium">
-                            {row.teamName}
+                            <button
+                              onClick={() =>
+                                setProfileTeam({
+                                  id: row.team_id,
+                                  name: row.teamName,
+                                })
+                              }
+                              className="hover:text-sky-700 hover:underline"
+                            >
+                              {row.teamName}
+                            </button>
                           </td>
                           <td className="px-4 py-3">
                             {roundTo(Number(row.fantasy_points ?? 0))}
@@ -341,9 +362,17 @@ export default function HomePage() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="font-semibold text-slate-900">
+                        <button
+                          onClick={() =>
+                            setProfileTeam({
+                              id: row.team_id,
+                              name: row.name,
+                            })
+                          }
+                          className="font-semibold text-slate-900 hover:text-sky-700 hover:underline"
+                        >
                           {row.name}
-                        </div>
+                        </button>
                         <div className="mt-1 text-xs text-slate-500">
                           {row.wins} wins • Avg finish {row.avg_finish ?? "—"}
                         </div>
@@ -376,6 +405,8 @@ export default function HomePage() {
           </section>
         </section>
       </div>
+
+      <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
     </main>
   );
 }

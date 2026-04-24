@@ -1,6 +1,7 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import TeamProfileModal from "@/components/TeamProfileModal";
 import { useEffect, useMemo, useState } from "react";
 
 type StandingRow = {
@@ -67,6 +68,7 @@ export default function StandingsPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("wins");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [profileTeam, setProfileTeam] = useState<{ id: number; name: string } | null>(null);
 
   useEffect(() => {
     void loadStandings();
@@ -252,7 +254,20 @@ export default function StandingsPage() {
                           index === 0 ? "bg-orange-50/50" : ""
                         }`}
                       >
-                        <td className="px-3 py-3 font-medium">{row.name}</td>
+                        <td className="px-3 py-3 font-medium">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProfileTeam({
+                                id: row.team_id,
+                                name: row.name,
+                              })
+                            }
+                            className="font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                          >
+                            {row.name}
+                          </button>
+                        </td>
                         <td className="px-3 py-3">{row.wins}</td>
                         <td className="px-3 py-3">{row.runner_ups}</td>
                         <td className="px-3 py-3">{formatNumber(row.avg_finish, 2)}</td>
@@ -269,6 +284,8 @@ export default function StandingsPage() {
           )}
         </section>
       </div>
+
+      <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
     </main>
   );
 }

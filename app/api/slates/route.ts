@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-type TeamRow = {
-  id: number;
-  name: string;
-};
+type TeamRow = { id: number; name: string };
 
 type TeamSlateResultRow = {
   team_id: number;
@@ -30,9 +27,7 @@ type ScoreboardV3Game = {
 };
 
 type ScoreboardV3Payload = {
-  scoreboard?: {
-    games?: ScoreboardV3Game[];
-  };
+  scoreboard?: { games?: ScoreboardV3Game[] };
   games?: ScoreboardV3Game[];
 };
 
@@ -42,6 +37,7 @@ function normalizeTeamConfigs(
   suggestedOrderIds: number[]
 ) {
   const rawMap = new Map<number, TeamConfigInput>();
+
   rawConfigs.forEach((config) => {
     rawMap.set(Number(config.team_id), {
       team_id: Number(config.team_id),
@@ -55,14 +51,13 @@ function normalizeTeamConfigs(
   const participating = allTeamIds.filter(
     (teamId) => rawMap.get(teamId)?.is_participating ?? true
   );
+
   const notParticipating = allTeamIds.filter(
     (teamId) => !(rawMap.get(teamId)?.is_participating ?? true)
   );
 
   const suggestedRank = new Map<number, number>();
-  suggestedOrderIds.forEach((teamId, index) => {
-    suggestedRank.set(teamId, index);
-  });
+  suggestedOrderIds.forEach((teamId, index) => suggestedRank.set(teamId, index));
 
   const sortBySuggestedOrder = (a: number, b: number) => {
     const aRank = suggestedRank.get(a) ?? Number.MAX_SAFE_INTEGER;
@@ -78,9 +73,7 @@ function normalizeTeamConfigs(
   participating.sort(sortBySuggestedOrder);
   notParticipating.sort(sortBySuggestedOrder);
 
-  const finalOrder = [...participating, ...notParticipating];
-
-  return finalOrder.map((teamId, index) => ({
+  return [...participating, ...notParticipating].map((teamId, index) => ({
     team_id: teamId,
     draft_order: index + 1,
     is_participating: participating.includes(teamId),
@@ -178,19 +171,82 @@ async function fetchTeamsForDate(gameDateIso: string) {
   return Array.from(teamCodes);
 }
 
+async function getMostRecentCompletedSlateSetup() {
+  const { data: slates, error: slatesError } = await supabaseAdmin
+    .from("slates")
+    .select("id, start_date, end_date, date")
+    .order("start_date", { ascending: false })
+    .order("end_date", { ascending: false });
+
+  if (slatesError) throw new Error(slatesError.message);
+
+  for (const slate of slates ?? []) {
+    const { data: results, error: resultsError } = await supabaseAdmin
+      .from("team_slate_results")
+      .select("team_id, fantasy_points, finish_position")
+      .eq("slate_id", slate.id);
+
+    if (resultsError) throw new Error(resultsError.message);
+
+    const safeResults = (results ?? []) as TeamSlateResultRow[];
+
+    const hasRealResults = safeResults.some(
+      (row) =>
+        row.finish_position !== null &&
+        row.finish_position !== undefined &&
+        (row.fantasy_points ?? 0) > 0
+    );
+
+    if (hasRealResults) {
+      return {
+        slate,
+        results: safeResults,
+      };
+    }
+  }
+
+  return {
+    slate: null,
+    results: [] as TeamSlateResultRow[],
+  };
+}
+
+function buildSuggestedOrderIds(
+  results: TeamSlateResultRow[],
+  safeTeams: TeamRow[]
+) {
+  const rankedTeams = [...results]
+    .filter(
+      (row) =>
+        row.finish_position !== null &&
+        row.finish_position !== undefined &&
+        (row.fantasy_points ?? 0) > 0
+    )
+    .sort((a, b) => {
+      const aFinish = a.finish_position ?? Number.MAX_SAFE_INTEGER;
+      const bFinish = b.finish_position ?? Number.MAX_SAFE_INTEGER;
+
+      if (aFinish !== bFinish) return aFinish - bFinish;
+
+      return (b.fantasy_points ?? 0) - (a.fantasy_points ?? 0);
+    });
+
+  const inverseOrderIds = rankedTeams.map((row) => row.team_id).reverse();
+
+  const teamsMissingFromSlate = safeTeams
+    .filter((team) => !inverseOrderIds.includes(team.id))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((team) => team.id);
+
+  return [...inverseOrderIds, ...teamsMissingFromSlate];
+}
+
 export async function GET() {
   try {
-    const [{ data: teams, error: teamsError }, { data: latestSlate, error: latestSlateError }] =
-      await Promise.all([
-        supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
-        supabaseAdmin
-          .from("slates")
-          .select("id, start_date, end_date, date")
-          .order("start_date", { ascending: false })
-          .order("end_date", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-      ]);
+    const { data: teams, error: teamsError } = await supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .order("name", { ascending: true });
 
     if (teamsError) {
       return NextResponse.json(
@@ -199,52 +255,13 @@ export async function GET() {
       );
     }
 
-    if (latestSlateError) {
-      return NextResponse.json(
-        { error: `Failed to load latest slate: ${latestSlateError.message}` },
-        { status: 500 }
-      );
-    }
-
     const safeTeams = (teams ?? []) as TeamRow[];
+    const previousCompleted = await getMostRecentCompletedSlateSetup();
 
-    let latestSlateResults: TeamSlateResultRow[] = [];
-
-    if (latestSlate?.id) {
-      const { data: results, error: resultsError } = await supabaseAdmin
-        .from("team_slate_results")
-        .select("team_id, fantasy_points, finish_position")
-        .eq("slate_id", latestSlate.id);
-
-      if (resultsError) {
-        return NextResponse.json(
-          { error: `Failed to load latest slate results: ${resultsError.message}` },
-          { status: 500 }
-        );
-      }
-
-      latestSlateResults = (results ?? []) as TeamSlateResultRow[];
-    }
-
-    const rankedLatestTeams = [...latestSlateResults].sort((a, b) => {
-      const aFinish = a.finish_position ?? Number.MAX_SAFE_INTEGER;
-      const bFinish = b.finish_position ?? Number.MAX_SAFE_INTEGER;
-
-      if (aFinish !== bFinish) return aFinish - bFinish;
-
-      const aScore = a.fantasy_points ?? 0;
-      const bScore = b.fantasy_points ?? 0;
-      return bScore - aScore;
-    });
-
-    const inverseOrderIds = rankedLatestTeams.map((row) => row.team_id).reverse();
-
-    const teamsMissingFromLatestSlate = safeTeams
-      .filter((team) => !inverseOrderIds.includes(team.id))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((team) => team.id);
-
-    const suggestedOrderIds = [...inverseOrderIds, ...teamsMissingFromLatestSlate];
+    const suggestedOrderIds = buildSuggestedOrderIds(
+      previousCompleted.results,
+      safeTeams
+    );
 
     const suggestedTeamConfigs = normalizeTeamConfigs(
       safeTeams.map((team) => ({
@@ -259,7 +276,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       teams: safeTeams,
-      latestSlate: latestSlate ?? null,
+      latestSlate: previousCompleted.slate,
+      previousCompletedSlate: previousCompleted.slate,
       suggestedTeamConfigs,
     });
   } catch (error) {
@@ -277,7 +295,12 @@ export async function POST(request: NextRequest) {
 
     const startDate = body?.startDate;
     const endDate = body?.endDate;
-    const teamConfigs = Array.isArray(body?.teamConfigs) ? body.teamConfigs : [];
+
+    const teamConfigs = Array.isArray(body?.teamSelections)
+      ? body.teamSelections
+      : Array.isArray(body?.teamConfigs)
+        ? body.teamConfigs
+        : [];
 
     if (!startDate || !endDate) {
       return NextResponse.json(
@@ -299,59 +322,12 @@ export async function POST(request: NextRequest) {
     }
 
     const safeTeams = teams as TeamRow[];
+    const previousCompleted = await getMostRecentCompletedSlateSetup();
 
-    const latestSlateQuery = await supabaseAdmin
-      .from("slates")
-      .select("id, start_date, end_date, date")
-      .order("start_date", { ascending: false })
-      .order("end_date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (latestSlateQuery.error) {
-      return NextResponse.json(
-        { error: `Failed to load latest slate: ${latestSlateQuery.error.message}` },
-        { status: 500 }
-      );
-    }
-
-    let latestSlateResults: TeamSlateResultRow[] = [];
-
-    if (latestSlateQuery.data?.id) {
-      const { data: results, error: resultsError } = await supabaseAdmin
-        .from("team_slate_results")
-        .select("team_id, fantasy_points, finish_position")
-        .eq("slate_id", latestSlateQuery.data.id);
-
-      if (resultsError) {
-        return NextResponse.json(
-          { error: `Failed to load latest slate results: ${resultsError.message}` },
-          { status: 500 }
-        );
-      }
-
-      latestSlateResults = (results ?? []) as TeamSlateResultRow[];
-    }
-
-    const rankedLatestTeams = [...latestSlateResults].sort((a, b) => {
-      const aFinish = a.finish_position ?? Number.MAX_SAFE_INTEGER;
-      const bFinish = b.finish_position ?? Number.MAX_SAFE_INTEGER;
-
-      if (aFinish !== bFinish) return aFinish - bFinish;
-
-      const aScore = a.fantasy_points ?? 0;
-      const bScore = b.fantasy_points ?? 0;
-      return bScore - aScore;
-    });
-
-    const inverseOrderIds = rankedLatestTeams.map((row) => row.team_id).reverse();
-
-    const teamsMissingFromLatestSlate = safeTeams
-      .filter((team) => !inverseOrderIds.includes(team.id))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((team) => team.id);
-
-    const suggestedOrderIds = [...inverseOrderIds, ...teamsMissingFromLatestSlate];
+    const suggestedOrderIds = buildSuggestedOrderIds(
+      previousCompleted.results,
+      safeTeams
+    );
 
     const normalizedTeamConfigs = normalizeTeamConfigs(
       teamConfigs.length > 0
@@ -369,8 +345,6 @@ export async function POST(request: NextRequest) {
       suggestedOrderIds
     );
 
-    // MULTI-DAY FIX:
-    // pull NBA teams for every day in the slate window and union them together
     const dates = buildDateRange(startDate, endDate);
     const nbaTeamSet = new Set<string>();
 
@@ -387,6 +361,16 @@ export async function POST(request: NextRequest) {
     }
 
     const nbaTeamAbbreviations = Array.from(nbaTeamSet).sort();
+
+    if (nbaTeamAbbreviations.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Could not auto-detect NBA team codes for this slate. Please try again or enter team codes manually from Admin → Slates.",
+        },
+        { status: 502 }
+      );
+    }
 
     const { data: newSlate, error: insertSlateError } = await supabaseAdmin
       .from("slates")
@@ -422,7 +406,9 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin.from("slates").delete().eq("id", newSlate.id);
 
       return NextResponse.json(
-        { error: `Failed to create slate team order: ${insertSlateTeamsError.message}` },
+        {
+          error: `Failed to create slate team order: ${insertSlateTeamsError.message}`,
+        },
         { status: 500 }
       );
     }
@@ -432,6 +418,7 @@ export async function POST(request: NextRequest) {
       slate: newSlate,
       slateTeams: slateTeamRows,
       autoDetectedNbaTeams: nbaTeamAbbreviations,
+      previousCompletedSlate: previousCompleted.slate,
     });
   } catch (error) {
     console.error(error);
