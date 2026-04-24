@@ -1184,7 +1184,8 @@ export default function LineupBuilder({
                                     : scoreTableCellClass
                                 }
                               >
-                                {compactView ? (
+                                
+{compactView ? (
                                   <div className="w-[40px] min-w-[40px] border-r border-slate-200 bg-white px-2 py-1">
                                     {row.slot}
                                   </div>
@@ -1200,12 +1201,16 @@ export default function LineupBuilder({
                                     : scoreTableCellClass
                                 }
                               >
-                                {compactView ? (
-                                  <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-white px-2 py-1">
-                                    {row.player ? (
-                                      <span className="block truncate">
-                                        {row.player.name}
-                                      </span>
+{compactView ? (
+  <div className="w-[128px] min-w-[128px] border-r">
+    {row.player ? (
+      <button
+        type="button"
+        onClick={() => setProfilePlayer(row.player)}
+        className="block w-full truncate text-left font-medium text-sky-700 hover:underline"
+      >
+        {row.player.name}
+      </button>
                                     ) : (
                                       <span className="text-slate-400">—</span>
                                     )}
