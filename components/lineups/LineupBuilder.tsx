@@ -1204,13 +1204,13 @@ export default function LineupBuilder({
 {compactView ? (
   <div className="w-[128px] min-w-[128px] border-r">
     {row.player ? (
-      <button
-        type="button"
-        onClick={() => setProfilePlayer(row.player)}
-        className="block w-full truncate text-left font-medium text-sky-700 hover:underline"
-      >
-        {row.player.name}
-      </button>
+<button
+  type="button"
+  onClick={() => setProfilePlayer(row.player)}
+  className="block w-full truncate bg-white text-left font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+>
+  {row.player.name}
+</button>
                                     ) : (
                                       <span className="text-slate-400">—</span>
                                     )}
