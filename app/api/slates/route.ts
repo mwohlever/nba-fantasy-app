@@ -31,11 +31,11 @@ type ScoreboardV3Payload = {
   games?: ScoreboardV3Game[];
 };
 
-function normalizeTeamConfigs(
-  rawConfigs: TeamConfigInput[],
-  allTeams: TeamRow[],
-  suggestedOrderIds: number[]
-) {
+const MANUAL_TEAM_CODE_FALLBACKS: Record<string, string[]> = {
+  "2026-04-24": ["LAL", "HOU", "BOS", "PHI", "SAS", "POR"],
+};
+
+function normalizeTeamConfigs(rawConfigs: TeamConfigInput[], allTeams: TeamRow[], suggestedOrderIds: number[]) {
   const rawMap = new Map<number, TeamConfigInput>();
 
   rawConfigs.forEach((config) => {
@@ -47,14 +47,8 @@ function normalizeTeamConfigs(
   });
 
   const allTeamIds = allTeams.map((team) => team.id);
-
-  const participating = allTeamIds.filter(
-    (teamId) => rawMap.get(teamId)?.is_participating ?? true
-  );
-
-  const notParticipating = allTeamIds.filter(
-    (teamId) => !(rawMap.get(teamId)?.is_participating ?? true)
-  );
+  const participating = allTeamIds.filter((teamId) => rawMap.get(teamId)?.is_participating ?? true);
+  const notParticipating = allTeamIds.filter((teamId) => !(rawMap.get(teamId)?.is_participating ?? true));
 
   const suggestedRank = new Map<number, number>();
   suggestedOrderIds.forEach((teamId, index) => suggestedRank.set(teamId, index));
@@ -130,45 +124,49 @@ function getTeamTricode(team?: ScoreboardV3Team) {
 
 async function fetchTeamsForDate(gameDateIso: string) {
   const formattedDate = formatForNbaStats(gameDateIso);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
 
-  const url = `https://stats.nba.com/stats/scoreboardv3?GameDate=${encodeURIComponent(
-    formattedDate
-  )}&LeagueID=00`;
+  try {
+    const url = `https://stats.nba.com/stats/scoreboardv3?GameDate=${encodeURIComponent(
+      formattedDate
+    )}&LeagueID=00`;
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json, text/plain, */*",
-      "Accept-Language": "en-US,en;q=0.9",
-      Connection: "keep-alive",
-      Origin: "https://www.nba.com",
-      Referer: "https://www.nba.com/",
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    },
-    cache: "no-store",
-  });
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        Connection: "keep-alive",
+        Origin: "https://www.nba.com",
+        Referer: "https://www.nba.com/",
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
-    throw new Error(
-      `NBA scoreboard request failed for ${formattedDate} with status ${response.status}`
-    );
+    if (!response.ok) {
+      throw new Error(`NBA scoreboard request failed for ${formattedDate} with status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as ScoreboardV3Payload;
+    const games = getGamesFromPayload(payload);
+    const teamCodes = new Set<string>();
+
+    for (const game of games) {
+      const homeCode = getTeamTricode(game.homeTeam);
+      const awayCode = getTeamTricode(game.awayTeam);
+
+      if (homeCode) teamCodes.add(homeCode);
+      if (awayCode) teamCodes.add(awayCode);
+    }
+
+    return Array.from(teamCodes);
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const payload = (await response.json()) as ScoreboardV3Payload;
-  const games = getGamesFromPayload(payload);
-
-  const teamCodes = new Set<string>();
-
-  for (const game of games) {
-    const homeCode = getTeamTricode(game.homeTeam);
-    const awayCode = getTeamTricode(game.awayTeam);
-
-    if (homeCode) teamCodes.add(homeCode);
-    if (awayCode) teamCodes.add(awayCode);
-  }
-
-  return Array.from(teamCodes);
 }
 
 async function getMostRecentCompletedSlateSetup() {
@@ -189,7 +187,6 @@ async function getMostRecentCompletedSlateSetup() {
     if (resultsError) throw new Error(resultsError.message);
 
     const safeResults = (results ?? []) as TeamSlateResultRow[];
-
     const hasRealResults = safeResults.some(
       (row) =>
         row.finish_position !== null &&
@@ -198,23 +195,14 @@ async function getMostRecentCompletedSlateSetup() {
     );
 
     if (hasRealResults) {
-      return {
-        slate,
-        results: safeResults,
-      };
+      return { slate, results: safeResults };
     }
   }
 
-  return {
-    slate: null,
-    results: [] as TeamSlateResultRow[],
-  };
+  return { slate: null, results: [] as TeamSlateResultRow[] };
 }
 
-function buildSuggestedOrderIds(
-  results: TeamSlateResultRow[],
-  safeTeams: TeamRow[]
-) {
+function buildSuggestedOrderIds(results: TeamSlateResultRow[], safeTeams: TeamRow[]) {
   const rankedTeams = [...results]
     .filter(
       (row) =>
@@ -241,6 +229,17 @@ function buildSuggestedOrderIds(
   return [...inverseOrderIds, ...teamsMissingFromSlate];
 }
 
+function getFallbackTeamCodesForRange(startDate: string, endDate: string) {
+  const dates = buildDateRange(startDate, endDate);
+  const teamSet = new Set<string>();
+
+  dates.forEach((date) => {
+    (MANUAL_TEAM_CODE_FALLBACKS[date] ?? []).forEach((code) => teamSet.add(code));
+  });
+
+  return Array.from(teamSet).sort();
+}
+
 export async function GET() {
   try {
     const { data: teams, error: teamsError } = await supabaseAdmin
@@ -249,19 +248,13 @@ export async function GET() {
       .order("name", { ascending: true });
 
     if (teamsError) {
-      return NextResponse.json(
-        { error: `Failed to load teams: ${teamsError.message}` },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: `Failed to load teams: ${teamsError.message}` }, { status: 500 });
     }
 
     const safeTeams = (teams ?? []) as TeamRow[];
     const previousCompleted = await getMostRecentCompletedSlateSetup();
 
-    const suggestedOrderIds = buildSuggestedOrderIds(
-      previousCompleted.results,
-      safeTeams
-    );
+    const suggestedOrderIds = buildSuggestedOrderIds(previousCompleted.results, safeTeams);
 
     const suggestedTeamConfigs = normalizeTeamConfigs(
       safeTeams.map((team) => ({
@@ -282,10 +275,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: "Unexpected server error while loading slate setup." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Unexpected server error while loading slate setup." }, { status: 500 });
   }
 }
 
@@ -303,10 +293,7 @@ export async function POST(request: NextRequest) {
         : [];
 
     if (!startDate || !endDate) {
-      return NextResponse.json(
-        { error: "Start date and end date are required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Start date and end date are required." }, { status: 400 });
     }
 
     const { data: teams, error: teamsError } = await supabaseAdmin
@@ -315,19 +302,12 @@ export async function POST(request: NextRequest) {
       .order("name", { ascending: true });
 
     if (teamsError || !teams) {
-      return NextResponse.json(
-        { error: `Failed to load teams: ${teamsError?.message}` },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: `Failed to load teams: ${teamsError?.message}` }, { status: 500 });
     }
 
     const safeTeams = teams as TeamRow[];
     const previousCompleted = await getMostRecentCompletedSlateSetup();
-
-    const suggestedOrderIds = buildSuggestedOrderIds(
-      previousCompleted.results,
-      safeTeams
-    );
+    const suggestedOrderIds = buildSuggestedOrderIds(previousCompleted.results, safeTeams);
 
     const normalizedTeamConfigs = normalizeTeamConfigs(
       teamConfigs.length > 0
@@ -360,8 +340,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const nbaTeamAbbreviations = Array.from(nbaTeamSet).sort();
-
+    const autoDetectedCodes = Array.from(nbaTeamSet).sort();
+    const fallbackCodes = getFallbackTeamCodesForRange(startDate, endDate);
+    const nbaTeamAbbreviations = autoDetectedCodes.length > 0 ? autoDetectedCodes : fallbackCodes;
 
     const { data: newSlate, error: insertSlateError } = await supabaseAdmin
       .from("slates")
@@ -376,10 +357,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertSlateError || !newSlate) {
-      return NextResponse.json(
-        { error: insertSlateError?.message || "Failed to create slate." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: insertSlateError?.message || "Failed to create slate." }, { status: 500 });
     }
 
     const slateTeamRows = normalizedTeamConfigs.map((config) => ({
@@ -389,17 +367,13 @@ export async function POST(request: NextRequest) {
       is_participating: config.is_participating,
     }));
 
-    const { error: insertSlateTeamsError } = await supabaseAdmin
-      .from("slate_teams")
-      .insert(slateTeamRows);
+    const { error: insertSlateTeamsError } = await supabaseAdmin.from("slate_teams").insert(slateTeamRows);
 
     if (insertSlateTeamsError) {
       await supabaseAdmin.from("slates").delete().eq("id", newSlate.id);
 
       return NextResponse.json(
-        {
-          error: `Failed to create slate team order: ${insertSlateTeamsError.message}`,
-        },
+        { error: `Failed to create slate team order: ${insertSlateTeamsError.message}` },
         { status: 500 }
       );
     }
@@ -408,14 +382,13 @@ export async function POST(request: NextRequest) {
       success: true,
       slate: newSlate,
       slateTeams: slateTeamRows,
-      autoDetectedNbaTeams: nbaTeamAbbreviations,
+      autoDetectedNbaTeams: autoDetectedCodes,
+      fallbackNbaTeams: fallbackCodes,
+      nbaTeamAbbreviations,
       previousCompletedSlate: previousCompleted.slate,
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json(
-      { error: "Unexpected server error while creating slate." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Unexpected server error while creating slate." }, { status: 500 });
   }
 }
