@@ -2,6 +2,7 @@
 
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import SlotDraftModal from "@/components/lineups/SlotDraftModal";
 import PlayerPool from "@/components/lineups/PlayerPool";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LineupControls from "@/components/lineups/LineupControls";
@@ -67,6 +68,11 @@ export default function LineupBuilder({
     useState<number[]>([]);
   const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+  const [targetDraftSlot, setTargetDraftSlot] = useState<{
+    teamId: number;
+    teamName: string;
+    positionGroup: "G" | "F/C";
+  } | null>(null);
 
   const [lastRefreshSummary, setLastRefreshSummary] = useState<{
     gamesFound?: number;
@@ -1001,13 +1007,25 @@ export default function LineupBuilder({
                               {row.player ? (
                                 <button
                                   type="button"
-                                  onClick={() => setProfilePlayer(row.player)}
+                                  onClick={() => setDraftingPlayer(row.player)}
                                   className="font-medium text-sky-700 hover:underline"
                                 >
                                   {row.player.name}
                                 </button>
                               ) : (
-                                <span className="text-slate-400">Empty</span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setTargetDraftSlot({
+                                      teamId: team.id,
+                                      teamName: team.name,
+                                      positionGroup: row.slot as "G" | "F/C",
+                                    })
+                                  }
+                                  className="rounded-lg border border-dashed border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                                >
+                                  + Draft {row.slot}
+                                </button>
                               )}
                             </td>
 
@@ -1313,6 +1331,19 @@ export default function LineupBuilder({
           </div>
         </section>
       )}
+
+      <SlotDraftModal
+        targetDraftSlot={targetDraftSlot}
+        setTargetDraftSlot={setTargetDraftSlot}
+        players={players}
+        playerAverageMap={playerAverageMap}
+        availablePlayerIdSet={availablePlayerIdSet}
+        isAvailabilityLoading={isAvailabilityLoading}
+        getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        isAssigningPlayer={isAssigningPlayer}
+        isSaving={isSaving}
+      />
 
       <ReadOnlyPlayerModal
         player={profilePlayer}
