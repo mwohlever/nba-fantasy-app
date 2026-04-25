@@ -125,13 +125,14 @@ export default function HomePage() {
     }
 
     let isActive = true;
+    const activeSlateRosterModal = slateRosterModal;
 
     async function loadSlateRoster() {
       try {
         setIsSlateRosterLoading(true);
 
         const response = await fetch(
-          `/api/team-slate-roster?slateId=${slateRosterModal.slateId}&teamId=${slateRosterModal.teamId}`,
+          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}`,
           { cache: "no-store" }
         );
 
