@@ -184,7 +184,9 @@ export async function GET() {
       normalizedSlates.find((slate) => isCompletedSlate(slate.id)) ?? null;
 
     const latestSlate =
-      liveSlate ?? lastCompletedSlate ?? normalizedSlates[0] ?? null;
+      liveSlate
+        ? liveSlate
+        : lastCompletedSlate ?? normalizedSlates[0] ?? null;
 
     const now = new Date();
 
