@@ -53,6 +53,26 @@ type HomeSummaryResponse = {
   latestSeason: number;
 };
 
+type SlateRosterModalState = {
+  slateId: number;
+  teamId: number;
+  teamName: string;
+  slateLabel: string;
+} | null;
+
+type SlateRosterRow = {
+  playerId: number;
+  name: string;
+  positionGroup: string | null;
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+  fantasyPoints: number;
+};
+
 function roundTo(value: number, digits = 1) {
   return Number(value.toFixed(digits));
 }
@@ -64,6 +84,11 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [profileTeam, setProfileTeam] = useState<{ id: number; name: string } | null>(null);
+  const [slateRosterModal, setSlateRosterModal] =
+    useState<SlateRosterModalState>(null);
+  const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
+  const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+  const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
 
 
   async function loadHomeSummary() {
@@ -91,6 +116,54 @@ export default function HomePage() {
   useEffect(() => {
     void loadHomeSummary();
   }, []);
+
+  useEffect(() => {
+    if (!slateRosterModal) {
+      setSlateRosterRows([]);
+      setSlateRosterTotal(0);
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadSlateRoster() {
+      try {
+        setIsSlateRosterLoading(true);
+
+        const response = await fetch(
+          `/api/team-slate-roster?slateId=${slateRosterModal.slateId}&teamId=${slateRosterModal.teamId}`,
+          { cache: "no-store" }
+        );
+
+        const result = await response.json();
+
+        if (!isActive) return;
+
+        if (!response.ok) {
+          console.error(result.error || "Failed to load slate roster.");
+          setSlateRosterRows([]);
+          setSlateRosterTotal(0);
+          return;
+        }
+
+        setSlateRosterRows(result.roster ?? []);
+        setSlateRosterTotal(Number(result.total ?? 0));
+      } catch (error) {
+        console.error(error);
+        if (!isActive) return;
+        setSlateRosterRows([]);
+        setSlateRosterTotal(0);
+      } finally {
+        if (isActive) setIsSlateRosterLoading(false);
+      }
+    }
+
+    void loadSlateRoster();
+
+    return () => {
+      isActive = false;
+    };
+  }, [slateRosterModal]);
 
 
 
@@ -260,11 +333,11 @@ export default function HomePage() {
                   </div>
 
                   {tipoffTime ? (
-                    <div className="rounded-2xl border border-sky-200 bg-white px-4 py-3 text-left sm:min-w-[150px] sm:text-center">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    <div className="rounded-lg border border-sky-200 bg-white px-2 py-1.5 text-left sm:min-w-[140px] sm:px-3 sm:py-2 sm:text-center">
+                      <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
                         Tip-off at
                       </div>
-                      <div className="mt-1 text-2xl font-bold text-slate-900">
+                      <div className="mt-0.5 text-base font-bold text-slate-900 sm:text-2xl">
                         {tipoffTime} ET
                       </div>
                     </div>
@@ -315,7 +388,20 @@ export default function HomePage() {
                             </button>
                           </td>
                           <td className="px-4 py-3">
-                            {roundTo(Number(row.fantasy_points ?? 0))}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSlateRosterModal({
+                                  slateId: row.slate_id,
+                                  teamId: row.team_id,
+                                  teamName: row.teamName,
+                                  slateLabel: latestSlate?.label ?? String(row.slate_id),
+                                })
+                              }
+                              className="font-medium text-sky-700 hover:underline"
+                            >
+                              {roundTo(Number(row.fantasy_points ?? 0))}
+                            </button>
                           </td>
                           <td className="px-4 py-3">
                             {row.games_completed ?? 0}
@@ -421,6 +507,102 @@ export default function HomePage() {
           </section>
         </section>
       </div>
+
+
+      {slateRosterModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
+          onClick={() => setSlateRosterModal(null)}
+        >
+          <div
+            className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="shrink-0 border-b border-slate-200 px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    Slate Roster
+                  </div>
+                  <h3 className="mt-1 text-2xl font-bold text-slate-900">
+                    {slateRosterModal.teamName}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {slateRosterModal.slateLabel} • Total {slateRosterTotal.toFixed(1)}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSlateRosterModal(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              {isSlateRosterLoading ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  Loading roster...
+                </div>
+              ) : slateRosterRows.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  No roster found for this slate.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="min-w-[720px] w-full text-sm">
+                    <thead className="bg-slate-100 text-slate-700">
+                      <tr className="text-left">
+                        <th className="px-3 py-2">Pos</th>
+                        <th className="px-3 py-2">Player</th>
+                        <th className="px-3 py-2 text-right">PTS</th>
+                        <th className="px-3 py-2 text-right">REB</th>
+                        <th className="px-3 py-2 text-right">AST</th>
+                        <th className="px-3 py-2 text-right">STL</th>
+                        <th className="px-3 py-2 text-right">BLK</th>
+                        <th className="px-3 py-2 text-right">TO</th>
+                        <th className="px-3 py-2 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {slateRosterRows.map((row) => (
+                        <tr key={row.playerId} className="border-t border-slate-100">
+                          <td className="px-3 py-2 font-medium">
+                            {row.positionGroup ?? "—"}
+                          </td>
+                          <td className="px-3 py-2 font-medium text-slate-900">
+                            {row.name}
+                          </td>
+                          <td className="px-3 py-2 text-right">{row.points}</td>
+                          <td className="px-3 py-2 text-right">{row.rebounds}</td>
+                          <td className="px-3 py-2 text-right">{row.assists}</td>
+                          <td className="px-3 py-2 text-right">{row.steals}</td>
+                          <td className="px-3 py-2 text-right">{row.blocks}</td>
+                          <td className="px-3 py-2 text-right">{row.turnovers}</td>
+                          <td className="px-3 py-2 text-right font-semibold">
+                            {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
+                        <td className="px-3 py-2" />
+                        <td className="px-3 py-2">Total</td>
+                        <td className="px-3 py-2 text-right" colSpan={6} />
+                        <td className="px-3 py-2 text-right">
+                          {slateRosterTotal.toFixed(1)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
     </main>

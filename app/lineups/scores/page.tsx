@@ -139,8 +139,25 @@ export default async function ScoresLineupsPage() {
     })
   );
 
+  const latestSlate = safeSlates[0] ?? null;
+  const previousSlate = safeSlates[1] ?? null;
+
+  let hasAnyStatsForLatest = false;
+
+  if (latestSlate) {
+    const { data: latestStats } = await supabaseAdmin
+      .from("player_slate_stats")
+      .select("player_id")
+      .eq("slate_id", latestSlate.id)
+      .limit(1);
+
+    hasAnyStatsForLatest = (latestStats ?? []).length > 0;
+  }
+
   let selectedSlateId =
-    safeSlates.find((slate) => slate.date === today)?.id ?? safeSlates[0]?.id ?? null;
+    !hasAnyStatsForLatest && previousSlate
+      ? previousSlate.id
+      : latestSlate?.id ?? null;
 
   if (!selectedSlateId && safeSlates.length === 0) {
     return (
