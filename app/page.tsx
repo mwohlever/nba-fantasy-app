@@ -334,11 +334,11 @@ export default function HomePage() {
                   </div>
 
                   {tipoffTime ? (
-                    <div className="rounded-lg border border-sky-200 bg-white px-2 py-1.5 text-left sm:min-w-[140px] sm:px-3 sm:py-2 sm:text-center">
-                      <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
-                        Tip-off at
+                    <div className="inline-flex w-fit items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-left sm:block sm:min-w-[140px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
+                        Tip-off
                       </div>
-                      <div className="mt-0.5 text-base font-bold text-slate-900 sm:text-2xl">
+                      <div className="text-sm font-bold text-slate-900 sm:mt-0.5 sm:text-2xl">
                         {tipoffTime} ET
                       </div>
                     </div>
