@@ -12,6 +12,7 @@ type Slate = {
   start_date: string | null;
   end_date: string | null;
   is_locked: boolean;
+  first_game_start_time: string | null;
 };
 
 type TeamSlateResult = {
@@ -79,7 +80,7 @@ export async function GET() {
       supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
       supabaseAdmin
         .from("slates")
-        .select("id, date, start_date, end_date, is_locked")
+        .select("id, date, start_date, end_date, is_locked, first_game_start_time")
         .order("start_date", { ascending: false })
         .order("end_date", { ascending: false }),
       supabaseAdmin
@@ -184,6 +185,22 @@ export async function GET() {
 
     const latestSlate =
       liveSlate ?? lastCompletedSlate ?? normalizedSlates[0] ?? null;
+
+    const now = new Date();
+
+    const nextSlate =
+      normalizedSlates
+        .filter(
+          (slate) =>
+            !slate.is_locked &&
+            slate.first_game_start_time &&
+            new Date(slate.first_game_start_time) > now
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.first_game_start_time ?? 0).getTime() -
+            new Date(b.first_game_start_time ?? 0).getTime()
+        )[0] ?? null;
 
     const latestSlateRows = latestSlate
       ? safeResults
@@ -568,6 +585,18 @@ export async function GET() {
             end_date: latestSlate.end_date,
             label: formatSlateLabel(latestSlate.start_date, latestSlate.end_date),
             is_locked: latestSlate.is_locked,
+            first_game_start_time: latestSlate.first_game_start_time,
+          }
+        : null,
+      nextSlate: nextSlate
+        ? {
+            id: nextSlate.id,
+            date: nextSlate.date,
+            start_date: nextSlate.start_date,
+            end_date: nextSlate.end_date,
+            label: formatSlateLabel(nextSlate.start_date, nextSlate.end_date),
+            is_locked: nextSlate.is_locked,
+            first_game_start_time: nextSlate.first_game_start_time,
           }
         : null,
       latestSlateRows,

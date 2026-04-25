@@ -24,6 +24,7 @@ type ScoreboardV3Team = {
 type ScoreboardV3Game = {
   homeTeam?: ScoreboardV3Team;
   awayTeam?: ScoreboardV3Team;
+  gameTimeUTC?: string;
 };
 
 type ScoreboardV3Payload = {
@@ -35,7 +36,11 @@ const MANUAL_TEAM_CODE_FALLBACKS: Record<string, string[]> = {
   "2026-04-24": ["LAL", "HOU", "BOS", "PHI", "SAS", "POR"],
 };
 
-function normalizeTeamConfigs(rawConfigs: TeamConfigInput[], allTeams: TeamRow[], suggestedOrderIds: number[]) {
+function normalizeTeamConfigs(
+  rawConfigs: TeamConfigInput[],
+  allTeams: TeamRow[],
+  suggestedOrderIds: number[]
+) {
   const rawMap = new Map<number, TeamConfigInput>();
 
   rawConfigs.forEach((config) => {
@@ -47,8 +52,14 @@ function normalizeTeamConfigs(rawConfigs: TeamConfigInput[], allTeams: TeamRow[]
   });
 
   const allTeamIds = allTeams.map((team) => team.id);
-  const participating = allTeamIds.filter((teamId) => rawMap.get(teamId)?.is_participating ?? true);
-  const notParticipating = allTeamIds.filter((teamId) => !(rawMap.get(teamId)?.is_participating ?? true));
+
+  const participating = allTeamIds.filter(
+    (teamId) => rawMap.get(teamId)?.is_participating ?? true
+  );
+
+  const notParticipating = allTeamIds.filter(
+    (teamId) => !(rawMap.get(teamId)?.is_participating ?? true)
+  );
 
   const suggestedRank = new Map<number, number>();
   suggestedOrderIds.forEach((teamId, index) => suggestedRank.set(teamId, index));
@@ -122,7 +133,7 @@ function getTeamTricode(team?: ScoreboardV3Team) {
   return normalizeTeamCode(typeof raw === "string" ? raw : null);
 }
 
-async function fetchTeamsForDate(gameDateIso: string) {
+async function fetchScoreboardForDate(gameDateIso: string) {
   const formattedDate = formatForNbaStats(gameDateIso);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4500);
@@ -148,22 +159,12 @@ async function fetchTeamsForDate(gameDateIso: string) {
     });
 
     if (!response.ok) {
-      throw new Error(`NBA scoreboard request failed for ${formattedDate} with status ${response.status}`);
+      throw new Error(
+        `NBA scoreboard request failed for ${formattedDate} with status ${response.status}`
+      );
     }
 
-    const payload = (await response.json()) as ScoreboardV3Payload;
-    const games = getGamesFromPayload(payload);
-    const teamCodes = new Set<string>();
-
-    for (const game of games) {
-      const homeCode = getTeamTricode(game.homeTeam);
-      const awayCode = getTeamTricode(game.awayTeam);
-
-      if (homeCode) teamCodes.add(homeCode);
-      if (awayCode) teamCodes.add(awayCode);
-    }
-
-    return Array.from(teamCodes);
+    return (await response.json()) as ScoreboardV3Payload;
   } finally {
     clearTimeout(timeout);
   }
@@ -234,7 +235,9 @@ function getFallbackTeamCodesForRange(startDate: string, endDate: string) {
   const teamSet = new Set<string>();
 
   dates.forEach((date) => {
-    (MANUAL_TEAM_CODE_FALLBACKS[date] ?? []).forEach((code) => teamSet.add(code));
+    (MANUAL_TEAM_CODE_FALLBACKS[date] ?? []).forEach((code) =>
+      teamSet.add(code)
+    );
   });
 
   return Array.from(teamSet).sort();
@@ -248,13 +251,19 @@ export async function GET() {
       .order("name", { ascending: true });
 
     if (teamsError) {
-      return NextResponse.json({ error: `Failed to load teams: ${teamsError.message}` }, { status: 500 });
+      return NextResponse.json(
+        { error: `Failed to load teams: ${teamsError.message}` },
+        { status: 500 }
+      );
     }
 
     const safeTeams = (teams ?? []) as TeamRow[];
     const previousCompleted = await getMostRecentCompletedSlateSetup();
 
-    const suggestedOrderIds = buildSuggestedOrderIds(previousCompleted.results, safeTeams);
+    const suggestedOrderIds = buildSuggestedOrderIds(
+      previousCompleted.results,
+      safeTeams
+    );
 
     const suggestedTeamConfigs = normalizeTeamConfigs(
       safeTeams.map((team) => ({
@@ -275,7 +284,10 @@ export async function GET() {
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Unexpected server error while loading slate setup." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unexpected server error while loading slate setup." },
+      { status: 500 }
+    );
   }
 }
 
@@ -293,7 +305,10 @@ export async function POST(request: NextRequest) {
         : [];
 
     if (!startDate || !endDate) {
-      return NextResponse.json({ error: "Start date and end date are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Start date and end date are required." },
+        { status: 400 }
+      );
     }
 
     const { data: teams, error: teamsError } = await supabaseAdmin
@@ -302,60 +317,79 @@ export async function POST(request: NextRequest) {
       .order("name", { ascending: true });
 
     if (teamsError || !teams) {
-      return NextResponse.json({ error: `Failed to load teams: ${teamsError?.message}` }, { status: 500 });
+      return NextResponse.json(
+        { error: `Failed to load teams: ${teamsError?.message}` },
+        { status: 500 }
+      );
     }
 
     const safeTeams = teams as TeamRow[];
     const previousCompleted = await getMostRecentCompletedSlateSetup();
-    const suggestedOrderIds = buildSuggestedOrderIds(previousCompleted.results, safeTeams);
+    const suggestedOrderIds = buildSuggestedOrderIds(
+      previousCompleted.results,
+      safeTeams
+    );
 
-const normalizedTeamConfigs =
-  teamConfigs.length > 0
-    ? (teamConfigs as TeamConfigInput[])
-        .map((config) => ({
-          team_id: Number(config.team_id),
-          draft_order: Number(config.draft_order),
-          is_participating: Boolean(config.is_participating),
-        }))
-        .sort((a, b) => {
-          if (a.is_participating !== b.is_participating) {
-            return a.is_participating ? -1 : 1;
-          }
+    const normalizedTeamConfigs =
+      teamConfigs.length > 0
+        ? (teamConfigs as TeamConfigInput[])
+            .map((config) => ({
+              team_id: Number(config.team_id),
+              draft_order: Number(config.draft_order),
+              is_participating: Boolean(config.is_participating),
+            }))
+            .sort((a, b) => {
+              if (a.is_participating !== b.is_participating) {
+                return a.is_participating ? -1 : 1;
+              }
 
-          return a.draft_order - b.draft_order;
-        })
-        .map((config, index) => ({
-          ...config,
-          draft_order: index + 1,
-        }))
-    : normalizeTeamConfigs(
-        safeTeams.map((team) => ({
-          team_id: team.id,
-          draft_order: 0,
-          is_participating: true,
-        })),
-        safeTeams,
-        suggestedOrderIds
-      );
+              return a.draft_order - b.draft_order;
+            })
+            .map((config, index) => ({
+              ...config,
+              draft_order: index + 1,
+            }))
+        : normalizeTeamConfigs(
+            safeTeams.map((team) => ({
+              team_id: team.id,
+              draft_order: 0,
+              is_participating: true,
+            })),
+            safeTeams,
+            suggestedOrderIds
+          );
 
     const dates = buildDateRange(startDate, endDate);
     const nbaTeamSet = new Set<string>();
+    let firstGameStartTime: string | null = null;
 
     for (const date of dates) {
       try {
-        const teamsForDate = await fetchTeamsForDate(date);
-        teamsForDate.forEach((teamCode) => {
-          const normalized = normalizeTeamCode(teamCode);
-          if (normalized) nbaTeamSet.add(normalized);
-        });
+        const payload = await fetchScoreboardForDate(date);
+        const games = getGamesFromPayload(payload);
+
+        for (const game of games) {
+          const homeCode = getTeamTricode(game.homeTeam);
+          const awayCode = getTeamTricode(game.awayTeam);
+
+          if (homeCode) nbaTeamSet.add(homeCode);
+          if (awayCode) nbaTeamSet.add(awayCode);
+
+          if (game.gameTimeUTC) {
+            if (!firstGameStartTime || game.gameTimeUTC < firstGameStartTime) {
+              firstGameStartTime = game.gameTimeUTC;
+            }
+          }
+        }
       } catch (error) {
-        console.error(`Failed to load NBA teams for ${date}:`, error);
+        console.error(`Failed to load NBA data for ${date}:`, error);
       }
     }
 
     const autoDetectedCodes = Array.from(nbaTeamSet).sort();
     const fallbackCodes = getFallbackTeamCodesForRange(startDate, endDate);
-    const nbaTeamAbbreviations = autoDetectedCodes.length > 0 ? autoDetectedCodes : fallbackCodes;
+    const nbaTeamAbbreviations =
+      autoDetectedCodes.length > 0 ? autoDetectedCodes : fallbackCodes;
 
     const { data: newSlate, error: insertSlateError } = await supabaseAdmin
       .from("slates")
@@ -365,12 +399,18 @@ const normalizedTeamConfigs =
         end_date: endDate,
         is_locked: false,
         nba_team_abbreviations: nbaTeamAbbreviations,
+        first_game_start_time: firstGameStartTime,
       })
-      .select("id, date, start_date, end_date, is_locked, nba_team_abbreviations")
+      .select(
+        "id, date, start_date, end_date, is_locked, nba_team_abbreviations, first_game_start_time"
+      )
       .single();
 
     if (insertSlateError || !newSlate) {
-      return NextResponse.json({ error: insertSlateError?.message || "Failed to create slate." }, { status: 500 });
+      return NextResponse.json(
+        { error: insertSlateError?.message || "Failed to create slate." },
+        { status: 500 }
+      );
     }
 
     const slateTeamRows = normalizedTeamConfigs.map((config) => ({
@@ -380,13 +420,17 @@ const normalizedTeamConfigs =
       is_participating: config.is_participating,
     }));
 
-    const { error: insertSlateTeamsError } = await supabaseAdmin.from("slate_teams").insert(slateTeamRows);
+    const { error: insertSlateTeamsError } = await supabaseAdmin
+      .from("slate_teams")
+      .insert(slateTeamRows);
 
     if (insertSlateTeamsError) {
       await supabaseAdmin.from("slates").delete().eq("id", newSlate.id);
 
       return NextResponse.json(
-        { error: `Failed to create slate team order: ${insertSlateTeamsError.message}` },
+        {
+          error: `Failed to create slate team order: ${insertSlateTeamsError.message}`,
+        },
         { status: 500 }
       );
     }
@@ -398,10 +442,14 @@ const normalizedTeamConfigs =
       autoDetectedNbaTeams: autoDetectedCodes,
       fallbackNbaTeams: fallbackCodes,
       nbaTeamAbbreviations,
+      firstGameStartTime,
       previousCompletedSlate: previousCompleted.slate,
     });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Unexpected server error while creating slate." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unexpected server error while creating slate." },
+      { status: 500 }
+    );
   }
 }

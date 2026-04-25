@@ -13,6 +13,7 @@ type LatestSlate = {
   end_date: string;
   label: string;
   is_locked: boolean;
+  first_game_start_time: string | null;
 };
 
 type LatestSlateRow = {
@@ -45,6 +46,7 @@ type FunFact = {
 type HomeSummaryResponse = {
   success: boolean;
   latestSlate: LatestSlate | null;
+  nextSlate: LatestSlate | null;
   latestSlateRows: LatestSlateRow[];
   seasonSnapshot: SeasonSnapshotRow[];
   funFacts: FunFact[];
@@ -55,11 +57,14 @@ function roundTo(value: number, digits = 1) {
   return Number(value.toFixed(digits));
 }
 
+
+
 export default function HomePage() {
   const [data, setData] = useState<HomeSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [profileTeam, setProfileTeam] = useState<{ id: number; name: string } | null>(null);
+
 
   async function loadHomeSummary() {
     try {
@@ -86,6 +91,8 @@ export default function HomePage() {
   useEffect(() => {
     void loadHomeSummary();
   }, []);
+
+
 
   const latestSlate = data?.latestSlate ?? null;
   const latestSlateRows = data?.latestSlateRows ?? [];
@@ -121,6 +128,17 @@ export default function HomePage() {
 
   const leaderLabel =
     hasCompletedGames && !hasRemainingGames ? "Winner" : "Leader";
+
+  const nextSlate = data?.nextSlate ?? null;
+
+  const tipoffTime =
+    !hasLiveGames && nextSlate?.first_game_start_time
+      ? new Date(nextSlate.first_game_start_time).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone: "America/New_York",
+        })
+      : null;
 
   const slateStatusLabel = hasLiveGames
     ? "Live"
@@ -215,27 +233,42 @@ export default function HomePage() {
             </div>
           ) : (
             <>
-              <div className="mb-4 max-w-xl rounded-2xl border border-orange-200 bg-orange-50 p-4">
-                <div className="text-xs uppercase tracking-wide text-orange-700">
-                  {leaderLabel}
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    leader &&
-                    setProfileTeam({
-                      id: leader.team_id,
-                      name: leader.teamName,
-                    })
-                  }
-                  className="mt-2 text-2xl font-bold text-slate-900 hover:text-sky-700 hover:underline"
-                >
-                  {leader ? leader.teamName : "—"}
-                </button>
-                <div className="mt-1 text-sm text-slate-600">
-                  {leader
-                    ? `${roundTo(Number(leader.fantasy_points ?? 0))} pts`
-                    : "—"}
+              <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-orange-700">
+                      {leaderLabel}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        leader &&
+                        setProfileTeam({
+                          id: leader.team_id,
+                          name: leader.teamName,
+                        })
+                      }
+                      className="mt-2 text-2xl font-bold text-slate-900 hover:text-sky-700 hover:underline"
+                    >
+                      {leader ? leader.teamName : "—"}
+                    </button>
+                    <div className="mt-1 text-sm text-slate-600">
+                      {leader
+                        ? `${roundTo(Number(leader.fantasy_points ?? 0))} pts`
+                        : "—"}
+                    </div>
+                  </div>
+
+                  {tipoffTime ? (
+                    <div className="rounded-2xl border border-sky-200 bg-white px-4 py-3 text-left sm:min-w-[150px] sm:text-center">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                        Tip-off at
+                      </div>
+                      <div className="mt-1 text-2xl font-bold text-slate-900">
+                        {tipoffTime} ET
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

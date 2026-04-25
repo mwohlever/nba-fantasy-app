@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  manifest: "/manifest.json",
   title: "NBA Fantasy Playoffs",
   description: "Fantasy NBA playoffs tracker, lineups, standings, and stats",
 };
