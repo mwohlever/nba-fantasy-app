@@ -307,7 +307,7 @@ export default function HomePage() {
             </div>
           ) : (
             <>
-              <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+              <div className="relative mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="text-xs uppercase tracking-wide text-orange-700">
@@ -334,11 +334,11 @@ export default function HomePage() {
                   </div>
 
                   {tipoffTime ? (
-                    <div className="inline-flex w-fit items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-left sm:block sm:min-w-[140px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
+                    <div className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:static sm:block sm:min-w-[140px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
+                      <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
                         Tip-off
                       </div>
-                      <div className="text-sm font-bold text-slate-900 sm:mt-0.5 sm:text-2xl">
+                      <div className="text-xs font-bold text-slate-900 sm:mt-0.5 sm:text-2xl">
                         {tipoffTime} ET
                       </div>
                     </div>
@@ -462,7 +462,7 @@ export default function HomePage() {
                         : "border-slate-200 bg-white"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <div>
                       <div>
                         <button
                           type="button"
@@ -553,7 +553,35 @@ export default function HomePage() {
                   No roster found for this slate.
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                <div>
+                  <div className="space-y-2 sm:hidden">
+                    {slateRosterRows.map((row) => (
+                      <div
+                        key={row.playerId}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-semibold text-slate-500">
+                              {row.positionGroup ?? "—"}
+                            </div>
+                            <div className="text-base font-semibold text-slate-900">
+                              {row.name}
+                            </div>
+                          </div>
+                          <div className="text-right text-base font-bold text-slate-900">
+                            {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 text-xs leading-relaxed text-slate-600">
+                          {row.points} pts • {row.rebounds} reb • {row.assists} ast • {row.steals} stl • {row.blocks} blk • {row.turnovers} TO
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 sm:block">
                   <table className="min-w-[720px] w-full text-sm">
                     <thead className="bg-slate-100 text-slate-700">
                       <tr className="text-left">
@@ -598,8 +626,8 @@ export default function HomePage() {
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              )}
+                  </div>
+                </div>              )}
             </div>
           </div>
         </div>
