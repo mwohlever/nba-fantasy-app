@@ -85,12 +85,7 @@ export default function AdminPage() {
             </p>
           </div>
 
-          <Link
-            href="/"
-            className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
-          >
-            ← Back
-          </Link>
+
         </div>
       </section>
 
