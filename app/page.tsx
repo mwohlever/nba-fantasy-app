@@ -89,7 +89,26 @@ export default function HomePage() {
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
   const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
+  const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
 
+
+
+  async function handleRefreshStats() {
+    try {
+      setIsRefreshingHomeStats(true);
+
+      await fetch("/api/refresh-stats", {
+        method: "POST",
+      });
+
+      await loadHomeSummary();
+    } catch (err) {
+      console.error("Failed to refresh stats", err);
+      setMessage("Failed to refresh stats.");
+    } finally {
+      setIsRefreshingHomeStats(false);
+    }
+  }
 
   async function loadHomeSummary() {
     try {
@@ -333,7 +352,16 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {tipoffTime ? (
+                  {hasLiveGames ? (
+  <button
+    type="button"
+    onClick={handleRefreshStats}
+    className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 sm:static sm:text-sm"
+    disabled={isRefreshingHomeStats}
+  >
+    {isRefreshingHomeStats ? "Refreshing..." : "🔄 Refresh"}
+  </button>
+) : tipoffTime ? (
                     <div className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:static sm:block sm:min-w-[140px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
                       <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
                         Tip-off
