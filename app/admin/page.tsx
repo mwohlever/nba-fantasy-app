@@ -28,8 +28,13 @@ const adminCards = [
   },
 ];
 
+type TeamOption = {
+  id: number;
+  name: string;
+};
+
 export default function AdminPage() {
-  const [teams, setTeams] = useState([]);
+  const [teams, setTeams] = useState<TeamOption[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [phone, setPhone] = useState("");
   const [smsEnabled, setSmsEnabled] = useState(true);

@@ -98,9 +98,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const orderedTeams = ((slateTeams ?? []) as SlateTeamRow[]).sort(
-      (a, b) => Number(a.draft_order) - Number(b.draft_order)
-    );
+    const orderedTeams = (slateTeams ?? [])
+  .map((t: any) => ({
+    team_id: t.team_id,
+    draft_order: t.draft_order,
+    is_participating: t.is_participating,
+    teams: t.teams ?? null,
+  }))
+  .sort((a, b) => Number(a.draft_order) - Number(b.draft_order));
 
     if (orderedTeams.length === 0) {
       return NextResponse.json({
