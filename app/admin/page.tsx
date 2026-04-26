@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import AppNav from "@/components/AppNav";
+import { useEffect, useState } from "react";
 
 const adminCards = [
   {
@@ -25,8 +29,45 @@ const adminCards = [
 ];
 
 export default function AdminPage() {
+  const [teams, setTeams] = useState([]);
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [phone, setPhone] = useState("");
+  const [smsEnabled, setSmsEnabled] = useState(true);
+
+  useEffect(() => {
+    async function loadTeams() {
+      const res = await fetch("/api/teams");
+      const data = await res.json();
+      setTeams(data?.teams ?? []);
+    }
+    loadTeams();
+  }, []);
+
+  async function saveContact() {
+    if (!selectedTeamId) return;
+
+    const team = teams.find(t => String(t.id) === selectedTeamId);
+
+    await fetch("/api/team-contacts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        teamId: selectedTeamId,
+        name: team?.name ?? "",
+        phone,
+        smsEnabled,
+      }),
+    });
+
+    alert("Saved!");
+  }
+
   return (
-    <div className="space-y-6">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <AppNav />
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
@@ -40,7 +81,7 @@ export default function AdminPage() {
           </div>
 
           <Link
-            href="/lineups"
+            href="/"
             className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
           >
             ← Back
@@ -71,11 +112,57 @@ export default function AdminPage() {
       </section>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+          Team Contacts
+        </h2>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <select
+            value={selectedTeamId}
+            onChange={(e) => setSelectedTeamId(e.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          >
+            <option value="">Select Team</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="text"
+            placeholder="Phone (+1614...)"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+          />
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={smsEnabled}
+              onChange={(e) => setSmsEnabled(e.target.checked)}
+            />
+            SMS Enabled
+          </label>
+
+          <button
+            onClick={saveContact}
+            className="rounded-lg bg-sky-600 px-4 py-2 text-sm text-white hover:bg-sky-700"
+          >
+            Save
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm text-slate-500">
           More admin tools can live here later, like scoring settings, lock
           rules, roster maintenance, and season controls.
         </p>
       </section>
-    </div>
+      </div>
+    </main>
   );
 }
