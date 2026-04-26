@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     team_id: t.team_id,
     draft_order: t.draft_order,
     is_participating: t.is_participating,
-    teams: t.teams ?? null,
+    teams: Array.isArray(t.teams) ? t.teams[0] : t.teams ?? null,
   }))
   .sort((a, b) => Number(a.draft_order) - Number(b.draft_order));
 
