@@ -32,6 +32,24 @@ type ScoreboardV3Payload = {
   games?: ScoreboardV3Game[];
 };
 
+type EspnCompetition = {
+  date?: string;
+  competitors?: Array<{
+    team?: {
+      abbreviation?: string;
+    };
+  }>;
+};
+
+type EspnEvent = {
+  date?: string;
+  competitions?: EspnCompetition[];
+};
+
+type EspnScoreboardPayload = {
+  events?: EspnEvent[];
+};
+
 const MANUAL_TEAM_CODE_FALLBACKS: Record<string, string[]> = {
   "2026-04-24": ["LAL", "HOU", "BOS", "PHI", "SAS", "POR"],
 };
@@ -106,6 +124,10 @@ function formatForNbaStats(gameDateIso: string) {
   return `${month}/${day}/${year}`;
 }
 
+function formatForEspn(gameDateIso: string) {
+  return gameDateIso.replaceAll("-", "");
+}
+
 function normalizeTeamCode(raw: string | null) {
   if (!raw) return null;
 
@@ -170,6 +192,117 @@ async function fetchScoreboardForDate(gameDateIso: string) {
   }
 }
 
+async function fetchEspnScoreboardForDate(gameDateIso: string) {
+  const espnDate = formatForEspn(gameDateIso);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+
+  try {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${espnDate}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `ESPN scoreboard request failed for ${espnDate} with status ${response.status}`
+      );
+    }
+
+    return (await response.json()) as EspnScoreboardPayload;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function getNbaTeamsAndFirstGameTimeForDate(date: string) {
+  const teamSet = new Set<string>();
+  let firstGameStartTime: string | null = null;
+  let source: "nba-stats" | "espn" | "manual" | "empty" = "empty";
+
+  try {
+    const payload = await fetchScoreboardForDate(date);
+    const games = getGamesFromPayload(payload);
+
+    for (const game of games) {
+      const homeCode = getTeamTricode(game.homeTeam);
+      const awayCode = getTeamTricode(game.awayTeam);
+
+      if (homeCode) teamSet.add(homeCode);
+      if (awayCode) teamSet.add(awayCode);
+
+      if (game.gameTimeUTC) {
+        if (!firstGameStartTime || game.gameTimeUTC < firstGameStartTime) {
+          firstGameStartTime = game.gameTimeUTC;
+        }
+      }
+    }
+
+    if (teamSet.size > 0) {
+      source = "nba-stats";
+      return { teamCodes: Array.from(teamSet), firstGameStartTime, source };
+    }
+  } catch (error) {
+    console.error(`NBA Stats scoreboard failed for ${date}:`, error);
+  }
+
+  try {
+    const payload = await fetchEspnScoreboardForDate(date);
+    const events = payload.events ?? [];
+
+    for (const event of events) {
+      const competitions = event.competitions ?? [];
+
+      for (const competition of competitions) {
+        const competitors = competition.competitors ?? [];
+
+        for (const competitor of competitors) {
+          const code = normalizeTeamCode(competitor.team?.abbreviation ?? null);
+          if (code) teamSet.add(code);
+        }
+
+        const gameDate = competition.date ?? event.date;
+        if (gameDate) {
+          if (!firstGameStartTime || gameDate < firstGameStartTime) {
+            firstGameStartTime = gameDate;
+          }
+        }
+      }
+    }
+
+    if (teamSet.size > 0) {
+      source = "espn";
+      return { teamCodes: Array.from(teamSet), firstGameStartTime, source };
+    }
+  } catch (error) {
+    console.error(`ESPN scoreboard failed for ${date}:`, error);
+  }
+
+  const manualFallback = MANUAL_TEAM_CODE_FALLBACKS[date] ?? [];
+  if (manualFallback.length > 0) {
+    source = "manual";
+    return {
+      teamCodes: manualFallback,
+      firstGameStartTime,
+      source,
+    };
+  }
+
+  return {
+    teamCodes: [],
+    firstGameStartTime,
+    source,
+  };
+}
+
 async function getMostRecentCompletedSlateSetup() {
   const { data: slates, error: slatesError } = await supabaseAdmin
     .from("slates")
@@ -228,19 +361,6 @@ function buildSuggestedOrderIds(results: TeamSlateResultRow[], safeTeams: TeamRo
     .map((team) => team.id);
 
   return [...inverseOrderIds, ...teamsMissingFromSlate];
-}
-
-function getFallbackTeamCodesForRange(startDate: string, endDate: string) {
-  const dates = buildDateRange(startDate, endDate);
-  const teamSet = new Set<string>();
-
-  dates.forEach((date) => {
-    (MANUAL_TEAM_CODE_FALLBACKS[date] ?? []).forEach((code) =>
-      teamSet.add(code)
-    );
-  });
-
-  return Array.from(teamSet).sort();
 }
 
 export async function GET() {
@@ -362,34 +482,36 @@ export async function POST(request: NextRequest) {
     const dates = buildDateRange(startDate, endDate);
     const nbaTeamSet = new Set<string>();
     let firstGameStartTime: string | null = null;
+    const detectionSources: Array<{
+      date: string;
+      source: string;
+      teamCodes: string[];
+      firstGameStartTime: string | null;
+    }> = [];
 
     for (const date of dates) {
-      try {
-        const payload = await fetchScoreboardForDate(date);
-        const games = getGamesFromPayload(payload);
+      const detected = await getNbaTeamsAndFirstGameTimeForDate(date);
 
-        for (const game of games) {
-          const homeCode = getTeamTricode(game.homeTeam);
-          const awayCode = getTeamTricode(game.awayTeam);
+      detected.teamCodes.forEach((code) => nbaTeamSet.add(code));
 
-          if (homeCode) nbaTeamSet.add(homeCode);
-          if (awayCode) nbaTeamSet.add(awayCode);
-
-          if (game.gameTimeUTC) {
-            if (!firstGameStartTime || game.gameTimeUTC < firstGameStartTime) {
-              firstGameStartTime = game.gameTimeUTC;
-            }
-          }
+      if (detected.firstGameStartTime) {
+        if (
+          !firstGameStartTime ||
+          detected.firstGameStartTime < firstGameStartTime
+        ) {
+          firstGameStartTime = detected.firstGameStartTime;
         }
-      } catch (error) {
-        console.error(`Failed to load NBA data for ${date}:`, error);
       }
+
+      detectionSources.push({
+        date,
+        source: detected.source,
+        teamCodes: detected.teamCodes,
+        firstGameStartTime: detected.firstGameStartTime,
+      });
     }
 
-    const autoDetectedCodes = Array.from(nbaTeamSet).sort();
-    const fallbackCodes = getFallbackTeamCodesForRange(startDate, endDate);
-    const nbaTeamAbbreviations =
-      autoDetectedCodes.length > 0 ? autoDetectedCodes : fallbackCodes;
+    const nbaTeamAbbreviations = Array.from(nbaTeamSet).sort();
 
     const { data: newSlate, error: insertSlateError } = await supabaseAdmin
       .from("slates")
@@ -439,10 +561,9 @@ export async function POST(request: NextRequest) {
       success: true,
       slate: newSlate,
       slateTeams: slateTeamRows,
-      autoDetectedNbaTeams: autoDetectedCodes,
-      fallbackNbaTeams: fallbackCodes,
       nbaTeamAbbreviations,
       firstGameStartTime,
+      detectionSources,
       previousCompletedSlate: previousCompleted.slate,
     });
   } catch (error) {
