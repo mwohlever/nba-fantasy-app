@@ -180,7 +180,7 @@ export default function PlayerHistoryPage() {
                 Player History
               </p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight">
-                2026 Player Results
+                Player Stats
               </h1>
               <p className="mt-2 text-sm text-slate-600">
                 Explore past performance and trends for all players.

@@ -80,7 +80,7 @@ export default async function ScoresLineupsPage() {
           <AppNav />
 
           <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
-            <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Live Scores</h1>
             <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
               Failed to load page data.
               <div className="mt-2 text-sm text-red-600">
@@ -168,7 +168,7 @@ export default async function ScoresLineupsPage() {
           <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Live Scores</h1>
                 <p className="mt-2 text-sm text-slate-600">
                   Track live scores and see how each lineup is performing.
                 </p>
@@ -233,7 +233,7 @@ export default async function ScoresLineupsPage() {
         <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Live Scores</h1>
               <p className="mt-2 text-sm text-slate-600">
                 Track live scores and see how each lineup is performing.
               </p>

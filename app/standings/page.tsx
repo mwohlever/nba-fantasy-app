@@ -142,7 +142,7 @@ export default function StandingsPage() {
         <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Season Standings</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Standings</h1>
               <p className="mt-2 text-sm text-slate-600">
                 See season standings, wins, and overall performance.
               </p>
