@@ -224,14 +224,34 @@ export default function HomePage() {
 
   const nextSlate = data?.nextSlate ?? null;
 
-  const tipoffTime =
-    !hasLiveGames && nextSlate?.first_game_start_time
-      ? new Date(nextSlate.first_game_start_time).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          timeZone: "America/New_York",
-        })
-      : null;
+  const activeSlateStartTime = latestSlate?.first_game_start_time
+    ? new Date(latestSlate.first_game_start_time)
+    : null;
+
+  const hasSlateStarted =
+    activeSlateStartTime !== null && activeSlateStartTime.getTime() <= Date.now();
+
+  const shouldShowRefreshStats =
+    Boolean(latestSlate) && hasSlateStarted && !latestSlate?.is_locked;
+
+  const latestSlateIsFinal =
+    hasCompletedGames && !hasRemainingGames;
+
+  const shouldShowTipoff =
+    Boolean(latestSlate) &&
+    !shouldShowRefreshStats &&
+    !hasLiveGames &&
+    !latestSlateIsFinal &&
+    !latestSlate?.is_locked &&
+    Boolean(latestSlate?.first_game_start_time);
+
+  const tipoffTime = shouldShowTipoff
+    ? new Date(latestSlate!.first_game_start_time!).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "America/New_York",
+      })
+    : null;
 
   const slateStatusLabel = hasLiveGames
     ? "Live"
@@ -248,7 +268,7 @@ export default function HomePage() {
     : "No slate";
 
   return (
-    <main className="min-h-screen bg-slate-50 px-3 py-5 text-slate-900 sm:px-4 sm:py-6">
+<main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
@@ -352,7 +372,7 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {hasLiveGames ? (
+                  {shouldShowRefreshStats ? (
   <button
     type="button"
     onClick={handleRefreshStats}
