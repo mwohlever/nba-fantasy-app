@@ -427,7 +427,7 @@ checked={!!team.is_participating}
               <button
                 type="submit"
                 disabled={isSaving}
-                className="rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isSaving ? "Creating..." : "Create Slate"}
               </button>
