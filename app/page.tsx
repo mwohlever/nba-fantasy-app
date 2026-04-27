@@ -282,8 +282,7 @@ export default function HomePage() {
                 NBA Fantasy Playoffs
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Quick pulse check for the current slate, season snapshot, and a
-                rotating fun fact.
+                Quickly check scores, standings, and what’s happening in today’s slate.
               </p>
             </div>
 

@@ -144,7 +144,7 @@ export default function StandingsPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Season Standings</h1>
               <p className="mt-2 text-sm text-slate-600">
-                Year-long team summary from imported season data.
+                See season standings, wins, and overall performance.
               </p>
             </div>
 

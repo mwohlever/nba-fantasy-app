@@ -170,7 +170,7 @@ export default async function ScoresLineupsPage() {
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
                 <p className="mt-2 text-sm text-slate-600">
-                  Watch the slate and leaderboard without draft controls.
+                  Track live scores and see how each lineup is performing.
                 </p>
               </div>
 
@@ -235,7 +235,7 @@ export default async function ScoresLineupsPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Scores</h1>
               <p className="mt-2 text-sm text-slate-600">
-                Watch the slate and leaderboard without draft controls.
+                Track live scores and see how each lineup is performing.
               </p>
             </div>
 

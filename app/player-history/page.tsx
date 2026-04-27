@@ -183,7 +183,7 @@ export default function PlayerHistoryPage() {
                 2026 Player Results
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Live-calculated from saved lineups and slate results.
+                Explore past performance and trends for all players.
               </p>
             </div>
 

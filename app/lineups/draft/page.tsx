@@ -153,7 +153,7 @@ export default async function DraftLineupsPage() {
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
                 <p className="mt-2 text-sm text-slate-600">
-                  Draft players fast without the score-tracking clutter.
+                  Draft players and build your lineup for the current slate.
                 </p>
               </div>
 
@@ -218,7 +218,7 @@ export default async function DraftLineupsPage() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
               <p className="mt-2 text-sm text-slate-600">
-                Draft players fast without the score-tracking clutter.
+                Draft players and build your lineup for the current slate.
               </p>
             </div>
 

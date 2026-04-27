@@ -80,8 +80,7 @@ export default function AdminPage() {
               Admin
             </h1>
             <p className="max-w-3xl text-sm text-slate-600">
-              League setup and maintenance tools. Use this area for player
-              management, slate management, and creating new slates.
+              Manage slates, players, and league settings.
             </p>
           </div>
 
