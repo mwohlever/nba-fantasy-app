@@ -37,3 +37,18 @@ body {
     overflow-x: hidden;
   }
 }
+
+/* Mobile modal safety for fixed bottom nav */
+@media (max-width: 639px) {
+  .mobile-modal-safe {
+    align-items: flex-start !important;
+    padding-top: 1rem !important;
+    padding-bottom: 8.5rem !important;
+    overflow-y: auto !important;
+  }
+
+  .mobile-modal-panel-safe {
+    max-height: calc(100dvh - 10rem) !important;
+    overflow-y: auto !important;
+  }
+}

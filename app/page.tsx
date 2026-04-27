@@ -560,11 +560,11 @@ export default function HomePage() {
 
       {slateRosterModal ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
+          className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
           onClick={() => setSlateRosterModal(null)}
         >
           <div
-            className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+            className="mobile-modal-panel-safe flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="shrink-0 border-b border-slate-200 px-5 py-4">

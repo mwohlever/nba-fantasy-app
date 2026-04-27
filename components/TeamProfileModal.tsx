@@ -134,7 +134,7 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
+      className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
       onClick={() => setTeam(null)}
     >
       <div

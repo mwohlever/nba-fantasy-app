@@ -70,7 +70,7 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
   const displayPosition = data?.player?.position_group ?? player.position_group ?? "—";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center">
+    <div className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center">
       <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
