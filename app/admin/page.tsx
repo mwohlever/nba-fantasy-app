@@ -6,11 +6,11 @@ import { useEffect, useState } from "react";
 
 const adminCards = [
   {
-    href: "/admin/players",
-    title: "Manage Players",
+    href: "/slates/new",
+    title: "Create Slate",
     description:
-      "Edit player names, NBA ids, team abbreviations, active status, and slate availability support data.",
-    cta: "Go to Player Admin →",
+      "Create a new slate, set the date range, choose participating teams, and establish draft order.",
+    cta: "Create New Slate →",
   },
   {
     href: "/admin/slates",
@@ -20,18 +20,18 @@ const adminCards = [
     cta: "Go to Slate Admin →",
   },
   {
-    href: "/slates/new",
-    title: "Create Slate",
-    description:
-      "Create a new slate, set the date range, choose participating teams, and establish draft order.",
-    cta: "Create New Slate →",
-  },
-  {
     href: "/admin/corrections",
     title: "Corrections",
     description:
       "Fix historical rosters, stat lines, slate totals, and finish positions.",
     cta: "Go to Corrections →",
+  },
+  {
+    href: "/admin/players",
+    title: "Manage Players",
+    description:
+      "Edit player names, NBA ids, team abbreviations, active status, and slate availability support data.",
+    cta: "Go to Player Admin →",
   },
 ];
 
