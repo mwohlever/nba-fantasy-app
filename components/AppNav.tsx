@@ -14,12 +14,14 @@ const moreLinks = [
   { href: "/standings", label: "Standings" },
   { href: "/player-history", label: "Player History" },
   { href: "/admin", label: "Admin" },
+  { href: "/admin/corrections", label: "Corrections" },
 ];
 
 const desktopAdminLinks = [
   { href: "/admin", label: "Admin Home" },
   { href: "/admin/players", label: "Manage Players" },
   { href: "/admin/slates", label: "Manage Slates" },
+  { href: "/admin/corrections", label: "Corrections" },
   { href: "/slates/new", label: "Create Slate" },
 ];
 

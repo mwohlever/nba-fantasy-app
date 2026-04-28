@@ -51,7 +51,6 @@ export default async function ScoresLineupsPage() {
     supabaseAdmin
       .from("players")
       .select("id, name, position_group, is_active, is_playing_today")
-      .eq("is_active", true)
       .order("name", { ascending: true }),
     supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
     supabaseAdmin

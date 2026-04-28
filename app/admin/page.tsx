@@ -26,6 +26,13 @@ const adminCards = [
       "Create a new slate, set the date range, choose participating teams, and establish draft order.",
     cta: "Create New Slate →",
   },
+  {
+    href: "/admin/corrections",
+    title: "Corrections",
+    description:
+      "Fix historical rosters, stat lines, slate totals, and finish positions.",
+    cta: "Go to Corrections →",
+  },
 ];
 
 type TeamOption = {
