@@ -33,6 +33,15 @@ export default function LineupBuilder({
   const [selectedSlateId, setSelectedSlateId] = useState<string>(
     initialSelectedSlateId ? String(initialSelectedSlateId) : ""
   );
+
+  const [selectedSeason, setSelectedSeason] = useState<string>(() => {
+    const initialSlate = slates.find(
+      (slate) => slate.id === Number(initialSelectedSlateId)
+    );
+
+    const initialDate = initialSlate?.start_date ?? initialSlate?.date ?? "";
+    return initialDate ? initialDate.slice(0, 4) : "2026";
+  });
   const [message, setMessage] = useState("");
   const latestSlateLoadRef = useRef(0);
   const [saveMessage, setSaveMessage] = useState("");
@@ -80,6 +89,24 @@ export default function LineupBuilder({
     teamResultsUpserted?: number;
   } | null>(null);
 
+  const seasons = useMemo(() => {
+    const uniqueYears = new Set<string>();
+
+    slates.forEach((slate) => {
+      const date = slate.start_date ?? slate.date;
+      if (date) uniqueYears.add(date.slice(0, 4));
+    });
+
+    return Array.from(uniqueYears).sort((a, b) => Number(b) - Number(a));
+  }, [slates]);
+
+  const filteredSlates = useMemo(() => {
+    return slates.filter((slate) => {
+      const date = slate.start_date ?? slate.date;
+      return date?.startsWith(selectedSeason);
+    });
+  }, [slates, selectedSeason]);
+
   const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
   const selectedSlate =
     slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
@@ -93,6 +120,18 @@ export default function LineupBuilder({
       setCompactView(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!filteredSlates.length) return;
+
+    const selectedStillInYear = filteredSlates.some(
+      (slate) => String(slate.id) === selectedSlateId
+    );
+
+    if (!selectedStillInYear) {
+      setSelectedSlateId(String(filteredSlates[0].id));
+    }
+  }, [filteredSlates, selectedSlateId]);
 
   useEffect(() => {
     if (!draftingPlayer) {
@@ -873,7 +912,7 @@ export default function LineupBuilder({
       <LineupControls
         selectedSlateId={selectedSlateId}
         setSelectedSlateId={setSelectedSlateId}
-        slates={slates}
+        slates={filteredSlates}
         selectedSlate={selectedSlate}
         selectedSlateDisplay={selectedSlateDisplay}
         selectedSlateIdNumber={selectedSlateIdNumber}
@@ -886,6 +925,9 @@ export default function LineupBuilder({
         hasMounted={hasMounted}
         isSlateLoading={isSlateLoading}
         lastUpdatedAt={lastUpdatedAt}
+        seasons={seasons}
+        selectedSeason={selectedSeason}
+        setSelectedSeason={setSelectedSeason}
       />
 
       {message ? (

@@ -21,6 +21,9 @@ type LineupControlsProps = {
   hasMounted: boolean;
   isSlateLoading: boolean;
   lastUpdatedAt: string | null;
+  seasons: string[];
+  selectedSeason: string;
+  setSelectedSeason: (value: string) => void;
 };
 
 export default function LineupControls({
@@ -39,6 +42,9 @@ export default function LineupControls({
   hasMounted,
   isSlateLoading,
   lastUpdatedAt,
+  seasons,
+  selectedSeason,
+  setSelectedSeason,
 }: LineupControlsProps) {
   const pathname = usePathname();
   const isDraftPage = pathname === "/lineups/draft";
@@ -52,6 +58,27 @@ export default function LineupControls({
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
         <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+          <div>
+            <label
+              htmlFor="season-select"
+              className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500"
+            >
+              Season
+            </label>
+            <select
+              id="season-select"
+              value={selectedSeason}
+              onChange={(e) => setSelectedSeason(e.target.value)}
+              className="min-w-[120px] rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+            >
+              {seasons.map((season) => (
+                <option key={season} value={season}>
+                  {season}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label
               htmlFor="slate-select"
