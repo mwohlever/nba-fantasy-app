@@ -45,14 +45,14 @@ export default function PlayerHistoryPage() {
 
   useEffect(() => {
     void loadPlayerHistory();
-  }, []);
+  }, [season]);
 
   async function loadPlayerHistory() {
     try {
       setIsLoading(true);
       setMessage("");
 
-      const response = await fetch("/api/player-history?season=2026", {
+      const response = await fetch(`/api/player-history?season=${season}`, {
         cache: "no-store",
       });
       const result = (await response.json()) as ApiResponse | { error?: string };
@@ -68,7 +68,6 @@ export default function PlayerHistoryPage() {
 
       const safeResult = result as ApiResponse;
       setRows(safeResult.playerHistory ?? []);
-      setSeason(safeResult.season ?? 2026);
     } catch (error) {
       console.error(error);
       setMessage("Something went wrong while loading player history.");
@@ -216,9 +215,25 @@ export default function PlayerHistoryPage() {
               />
             </div>
 
-            <div className="text-sm text-slate-500">
-              Season:{" "}
-              <span className="font-medium text-slate-900">{season}</span>
+            <div>
+              <label
+                htmlFor="season-select"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Season
+              </label>
+              <select
+                id="season-select"
+                value={season}
+                onChange={(e) => setSeason(Number(e.target.value))}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+              >
+                {[2026, 2025, 2024, 2023].map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
