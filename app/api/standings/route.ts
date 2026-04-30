@@ -19,7 +19,7 @@ type TeamSlateResultRow = {
 };
 
 type StandingRow = {
-  season: number;
+  season: number | "all";
   team_id: number;
   name: string;
   wins: number;
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
       const slatesPlayed = playedRows.length;
 
       return {
-        season: isAllTime ? 0 : selectedSeason ?? 0,
+        season: isAllTime ? "all" : selectedSeason ?? 0,
         team_id: team.id,
         name: team.name,
         wins,
