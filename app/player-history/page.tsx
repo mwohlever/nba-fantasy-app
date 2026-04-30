@@ -14,6 +14,7 @@ type PlayerHistoryRow = {
   low_score: number;
   winning_lineups: number;
   runner_up_lineups: number;
+  avg_finish: number | null;
 };
 
 type SortKey =
@@ -23,7 +24,8 @@ type SortKey =
   | "high_score"
   | "low_score"
   | "winning_lineups"
-  | "runner_up_lineups";
+  | "runner_up_lineups"
+  | "avg_finish";
 
 type SortDirection = "asc" | "desc";
 
@@ -117,6 +119,11 @@ export default function PlayerHistoryPage() {
           comparison = a.winning_lineups - b.winning_lineups;
           break;
         case "runner_up_lineups":
+          comparison = a.runner_up_lineups - b.runner_up_lineups;
+          break;
+        case "avg_finish":
+          comparison = (a.avg_finish ?? 999) - (b.avg_finish ?? 999);
+          break;
           comparison = a.runner_up_lineups - b.runner_up_lineups;
           break;
       }
@@ -282,6 +289,9 @@ export default function PlayerHistoryPage() {
                     <th className="px-4 py-3">
                       {headerButton("Runner-up Lineups", "runner_up_lineups")}
                     </th>
+                    <th className="px-4 py-3">
+                      {headerButton("Avg Finish", "avg_finish")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white text-slate-800">
@@ -302,6 +312,7 @@ export default function PlayerHistoryPage() {
                       <td className="px-4 py-3">{row.low_score.toFixed(2)}</td>
                       <td className="px-4 py-3">{row.winning_lineups}</td>
                       <td className="px-4 py-3">{row.runner_up_lineups}</td>
+                      <td className="px-4 py-3">{row.avg_finish ? row.avg_finish.toFixed(2) : "—"}</td>
                     </tr>
                   ))}
                 </tbody>

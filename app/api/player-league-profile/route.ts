@@ -94,6 +94,15 @@ export async function GET(req: Request) {
     .sort((a, b) => b.count - a.count || a.teamName.localeCompare(b.teamName));
 
   const draftedMostBy = draftedByBreakdown[0] ?? null;
+  const finishes = enriched
+    .map(r => r.finishPosition)
+    .filter(v => v !== null);
+
+  const avgFinish =
+    finishes.length > 0
+      ? round(finishes.reduce((a, b) => a + b, 0) / finishes.length)
+      : null;
+
   const wins = enriched.filter((r) => r.finishPosition === 1).length;
   const runnerUps = enriched.filter((r) => r.finishPosition === 2).length;
   const winRate = enriched.length > 0 ? round((wins / enriched.length) * 100, 1) : null;
@@ -116,6 +125,7 @@ export async function GET(req: Request) {
       averageFantasyPoints:
         scores.length > 0 ? round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
       bestFantasyPoints: scores.length > 0 ? round(Math.max(...scores)) : null,
+      averageFinish: avgFinish,
       worstFantasyPoints: scores.length > 0 ? round(Math.min(...scores)) : null,
     },
     recentHistory: enriched

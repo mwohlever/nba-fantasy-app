@@ -95,11 +95,30 @@ export default function HomePage() {
 
   async function handleRefreshStats() {
     try {
-      setIsRefreshingHomeStats(true);
+      if (!latestSlate?.id) {
+        setMessage("No active slate found to refresh.");
+        return;
+      }
 
-      await fetch("/api/refresh-stats", {
+      setIsRefreshingHomeStats(true);
+      setMessage("");
+
+      const response = await fetch("/api/refresh-stats", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          slateId: latestSlate.id,
+        }),
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to refresh stats.");
+        return;
+      }
 
       await loadHomeSummary();
     } catch (err) {

@@ -19,6 +19,7 @@ type Profile = {
     averageFantasyPoints: number | null;
     bestFantasyPoints: number | null;
     worstFantasyPoints: number | null;
+    averageFinish: number | null;
   };
   recentHistory: Array<{
     slateLabel: string;
@@ -136,11 +137,9 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
                   <div className="mt-2 text-2xl font-bold">{data.summary.runnerUps}</div>
                 </div>
                 <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
-                  <div className="text-xs uppercase text-indigo-700">Drafted Most By</div>
-                  <div className="mt-2 text-lg font-bold">
-                    {data.summary.draftedMostBy
-                      ? `${data.summary.draftedMostBy.teamName} (${data.summary.draftedMostBy.count})`
-                      : "—"}
+                  <div className="text-xs uppercase text-indigo-700">Avg Finish</div>
+                  <div className="mt-2 text-2xl font-bold">
+                    {fmt(data.summary.averageFinish)}
                   </div>
                 </div>
               </div>

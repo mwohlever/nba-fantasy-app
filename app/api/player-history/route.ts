@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
         scores: number[];
         winning_lineups: number;
         runner_up_lineups: number;
+        finishes: number[];
       }
     >();
 
@@ -165,12 +166,14 @@ export async function GET(request: NextRequest) {
         scores: [],
         winning_lineups: 0,
         runner_up_lineups: 0,
+        finishes: [],
       };
 
       current.times_drafted += 1;
       current.scores.push(fantasyPoints);
 
       if (finishPosition === 1) current.winning_lineups += 1;
+      if (finishPosition !== null) current.finishes.push(finishPosition);
       if (finishPosition === 2) current.runner_up_lineups += 1;
 
       playerAggMap.set(player.id, current);
@@ -184,6 +187,11 @@ export async function GET(request: NextRequest) {
             : 0;
 
         const highScore = row.scores.length > 0 ? roundTo(Math.max(...row.scores)) : 0;
+
+        const avgFinish =
+          row.finishes.length > 0
+            ? roundTo(row.finishes.reduce((a, b) => a + b, 0) / row.finishes.length)
+            : null;
         const lowScore = row.scores.length > 0 ? roundTo(Math.min(...row.scores)) : 0;
 
         return {
@@ -195,6 +203,7 @@ export async function GET(request: NextRequest) {
           low_score: lowScore,
           winning_lineups: row.winning_lineups,
           runner_up_lineups: row.runner_up_lineups,
+          avg_finish: avgFinish,
         };
       })
       .sort((a, b) => {
