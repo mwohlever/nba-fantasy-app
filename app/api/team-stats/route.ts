@@ -31,11 +31,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "season is required" }, { status: 400 });
     }
 
-    const { data: slates, error: slateError } = await supabaseAdmin
+    const isAllTime = season === "all";
+
+    let slateQuery = supabaseAdmin
       .from("slates")
-      .select("id, start_date")
-      .gte("start_date", `${season}-01-01`)
-      .lte("start_date", `${season}-12-31`);
+      .select("id, start_date");
+
+    if (!isAllTime) {
+      slateQuery = slateQuery
+        .gte("start_date", `${season}-01-01`)
+        .lte("start_date", `${season}-12-31`);
+    }
+
+    const { data: slates, error: slateError } = await slateQuery;
 
     if (slateError) throw new Error(slateError.message);
 

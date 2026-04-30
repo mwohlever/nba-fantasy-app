@@ -85,7 +85,7 @@ export default function StandingsPage() {
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStatsRow[]>([]);
   const [availableSeasons, setAvailableSeasons] = useState<number[]>([]);
-  const [selectedSeason, setSelectedSeason] = useState<number | "">("");
+  const [selectedSeason, setSelectedSeason] = useState<number | "all" | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("wins");
@@ -100,7 +100,7 @@ export default function StandingsPage() {
     void loadStandings();
   }, []);
 
-  async function loadStandings(seasonOverride?: number | "") {
+  async function loadStandings(seasonOverride?: number | "all" | "") {
     try {
       setIsLoading(true);
       setErrorMessage("");
@@ -239,12 +239,18 @@ export default function StandingsPage() {
                   id="season-select"
                   value={selectedSeason}
                   onChange={async (e) => {
-                    const nextValue = e.target.value ? Number(e.target.value) : "";
+                    const nextValue =
+                      e.target.value === "all"
+                        ? "all"
+                        : e.target.value
+                          ? Number(e.target.value)
+                          : "";
                     setSelectedSeason(nextValue);
                     await loadStandings(nextValue);
                   }}
                   className="min-w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
                 >
+                  <option value="all">All-Time</option>
                   {availableSeasons.map((season) => (
                     <option key={season} value={season}>
                       {season}

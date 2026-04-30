@@ -35,7 +35,7 @@ type ApiResponse = {
 
 export default function PlayerHistoryPage() {
   const [rows, setRows] = useState<PlayerHistoryRow[]>([]);
-  const [season, setSeason] = useState<number>(2026);
+  const [season, setSeason] = useState<number | "all">(2026);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -225,9 +225,12 @@ export default function PlayerHistoryPage() {
               <select
                 id="season-select"
                 value={season}
-                onChange={(e) => setSeason(Number(e.target.value))}
+                onChange={(e) =>
+                  setSeason(e.target.value === "all" ? "all" : Number(e.target.value))
+                }
                 className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
               >
+                <option value="all">All-Time</option>
                 {[2026, 2025, 2024, 2023].map((year) => (
                   <option key={year} value={year}>
                     {year}

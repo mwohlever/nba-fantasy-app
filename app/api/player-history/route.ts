@@ -47,8 +47,13 @@ function roundTo(value: number, digits = 2) {
 export async function GET(request: NextRequest) {
   try {
     const seasonParam = request.nextUrl.searchParams.get("season");
+    const isAllTime = seasonParam === "all";
     const selectedSeason =
-      seasonParam && Number.isFinite(Number(seasonParam)) ? Number(seasonParam) : 2026;
+      isAllTime
+        ? "all"
+        : seasonParam && Number.isFinite(Number(seasonParam))
+          ? Number(seasonParam)
+          : 2026;
 
     const [
       { data: slates, error: slatesError },
@@ -102,6 +107,7 @@ export async function GET(request: NextRequest) {
     const seasonSlateIds = new Set(
       safeSlates
         .filter((slate) => {
+          if (isAllTime) return true;
           const effectiveDate = slate.start_date ?? slate.date;
           return getSeasonFromDate(effectiveDate) === selectedSeason;
         })

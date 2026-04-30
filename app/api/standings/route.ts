@@ -88,14 +88,20 @@ export async function GET(request: NextRequest) {
       )
     ).sort((a, b) => b - a);
 
-    const selectedSeason =
-      seasonParam && Number.isFinite(Number(seasonParam))
-        ? Number(seasonParam)
-        : availableSeasons[0] ?? null;
+    const isAllTime = seasonParam === "all";
 
-    const seasonResults = safeResults.filter(
-      (row) => slateSeasonMap.get(row.slate_id) === selectedSeason
-    );
+    const selectedSeason =
+      isAllTime
+        ? "all"
+        : seasonParam && Number.isFinite(Number(seasonParam))
+          ? Number(seasonParam)
+          : availableSeasons[0] ?? null;
+
+    const seasonResults = isAllTime
+      ? safeResults
+      : safeResults.filter(
+          (row) => slateSeasonMap.get(row.slate_id) === selectedSeason
+        );
 
     const standings: StandingRow[] = safeTeams.map((team) => {
       const teamRows = seasonResults.filter((row) => row.team_id === team.id);
@@ -111,7 +117,7 @@ export async function GET(request: NextRequest) {
       const slatesPlayed = playedRows.length;
 
       return {
-        season: selectedSeason ?? 0,
+        season: isAllTime ? 0 : selectedSeason ?? 0,
         team_id: team.id,
         name: team.name,
         wins,
