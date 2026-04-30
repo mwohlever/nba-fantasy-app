@@ -85,6 +85,7 @@ export default function DraftPlayerModal({
 }: DraftPlayerModalProps) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [season, setSeason] = useState<string>("2026");
 
   useEffect(() => {
     if (!draftingPlayer) {
@@ -101,7 +102,7 @@ export default function DraftPlayerModal({
         setIsProfileLoading(true);
 
         const response = await fetch(
-          `/api/player-league-profile?playerId=${currentPlayer.id}`,
+          `/api/player-league-profile?playerId=${currentPlayer.id}&season=${season}`,
           { cache: "no-store" }
         );
 
@@ -129,7 +130,7 @@ export default function DraftPlayerModal({
     return () => {
       isActive = false;
     };
-  }, [draftingPlayer]);
+  }, [draftingPlayer, season]);
 
   if (!draftingPlayer) return null;
 
@@ -151,6 +152,23 @@ export default function DraftPlayerModal({
             <h3 className="mt-1 text-2xl font-bold text-slate-900">
               {draftingPlayer.name}
             </h3>
+
+            <div className="mt-3">
+              <label className="mb-1 block text-xs font-medium text-slate-500">
+                View
+              </label>
+              <select
+                value={season}
+                onChange={(e) => setSeason(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+              >
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="all">All-Time</option>
+              </select>
+            </div>
 
             <div className="mt-2 flex flex-wrap gap-2 text-sm text-slate-600">
               <span className="rounded-full bg-slate-100 px-2.5 py-1">

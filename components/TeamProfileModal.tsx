@@ -6,6 +6,7 @@ type TeamProfile = {
   success: boolean;
   team: { id: number; name: string };
   latestSeason: number;
+  selectedSeason: number | "all";
   seasonSummary: {
     slatesPlayed: number;
     wins: number;
@@ -28,6 +29,12 @@ type TeamProfile = {
     longestWinStreak: number;
     favoritePlayer: { playerName: string; count: number } | null;
     bestAvgPlayer: { playerName: string; avg: number; count: number } | null;
+    bestPickEver: {
+      playerName: string;
+      fantasyPoints: number;
+      slateLabel: string;
+      finishPosition: number | null;
+    } | null;
     bestSlate: { slateLabel: string; score: number; finishPosition: number | null } | null;
     worstSlate: { slateLabel: string; score: number; finishPosition: number | null } | null;
   };
@@ -92,6 +99,7 @@ function Card({
 export default function TeamProfileModal({ team, setTeam }: Props) {
   const [data, setData] = useState<TeamProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [season, setSeason] = useState<number | "all">("all");
 
   useEffect(() => {
     if (!team) {
@@ -106,9 +114,12 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
     async function load() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/team-profile?teamId=${currentTeam.id}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/team-profile?teamId=${currentTeam.id}&season=${season}`,
+          {
+            cache: "no-store",
+          }
+        );
         const json = await response.json();
         if (active) setData(json);
       } catch (error) {
@@ -124,7 +135,7 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
     return () => {
       active = false;
     };
-  }, [team]);
+  }, [team, season]);
 
   if (!team) return null;
 
@@ -165,6 +176,26 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
               <p className="mt-1 text-sm text-slate-500">
                 Owner trends, recent slate results, and draft personality.
               </p>
+
+              <div className="mt-3">
+                <label className="mb-1 block text-xs font-medium text-slate-500">
+                  View
+                </label>
+                <select
+                  value={season}
+                  onChange={(e) =>
+                    setSeason(e.target.value === "all" ? "all" : Number(e.target.value))
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+                >
+                  <option value="all">All-Time</option>
+                  {[2026, 2025, 2024, 2023].map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -184,25 +215,27 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
             </div>
           ) : (
             <div className="space-y-6">
-              <section>
-                <h3 className="text-xl font-semibold text-slate-900">
-                  {data.latestSeason} Season Stats
-                </h3>
-                <p className="mb-3 text-sm text-slate-500">Current season only.</p>
+              {season !== "all" ? (
+                <section>
+                  <h3 className="text-xl font-semibold text-slate-900">
+                    {season} Season Stats
+                  </h3>
+                  <p className="mb-3 text-sm text-slate-500">Selected season only.</p>
 
-                <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                  <Card label="Wins" value={data.seasonSummary.wins} color="green" />
-                  <Card label="Runner-ups" value={data.seasonSummary.runnerUps} color="orange" />
-                  <Card label="Win Rate" value={`${fmt(data.seasonSummary.winRate)}%`} />
-                  <Card label="Avg Finish" value={fmt(data.seasonSummary.avgFinish)} />
-                  <Card label="Avg Score" value={fmt(data.seasonSummary.avgScore)} />
-                  <Card
-                    label="Win Streak"
-                    value={`Current ${data.seasonSummary.currentWinStreak}`}
-                    detail={`Best ${data.seasonSummary.longestWinStreak}`}
-                  />
-                </div>
-              </section>
+                  <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    <Card label="Wins" value={data.seasonSummary.wins} color="green" />
+                    <Card label="Runner-ups" value={data.seasonSummary.runnerUps} color="orange" />
+                    <Card label="Win Rate" value={`${fmt(data.seasonSummary.winRate)}%`} />
+                    <Card label="Avg Finish" value={fmt(data.seasonSummary.avgFinish)} />
+                    <Card label="Avg Score" value={fmt(data.seasonSummary.avgScore)} />
+                    <Card
+                      label="Win Streak"
+                      value={`Current ${data.seasonSummary.currentWinStreak}`}
+                      detail={`Best ${data.seasonSummary.longestWinStreak}`}
+                    />
+                  </div>
+                </section>
+              ) : null}
 
               <section>
                 <h3 className="text-xl font-semibold text-slate-900">Career Stats</h3>
@@ -223,13 +256,18 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
                     }
                   />
                   <Card
-                    label="Best Avg Player"
-                    value={data.careerSummary.bestAvgPlayer?.playerName ?? "—"}
+                    label="Best Pick Ever"
+                    value={data.careerSummary.bestPickEver?.playerName ?? "—"}
                     detail={
-                      data.careerSummary.bestAvgPlayer
-                        ? `${fmt(data.careerSummary.bestAvgPlayer.avg)} FP over ${data.careerSummary.bestAvgPlayer.count}`
+                      data.careerSummary.bestPickEver
+                        ? `${fmt(data.careerSummary.bestPickEver.fantasyPoints)} FP • ${data.careerSummary.bestPickEver.slateLabel}${
+                            data.careerSummary.bestPickEver.finishPosition
+                              ? ` • #${data.careerSummary.bestPickEver.finishPosition}`
+                              : ""
+                          }`
                         : undefined
                     }
+                    color="green"
                   />
                   <Card
                     label="Best Slate"

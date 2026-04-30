@@ -20,6 +20,8 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const teamId = Number(searchParams.get("teamId"));
+    const seasonParam = searchParams.get("season");
+    const isAllTime = !seasonParam || seasonParam === "all";
 
     if (!teamId || Number.isNaN(teamId)) {
       return NextResponse.json({ error: "Missing or invalid teamId." }, { status: 400 });
@@ -125,7 +127,16 @@ export async function GET(req: Request) {
         (row.gamesRemaining ?? 0) === 0
     );
 
-    const seasonRows = completedRows.filter((row: any) => row.season === latestSeason);
+    const selectedSeason =
+      !isAllTime && Number.isFinite(Number(seasonParam))
+        ? Number(seasonParam)
+        : latestSeason;
+
+    const selectedRows = isAllTime
+      ? completedRows
+      : completedRows.filter((row: any) => row.season === selectedSeason);
+
+    const seasonRows = selectedRows;
 
     function summarize(rows: any[]) {
       const scores = rows.map((row) => Number(row.score ?? 0));
@@ -195,6 +206,35 @@ export async function GET(req: Request) {
         }))
         .sort((a, b) => b.avg - a.avg)[0] ?? null;
 
+    const bestPickEver =
+      allTeamRows
+        .flatMap((row: any) => {
+          const lineup = safeLineups.find(
+            (l: any) => l.slate_id === row.slateId && l.team_id === teamId
+          );
+
+          if (!lineup) return [];
+
+          return safeLineupPlayers
+            .filter((lp: any) => lp.lineup_id === lineup.id)
+            .map((lp: any) => {
+              const player = playerMap.get(lp.player_id);
+              const stat = safePlayerStats.find(
+                (s: any) => s.slate_id === row.slateId && s.player_id === lp.player_id
+              );
+
+              return {
+                playerId: lp.player_id,
+                playerName: player?.name ?? "Unknown Player",
+                fantasyPoints: stat?.fantasy_points ?? null,
+                slateLabel: row.slateLabel,
+                finishPosition: row.finishPosition,
+              };
+            });
+        })
+        .filter((pick: any) => pick.fantasyPoints !== null)
+        .sort((a: any, b: any) => Number(b.fantasyPoints ?? 0) - Number(a.fantasyPoints ?? 0))[0] ?? null;
+
     function getWinStreaks(rows: any[]) {
       let longest = 0;
       let current = 0;
@@ -234,6 +274,7 @@ export async function GET(req: Request) {
         name: safeTeam.name,
       },
       latestSeason,
+      selectedSeason: isAllTime ? "all" : selectedSeason,
       seasonSummary: {
         ...seasonSummary,
         currentWinStreak: seasonStreaks.current,
@@ -259,10 +300,19 @@ export async function GET(req: Request) {
               count: bestAvgPlayer.count,
             }
           : null,
+        bestPickEver: bestPickEver
+          ? {
+              playerId: bestPickEver.playerId,
+              playerName: bestPickEver.playerName,
+              fantasyPoints: round(Number(bestPickEver.fantasyPoints)),
+              slateLabel: bestPickEver.slateLabel,
+              finishPosition: bestPickEver.finishPosition,
+            }
+          : null,
         bestSlate,
         worstSlate,
       },
-      recentSlates: allTeamRows.slice(0, 8),
+      recentSlates: selectedRows.slice(0, 8),
     });
   } catch (error) {
     console.error(error);

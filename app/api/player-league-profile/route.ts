@@ -8,6 +8,8 @@ function round(value: number, digits = 1) {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const playerId = Number(searchParams.get("playerId"));
+  const seasonParam = searchParams.get("season") ?? "all";
+  const isAllTime = seasonParam === "all";
 
   if (!playerId) {
     return NextResponse.json({ error: "Missing playerId." }, { status: 400 });
@@ -45,7 +47,8 @@ export async function GET(req: Request) {
     .map((lp) => safeLineups.find((l) => l.id === lp.lineup_id))
     .filter(Boolean);
 
-  const enriched = draftedRows.map((draft: any) => {
+  const enriched = draftedRows
+    .map((draft: any) => {
     const team = safeTeams.find((t) => t.id === draft.team_id);
     const slate = safeSlates.find((s) => s.id === draft.slate_id);
     const result = safeResults.find(
@@ -57,9 +60,12 @@ export async function GET(req: Request) {
     const end = slate?.end_date ?? slate?.date ?? "";
     const label = start && end && start !== end ? `${start} - ${end}` : start || "Unknown slate";
 
+    const season = start ? new Date(`${start}T00:00:00`).getFullYear() : null;
+
     return {
       slateId: draft.slate_id,
       slateLabel: label,
+      season,
       teamName: team?.name ?? "Unknown",
       finishPosition: result?.finish_position ?? null,
       points: stat?.points ?? 0,
@@ -70,7 +76,11 @@ export async function GET(req: Request) {
       turnovers: stat?.turnovers ?? 0,
       fantasyPoints: stat?.fantasy_points ?? null,
     };
-  });
+  })
+    .filter((row: any) => {
+      if (isAllTime) return true;
+      return row.season === Number(seasonParam);
+    });
 
   const scores = enriched
     .map((r) => r.fantasyPoints)
@@ -90,6 +100,7 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     success: true,
+    selectedSeason: isAllTime ? "all" : Number(seasonParam),
     player: {
       id: player?.id ?? playerId,
       name: player?.name ?? "Unknown Player",

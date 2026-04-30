@@ -48,13 +48,15 @@ function fmt(value: number | null | undefined) {
 export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMap }: Props) {
   const [data, setData] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [season, setSeason] = useState<string>("2026");
 
   useEffect(() => {
     if (!player) return;
 
     async function load() {
       setLoading(true);
-      const res = await fetch(`/api/player-league-profile?playerId=${player!.id}`, {
+      const res = await fetch(
+        `/api/player-league-profile?playerId=${player!.id}&season=${season}`, {
         cache: "no-store",
       });
       const json = await res.json();
@@ -63,7 +65,7 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
     }
 
     void load();
-  }, [player]);
+  }, [player, season]);
 
   if (!player) return null;
 
@@ -81,6 +83,23 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
             <p className="mt-1 text-sm text-slate-500">
               {displayPosition} • Season avg {fmt(playerAverageMap.get(player.id))}
             </p>
+
+            <div className="mt-3">
+              <label className="mb-1 block text-xs font-medium text-slate-500">
+                View
+              </label>
+              <select
+                value={season}
+                onChange={(e) => setSeason(e.target.value)}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900"
+              >
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+                <option value="all">All-Time</option>
+              </select>
+            </div>
           </div>
 
           <button
