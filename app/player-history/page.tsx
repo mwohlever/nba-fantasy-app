@@ -39,6 +39,7 @@ export default function PlayerHistoryPage() {
   const [rows, setRows] = useState<PlayerHistoryRow[]>([]);
   const [season, setSeason] = useState<number | "all">(2026);
   const [searchTerm, setSearchTerm] = useState("");
+  const [minTimesDrafted, setMinTimesDrafted] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("times_drafted");
@@ -92,8 +93,12 @@ export default function PlayerHistoryPage() {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     const filtered = rows.filter((row) => {
-      if (!normalizedSearch) return true;
-      return row.player_name.toLowerCase().includes(normalizedSearch);
+      const matchesSearch =
+        !normalizedSearch || row.player_name.toLowerCase().includes(normalizedSearch);
+
+      const matchesMinDrafted = row.times_drafted >= minTimesDrafted;
+
+      return matchesSearch && matchesMinDrafted;
     });
 
     filtered.sort((a, b) => {
@@ -136,7 +141,7 @@ export default function PlayerHistoryPage() {
     });
 
     return filtered;
-  }, [rows, searchTerm, sortKey, sortDirection]);
+  }, [rows, searchTerm, minTimesDrafted, sortKey, sortDirection]);
 
   const playerAverageMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -204,7 +209,7 @@ export default function PlayerHistoryPage() {
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
             <div>
               <label
                 htmlFor="player-search"
@@ -220,6 +225,28 @@ export default function PlayerHistoryPage() {
                 placeholder="Search by player name"
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
               />
+            </div>
+
+            <div>
+              <label
+                htmlFor="min-times-drafted"
+                className="mb-2 block text-sm font-medium text-slate-700"
+              >
+                Min Drafted
+              </label>
+              <select
+                id="min-times-drafted"
+                value={minTimesDrafted}
+                onChange={(e) => setMinTimesDrafted(Number(e.target.value))}
+                className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+              >
+                <option value={0}>Any</option>
+                <option value={2}>2+</option>
+                <option value={3}>3+</option>
+                <option value={5}>5+</option>
+                <option value={10}>10+</option>
+                <option value={15}>15+</option>
+              </select>
             </div>
 
             <div>
@@ -255,6 +282,13 @@ export default function PlayerHistoryPage() {
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          {!isLoading ? (
+            <div className="mb-3 text-sm text-slate-500">
+              Showing {filteredRows.length} of {rows.length} players
+              {minTimesDrafted > 0 ? ` with ${minTimesDrafted}+ drafts` : ""}.
+            </div>
+          ) : null}
+
           {isLoading ? (
             <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               Loading player history...
