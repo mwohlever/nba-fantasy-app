@@ -177,32 +177,50 @@ export async function GET() {
       );
     };
 
+    const now = new Date();
+
     const liveSlate =
       normalizedSlates.find((slate) => isLiveSlate(slate.id)) ?? null;
 
-    const lastCompletedSlate =
-      normalizedSlates.find((slate) => isCompletedSlate(slate.id)) ?? null;
+    const upcomingOpenSlates = normalizedSlates
+      .filter(
+        (slate) =>
+          !slate.is_locked &&
+          slate.first_game_start_time &&
+          new Date(slate.first_game_start_time) > now
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.first_game_start_time ?? 0).getTime() -
+          new Date(b.first_game_start_time ?? 0).getTime()
+      );
 
-    const latestSlate =
-      liveSlate
-        ? liveSlate
-        : lastCompletedSlate ?? normalizedSlates[0] ?? null;
+    const nextSlate = upcomingOpenSlates[0] ?? null;
 
-    const now = new Date();
-
-    const nextSlate =
+    const startedOpenSlate =
       normalizedSlates
         .filter(
           (slate) =>
             !slate.is_locked &&
             slate.first_game_start_time &&
-            new Date(slate.first_game_start_time) > now
+            new Date(slate.first_game_start_time) <= now
         )
         .sort(
           (a, b) =>
-            new Date(a.first_game_start_time ?? 0).getTime() -
-            new Date(b.first_game_start_time ?? 0).getTime()
+            new Date(b.first_game_start_time ?? 0).getTime() -
+            new Date(a.first_game_start_time ?? 0).getTime()
         )[0] ?? null;
+
+    const lastCompletedSlate =
+      normalizedSlates.find((slate) => isCompletedSlate(slate.id)) ?? null;
+
+    const latestSlate =
+      liveSlate ??
+      startedOpenSlate ??
+      lastCompletedSlate ??
+      nextSlate ??
+      normalizedSlates[0] ??
+      null;
 
     const latestSlateRows = latestSlate
       ? safeResults

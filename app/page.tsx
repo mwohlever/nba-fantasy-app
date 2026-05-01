@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
 import FunFactCarousel from "@/components/home/FunFactCarousel";
@@ -90,16 +90,12 @@ export default function HomePage() {
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
   const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
   const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
 
-  async function handleRefreshStats() {
+  async function refreshSlateStatsById(slateId: number) {
     try {
-      if (!latestSlate?.id) {
-        setMessage("No active slate found to refresh.");
-        return;
-      }
-
       setIsRefreshingHomeStats(true);
       setMessage("");
 
@@ -108,9 +104,7 @@ export default function HomePage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          slateId: latestSlate.id,
-        }),
+        body: JSON.stringify({ slateId }),
       });
 
       const result = await response.json();
@@ -127,6 +121,15 @@ export default function HomePage() {
     } finally {
       setIsRefreshingHomeStats(false);
     }
+  }
+
+  async function handleRefreshStats() {
+    if (!latestSlate?.id) {
+      setMessage("No active slate found to refresh.");
+      return;
+    }
+
+    await refreshSlateStatsById(latestSlate.id);
   }
 
   async function loadHomeSummary() {
@@ -154,6 +157,8 @@ export default function HomePage() {
   useEffect(() => {
     void loadHomeSummary();
   }, []);
+
+
 
   useEffect(() => {
     if (!slateRosterModal) {
@@ -243,6 +248,34 @@ export default function HomePage() {
 
   const nextSlate = data?.nextSlate ?? null;
 
+  useEffect(() => {
+    if (!nextSlate?.id || !nextSlate.first_game_start_time) return;
+
+    const tipoffMs = new Date(nextSlate.first_game_start_time).getTime();
+    const delayMs = tipoffMs - Date.now();
+
+    if (delayMs <= 0) return;
+
+    if (autoRefreshTimerRef.current) {
+      clearTimeout(autoRefreshTimerRef.current);
+    }
+
+    autoRefreshTimerRef.current = setTimeout(() => {
+      void refreshSlateStatsById(nextSlate.id);
+    }, delayMs);
+
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearTimeout(autoRefreshTimerRef.current);
+      }
+    };
+  }, [nextSlate?.id, nextSlate?.first_game_start_time]);
+
+
+  const nextSlateStartTime = nextSlate?.first_game_start_time
+    ? new Date(nextSlate.first_game_start_time)
+    : null;
+
   const activeSlateStartTime = latestSlate?.first_game_start_time
     ? new Date(latestSlate.first_game_start_time)
     : null;
@@ -253,23 +286,24 @@ export default function HomePage() {
   const shouldShowRefreshStats =
     Boolean(latestSlate) && hasSlateStarted && !latestSlate?.is_locked;
 
-  const latestSlateIsFinal =
-    hasCompletedGames && !hasRemainingGames;
+  const latestSlateIsFinal = latestSlate?.is_locked === true;
 
   const shouldShowTipoff =
-    Boolean(latestSlate) &&
+    Boolean(nextSlateStartTime) &&
     !shouldShowRefreshStats &&
     !hasLiveGames &&
-    !latestSlateIsFinal &&
-    !latestSlate?.is_locked &&
-    Boolean(latestSlate?.first_game_start_time);
+    latestSlateIsFinal;
 
-  const tipoffTime = shouldShowTipoff
-    ? new Date(latestSlate!.first_game_start_time!).toLocaleTimeString("en-US", {
+  const tipoffTime = shouldShowTipoff && nextSlateStartTime
+    ? nextSlateStartTime.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
         timeZone: "America/New_York",
       })
+    : null;
+
+  const tipoffLabel = shouldShowTipoff && nextSlate
+    ? `Next slate ${nextSlate.label}`
     : null;
 
   const slateStatusLabel = hasLiveGames
@@ -400,13 +434,18 @@ export default function HomePage() {
     {isRefreshingHomeStats ? "Refreshing..." : "🔄 Refresh"}
   </button>
 ) : tipoffTime ? (
-                    <div className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:static sm:block sm:min-w-[140px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
+                    <div className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:static sm:block sm:min-w-[150px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
                       <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
                         Tip-off
                       </div>
                       <div className="text-xs font-bold text-slate-900 sm:mt-0.5 sm:text-2xl">
                         {tipoffTime} ET
                       </div>
+                      {tipoffLabel ? (
+                        <div className="mt-0.5 hidden text-[10px] font-medium text-slate-500 sm:block">
+                          {tipoffLabel}
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </div>

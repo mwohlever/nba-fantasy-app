@@ -374,7 +374,7 @@ export default function StandingsPage() {
               Team Style Stats
             </h2>
             <p className="text-sm text-slate-600">
-              Per-slate averages showing how each team builds their roster.
+              Per-slate averages from slates with tracked player box-score data.
             </p>
           </div>
 

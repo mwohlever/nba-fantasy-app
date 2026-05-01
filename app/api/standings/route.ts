@@ -97,11 +97,14 @@ export async function GET(request: NextRequest) {
           ? Number(seasonParam)
           : availableSeasons[0] ?? null;
 
-    const seasonResults = isAllTime
-      ? safeResults
-      : safeResults.filter(
-          (row) => slateSeasonMap.get(row.slate_id) === selectedSeason
-        );
+    const seasonResults = safeResults.filter((row) => {
+      const slateSeason = slateSeasonMap.get(row.slate_id);
+
+      if (!slateSeason) return false;
+      if (isAllTime) return true;
+
+      return slateSeason === selectedSeason;
+    });
 
     const standings: StandingRow[] = safeTeams.map((team) => {
       const teamRows = seasonResults.filter((row) => row.team_id === team.id);

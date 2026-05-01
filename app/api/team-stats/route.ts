@@ -23,6 +23,12 @@ type StatRow = {
   turnovers: number | null;
 };
 
+type TeamSlateResultRow = {
+  team_id: number;
+  slate_id: number;
+  fantasy_points: number | null;
+};
+
 export async function GET(req: NextRequest) {
   try {
     const season = req.nextUrl.searchParams.get("season");
@@ -93,6 +99,26 @@ export async function GET(req: NextRequest) {
 
     const safeStats = (stats ?? []) as StatRow[];
 
+    const { data: teamSlateResults, error: resultsError } = await supabaseAdmin
+      .from("team_slate_results")
+      .select("team_id, slate_id, fantasy_points")
+      .in("slate_id", slateIds);
+
+    if (resultsError) throw new Error(resultsError.message);
+
+    const safeTeamSlateResults = (teamSlateResults ?? []) as TeamSlateResultRow[];
+
+    const officialSlateCountByTeam = new Map<number, Set<number>>();
+
+    safeTeamSlateResults.forEach((row) => {
+      if ((row.fantasy_points ?? 0) <= 0) return;
+
+      const teamId = Number(row.team_id);
+      const existing = officialSlateCountByTeam.get(teamId) ?? new Set<number>();
+      existing.add(Number(row.slate_id));
+      officialSlateCountByTeam.set(teamId, existing);
+    });
+
     const lineupMap = new Map<number, LineupRow>();
     safeLineups.forEach((lineup) => lineupMap.set(Number(lineup.id), lineup));
 
@@ -121,6 +147,23 @@ export async function GET(req: NextRequest) {
       const stat = statsMap.get(`${Number(lp.player_id)}-${Number(lineup.slate_id)}`);
       if (!stat) return;
 
+      const statPoints = Number(stat.points ?? 0);
+      const statRebounds = Number(stat.rebounds ?? 0);
+      const statAssists = Number(stat.assists ?? 0);
+      const statSteals = Number(stat.steals ?? 0);
+      const statBlocks = Number(stat.blocks ?? 0);
+      const statTurnovers = Number(stat.turnovers ?? 0);
+
+      const hasRealStat =
+        statPoints > 0 ||
+        statRebounds > 0 ||
+        statAssists > 0 ||
+        statSteals > 0 ||
+        statBlocks > 0 ||
+        statTurnovers > 0;
+
+      if (!hasRealStat) return;
+
       const teamId = Number(lineup.team_id);
 
       const existing =
@@ -136,12 +179,12 @@ export async function GET(req: NextRequest) {
         };
 
       existing.slateIds.add(Number(lineup.slate_id));
-      existing.points += Number(stat.points ?? 0);
-      existing.rebounds += Number(stat.rebounds ?? 0);
-      existing.assists += Number(stat.assists ?? 0);
-      existing.steals += Number(stat.steals ?? 0);
-      existing.blocks += Number(stat.blocks ?? 0);
-      existing.turnovers += Number(stat.turnovers ?? 0);
+      existing.points += statPoints;
+      existing.rebounds += statRebounds;
+      existing.assists += statAssists;
+      existing.steals += statSteals;
+      existing.blocks += statBlocks;
+      existing.turnovers += statTurnovers;
 
       teamTotals.set(teamId, existing);
     });
