@@ -36,6 +36,7 @@ type ApiResponse = {
 };
 
 export default function PlayerHistoryPage() {
+  const emptyPlayerProjections: Record<number, any> = {};
   const [rows, setRows] = useState<PlayerHistoryRow[]>([]);
   const [season, setSeason] = useState<number | "all">(2026);
   const [searchTerm, setSearchTerm] = useState("");
@@ -360,6 +361,7 @@ export default function PlayerHistoryPage() {
         player={profilePlayer}
         setPlayer={setProfilePlayer}
         playerAverageMap={playerAverageMap}
+        playerProjections={emptyPlayerProjections}
       />
     </main>
   );

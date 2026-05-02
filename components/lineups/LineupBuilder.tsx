@@ -240,6 +240,22 @@ export default function LineupBuilder({
     return map;
   }, [playerStatsState]);
 
+  const [playerProjections, setPlayerProjections] = useState<Record<number, any>>({});
+
+  useEffect(() => {
+    if (!selectedSeason) return;
+
+    fetch(`/api/player-projections?season=${selectedSeason}`, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => {
+        setPlayerProjections(data.projections || {});
+      })
+      .catch((error) => {
+        console.error("Failed to load player projections", error);
+        setPlayerProjections({});
+      });
+  }, [selectedSeason]);
+
   const playerAverageMap = useMemo(() => {
     const map = new Map<number, number>();
     playerAverages.forEach((row) => {
@@ -247,6 +263,13 @@ export default function LineupBuilder({
     });
     return map;
   }, [playerAverages]);
+
+  const getPlayerProjectionScore = (playerId: number) => {
+    const projected = playerProjections?.[playerId]?.projection;
+    const fallback = playerAverageMap.get(playerId);
+    const value = projected ?? fallback ?? 0;
+    return Number.isFinite(Number(value)) ? Number(value) : 0;
+  };
 
   const teamResultsMap = useMemo(() => {
     const map = new Map<number, TeamResult>();
@@ -967,6 +990,7 @@ export default function LineupBuilder({
             availablePlayerIdsForSlate={availablePlayerIdsForSlate}
             availablePlayerIdSet={availablePlayerIdSet}
             playerAverageMap={playerAverageMap}
+            playerProjections={playerProjections}
             getOwnerTeamForPlayer={getOwnerTeamForPlayer}
             setDraftingPlayer={setDraftingPlayer}
             isAssigningPlayer={isAssigningPlayer}
@@ -1006,6 +1030,11 @@ export default function LineupBuilder({
                   { slot: "F/C", player: fcs[2] ?? null },
                 ];
 
+                const projectedTotal = rosterPlayers.reduce(
+                  (sum, player) => sum + getPlayerProjectionScore(player.id),
+                  0
+                );
+
                 return (
                   <div
                     key={team.id}
@@ -1022,6 +1051,9 @@ export default function LineupBuilder({
                         <div className="text-sm text-slate-600">
                           Draft Position #{draftOrder ?? "—"}
                         </div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          Projected Total: {projectedTotal.toFixed(1)}
+                        </div>
                       </div>
 
                       <div className="text-sm font-medium text-sky-700">
@@ -1034,6 +1066,7 @@ export default function LineupBuilder({
                         <tr>
                           <th className="px-3 py-2 text-left">Slot</th>
                           <th className="px-3 py-2 text-left">Player</th>
+                          <th className="px-3 py-2 text-left">Proj</th>
                         </tr>
                       </thead>
 
@@ -1069,6 +1102,12 @@ export default function LineupBuilder({
                                   + Draft {row.slot}
                                 </button>
                               )}
+                            </td>
+
+                            <td className="px-3 py-2 font-semibold text-slate-700">
+                              {row.player
+                                ? getPlayerProjectionScore(row.player.id).toFixed(1)
+                                : "—"}
                             </td>
 
                           </tr>
@@ -1391,12 +1430,14 @@ export default function LineupBuilder({
         player={profilePlayer}
         setPlayer={setProfilePlayer}
         playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
       />
 
       <DraftPlayerModal
         draftingPlayer={draftingPlayer}
         setDraftingPlayer={setDraftingPlayer}
         playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
         availablePlayerIdSet={availablePlayerIdSet}
         ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
         isAssigningPlayer={isAssigningPlayer}

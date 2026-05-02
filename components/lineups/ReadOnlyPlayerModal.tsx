@@ -39,6 +39,7 @@ type Props = {
   player: Player | null;
   setPlayer: (p: Player | null) => void;
   playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
 };
 
 function fmt(value: number | null | undefined) {
@@ -46,7 +47,7 @@ function fmt(value: number | null | undefined) {
   return Number(value).toFixed(1);
 }
 
-export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMap }: Props) {
+export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMap, playerProjections }: Props) {
   const [data, setData] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [season, setSeason] = useState<string>("2026");
@@ -69,6 +70,19 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
   }, [player, season]);
 
   if (!player) return null;
+
+  const projectionMeta = playerProjections?.[player.id];
+  const projectionScore =
+    projectionMeta?.projection ?? playerAverageMap.get(player.id) ?? null;
+  const projectionBadges = projectionMeta?.badges ?? [];
+  const projectionConfidence = projectionMeta?.confidence ?? null;
+  const projectionSource =
+    projectionMeta?.source === "league"
+      ? "League data"
+      : projectionMeta?.source === "nbaSeasonAverage"
+        ? "NBA season avg"
+        : "Fallback";
+
 
   const displayPosition = data?.player?.position_group ?? player.position_group ?? "—";
 
@@ -144,7 +158,23 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+                  <div className="text-xs uppercase text-indigo-700">Mark’s Projection</div>
+                  <div className="mt-2 text-xl font-bold">
+                    {projectionScore !== null ? fmt(projectionScore) : "—"}
+                    {projectionBadges.includes("trophy") ? " 🏆" : ""}
+                    {projectionBadges.includes("hot") ? " 🔥" : ""}
+                    {projectionBadges.includes("cold") ? " 🧊" : ""}
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-indigo-700">
+                    {projectionConfidence ? projectionConfidence.toUpperCase() : "—"} confidence
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {projectionSource}
+                  </div>
+                </div>
+
                 <div className="rounded-2xl border border-slate-200 p-4">
                   <div className="text-xs uppercase text-slate-500">Avg When Drafted</div>
                   <div className="mt-2 text-xl font-semibold">{fmt(data.summary.averageFantasyPoints)}</div>
