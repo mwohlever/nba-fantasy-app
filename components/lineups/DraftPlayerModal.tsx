@@ -48,6 +48,7 @@ type DraftPlayerModalProps = {
   draftingPlayer: Player | null;
   setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
   playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
   availablePlayerIdSet: Set<number>;
   ownerTeamForDraftingPlayer: OrderedTeam | null;
   isAssigningPlayer: boolean;
@@ -71,6 +72,7 @@ export default function DraftPlayerModal({
   draftingPlayer,
   setDraftingPlayer,
   playerAverageMap,
+  playerProjections,
   availablePlayerIdSet,
   ownerTeamForDraftingPlayer,
   isAssigningPlayer,
@@ -134,6 +136,19 @@ export default function DraftPlayerModal({
 
   if (!draftingPlayer) return null;
 
+  const projectionMeta = playerProjections?.[draftingPlayer.id];
+  const projectionScore =
+    projectionMeta?.projection ?? playerAverageMap.get(draftingPlayer.id) ?? null;
+  const projectionBadges = projectionMeta?.badges ?? [];
+  const projectionConfidence = projectionMeta?.confidence ?? null;
+  const projectionSource =
+    projectionMeta?.source === "league"
+      ? "League data"
+      : projectionMeta?.source === "nbaSeasonAverage"
+        ? "NBA season avg"
+        : "Fallback";
+
+
   return (
     <div
       className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
@@ -176,7 +191,7 @@ export default function DraftPlayerModal({
               </span>
 
               <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Season avg {fmt(playerAverageMap.get(draftingPlayer.id))}
+                NBA Regular Season Avg {(projectionMeta?.nbaSeasonAverage ?? "—")}
               </span>
 
               {availablePlayerIdSet.has(draftingPlayer.id) ? (
@@ -261,13 +276,35 @@ export default function DraftPlayerModal({
 
                 <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
                   <div className="text-xs uppercase text-indigo-700">
-                    Drafted Most By
+                    Mark’s Projection
                   </div>
                   <div className="mt-2 text-lg font-bold">
-                    {profile.summary.draftedMostBy
-                      ? `${profile.summary.draftedMostBy.teamName} (${profile.summary.draftedMostBy.count})`
-                      : "—"}
+                    {projectionScore !== null ? projectionScore.toFixed(1) : "—"}
+                    {projectionBadges.includes("trophy") ? " 🏆" : ""}
+                    {projectionBadges.includes("hot") ? " 🔥" : ""}
+                    {projectionBadges.includes("cold") ? " 🧊" : ""}
                   </div>
+                  <div className="mt-1 text-xs font-semibold text-indigo-700">
+                    {projectionConfidence ? projectionConfidence.toUpperCase() : "—"} confidence
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {projectionSource}
+                  </div>
+                  <details className="mt-2 text-xs text-slate-600">
+                    <summary className="cursor-pointer font-semibold text-slate-700">
+                      Why this projection?
+                    </summary>
+                    <div className="mt-2 space-y-1">
+                      <div>NBA regular season avg: {projectionMeta?.nbaSeasonAverage?.toFixed?.(1) ?? "—"}</div>
+                      <div>App season avg: {projectionMeta?.seasonAvg?.toFixed?.(1) ?? "—"}</div>
+                      <div>Recent app avg: {projectionMeta?.recentAvg?.toFixed?.(1) ?? "—"}</div>
+                      <div>Drafted slates: {projectionMeta?.draftedCount ?? "—"}</div>
+                      <div>Avg finish: {projectionMeta?.avgFinish?.toFixed?.(1) ?? "—"}</div>
+                      <div className="pt-1 text-slate-500">
+                        Formula: 50% NBA avg + 30% app season avg + 20% recent avg + finish boost ± hot/cold adjustment.
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
 

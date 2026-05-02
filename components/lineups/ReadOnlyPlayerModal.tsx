@@ -39,6 +39,7 @@ type Props = {
   player: Player | null;
   setPlayer: (p: Player | null) => void;
   playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
 };
 
 function fmt(value: number | null | undefined) {
@@ -46,7 +47,7 @@ function fmt(value: number | null | undefined) {
   return Number(value).toFixed(1);
 }
 
-export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMap }: Props) {
+export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMap, playerProjections }: Props) {
   const [data, setData] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
   const [season, setSeason] = useState<string>("2026");
@@ -70,6 +71,19 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
 
   if (!player) return null;
 
+  const projectionMeta = playerProjections?.[player.id];
+  const projectionScore =
+    projectionMeta?.projection ?? playerAverageMap.get(player.id) ?? null;
+  const projectionBadges = projectionMeta?.badges ?? [];
+  const projectionConfidence = projectionMeta?.confidence ?? null;
+  const projectionSource =
+    projectionMeta?.source === "league"
+      ? "League data"
+      : projectionMeta?.source === "nbaSeasonAverage"
+        ? "NBA season avg"
+        : "Fallback";
+
+
   const displayPosition = data?.player?.position_group ?? player.position_group ?? "—";
 
   return (
@@ -82,7 +96,7 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
             </div>
             <h2 className="mt-1 text-2xl font-bold text-slate-900">{player.name}</h2>
             <p className="mt-1 text-sm text-slate-500">
-              {displayPosition} • Season avg {fmt(playerAverageMap.get(player.id))}
+              {displayPosition} • NBA Regular Season Avg {(projectionMeta?.nbaSeasonAverage ?? "—")}
             </p>
 
             <div className="mt-3">
@@ -144,7 +158,38 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-xs uppercase text-slate-500">Mark’s Projection</div>
+                  <div className="mt-2 text-xl font-semibold text-slate-900">
+                    {projectionScore !== null ? projectionScore.toFixed(1) : "—"}
+                    {projectionBadges.includes("trophy") ? " 🏆" : ""}
+                    {projectionBadges.includes("hot") ? " 🔥" : ""}
+                    {projectionBadges.includes("cold") ? " 🧊" : ""}
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-slate-600">
+                    {projectionConfidence ? projectionConfidence.toUpperCase() : "—"} confidence
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {projectionSource}
+                  </div>
+                  <details className="mt-2 text-xs text-slate-600">
+                    <summary className="cursor-pointer font-semibold text-slate-700">
+                      Why this projection?
+                    </summary>
+                    <div className="mt-2 space-y-1">
+                      <div>NBA regular season avg: {projectionMeta?.nbaSeasonAverage?.toFixed?.(1) ?? "—"}</div>
+                      <div>App season avg: {projectionMeta?.seasonAvg?.toFixed?.(1) ?? "—"}</div>
+                      <div>Recent app avg: {projectionMeta?.recentAvg?.toFixed?.(1) ?? "—"}</div>
+                      <div>Drafted slates: {projectionMeta?.draftedCount ?? "—"}</div>
+                      <div>Avg finish: {projectionMeta?.avgFinish?.toFixed?.(1) ?? "—"}</div>
+                      <div className="pt-1 text-slate-500">
+                        Formula: 50% NBA avg + 30% app season avg + 20% recent avg + finish boost ± hot/cold adjustment.
+                      </div>
+                    </div>
+                  </details>
+                </div>
+
                 <div className="rounded-2xl border border-slate-200 p-4">
                   <div className="text-xs uppercase text-slate-500">Avg When Drafted</div>
                   <div className="mt-2 text-xl font-semibold">{fmt(data.summary.averageFantasyPoints)}</div>
