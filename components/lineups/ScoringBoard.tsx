@@ -209,7 +209,12 @@ export default function ScoringBoard({
                             {compactView ? (
                               <div className="w-[128px] min-w-[128px] border-r border-slate-200 bg-white px-2 py-1">
                                 {row.player ? (
-                                  <span className="block truncate">{row.player.name}</span>
+                                  <span className="block truncate">{row.player.name}
+                                  {(row.player.id === 508 || row.player.name === "Max Strus") && (
+                                    <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                                      🔥 Doubled Points for Game 7 Strus!
+                                    </span>
+                                  )}</span>
                                 ) : (
                                   <span className="text-slate-400">—</span>
                                 )}

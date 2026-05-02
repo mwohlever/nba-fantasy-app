@@ -118,7 +118,16 @@ export default async function LineupsPage() {
 
   safeAllPlayerStats.forEach((row) => {
     const playerId = Number(row.player_id);
-    const fantasyPoints = Number(row.fantasy_points ?? 0);
+    // STRUS DOUBLE RULE (temporary)
+const fantasyPointsRaw = Number(row.fantasy_points ?? 0);
+
+const isStrus = row.player_id === 508;
+
+const isTargetSlate = true; // current slate only
+
+const fantasyPoints =
+  isStrus && isTargetSlate ? fantasyPointsRaw * 2 : fantasyPointsRaw;
+
 
     if (!Number.isFinite(playerId)) return;
     if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
