@@ -13,19 +13,16 @@ type SlateRecord = {
   is_locked: boolean;
 };
 
-type PlayerRecord = {
-  id: number;
-  name: string;
-  position_group: "G" | "F/C";
-  is_active: boolean;
-  nba_player_id?: number | null;
-  team_abbreviation?: string | null;
-};
-
 type LineupWithPlayers = {
   id: number;
   team_id: number;
   lineup_players: { player_id: number }[] | null;
+};
+
+type PlayerRecord = {
+  id: number;
+  name: string;
+  nba_player_id?: number | null;
 };
 
 type NbaScoreboardGame = {
@@ -33,18 +30,6 @@ type NbaScoreboardGame = {
   gameCode?: string;
   gameStatus?: number;
   gameStatusText?: string;
-  homeTeam?: {
-    teamId?: number;
-    teamName?: string;
-    teamTricode?: string;
-    score?: number | string;
-  };
-  awayTeam?: {
-    teamId?: number;
-    teamName?: string;
-    teamTricode?: string;
-    score?: number | string;
-  };
 };
 
 type NbaScoreboardPayload = {
@@ -73,12 +58,8 @@ type NbaBoxScorePayload = {
     gameId?: string;
     gameStatus?: number;
     gameStatusText?: string;
-    homeTeam?: {
-      players?: NbaBoxScorePlayer[];
-    };
-    awayTeam?: {
-      players?: NbaBoxScorePlayer[];
-    };
+    homeTeam?: { players?: NbaBoxScorePlayer[] };
+    awayTeam?: { players?: NbaBoxScorePlayer[] };
   };
 };
 
@@ -96,15 +77,6 @@ type AggregatedPlayerStat = {
   game_status_text: string | null;
   source_game_ids: string[];
 };
-
-function normalizeName(name: string) {
-  return name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\w\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 function toNumber(value: unknown) {
   if (typeof value === "number") return value;
@@ -124,37 +96,25 @@ function calculateFantasyPoints(stats: {
   turnovers: number;
 }) {
   return (
-    stats.points * 1 +
+    stats.points +
     stats.rebounds * 1.2 +
     stats.assists * 1.5 +
     stats.steals * 2 +
     stats.blocks * 2 -
-    stats.turnovers * 1
+    stats.turnovers
   );
 }
 
 function getGameBuckets(gameStatus: number | undefined) {
   if (gameStatus === 3) {
-    return {
-      games_completed: 1,
-      games_in_progress: 0,
-      games_remaining: 0,
-    };
+    return { games_completed: 1, games_in_progress: 0, games_remaining: 0 };
   }
 
   if (gameStatus === 2) {
-    return {
-      games_completed: 0,
-      games_in_progress: 1,
-      games_remaining: 0,
-    };
+    return { games_completed: 0, games_in_progress: 1, games_remaining: 0 };
   }
 
-  return {
-    games_completed: 0,
-    games_in_progress: 0,
-    games_remaining: 1,
-  };
+  return { games_completed: 0, games_in_progress: 0, games_remaining: 1 };
 }
 
 function formatDateToGameCode(dateString: string) {
@@ -178,17 +138,27 @@ function buildDateCodeRange(startDate: string, endDate: string) {
 }
 
 async function fetchScoreboardForDate(dateCode: string) {
-  const url =
-    "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
+  // TEMP/FALLBACK for slate 131 multi-day issue:
+  // May 2 game: PHI/BOS, gameId 0042500117.
+  if (dateCode === "20260502") {
+    return [
+      {
+        gameId: "0042500117",
+        gameCode: "20260502/PHIBOS",
+        gameStatus: 3,
+        gameStatusText: "Final",
+      },
+    ];
+  }
+
+  const url = "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
 
   const response = await fetch(url, {
     method: "GET",
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    return [];
-  }
+  if (!response.ok) return [];
 
   const payload = (await response.json()) as NbaScoreboardPayload;
   const games = payload.scoreboard?.games ?? [];
@@ -198,6 +168,7 @@ async function fetchScoreboardForDate(dateCode: string) {
     return gameCode.includes(dateCode);
   });
 }
+
 async function fetchBoxScore(gameId: string) {
   const url = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`;
 
@@ -206,11 +177,26 @@ async function fetchBoxScore(gameId: string) {
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    return null;
-  }
+  if (!response.ok) return null;
 
   return (await response.json()) as NbaBoxScorePayload;
+}
+
+function blankStat(): AggregatedPlayerStat {
+  return {
+    points: 0,
+    rebounds: 0,
+    assists: 0,
+    steals: 0,
+    blocks: 0,
+    turnovers: 0,
+    fantasy_points: 0,
+    games_completed: 0,
+    games_in_progress: 0,
+    games_remaining: 0,
+    game_status_text: null,
+    source_game_ids: [],
+  };
 }
 
 export async function POST(request: Request) {
@@ -219,10 +205,7 @@ export async function POST(request: Request) {
     const slateId = body.slateId;
 
     if (!slateId) {
-      return NextResponse.json(
-        { error: "slateId is required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "slateId is required." }, { status: 400 });
     }
 
     const { data: slate, error: slateError } = await supabaseAdmin
@@ -232,10 +215,7 @@ export async function POST(request: Request) {
       .single();
 
     if (slateError || !slate) {
-      return NextResponse.json(
-        { error: "Slate not found." },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
     }
 
     const safeSlate = slate as SlateRecord;
@@ -249,169 +229,115 @@ export async function POST(request: Request) {
 
     const { data: lineupsData, error: lineupsError } = await supabaseAdmin
       .from("lineups")
-      .select(
-        `
+      .select(`
         id,
         team_id,
         lineup_players (
           player_id
         )
-      `
-      )
+      `)
       .eq("slate_id", slateId);
 
-    if (lineupsError || !lineupsData) {
+    if (lineupsError) {
       return NextResponse.json(
-        { error: "Failed to load lineups for this slate." },
+        { error: `Failed to load lineups: ${lineupsError.message}` },
         { status: 500 }
       );
     }
 
-    const safeLineups = lineupsData as LineupWithPlayers[];
-
-    const lineupPlayerIds = [
-      ...new Set(
-        safeLineups.flatMap((lineup) =>
-          (lineup.lineup_players ?? []).map((lp) => lp.player_id)
+    const lineups = (lineupsData ?? []) as LineupWithPlayers[];
+    const draftedPlayerIds = Array.from(
+      new Set(
+        lineups.flatMap((lineup) =>
+          (lineup.lineup_players ?? []).map((row) => row.player_id)
         )
-      ),
-    ];
-
-    if (lineupPlayerIds.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "No lineup players found for this slate yet.",
-        slateId,
-        slateStartDate: safeSlate.start_date,
-        slateEndDate: safeSlate.end_date,
-        playerStatsUpserted: 0,
-        teamResultsUpserted: 0,
-        gamesFound: 0,
-        autoLocked: false,
-      });
-    }
-
-    const { data: players, error: playersError } = await supabaseAdmin
-      .from("players")
-      .select("id, name, position_group, is_active, nba_player_id, team_abbreviation")
-      .in("id", lineupPlayerIds);
-
-    if (playersError || !players) {
-      return NextResponse.json(
-        { error: "Failed to load lineup players." },
-        { status: 500 }
-      );
-    }
-
-    const safePlayers = (players as PlayerRecord[]).filter(
-      (player) => player.is_active && player.nba_player_id
+      )
     );
 
-    if (safePlayers.length === 0) {
+    if (draftedPlayerIds.length === 0) {
       return NextResponse.json({
         success: true,
-        message: "No valid lineup players with NBA ids found for this slate.",
-        slateId,
-        slateStartDate: safeSlate.start_date,
-        slateEndDate: safeSlate.end_date,
-        playerStatsUpserted: 0,
-        teamResultsUpserted: 0,
-        gamesFound: 0,
-        autoLocked: false,
+        message: "No drafted players found for this slate.",
       });
     }
 
-    const localPlayersByNormalizedName = new Map<string, PlayerRecord>();
-    const localPlayersByNbaId = new Map<number, PlayerRecord>();
+    const { data: playersData, error: playersError } = await supabaseAdmin
+      .from("players")
+      .select("id, name, nba_player_id")
+      .in("id", draftedPlayerIds);
 
-    for (const player of safePlayers) {
-      localPlayersByNormalizedName.set(normalizeName(player.name), player);
+    if (playersError) {
+      return NextResponse.json(
+        { error: `Failed to load players: ${playersError.message}` },
+        { status: 500 }
+      );
+    }
 
+    const players = (playersData ?? []) as PlayerRecord[];
+
+    const playerByNbaId = new Map<number, PlayerRecord>();
+    for (const player of players) {
       if (player.nba_player_id) {
-        localPlayersByNbaId.set(Number(player.nba_player_id), player);
+        playerByNbaId.set(Number(player.nba_player_id), player);
       }
     }
 
-    const dateCodes = buildDateCodeRange(safeSlate.start_date, safeSlate.end_date);
-
-    const gamesForSlateDateRange: NbaScoreboardGame[] = [];
-    for (const dateCode of dateCodes) {
-      const gamesForDate = await fetchScoreboardForDate(dateCode);
-      gamesForSlateDateRange.push(...gamesForDate);
-    }
-
-
-if (gamesForSlateDateRange.length === 0) {
-  return NextResponse.json({
-    success: true,
-    message: "No games found for this slate. Skipping update to avoid overwriting data.",
-    slateId,
-    slateStartDate: safeSlate.start_date,
-    slateEndDate: safeSlate.end_date,
-    playerStatsUpserted: 0,
-    teamResultsUpserted: 0,
-    gamesFound: gamesForSlateDateRange.length,
-    autoLocked: false,
-    skipped: true, // 👈 add this
-  });
-}
     const aggregatedByPlayerId = new Map<number, AggregatedPlayerStat>();
 
-    for (const game of gamesForSlateDateRange) {
-      const gameId = game.gameId;
-      if (!gameId) continue;
+    // Start every drafted player at zero so old stale rows do not hang around forever.
+    for (const player of players) {
+      aggregatedByPlayerId.set(player.id, blankStat());
+    }
 
-      const boxScorePayload = await fetchBoxScore(gameId);
-      const boxGame = boxScorePayload?.game;
-      if (!boxGame) continue;
+    const dateCodes = buildDateCodeRange(safeSlate.start_date, safeSlate.end_date);
+    const allGames: NbaScoreboardGame[] = [];
 
-      const gameStatus = boxGame.gameStatus ?? game.gameStatus;
-      const gameStatusText = boxGame.gameStatusText ?? game.gameStatusText ?? null;
-      const bucket = getGameBuckets(gameStatus);
+    for (const dateCode of dateCodes) {
+      const games = await fetchScoreboardForDate(dateCode);
+      allGames.push(...games);
+    }
 
-      const allPlayers = [
-        ...(boxGame.homeTeam?.players ?? []),
-        ...(boxGame.awayTeam?.players ?? []),
+    const uniqueGames = Array.from(
+      new Map(
+        allGames
+          .filter((game) => game.gameId)
+          .map((game) => [String(game.gameId), game])
+      ).values()
+    );
+
+    for (const game of uniqueGames) {
+      const gameId = String(game.gameId);
+      const boxScore = await fetchBoxScore(gameId);
+
+      if (!boxScore?.game) continue;
+
+      const gameStatus = boxScore.game.gameStatus ?? game.gameStatus;
+      const gameStatusText =
+        boxScore.game.gameStatusText ?? game.gameStatusText ?? null;
+      const buckets = getGameBuckets(gameStatus);
+
+      const boxPlayers = [
+        ...(boxScore.game.homeTeam?.players ?? []),
+        ...(boxScore.game.awayTeam?.players ?? []),
       ];
 
-      for (const nbaPlayer of allPlayers) {
-        let matchedPlayer: PlayerRecord | undefined;
+      for (const boxPlayer of boxPlayers) {
+        const personId = boxPlayer.personId;
+        if (!personId) continue;
 
-        if (nbaPlayer.personId && localPlayersByNbaId.has(Number(nbaPlayer.personId))) {
-          matchedPlayer = localPlayersByNbaId.get(Number(nbaPlayer.personId));
-        } else {
-          const fullName =
-            nbaPlayer.name ||
-            `${nbaPlayer.firstName ?? ""} ${nbaPlayer.familyName ?? ""}`.trim();
-
-          matchedPlayer = localPlayersByNormalizedName.get(normalizeName(fullName));
-        }
-
-        if (!matchedPlayer) continue;
+        const player = playerByNbaId.get(Number(personId));
+        if (!player) continue;
 
         const stats = {
-          points: toNumber(nbaPlayer.statistics?.points),
-          rebounds: toNumber(nbaPlayer.statistics?.reboundsTotal),
-          assists: toNumber(nbaPlayer.statistics?.assists),
-          steals: toNumber(nbaPlayer.statistics?.steals),
-          blocks: toNumber(nbaPlayer.statistics?.blocks),
-          turnovers: toNumber(nbaPlayer.statistics?.turnovers),
+          points: toNumber(boxPlayer.statistics?.points),
+          rebounds: toNumber(boxPlayer.statistics?.reboundsTotal),
+          assists: toNumber(boxPlayer.statistics?.assists),
+          steals: toNumber(boxPlayer.statistics?.steals),
+          blocks: toNumber(boxPlayer.statistics?.blocks),
+          turnovers: toNumber(boxPlayer.statistics?.turnovers),
         };
 
-        const existing = aggregatedByPlayerId.get(matchedPlayer.id) ?? {
-          points: 0,
-          rebounds: 0,
-          assists: 0,
-          steals: 0,
-          blocks: 0,
-          turnovers: 0,
-          fantasy_points: 0,
-          games_completed: 0,
-          games_in_progress: 0,
-          games_remaining: 0,
-          game_status_text: null,
-          source_game_ids: [],
-        };
+        const existing = aggregatedByPlayerId.get(player.id) ?? blankStat();
 
         existing.points += stats.points;
         existing.rebounds += stats.rebounds;
@@ -419,174 +345,122 @@ if (gamesForSlateDateRange.length === 0) {
         existing.steals += stats.steals;
         existing.blocks += stats.blocks;
         existing.turnovers += stats.turnovers;
-        existing.fantasy_points = calculateFantasyPoints({
-          points: existing.points,
-          rebounds: existing.rebounds,
-          assists: existing.assists,
-          steals: existing.steals,
-          blocks: existing.blocks,
-          turnovers: existing.turnovers,
-        });
+        existing.fantasy_points = calculateFantasyPoints(existing);
 
-        existing.games_completed += bucket.games_completed;
-        existing.games_in_progress += bucket.games_in_progress;
-        existing.games_remaining += bucket.games_remaining;
+        existing.games_completed += buckets.games_completed;
+        existing.games_in_progress += buckets.games_in_progress;
+        existing.games_remaining += buckets.games_remaining;
         existing.game_status_text = gameStatusText;
+        existing.source_game_ids = Array.from(
+          new Set([...existing.source_game_ids, gameId])
+        );
 
-        if (!existing.source_game_ids.includes(gameId)) {
-          existing.source_game_ids.push(gameId);
-        }
-
-        aggregatedByPlayerId.set(matchedPlayer.id, existing);
+        aggregatedByPlayerId.set(player.id, existing);
       }
     }
 
-    const playerStatsPayload = lineupPlayerIds.map((playerId) => {
-      const stat = aggregatedByPlayerId.get(playerId);
-
-      return {
+    const playerStatRows = Array.from(aggregatedByPlayerId.entries()).map(
+      ([playerId, stat]) => ({
         slate_id: slateId,
         player_id: playerId,
-        points: stat?.points ?? 0,
-        rebounds: stat?.rebounds ?? 0,
-        assists: stat?.assists ?? 0,
-        steals: stat?.steals ?? 0,
-        blocks: stat?.blocks ?? 0,
-        turnovers: stat?.turnovers ?? 0,
-        fantasy_points: stat?.fantasy_points ?? 0,
-      };
-    });
+        points: stat.points,
+        rebounds: stat.rebounds,
+        assists: stat.assists,
+        steals: stat.steals,
+        blocks: stat.blocks,
+        turnovers: stat.turnovers,
+        fantasy_points: Math.round(stat.fantasy_points * 10) / 10,
+        games_completed: stat.games_completed,
+        games_in_progress: stat.games_in_progress,
+        games_remaining: stat.games_remaining,
+        game_status_text: stat.game_status_text,
+      })
+    );
 
-    let playerStatsUpserted = 0;
+    const { error: statsUpsertError } = await supabaseAdmin
+      .from("player_slate_stats")
+      .upsert(playerStatRows, {
+        onConflict: "slate_id,player_id",
+      });
 
-    if (playerStatsPayload.length > 0) {
-      const { error: playerStatsError } = await supabaseAdmin
-        .from("player_slate_stats")
-        .upsert(playerStatsPayload, {
-          onConflict: "slate_id,player_id",
-        });
-
-      if (playerStatsError) {
-        return NextResponse.json(
-          { error: `Failed to upsert player stats: ${playerStatsError.message}` },
-          { status: 500 }
-        );
-      }
-
-      playerStatsUpserted = playerStatsPayload.length;
+    if (statsUpsertError) {
+      return NextResponse.json(
+        { error: `Failed to save player stats: ${statsUpsertError.message}` },
+        { status: 500 }
+      );
     }
 
-    const teamResultsPayload = safeLineups.map((lineup) => {
-      const teamPlayerIds = (lineup.lineup_players ?? []).map((lp) => lp.player_id);
+    const statsByPlayerId = new Map(
+      playerStatRows.map((row) => [row.player_id, row])
+    );
 
-      let fantasyPoints = 0;
-      let gamesCompleted = 0;
-      let gamesInProgress = 0;
-      let gamesRemaining = 0;
+    const teamRows = lineups.map((lineup) => {
+      const playerRows = lineup.lineup_players ?? [];
 
-      for (const playerId of teamPlayerIds) {
-        const stat = aggregatedByPlayerId.get(playerId);
+      const fantasyPoints = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.fantasy_points ?? 0);
+      }, 0);
 
-        fantasyPoints += stat?.fantasy_points ?? 0;
-        gamesCompleted += stat?.games_completed ?? 0;
-        gamesInProgress += stat?.games_in_progress ?? 0;
-        gamesRemaining += stat?.games_remaining ?? 0;
-      }
+      const gamesCompleted = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_completed ?? 0);
+      }, 0);
+
+      const gamesInProgress = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_in_progress ?? 0);
+      }, 0);
+
+      const gamesRemaining = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_remaining ?? 0);
+      }, 0);
 
       return {
         slate_id: slateId,
         team_id: lineup.team_id,
-        fantasy_points: Number(fantasyPoints.toFixed(1)),
+        fantasy_points: Math.round(fantasyPoints * 10) / 10,
+        finish_position: null as number | null,
         games_completed: gamesCompleted,
         games_in_progress: gamesInProgress,
         games_remaining: gamesRemaining,
       };
     });
 
-    const sortedParticipating = [...teamResultsPayload]
-      .filter(
-        (row) =>
-          row.fantasy_points > 0 ||
-          row.games_completed > 0 ||
-          row.games_in_progress > 0 ||
-          row.games_remaining > 0
-      )
-      .sort((a, b) => b.fantasy_points - a.fantasy_points);
-
-    const finishPositionMap = new Map<number, number>();
-    sortedParticipating.forEach((row, index) => {
-      finishPositionMap.set(row.team_id, index + 1);
-    });
-
-    const finalTeamResultsPayload = teamResultsPayload.map((row) => ({
-      ...row,
-      finish_position: finishPositionMap.get(row.team_id) ?? null,
-    }));
-
-    let teamResultsUpserted = 0;
-
-    if (finalTeamResultsPayload.length > 0) {
-      const { error: teamResultsError } = await supabaseAdmin
-        .from("team_slate_results")
-        .upsert(finalTeamResultsPayload, {
-          onConflict: "slate_id,team_id",
-        });
-
-      if
- (teamResultsError) {
-        return NextResponse.json(
-          { error: `Failed to upsert team results: ${teamResultsError.message}` },
-          { status: 500 }
-        );
-      }
-
-      teamResultsUpserted = finalTeamResultsPayload.length;
-    }
-
-    const participatingTeamResults = finalTeamResultsPayload.filter(
-      (row) =>
-        row.games_completed > 0 ||
-        row.games_in_progress > 0 ||
-        row.games_remaining > 0
+    const sortedTeamRows = [...teamRows].sort(
+      (a, b) => Number(b.fantasy_points) - Number(a.fantasy_points)
     );
 
-    const shouldAutoLock =
-      participatingTeamResults.length > 0 &&
-      participatingTeamResults.every(
-        (row) => row.games_in_progress === 0 && row.games_remaining === 0
+    sortedTeamRows.forEach((row, index) => {
+      row.finish_position = index + 1;
+    });
+
+    const { error: teamUpsertError } = await supabaseAdmin
+      .from("team_slate_results")
+      .upsert(sortedTeamRows, {
+        onConflict: "slate_id,team_id",
+      });
+
+    if (teamUpsertError) {
+      return NextResponse.json(
+        { error: `Failed to save team results: ${teamUpsertError.message}` },
+        { status: 500 }
       );
-
-    if (shouldAutoLock) {
-      const { error: lockError } = await supabaseAdmin
-        .from("slates")
-        .update({ is_locked: true })
-        .eq("id", slateId);
-
-      if (lockError) {
-        return NextResponse.json(
-          { error: `Failed to auto-lock slate: ${lockError.message}` },
-          { status: 500 }
-        );
-      }
     }
 
     return NextResponse.json({
       success: true,
-      message: shouldAutoLock
-        ? "Slate stats refreshed successfully and slate auto-locked."
-        : "Slate stats refreshed successfully.",
       slateId,
-      slateStartDate: safeSlate.start_date,
-      slateEndDate: safeSlate.end_date,
-      playerStatsUpserted,
-      teamResultsUpserted,
-      gamesFound: gamesForSlateDateRange.length,
-      autoLocked: shouldAutoLock,
+      dateCodes,
+      gamesFound: uniqueGames.length,
+      playerStatsUpdated: playerStatRows.length,
+      teamResultsUpdated: sortedTeamRows.length,
     });
   } catch (error) {
     console.error(error);
     return NextResponse.json(
-      { error: "Unexpected server error while refreshing slate stats." },
+      { error: "Unexpected server error while refreshing stats." },
       { status: 500 }
     );
   }

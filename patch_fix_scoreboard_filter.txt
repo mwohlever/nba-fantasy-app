@@ -1,0 +1,23 @@
+async function fetchScoreboardForDate(dateCode: string) {
+  const urls = [
+    `https://cdn.nba.com/static/json/liveData/scoreboard/scoreboard_${dateCode}.json`,
+    "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json",
+  ];
+
+  for (const url of urls) {
+    const response = await fetch(url, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (!response.ok) continue;
+
+    const payload = await response.json();
+    const games = payload.scoreboard?.games ?? [];
+
+    // 🔥 DO NOT FILTER — endpoint already scoped to date
+    if (games.length > 0) return games;
+  }
+
+  return [];
+}

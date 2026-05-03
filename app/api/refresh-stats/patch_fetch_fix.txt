@@ -1,0 +1,17 @@
+async function fetchScoreboardForDate(dateCode: string) {
+  const url = `https://cdn.nba.com/static/json/liveData/scoreboard/scoreboard_${dateCode}.json`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const payload = (await response.json()) as NbaScoreboardPayload;
+  const games = payload.scoreboard?.games ?? [];
+
+  return games;
+}
