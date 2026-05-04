@@ -190,7 +190,8 @@ export async function GET(req: NextRequest) {
     });
 
     const teams = Array.from(teamTotals.entries()).map(([teamId, totals]) => {
-      const slateCount = totals.slateIds.size || 1;
+      const officialSlates = officialSlateCountByTeam.get(teamId);
+const slateCount = officialSlates ? officialSlates.size : totals.slateIds.size || 1;
 
       return {
         teamId,

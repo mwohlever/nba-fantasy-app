@@ -9,6 +9,7 @@ type TeamRow = {
 type SlateRow = {
   id: number;
   start_date: string;
+  is_locked: boolean;
 };
 
 type TeamSlateResultRow = {
@@ -51,7 +52,8 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
       supabaseAdmin
         .from("slates")
-        .select("id, start_date")
+        .select("id, start_date, is_locked")
+        .eq("is_locked", true)
         .order("start_date", { ascending: true }),
       supabaseAdmin
         .from("team_slate_results")
