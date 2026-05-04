@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+function normalizeNbaTeamCode(value: string | null | undefined) {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (code === "NY") return "NYK";
+  return code;
+}
+
+
+
 type ExistingPlayer = {
   id: number;
   name: string;
@@ -247,7 +255,7 @@ export async function POST() {
           nba_player_id: nbaPlayerId,
           nba_display_name: displayName,
           is_active: isActive,
-          team_abbreviation: teamAbbreviation,
+          team_abbreviation: normalizeNbaTeamCode(teamAbbreviation),
           roster_status: rosterStatus,
           is_playing_today: isPlayingToday,
         });
@@ -259,7 +267,7 @@ export async function POST() {
           // Default for new players; you can edit later in-app or in DB
           position_group: "F/C",
           is_active: isActive,
-          team_abbreviation: teamAbbreviation,
+          team_abbreviation: normalizeNbaTeamCode(teamAbbreviation),
           roster_status: rosterStatus,
           is_playing_today: isPlayingToday,
         });

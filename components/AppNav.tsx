@@ -20,6 +20,7 @@ const desktopAdminLinks = [
   { href: "/admin", label: "Admin Home" },
   { href: "/admin/players", label: "Manage Players" },
   { href: "/admin/slates", label: "Manage Slates" },
+  { href: "/admin/slate-games", label: "Slate NBA Games" },
   { href: "/slates/new", label: "Create Slate" },
 ];
 

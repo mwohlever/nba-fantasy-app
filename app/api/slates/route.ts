@@ -1,6 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+function isoDateFromGameCode(gameCode: string | null | undefined) {
+  const raw = String(gameCode ?? "").slice(0, 8);
+  if (!/^\d{8}$/.test(raw)) return null;
+  return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+}
+
+async function autoAttachNbaGamesToSlate(slateId: number) {
+  try {
+    const response = await fetch(
+      "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json",
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) return;
+
+    const payload = await response.json();
+    const games = payload?.scoreboard?.games ?? [];
+
+    const rows = games
+      .filter((game: any) => game?.gameId)
+      .map((game: any) => ({
+        slate_id: slateId,
+        game_date: isoDateFromGameCode(game.gameCode),
+        game_id: String(game.gameId),
+        game_code: game.gameCode ?? null,
+        note: `${game.awayTeam?.teamTricode ?? ""} at ${game.homeTeam?.teamTricode ?? ""}`.trim(),
+      }));
+
+    if (rows.length === 0) return;
+
+    await supabaseAdmin
+      .from("slate_nba_games")
+      .upsert(rows, { onConflict: "slate_id,game_id" });
+  } catch (error) {
+    console.error("Auto attach NBA games failed:", error);
+  }
+}
+
+
+function normalizeNbaTeamCode(value: string | null | undefined) {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (code === "NY") return "NYK";
+  return code;
+}
+
+
+
 type TeamRow = { id: number; name: string };
 
 type TeamSlateResultRow = {

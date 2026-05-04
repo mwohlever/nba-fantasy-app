@@ -138,19 +138,6 @@ function buildDateCodeRange(startDate: string, endDate: string) {
 }
 
 async function fetchScoreboardForDate(dateCode: string) {
-  // TEMP/FALLBACK for slate 131 multi-day issue:
-  // May 2 game: PHI/BOS, gameId 0042500117.
-  if (dateCode === "20260502") {
-    return [
-      {
-        gameId: "0042500117",
-        gameCode: "20260502/PHIBOS",
-        gameStatus: 3,
-        gameStatusText: "Final",
-      },
-    ];
-  }
-
   const url = "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
 
   const response = await fetch(url, {
@@ -292,9 +279,32 @@ export async function POST(request: Request) {
     const dateCodes = buildDateCodeRange(safeSlate.start_date, safeSlate.end_date);
     const allGames: NbaScoreboardGame[] = [];
 
-    for (const dateCode of dateCodes) {
-      const games = await fetchScoreboardForDate(dateCode);
-      allGames.push(...games);
+    const { data: manualGames, error: manualGamesError } = await supabaseAdmin
+      .from("slate_nba_games")
+      .select("game_id, game_code")
+      .eq("slate_id", slateId);
+
+    if (manualGamesError) {
+      return NextResponse.json(
+        { error: `Failed to load slate NBA games: ${manualGamesError.message}` },
+        { status: 500 }
+      );
+    }
+
+    if ((manualGames ?? []).length > 0) {
+      for (const manualGame of manualGames ?? []) {
+        allGames.push({
+          gameId: String(manualGame.game_id),
+          gameCode: manualGame.game_code ?? undefined,
+          gameStatus: undefined,
+          gameStatusText: undefined,
+        });
+      }
+    } else {
+      for (const dateCode of dateCodes) {
+        const games = await fetchScoreboardForDate(dateCode);
+        allGames.push(...games);
+      }
     }
 
     const uniqueGames = Array.from(

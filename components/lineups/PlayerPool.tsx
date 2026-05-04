@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Player, PositionFilter, Team } from "@/components/lineups/types";
 
 type PlayerPoolProps = {
@@ -26,7 +26,6 @@ type PlayerPoolProps = {
 };
 
 export default function PlayerPool({
-  players,
   filteredPlayers,
   searchTerm,
   setSearchTerm,
@@ -47,6 +46,10 @@ export default function PlayerPool({
   inactivePill,
 }: PlayerPoolProps) {
   const [sortBy, setSortBy] = useState<"projection" | "average" | "name">("projection");
+
+  useEffect(() => {
+    setOnSlateOnly(true);
+  }, [setOnSlateOnly]);
 
   const sortedFilteredPlayers = useMemo(() => {
     return [...filteredPlayers].sort((a, b) => {
@@ -74,28 +77,24 @@ export default function PlayerPool({
           Search a player, click them, then choose which team gets them.
         </p>
 
-          <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            <summary className="cursor-pointer font-semibold text-slate-700">
-              Mark’s Projection Key
-            </summary>
-            <div className="mt-2 space-y-1">
-              <div><strong>Projection</strong> formula:</div>
-              <ul className="ml-4 list-disc space-y-1">
-                <li>50% NBA regular season avg</li>
-                <li>30% app season avg — this season only</li>
-                <li>20% recent app avg — last 3 drafted games</li>
-                <li>+ finish boost</li>
-                <li>± hot/cold adjustment</li>
-              </ul>
-              <div><strong>HIGH</strong> = 4+ drafted slates</div>
-              <div><strong>MEDIUM</strong> = 2–3 drafted slates</div>
-              <div><strong>LOW</strong> = NBA regular season fallback / low app sample</div>
-              <div>🔥 = recent app performance is above NBA regular season average</div>
-              <div>🧊 = recent app performance is below NBA regular season average</div>
-              <div>🏆 = strong average finish when drafted</div>
-            </div>
-          </details>
-
+        <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          <summary className="cursor-pointer font-semibold text-slate-700">
+            Mark’s Projection Key
+          </summary>
+          <div className="mt-2 space-y-1">
+            <div><strong>Projection</strong> formula:</div>
+            <ul className="ml-4 list-disc space-y-1">
+              <li>50% NBA regular season avg</li>
+              <li>30% app season avg — this season only</li>
+              <li>20% recent app avg — last 3 drafted games</li>
+              <li>+ finish boost</li>
+              <li>± hot/cold adjustment</li>
+            </ul>
+            <div>🔥 = recent app performance is above NBA regular season average</div>
+            <div>🧊 = recent app performance is below NBA regular season average</div>
+            <div>🏆 = strong average finish when drafted</div>
+          </div>
+        </details>
       </div>
 
       <div className="mb-4 flex flex-col gap-3">
@@ -167,7 +166,11 @@ export default function PlayerPool({
                   : inactivePill
               }`}
             >
-              {onSlateOnly ? "On This Slate" : "All Players"}
+              {isAvailabilityLoading
+                ? "Loading..."
+                : onSlateOnly
+                  ? "On This Slate"
+                  : "All Players"}
             </button>
           </div>
         </div>
@@ -175,84 +178,63 @@ export default function PlayerPool({
 
       <div className="mb-4 flex flex-wrap gap-4 text-xs text-slate-500">
         <span>
-          Showing {filteredPlayers.length} of {players.length} active players
+          Showing {sortedFilteredPlayers.length} of {filteredPlayers.length} active players
         </span>
-<span>
-  On this slate:{" "}
-  {isAvailabilityLoading ? "Loading..." : availablePlayerIdSet.size}
-</span>
+        <span>On this slate: {availablePlayerIdsForSlate.length}</span>
       </div>
 
-      {filteredPlayers.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 px-4 py-5 text-sm text-slate-500">
-          No players match your current search/filter.
+      {sortedFilteredPlayers.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+          No players match your filters.
         </div>
       ) : (
         <div className="max-h-[305px] overflow-y-auto pr-1">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2">
             {sortedFilteredPlayers.map((player) => {
-              const ownerTeam = getOwnerTeamForPlayer(player.id);
-              const isOnSlate = availablePlayerIdSet.has(player.id);
               const projectionMeta = playerProjections?.[player.id];
               const projectionScore =
                 projectionMeta?.projection ?? playerAverageMap.get(player.id) ?? 0;
+              const displayScore =
+                sortBy === "average"
+                  ? playerAverageMap.get(player.id) ?? projectionScore
+                  : projectionScore;
+              const isOnSlate = availablePlayerIdSet.has(player.id);
+              const ownerTeam = getOwnerTeamForPlayer(player.id);
 
               return (
                 <button
                   key={player.id}
                   type="button"
-                  onClick={() => setDraftingPlayer(player)}
                   disabled={isAssigningPlayer}
-                  className={`rounded-2xl border px-4 py-3 text-left transition ${
+                  onClick={() => setDraftingPlayer(player)}
+                  className={`rounded-2xl border p-4 text-left transition hover:border-sky-300 hover:bg-sky-50 ${
                     ownerTeam
-                      ? "border-red-200 bg-red-50 hover:border-red-300"
-                      : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50"
-                  } ${isAssigningPlayer ? "cursor-not-allowed opacity-60" : ""}`}
+                      ? "border-red-200 bg-red-50"
+                      : "border-slate-200 bg-white"
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-slate-900">
+                    <div>
+                      <div className="font-semibold text-slate-900">
                         {player.name}
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">
-                          Proj {projectionScore.toFixed(1)}
-                        {projectionMeta && (
-                          <span style={{ marginLeft: 6, fontSize: 12 }}>
-                            {projectionMeta.badges?.includes("trophy") && "🏆"}
-                            {projectionMeta.badges?.includes("hot") && "🔥"}
-                            {projectionMeta.badges?.includes("cold") && "🧊"}
-                            <span
-                              style={{
-                                marginLeft: 6,
-                                padding: "2px 6px",
-                                borderRadius: 6,
-                                fontSize: 10,
-                                fontWeight: 600,
-                                background:
-                                  projectionMeta.confidence === "high"
-                                    ? "#d1fae5"
-                                    : projectionMeta.confidence === "medium"
-                                      ? "#fef3c7"
-                                      : "#fee2e2",
-                                color:
-                                  projectionMeta.confidence === "high"
-                                    ? "#065f46"
-                                    : projectionMeta.confidence === "medium"
-                                      ? "#92400e"
-                                      : "#991b1b",
-                              }}
-                            >
-                              {projectionMeta.confidence?.toUpperCase()}
-                            </span>
-                          </span>
-                        )}
+
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                          {sortBy === "average" ? "Avg" : "Proj"}{" "}
+                          {displayScore.toFixed(1)}
                         </span>
+
+                        {projectionMeta?.badges?.includes("hot") ? <span>🔥</span> : null}
+                        {projectionMeta?.badges?.includes("cold") ? <span>🧊</span> : null}
+                        {projectionMeta?.badges?.includes("winner") ? <span>🏆</span> : null}
+
                         {isOnSlate ? (
                           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-800">
                             On this slate
                           </span>
                         ) : null}
+
                         {ownerTeam ? (
                           <span className="text-[11px] text-red-600">
                             Used by {ownerTeam.name}
@@ -265,7 +247,7 @@ export default function PlayerPool({
                       </div>
                     </div>
 
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
                       {player.position_group}
                     </span>
                   </div>

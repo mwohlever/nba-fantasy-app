@@ -149,7 +149,7 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
       onClick={() => setTeam(null)}
     >
       <div
-        className="mobile-modal-panel-safe max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+        className="mobile-modal-panel-safe flex max-h-[90dvh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
@@ -208,7 +208,7 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
           </button>
         </div>
 
-        <div className="max-h-[calc(90vh-112px)] overflow-y-auto p-5 pb-36 sm:pb-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-36 sm:pb-5">
           {loading || !data ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               Loading team profile...

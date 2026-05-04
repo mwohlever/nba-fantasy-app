@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+function normalizeNbaTeamCode(value: string | null | undefined) {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (code === "NY") return "NYK";
+  return code;
+}
+
+
+
 type SlateTeamUpdate = {
   team_id: number;
   draft_order: number;
