@@ -266,10 +266,7 @@ export default function LineupBuilder({
     const projected = playerProjections?.[playerId]?.projection;
     const fallback = playerAverageMap.get(playerId);
     const value = projected ?? fallback ?? 0;
-    const numericValue = Number.isFinite(Number(value)) ? Number(value) : 0;
-
-    // STRUS DOUBLE RULE (temporary)
-    return playerId === 508 ? numericValue * 2 : numericValue;
+    return Number.isFinite(Number(value)) ? Number(value) : 0;
   };
 
   const teamResultsMap = useMemo(() => {
@@ -839,12 +836,7 @@ export default function LineupBuilder({
     const targetPlayers = getPlayersForTeam(targetTeamId);
 
     if (currentOwnerTeamId === targetTeamId) {
-      setSaveMessage(`${player.name}
-                                {(player.id === 508 || player.name === "Max Strus") && (
-                                  <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                    🔥 Doubled Points for Game 7 Strus!
-                                  </span>
-                                )} is already on ${targetTeam.name}.`);
+      setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
       return;
     }
 
@@ -869,12 +861,7 @@ export default function LineupBuilder({
       const added = await persistLineupForTeam(
         targetTeamId,
         [...targetPlayers, player],
-        `${player.name}
-                                {(player.id === 508 || player.name === "Max Strus") && (
-                                  <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                    🔥 Doubled Points for Game 7 Strus!
-                                  </span>
-                                )} drafted to ${targetTeam.name}.`
+        `${player.name} drafted to ${targetTeam.name}.`
       );
 
       if (!added) return;
@@ -906,12 +893,7 @@ export default function LineupBuilder({
       const removed = await persistLineupForTeam(
         ownerTeamId,
         nextPlayers,
-        `${player.name}
-                                {(player.id === 508 || player.name === "Max Strus") && (
-                                  <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                    🔥 Doubled Points for Game 7 Strus!
-                                  </span>
-                                )} removed from ${ownerTeam.name}.`,
+        `${player.name} removed from ${ownerTeam.name}.`,
         { allowEmpty: true }
       );
 
@@ -1102,11 +1084,6 @@ export default function LineupBuilder({
                                   className="font-medium text-sky-700 hover:underline"
                                 >
                                   {row.player.name}
-                                  {(row.player.id === 508 || row.player.name === "Max Strus") && (
-                                    <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                      🔥 Doubled Points for Game 7 Strus!
-                                    </span>
-                                  )}
                                 </button>
                               ) : (
                                 <button
@@ -1330,11 +1307,6 @@ export default function LineupBuilder({
   className="block w-full truncate bg-white text-left font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
 >
   {row.player.name}
-                                  {(row.player.id === 508 || row.player.name === "Max Strus") && (
-                                    <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                      🔥 Doubled Points for Game 7 Strus!
-                                    </span>
-                                  )}
 </button>
                                     ) : (
                                       <span className="text-slate-400">—</span>
@@ -1347,11 +1319,6 @@ export default function LineupBuilder({
     className="font-medium text-sky-700 hover:underline"
   >
     {row.player.name}
-                                  {(row.player.id === 508 || row.player.name === "Max Strus") && (
-                                    <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-                                      🔥 Doubled Points for Game 7 Strus!
-                                    </span>
-                                  )}
   </button>
 ) : (
   <span className="text-slate-400">—</span>
