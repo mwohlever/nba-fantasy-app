@@ -14,6 +14,7 @@ type Props = {
   setTargetDraftSlot: (slot: TargetDraftSlot | null) => void;
   players: Player[];
   playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
   availablePlayerIdSet: Set<number>;
   isAvailabilityLoading: boolean;
   getOwnerTeamForPlayer: (playerId: number) => { id: number; name: string } | null;
@@ -32,6 +33,7 @@ export default function SlotDraftModal({
   setTargetDraftSlot,
   players,
   playerAverageMap,
+  playerProjections,
   availablePlayerIdSet,
   isAvailabilityLoading,
   getOwnerTeamForPlayer,
@@ -60,8 +62,8 @@ export default function SlotDraftModal({
         return true;
       })
       .sort((a, b) => {
-        const avgA = playerAverageMap.get(a.id);
-        const avgB = playerAverageMap.get(b.id);
+        const avgA = playerProjections?.[a.id]?.projection ?? playerAverageMap.get(a.id);
+        const avgB = playerProjections?.[b.id]?.projection ?? playerAverageMap.get(b.id);
 
         if (avgA == null && avgB == null) return a.name.localeCompare(b.name);
         if (avgA == null) return 1;
@@ -155,7 +157,7 @@ export default function SlotDraftModal({
                   <div>
                     <div className="font-semibold text-slate-900">{player.name}</div>
                     <div className="mt-1 text-xs text-slate-500">
-                      {player.position_group} • Avg {fmt(playerAverageMap.get(player.id))}
+                      {player.position_group} • Proj {fmt(playerProjections?.[player.id]?.projection ?? playerAverageMap.get(player.id))}
                     </div>
                   </div>
 

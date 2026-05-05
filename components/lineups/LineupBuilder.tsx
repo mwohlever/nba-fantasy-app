@@ -1416,6 +1416,7 @@ export default function LineupBuilder({
         setTargetDraftSlot={setTargetDraftSlot}
         players={players}
         playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
         availablePlayerIdSet={availablePlayerIdSet}
         isAvailabilityLoading={isAvailabilityLoading}
         getOwnerTeamForPlayer={getOwnerTeamForPlayer}
