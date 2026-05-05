@@ -315,13 +315,22 @@ export async function POST(request: Request) {
       ).values()
     );
 
+    let allGamesFinal = uniqueGames.length > 0;
+
     for (const game of uniqueGames) {
       const gameId = String(game.gameId);
       const boxScore = await fetchBoxScore(gameId);
 
-      if (!boxScore?.game) continue;
+      if (!boxScore?.game) {
+        allGamesFinal = false;
+        continue;
+      }
 
       const gameStatus = boxScore.game.gameStatus ?? game.gameStatus;
+
+      if (gameStatus !== 3) {
+        allGamesFinal = false;
+      }
       const gameStatusText =
         boxScore.game.gameStatusText ?? game.gameStatusText ?? null;
       const buckets = getGameBuckets(gameStatus);
@@ -459,6 +468,24 @@ export async function POST(request: Request) {
       );
     }
 
+    let slateAutoLocked = false;
+
+    if (allGamesFinal) {
+      const { error: lockError } = await supabaseAdmin
+        .from("slates")
+        .update({ is_locked: true })
+        .eq("id", slateId);
+
+      if (lockError) {
+        return NextResponse.json(
+          { error: `Stats saved, but failed to auto-lock slate: ${lockError.message}` },
+          { status: 500 }
+        );
+      }
+
+      slateAutoLocked = true;
+    }
+
     return NextResponse.json({
       success: true,
       slateId,
@@ -466,6 +493,7 @@ export async function POST(request: Request) {
       gamesFound: uniqueGames.length,
       playerStatsUpdated: playerStatRows.length,
       teamResultsUpdated: sortedTeamRows.length,
+      slateAutoLocked,
     });
   } catch (error) {
     console.error(error);
