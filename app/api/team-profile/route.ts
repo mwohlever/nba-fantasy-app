@@ -42,10 +42,22 @@ export async function GET(req: Request) {
       supabaseAdmin.from("teams").select("id, name"),
       supabaseAdmin.from("slates").select("id, date, start_date, end_date, is_locked"),
       supabaseAdmin.from("team_slate_results").select("*"),
-      supabaseAdmin.from("lineups").select("id, slate_id, team_id"),
-      supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
+      supabaseAdmin
+        .from("lineups")
+        .select("id, slate_id, team_id")
+        .order("slate_id", { ascending: false })
+        .range(0, 20000),
+      supabaseAdmin
+        .from("lineup_players")
+        .select("lineup_id, player_id")
+        .order("lineup_id", { ascending: false })
+        .range(0, 20000),
       supabaseAdmin.from("players").select("id, name, position_group"),
-      supabaseAdmin.from("player_slate_stats").select("*"),
+      supabaseAdmin
+        .from("player_slate_stats")
+        .select("*")
+        .order("slate_id", { ascending: false })
+        .range(0, 20000),
       supabaseAdmin.from("slate_team_configs").select("slate_id, team_id, draft_order, is_participating"),
     ]);
 
@@ -60,6 +72,12 @@ export async function GET(req: Request) {
 
     const slateMap = new Map(safeSlates.map((s: any) => [s.id, s]));
     const playerMap = new Map(safePlayers.map((p: any) => [p.id, p]));
+    const statBySlatePlayerKey = new Map(
+      safePlayerStats.map((stat: any) => [
+        `${Number(stat.slate_id)}-${Number(stat.player_id)}`,
+        stat,
+      ])
+    );
 
     const latestSeason =
       safeSlates.length > 0
@@ -83,12 +101,15 @@ export async function GET(req: Request) {
               .map((lp: any) => lp.player_id)
           : [];
 
+        const isCompleted =
+          (result.games_completed ?? 0) > 0 &&
+          (result.games_in_progress ?? 0) === 0 &&
+          (result.games_remaining ?? 0) === 0;
+
         const draftedPlayerStats = draftedPlayerIds
           .map((playerId: number) => {
             const player = playerMap.get(playerId);
-            const stat = safePlayerStats.find(
-              (s: any) => s.slate_id === result.slate_id && s.player_id === playerId
-            );
+            const stat = statBySlatePlayerKey.get(`${Number(result.slate_id)}-${Number(playerId)}`);
 
             return {
               playerId,
@@ -99,10 +120,28 @@ export async function GET(req: Request) {
           })
           .filter((p: any) => p.fantasyPoints !== null);
 
+        const draftedIds = draftedPlayerIds.map((id: any) => Number(id));
+
         const topPlayer =
-          [...draftedPlayerStats].sort(
-            (a: any, b: any) => (b.fantasyPoints ?? 0) - (a.fantasyPoints ?? 0)
-          )[0] ?? null;
+          safePlayerStats
+            .filter(
+              (stat: any) =>
+                Number(stat.slate_id) === Number(result.slate_id) &&
+                draftedIds.includes(Number(stat.player_id)) &&
+                (stat.fantasy_points ?? 0) > 0
+            )
+            .map((stat: any) => {
+              const player = playerMap.get(Number(stat.player_id));
+
+              return {
+                playerId: Number(stat.player_id),
+                playerName: player?.name ?? "Unknown Player",
+                positionGroup: player?.position_group ?? null,
+                fantasyPoints: stat.fantasy_points ?? null,
+              };
+            })
+            .sort((a: any, b: any) => (b.fantasyPoints ?? 0) - (a.fantasyPoints ?? 0))[0] ??
+          null;
 
         return {
           slateId: result.slate_id,

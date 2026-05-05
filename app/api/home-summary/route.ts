@@ -91,7 +91,11 @@ export async function GET() {
       supabaseAdmin.from("lineups").select("id, slate_id, team_id"),
       supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
       supabaseAdmin.from("players").select("id, name").order("name", { ascending: true }),
-      supabaseAdmin.from("player_slate_stats").select("slate_id, player_id, fantasy_points"),
+      supabaseAdmin
+        .from("player_slate_stats")
+        .select("slate_id, player_id, fantasy_points")
+        .order("slate_id", { ascending: false })
+        .range(0, 20000),
       supabaseAdmin.from("season_team_summary").select("season, team_id, runner_ups"),
     ]);
 
@@ -211,8 +215,13 @@ export async function GET() {
             new Date(a.first_game_start_time ?? 0).getTime()
         )[0] ?? null;
 
-    const lastCompletedSlate =
-      normalizedSlates.find((slate) => isCompletedSlate(slate.id)) ?? null;
+    const lastCompletedSlate = safeSlates
+      .filter((s: any) => s.is_locked)
+      .sort(
+        (a: any, b: any) =>
+          new Date(b.end_date || b.start_date).getTime() -
+          new Date(a.end_date || a.start_date).getTime()
+      )[0];
 
     const latestSlate =
       liveSlate ??
@@ -319,15 +328,6 @@ export async function GET() {
       (a, b) => (a.fantasy_points ?? 0) - (b.fantasy_points ?? 0)
     )[0];
 
-    const allTimeRunnerUps = safeTeams
-      .map((team) => ({
-        name: team.name,
-        runnerUps: safeSeasonTeamSummary
-          .filter((row) => row.team_id === team.id)
-          .reduce((sum, row) => sum + Number(row.runner_ups ?? 0), 0),
-      }))
-      .sort((a, b) => b.runnerUps - a.runnerUps)[0];
-
     const allTimeAverageScores = safeTeams
       .map((team) => {
         const rows = lockedResults.filter((row) => row.team_id === team.id);
@@ -425,7 +425,7 @@ export async function GET() {
             )[0]
         : null;
 
-    const topLatestCompletedPerformer =
+    const topPlayerLastSlate =
       lastCompletedSlate
         ? safePlayerSlateStats
             .filter(
@@ -495,7 +495,47 @@ export async function GET() {
       (a, b) => b[1] - a[1]
     )[0];
 
+    const lockedSlatesWithPlayerStats = normalizedSlates.filter((slate) => {
+      if (!slate.is_locked) return false;
+
+      return safePlayerSlateStats.some(
+        (stat) => stat.slate_id === slate.id && (stat.fantasy_points ?? 0) > 0
+      );
+    });
+
+    const latestLockedSlateWithPlayerStats = lockedSlatesWithPlayerStats[0] ?? null;
+
+    const topPlayerLastCompletedSlate =
+      latestLockedSlateWithPlayerStats
+        ? safePlayerSlateStats
+            .filter(
+              (stat) =>
+                stat.slate_id === latestLockedSlateWithPlayerStats.id &&
+                (stat.fantasy_points ?? 0) > 0
+            )
+            .sort(
+              (a, b) =>
+                Number(b.fantasy_points ?? 0) - Number(a.fantasy_points ?? 0)
+            )[0] ?? null
+        : null;
+
+    const topPlayerLastCompletedSlateName = topPlayerLastCompletedSlate
+      ? safePlayers.find((player) => player.id === topPlayerLastCompletedSlate.player_id)?.name ??
+        "Unknown Player"
+      : null;
+
     const funFacts = [
+      ...(topPlayerLastCompletedSlate
+        ? [
+            {
+              label: "Top NBA Player Last Completed Slate",
+              value: `${topPlayerLastCompletedSlateName} • ${roundTo(
+                Number(topPlayerLastCompletedSlate.fantasy_points ?? 0),
+                1
+              )} FP`,
+            },
+          ]
+        : []),
       topLivePerformer && liveSlate
         ? {
             label: "⚡ Top Performer (Live)",
@@ -503,20 +543,6 @@ export async function GET() {
               playerMap.get(topLivePerformer.player_id)?.name ?? "Unknown Player"
             } • ${roundTo(Number(topLivePerformer.fantasy_points ?? 0))}`,
             detail: formatSlateLabel(liveSlate.start_date, liveSlate.end_date),
-          }
-        : null,
-
-      topLatestCompletedPerformer && lastCompletedSlate
-        ? {
-            label: "🔥 Top Performer (Latest Final)",
-            value: `${
-              playerMap.get(topLatestCompletedPerformer.player_id)?.name ??
-              "Unknown Player"
-            } • ${roundTo(Number(topLatestCompletedPerformer.fantasy_points ?? 0))}`,
-            detail: formatSlateLabel(
-              lastCompletedSlate.start_date,
-              lastCompletedSlate.end_date
-            ),
           }
         : null,
 
@@ -569,13 +595,6 @@ export async function GET() {
                 ?.name ?? "Unknown"
             } • ${roundTo(Number(lowestScoreRow.fantasy_points ?? 0))}`,
             detail: "Lowest non-zero single-slate team score",
-          }
-        : null,
-
-      allTimeRunnerUps
-        ? {
-            label: "Most Runner-Ups (All Time)",
-            value: `${allTimeRunnerUps.name} • ${allTimeRunnerUps.runnerUps}`,
           }
         : null,
 
