@@ -105,7 +105,10 @@ export async function GET(request: NextRequest) {
       .from("players")
       .select("id, team_abbreviation")
       .eq("is_active", true)
-      .in("team_abbreviation", normalizedTeamCodes);
+      .in(
+  "team_abbreviation",
+  normalizedTeamCodes.map((c) => c === "NY" ? "NYK" : c)
+);
 
     if (playersError) {
       return NextResponse.json(

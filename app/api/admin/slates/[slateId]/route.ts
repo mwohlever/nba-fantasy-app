@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const teams = body.teams ?? [];
     const isLocked = body.is_locked;
     const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
-      .map((value) => value.trim().toUpperCase())
+      .map((value) => normalizeNbaTeamCode(value))
       .filter(Boolean);
 
     if (!Array.isArray(teams) || teams.length === 0) {

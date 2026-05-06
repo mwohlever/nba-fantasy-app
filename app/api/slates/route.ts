@@ -182,13 +182,16 @@ function normalizeTeamCode(raw: string | null) {
   if (!code) return null;
 
   const aliasMap: Record<string, string> = {
-    PHO: "PHX",
-    BRK: "BKN",
-    UTH: "UTA",
-    GS: "GSW",
-    SA: "SAS",
-    NO: "NOP",
-  };
+  PHO: "PHX",
+  BRK: "BKN",
+  UTH: "UTA",
+  GS: "GSW",
+  SA: "SAS",
+  NO: "NOP",
+
+  // 🔥 FIX: Knicks normalization
+  NY: "NYK",
+};
 
   return aliasMap[code] ?? code;
 }
