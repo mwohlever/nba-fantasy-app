@@ -58,6 +58,8 @@ type NbaBoxScorePayload = {
     gameId?: string;
     gameStatus?: number;
     gameStatusText?: string;
+    period?: number;
+    gameClock?: string;
     homeTeam?: { players?: NbaBoxScorePlayer[] };
     awayTeam?: { players?: NbaBoxScorePlayer[] };
   };
@@ -74,7 +76,10 @@ type AggregatedPlayerStat = {
   games_completed: number;
   games_in_progress: number;
   games_remaining: number;
+  game_status: number | null;
   game_status_text: string | null;
+  period: number | null;
+  game_clock: string | null;
   source_game_ids: string[];
 };
 
@@ -181,7 +186,10 @@ function blankStat(): AggregatedPlayerStat {
     games_completed: 0,
     games_in_progress: 0,
     games_remaining: 0,
+    game_status: null,
     game_status_text: null,
+    period: null,
+    game_clock: null,
     source_game_ids: [],
   };
 }
@@ -333,6 +341,17 @@ export async function POST(request: Request) {
       }
       const gameStatusText =
         boxScore.game.gameStatusText ?? game.gameStatusText ?? null;
+
+      const period =
+        typeof boxScore.game.period === "number"
+          ? boxScore.game.period
+          : null;
+
+      const gameClock =
+        typeof boxScore.game.gameClock === "string"
+          ? boxScore.game.gameClock
+          : null;
+
       const buckets = getGameBuckets(gameStatus);
 
       const boxPlayers = [
@@ -369,7 +388,11 @@ export async function POST(request: Request) {
         existing.games_completed += buckets.games_completed;
         existing.games_in_progress += buckets.games_in_progress;
         existing.games_remaining += buckets.games_remaining;
+
+        existing.game_status = gameStatus ?? null;
         existing.game_status_text = gameStatusText;
+        existing.period = period;
+        existing.game_clock = gameClock;
         existing.source_game_ids = Array.from(
           new Set([...existing.source_game_ids, gameId])
         );
@@ -392,7 +415,10 @@ export async function POST(request: Request) {
         games_completed: stat.games_completed,
         games_in_progress: stat.games_in_progress,
         games_remaining: stat.games_remaining,
+        game_status: stat.game_status,
         game_status_text: stat.game_status_text,
+        period: stat.period,
+        game_clock: stat.game_clock,
       })
     );
 

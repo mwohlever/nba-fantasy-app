@@ -25,6 +25,8 @@ type LatestSlateRow = {
   games_completed: number | null;
   games_in_progress: number | null;
   games_remaining: number | null;
+  projected_points?: number | null;
+  win_probability?: number | null;
 };
 
 type SeasonSnapshotRow = {
@@ -88,6 +90,52 @@ export default function HomePage() {
     useState<SlateRosterModalState>(null);
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+
+  function parseStatusTextMinutesRemaining(statusText?: string | null) {
+    if (!statusText) return null;
+
+    const trimmed = statusText.trim();
+
+    if (/final/i.test(trimmed)) return 0;
+
+    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
+
+    if (!match) return null;
+
+    const period = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const seconds = Number(match[3] ?? 0);
+
+    const clockMinutes = minutes + seconds / 60;
+    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
+
+    return periodsRemainingAfterCurrent * 12 + clockMinutes;
+  }
+
+  function getProjectedFantasyPoints(row: any) {
+    const current = Number(row.fantasyPoints ?? 0);
+    const baseline = Number(row.projection ?? row.averageProjection ?? 30);
+
+    const remainingMinutes = parseStatusTextMinutesRemaining(
+      row.gameStatusText
+    );
+
+    if (remainingMinutes === 0) return current;
+
+    if (remainingMinutes === null) return baseline;
+
+    return current + baseline * (remainingMinutes / 48);
+  }
+
+  function getPlayerStatusLabel(row: any) {
+    const text = row.gameStatusText;
+
+    if (!text) return "Pregame";
+
+    if (/final/i.test(text)) return "Final";
+
+    return text;
+  }
   const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
   const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -466,6 +514,8 @@ export default function HomePage() {
                       <tr className="text-left">
                         <th className="px-4 py-3 font-semibold">Player</th>
                         <th className="px-4 py-3 font-semibold">Score</th>
+                        <th className="px-4 py-3 font-semibold">Projected</th>
+                        <th className="px-4 py-3 font-semibold">Win %</th>
                         <th className="px-4 py-3 font-semibold">Completed</th>
                         <th className="px-4 py-3 font-semibold">In Progress</th>
                         <th className="px-4 py-3 font-semibold">Remaining</th>
@@ -508,6 +558,20 @@ export default function HomePage() {
                             >
                               {roundTo(Number(row.fantasy_points ?? 0))}
                             </button>
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-sky-700">
+                            {row.projected_points !== null && row.projected_points !== undefined
+                              ? roundTo(Number(row.projected_points))
+                              : "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {row.win_probability !== null && row.win_probability !== undefined ? (
+                              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                                {roundTo(Number(row.win_probability), 0)}%
+                              </span>
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             {row.games_completed ?? 0}
@@ -682,6 +746,16 @@ export default function HomePage() {
                         <div className="mt-2 text-xs leading-relaxed text-slate-600">
                           {row.points} pts • {row.rebounds} reb • {row.assists} ast • {row.steals} stl • {row.blocks} blk • {row.turnovers} TO
                         </div>
+
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                          <div className="font-semibold text-sky-700">
+                            Proj: {getProjectedFantasyPoints(row).toFixed(1)}
+                          </div>
+
+                          <div className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
+                            {getPlayerStatusLabel(row)}
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -699,6 +773,8 @@ export default function HomePage() {
                         <th className="px-3 py-2 text-right">BLK</th>
                         <th className="px-3 py-2 text-right">TO</th>
                         <th className="px-3 py-2 text-right">Total</th>
+                        <th className="px-3 py-2 text-right">Proj</th>
+                        <th className="px-3 py-2 text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -718,6 +794,14 @@ export default function HomePage() {
                           <td className="px-3 py-2 text-right">{row.turnovers}</td>
                           <td className="px-3 py-2 text-right font-semibold">
                             {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                          </td>
+
+                          <td className="px-3 py-2 text-right font-semibold text-sky-700">
+                            {getProjectedFantasyPoints(row).toFixed(1)}
+                          </td>
+
+                          <td className="px-3 py-2 text-right text-xs font-medium text-slate-500">
+                            {getPlayerStatusLabel(row)}
                           </td>
                         </tr>
                       ))}

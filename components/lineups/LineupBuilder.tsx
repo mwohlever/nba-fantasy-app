@@ -490,6 +490,145 @@ export default function LineupBuilder({
     };
   }
 
+  // ===== LIVE WIN % HELPERS =====
+
+  function parseNbaIsoClockMinutes(gameClock?: string | null) {
+    if (!gameClock) return null;
+
+    const match = gameClock.match(/^PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
+    if (!match) return null;
+
+    const minutes = Number(match[1] ?? 0);
+    const seconds = Number(match[2] ?? 0);
+
+    return minutes + seconds / 60;
+  }
+
+  function parseStatusTextMinutesRemaining(statusText?: string | null) {
+    if (!statusText) return null;
+
+    const trimmed = statusText.trim();
+
+    if (/final/i.test(trimmed)) return 0;
+
+    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
+    if (!match) return null;
+
+    const period = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const seconds = Number(match[3] ?? 0);
+
+    if (!Number.isFinite(period)) return null;
+
+    const clockMinutes = minutes + seconds / 60;
+    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
+
+    return periodsRemainingAfterCurrent * 12 + clockMinutes;
+  }
+
+  function getMinutesRemainingForPlayer(stat?: PlayerStat) {
+    const gameStatus = stat?.game_status ?? null;
+
+    if (gameStatus === 3) return 0;
+
+    const period = stat?.period ?? null;
+    const clockMinutes = parseNbaIsoClockMinutes(stat?.game_clock);
+
+    if (gameStatus === 2 && period && clockMinutes !== null) {
+      const regulationPeriods = 4;
+      const periodsRemainingAfterCurrent = Math.max(
+        regulationPeriods - period,
+        0
+      );
+
+      return periodsRemainingAfterCurrent * 12 + clockMinutes;
+    }
+
+    const statusTextMinutes = parseStatusTextMinutesRemaining(
+      stat?.game_status_text
+    );
+
+    if (statusTextMinutes !== null) return statusTextMinutes;
+
+    return 48;
+  }
+
+  function getLiveProjectedTeamTotal(teamId: number) {
+    const stats = getTeamStats(teamId);
+
+    if (selectedSlate?.is_locked) {
+      return Number(stats.total ?? 0);
+    }
+
+    const teamPlayers = getPlayersForTeam(teamId);
+
+    return teamPlayers.reduce((sum, player) => {
+      const stat = playerStatsMap.get(player.id);
+
+      const current = Number(stat?.fantasy_points ?? 0);
+
+      const projection =
+        playerProjections?.[player.id]?.projection ??
+        playerAverageMap.get(player.id) ??
+        0;
+
+      const minutesRemaining = getMinutesRemainingForPlayer(stat);
+      const remainingFactor = minutesRemaining / 48;
+
+      const projected =
+        minutesRemaining <= 0
+          ? current
+          : current + projection * remainingFactor;
+
+      return sum + projected;
+    }, 0);
+  }
+
+  function computeWinPctMap() {
+    const map = new Map<number, number>();
+
+    if (selectedSlate?.is_locked) {
+      const rows = orderedTeamsForSlate
+        .map((team) => ({
+          teamId: team.id,
+          total: Number(getTeamStats(team.id).total ?? 0),
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      const winnerTeamId = rows[0]?.teamId ?? null;
+
+      rows.forEach((row) => {
+        map.set(row.teamId, row.teamId === winnerTeamId ? 100 : 0);
+      });
+
+      return map;
+    }
+
+    const k = 20;
+
+    const teams = orderedTeamsForSlate.map((team) => ({
+      teamId: team.id,
+      projected: getLiveProjectedTeamTotal(team.id),
+    }));
+
+    const weights = teams.map((t) => ({
+      ...t,
+      weight: Math.exp(t.projected / k),
+    }));
+
+    const totalWeight = weights.reduce((sum, t) => sum + t.weight, 0);
+
+    weights.forEach((t) => {
+      let pct = (t.weight / totalWeight) * 100;
+      pct = Math.max(5, Math.min(95, pct));
+      map.set(t.teamId, pct);
+    });
+
+    return map;
+  }
+
+  const liveWinPctMap = computeWinPctMap();
+
   function getDraftNeeds(teamId: number) {
     const teamPlayers = getPlayersForTeam(teamId);
     const guards = teamPlayers.filter(
@@ -1203,7 +1342,9 @@ export default function LineupBuilder({
                         {typeof stats.total === "number"
                           ? stats.total.toFixed(1)
                           : "0.0"}{" "}
-                        • C: {stats.games_completed} • P: {stats.games_in_progress} •
+                        • Proj: {getLiveProjectedTeamTotal(team.id).toFixed(1)} •{" "}
+                        {liveWinPctMap.get(team.id)?.toFixed(0)}% win • C:{" "}
+                        {stats.games_completed} • P: {stats.games_in_progress} •
                         R: {stats.games_remaining}
                       </div>
                     </div>

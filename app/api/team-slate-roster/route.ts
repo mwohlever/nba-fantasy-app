@@ -16,6 +16,10 @@ type StatRow = {
   blocks: number | null;
   turnovers: number | null;
   fantasy_points: number | null;
+  game_status: number | null;
+  game_status_text: string | null;
+  period: number | null;
+  game_clock: string | null;
 };
 
 function getSlotOrder(positionGroup: string | null, index: number) {
@@ -95,7 +99,7 @@ export async function GET(request: NextRequest) {
         supabaseAdmin
           .from("player_slate_stats")
           .select(
-            "player_id, points, rebounds, assists, steals, blocks, turnovers, fantasy_points"
+            "player_id, points, rebounds, assists, steals, blocks, turnovers, fantasy_points, game_status, game_status_text, period, game_clock"
           )
           .eq("slate_id", slateId)
           .in("player_id", playerIds),
@@ -131,6 +135,10 @@ export async function GET(request: NextRequest) {
           blocks: stat?.blocks ?? 0,
           turnovers: stat?.turnovers ?? 0,
           fantasyPoints: stat?.fantasy_points ?? 0,
+          gameStatus: stat?.game_status ?? null,
+          gameStatusText: stat?.game_status_text ?? null,
+          period: stat?.period ?? null,
+          gameClock: stat?.game_clock ?? null,
           sortOrder: getSlotOrder(player?.position_group ?? null, index),
         };
       })

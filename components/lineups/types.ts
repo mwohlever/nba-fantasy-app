@@ -48,6 +48,11 @@ export type PlayerStat = {
   blocks: number | null;
   turnovers: number | null;
   fantasy_points: number | null;
+
+  game_status?: number | null;
+  game_status_text?: string | null;
+  period?: number | null;
+  game_clock?: string | null;
 };
 
 export type TeamResult = {

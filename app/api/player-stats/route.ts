@@ -44,7 +44,11 @@ export async function GET(request: NextRequest) {
         steals,
         blocks,
         turnovers,
-        fantasy_points
+        fantasy_points,
+        game_status,
+        game_status_text,
+        period,
+        game_clock
       `
       )
       .eq("slate_id", slateId)
