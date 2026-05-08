@@ -36,7 +36,7 @@ type ApiResponse = {
 };
 
 export default function PlayerHistoryPage() {
-  const emptyPlayerProjections: Record<number, any> = {};
+  const [playerProjections, setPlayerProjections] = useState<Record<number, any>>({});
   const [rows, setRows] = useState<PlayerHistoryRow[]>([]);
   const [season, setSeason] = useState<number | "all">(2026);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,6 +49,25 @@ export default function PlayerHistoryPage() {
 
   useEffect(() => {
     void loadPlayerHistory();
+  }, [season]);
+
+  useEffect(() => {
+    async function loadPlayerProjections() {
+      try {
+        const response = await fetch(
+          `/api/player-projections?season=${season === "all" ? 2026 : season}`,
+          { cache: "no-store" }
+        );
+
+        const result = await response.json();
+
+        setPlayerProjections(result.projections ?? {});
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    void loadPlayerProjections();
   }, [season]);
 
   async function loadPlayerHistory() {
@@ -361,7 +380,7 @@ export default function PlayerHistoryPage() {
         player={profilePlayer}
         setPlayer={setProfilePlayer}
         playerAverageMap={playerAverageMap}
-        playerProjections={emptyPlayerProjections}
+        playerProjections={playerProjections}
       />
     </main>
   );
