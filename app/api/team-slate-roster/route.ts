@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 type PlayerRow = {
   id: number;
   name: string;
+  nba_player_id: number | null;
   position_group: "G" | "F/C" | null;
 };
 
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
       await Promise.all([
         supabaseAdmin
           .from("players")
-          .select("id, name, position_group")
+          .select("id, name, nba_player_id, position_group")
           .in("id", playerIds),
         supabaseAdmin
           .from("player_slate_stats")
@@ -127,6 +128,7 @@ export async function GET(request: NextRequest) {
         return {
           playerId,
           name: player?.name ?? `Player ${playerId}`,
+          nbaPlayerId: player?.nba_player_id ?? null,
           positionGroup: player?.position_group ?? null,
           points: stat?.points ?? 0,
           rebounds: stat?.rebounds ?? 0,

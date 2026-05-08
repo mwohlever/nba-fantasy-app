@@ -4,6 +4,7 @@ export type Player = {
   position_group: "G" | "F/C";
   is_active: boolean;
   is_playing_today?: boolean | null;
+  nba_player_id?: number | null;
 };
 
 export type PlayerHistoryDetailRow = {

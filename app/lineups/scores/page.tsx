@@ -50,7 +50,7 @@ export default async function ScoresLineupsPage() {
   ] = await Promise.all([
     supabaseAdmin
       .from("players")
-      .select("id, name, position_group, is_active, is_playing_today")
+      .select("id, name, position_group, is_active, is_playing_today, nba_player_id")
       .order("name", { ascending: true }),
     supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
     supabaseAdmin

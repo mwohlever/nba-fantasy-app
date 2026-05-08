@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type { Player } from "@/components/lineups/types";
 
 type PlayerHistoryRow = {
   player_id: number;
   player_name: string;
+  nba_player_id: number | null;
   times_drafted: number;
   avg_score: number;
   high_score: number;
@@ -193,6 +195,7 @@ export default function PlayerHistoryPage() {
     setProfilePlayer({
       id: row.player_id,
       name: row.player_name,
+      nba_player_id: row.nba_player_id,
       position_group: "G",
       is_active: true,
       is_playing_today: null,
@@ -355,9 +358,14 @@ export default function PlayerHistoryPage() {
                         <button
                           type="button"
                           onClick={() => openPlayerProfile(row)}
-                          className="font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                          className="flex items-center gap-2 font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
                         >
-                          {row.player_name}
+                          <PlayerHeadshot
+                            nbaPlayerId={row.nba_player_id}
+                            playerName={row.player_name}
+                            size="xs"
+                          />
+                          <span>{row.player_name}</span>
                         </button>
                       </td>
                       <td className="px-4 py-3">{row.times_drafted}</td>

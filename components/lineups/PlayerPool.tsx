@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Player, PositionFilter, Team } from "@/components/lineups/types";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 
 type PlayerPoolProps = {
   players: Player[];
@@ -214,10 +215,17 @@ export default function PlayerPool({
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-slate-900">
-                        {player.name}
-                      </div>
+                    <div className="flex min-w-0 items-start gap-3">
+                      <PlayerHeadshot
+                        nbaPlayerId={player.nba_player_id}
+                        playerName={player.name}
+                        size="md"
+                      />
+
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-slate-900">
+                          {player.name}
+                        </div>
 
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
@@ -245,6 +253,7 @@ export default function PlayerPool({
                           </span>
                         )}
                       </div>
+                    </div>
                     </div>
 
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">

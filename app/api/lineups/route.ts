@@ -159,7 +159,7 @@ if (playerIds.length > 5) {
 
     const { data: players, error: playersError } = await supabaseAdmin
       .from("players")
-      .select("id, name, position_group, is_active")
+      .select("id, name, position_group, is_active, nba_player_id")
       .in("id", uniquePlayerIds);
 
     if (playersError || !players || players.length !== uniquePlayerIds.length) {

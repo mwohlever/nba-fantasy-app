@@ -11,6 +11,7 @@ type SlateRow = {
 type PlayerRow = {
   id: number;
   name: string;
+  nba_player_id: number | null;
 };
 
 type LineupRow = {
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
   .from("slates")
   .select("id, start_date, date, is_locked")
   .eq("is_locked", true),
-      supabaseAdmin.from("players").select("id, name").order("name", { ascending: true }),
+      supabaseAdmin.from("players").select("id, name, nba_player_id").order("name", { ascending: true }),
       supabaseAdmin.from("lineups").select("id, slate_id, team_id"),
       supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
       supabaseAdmin.from("player_slate_stats").select("slate_id, player_id, fantasy_points"),
@@ -138,6 +139,7 @@ export async function GET(request: NextRequest) {
       {
         player_id: number;
         player_name: string;
+        nba_player_id: number | null;
         times_drafted: number;
         scores: number[];
         winning_lineups: number;
@@ -162,6 +164,7 @@ export async function GET(request: NextRequest) {
       const current = playerAggMap.get(player.id) ?? {
         player_id: player.id,
         player_name: player.name,
+        nba_player_id: player.nba_player_id,
         times_drafted: 0,
         scores: [],
         winning_lineups: 0,
@@ -197,6 +200,7 @@ export async function GET(request: NextRequest) {
         return {
           player_id: row.player_id,
           player_name: row.player_name,
+          nba_player_id: row.nba_player_id,
           times_drafted: row.times_drafted,
           avg_score: avgScore,
           high_score: highScore,

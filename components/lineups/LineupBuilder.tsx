@@ -2,6 +2,7 @@
 
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import SlotDraftModal from "@/components/lineups/SlotDraftModal";
 import PlayerPool from "@/components/lineups/PlayerPool";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -1220,9 +1221,15 @@ export default function LineupBuilder({
                                 <button
                                   type="button"
                                   onClick={() => setDraftingPlayer(row.player)}
-                                  className="font-medium text-sky-700 hover:underline"
+                                  className="flex items-center gap-2 font-medium text-sky-700 hover:underline"
                                 >
-                                  {row.player.name}
+                                  <PlayerHeadshot
+                                    nbaPlayerId={row.player.nba_player_id}
+                                    playerName={row.player.name}
+                                    size="sm"
+                                  />
+
+                                  <span>{row.player.name}</span>
                                 </button>
                               ) : (
                                 <button
@@ -1440,26 +1447,36 @@ export default function LineupBuilder({
                                 }
                               >
 {compactView ? (
-  <div className="w-[128px] min-w-[128px] border-r">
+  <div className="w-[128px] min-w-[128px] border-r bg-white">
     {row.player ? (
-<button
-  type="button"
-  onClick={() => setProfilePlayer(row.player)}
-  className="block w-full truncate bg-white text-left font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
->
-  {row.player.name}
-</button>
-                                    ) : (
-                                      <span className="text-slate-400">—</span>
-                                    )}
-                                  </div>
+      <button
+        type="button"
+        onClick={() => setProfilePlayer(row.player)}
+        className="flex w-full items-center gap-1.5 truncate text-left font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+      >
+        <PlayerHeadshot
+          nbaPlayerId={row.player.nba_player_id}
+          playerName={row.player.name}
+          size="xs"
+        />
+        <span className="truncate">{row.player.name}</span>
+      </button>
+    ) : (
+      <span className="text-slate-400">—</span>
+    )}
+  </div>
 ) : row.player ? (
   <button
     type="button"
     onClick={() => setProfilePlayer(row.player)}
-    className="font-medium text-sky-700 hover:underline"
+    className="flex items-center gap-2 font-medium text-sky-700 hover:underline"
   >
-    {row.player.name}
+    <PlayerHeadshot
+      nbaPlayerId={row.player.nba_player_id}
+      playerName={row.player.name}
+      size="xs"
+    />
+    <span>{row.player.name}</span>
   </button>
 ) : (
   <span className="text-slate-400">—</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type {
   OrderedTeam,
   Player,
@@ -160,13 +161,23 @@ export default function DraftPlayerModal({
       >
         <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-              Draft Player
-            </div>
+            <div className="flex items-center gap-3">
+              <PlayerHeadshot
+                nbaPlayerId={draftingPlayer.nba_player_id}
+                playerName={draftingPlayer.name}
+                size="md"
+              />
 
-            <h3 className="mt-1 text-2xl font-bold text-slate-900">
-              {draftingPlayer.name}
-            </h3>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                  Draft Player
+                </div>
+
+                <h3 className="mt-1 text-2xl font-bold text-slate-900">
+                  {draftingPlayer.name}
+                </h3>
+              </div>
+            </div>
 
             <div className="mt-3">
               <label className="mb-1 block text-xs font-medium text-slate-500">

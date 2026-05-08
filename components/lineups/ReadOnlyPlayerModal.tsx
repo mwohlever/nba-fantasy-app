@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type { Player } from "@/components/lineups/types";
 
 type Profile = {
@@ -91,13 +92,23 @@ export default function ReadOnlyPlayerModal({ player, setPlayer, playerAverageMa
       <div className="mobile-modal-panel-safe flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
         <div className="shrink-0 flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-              Player Profile
+            <div className="flex items-center gap-3">
+              <PlayerHeadshot
+                nbaPlayerId={player.nba_player_id}
+                playerName={player.name}
+                size="md"
+              />
+
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                  Player Profile
+                </div>
+                <h2 className="mt-1 text-2xl font-bold text-slate-900">{player.name}</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {displayPosition} • NBA Regular Season Avg {(projectionMeta?.nbaSeasonAverage ?? "—")}
+                </p>
+              </div>
             </div>
-            <h2 className="mt-1 text-2xl font-bold text-slate-900">{player.name}</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {displayPosition} • NBA Regular Season Avg {(projectionMeta?.nbaSeasonAverage ?? "—")}
-            </p>
 
             <div className="mt-3">
               <label className="mb-1 block text-xs font-medium text-slate-500">

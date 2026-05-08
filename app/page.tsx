@@ -5,6 +5,7 @@ import Link from "next/link";
 import AppNav from "@/components/AppNav";
 import FunFactCarousel from "@/components/home/FunFactCarousel";
 import TeamProfileModal from "@/components/TeamProfileModal";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 
 type LatestSlate = {
   id: number;
@@ -65,6 +66,7 @@ type SlateRosterModalState = {
 type SlateRosterRow = {
   playerId: number;
   name: string;
+  nbaPlayerId: number | null;
   positionGroup: string | null;
   points: number;
   rebounds: number;
@@ -730,12 +732,20 @@ export default function HomePage() {
                         className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-xs font-semibold text-slate-500">
-                              {row.positionGroup ?? "—"}
-                            </div>
-                            <div className="text-base font-semibold text-slate-900">
-                              {row.name}
+                          <div className="flex items-center gap-3">
+                            <PlayerHeadshot
+                              nbaPlayerId={row.nbaPlayerId}
+                              playerName={row.name}
+                              size="sm"
+                            />
+
+                            <div>
+                              <div className="text-xs font-semibold text-slate-500">
+                                {row.positionGroup ?? "—"}
+                              </div>
+                              <div className="text-base font-semibold text-slate-900">
+                                {row.name}
+                              </div>
                             </div>
                           </div>
                           <div className="text-right text-base font-bold text-slate-900">
@@ -783,8 +793,15 @@ export default function HomePage() {
                           <td className="px-3 py-2 font-medium">
                             {row.positionGroup ?? "—"}
                           </td>
-                          <td className="px-3 py-2 font-medium text-slate-900">
-                            {row.name}
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2 font-medium text-slate-900">
+                              <PlayerHeadshot
+                                nbaPlayerId={row.nbaPlayerId}
+                                playerName={row.name}
+                                size="xs"
+                              />
+                              <span>{row.name}</span>
+                            </div>
                           </td>
                           <td className="px-3 py-2 text-right">{row.points}</td>
                           <td className="px-3 py-2 text-right">{row.rebounds}</td>
