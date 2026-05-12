@@ -184,18 +184,25 @@ export async function GET(request: NextRequest) {
 
     const playerHistory = Array.from(playerAggMap.values())
       .map((row) => {
+        const scoringGames = row.scores.filter((score) => Number(score) > 0);
+
         const avgScore =
-          row.scores.length > 0
-            ? roundTo(row.scores.reduce((sum, value) => sum + value, 0) / row.scores.length)
+          scoringGames.length > 0
+            ? roundTo(
+                scoringGames.reduce((sum, value) => sum + value, 0) /
+                  scoringGames.length
+              )
             : 0;
 
-        const highScore = row.scores.length > 0 ? roundTo(Math.max(...row.scores)) : 0;
+        const highScore =
+          scoringGames.length > 0 ? roundTo(Math.max(...scoringGames)) : 0;
 
         const avgFinish =
           row.finishes.length > 0
             ? roundTo(row.finishes.reduce((a, b) => a + b, 0) / row.finishes.length)
             : null;
-        const lowScore = row.scores.length > 0 ? roundTo(Math.min(...row.scores)) : 0;
+        const lowScore =
+          scoringGames.length > 0 ? roundTo(Math.min(...scoringGames)) : 0;
 
         return {
           player_id: row.player_id,
