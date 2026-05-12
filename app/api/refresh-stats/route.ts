@@ -148,6 +148,13 @@ async function fetchScoreboardForDate(dateCode: string) {
   const response = await fetch(url, {
     method: "GET",
     cache: "no-store",
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+      Accept: "application/json,text/plain,*/*",
+      Referer: "https://www.nba.com/",
+      Origin: "https://www.nba.com",
+    },
   });
 
   if (!response.ok) return [];
@@ -167,6 +174,13 @@ async function fetchBoxScore(gameId: string) {
   const response = await fetch(url, {
     method: "GET",
     cache: "no-store",
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+      Accept: "application/json,text/plain,*/*",
+      Referer: "https://www.nba.com/",
+      Origin: "https://www.nba.com",
+    },
   });
 
   if (!response.ok) return null;
