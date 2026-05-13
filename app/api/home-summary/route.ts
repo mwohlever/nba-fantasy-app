@@ -593,6 +593,13 @@ export async function GET() {
         ...latestSlateRowsBase.map((row) => Number(row.fantasy_points ?? 0))
       );
 
+      const slateEndDate = latestSlate?.end_date
+        ? new Date(`${latestSlate.end_date}T23:59:59`)
+        : null;
+      const slateHasEndedByDate = slateEndDate
+        ? Date.now() > slateEndDate.getTime()
+        : false;
+
       const teamsWithUpside = latestSlateRowsBase.filter((row) => {
         const currentScore = Number(row.fantasy_points ?? 0);
         const projectedScore = Number(row.projected_points ?? currentScore);
@@ -600,8 +607,13 @@ export async function GET() {
         const gamesRemaining = Number(row.games_remaining ?? 0);
         const isDone = gamesInProgress === 0 && gamesRemaining === 0;
 
-        if (isDone && currentScore < bestCurrentScore) return false;
-        if (projectedScore < bestCurrentScore) return false;
+        if (slateHasEndedByDate && isDone && currentScore < bestCurrentScore) {
+          return false;
+        }
+
+        if (slateHasEndedByDate && projectedScore < bestCurrentScore) {
+          return false;
+        }
 
         return true;
       });
