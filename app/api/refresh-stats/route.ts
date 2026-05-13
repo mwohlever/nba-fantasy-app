@@ -510,7 +510,10 @@ export async function POST(request: Request) {
 
     let slateAutoLocked = false;
 
-    if (allGamesFinal) {
+    const slateEndDate = new Date(`${safeSlate.end_date}T23:59:59`);
+    const slateHasEndedByDate = Date.now() > slateEndDate.getTime();
+
+    if (allGamesFinal && slateHasEndedByDate) {
       const { error: lockError } = await supabaseAdmin
         .from("slates")
         .update({ is_locked: true })
