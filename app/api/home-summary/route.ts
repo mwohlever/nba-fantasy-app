@@ -530,16 +530,28 @@ export async function GET() {
 
       const playerIds = latestPlayerIdsByLineupId.get(lineup.id) ?? [];
 
-      return playerIds.reduce((sum, playerId) => {
+      let hasRemainingUpside = false;
+
+      const projectedTotal = playerIds.reduce((sum, playerId) => {
         const stat = statBySlateAndPlayer.get(`${latestSlate.id}:${playerId}`);
         const current = Number(stat?.fantasy_points ?? 0);
         const projection = projectionByPlayerId.get(playerId) ?? 0;
         const minutesRemaining = getMinutesRemainingForStat(stat);
 
-        if (minutesRemaining <= 0) return sum + current;
+        if (minutesRemaining <= 0) {
+          return sum + current;
+        }
+
+        hasRemainingUpside = true;
 
         return sum + current + projection * (minutesRemaining / 48);
       }, 0);
+
+      if (!hasRemainingUpside) {
+        return Number(result?.fantasy_points ?? 0);
+      }
+
+      return projectedTotal;
     }
 
     const latestSlateRowsBase = latestSlate
@@ -577,11 +589,37 @@ export async function GET() {
         }));
       }
 
+      const bestCurrentScore = Math.max(
+        ...latestSlateRowsBase.map((row) => Number(row.fantasy_points ?? 0))
+      );
+
+      const teamsWithUpside = latestSlateRowsBase.filter((row) => {
+        const currentScore = Number(row.fantasy_points ?? 0);
+        const projectedScore = Number(row.projected_points ?? currentScore);
+        const gamesInProgress = Number(row.games_in_progress ?? 0);
+        const gamesRemaining = Number(row.games_remaining ?? 0);
+        const isDone = gamesInProgress === 0 && gamesRemaining === 0;
+
+        if (isDone && currentScore < bestCurrentScore) return false;
+        if (projectedScore < bestCurrentScore) return false;
+
+        return true;
+      });
+
+      if (teamsWithUpside.length === 1) {
+        const lockedWinnerId = teamsWithUpside[0].team_id;
+
+        return latestSlateRowsBase.map((row) => ({
+          ...row,
+          win_probability: row.team_id === lockedWinnerId ? 100 : 0,
+        }));
+      }
+
       const k = 20;
       const minProbability = 3;
       const maxProbability = 97;
 
-      const weights = latestSlateRowsBase.map((row) => ({
+      const weights = teamsWithUpside.map((row) => ({
         teamId: row.team_id,
         weight: Math.exp(Number(row.projected_points ?? 0) / k),
       }));
