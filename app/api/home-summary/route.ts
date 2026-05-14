@@ -611,10 +611,6 @@ export async function GET() {
           return false;
         }
 
-        if (slateHasEndedByDate && projectedScore < bestCurrentScore) {
-          return false;
-        }
-
         return true;
       });
 
