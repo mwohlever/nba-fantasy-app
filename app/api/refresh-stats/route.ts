@@ -291,13 +291,6 @@ export async function POST(request: Request) {
       }
     }
 
-    const aggregatedByPlayerId = new Map<number, AggregatedPlayerStat>();
-
-    // Start every drafted player at zero so old stale rows do not hang around forever.
-    for (const player of players) {
-      aggregatedByPlayerId.set(player.id, blankStat());
-    }
-
     const dateCodes = buildDateCodeRange(safeSlate.start_date, safeSlate.end_date);
     const allGames: NbaScoreboardGame[] = [];
 
@@ -310,6 +303,60 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: `Failed to load slate NBA games: ${manualGamesError.message}` },
         { status: 500 }
+      );
+    }
+
+    const { data: existingStatsData, error: existingStatsError } = await supabaseAdmin
+      .from("player_slate_stats")
+      .select(
+        "player_id, points, rebounds, assists, steals, blocks, turnovers, fantasy_points, games_completed, games_in_progress, games_remaining, game_status, game_status_text, period, game_clock"
+      )
+      .eq("slate_id", slateId)
+      .in("player_id", draftedPlayerIds);
+
+    if (existingStatsError) {
+      return NextResponse.json(
+        { error: `Failed to load existing player stats: ${existingStatsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const existingStatsByPlayerId = new Map<number, any>();
+    (existingStatsData ?? []).forEach((row: any) => {
+      existingStatsByPlayerId.set(Number(row.player_id), row);
+    });
+
+    const aggregatedByPlayerId = new Map<number, AggregatedPlayerStat>();
+
+    // If manual slate games are pinned, rebuild from scratch from the full known game list.
+    // If not, preserve existing stats so multi-day slate refreshes do not wipe prior-day results
+    // when the NBA "today" scoreboard only returns the current day.
+    const shouldRebuildFromScratch = (manualGames ?? []).length > 0;
+
+    for (const player of players) {
+      const existing = existingStatsByPlayerId.get(player.id);
+
+      aggregatedByPlayerId.set(
+        player.id,
+        !shouldRebuildFromScratch && existing
+          ? {
+              points: Number(existing.points ?? 0),
+              rebounds: Number(existing.rebounds ?? 0),
+              assists: Number(existing.assists ?? 0),
+              steals: Number(existing.steals ?? 0),
+              blocks: Number(existing.blocks ?? 0),
+              turnovers: Number(existing.turnovers ?? 0),
+              fantasy_points: Number(existing.fantasy_points ?? 0),
+              games_completed: Number(existing.games_completed ?? 0),
+              games_in_progress: Number(existing.games_in_progress ?? 0),
+              games_remaining: Number(existing.games_remaining ?? 0),
+              game_status: existing.game_status ?? null,
+              game_status_text: existing.game_status_text ?? null,
+              period: existing.period ?? null,
+              game_clock: existing.game_clock ?? null,
+              source_game_ids: [],
+            }
+          : blankStat()
       );
     }
 
