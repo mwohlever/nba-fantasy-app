@@ -331,7 +331,8 @@ export async function POST(request: Request) {
     // If manual slate games are pinned, rebuild from scratch from the full known game list.
     // If not, preserve existing stats so multi-day slate refreshes do not wipe prior-day results
     // when the NBA "today" scoreboard only returns the current day.
-    const shouldRebuildFromScratch = (manualGames ?? []).length > 0;
+    const isSingleDaySlate = safeSlate.start_date === safeSlate.end_date;
+    const shouldRebuildFromScratch = isSingleDaySlate || (manualGames ?? []).length > 0;
 
     for (const player of players) {
       const existing = existingStatsByPlayerId.get(player.id);
