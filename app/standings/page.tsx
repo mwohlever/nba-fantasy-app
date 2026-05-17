@@ -17,11 +17,21 @@ type StandingRow = {
   slates_played: number;
 };
 
+type DraftPositionRow = {
+  draft_order: number;
+  wins: number;
+  runner_ups: number;
+  avg_finish: number | null;
+  avg_score: number | null;
+  slates_played: number;
+};
+
 type StandingsResponse = {
   success: boolean;
   selectedSeason: number | null;
   availableSeasons: number[];
   standings: StandingRow[];
+  draftPositionResults: DraftPositionRow[];
 };
 
 type TeamStatsRow = {
@@ -84,6 +94,7 @@ function compareValues(
 export default function StandingsPage() {
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStatsRow[]>([]);
+  const [draftPositionResults, setDraftPositionResults] = useState<DraftPositionRow[]>([]);
   const [availableSeasons, setAvailableSeasons] = useState<number[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<number | "all" | "">("");
   const [isLoading, setIsLoading] = useState(true);
@@ -127,6 +138,7 @@ export default function StandingsPage() {
 
       const safeResult = result as StandingsResponse;
       setStandings(safeResult.standings ?? []);
+      setDraftPositionResults(safeResult.draftPositionResults ?? []);
       setAvailableSeasons(safeResult.availableSeasons ?? []);
       setSelectedSeason(safeResult.selectedSeason ?? "");
 
@@ -368,6 +380,49 @@ export default function StandingsPage() {
             </div>
           )}
         </section>
+        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-2xl font-bold tracking-tight">Draft Position Results</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Based on slates with saved draft order data. Early backfilled slates without draft order are excluded.
+            </p>
+          </div>
+
+          {draftPositionResults.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              No draft position data available yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="min-w-full text-left text-sm">
+                <thead className="bg-slate-100 text-slate-700">
+                  <tr>
+                    <th className="px-4 py-3">Draft Slot</th>
+                    <th className="px-4 py-3">Wins</th>
+                    <th className="px-4 py-3">Runner-ups</th>
+                    <th className="px-4 py-3">Avg Finish</th>
+                    <th className="px-4 py-3">Avg Score</th>
+                    <th className="px-4 py-3">Tracked Slates</th>
+                  </tr>
+                </thead>
+
+                <tbody className="bg-white text-slate-800">
+                  {draftPositionResults.map((row) => (
+                    <tr key={row.draft_order} className="border-t border-slate-100">
+                      <td className="px-4 py-3 font-semibold">#{row.draft_order}</td>
+                      <td className="px-4 py-3">{row.wins}</td>
+                      <td className="px-4 py-3">{row.runner_ups}</td>
+                      <td className="px-4 py-3">{formatNumber(row.avg_finish)}</td>
+                      <td className="px-4 py-3">{formatNumber(row.avg_score)}</td>
+                      <td className="px-4 py-3">{row.slates_played}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3">
             <h2 className="text-xl font-semibold text-slate-900">

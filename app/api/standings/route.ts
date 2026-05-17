@@ -19,6 +19,13 @@ type TeamSlateResultRow = {
   finish_position: number | null;
 };
 
+type SlateTeamRow = {
+  slate_id: number;
+  team_id: number;
+  draft_order: number | null;
+  is_participating: boolean | null;
+};
+
 type StandingRow = {
   season: number | "all";
   team_id: number;
@@ -48,6 +55,7 @@ export async function GET(request: NextRequest) {
       { data: teams, error: teamsError },
       { data: slates, error: slatesError },
       { data: teamSlateResults, error: teamSlateResultsError },
+      { data: slateTeams, error: slateTeamsError },
     ] = await Promise.all([
       supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
       supabaseAdmin
@@ -58,15 +66,19 @@ export async function GET(request: NextRequest) {
       supabaseAdmin
         .from("team_slate_results")
         .select("slate_id, team_id, fantasy_points, finish_position"),
+      supabaseAdmin
+        .from("slate_teams")
+        .select("slate_id, team_id, draft_order, is_participating"),
     ]);
 
-    if (teamsError || slatesError || teamSlateResultsError) {
+    if (teamsError || slatesError || teamSlateResultsError || slateTeamsError) {
       return NextResponse.json(
         {
           error:
             teamsError?.message ||
             slatesError?.message ||
             teamSlateResultsError?.message ||
+            slateTeamsError?.message ||
             "Failed to load standings data.",
         },
         { status: 500 }
@@ -76,6 +88,7 @@ export async function GET(request: NextRequest) {
     const safeTeams = (teams ?? []) as TeamRow[];
     const safeSlates = (slates ?? []) as SlateRow[];
     const safeResults = (teamSlateResults ?? []) as TeamSlateResultRow[];
+    const safeSlateTeams = (slateTeams ?? []) as SlateTeamRow[];
 
     const slateSeasonMap = new Map<number, number>();
     safeSlates.forEach((slate) => {
@@ -107,6 +120,77 @@ export async function GET(request: NextRequest) {
 
       return slateSeason === selectedSeason;
     });
+
+    const slateTeamBySlateTeamId = new Map<string, SlateTeamRow>();
+
+    safeSlateTeams.forEach((row) => {
+      slateTeamBySlateTeamId.set(`${row.slate_id}:${row.team_id}`, row);
+    });
+
+    const draftPositionMap = new Map<
+      number,
+      {
+        draft_order: number;
+        wins: number;
+        runner_ups: number;
+        total_finish: number;
+        total_score: number;
+        slates_played: number;
+      }
+    >();
+
+    seasonResults.forEach((result) => {
+
+      const slateTeam = slateTeamBySlateTeamId.get(
+        `${result.slate_id}:${result.team_id}`
+      );
+
+      if (
+        !slateTeam ||
+        slateTeam.is_participating === false ||
+        !slateTeam.draft_order
+      ) {
+        return;
+      }
+
+      const draftOrder = Number(slateTeam.draft_order);
+
+      const current =
+        draftPositionMap.get(draftOrder) ?? {
+          draft_order: draftOrder,
+          wins: 0,
+          runner_ups: 0,
+          total_finish: 0,
+          total_score: 0,
+          slates_played: 0,
+        };
+
+      current.slates_played += 1;
+      current.total_finish += Number(result.finish_position ?? 0);
+      current.total_score += Number(result.fantasy_points ?? 0);
+
+      if (result.finish_position === 1) current.wins += 1;
+      if (result.finish_position === 2) current.runner_ups += 1;
+
+      draftPositionMap.set(draftOrder, current);
+    });
+
+    const draftPositionResults = Array.from(draftPositionMap.values())
+      .map((row) => ({
+        draft_order: row.draft_order,
+        wins: row.wins,
+        runner_ups: row.runner_ups,
+        avg_finish:
+          row.slates_played > 0
+            ? roundTo(row.total_finish / row.slates_played, 2)
+            : null,
+        avg_score:
+          row.slates_played > 0
+            ? roundTo(row.total_score / row.slates_played, 2)
+            : null,
+        slates_played: row.slates_played,
+      }))
+      .sort((a, b) => a.draft_order - b.draft_order);
 
     const standings: StandingRow[] = safeTeams.map((team) => {
       const teamRows = seasonResults.filter((row) => row.team_id === team.id);
@@ -146,6 +230,7 @@ export async function GET(request: NextRequest) {
       selectedSeason,
       availableSeasons,
       standings,
+      draftPositionResults,
     });
   } catch (error) {
     console.error(error);
