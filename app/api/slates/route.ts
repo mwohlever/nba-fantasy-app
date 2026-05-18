@@ -607,6 +607,72 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Automatically pin NBA games for this slate so multi-day stat refreshes
+    // rebuild from a stable game list instead of relying on "today" scoreboards.
+    try {
+      const slateGameRows: Array<{
+        slate_id: number;
+        game_date: string | null;
+        game_id: string;
+        game_code: string | null;
+        note: string | null;
+      }> = [];
+
+      for (const date of dates) {
+        const scoreboard = await fetchScoreboardForDate(date);
+        const games = getGamesFromPayload(scoreboard);
+
+        for (const game of games) {
+          const rawGame = game as any;
+          const gameId = rawGame.gameId ?? rawGame.gameID ?? rawGame.game_id;
+          const gameCode = rawGame.gameCode ?? rawGame.game_code ?? null;
+
+          if (!gameId) continue;
+
+          slateGameRows.push({
+            slate_id: newSlate.id,
+            game_date: isoDateFromGameCode(gameCode),
+            game_id: String(gameId),
+            game_code: gameCode,
+            note: null,
+          });
+        }
+      }
+
+      const dedupedGames = Array.from(
+        new Map(
+          slateGameRows.map((row) => [
+            `${row.slate_id}:${row.game_id}`,
+            row,
+          ])
+        ).values()
+      );
+
+      if (dedupedGames.length > 0) {
+        const { error: slateGamesError } = await supabaseAdmin
+          .from("slate_nba_games")
+          .upsert(dedupedGames, {
+            onConflict: "slate_id,game_id",
+          });
+
+        if (slateGamesError) {
+          console.error(
+            "Failed to auto-create slate_nba_games:",
+            slateGamesError
+          );
+        } else {
+          console.log(
+            `✅ Auto-created ${dedupedGames.length} slate_nba_games rows for slate ${newSlate.id}`
+          );
+        }
+      }
+    } catch (slateGamesInsertError) {
+      console.error(
+        "Unexpected error while auto-creating slate_nba_games:",
+        slateGamesInsertError
+      );
+    }
+
     return NextResponse.json({
       success: true,
       slate: newSlate,
