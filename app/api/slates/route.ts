@@ -608,63 +608,89 @@ export async function POST(request: NextRequest) {
     }
 
     // Automatically pin NBA games for this slate so multi-day stat refreshes
-    // rebuild from a stable game list instead of relying on "today" scoreboards.
+    // rebuild from a stable full game list instead of relying on "today" scoreboards.
     try {
-      const slateGameRows: Array<{
-        slate_id: number;
-        game_date: string | null;
-        game_id: string;
-        game_code: string | null;
-        note: string | null;
-      }> = [];
+      const dateCodes = new Set(dates.map((date) => date.replaceAll("-", "")));
+      const slateTeamCodes = new Set(nbaTeamAbbreviations);
 
-      for (const date of dates) {
-        const scoreboard = await fetchScoreboardForDate(date);
-        const games = getGamesFromPayload(scoreboard);
-
-        for (const game of games) {
-          const rawGame = game as any;
-          const gameId = rawGame.gameId ?? rawGame.gameID ?? rawGame.game_id;
-          const gameCode = rawGame.gameCode ?? rawGame.game_code ?? null;
-
-          if (!gameId) continue;
-
-          slateGameRows.push({
-            slate_id: newSlate.id,
-            game_date: isoDateFromGameCode(gameCode),
-            game_id: String(gameId),
-            game_code: gameCode,
-            note: null,
-          });
+      const scheduleResponse = await fetch(
+        "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json",
+        {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            Accept: "application/json,text/plain,*/*",
+            Referer: "https://www.nba.com/",
+            Origin: "https://www.nba.com",
+          },
         }
-      }
-
-      const dedupedGames = Array.from(
-        new Map(
-          slateGameRows.map((row) => [
-            `${row.slate_id}:${row.game_id}`,
-            row,
-          ])
-        ).values()
       );
 
-      if (dedupedGames.length > 0) {
-        const { error: slateGamesError } = await supabaseAdmin
-          .from("slate_nba_games")
-          .upsert(dedupedGames, {
-            onConflict: "slate_id,game_id",
-          });
+      if (scheduleResponse.ok) {
+        const schedulePayload = (await scheduleResponse.json()) as any;
+        const gameDates = schedulePayload?.leagueSchedule?.gameDates ?? [];
+        const scheduleGames = gameDates.flatMap((day: any) => day.games ?? []);
 
-        if (slateGamesError) {
-          console.error(
-            "Failed to auto-create slate_nba_games:",
-            slateGamesError
-          );
+        const slateGameRows = scheduleGames
+          .filter((game: any) => {
+            const gameCode = String(game?.gameCode ?? "");
+            const dateCode = gameCode.slice(0, 8);
+
+            if (!dateCodes.has(dateCode)) return false;
+            if (game?.gameStatusText === "UNNECESSARY") return false;
+
+            const awayCode = normalizeTeamCode(game?.awayTeam?.teamTricode ?? null);
+            const homeCode = normalizeTeamCode(game?.homeTeam?.teamTricode ?? null);
+
+            return (
+              (awayCode && slateTeamCodes.has(awayCode)) ||
+              (homeCode && slateTeamCodes.has(homeCode))
+            );
+          })
+          .map((game: any) => ({
+            slate_id: newSlate.id,
+            game_date: isoDateFromGameCode(game.gameCode),
+            game_id: String(game.gameId),
+            game_code: game.gameCode ?? null,
+            note: `${game?.awayTeam?.teamTricode ?? "?"} at ${game?.homeTeam?.teamTricode ?? "?"}`,
+          }))
+          .filter((row: any) => row.game_id && row.game_code);
+
+        const dedupedGames = Array.from(
+          new Map(
+            slateGameRows.map((row: any) => [
+              `${row.slate_id}:${row.game_id}`,
+              row,
+            ])
+          ).values()
+        );
+
+        if (dedupedGames.length > 0) {
+          const { error: slateGamesError } = await supabaseAdmin
+            .from("slate_nba_games")
+            .upsert(dedupedGames, {
+              onConflict: "slate_id,game_id",
+            });
+
+          if (slateGamesError) {
+            console.error("Failed to auto-create slate_nba_games:", slateGamesError);
+          } else {
+            console.log(
+              `✅ Auto-created ${dedupedGames.length} slate_nba_games rows for slate ${newSlate.id}`
+            );
+          }
         } else {
-          console.log(
-            `✅ Auto-created ${dedupedGames.length} slate_nba_games rows for slate ${newSlate.id}`
+          console.warn(
+            `No slate_nba_games rows found for slate ${newSlate.id}; refresh may need manual pinning.`
           );
         }
+      } else {
+        console.error(
+          "Failed to load scheduleLeagueV2 while auto-pinning slate games:",
+          scheduleResponse.status
+        );
       }
     } catch (slateGamesInsertError) {
       console.error(
