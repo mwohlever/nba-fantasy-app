@@ -23,6 +23,7 @@ type PlayerRecord = {
   id: number;
   name: string;
   nba_player_id?: number | null;
+  team_abbreviation?: string | null;
 };
 
 type NbaScoreboardGame = {
@@ -188,6 +189,19 @@ async function fetchBoxScore(gameId: string) {
   return (await response.json()) as NbaBoxScorePayload;
 }
 
+function getTeamCodesFromGameCode(gameCode: string | null | undefined) {
+  const raw = String(gameCode ?? "");
+  const matchup = raw.includes("/") ? raw.split("/")[1] ?? "" : raw;
+  const upper = matchup.toUpperCase();
+
+  if (upper.length < 6) return [];
+
+  const away = upper.slice(0, 3);
+  const home = upper.slice(3, 6);
+
+  return [away, home].filter(Boolean);
+}
+
 function blankStat(): AggregatedPlayerStat {
   return {
     points: 0,
@@ -272,7 +286,7 @@ export async function POST(request: Request) {
 
     const { data: playersData, error: playersError } = await supabaseAdmin
       .from("players")
-      .select("id, name, nba_player_id")
+      .select("id, name, nba_player_id, team_abbreviation")
       .in("id", draftedPlayerIds);
 
     if (playersError) {
@@ -393,6 +407,31 @@ export async function POST(request: Request) {
 
       if (!boxScore?.game) {
         allGamesFinal = false;
+
+        const teamCodes = getTeamCodesFromGameCode(game.gameCode);
+        const gameDateCode = String(game.gameCode ?? "").slice(0, 8);
+        const slateStartDateCode = safeSlate.start_date.replaceAll("-", "");
+        const isFuturePinnedGame = gameDateCode > slateStartDateCode;
+
+        if (isFuturePinnedGame && teamCodes.length > 0) {
+          for (const player of players) {
+            const playerTeam = String(player.team_abbreviation ?? "").toUpperCase();
+
+            if (!teamCodes.includes(playerTeam)) continue;
+
+            const existing = aggregatedByPlayerId.get(player.id) ?? blankStat();
+
+            existing.games_remaining += 1;
+            existing.game_status = 1;
+            existing.game_status_text = "Scheduled";
+            existing.source_game_ids = Array.from(
+              new Set([...existing.source_game_ids, gameId])
+            );
+
+            aggregatedByPlayerId.set(player.id, existing);
+          }
+        }
+
         continue;
       }
 
