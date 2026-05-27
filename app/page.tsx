@@ -6,6 +6,7 @@ import AppNav from "@/components/AppNav";
 import FunFactCarousel from "@/components/home/FunFactCarousel";
 import TeamProfileModal from "@/components/TeamProfileModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import SeasonAwards from "@/components/home/SeasonAwards";
 
 type LatestSlate = {
   id: number;
@@ -44,6 +45,20 @@ type FunFact = {
   label: string;
   value: string;
   detail?: string;
+};
+
+type SeasonAwardsResponse = {
+  success: boolean;
+  awards: Array<{
+    title: string;
+    emoji: string;
+    winner: string;
+    detail: string;
+  }>;
+  firstTeam: {
+    guards: any[];
+    frontcourt: any[];
+  };
 };
 
 type HomeSummaryResponse = {
@@ -92,6 +107,7 @@ export default function HomePage() {
     useState<SlateRosterModalState>(null);
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+  const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(null);
 
   function parseStatusTextMinutesRemaining(statusText?: string | null) {
     if (!statusText) return null;
@@ -187,8 +203,13 @@ export default function HomePage() {
       setIsLoading(true);
       setMessage("");
 
-      const response = await fetch("/api/home-summary", { cache: "no-store" });
+      const [response, awardsResponse] = await Promise.all([
+        fetch("/api/home-summary", { cache: "no-store" }),
+        fetch("/api/season-awards", { cache: "no-store" }),
+      ]);
+
       const result = await response.json();
+      const awardsResult = await awardsResponse.json();
 
       if (!response.ok) {
         setMessage(result.error || "Failed to load home summary.");
@@ -196,6 +217,13 @@ export default function HomePage() {
       }
 
       setData(result);
+
+      if (awardsResponse.ok) {
+        setSeasonAwards(awardsResult);
+      } else {
+        console.error("Failed to load season awards", awardsResult);
+        setSeasonAwards(null);
+      }
     } catch (error) {
       console.error(error);
       setMessage("Something went wrong while loading the home page.");
@@ -593,6 +621,14 @@ export default function HomePage() {
             </>
           )}
         </section>
+
+        {seasonAwards ? (
+          <SeasonAwards
+            awards={seasonAwards.awards}
+            guards={seasonAwards.firstTeam.guards}
+            frontcourt={seasonAwards.firstTeam.frontcourt}
+          />
+        ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
