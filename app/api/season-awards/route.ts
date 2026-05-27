@@ -191,8 +191,8 @@ export async function GET() {
           detail: "2026 season champion",
         },
         {
-          title: "Survivor Award",
-          emoji: "🧟",
+          title: "Consistency King",
+          emoji: "👑",
           winner: survivor?.name ?? "Josh",
           detail: survivor?.avgFinish
             ? `Best average finish: ${survivor.avgFinish}`
