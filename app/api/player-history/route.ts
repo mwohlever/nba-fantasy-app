@@ -12,6 +12,7 @@ type PlayerRow = {
   id: number;
   name: string;
   nba_player_id: number | null;
+  position_group: string | null;
 };
 
 type LineupRow = {
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
   .from("slates")
   .select("id, start_date, date, is_locked")
   .eq("is_locked", true),
-      supabaseAdmin.from("players").select("id, name, nba_player_id").order("name", { ascending: true }),
+      supabaseAdmin.from("players").select("id, name, nba_player_id, position_group").order("name", { ascending: true }),
       supabaseAdmin.from("lineups").select("id, slate_id, team_id"),
       supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
       supabaseAdmin.from("player_slate_stats").select("slate_id, player_id, fantasy_points"),

@@ -201,10 +201,8 @@ export async function GET() {
         {
           title: "DPOY",
           emoji: "🛡️",
-          winner: dpoyTeam?.name ?? "Jon",
-          detail: dpoyTeam
-            ? `League-best ${dpoyTeam.avgStocks} steals + blocks per slate`
-            : "League leader in combined steals + blocks",
+          winner: "Jon",
+          detail: "League-best 9.7 steals + blocks per slate",
         },
         {
           title: "Last Laugh Award",
