@@ -16,6 +16,13 @@ type Slate = {
   first_game_start_time: string | null;
 };
 
+type SlateTeam = {
+  slate_id: number;
+  team_id: number;
+  draft_order: number | null;
+  is_participating: boolean | null;
+};
+
 type TeamSlateResult = {
   slate_id: number;
   team_id: number;
@@ -148,6 +155,7 @@ export async function GET() {
       { data: players, error: playersError },
       { data: playerSlateStats, error: playerSlateStatsError },
       { data: seasonTeamSummary, error: seasonTeamSummaryError },
+      { data: slateTeams, error: slateTeamsError },
       { data: nbaSeasonAverages, error: nbaSeasonAveragesError },
     ] = await Promise.all([
       supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
@@ -177,6 +185,10 @@ export async function GET() {
         .range(0, 20000),
       supabaseAdmin.from("season_team_summary").select("season, team_id, runner_ups"),
       supabaseAdmin
+        .from("slate_teams")
+        .select("slate_id, team_id, draft_order, is_participating")
+        .range(0, 20000),
+      supabaseAdmin
         .from("player_nba_season_averages")
         .select("season, nba_player_id, fantasy_points")
         .range(0, 5000),
@@ -191,6 +203,7 @@ export async function GET() {
       playersError ||
       playerSlateStatsError ||
       seasonTeamSummaryError ||
+      slateTeamsError ||
       nbaSeasonAveragesError
     ) {
       return NextResponse.json(
@@ -204,6 +217,7 @@ export async function GET() {
             playersError?.message ||
             playerSlateStatsError?.message ||
             seasonTeamSummaryError?.message ||
+            slateTeamsError?.message ||
             nbaSeasonAveragesError?.message ||
             "Failed to load home summary data.",
         },
@@ -219,6 +233,7 @@ export async function GET() {
     const safePlayers = (players ?? []) as Player[];
     const safePlayerSlateStats = (playerSlateStats ?? []) as PlayerSlateStat[];
     const safeSeasonTeamSummary = (seasonTeamSummary ?? []) as SeasonTeamSummary[];
+    const safeSlateTeams = (slateTeams ?? []) as SlateTeam[];
     const safeNbaSeasonAverages = (nbaSeasonAverages ?? []) as NbaSeasonAverage[];
 
     const normalizedSlates = safeSlates
@@ -981,95 +996,216 @@ export async function GET() {
         "Unknown Player"
       : null;
 
-    const funFacts = [
-      ...(topPlayerLastCompletedSlate
-        ? [
-            {
-              label: "Top NBA Player Last Completed Slate",
-              value: `${topPlayerLastCompletedSlateName} • ${roundTo(
-                Number(topPlayerLastCompletedSlate.fantasy_points ?? 0),
-                1
-              )} FP`,
-            },
-          ]
-        : []),
+    const teamNameById = new Map(safeTeams.map((team) => [team.id, team.name]));
+
+    const allTimeTeamRecords = safeTeams
+      .map((team) => {
+        const rows = lockedResults.filter((row) => row.team_id === team.id);
+
+        return {
+          teamId: team.id,
+          name: team.name,
+          wins: rows.filter((row) => row.finish_position === 1).length,
+          runnerUps: rows.filter((row) => row.finish_position === 2).length,
+          twoHundredPointSlates: rows.filter(
+            (row) => Number(row.fantasy_points ?? 0) >= 200
+          ).length,
+        };
+      })
+      .filter((row) => row.wins > 0 || row.runnerUps > 0 || row.twoHundredPointSlates > 0);
+
+    const mostWinsAllTime = [...allTimeTeamRecords].sort(
+      (a, b) => b.wins - a.wins
+    )[0];
+
+    const mostRunnerUpsAllTime = [...allTimeTeamRecords].sort(
+      (a, b) => b.runnerUps - a.runnerUps
+    )[0];
+
+    const mostTwoHundredPointSlates = [...allTimeTeamRecords].sort(
+      (a, b) => b.twoHundredPointSlates - a.twoHundredPointSlates
+    )[0];
+
+    const slateTeamBySlateTeamId = new Map<string, SlateTeam>();
+    safeSlateTeams.forEach((row) => {
+      slateTeamBySlateTeamId.set(`${row.slate_id}:${row.team_id}`, row);
+    });
+
+    const draftPositionMap = new Map<
+      number,
+      {
+        draftOrder: number;
+        wins: number;
+        slatesPlayed: number;
+      }
+    >();
+
+    lockedResults
+      .filter((row) => slateSeasonMap.get(row.slate_id) === 2026)
+      .forEach((result) => {
+        const slateTeam = slateTeamBySlateTeamId.get(
+          `${result.slate_id}:${result.team_id}`
+        );
+
+        if (
+          !slateTeam ||
+          slateTeam.is_participating === false ||
+          !slateTeam.draft_order
+        ) {
+          return;
+        }
+
+        const draftOrder = Number(slateTeam.draft_order);
+        const current =
+          draftPositionMap.get(draftOrder) ?? {
+            draftOrder,
+            wins: 0,
+            slatesPlayed: 0,
+          };
+
+        current.slatesPlayed += 1;
+        if (result.finish_position === 1) current.wins += 1;
+
+        draftPositionMap.set(draftOrder, current);
+      });
+
+    const draftPositionRows = [...draftPositionMap.values()]
+      .filter((row) => row.slatesPlayed > 0)
+      .map((row) => ({
+        ...row,
+        winRate: row.wins / row.slatesPlayed,
+      }));
+
+    const bestDraftSlot = [...draftPositionRows].sort((a, b) => {
+      if (b.winRate !== a.winRate) return b.winRate - a.winRate;
+      return b.wins - a.wins;
+    })[0];
+
+    const worstDraftSlot = [...draftPositionRows].sort((a, b) => {
+      if (a.winRate !== b.winRate) return a.winRate - b.winRate;
+      return a.wins - b.wins;
+    })[0];
+
+    const shuffleFacts = <T,>(items: T[]) => {
+      const copy = [...items];
+
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+
+      return copy;
+    };
+
+    const funFacts = shuffleFacts([
       topLivePerformer && liveSlate
         ? {
             label: "⚡ Top Performer (Live)",
             value: `${
               playerMap.get(topLivePerformer.player_id)?.name ?? "Unknown Player"
-            } • ${roundTo(Number(topLivePerformer.fantasy_points ?? 0))}`,
-            detail: formatSlateLabel(liveSlate.start_date, liveSlate.end_date),
+            } • ${roundTo(Number(topLivePerformer.fantasy_points ?? 0), 1)} FP`,
+          }
+        : null,
+
+      {
+        label: "🏆 Champion",
+        value: "Mark",
+      },
+
+      {
+        label: "👑 Consistency King",
+        value: "Josh",
+      },
+
+      {
+        label: "🛡 DPOY",
+        value: "Jon",
+      },
+
+      {
+        label: "😂 Last Laugh",
+        value: "Andy",
+      },
+
+      mostWinsAllTime
+        ? {
+            label: "🏅 Most Wins",
+            value: `${mostWinsAllTime.name} • ${mostWinsAllTime.wins}`,
+          }
+        : null,
+
+      mostRunnerUpsAllTime
+        ? {
+            label: "🥈 Most Runner-Ups",
+            value: `${mostRunnerUpsAllTime.name} • ${mostRunnerUpsAllTime.runnerUps}`,
+          }
+        : null,
+
+      mostTwoHundredPointSlates && mostTwoHundredPointSlates.twoHundredPointSlates > 0
+        ? {
+            label: "💯 200+ Point Slates",
+            value: `${mostTwoHundredPointSlates.name} • ${mostTwoHundredPointSlates.twoHundredPointSlates}`,
+          }
+        : null,
+
+      bestDraftSlot
+        ? {
+            label: "🎲 Best Draft Slot",
+            value: `#${bestDraftSlot.draftOrder} • ${roundTo(bestDraftSlot.winRate * 100, 0)}%`,
+          }
+        : null,
+
+      worstDraftSlot
+        ? {
+            label: "📉 Worst Draft Slot",
+            value: `#${worstDraftSlot.draftOrder} • ${roundTo(worstDraftSlot.winRate * 100, 0)}%`,
           }
         : null,
 
       mostDraftedPlayer
         ? {
-            label: "Most Drafted Player",
+            label: "📝 Most Drafted (All-Time)",
             value: `${
               playerMap.get(mostDraftedPlayer[0])?.name ?? "Unknown Player"
-            } • ${mostDraftedPlayer[1]} drafts`,
+            } • ${mostDraftedPlayer[1]}`,
           }
         : null,
 
       highestAveragePlayer
         ? {
-            label: "Highest Avg Player",
+            label: "⭐ Highest Avg Player",
             value: `${
               playerMap.get(highestAveragePlayer.playerId)?.name ??
               "Unknown Player"
-            } • ${roundTo(highestAveragePlayer.avg)} FP`,
-            detail: `${highestAveragePlayer.count} recorded games`,
-          }
-        : null,
-
-      mostWinsWhenDraftedPlayer
-        ? {
-            label: "Most Wins When Drafted",
-            value: `${
-              playerMap.get(mostWinsWhenDraftedPlayer[0])?.name ??
-              "Unknown Player"
-            } • ${mostWinsWhenDraftedPlayer[1]} wins`,
+            } • ${roundTo(highestAveragePlayer.avg, 1)} FP`,
           }
         : null,
 
       highestScoreRow
         ? {
-            label: "Season High Score",
+            label: "🚀 Season High",
             value: `${
-              safeTeams.find((team) => team.id === highestScoreRow.team_id)
-                ?.name ?? "Unknown"
-            } • ${roundTo(Number(highestScoreRow.fantasy_points ?? 0))}`,
-            detail: "Single-slate team score",
+              teamNameById.get(highestScoreRow.team_id) ?? "Unknown"
+            } • ${roundTo(Number(highestScoreRow.fantasy_points ?? 0), 1)}`,
           }
         : null,
 
       lowestScoreRow
         ? {
-            label: "Season Low Score",
+            label: "📉 Season Low",
             value: `${
-              safeTeams.find((team) => team.id === lowestScoreRow.team_id)
-                ?.name ?? "Unknown"
-            } • ${roundTo(Number(lowestScoreRow.fantasy_points ?? 0))}`,
-            detail: "Lowest non-zero single-slate team score",
+              teamNameById.get(lowestScoreRow.team_id) ?? "Unknown"
+            } • ${roundTo(Number(lowestScoreRow.fantasy_points ?? 0), 1)}`,
           }
         : null,
 
       allTimeAverageScores
         ? {
-            label: "Best Average Score (The Season)",
-            value: `${allTimeAverageScores.name} • ${allTimeAverageScores.avg}`,
-            detail: `${allTimeAverageScores.count} locked slates`,
+            label: "📈 Best Avg Score (All-Time)",
+            value: `${allTimeAverageScores.name} • ${roundTo(allTimeAverageScores.avg, 1)}`,
           }
         : null,
-
-      longestWinStreak
-        ? {
-            label: "Longest Win Streak",
-            value: `${longestWinStreak.team_name} • ${longestWinStreak.streak} in a row`,
-          }
-        : null,
-    ].filter(Boolean);
+    ].filter(Boolean));
 
     return NextResponse.json({
       success: true,
