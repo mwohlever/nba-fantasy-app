@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 function roundTo(value: number, digits = 1) {
@@ -16,9 +16,17 @@ type PlayerRow = {
   nba_player_id: number | null;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const season = 2026;
+    const requestedSeason = request.nextUrl.searchParams.get("season");
+    const season = requestedSeason ? Number(requestedSeason) : 2026;
+
+    if (!Number.isFinite(season)) {
+      return NextResponse.json(
+        { error: "Invalid season." },
+        { status: 400 }
+      );
+    }
 
     const [
       { data: teams },
@@ -188,7 +196,7 @@ export async function GET() {
           title: "Championship Belt",
           emoji: "🏆",
           winner: "Mark",
-          detail: "2026 season champion",
+          detail: `${season} season champion`,
         },
         {
           title: "Consistency King",
