@@ -546,9 +546,12 @@ export default function HomePage() {
                         <th className="px-4 py-3 font-semibold">Score</th>
                         <th className="px-4 py-3 font-semibold">Projected</th>
                         <th className="px-4 py-3 font-semibold">Win %</th>
-                        <th className="px-4 py-3 font-semibold">Completed</th>
-                        <th className="px-4 py-3 font-semibold">In Progress</th>
-                        <th className="px-4 py-3 font-semibold">Remaining</th>
+                        <th className="px-4 py-3 font-semibold">
+                          <div>Games</div>
+                          <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                            C/IP/R
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white text-slate-800">
@@ -603,14 +606,8 @@ export default function HomePage() {
                               "—"
                             )}
                           </td>
-                          <td className="px-4 py-3">
-                            {row.games_completed ?? 0}
-                          </td>
-                          <td className="px-4 py-3">
-                            {row.games_in_progress ?? 0}
-                          </td>
-                          <td className="px-4 py-3">
-                            {row.games_remaining ?? 0}
+                          <td className="px-4 py-3 font-semibold tabular-nums">
+                            {row.games_completed ?? 0} / {row.games_in_progress ?? 0} / {row.games_remaining ?? 0}
                           </td>
                         </tr>
                       ))}
