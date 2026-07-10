@@ -17,12 +17,13 @@ type FirstTeamPlayer = {
 };
 
 type SeasonAwardsProps = {
+  season?: number | string;
   awards: Award[];
   guards: FirstTeamPlayer[];
   frontcourt: FirstTeamPlayer[];
 };
 
-export default function SeasonAwards({
+export default function SeasonAwards({ season,
   awards,
   guards,
   frontcourt,
@@ -34,7 +35,7 @@ export default function SeasonAwards({
       <section className="rounded-3xl border border-amber-200 bg-amber-50/70 p-5 shadow-sm">
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-slate-900">
-            2026 Season Awards
+            {season ?? 'Season'} Season Awards
           </h2>
           <p className="mt-1 text-sm text-slate-600">
             End-of-season hardware for the league.

@@ -28,6 +28,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (season !== 2026) {
+      return NextResponse.json({
+        success: true,
+        season,
+        awards: [],
+        firstTeam: {
+          guards: [],
+          frontcourt: [],
+        },
+      });
+    }
+
     const [
       { data: teams },
       { data: slates },

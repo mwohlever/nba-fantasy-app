@@ -466,7 +466,19 @@ export default function StandingsPage() {
                 </p>
               </div>
 
-              {teamStatsWithNames.length === 0 ? (
+              {selectedSeason === "all" ? (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                  <div className="text-4xl">📊</div>
+
+                  <h2 className="mt-4 text-xl font-semibold text-slate-900">
+                    Select a Season
+                  </h2>
+
+                  <p className="mt-2 text-sm text-slate-600">
+                    Team Style, Draft Position, and Awards are shown by individual season.
+                  </p>
+                </div>
+              ) : teamStatsWithNames.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
                   No team stats available for this season.
                 </div>
@@ -561,7 +573,31 @@ export default function StandingsPage() {
                 </p>
               </div>
 
-              {draftPositionResults.length === 0 ? (
+              {selectedSeason === "all" ? (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                  <div className="text-4xl">📊</div>
+
+                  <h2 className="mt-4 text-xl font-semibold text-slate-900">
+                    Select a Season
+                  </h2>
+
+                  <p className="mt-2 text-sm text-slate-600">
+                    Team Style, Draft Position, and Awards are shown by individual season.
+                  </p>
+                </div>
+              ) : selectedSeason !== 2026 ? (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                  <div className="text-4xl">🎲</div>
+
+                  <h2 className="mt-4 text-xl font-semibold text-slate-900">
+                    No Draft Position Data Yet
+                  </h2>
+
+                  <p className="mt-2 text-sm text-slate-600">
+                    Draft position tracking starts with the 2026 season.
+                  </p>
+                </div>
+              ) : draftPositionResults.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
                   No draft position data available yet.
                 </div>
@@ -598,15 +634,36 @@ export default function StandingsPage() {
           ) : null}
 
           {activeDetailTab === "awards" ? (
-            seasonAwards ? (
+            selectedSeason === "all" ? (
+              <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                <div className="text-4xl">📊</div>
+
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">
+                  Select a Season
+                </h2>
+
+                <p className="mt-2 text-sm text-slate-600">
+                  Team Style, Draft Position, and Awards are shown by individual season.
+                </p>
+              </div>
+            ) : seasonAwards && seasonAwards.awards.length > 0 ? (
               <SeasonAwards
+                season={selectedSeason}
                 awards={seasonAwards.awards}
                 guards={seasonAwards.firstTeam.guards}
                 frontcourt={seasonAwards.firstTeam.frontcourt}
               />
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                No awards available for this season yet.
+              <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                <div className="text-4xl">🏆</div>
+
+                <h2 className="mt-4 text-xl font-semibold text-slate-900">
+                  No Season Awards Yet
+                </h2>
+
+                <p className="mt-2 text-sm text-slate-600">
+                  Awards and the All-111 First Team are published after the playoffs conclude.
+                </p>
               </div>
             )
           ) : null}
