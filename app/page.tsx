@@ -309,11 +309,7 @@ export default function HomePage() {
     (row) => Number(row.games_remaining ?? 0) > 0
   );
 
-  const slateHeading = hasLiveGames
-    ? "Live Slate"
-    : hasCompletedGames && !hasRemainingGames
-      ? "Latest Results"
-      : "Current Slate";
+  const slateHeading = "Current Slate";
 
   const slateBadge = hasLiveGames
     ? "LIVE"
@@ -403,29 +399,23 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-sky-700">
-                League Dashboard
-              </p>
-              <h1 className="mt-2 text-3xl font-bold tracking-tight">
-                111 NBA Fantasy Playoffs
-              </h1>
-              <p className="mt-2 text-sm text-slate-600">
-                Quickly check scores, standings, and what’s happening in today’s slate.
-              </p>
-            </div>
+        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              111 NBA Fantasy Playoffs
+            </h1>
 
             <button
               type="button"
               onClick={() => void loadHomeSummary()}
-              className="rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200"
+              className="shrink-0 rounded-xl border border-sky-300 bg-sky-100 px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-200"
             >
-              Refresh Home
+              Refresh
             </button>
           </div>
         </section>
+
+        <FunFactCarousel facts={funFacts} />
 
         {message ? (
           <section className="rounded-3xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-800 shadow-sm">
@@ -462,7 +452,7 @@ export default function HomePage() {
               href="/lineups/scores"
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
             >
-              Open Scores
+              View Scores
             </Link>
           </div>
 
@@ -619,98 +609,6 @@ export default function HomePage() {
           )}
         </section>
 
-        {seasonAwards ? (
-          <SeasonAwards
-            awards={seasonAwards.awards}
-            guards={seasonAwards.firstTeam.guards}
-            frontcourt={seasonAwards.firstTeam.frontcourt}
-          />
-        ) : null}
-
-        <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-semibold text-slate-900">
-                  Season Snapshot
-                </h2>
-                <p className="mt-1 text-sm text-slate-600">
-                  {latestSeason} quick leaderboard
-                </p>
-              </div>
-
-              <Link
-                href="/standings"
-                className="text-sm font-medium text-sky-700 underline underline-offset-2 hover:text-sky-900"
-              >
-                Full standings
-              </Link>
-            </div>
-
-            {isLoading ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                Loading season snapshot...
-              </div>
-            ) : seasonSnapshot.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                No season snapshot available yet.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {seasonSnapshot.map((row, index) => (
-                  <div
-                    key={row.team_id}
-                    className={`rounded-2xl border px-4 py-3 ${
-                      index === 0
-                        ? "border-sky-200 bg-sky-50"
-                        : "border-slate-200 bg-white"
-                    }`}
-                  >
-                    <div>
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setProfileTeam({
-                              id: row.team_id,
-                              name: row.name,
-                            })
-                          }
-                          className="font-semibold text-slate-900 hover:text-sky-700 hover:underline"
-                        >
-                          {row.name}
-                        </button>
-                        <div className="mt-1 text-xs text-slate-500">
-                          {row.wins} wins • Avg finish {row.avg_finish ?? "—"}
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-sm font-semibold text-slate-900">
-                          {row.avg_score ?? "—"}
-                        </div>
-                        <div className="text-xs text-slate-500">Avg score</div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Fun Facts
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Tap through some extra stats.
-              </p>
-            </div>
-
-            <FunFactCarousel facts={funFacts} />
-          </section>
-        </section>
       </div>
 
 
