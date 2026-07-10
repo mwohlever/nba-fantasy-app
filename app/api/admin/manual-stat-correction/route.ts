@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 function calculateFantasyPoints({
   points,
@@ -29,6 +30,9 @@ function calculateFantasyPoints({
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
 

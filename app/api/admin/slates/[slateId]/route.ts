@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 function normalizeNbaTeamCode(value: string | null | undefined) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -28,6 +29,9 @@ type RouteContext = {
 };
 
 export async function GET(_: NextRequest, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);
@@ -119,6 +123,9 @@ export async function GET(_: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);
@@ -220,6 +227,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_: NextRequest, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);

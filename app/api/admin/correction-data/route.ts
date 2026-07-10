@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 function formatSlateLabel(startDate: string, endDate: string) {
   return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 }
 
 export async function GET() {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const [
       { data: slates, error: slatesError },

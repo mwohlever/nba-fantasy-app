@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 export async function POST(req: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const body = await req.json();
 

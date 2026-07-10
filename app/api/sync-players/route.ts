@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 function normalizeNbaTeamCode(value: string | null | undefined) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -134,6 +135,9 @@ function rowToObject(
 }
 
 export async function POST() {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const season = getCurrentSeasonString();
     const todayTeamTricodes = await fetchTodayTeamTricodes();

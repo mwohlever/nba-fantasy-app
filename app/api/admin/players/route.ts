@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 export async function GET() {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const { data, error } = await supabaseAdmin
       .from("players")
@@ -29,6 +33,9 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const updates = Array.isArray(body?.updates) ? body.updates : [];

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 type RouteContext = {
   params: Promise<{
@@ -22,6 +23,9 @@ type TeamResultRow = {
 };
 
 export async function POST(_: Request, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);

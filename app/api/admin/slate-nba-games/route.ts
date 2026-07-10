@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 function isoDateFromGameCode(gameCode: string | null | undefined) {
   const raw = String(gameCode ?? "").slice(0, 8);
@@ -13,6 +14,9 @@ function dateInSlateRange(gameDate: string | null, startDate: string, endDate: s
 }
 
 export async function GET(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const slateId = Number(request.nextUrl.searchParams.get("slateId") ?? "");
 
   const { data: slates } = await supabaseAdmin
@@ -41,6 +45,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   const body = await request.json();
   const slateId = Number(body.slateId);
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
 
 type BackfillBody = {
   slateId?: number;
@@ -553,6 +554,9 @@ async function backfillSlate(slateId: number): Promise<SlateBackfillResult> {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
   try {
     const body = (await request.json()) as BackfillBody;
 
