@@ -529,14 +529,14 @@ export default function HomePage() {
 
               <div className="overflow-hidden rounded-2xl border border-slate-200">
                 <div className="-mx-4 overflow-x-auto px-4">
-                  <table className="min-w-full border-collapse text-sm">
+                  <table className="w-full table-fixed border-collapse text-sm">
                     <thead className="bg-slate-100 text-slate-700">
                       <tr className="text-left">
-                        <th className="px-4 py-3 font-semibold">Player</th>
-                        <th className="px-4 py-3 font-semibold">Score</th>
-                        <th className="px-4 py-3 font-semibold">Projected</th>
-                        <th className="px-4 py-3 font-semibold">Win %</th>
-                        <th className="px-4 py-3 font-semibold">
+                        <th className="px-3 py-3 font-semibold">Player</th>
+                        <th className="px-2 py-3 font-semibold">Score</th>
+                        <th className="px-2 py-3 font-semibold">Proj</th>
+                        <th className="px-2 py-3 font-semibold">Win %</th>
+                        <th className="px-2 py-3 font-semibold">
                           <div>Games</div>
                           <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
                             C/IP/R
@@ -552,7 +552,7 @@ export default function HomePage() {
                             index === 0 ? "bg-orange-50/50" : ""
                           }`}
                         >
-                          <td className="px-4 py-3 font-medium">
+                          <td className="px-3 py-3 font-medium">
                             <button
                               type="button"
                               onClick={() =>
@@ -566,7 +566,7 @@ export default function HomePage() {
                               {row.teamName}
                             </button>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-3">
                             <button
                               type="button"
                               onClick={() =>
@@ -582,12 +582,12 @@ export default function HomePage() {
                               {roundTo(Number(row.fantasy_points ?? 0))}
                             </button>
                           </td>
-                          <td className="px-4 py-3 font-semibold text-sky-700">
+                          <td className="px-2 py-3 font-semibold text-sky-700">
                             {row.projected_points !== null && row.projected_points !== undefined
                               ? roundTo(Number(row.projected_points))
                               : "—"}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-2 py-3">
                             {row.win_probability !== null && row.win_probability !== undefined ? (
                               <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                                 {roundTo(Number(row.win_probability), 0)}%
@@ -596,7 +596,7 @@ export default function HomePage() {
                               "—"
                             )}
                           </td>
-                          <td className="px-4 py-3 font-semibold tabular-nums">
+                          <td className="px-2 py-3 font-semibold tabular-nums">
                             {row.games_completed ?? 0} / {row.games_in_progress ?? 0} / {row.games_remaining ?? 0}
                           </td>
                         </tr>
