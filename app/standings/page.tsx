@@ -1,6 +1,7 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import SeasonAwards from "@/components/home/SeasonAwards";
 import TeamProfileModal from "@/components/TeamProfileModal";
 import { useEffect, useMemo, useState } from "react";
 
@@ -66,6 +67,35 @@ type TeamStatsSortKey =
   | "turnoversPerSlate";
 
 type SortDirection = "asc" | "desc";
+type DetailTab = "team-style" | "draft-position" | "awards";
+
+type SeasonAwardsResponse = {
+  success: boolean;
+  awards: Array<{
+    title: string;
+    emoji: string;
+    winner: string;
+    detail: string;
+  }>;
+  firstTeam: {
+    guards: Array<{
+      playerId: number;
+      name: string;
+      positionGroup: "G" | "F/C" | null;
+      nbaPlayerId: number | null;
+      games: number;
+      avgFantasy: number;
+    }>;
+    frontcourt: Array<{
+      playerId: number;
+      name: string;
+      positionGroup: "G" | "F/C" | null;
+      nbaPlayerId: number | null;
+      games: number;
+      avgFantasy: number;
+    }>;
+  };
+};
 
 function formatNumber(value: number | null, digits = 2) {
   if (value === null || value === undefined) return "—";
@@ -106,6 +136,8 @@ export default function StandingsPage() {
   const [teamStatsSortDirection, setTeamStatsSortDirection] =
     useState<SortDirection>("desc");
   const [profileTeam, setProfileTeam] = useState<{ id: number; name: string } | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>("team-style");
+  const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(null);
 
   useEffect(() => {
     void loadStandings();
@@ -143,7 +175,24 @@ export default function StandingsPage() {
       setSelectedSeason(safeResult.selectedSeason ?? "");
 
       const statsSeason = safeResult.selectedSeason ?? seasonToUse;
-      if (statsSeason !== "" && statsSeason !== null) {
+      setSeasonAwards(null);
+
+      if (statsSeason !== "" && statsSeason !== null && statsSeason !== "all") {
+        try {
+          const awardsResponse = await fetch(`/api/season-awards?season=${statsSeason}`);
+          const awardsResult = await awardsResponse.json();
+
+          if (awardsResponse.ok && awardsResult?.success) {
+            setSeasonAwards(awardsResult);
+          } else {
+            setSeasonAwards(null);
+          }
+        } catch (awardsError) {
+          console.error("Failed to load season awards", awardsError);
+          setSeasonAwards(null);
+        }
+
+
         try {
           const statsResponse = await fetch(`/api/team-stats?season=${statsSeason}`);
           const statsResult = await statsResponse.json();
@@ -159,6 +208,7 @@ export default function StandingsPage() {
         }
       } else {
         setTeamStats([]);
+        setSeasonAwards(null);
       }
     } catch (error) {
       console.error(error);
@@ -234,9 +284,6 @@ export default function StandingsPage() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Standings</h1>
-              <p className="mt-2 text-sm text-slate-600">
-                See season standings, wins, and overall performance.
-              </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -381,141 +428,188 @@ export default function StandingsPage() {
           )}
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold tracking-tight">Draft Position Results</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Based on slates with saved draft order data. Early backfilled slates without draft order are excluded.
-            </p>
+          <div className="mb-4 overflow-x-auto">
+            <div className="inline-flex min-w-full gap-2 rounded-2xl bg-slate-100 p-1 sm:min-w-0">
+              {[
+                { id: "team-style", label: "Team Style" },
+                { id: "draft-position", label: "Draft Position" },
+                { id: "awards", label: "Awards" },
+              ].map((tab) => {
+                const isActive = activeDetailTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveDetailTab(tab.id as DetailTab)}
+                    className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                      isActive
+                        ? "bg-white text-sky-900 shadow-sm"
+                        : "text-slate-600 hover:bg-white/70 hover:text-slate-900"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {draftPositionResults.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              No draft position data available yet.
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-100 text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3">Draft Slot</th>
-                    <th className="px-4 py-3">Wins</th>
-                    <th className="px-4 py-3">Runner-ups</th>
-                    <th className="px-4 py-3">Avg Finish</th>
-                    <th className="px-4 py-3">Avg Score</th>
-                    <th className="px-4 py-3">Tracked Slates</th>
-                  </tr>
-                </thead>
-
-                <tbody className="bg-white text-slate-800">
-                  {draftPositionResults.map((row) => (
-                    <tr key={row.draft_order} className="border-t border-slate-100">
-                      <td className="px-4 py-3 font-semibold">#{row.draft_order}</td>
-                      <td className="px-4 py-3">{row.wins}</td>
-                      <td className="px-4 py-3">{row.runner_ups}</td>
-                      <td className="px-4 py-3">{formatNumber(row.avg_finish)}</td>
-                      <td className="px-4 py-3">{formatNumber(row.avg_score)}</td>
-                      <td className="px-4 py-3">{row.slates_played}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3">
-            <h2 className="text-xl font-semibold text-slate-900">
-              Team Style Stats
-            </h2>
-            <p className="text-sm text-slate-600">
-              Per-slate averages from slates with tracked player box-score data.
-            </p>
-          </div>
-
-          {teamStatsWithNames.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              No team stats available for this season.
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-fixed border-collapse text-sm">
-                  <thead className="bg-slate-100 text-slate-700">
-                    <tr className="text-left">
-                      <th className="w-[16%] px-3 py-3">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("name")}>
-                          Team{getTeamStatsSortArrow("name")}
-                        </button>
-                      </th>
-                      <th className="w-[12%] px-3 py-3 text-right">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("slateCount")}>
-                          Slates{getTeamStatsSortArrow("slateCount")}
-                        </button>
-                      </th>
-                      <th className="w-[12%] px-3 py-3 text-right">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("pointsPerSlate")}>
-                          PTS{getTeamStatsSortArrow("pointsPerSlate")}
-                        </button>
-                      </th>
-                      <th className="w-[12%] px-3 py-3 text-right">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("reboundsPerSlate")}>
-                          REB{getTeamStatsSortArrow("reboundsPerSlate")}
-                        </button>
-                      </th>
-                      <th className="w-[12%] px-3 py-3 text-right">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("assistsPerSlate")}>
-                          AST{getTeamStatsSortArrow("assistsPerSlate")}
-                        </button>
-                      </th>
-                      <th className="w-[12%] px-3 py-3 text-right">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("stealsPerSlate")}>
-                          STL{getTeamStatsSortArrow("stealsPerSlate")}
-                        </button>
-                      </th>
-                      <th className="w-[12%] px-3 py-3 text-right">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("blocksPerSlate")}>
-                          BLK{getTeamStatsSortArrow("blocksPerSlate")}
-                        </button>
-                      </th>
-                      <th className="w-[12%] px-3 py-3 text-right">
-                        <button className={headerButtonClass} onClick={() => handleTeamStatsSort("turnoversPerSlate")}>
-                          TO{getTeamStatsSortArrow("turnoversPerSlate")}
-                        </button>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white text-slate-800">
-                    {teamStatsWithNames.map((row) => (
-                      <tr key={row.teamId} className="border-t border-slate-100">
-                        <td className="px-3 py-3 font-medium">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setProfileTeam({
-                                id: row.teamId,
-                                name: row.name,
-                              })
-                            }
-                            className="font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
-                          >
-                            {row.name}
-                          </button>
-                        </td>
-                        <td className="px-3 py-3 text-right">{row.slateCount}</td>
-                        <td className="px-3 py-3 text-right">{row.pointsPerSlate}</td>
-                        <td className="px-3 py-3 text-right">{row.reboundsPerSlate}</td>
-                        <td className="px-3 py-3 text-right">{row.assistsPerSlate}</td>
-                        <td className="px-3 py-3 text-right">{row.stealsPerSlate}</td>
-                        <td className="px-3 py-3 text-right">{row.blocksPerSlate}</td>
-                        <td className="px-3 py-3 text-right">{row.turnoversPerSlate}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {activeDetailTab === "team-style" ? (
+            <section>
+              <div className="mb-3">
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Team Style
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Per-slate averages from slates with tracked player box-score data.
+                </p>
               </div>
-            </div>
-          )}
+
+              {teamStatsWithNames.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  No team stats available for this season.
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full table-fixed border-collapse text-sm">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr className="text-left">
+                          <th className="w-[16%] px-3 py-3">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("name")}>
+                              Team{getTeamStatsSortArrow("name")}
+                            </button>
+                          </th>
+                          <th className="w-[12%] px-3 py-3 text-right">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("slateCount")}>
+                              Slates{getTeamStatsSortArrow("slateCount")}
+                            </button>
+                          </th>
+                          <th className="w-[12%] px-3 py-3 text-right">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("pointsPerSlate")}>
+                              PTS{getTeamStatsSortArrow("pointsPerSlate")}
+                            </button>
+                          </th>
+                          <th className="w-[12%] px-3 py-3 text-right">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("reboundsPerSlate")}>
+                              REB{getTeamStatsSortArrow("reboundsPerSlate")}
+                            </button>
+                          </th>
+                          <th className="w-[12%] px-3 py-3 text-right">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("assistsPerSlate")}>
+                              AST{getTeamStatsSortArrow("assistsPerSlate")}
+                            </button>
+                          </th>
+                          <th className="w-[12%] px-3 py-3 text-right">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("stealsPerSlate")}>
+                              STL{getTeamStatsSortArrow("stealsPerSlate")}
+                            </button>
+                          </th>
+                          <th className="w-[12%] px-3 py-3 text-right">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("blocksPerSlate")}>
+                              BLK{getTeamStatsSortArrow("blocksPerSlate")}
+                            </button>
+                          </th>
+                          <th className="w-[12%] px-3 py-3 text-right">
+                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("turnoversPerSlate")}>
+                              TO{getTeamStatsSortArrow("turnoversPerSlate")}
+                            </button>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white text-slate-800">
+                        {teamStatsWithNames.map((row) => (
+                          <tr key={row.teamId} className="border-t border-slate-100">
+                            <td className="px-3 py-3 font-medium">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setProfileTeam({
+                                    id: row.teamId,
+                                    name: row.name,
+                                  })
+                                }
+                                className="font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                              >
+                                {row.name}
+                              </button>
+                            </td>
+                            <td className="px-3 py-3 text-right">{row.slateCount}</td>
+                            <td className="px-3 py-3 text-right">{row.pointsPerSlate}</td>
+                            <td className="px-3 py-3 text-right">{row.reboundsPerSlate}</td>
+                            <td className="px-3 py-3 text-right">{row.assistsPerSlate}</td>
+                            <td className="px-3 py-3 text-right">{row.stealsPerSlate}</td>
+                            <td className="px-3 py-3 text-right">{row.blocksPerSlate}</td>
+                            <td className="px-3 py-3 text-right">{row.turnoversPerSlate}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeDetailTab === "draft-position" ? (
+            <section>
+              <div className="mb-4">
+                <h2 className="text-xl font-semibold tracking-tight">Draft Position</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Based on slates with saved draft order data. Early backfilled slates without draft order are excluded.
+                </p>
+              </div>
+
+              {draftPositionResults.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  No draft position data available yet.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="bg-slate-100 text-slate-700">
+                      <tr>
+                        <th className="px-4 py-3">Draft Slot</th>
+                        <th className="px-4 py-3">Wins</th>
+                        <th className="px-4 py-3">Runner-ups</th>
+                        <th className="px-4 py-3">Avg Finish</th>
+                        <th className="px-4 py-3">Avg Score</th>
+                        <th className="px-4 py-3">Tracked Slates</th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="bg-white text-slate-800">
+                      {draftPositionResults.map((row) => (
+                        <tr key={row.draft_order} className="border-t border-slate-100">
+                          <td className="px-4 py-3 font-semibold">#{row.draft_order}</td>
+                          <td className="px-4 py-3">{row.wins}</td>
+                          <td className="px-4 py-3">{row.runner_ups}</td>
+                          <td className="px-4 py-3">{formatNumber(row.avg_finish)}</td>
+                          <td className="px-4 py-3">{formatNumber(row.avg_score)}</td>
+                          <td className="px-4 py-3">{row.slates_played}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {activeDetailTab === "awards" ? (
+            seasonAwards ? (
+              <SeasonAwards
+                awards={seasonAwards.awards}
+                guards={seasonAwards.firstTeam.guards}
+                frontcourt={seasonAwards.firstTeam.frontcourt}
+              />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                No awards available for this season yet.
+              </div>
+            )
+          ) : null}
         </section>
 
       </div>
