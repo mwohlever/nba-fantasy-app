@@ -1,19 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+
+type CurrentUser = {
+  id: string;
+  teamId: number;
+  displayName: string;
+  role: "player" | "admin";
+};
 
 const mainLinks = [
   { href: "/", label: "Home", icon: "⌂" },
   { href: "/lineups/draft", label: "Draft", icon: "✎" },
   { href: "/lineups/scores", label: "Scores", icon: "▦" },
-];
-
-const moreLinks = [
-  { href: "/standings", label: "Standings" },
-  { href: "/player-history", label: "Player History" },
-  { href: "/admin", label: "Admin" },
 ];
 
 const desktopAdminLinks = [
@@ -26,30 +27,65 @@ const desktopAdminLinks = [
 
 export default function AppNav() {
   const pathname = usePathname();
-  const [desktopAdminOpen, setDesktopAdminOpen] = useState(false);
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const router = useRouter();
 
-  const desktopAdminRef = useRef<HTMLDivElement | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [desktopUserOpen, setDesktopUserOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const desktopUserRef = useRef<HTMLDivElement | null>(null);
   const mobileMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const isAdmin = currentUser?.role === "admin";
 
   const moreIsActive =
     pathname.startsWith("/standings") ||
     pathname.startsWith("/player-history") ||
+    pathname.startsWith("/profile") ||
+    (isAdmin &&
+      (pathname.startsWith("/admin") || pathname.startsWith("/slates")));
+
+  const userMenuIsActive =
+    pathname.startsWith("/profile") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/slates");
 
-  const adminIsActive =
-    pathname.startsWith("/admin") || pathname.startsWith("/slates");
+  useEffect(() => {
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/me", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.authenticated && result.user) {
+          setCurrentUser(result.user as CurrentUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error("Failed to load current user", error);
+        setCurrentUser(null);
+      } finally {
+        setIsUserLoading(false);
+      }
+    }
+
+    void loadCurrentUser();
+  }, [pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
 
       if (
-        desktopAdminRef.current &&
-        !desktopAdminRef.current.contains(target)
+        desktopUserRef.current &&
+        !desktopUserRef.current.contains(target)
       ) {
-        setDesktopAdminOpen(false);
+        setDesktopUserOpen(false);
       }
 
       if (mobileMoreRef.current && !mobileMoreRef.current.contains(target)) {
@@ -60,6 +96,32 @@ export default function AppNav() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  async function handleLogout() {
+    try {
+      setIsLoggingOut(true);
+
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed.");
+      }
+
+      setCurrentUser(null);
+      setDesktopUserOpen(false);
+      setMobileMoreOpen(false);
+
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      window.alert("Unable to log out right now.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   function isLinkActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -85,6 +147,13 @@ export default function AppNav() {
         : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
     }`;
   }
+
+  const mobileMoreLinks = [
+    { href: "/standings", label: "Standings" },
+    { href: "/player-history", label: "Player History" },
+    ...(currentUser ? [{ href: "/profile", label: "Profile" }] : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+  ];
 
   return (
     <>
@@ -114,37 +183,82 @@ export default function AppNav() {
             </Link>
           </div>
 
-          <div className="relative" ref={desktopAdminRef}>
-            <button
-              type="button"
-              onClick={() => setDesktopAdminOpen((open) => !open)}
-              className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                adminIsActive
-                  ? "border-sky-300 bg-sky-100 text-sky-900 shadow-sm"
-                  : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
-              }`}
-            >
-              Admin ▾
-            </button>
-
-            {desktopAdminOpen ? (
-              <div className="absolute right-0 z-50 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                {desktopAdminLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setDesktopAdminOpen(false)}
-                    className={`block rounded-xl px-3 py-2 text-sm transition ${
-                      isLinkActive(link.href)
-                        ? "bg-sky-100 font-semibold text-sky-900"
-                        : "text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+          <div className="relative" ref={desktopUserRef}>
+            {isUserLoading ? (
+              <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400">
+                Loading...
               </div>
-            ) : null}
+            ) : currentUser ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setDesktopUserOpen((open) => !open)}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                    userMenuIsActive
+                      ? "border-sky-300 bg-sky-100 text-sky-900 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                  }`}
+                >
+                  👤 {currentUser.displayName} ▾
+                </button>
+
+                {desktopUserOpen ? (
+                  <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                    <Link
+                      href="/profile"
+                      onClick={() => setDesktopUserOpen(false)}
+                      className={`block rounded-xl px-3 py-2 text-sm transition ${
+                        isLinkActive("/profile")
+                          ? "bg-sky-100 font-semibold text-sky-900"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      Profile
+                    </Link>
+
+                    {isAdmin ? (
+                      <>
+                        <div className="my-2 border-t border-slate-200" />
+
+                        <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Admin
+                        </div>
+
+                        {desktopAdminLinks.map((link) => (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            onClick={() => setDesktopUserOpen(false)}
+                            className={`block rounded-xl px-3 py-2 text-sm transition ${
+                              isLinkActive(link.href)
+                                ? "bg-sky-100 font-semibold text-sky-900"
+                                : "text-slate-700 hover:bg-slate-100"
+                            }`}
+                          >
+                            {link.label}
+                          </Link>
+                        ))}
+                      </>
+                    ) : null}
+
+                    <div className="my-2 border-t border-slate-200" />
+
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      disabled={isLoggingOut}
+                      className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {isLoggingOut ? "Logging out..." : "Logout"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <Link href="/login" className={desktopLinkClass("/login")}>
+                Login
+              </Link>
+            )}
           </div>
         </div>
       </nav>
@@ -162,7 +276,18 @@ export default function AppNav() {
       >
         {mobileMoreOpen ? (
           <div className="absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-            {moreLinks.map((link) => (
+            {currentUser ? (
+              <div className="mb-2 rounded-xl bg-slate-50 px-4 py-3">
+                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                  Signed in as
+                </div>
+                <div className="mt-1 font-semibold text-slate-900">
+                  {currentUser.displayName}
+                </div>
+              </div>
+            ) : null}
+
+            {mobileMoreLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -176,6 +301,27 @@ export default function AppNav() {
                 {link.label}
               </Link>
             ))}
+
+            <div className="my-2 border-t border-slate-200" />
+
+            {currentUser ? (
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                disabled={isLoggingOut}
+                className="block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileMoreOpen(false)}
+                className="block rounded-xl px-4 py-3 text-sm font-medium text-sky-700 hover:bg-sky-50"
+              >
+                Login
+              </Link>
+            )}
           </div>
         ) : null}
 
