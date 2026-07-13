@@ -66,6 +66,15 @@ export default function LineupBuilder({
 
   const [compactView, setCompactView] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{
+    teamId: number;
+    displayName: string;
+    role: "player" | "admin";
+  } | null>(null);
+  const [
+    notifyNextDrafterForProxyPicks,
+    setNotifyNextDrafterForProxyPicks,
+  ] = useState(false);
 
   const [lineupsState, setLineupsState] = useState<SavedLineup[]>(
     savedLineupsForInitialSlate
@@ -120,6 +129,41 @@ export default function LineupBuilder({
     if (window.innerWidth < 768) {
       setCompactView(true);
     }
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/me", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!isActive) return;
+
+        if (!response.ok) {
+          setCurrentUser(null);
+          return;
+        }
+
+        setCurrentUser(result.user ?? null);
+      } catch (error) {
+        console.error("Failed to load current user", error);
+
+        if (isActive) {
+          setCurrentUser(null);
+        }
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -881,7 +925,10 @@ export default function LineupBuilder({
     teamId: number,
     playerList: Player[],
     successMessage?: string,
-    options?: { allowEmpty?: boolean }
+    options?: {
+      allowEmpty?: boolean;
+      notifyNextDrafter?: boolean;
+    }
   ) {
     setSaveMessage("");
     setMessage("");
@@ -929,6 +976,7 @@ export default function LineupBuilder({
           slateId: selectedSlateIdNumber,
           teamId,
           playerIds: playerList.map((player) => player.id),
+          notifyNextDrafter: options?.notifyNextDrafter === true,
         }),
         cache: "no-store",
       });
@@ -998,10 +1046,21 @@ export default function LineupBuilder({
         if (!removed) return;
       }
 
+      const isAdminProxyPick =
+        currentUser?.role === "admin" &&
+        targetTeamId !== currentUser.teamId;
+
+      const shouldNotifyNextDrafter = isAdminProxyPick
+        ? notifyNextDrafterForProxyPicks
+        : true;
+
       const added = await persistLineupForTeam(
         targetTeamId,
         [...targetPlayers, player],
-        `${player.name} drafted to ${targetTeam.name}.`
+        `${player.name} drafted to ${targetTeam.name}.`,
+        {
+          notifyNextDrafter: shouldNotifyNextDrafter,
+        }
       );
 
       if (!added) return;
@@ -1095,6 +1154,32 @@ export default function LineupBuilder({
         <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
           {message}
         </div>
+      ) : null}
+
+      {currentUser?.role === "admin" && viewMode === "draft" ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={notifyNextDrafterForProxyPicks}
+              onChange={(event) =>
+                setNotifyNextDrafterForProxyPicks(event.target.checked)
+              }
+              className="mt-1 h-4 w-4 rounded border-amber-300"
+            />
+
+            <span>
+              <span className="block text-sm font-semibold text-amber-950">
+                Notify the next drafter for proxy picks
+              </span>
+
+              <span className="mt-1 block text-xs leading-5 text-amber-800">
+                Leave this off while entering picks submitted through the group
+                text. Your own draft picks still notify the next person.
+              </span>
+            </span>
+          </label>
+        </section>
       ) : null}
 
       {saveMessage ? (

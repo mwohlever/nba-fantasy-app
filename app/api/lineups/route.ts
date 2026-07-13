@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { notifyNextDrafter } from "@/lib/draftNotifications";
 
 type SaveLineupBody = {
   slateId?: number;
   teamId?: number;
   playerIds?: number[];
+  notifyNextDrafter?: boolean;
 };
 
 type LineupRow = {
@@ -97,6 +100,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
     const body = (await request.json()) as SaveLineupBody;
     const slateId = body.slateId;
     const teamId = body.teamId;
@@ -194,7 +206,7 @@ if (playerIds.length > 5) {
 
     const { data: existingLineup, error: existingLineupError } = await supabaseAdmin
       .from("lineups")
-      .select("id")
+      .select("id, lineup_players(player_id)")
       .eq("team_id", teamId)
       .eq("slate_id", slateId)
       .maybeSingle();
@@ -205,6 +217,29 @@ if (playerIds.length > 5) {
         { status: 500 }
       );
     }
+
+    const previousPlayerIds = existingLineup
+      ? (
+          (
+            existingLineup as {
+              lineup_players?: { player_id: number }[] | null;
+            }
+          ).lineup_players ?? []
+        ).map((row) => Number(row.player_id))
+      : [];
+
+    const previousPlayerIdSet = new Set(previousPlayerIds);
+    const addedPlayerIds = uniquePlayerIds.filter(
+      (playerId) => !previousPlayerIdSet.has(playerId)
+    );
+    const removedPlayerIds = previousPlayerIds.filter(
+      (playerId) => !uniquePlayerIds.includes(playerId)
+    );
+
+    const isSingleNewDraftPick =
+      addedPlayerIds.length === 1 &&
+      removedPlayerIds.length === 0 &&
+      uniquePlayerIds.length === previousPlayerIds.length + 1;
 
     if (existingLineup) {
       const { error: deleteLineupPlayersError } = await supabaseAdmin
@@ -255,15 +290,44 @@ if (playerIds.length > 5) {
       player_id: playerId,
     }));
 
-    const { error: lineupPlayersError } = await supabaseAdmin
-      .from("lineup_players")
-      .insert(lineupPlayersPayload);
+    if (lineupPlayersPayload.length > 0) {
+      const { error: lineupPlayersError } = await supabaseAdmin
+        .from("lineup_players")
+        .insert(lineupPlayersPayload);
 
-    if (lineupPlayersError) {
-      return NextResponse.json(
-        { error: `Failed to save lineup players: ${lineupPlayersError.message}` },
-        { status: 500 }
-      );
+      if (lineupPlayersError) {
+        return NextResponse.json(
+          {
+            error: `Failed to save lineup players: ${lineupPlayersError.message}`,
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    const notificationRequested =
+      currentUser.role === "admin"
+        ? body.notifyNextDrafter === true
+        : true;
+
+    let draftNotification = null;
+
+    if (isSingleNewDraftPick && notificationRequested) {
+      try {
+        draftNotification = await notifyNextDrafter(slateId);
+      } catch (notificationError) {
+        console.error(
+          "Lineup saved, but the next-drafter notification failed",
+          notificationError
+        );
+
+        draftNotification = {
+          sent: 0,
+          failed: 1,
+          skipped: true,
+          reason: "Notification failed after the lineup was saved.",
+        };
+      }
     }
 
     return NextResponse.json({
@@ -273,6 +337,7 @@ if (playerIds.length > 5) {
       slateId: slate.id,
       slateDate: slate.date,
       teamName: team.name,
+      draftNotification,
     });
   } catch (error) {
     console.error(error);

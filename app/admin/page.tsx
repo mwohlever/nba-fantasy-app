@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
-import { useEffect, useState } from "react";
 
 const adminCards = [
   {
@@ -40,50 +39,16 @@ const adminCards = [
       "Attach exact NBA game IDs to slates so multi-day slates refresh correctly.",
     cta: "Go to Slate NBA Games →",
   },
+  {
+    href: "/admin/notification-templates",
+    title: "Notification Templates",
+    description:
+      "Edit the wording used for browser push notifications and preview how messages will appear.",
+    cta: "Edit Notifications →",
+  },
 ];
 
-type TeamOption = {
-  id: number;
-  name: string;
-};
-
 export default function AdminPage() {
-  const [teams, setTeams] = useState<TeamOption[]>([]);
-  const [selectedTeamId, setSelectedTeamId] = useState("");
-  const [phone, setPhone] = useState("");
-  const [smsEnabled, setSmsEnabled] = useState(true);
-
-  useEffect(() => {
-    async function loadTeams() {
-      const res = await fetch("/api/teams");
-      const data = await res.json();
-      setTeams(data?.teams ?? []);
-    }
-
-    loadTeams();
-  }, []);
-
-  async function saveContact() {
-    if (!selectedTeamId) return;
-
-    const team = teams.find((t) => String(t.id) === selectedTeamId);
-
-    await fetch("/api/team-contacts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        teamId: selectedTeamId,
-        name: team?.name ?? "",
-        phone,
-        smsEnabled,
-      }),
-    });
-
-    alert("Saved!");
-  }
-
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
       <div className="mx-auto max-w-[1600px] space-y-6">
@@ -119,51 +84,6 @@ export default function AdminPage() {
             </Link>
           ))}
 
-          {/* Team Contacts */}
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold text-slate-900">
-              Team Contacts
-            </h2>
-
-            <div className="flex flex-wrap gap-3 items-center">
-              <select
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              >
-                <option value="">Select Team</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                type="text"
-                placeholder="Phone (+1614...)"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm flex-1 min-w-[200px]"
-              />
-
-              <label className="flex items-center gap-2 text-sm whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={smsEnabled}
-                  onChange={(e) => setSmsEnabled(e.target.checked)}
-                />
-                SMS Enabled
-              </label>
-
-              <button
-                onClick={saveContact}
-                className="rounded-lg bg-sky-600 px-4 py-2 text-sm text-white hover:bg-sky-700 whitespace-nowrap"
-              >
-                Save
-              </button>
-            </div>
-          </section>
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
