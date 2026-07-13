@@ -3,6 +3,7 @@ import { sendPushToUser, type PushResult } from "@/lib/push";
 import {
   getNotificationTemplate,
   renderNotificationTemplate,
+  type NotificationTemplateType,
 } from "@/lib/notificationTemplates";
 
 type SlateTeamRow = {
@@ -19,6 +20,7 @@ type SlateTeamRow = {
 };
 
 type LineupRow = {
+  team_id: number;
   lineup_players:
     | {
         player_id: number;
@@ -36,6 +38,11 @@ type NotificationPreferenceRow = {
   draft_turn_enabled: boolean;
 };
 
+type PlayerPositionRow = {
+  id: number;
+  position_group: "G" | "F/C";
+};
+
 export type DraftNotificationResult = PushResult & {
   nextTeamId?: number;
   nextTeamName?: string;
@@ -47,6 +54,49 @@ function getRelatedTeamName(row: SlateTeamRow) {
   }
 
   return row.teams?.name ?? `Team ${row.team_id}`;
+}
+
+function getOrdinal(value: number) {
+  const remainder100 = value % 100;
+
+  if (remainder100 >= 11 && remainder100 <= 13) {
+    return `${value}th`;
+  }
+
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
+function getRemainingNeeds(guardCount: number, fcCount: number) {
+  const guardNeed = Math.max(0, 2 - guardCount);
+  const fcNeed = Math.max(0, 3 - fcCount);
+
+  const parts: string[] = [];
+
+  if (guardNeed > 0) {
+    parts.push(`${guardNeed} G`);
+  }
+
+  if (fcNeed > 0) {
+    parts.push(`${fcNeed} F/C`);
+  }
+
+  return parts.length > 0 ? parts.join(" and ") : "roster complete";
+}
+
+function getFinalPositionNeed(guardCount: number, fcCount: number) {
+  if (guardCount >= 2) return "F/C";
+  if (fcCount >= 3) return "G";
+
+  return "G or F/C";
 }
 
 export async function notifyNextDrafter(
@@ -94,14 +144,16 @@ export async function notifyNextDrafter(
 
   const { data: lineups, error: lineupsError } = await supabaseAdmin
     .from("lineups")
-    .select("lineup_players(player_id)")
+    .select("team_id, lineup_players(player_id)")
     .eq("slate_id", slateId);
 
   if (lineupsError) {
     throw new Error(`Failed to load draft picks: ${lineupsError.message}`);
   }
 
-  const totalDrafted = ((lineups ?? []) as LineupRow[]).reduce(
+  const safeLineups = (lineups ?? []) as LineupRow[];
+
+  const totalDrafted = safeLineups.reduce(
     (sum, lineup) => sum + Number(lineup.lineup_players?.length ?? 0),
     0
   );
@@ -119,6 +171,8 @@ export async function notifyNextDrafter(
   }
 
   const roundIndex = Math.floor(totalDrafted / totalTeams);
+  const roundNumber = roundIndex + 1;
+  const overallPickNumber = totalDrafted + 1;
   const pickInRound = totalDrafted % totalTeams;
 
   const nextTeam =
@@ -136,6 +190,39 @@ export async function notifyNextDrafter(
   }
 
   const nextTeamName = getRelatedTeamName(nextTeam);
+
+  const nextTeamLineup =
+    safeLineups.find((lineup) => lineup.team_id === nextTeam.team_id) ?? null;
+
+  const nextTeamPlayerIds =
+    nextTeamLineup?.lineup_players?.map((row) => Number(row.player_id)) ?? [];
+
+  let guardCount = 0;
+  let fcCount = 0;
+
+  if (nextTeamPlayerIds.length > 0) {
+    const { data: rosterPlayers, error: rosterPlayersError } =
+      await supabaseAdmin
+        .from("players")
+        .select("id, position_group")
+        .in("id", nextTeamPlayerIds);
+
+    if (rosterPlayersError) {
+      throw new Error(
+        `Failed to inspect the next team's roster: ${rosterPlayersError.message}`
+      );
+    }
+
+    for (const player of (rosterPlayers ?? []) as PlayerPositionRow[]) {
+      if (player.position_group === "G") {
+        guardCount += 1;
+      } else if (player.position_group === "F/C") {
+        fcCount += 1;
+      }
+    }
+  }
+
+  const isFinalPick = nextTeamPlayerIds.length === 4;
 
   const { data: appUser, error: appUserError } = await supabaseAdmin
     .from("app_users")
@@ -198,11 +285,21 @@ export async function notifyNextDrafter(
   const slateLabel =
     startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 
-  const notificationTemplate = await getNotificationTemplate("draft_turn");
+  const templateType: NotificationTemplateType = isFinalPick
+    ? "draft_final_pick"
+    : "draft_turn";
+
+  const notificationTemplate =
+    await getNotificationTemplate(templateType);
 
   const templateValues = {
     teamName: nextTeamName,
     slateLabel,
+    roundNumber,
+    roundOrdinal: getOrdinal(roundNumber),
+    overallPickNumber,
+    positionNeed: getFinalPositionNeed(guardCount, fcCount),
+    remainingNeeds: getRemainingNeeds(guardCount, fcCount),
   };
 
   const result = await sendPushToUser(user.id, {

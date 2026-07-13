@@ -38,16 +38,21 @@ export async function GET() {
   if (authError) return authError;
 
   try {
-    const notificationType: NotificationTemplateType = "draft_turn";
+    const notificationTypes = Object.keys(
+      NOTIFICATION_TEMPLATE_DEFAULTS
+    ) as NotificationTemplateType[];
 
-    const [template, defaults] = await Promise.all([
-      getNotificationTemplate(notificationType),
-      Promise.resolve(getDefaultNotificationTemplate(notificationType)),
-    ]);
+    const templates = await Promise.all(
+      notificationTypes.map((type) => getNotificationTemplate(type))
+    );
+
+    const defaults = notificationTypes.map((type) =>
+      getDefaultNotificationTemplate(type)
+    );
 
     return NextResponse.json({
       success: true,
-      template,
+      templates,
       defaults,
     });
   } catch (error) {
@@ -75,9 +80,7 @@ export async function PUT(request: Request) {
     }
 
     const body = (await request.json()) as SaveTemplateBody;
-    const notificationType = String(
-      body.notificationType ?? "draft_turn"
-    ).trim();
+    const notificationType = String(body.notificationType ?? "").trim();
 
     if (!isSupportedNotificationType(notificationType)) {
       return NextResponse.json(

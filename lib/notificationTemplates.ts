@@ -4,10 +4,35 @@ export const NOTIFICATION_TEMPLATE_DEFAULTS = {
   draft_turn: {
     notificationType: "draft_turn",
     titleTemplate: "🏀 Your turn to draft!",
-    bodyTemplate: "{teamName}, you're on the clock for {slateLabel}.",
+    bodyTemplate:
+      "{teamName}, you're on the clock for your {roundOrdinal} round pick.",
     description:
       "Sent to the next participant after a draft pick is submitted.",
-    availablePlaceholders: ["{teamName}", "{slateLabel}"],
+    availablePlaceholders: [
+      "{teamName}",
+      "{slateLabel}",
+      "{roundNumber}",
+      "{roundOrdinal}",
+      "{overallPickNumber}",
+      "{remainingNeeds}",
+    ],
+  },
+  draft_final_pick: {
+    notificationType: "draft_final_pick",
+    titleTemplate: "🏀 Last pick!",
+    bodyTemplate:
+      "{teamName}, you're on the clock for your last pick — you need a {positionNeed}!",
+    description:
+      "Sent when the next participant is making their fifth and final draft pick.",
+    availablePlaceholders: [
+      "{teamName}",
+      "{slateLabel}",
+      "{roundNumber}",
+      "{roundOrdinal}",
+      "{overallPickNumber}",
+      "{positionNeed}",
+      "{remainingNeeds}",
+    ],
   },
 } as const;
 
@@ -36,7 +61,6 @@ export function renderNotificationTemplate(
 ) {
   return Object.entries(values).reduce((result, [key, value]) => {
     const replacement = value == null ? "" : String(value);
-
     return result.replaceAll(`{${key}}`, replacement);
   }, template);
 }
@@ -85,9 +109,7 @@ export async function getNotificationTemplate(
 
   const row = data as NotificationTemplateRow | null;
 
-  if (!row) {
-    return fallback;
-  }
+  if (!row) return fallback;
 
   return {
     notificationType,
