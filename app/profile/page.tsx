@@ -3,6 +3,7 @@
 import AppNav from "@/components/AppNav";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import PushDeviceControls from "@/components/profile/PushDeviceControls";
 
 type CurrentUser = {
   id: string;
@@ -803,6 +804,10 @@ export default function ProfilePage() {
                         <p className="mt-1 text-sm text-slate-600">
                           Choose which league alerts you want to receive.
                         </p>
+                      </div>
+
+                      <div className="mt-5">
+                        <PushDeviceControls />
                       </div>
 
                       {preferenceMessage ? (
