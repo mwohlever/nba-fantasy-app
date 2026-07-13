@@ -255,8 +255,11 @@ export default function AppNav() {
                 ) : null}
               </>
             ) : (
-              <Link href="/login" className={desktopLinkClass("/login")}>
-                Login
+              <Link
+                href="/login"
+                className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-100"
+              >
+                Join Your Team
               </Link>
             )}
           </div>
@@ -314,13 +317,23 @@ export default function AppNav() {
                 {isLoggingOut ? "Logging out..." : "Logout"}
               </button>
             ) : (
-              <Link
-                href="/login"
-                onClick={() => setMobileMoreOpen(false)}
-                className="block rounded-xl px-4 py-3 text-sm font-medium text-sky-700 hover:bg-sky-50"
-              >
-                Login
-              </Link>
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3">
+                <div className="text-sm font-semibold text-sky-900">
+                  Join your team
+                </div>
+
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Log in for your profile, draft alerts, and player notifications.
+                </p>
+
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMoreOpen(false)}
+                  className="mt-3 block rounded-xl bg-sky-700 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-sky-800"
+                >
+                  Log In
+                </Link>
+              </div>
             )}
           </div>
         ) : null}
