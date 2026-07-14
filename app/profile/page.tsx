@@ -2,17 +2,26 @@
 
 import AppNav from "@/components/AppNav";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import PushDeviceControls from "@/components/profile/PushDeviceControls";
+import ChangePinForm from "@/components/profile/ChangePinForm";
+import ProfilePictureSettings from "@/components/profile/ProfilePictureSettings";
 
 type CurrentUser = {
   id: string;
   teamId: number;
   displayName: string;
   role: "player" | "admin";
+  avatarUrl: string | null;
 };
 
 type ProfileTab = "overview" | "awards" | "settings";
+type SettingsTab = "profile" | "notifications" | "security";
 
 type NotificationPreferences = {
   notificationsEnabled: boolean;
@@ -26,6 +35,7 @@ type TeamProfile = {
   team: {
     id: number;
     name: string;
+    avatarUrl: string | null;
   };
   latestSeason: number;
   selectedSeason: number | "all";
@@ -181,11 +191,17 @@ function StatCard({
   );
 }
 
-export default function ProfilePage() {
+function ProfilePageContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [profile, setProfile] = useState<TeamProfile | null>(null);
   const [season, setSeason] = useState<number | "all">("all");
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+  const [activeSettingsTab, setActiveSettingsTab] =
+    useState<SettingsTab>("profile");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [message, setMessage] = useState("");
@@ -194,6 +210,31 @@ export default function ProfilePage() {
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
   const [preferenceMessage, setPreferenceMessage] = useState("");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+
+    if (
+      requestedTab === "overview" ||
+      requestedTab === "awards" ||
+      requestedTab === "settings"
+    ) {
+      setActiveTab(requestedTab);
+    } else {
+      setActiveTab("overview");
+    }
+  }, [searchParams]);
+
+  function changeProfileTab(tab: ProfileTab) {
+    setActiveTab(tab);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+
+    router.replace(`${pathname}?${params.toString()}`, {
+      scroll: false,
+    });
+  }
 
   useEffect(() => {
     async function loadUser() {
@@ -374,9 +415,11 @@ export default function ProfilePage() {
       )
     : [2026, 2025, 2024, 2023];
 
-  const headshot = user
-    ? TEAM_HEADSHOTS[user.displayName]
+  const fallbackHeadshot = user
+    ? TEAM_HEADSHOTS[user.displayName] ?? null
     : null;
+
+  const headshot = user?.avatarUrl ?? fallbackHeadshot;
 
   const hasDraftPosition =
     profile?.recentSlates.some((row) => row.draftPosition !== null) ?? false;
@@ -454,7 +497,9 @@ export default function ProfilePage() {
                     <button
                       key={tab.id}
                       type="button"
-                      onClick={() => setActiveTab(tab.id as ProfileTab)}
+                      onClick={() =>
+                        changeProfileTab(tab.id as ProfileTab)
+                      }
                       className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
                         isActive
                           ? "bg-sky-100 text-sky-900 shadow-sm"
@@ -794,124 +839,190 @@ export default function ProfilePage() {
                 ) : null}
 
                 {activeTab === "settings" ? (
-                  <div className="space-y-6">
-                    <section className="rounded-3xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
-                      <div>
-                        <h2 className="text-xl font-bold text-slate-900">
-                          Notification Settings
-                        </h2>
+                  <div className="space-y-5">
+                    <section className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          {
+                            id: "profile",
+                            label: "Profile",
+                            icon: "👤",
+                          },
+                          {
+                            id: "notifications",
+                            label: "Notifications",
+                            icon: "🔔",
+                          },
+                          {
+                            id: "security",
+                            label: "Security",
+                            icon: "🔐",
+                          },
+                        ].map((tab) => {
+                          const isActive = activeSettingsTab === tab.id;
 
-                        <p className="mt-1 text-sm text-slate-600">
-                          Choose which league alerts you want to receive.
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() =>
+                                setActiveSettingsTab(tab.id as SettingsTab)
+                              }
+                              className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                                isActive
+                                  ? "bg-sky-100 text-sky-900 shadow-sm"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              }`}
+                            >
+                              <span className="mr-1 hidden sm:inline">
+                                {tab.icon}
+                              </span>
+                              {tab.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    {activeSettingsTab === "profile" && user ? (
+                      <ProfilePictureSettings
+                        displayName={user.displayName}
+                        avatarUrl={user.avatarUrl}
+                        fallbackUrl={fallbackHeadshot}
+                        onAvatarChanged={(avatarUrl) => {
+                          setUser((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  avatarUrl,
+                                }
+                              : current
+                          );
+
+                          window.dispatchEvent(
+                            new CustomEvent(
+                              "profile-avatar-updated",
+                              {
+                                detail: {
+                                  avatarUrl,
+                                },
+                              }
+                            )
+                          );
+                        }}
+                      />
+                    ) : null}
+
+                    {activeSettingsTab === "notifications" ? (
+                      <section className="rounded-3xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
+                        <div>
+                          <h2 className="text-xl font-bold text-slate-900">
+                            Notification Settings
+                          </h2>
+
+                          <p className="mt-1 text-sm text-slate-600">
+                            Choose which league alerts you want to receive.
+                          </p>
+                        </div>
+
+                        <div className="mt-5">
+                          <PushDeviceControls />
+                        </div>
+
+                        {preferenceMessage ? (
+                          <div className="mt-4 rounded-2xl border border-sky-200 bg-white px-4 py-3 text-sm text-sky-800">
+                            {preferenceMessage}
+                          </div>
+                        ) : null}
+
+                        {isLoadingPreferences || !notificationPreferences ? (
+                          <div className="mt-4 rounded-2xl border border-dashed border-sky-300 bg-white/70 px-4 py-8 text-center text-sm text-slate-500">
+                            Loading notification settings...
+                          </div>
+                        ) : (
+                          <div className="mt-5 rounded-2xl border border-sky-200 bg-white p-4">
+                            <SettingToggle
+                              label="Enable Notifications"
+                              description="Master switch for all push notifications."
+                              checked={
+                                notificationPreferences.notificationsEnabled
+                              }
+                              disabled={isSavingPreferences}
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  notificationsEnabled: checked,
+                                })
+                              }
+                            />
+
+                            <SettingToggle
+                              label="Draft Turn"
+                              description="Notify me when it is my turn to make a pick."
+                              checked={
+                                notificationPreferences.draftTurnEnabled
+                              }
+                              disabled={
+                                isSavingPreferences ||
+                                !notificationPreferences.notificationsEnabled
+                              }
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  draftTurnEnabled: checked,
+                                })
+                              }
+                            />
+
+                            <SettingToggle
+                              label="Player Finished"
+                              description="Notify me when one of my drafted players finishes."
+                              checked={
+                                notificationPreferences.playerFinishedEnabled
+                              }
+                              disabled={
+                                isSavingPreferences ||
+                                !notificationPreferences.notificationsEnabled
+                              }
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  playerFinishedEnabled: checked,
+                                })
+                              }
+                            />
+
+                            <SettingToggle
+                              label="Slate Final"
+                              description="Notify me when the slate standings become final."
+                              checked={
+                                notificationPreferences.slateFinalEnabled
+                              }
+                              disabled={
+                                isSavingPreferences ||
+                                !notificationPreferences.notificationsEnabled
+                              }
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  slateFinalEnabled: checked,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+
+                        <p className="mt-4 text-xs leading-5 text-slate-500">
+                          These choices are saved to your league account.
+                          Push delivery also requires this device to be
+                          registered.
                         </p>
-                      </div>
+                      </section>
+                    ) : null}
 
-                      <div className="mt-5">
-                        <PushDeviceControls />
-                      </div>
-
-                      {preferenceMessage ? (
-                        <div className="mt-4 rounded-2xl border border-sky-200 bg-white px-4 py-3 text-sm text-sky-800">
-                          {preferenceMessage}
-                        </div>
-                      ) : null}
-
-                      {isLoadingPreferences || !notificationPreferences ? (
-                        <div className="mt-4 rounded-2xl border border-dashed border-sky-300 bg-white/70 px-4 py-8 text-center text-sm text-slate-500">
-                          Loading notification settings...
-                        </div>
-                      ) : (
-                        <div className="mt-5 rounded-2xl border border-sky-200 bg-white p-4">
-                          <SettingToggle
-                            label="Enable Notifications"
-                            description="Master switch for all push notifications."
-                            checked={
-                              notificationPreferences.notificationsEnabled
-                            }
-                            disabled={isSavingPreferences}
-                            onChange={(checked) =>
-                              void updateNotificationPreferences({
-                                ...notificationPreferences,
-                                notificationsEnabled: checked,
-                              })
-                            }
-                          />
-
-                          <SettingToggle
-                            label="Draft Turn"
-                            description="Notify me when it is my turn to make a pick."
-                            checked={
-                              notificationPreferences.draftTurnEnabled
-                            }
-                            disabled={
-                              isSavingPreferences ||
-                              !notificationPreferences.notificationsEnabled
-                            }
-                            onChange={(checked) =>
-                              void updateNotificationPreferences({
-                                ...notificationPreferences,
-                                draftTurnEnabled: checked,
-                              })
-                            }
-                          />
-
-                          <SettingToggle
-                            label="Player Finished"
-                            description="Notify me when one of my drafted players finishes."
-                            checked={
-                              notificationPreferences.playerFinishedEnabled
-                            }
-                            disabled={
-                              isSavingPreferences ||
-                              !notificationPreferences.notificationsEnabled
-                            }
-                            onChange={(checked) =>
-                              void updateNotificationPreferences({
-                                ...notificationPreferences,
-                                playerFinishedEnabled: checked,
-                              })
-                            }
-                          />
-
-                          <SettingToggle
-                            label="Slate Final"
-                            description="Notify me when the slate standings become final."
-                            checked={
-                              notificationPreferences.slateFinalEnabled
-                            }
-                            disabled={
-                              isSavingPreferences ||
-                              !notificationPreferences.notificationsEnabled
-                            }
-                            onChange={(checked) =>
-                              void updateNotificationPreferences({
-                                ...notificationPreferences,
-                                slateFinalEnabled: checked,
-                              })
-                            }
-                          />
-                        </div>
-                      )}
-
-                      <p className="mt-4 text-xs leading-5 text-slate-500">
-                        These choices are saved now. Push delivery will be enabled
-                        after this device is registered.
-                      </p>
-                    </section>
-
-                    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                      <h2 className="text-xl font-bold text-slate-900">
-                        Account
-                      </h2>
-
-                      <p className="mt-1 text-sm text-slate-600">
-                        Change your PIN and manage signed-in devices here later.
-                      </p>
-
-                      <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center text-sm text-slate-500">
-                        Account controls coming soon.
-                      </div>
-                    </section>
+                    {activeSettingsTab === "security" ? (
+                      <ChangePinForm />
+                    ) : null}
                   </div>
                 ) : null}
               </>
@@ -920,5 +1031,26 @@ export default function ProfilePage() {
         )}
       </div>
     </main>
+  );
+}
+
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
+          <div className="mx-auto max-w-7xl">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm text-slate-500">
+                Loading profile...
+              </div>
+            </section>
+          </div>
+        </main>
+      }
+    >
+      <ProfilePageContent />
+    </Suspense>
   );
 }

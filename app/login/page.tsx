@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("");
   const [pin, setPin] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -137,19 +138,29 @@ export default function LoginPage() {
               PIN
             </label>
 
-            <input
-              id="pin"
-              type="password"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              autoComplete="current-password"
-              value={pin}
-              onChange={(event) =>
-                setPin(event.target.value.replace(/\D/g, "").slice(0, 8))
-              }
-              placeholder="Enter PIN"
-              className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-2xl font-bold tracking-[0.4em] outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
-            />
+            <div className="relative">
+              <input
+                id="pin"
+                type={showPin ? "text" : "password"}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="current-password"
+                value={pin}
+                onChange={(event) =>
+                  setPin(event.target.value.replace(/\D/g, "").slice(0, 8))
+                }
+                placeholder="Enter PIN"
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 pr-20 text-center text-2xl font-bold tracking-[0.4em] outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPin((current) => !current)}
+                className="absolute inset-y-0 right-0 px-4 text-xs font-semibold text-sky-700 transition hover:text-sky-900"
+              >
+                {showPin ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
 
           <button

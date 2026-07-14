@@ -1,15 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import MobileAccountMenu from "@/components/MobileAccountMenu";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 type CurrentUser = {
   id: string;
   teamId: number;
   displayName: string;
   role: "player" | "admin";
+  avatarUrl: string | null;
 };
+
+function getFallbackProfileImage(displayName: string) {
+  const imageMap: Record<string, string> = {
+    mark: "/team-headshots/mark.jpg",
+    andy: "/team-headshots/andy.jpg",
+    jon: "/team-headshots/jon.jpg",
+    josh: "/team-headshots/josh.jpg",
+  };
+
+  return imageMap[displayName.trim().toLowerCase()] ?? null;
+}
 
 const mainLinks = [
   { href: "/", label: "Home", icon: "⌂" },
@@ -50,9 +67,33 @@ const desktopAdminGroups = [
   },
 ];
 
-export default function AppNav() {
+const profileLinks = [
+  {
+    href: "/profile?tab=overview",
+    label: "Overview",
+    tab: "overview",
+  },
+  {
+    href: "/profile?tab=awards",
+    label: "Awards",
+    tab: "awards",
+  },
+  {
+    href: "/profile?tab=settings",
+    label: "Settings",
+    tab: "settings",
+  },
+];
+
+function AppNavContent() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const activeProfileTab =
+    pathname.startsWith("/profile")
+      ? searchParams.get("tab") ?? "overview"
+      : null;
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
@@ -67,15 +108,41 @@ export default function AppNav() {
 
   const moreIsActive =
     pathname.startsWith("/standings") ||
-    pathname.startsWith("/player-history") ||
-    pathname.startsWith("/profile") ||
-    (isAdmin &&
-      (pathname.startsWith("/admin") || pathname.startsWith("/slates")));
+    pathname.startsWith("/player-history");
 
   const userMenuIsActive =
     pathname.startsWith("/profile") ||
     pathname.startsWith("/admin") ||
     pathname.startsWith("/slates");
+
+  useEffect(() => {
+    function handleAvatarUpdated(event: Event) {
+      const customEvent = event as CustomEvent<{
+        avatarUrl: string | null;
+      }>;
+
+      setCurrentUser((current) =>
+        current
+          ? {
+              ...current,
+              avatarUrl: customEvent.detail.avatarUrl,
+            }
+          : current
+      );
+    }
+
+    window.addEventListener(
+      "profile-avatar-updated",
+      handleAvatarUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profile-avatar-updated",
+        handleAvatarUpdated
+      );
+    };
+  }, []);
 
   useEffect(() => {
     async function loadCurrentUser() {
@@ -176,20 +243,6 @@ export default function AppNav() {
   const mobileMoreLinks = [
     { href: "/standings", label: "Standings" },
     { href: "/player-history", label: "Player History" },
-    ...(currentUser ? [{ href: "/profile", label: "Profile" }] : []),
-    ...(isAdmin
-      ? [
-          { href: "/admin", label: "Admin Home" },
-          {
-            href: "/admin/notification-templates",
-            label: "Notification Templates",
-          },
-          {
-            href: "/admin/notification-history",
-            label: "Notification History",
-          },
-        ]
-      : []),
   ];
 
   return (
@@ -236,22 +289,59 @@ export default function AppNav() {
                       : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
                   }`}
                 >
-                  👤 {currentUser.displayName} ▾
+                  <span className="flex items-center gap-2">
+                    {currentUser.avatarUrl ||
+                    getFallbackProfileImage(currentUser.displayName) ? (
+                      <img
+                        src={
+                          currentUser.avatarUrl ??
+                          getFallbackProfileImage(
+                            currentUser.displayName
+                          ) ??
+                          undefined
+                        }
+                        alt={`${currentUser.displayName} profile`}
+                        className="h-8 w-8 rounded-full object-cover ring-1 ring-white shadow-sm"
+                      />
+                    ) : (
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-200 text-xs font-bold text-sky-900">
+                        {currentUser.displayName
+                          .slice(0, 1)
+                          .toUpperCase()}
+                      </span>
+                    )}
+
+                    <span>{currentUser.displayName}</span>
+                    <span aria-hidden="true">▾</span>
+                  </span>
                 </button>
 
                 {desktopUserOpen ? (
                   <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                    <Link
-                      href="/profile"
-                      onClick={() => setDesktopUserOpen(false)}
-                      className={`block rounded-xl px-3 py-2 text-sm transition ${
-                        isLinkActive("/profile")
-                          ? "bg-sky-100 font-semibold text-sky-900"
-                          : "text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
+                    <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Profile
-                    </Link>
+                    </div>
+
+                    {profileLinks.map((link) => {
+                      const isActive =
+                        pathname.startsWith("/profile") &&
+                        activeProfileTab === link.tab;
+
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setDesktopUserOpen(false)}
+                          className={`block rounded-xl px-3 py-2 text-sm transition ${
+                            isActive
+                              ? "bg-sky-100 font-semibold text-sky-900"
+                              : "text-slate-700 hover:bg-slate-100"
+                          }`}
+                        >
+                          {link.label}
+                        </Link>
+                      );
+                    })}
 
                     {isAdmin ? (
                       <>
@@ -315,6 +405,28 @@ export default function AppNav() {
         </div>
       </nav>
 
+      {/* Global mobile account header */}
+      <nav className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
+        <Link
+          href="/"
+          className="flex min-w-0 items-center gap-3"
+          aria-label="111 Fantasy Sports home"
+        >
+          <img
+            src="/icon-192.png"
+            alt=""
+            aria-hidden="true"
+            className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-sm"
+          />
+
+          <span className="truncate text-lg font-bold tracking-tight text-slate-900">
+            111 Fantasy Sports
+          </span>
+        </Link>
+
+        <MobileAccountMenu />
+      </nav>
+
       {/* White shield behind mobile nav */}
       <div
         className="fixed bottom-[-56px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
@@ -328,24 +440,21 @@ export default function AppNav() {
       >
         {mobileMoreOpen ? (
           <div className="absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-            {currentUser ? (
-              <div className="mb-2 rounded-xl bg-slate-50 px-4 py-3">
-                <div className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Signed in as
-                </div>
-                <div className="mt-1 font-semibold text-slate-900">
-                  {currentUser.displayName}
-                </div>
-              </div>
-            ) : null}
-
             {mobileMoreLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMoreOpen(false)}
                 className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  isLinkActive(link.href)
+                  (
+                    link.href.startsWith("/profile?")
+                      ? pathname.startsWith("/profile") &&
+                        activeProfileTab ===
+                          new URLSearchParams(
+                            link.href.split("?")[1] ?? ""
+                          ).get("tab")
+                      : isLinkActive(link.href)
+                  )
                     ? "bg-sky-100 text-sky-900"
                     : "text-slate-700 hover:bg-slate-100"
                 }`}
@@ -354,36 +463,6 @@ export default function AppNav() {
               </Link>
             ))}
 
-            <div className="my-2 border-t border-slate-200" />
-
-            {currentUser ? (
-              <button
-                type="button"
-                onClick={() => void handleLogout()}
-                disabled={isLoggingOut}
-                className="block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-              >
-                {isLoggingOut ? "Logging out..." : "Logout"}
-              </button>
-            ) : (
-              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3">
-                <div className="text-sm font-semibold text-sky-900">
-                  Join your team
-                </div>
-
-                <p className="mt-1 text-xs leading-5 text-slate-600">
-                  Log in for your profile, draft alerts, and player notifications.
-                </p>
-
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMoreOpen(false)}
-                  className="mt-3 block rounded-xl bg-sky-700 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-sky-800"
-                >
-                  Log In
-                </Link>
-              </div>
-            )}
           </div>
         ) : null}
 
@@ -414,5 +493,20 @@ export default function AppNav() {
         </div>
       </div>
     </>
+  );
+}
+
+
+export default function AppNav() {
+  return (
+    <Suspense
+      fallback={
+        <nav className="mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
+          <div className="h-10" />
+        </nav>
+      }
+    >
+      <AppNavContent />
+    </Suspense>
   );
 }

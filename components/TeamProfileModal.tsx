@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 
 type TeamProfile = {
   success: boolean;
-  team: { id: number; name: string };
+  team: {
+    id: number;
+    name: string;
+    avatarUrl: string | null;
+  };
   latestSeason: number;
   selectedSeason: number | "all";
   seasonSummary: {
@@ -139,7 +143,8 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
 
   if (!team) return null;
 
-  const headshot = TEAM_HEADSHOTS[team.name];
+  const fallbackHeadshot = TEAM_HEADSHOTS[team.name];
+  const headshot = data?.team.avatarUrl ?? fallbackHeadshot;
   const hasAnyDraftPosition =
     data?.recentSlates?.some((row) => row.draftPosition !== null) ?? false;
 

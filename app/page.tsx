@@ -399,22 +399,6 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-3 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              111 NBA Fantasy Playoffs
-            </h1>
-
-            <button
-              type="button"
-              onClick={() => void loadHomeSummary()}
-              className="shrink-0 rounded-xl border border-sky-300 bg-sky-100 px-4 py-2 text-sm font-medium text-sky-900 transition hover:bg-sky-200"
-            >
-              Refresh
-            </button>
-          </div>
-        </section>
-
         <FunFactCarousel facts={funFacts} />
 
         {message ? (
@@ -467,8 +451,23 @@ export default function HomePage() {
           ) : (
             <>
               <div className="relative mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    shouldShowRefreshStats
+                      ? void handleRefreshStats()
+                      : void loadHomeSummary()
+                  }
+                  disabled={isRefreshingHomeStats || isLoading}
+                  className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
+                >
+                  {isRefreshingHomeStats || isLoading
+                    ? "Refreshing..."
+                    : "↻ Refresh"}
+                </button>
+
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
+                  <div className="pr-24 sm:pr-0">
                     <div className="text-xs uppercase tracking-wide text-orange-700">
                       {leaderLabel}
                     </div>
@@ -492,17 +491,8 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {shouldShowRefreshStats ? (
-  <button
-    type="button"
-    onClick={handleRefreshStats}
-    className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-xs font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60 sm:static sm:text-sm"
-    disabled={isRefreshingHomeStats}
-  >
-    {isRefreshingHomeStats ? "Refreshing..." : "🔄 Refresh"}
-  </button>
-) : tipoffTime ? (
-                    <div className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:static sm:block sm:min-w-[150px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
+                  {tipoffTime ? (
+                    <div className="absolute right-3 top-14 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:top-16 sm:block sm:min-w-[150px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
                       <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
                         Tip-off
                       </div>

@@ -18,6 +18,7 @@ export type AppUser = {
   teamId: number;
   displayName: string;
   role: "player" | "admin";
+  avatarUrl: string | null;
 };
 
 type AppUserRow = {
@@ -28,6 +29,7 @@ type AppUserRow = {
   pin_salt: string;
   pin_hash: string;
   is_active: boolean;
+  avatar_url: string | null;
 };
 
 type SessionRow = {
@@ -111,6 +113,27 @@ export async function deleteCurrentSession() {
   cookieStore.delete(SESSION_COOKIE_NAME);
 }
 
+export async function deleteOtherUserSessions(userId: string) {
+  const cookieStore = await cookies();
+  const rawToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!rawToken) {
+    throw new Error("Current session could not be identified.");
+  }
+
+  const currentTokenHash = hashSessionToken(rawToken);
+
+  const { error } = await supabaseAdmin
+    .from("user_sessions")
+    .delete()
+    .eq("user_id", userId)
+    .neq("token_hash", currentTokenHash);
+
+  if (error) {
+    throw new Error(`Failed to remove other sessions: ${error.message}`);
+  }
+}
+
 export async function getCurrentUser(): Promise<AppUser | null> {
   const cookieStore = await cookies();
   const rawToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -133,7 +156,8 @@ export async function getCurrentUser(): Promise<AppUser | null> {
           role,
           pin_salt,
           pin_hash,
-          is_active
+          is_active,
+          avatar_url
         )
       `
     )
@@ -170,6 +194,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     teamId: Number(relatedUser.team_id),
     displayName: relatedUser.display_name,
     role: relatedUser.role,
+    avatarUrl: relatedUser.avatar_url ?? null,
   };
 }
 

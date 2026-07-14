@@ -37,6 +37,7 @@ export async function GET(req: Request) {
       { data: players },
       { data: playerStats },
       { data: slateTeamConfigs },
+      { data: teamUser },
     ] = await Promise.all([
       supabaseAdmin.from("teams").select("id, name").eq("id", teamId).single(),
       supabaseAdmin.from("teams").select("id, name"),
@@ -59,6 +60,11 @@ export async function GET(req: Request) {
         .order("slate_id", { ascending: false })
         .range(0, 20000),
       supabaseAdmin.from("slate_team_configs").select("slate_id, team_id, draft_order, is_participating"),
+      supabaseAdmin
+        .from("app_users")
+        .select("avatar_url")
+        .eq("team_id", teamId)
+        .maybeSingle(),
     ]);
 
     const safeTeam = team ?? { id: teamId, name: "Unknown Team" };
@@ -311,6 +317,7 @@ export async function GET(req: Request) {
       team: {
         id: safeTeam.id,
         name: safeTeam.name,
+        avatarUrl: teamUser?.avatar_url ?? null,
       },
       latestSeason,
       selectedSeason: isAllTime ? "all" : selectedSeason,

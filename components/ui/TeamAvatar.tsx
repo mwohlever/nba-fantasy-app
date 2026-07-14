@@ -1,5 +1,6 @@
 type TeamAvatarProps = {
   teamName: string;
+  avatarUrl?: string | null;
   size?: "xs" | "sm" | "md" | "lg";
 };
 
@@ -10,7 +11,7 @@ const sizeMap = {
   lg: "h-14 w-14 text-lg",
 };
 
-function getTeamImage(teamName: string) {
+function getFallbackTeamImage(teamName: string) {
   const normalized = teamName.trim().toLowerCase();
 
   const map: Record<string, string> = {
@@ -25,9 +26,10 @@ function getTeamImage(teamName: string) {
 
 export default function TeamAvatar({
   teamName,
+  avatarUrl,
   size = "md",
 }: TeamAvatarProps) {
-  const imageSrc = getTeamImage(teamName);
+  const imageSrc = avatarUrl || getFallbackTeamImage(teamName);
 
   if (imageSrc) {
     return (
