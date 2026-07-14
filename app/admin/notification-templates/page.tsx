@@ -6,7 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 type NotificationTemplateType =
   | "draft_turn"
   | "draft_final_pick"
-  | "player_finished";
+  | "player_finished"
+  | "slate_complete"
+  | "slate_complete_winner";
 
 type NotificationTemplate = {
   notificationType: NotificationTemplateType;
@@ -25,12 +27,16 @@ const TEMPLATE_LABELS: Record<NotificationTemplateType, string> = {
   draft_turn: "🏀 Draft Turn",
   draft_final_pick: "🏁 Final Draft Pick",
   player_finished: "📈 Player Finished Game",
+  slate_complete: "🏆 Slate Complete",
+  slate_complete_winner: "🥇 Slate Winner",
 };
 
 const TEMPLATE_ORDER: NotificationTemplateType[] = [
   "draft_turn",
   "draft_final_pick",
   "player_finished",
+  "slate_complete",
+  "slate_complete_winner",
 ];
 
 const PREVIEW_VALUES: Record<string, string> = {
@@ -43,6 +49,11 @@ const PREVIEW_VALUES: Record<string, string> = {
   "{remainingNeeds}": "1 F/C",
   "{playerName}": "Anthony Edwards",
   "{fantasyPoints}": "46.7",
+  "{winnerName}": "Josh",
+  "{winningScore}": "247.4",
+  "{teamScore}": "231.8",
+  "{finishNumber}": "2",
+  "{finishOrdinal}": "2nd",
 };
 
 function renderPreview(value: string) {
@@ -58,6 +69,11 @@ function emptyDrafts() {
     draft_turn: { titleTemplate: "", bodyTemplate: "" },
     draft_final_pick: { titleTemplate: "", bodyTemplate: "" },
     player_finished: { titleTemplate: "", bodyTemplate: "" },
+    slate_complete: { titleTemplate: "", bodyTemplate: "" },
+    slate_complete_winner: {
+      titleTemplate: "",
+      bodyTemplate: "",
+    },
   };
 }
 

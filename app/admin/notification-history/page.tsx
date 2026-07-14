@@ -35,6 +35,7 @@ const TYPE_LABELS: Record<string, string> = {
   draft_turn: "Draft Turn",
   draft_final_pick: "Final Draft Pick",
   player_finished: "Player Finished",
+  slate_complete: "Slate Complete",
   push_test: "Push Test",
 };
 
@@ -151,6 +152,7 @@ export default function NotificationHistoryPage() {
               <option value="draft_turn">Draft Turn</option>
               <option value="draft_final_pick">Final Draft Pick</option>
               <option value="player_finished">Player Finished</option>
+              <option value="slate_complete">Slate Complete</option>
               <option value="push_test">Push Test</option>
             </select>
 

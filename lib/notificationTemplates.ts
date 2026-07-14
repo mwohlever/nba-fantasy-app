@@ -48,6 +48,40 @@ export const NOTIFICATION_TEMPLATE_DEFAULTS = {
       "{slateLabel}",
     ],
   },
+  slate_complete: {
+    notificationType: "slate_complete",
+    titleTemplate: "🏆 Slate Complete!",
+    bodyTemplate:
+      "{winnerName} wins with {winningScore} fantasy points. You finished {finishOrdinal} with {teamScore}.",
+    description:
+      "Sent to participants after a slate finishes and final standings are calculated.",
+    availablePlaceholders: [
+      "{winnerName}",
+      "{winningScore}",
+      "{teamName}",
+      "{teamScore}",
+      "{finishNumber}",
+      "{finishOrdinal}",
+      "{slateLabel}",
+    ],
+  },
+  slate_complete_winner: {
+    notificationType: "slate_complete_winner",
+    titleTemplate: "🏆 You won!",
+    bodyTemplate:
+      "You won the {slateLabel} slate with {teamScore} fantasy points!",
+    description:
+      "Sent to the participant who wins a completed slate.",
+    availablePlaceholders: [
+      "{winnerName}",
+      "{winningScore}",
+      "{teamName}",
+      "{teamScore}",
+      "{finishNumber}",
+      "{finishOrdinal}",
+      "{slateLabel}",
+    ],
+  },
 } as const;
 
 export type NotificationTemplateType =

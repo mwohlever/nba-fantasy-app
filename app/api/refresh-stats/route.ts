@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 
 type RefreshBody = {
   slateId?: number;
@@ -637,6 +638,13 @@ export async function POST(request: Request) {
 
     let slateAutoLocked = false;
 
+    let slateCompleteNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
     const slateEndDate = new Date(`${safeSlate.end_date}T23:59:59`);
     const slateHasEndedByDate = Date.now() > slateEndDate.getTime();
 
@@ -654,6 +662,27 @@ export async function POST(request: Request) {
       }
 
       slateAutoLocked = true;
+
+      try {
+        slateCompleteNotifications = await notifyCompletedSlate({
+          slate: {
+            id: safeSlate.id,
+            date: safeSlate.date,
+            start_date: safeSlate.start_date,
+            end_date: safeSlate.end_date,
+          },
+          teamResults: sortedTeamRows.map((row) => ({
+            team_id: row.team_id,
+            fantasy_points: Number(row.fantasy_points ?? 0),
+            finish_position: row.finish_position,
+          })),
+        });
+      } catch (notificationError) {
+        console.error(
+          "Slate locked, but slate-complete notifications failed",
+          notificationError
+        );
+      }
     }
 
     return NextResponse.json({
@@ -665,6 +694,7 @@ export async function POST(request: Request) {
       teamResultsUpdated: sortedTeamRows.length,
       slateAutoLocked,
       playerFinishedNotifications,
+      slateCompleteNotifications,
     });
   } catch (error) {
     console.error(error);
