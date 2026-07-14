@@ -17,12 +17,37 @@ const mainLinks = [
   { href: "/lineups/scores", label: "Scores", icon: "▦" },
 ];
 
-const desktopAdminLinks = [
-  { href: "/admin", label: "Admin Home" },
-  { href: "/admin/players", label: "Manage Players" },
-  { href: "/admin/slates", label: "Manage Slates" },
-  { href: "/admin/slate-games", label: "Slate NBA Games" },
-  { href: "/slates/new", label: "Create Slate" },
+const desktopAdminGroups = [
+  {
+    label: "Overview",
+    links: [{ href: "/admin", label: "Admin Home" }],
+  },
+  {
+    label: "Slates",
+    links: [
+      { href: "/slates/new", label: "Create Slate" },
+      { href: "/admin/slates", label: "Manage Slates" },
+      { href: "/admin/slate-games", label: "Slate NBA Games" },
+      { href: "/admin/corrections", label: "Corrections" },
+    ],
+  },
+  {
+    label: "Notifications",
+    links: [
+      {
+        href: "/admin/notification-templates",
+        label: "Notification Templates",
+      },
+      {
+        href: "/admin/notification-history",
+        label: "Notification History",
+      },
+    ],
+  },
+  {
+    label: "Players",
+    links: [{ href: "/admin/players", label: "Manage Players" }],
+  },
 ];
 
 export default function AppNav() {
@@ -152,7 +177,19 @@ export default function AppNav() {
     { href: "/standings", label: "Standings" },
     { href: "/player-history", label: "Player History" },
     ...(currentUser ? [{ href: "/profile", label: "Profile" }] : []),
-    ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+    ...(isAdmin
+      ? [
+          { href: "/admin", label: "Admin Home" },
+          {
+            href: "/admin/notification-templates",
+            label: "Notification Templates",
+          },
+          {
+            href: "/admin/notification-history",
+            label: "Notification History",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -224,19 +261,31 @@ export default function AppNav() {
                           Admin
                         </div>
 
-                        {desktopAdminLinks.map((link) => (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            onClick={() => setDesktopUserOpen(false)}
-                            className={`block rounded-xl px-3 py-2 text-sm transition ${
-                              isLinkActive(link.href)
-                                ? "bg-sky-100 font-semibold text-sky-900"
-                                : "text-slate-700 hover:bg-slate-100"
-                            }`}
-                          >
-                            {link.label}
-                          </Link>
+                        {desktopAdminGroups.map((group, groupIndex) => (
+                          <div key={group.label}>
+                            {groupIndex > 0 ? (
+                              <div className="my-2 border-t border-slate-100" />
+                            ) : null}
+
+                            <div className="px-3 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                              {group.label}
+                            </div>
+
+                            {group.links.map((link) => (
+                              <Link
+                                key={link.href}
+                                href={link.href}
+                                onClick={() => setDesktopUserOpen(false)}
+                                className={`block rounded-xl px-3 py-2 text-sm transition ${
+                                  isLinkActive(link.href)
+                                    ? "bg-sky-100 font-semibold text-sky-900"
+                                    : "text-slate-700 hover:bg-slate-100"
+                                }`}
+                              >
+                                {link.label}
+                              </Link>
+                            ))}
+                          </div>
                         ))}
                       </>
                     ) : null}

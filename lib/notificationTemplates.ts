@@ -34,6 +34,20 @@ export const NOTIFICATION_TEMPLATE_DEFAULTS = {
       "{remainingNeeds}",
     ],
   },
+  player_finished: {
+    notificationType: "player_finished",
+    titleTemplate: "🏀 {playerName} finished!",
+    bodyTemplate:
+      "{playerName} finished with {fantasyPoints} fantasy points for {teamName}.",
+    description:
+      "Sent when one of a participant's drafted players finishes a game.",
+    availablePlaceholders: [
+      "{playerName}",
+      "{fantasyPoints}",
+      "{teamName}",
+      "{slateLabel}",
+    ],
+  },
 } as const;
 
 export type NotificationTemplateType =

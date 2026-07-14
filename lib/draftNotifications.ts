@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendPushToUser, type PushResult } from "@/lib/push";
+import type { PushResult } from "@/lib/push";
+import { sendLoggedNotification } from "@/lib/notifications";
 import {
   getNotificationTemplate,
   renderNotificationTemplate,
@@ -139,6 +140,7 @@ export async function notifyNextDrafter(
       failed: 0,
       skipped: true,
       reason: "No participating teams found.",
+      devices: [],
     };
   }
 
@@ -167,6 +169,7 @@ export async function notifyNextDrafter(
       failed: 0,
       skipped: true,
       reason: "Draft is complete.",
+      devices: [],
     };
   }
 
@@ -186,6 +189,7 @@ export async function notifyNextDrafter(
       failed: 0,
       skipped: true,
       reason: "Unable to determine the next drafter.",
+      devices: [],
     };
   }
 
@@ -245,6 +249,7 @@ export async function notifyNextDrafter(
       failed: 0,
       skipped: true,
       reason: "The next team does not have an active league account.",
+      devices: [],
       nextTeamId: nextTeam.team_id,
       nextTeamName,
     };
@@ -275,6 +280,7 @@ export async function notifyNextDrafter(
       failed: 0,
       skipped: true,
       reason: "Draft-turn notifications are disabled for the next drafter.",
+      devices: [],
       nextTeamId: nextTeam.team_id,
       nextTeamName,
     };
@@ -302,17 +308,33 @@ export async function notifyNextDrafter(
     remainingNeeds: getRemainingNeeds(guardCount, fcCount),
   };
 
-  const result = await sendPushToUser(user.id, {
-    title: renderNotificationTemplate(
-      notificationTemplate.titleTemplate,
-      templateValues
-    ),
-    body: renderNotificationTemplate(
-      notificationTemplate.bodyTemplate,
-      templateValues
-    ),
+  const renderedTitle = renderNotificationTemplate(
+    notificationTemplate.titleTemplate,
+    templateValues
+  );
+
+  const renderedBody = renderNotificationTemplate(
+    notificationTemplate.bodyTemplate,
+    templateValues
+  );
+
+  const result = await sendLoggedNotification({
+    notificationType: templateType,
+    userId: user.id,
+    teamId: nextTeam.team_id,
+    slateId,
+    title: renderedTitle,
+    body: renderedBody,
     url: `/lineups/draft?slateId=${slateId}`,
     tag: `draft-turn-${slateId}`,
+    metadata: {
+      nextTeamName,
+      roundNumber,
+      roundOrdinal: getOrdinal(roundNumber),
+      overallPickNumber,
+      positionNeed: getFinalPositionNeed(guardCount, fcCount),
+      remainingNeeds: getRemainingNeeds(guardCount, fcCount),
+    },
   });
 
   return {

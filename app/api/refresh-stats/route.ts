@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 
 type RefreshBody = {
   slateId?: number;
@@ -536,6 +537,45 @@ export async function POST(request: Request) {
       );
     }
 
+    let playerFinishedNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    try {
+      playerFinishedNotifications = await notifyNewlyFinishedPlayers({
+        slate: {
+          id: safeSlate.id,
+          date: safeSlate.date,
+          start_date: safeSlate.start_date,
+          end_date: safeSlate.end_date,
+        },
+        players: players.map((player) => ({
+          id: player.id,
+          name: player.name,
+        })),
+        lineups,
+        previousStatuses: Array.from(
+          existingStatsByPlayerId.entries()
+        ).map(([playerId, row]) => ({
+          playerId,
+          gameStatus: row.game_status ?? null,
+        })),
+        currentStats: playerStatRows.map((row) => ({
+          player_id: row.player_id,
+          fantasy_points: row.fantasy_points,
+          game_status: row.game_status,
+        })),
+      });
+    } catch (notificationError) {
+      console.error(
+        "Player stats saved, but finished-player notifications failed",
+        notificationError
+      );
+    }
+
     const statsByPlayerId = new Map(
       playerStatRows.map((row) => [row.player_id, row])
     );
@@ -624,6 +664,7 @@ export async function POST(request: Request) {
       playerStatsUpdated: playerStatRows.length,
       teamResultsUpdated: sortedTeamRows.length,
       slateAutoLocked,
+      playerFinishedNotifications,
     });
   } catch (error) {
     console.error(error);

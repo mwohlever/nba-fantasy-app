@@ -3,7 +3,10 @@
 import AppNav from "@/components/AppNav";
 import { useEffect, useMemo, useState } from "react";
 
-type NotificationTemplateType = "draft_turn" | "draft_final_pick";
+type NotificationTemplateType =
+  | "draft_turn"
+  | "draft_final_pick"
+  | "player_finished";
 
 type NotificationTemplate = {
   notificationType: NotificationTemplateType;
@@ -19,13 +22,15 @@ type EditableTemplate = {
 };
 
 const TEMPLATE_LABELS: Record<NotificationTemplateType, string> = {
-  draft_turn: "Standard Draft Turn",
-  draft_final_pick: "Final Draft Pick",
+  draft_turn: "🏀 Draft Turn",
+  draft_final_pick: "🏁 Final Draft Pick",
+  player_finished: "📈 Player Finished Game",
 };
 
 const TEMPLATE_ORDER: NotificationTemplateType[] = [
   "draft_turn",
   "draft_final_pick",
+  "player_finished",
 ];
 
 const PREVIEW_VALUES: Record<string, string> = {
@@ -36,6 +41,8 @@ const PREVIEW_VALUES: Record<string, string> = {
   "{overallPickNumber}": "13",
   "{positionNeed}": "F/C",
   "{remainingNeeds}": "1 F/C",
+  "{playerName}": "Anthony Edwards",
+  "{fantasyPoints}": "46.7",
 };
 
 function renderPreview(value: string) {
@@ -44,6 +51,14 @@ function renderPreview(value: string) {
       result.replaceAll(placeholder, replacement),
     value
   );
+}
+
+function emptyDrafts() {
+  return {
+    draft_turn: { titleTemplate: "", bodyTemplate: "" },
+    draft_final_pick: { titleTemplate: "", bodyTemplate: "" },
+    player_finished: { titleTemplate: "", bodyTemplate: "" },
+  };
 }
 
 export default function NotificationTemplatesPage() {
@@ -58,18 +73,10 @@ export default function NotificationTemplatesPage() {
     Record<NotificationTemplateType, NotificationTemplate> | null
   >(null);
 
-  const [drafts, setDrafts] = useState<
-    Record<NotificationTemplateType, EditableTemplate>
-  >({
-    draft_turn: {
-      titleTemplate: "",
-      bodyTemplate: "",
-    },
-    draft_final_pick: {
-      titleTemplate: "",
-      bodyTemplate: "",
-    },
-  });
+  const [drafts, setDrafts] =
+    useState<Record<NotificationTemplateType, EditableTemplate>>(
+      emptyDrafts()
+    );
 
   const [isLoading, setIsLoading] = useState(true);
   const [savingType, setSavingType] =
@@ -110,16 +117,17 @@ export default function NotificationTemplatesPage() {
         setTemplates(templateMap);
         setDefaults(defaultMap);
 
-        setDrafts({
-          draft_turn: {
-            titleTemplate: templateMap.draft_turn.titleTemplate,
-            bodyTemplate: templateMap.draft_turn.bodyTemplate,
-          },
-          draft_final_pick: {
-            titleTemplate: templateMap.draft_final_pick.titleTemplate,
-            bodyTemplate: templateMap.draft_final_pick.bodyTemplate,
-          },
-        });
+        setDrafts(
+          Object.fromEntries(
+            TEMPLATE_ORDER.map((type) => [
+              type,
+              {
+                titleTemplate: templateMap[type].titleTemplate,
+                bodyTemplate: templateMap[type].bodyTemplate,
+              },
+            ])
+          ) as Record<NotificationTemplateType, EditableTemplate>
+        );
       } catch (error) {
         console.error(error);
         setMessage("Something went wrong while loading the templates.");
@@ -132,25 +140,14 @@ export default function NotificationTemplatesPage() {
   }, []);
 
   const unsavedChanges = useMemo(() => {
-    if (!templates) {
-      return {
-        draft_turn: false,
-        draft_final_pick: false,
-      };
-    }
-
-    return {
-      draft_turn:
-        drafts.draft_turn.titleTemplate !==
-          templates.draft_turn.titleTemplate ||
-        drafts.draft_turn.bodyTemplate !==
-          templates.draft_turn.bodyTemplate,
-      draft_final_pick:
-        drafts.draft_final_pick.titleTemplate !==
-          templates.draft_final_pick.titleTemplate ||
-        drafts.draft_final_pick.bodyTemplate !==
-          templates.draft_final_pick.bodyTemplate,
-    };
+    return Object.fromEntries(
+      TEMPLATE_ORDER.map((type) => [
+        type,
+        Boolean(templates) &&
+          (drafts[type].titleTemplate !== templates?.[type].titleTemplate ||
+            drafts[type].bodyTemplate !== templates?.[type].bodyTemplate),
+      ])
+    ) as Record<NotificationTemplateType, boolean>;
   }, [drafts, templates]);
 
   async function saveTemplate(
@@ -165,9 +162,7 @@ export default function NotificationTemplatesPage() {
 
       const response = await fetch("/api/admin/notification-templates", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           notificationType,
           titleTemplate: draft.titleTemplate,
@@ -185,10 +180,7 @@ export default function NotificationTemplatesPage() {
 
       setTemplates((current) =>
         current
-          ? {
-              ...current,
-              [notificationType]: result.template,
-            }
+          ? { ...current, [notificationType]: result.template }
           : current
       );
 
@@ -214,26 +206,20 @@ export default function NotificationTemplatesPage() {
   }
 
   function updateDraft(
-    notificationType: NotificationTemplateType,
+    type: NotificationTemplateType,
     patch: Partial<EditableTemplate>
   ) {
     setDrafts((current) => ({
       ...current,
-      [notificationType]: {
-        ...current[notificationType],
-        ...patch,
-      },
+      [type]: { ...current[type], ...patch },
     }));
   }
 
-  function appendPlaceholder(
-    notificationType: NotificationTemplateType,
-    placeholder: string
-  ) {
-    const current = drafts[notificationType].bodyTemplate;
+  function appendPlaceholder(placeholder: string) {
+    const current = drafts[activeTemplateType].bodyTemplate;
     const separator = !current || current.endsWith(" ") ? "" : " ";
 
-    updateDraft(notificationType, {
+    updateDraft(activeTemplateType, {
       bodyTemplate: `${current}${separator}${placeholder}`,
     });
   }
@@ -254,8 +240,8 @@ export default function NotificationTemplatesPage() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Choose a notification type, edit its wording, and preview how it
-            will appear.
+            Choose a notification type, edit its wording, and preview the
+            final message.
           </p>
         </section>
 
@@ -273,83 +259,50 @@ export default function NotificationTemplatesPage() {
         ) : null}
 
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="md:hidden">
-            <label className="text-sm font-semibold text-slate-700">
-              Notification type
-            </label>
+          <label className="text-sm font-semibold text-slate-700">
+            Notification type
+          </label>
 
-            <select
-              value={activeTemplateType}
-              onChange={(event) => {
-                setActiveTemplateType(
-                  event.target.value as NotificationTemplateType
-                );
-                setMessage("");
-              }}
-              className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
-            >
-              {TEMPLATE_ORDER.map((notificationType) => (
-                <option key={notificationType} value={notificationType}>
-                  {TEMPLATE_LABELS[notificationType]}
-                  {unsavedChanges[notificationType] ? " • Unsaved" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="hidden gap-2 md:flex">
-            {TEMPLATE_ORDER.map((notificationType) => {
-              const isActive = activeTemplateType === notificationType;
-              const hasChanges = unsavedChanges[notificationType];
-
-              return (
-                <button
-                  key={notificationType}
-                  type="button"
-                  onClick={() => {
-                    setActiveTemplateType(notificationType);
-                    setMessage("");
-                  }}
-                  className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                    isActive
-                      ? "bg-sky-600 text-white shadow-sm"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  {TEMPLATE_LABELS[notificationType]}
-                  {hasChanges ? " •" : ""}
-                </button>
+          <select
+            value={activeTemplateType}
+            onChange={(event) => {
+              setActiveTemplateType(
+                event.target.value as NotificationTemplateType
               );
-            })}
-          </div>
+              setMessage("");
+            }}
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+          >
+            {TEMPLATE_ORDER.map((type) => (
+              <option key={type} value={type}>
+                {TEMPLATE_LABELS[type]}
+                {unsavedChanges[type] ? " • Unsaved" : ""}
+              </option>
+            ))}
+          </select>
         </section>
 
         {isLoading || !activeTemplate || !activeDefault ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="text-sm text-slate-500">
-              Loading notification template…
-            </div>
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+            Loading notification template…
           </section>
         ) : (
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div>
-              <h2 className="text-xl font-semibold">
-                {TEMPLATE_LABELS[activeTemplateType]}
-              </h2>
+            <h2 className="text-xl font-semibold">
+              {TEMPLATE_LABELS[activeTemplateType]}
+            </h2>
 
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                {activeTemplate.description}
-              </p>
-            </div>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              {activeTemplate.description}
+            </p>
 
             <div className="mt-6 space-y-6">
               <div>
-                <label className="text-sm font-semibold text-slate-800">
+                <label className="text-sm font-semibold">
                   Notification title
                 </label>
 
                 <input
-                  type="text"
                   value={activeDraft.titleTemplate}
                   onChange={(event) =>
                     updateDraft(activeTemplateType, {
@@ -357,16 +310,12 @@ export default function NotificationTemplatesPage() {
                     })
                   }
                   maxLength={100}
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
                 />
-
-                <div className="mt-1 text-right text-xs text-slate-400">
-                  {activeDraft.titleTemplate.length}/100
-                </div>
               </div>
 
               <div>
-                <label className="text-sm font-semibold text-slate-800">
+                <label className="text-sm font-semibold">
                   Notification message
                 </label>
 
@@ -379,28 +328,22 @@ export default function NotificationTemplatesPage() {
                   }
                   maxLength={240}
                   rows={4}
-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
                 />
-
-                <div className="mt-1 text-right text-xs text-slate-400">
-                  {activeDraft.bodyTemplate.length}/240
-                </div>
               </div>
 
               <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-                <h3 className="text-sm font-semibold text-sky-950">
+                <div className="text-sm font-semibold text-sky-950">
                   Available placeholders
-                </h3>
+                </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {activeTemplate.availablePlaceholders.map((placeholder) => (
                     <button
                       key={placeholder}
                       type="button"
-                      onClick={() =>
-                        appendPlaceholder(activeTemplateType, placeholder)
-                      }
-                      className="rounded-full border border-sky-200 bg-white px-3 py-1.5 font-mono text-xs text-sky-800 transition hover:bg-sky-100"
+                      onClick={() => appendPlaceholder(placeholder)}
+                      className="rounded-full border border-sky-200 bg-white px-3 py-1.5 font-mono text-xs text-sky-800"
                     >
                       {placeholder}
                     </button>
@@ -413,15 +356,12 @@ export default function NotificationTemplatesPage() {
                   Preview
                 </div>
 
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="font-semibold text-slate-950">
-                    {renderPreview(activeDraft.titleTemplate) ||
-                      "Notification title"}
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="font-semibold">
+                    {renderPreview(activeDraft.titleTemplate)}
                   </div>
-
-                  <div className="mt-1 text-sm leading-5 text-slate-600">
-                    {renderPreview(activeDraft.bodyTemplate) ||
-                      "Notification message"}
+                  <div className="mt-1 text-sm text-slate-600">
+                    {renderPreview(activeDraft.bodyTemplate)}
                   </div>
                 </div>
               </div>
@@ -435,7 +375,7 @@ export default function NotificationTemplatesPage() {
                   disabled={
                     isSaving || !unsavedChanges[activeTemplateType]
                   }
-                  className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
                 >
                   {isSaving ? "Saving…" : "Save Changes"}
                 </button>
@@ -446,7 +386,7 @@ export default function NotificationTemplatesPage() {
                     void saveTemplate(activeTemplateType, true)
                   }
                   disabled={isSaving}
-                  className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold"
                 >
                   Restore Default
                 </button>
@@ -463,15 +403,14 @@ export default function NotificationTemplatesPage() {
                         },
                       }))
                     }
-                    disabled={isSaving}
-                    className="rounded-xl px-5 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100"
+                    className="rounded-xl px-5 py-3 text-sm font-semibold text-slate-500"
                   >
                     Discard Changes
                   </button>
                 ) : null}
               </div>
 
-              <p className="text-xs leading-5 text-slate-400">
+              <p className="text-xs text-slate-400">
                 Default: “{activeDefault.titleTemplate}” / “
                 {activeDefault.bodyTemplate}”
               </p>

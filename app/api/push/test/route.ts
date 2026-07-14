@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { sendPushToUser } from "@/lib/push";
+import { sendLoggedNotification } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 
@@ -15,11 +15,17 @@ export async function POST() {
       );
     }
 
-    const result = await sendPushToUser(user.id, {
+    const result = await sendLoggedNotification({
+      notificationType: "push_test",
+      userId: user.id,
+      teamId: user.teamId,
       title: "🏀 Push Notifications Work!",
       body: `Hey ${user.displayName}, this device is connected to 111 Fantasy.`,
       url: "/profile",
       tag: "push-test",
+      metadata: {
+        displayName: user.displayName,
+      },
     });
 
     if (result.sent === 0) {
