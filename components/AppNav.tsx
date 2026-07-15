@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import MobileAccountMenu from "@/components/MobileAccountMenu";
+import DarkModeToggle from "@/components/theme/DarkModeToggle";
 import {
   usePathname,
   useRouter,
@@ -232,20 +233,20 @@ function AppNavContent() {
   function desktopLinkClass(href: string) {
     const active = isLinkActive(href);
 
-    return `rounded-full border px-4 py-2 text-sm font-medium transition ${
+    return `app-desktop-link rounded-full border px-4 py-2 text-sm font-medium ${
       active
-        ? "border-sky-300 bg-sky-100 text-sky-900 shadow-sm"
-        : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+        ? "app-desktop-link-active border-sky-300 bg-sky-100 text-sky-900 shadow-sm"
+        : "app-desktop-link-idle border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
     }`;
   }
 
   function mobileLinkClass(href: string) {
     const active = isLinkActive(href);
 
-    return `flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium transition ${
+    return `app-mobile-nav-item flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium ${
       active
-        ? "bg-sky-100 text-sky-900"
-        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+        ? "app-mobile-nav-active bg-sky-100 text-sky-900"
+        : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"
     }`;
   }
 
@@ -257,7 +258,7 @@ function AppNavContent() {
   return (
     <>
       {/* Desktop nav only */}
-      <nav className="mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
+      <nav className="app-desktop-nav mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             {mainLinks.map((link) => (
@@ -326,7 +327,7 @@ function AppNavContent() {
                 </button>
 
                 {desktopUserOpen ? (
-                  <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                  <div className="app-dropdown-panel absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
                     <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Profile
                     </div>
@@ -352,7 +353,11 @@ function AppNavContent() {
                       );
                     })}
 
-                    {isAdmin ? (
+                    <div className="my-2 border-t border-slate-200" />
+
+              <DarkModeToggle />
+
+              {isAdmin ? (
                       <>
                         <div className="my-2 border-t border-slate-200" />
 
@@ -415,7 +420,7 @@ function AppNavContent() {
       </nav>
 
       {/* Global mobile account header */}
-      <nav className="mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
+      <nav className="app-mobile-header mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
         <Link
           href="/"
           className="flex min-w-0 items-center gap-3"
@@ -438,17 +443,17 @@ function AppNavContent() {
 
       {/* White shield behind mobile nav */}
       <div
-        className="fixed bottom-[-56px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
+        className="app-mobile-nav-shield fixed bottom-[-56px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
         aria-hidden="true"
       />
 
       {/* Mobile bottom nav only */}
       <div
         ref={mobileMoreRef}
-        className="fixed bottom-[-48px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[58px] pt-2 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
+        className="app-mobile-bottom-nav fixed bottom-[-48px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[58px] pt-2 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
       >
         {mobileMoreOpen ? (
-          <div className="absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+          <div className="app-dropdown-panel absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
             {mobileMoreLinks.map((link) => (
               <Link
                 key={link.href}
@@ -490,10 +495,10 @@ function AppNavContent() {
           <button
             type="button"
             onClick={() => setMobileMoreOpen((open) => !open)}
-            className={`flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium transition ${
+            className={`app-mobile-nav-item flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium ${
               moreIsActive
-                ? "bg-sky-100 text-sky-900"
-                : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                ? "app-mobile-nav-active bg-sky-100 text-sky-900"
+                : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"
             }`}
           >
             <span className="text-lg leading-none">⋯</span>
@@ -510,7 +515,7 @@ export default function AppNav() {
   return (
     <Suspense
       fallback={
-        <nav className="mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
+        <nav className="app-desktop-nav mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
           <div className="h-10" />
         </nav>
       }

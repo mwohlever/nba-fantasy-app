@@ -210,7 +210,7 @@ export default function TrophyCase({
   leagueAwards,
 }: Props) {
   const [activeTab, setActiveTab] =
-    useState<TrophyTab>("seasons");
+    useState<TrophyTab>("milestones");
 
   const availableAwardSeasons = [
     ...new Set(leagueAwards.map((award) => award.season)),
@@ -399,14 +399,14 @@ export default function TrophyCase({
         <div className="grid grid-cols-3 gap-2">
           {[
             {
-              id: "seasons",
-              label: "League Awards",
-              icon: "🏆",
-            },
-            {
               id: "milestones",
               label: "Milestones",
               icon: "🏅",
+            },
+            {
+              id: "seasons",
+              label: "League Awards",
+              icon: "🏆",
             },
             {
               id: "career",

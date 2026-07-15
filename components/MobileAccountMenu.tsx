@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import DarkModeToggle from "@/components/theme/DarkModeToggle";
 import {
   usePathname,
   useRouter,
@@ -259,7 +260,7 @@ function MobileAccountMenuContent() {
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 z-[10000] mt-2 max-h-[70dvh] w-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+        <div className="app-dropdown-panel absolute right-0 z-[10000] mt-2 max-h-[70dvh] w-72 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
           <div className="mb-2 flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-3">
             {imageSrc ? (
               <img
@@ -308,6 +309,10 @@ function MobileAccountMenuContent() {
               </Link>
             );
           })}
+
+          <div className="my-2 border-t border-slate-200" />
+
+          <DarkModeToggle />
 
           {currentUser.role === "admin" ? (
             <>

@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
+/*
+ * Tailwind v4 dark-mode variant controlled by next-themes.
+ * Any future dark:* utilities will respond to <html class="dark">.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #020617;
+  --foreground: #f1f5f9;
 }
 
 @theme inline {
@@ -12,17 +25,290 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--background);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+/*
+ * App-wide dark conversion.
+ *
+ * The app currently uses a consistent Slate/Sky utility palette. These
+ * overrides convert the existing classes without requiring every page to
+ * be rewritten before dark mode is usable.
+ */
+
+/* Main surfaces */
+.dark .bg-white {
+  background-color: #0f172a;
+}
+
+.dark .bg-slate-50 {
+  background-color: #020617;
+}
+
+.dark .bg-slate-100 {
+  background-color: #1e293b;
+}
+
+.dark .bg-slate-200 {
+  background-color: #334155;
+}
+
+.dark .bg-slate-300 {
+  background-color: #475569;
+}
+
+/* Text */
+.dark .text-slate-950,
+.dark .text-slate-900 {
+  color: #f8fafc;
+}
+
+.dark .text-slate-800 {
+  color: #f1f5f9;
+}
+
+.dark .text-slate-700 {
+  color: #e2e8f0;
+}
+
+.dark .text-slate-600 {
+  color: #cbd5e1;
+}
+
+.dark .text-slate-500 {
+  color: #94a3b8;
+}
+
+.dark .text-slate-400 {
+  color: #64748b;
+}
+
+.dark .text-slate-300 {
+  color: #cbd5e1;
+}
+
+/* Borders and rings */
+.dark .border-slate-100 {
+  border-color: #1e293b;
+}
+
+.dark .border-slate-200 {
+  border-color: #334155;
+}
+
+.dark .border-slate-300 {
+  border-color: #475569;
+}
+
+.dark .ring-white {
+  --tw-ring-color: #0f172a;
+}
+
+.dark .ring-sky-100 {
+  --tw-ring-color: rgb(14 116 144 / 0.35);
+}
+
+/* Sky accents */
+.dark .bg-sky-50 {
+  background-color: rgb(8 47 73 / 0.7);
+}
+
+.dark .bg-sky-100 {
+  background-color: rgb(12 74 110 / 0.7);
+}
+
+.dark .bg-sky-200 {
+  background-color: #075985;
+}
+
+.dark .text-sky-950,
+.dark .text-sky-900 {
+  color: #e0f2fe;
+}
+
+.dark .text-sky-800 {
+  color: #bae6fd;
+}
+
+.dark .text-sky-700 {
+  color: #7dd3fc;
+}
+
+.dark .border-sky-200 {
+  border-color: #075985;
+}
+
+.dark .border-sky-300,
+.dark .border-sky-400 {
+  border-color: #0284c7;
+}
+
+/* Amber and orange accents */
+.dark .bg-amber-50 {
+  background-color: rgb(69 26 3 / 0.55);
+}
+
+.dark .bg-amber-100 {
+  background-color: rgb(120 53 15 / 0.6);
+}
+
+.dark .text-amber-950,
+.dark .text-amber-900,
+.dark .text-amber-800 {
+  color: #fef3c7;
+}
+
+.dark .text-amber-700 {
+  color: #fcd34d;
+}
+
+.dark .border-amber-200,
+.dark .border-amber-300,
+.dark .border-amber-400 {
+  border-color: #b45309;
+}
+
+.dark .bg-orange-50 {
+  background-color: rgb(67 20 7 / 0.65);
+}
+
+.dark .bg-orange-100 {
+  background-color: rgb(124 45 18 / 0.6);
+}
+
+.dark .text-orange-900,
+.dark .text-orange-800 {
+  color: #ffedd5;
+}
+
+.dark .text-orange-700 {
+  color: #fdba74;
+}
+
+.dark .border-orange-200,
+.dark .border-orange-300 {
+  border-color: #c2410c;
+}
+
+/* Success states */
+.dark .bg-emerald-50 {
+  background-color: rgb(2 44 34 / 0.75);
+}
+
+.dark .bg-emerald-100 {
+  background-color: rgb(6 78 59 / 0.65);
+}
+
+.dark .bg-emerald-200 {
+  background-color: #065f46;
+}
+
+.dark .text-emerald-900,
+.dark .text-emerald-800 {
+  color: #d1fae5;
+}
+
+.dark .text-emerald-700,
+.dark .text-emerald-600 {
+  color: #6ee7b7;
+}
+
+.dark .border-emerald-200,
+.dark .border-emerald-300 {
+  border-color: #047857;
+}
+
+/* Error states */
+.dark .bg-red-50 {
+  background-color: rgb(69 10 10 / 0.7);
+}
+
+.dark .bg-red-100 {
+  background-color: rgb(127 29 29 / 0.65);
+}
+
+.dark .bg-red-200 {
+  background-color: #991b1b;
+}
+
+.dark .text-red-900,
+.dark .text-red-700 {
+  color: #fee2e2;
+}
+
+.dark .text-red-600 {
+  color: #fca5a5;
+}
+
+.dark .border-red-200,
+.dark .border-red-300 {
+  border-color: #b91c1c;
+}
+
+/* Violet achievement accents */
+.dark .text-violet-700 {
+  color: #c4b5fd;
+}
+
+.dark .border-violet-300 {
+  border-color: #7c3aed;
+}
+
+/* Inputs and browser controls */
+.dark input,
+.dark textarea,
+.dark select {
+  color: #f8fafc;
+  background-color: #0f172a;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+.dark select option {
+  color: #f8fafc;
+  background-color: #0f172a;
+}
+
+/* Hover utilities used throughout the app */
+.dark .hover\:bg-slate-50:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: #1e293b;
+}
+
+.dark .hover\:bg-sky-50:hover {
+  background-color: rgb(12 74 110 / 0.75);
+}
+
+.dark .hover\:bg-sky-100:hover {
+  background-color: rgb(3 105 161 / 0.65);
+}
+
+.dark .hover\:bg-amber-50:hover {
+  background-color: rgb(120 53 15 / 0.55);
+}
+
+.dark .hover\:bg-red-50:hover {
+  background-color: rgb(127 29 29 / 0.55);
+}
+
+/* Shadows should remain visible without looking cloudy */
+.dark .shadow-sm,
+.dark .shadow-lg,
+.dark .shadow-xl {
+  --tw-shadow-color: rgb(0 0 0 / 0.45);
 }
 
 /* Mobile fixed bottom nav safety */
@@ -52,3 +338,1438 @@ body {
     overflow-y: auto !important;
   }
 }
+
+/*
+ * Root dark-mode safeguard. next-themes applies .dark to <html>.
+ */
+html.dark,
+html.dark body {
+  background-color: #020617;
+  color: #f1f5f9;
+}
+
+/* =========================================================
+   111 FANTASY DARK MODE — PLAYOFF NIGHT POLISH
+   Midnight navy + electric blue + championship gold
+   ========================================================= */
+
+.dark body {
+  background:
+    radial-gradient(
+      circle at 15% -10%,
+      rgb(14 116 144 / 0.13),
+      transparent 30rem
+    ),
+    radial-gradient(
+      circle at 95% 10%,
+      rgb(245 158 11 / 0.08),
+      transparent 28rem
+    ),
+    #020617;
+}
+
+/* Give cards more separation from the page background. */
+.dark .bg-white {
+  background-color: #111c31;
+}
+
+.dark .bg-slate-50 {
+  background-color: #020617;
+}
+
+.dark .bg-slate-100 {
+  background-color: #1d2a42;
+}
+
+.dark .bg-slate-200 {
+  background-color: #2b3b56;
+}
+
+.dark .border-slate-100 {
+  border-color: #22314b;
+}
+
+.dark .border-slate-200 {
+  border-color: #344663;
+}
+
+.dark .border-slate-300 {
+  border-color: #49607f;
+}
+
+/* Stronger text contrast. */
+.dark .text-slate-950,
+.dark .text-slate-900 {
+  color: #f8fafc;
+}
+
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  color: #e2e8f0;
+}
+
+.dark .text-slate-600 {
+  color: #c5d1e3;
+}
+
+.dark .text-slate-500 {
+  color: #94a8c5;
+}
+
+/* Electric-blue navigation and controls. */
+.dark .bg-sky-50 {
+  background-color: rgb(5 45 72 / 0.88);
+}
+
+.dark .bg-sky-100 {
+  background:
+    linear-gradient(
+      135deg,
+      rgb(3 105 161 / 0.92),
+      rgb(8 145 178 / 0.82)
+    );
+}
+
+.dark .bg-sky-200 {
+  background-color: #0369a1;
+}
+
+.dark .border-sky-200 {
+  border-color: #0369a1;
+}
+
+.dark .border-sky-300,
+.dark .border-sky-400 {
+  border-color: #0ea5e9;
+}
+
+.dark .text-sky-950,
+.dark .text-sky-900,
+.dark .text-sky-800 {
+  color: #e0f2fe;
+}
+
+.dark .text-sky-700 {
+  color: #7dd3fc;
+}
+
+.dark .hover\:bg-sky-50:hover {
+  background-color: rgb(3 105 161 / 0.72);
+}
+
+.dark .hover\:bg-sky-100:hover {
+  background:
+    linear-gradient(
+      135deg,
+      rgb(2 132 199 / 0.95),
+      rgb(8 145 178 / 0.9)
+    );
+}
+
+/* Championship gold and playoff orange. */
+.dark .bg-amber-50 {
+  background:
+    linear-gradient(
+      145deg,
+      rgb(69 26 3 / 0.96),
+      rgb(92 36 5 / 0.88)
+    );
+}
+
+.dark .bg-amber-100 {
+  background:
+    linear-gradient(
+      135deg,
+      rgb(180 83 9 / 0.85),
+      rgb(217 119 6 / 0.75)
+    );
+}
+
+.dark .border-amber-200,
+.dark .border-amber-300,
+.dark .border-amber-400 {
+  border-color: #f59e0b;
+}
+
+.dark .text-amber-950,
+.dark .text-amber-900,
+.dark .text-amber-800 {
+  color: #fef3c7;
+}
+
+.dark .text-amber-700 {
+  color: #fbbf24;
+}
+
+.dark .text-amber-300 {
+  color: #fcd34d;
+}
+
+.dark .bg-orange-50,
+.dark .bg-orange-50\/50 {
+  background:
+    linear-gradient(
+      135deg,
+      rgb(67 20 7 / 0.96),
+      rgb(88 28 5 / 0.9)
+    );
+}
+
+.dark .bg-orange-100 {
+  background-color: rgb(154 52 18 / 0.72);
+}
+
+.dark .border-orange-200,
+.dark .border-orange-300 {
+  border-color: #f97316;
+}
+
+.dark .text-orange-900,
+.dark .text-orange-800 {
+  color: #ffedd5;
+}
+
+.dark .text-orange-700 {
+  color: #fb923c;
+}
+
+/*
+ * Winner/leader rows currently use bg-orange-50/50.
+ * Give them a warm highlight instead of a flat gray appearance.
+ */
+.dark tr.bg-orange-50\/50 {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(120 53 15 / 0.72),
+      rgb(67 20 7 / 0.4)
+    );
+  box-shadow: inset 4px 0 0 #f59e0b;
+}
+
+.dark tr.bg-orange-50\/50 td {
+  color: #fff7ed;
+}
+
+/* Make score links and projections pop against dark rows. */
+.dark table .text-sky-700 {
+  color: #7dd3fc;
+}
+
+.dark table .font-semibold.text-sky-700 {
+  color: #38bdf8;
+}
+
+/* Richer success indicators. */
+.dark .bg-emerald-50 {
+  background-color: rgb(2 70 54 / 0.82);
+}
+
+.dark .bg-emerald-100 {
+  background-color: rgb(4 120 87 / 0.68);
+}
+
+.dark .border-emerald-200,
+.dark .border-emerald-300 {
+  border-color: #10b981;
+}
+
+.dark .text-emerald-900,
+.dark .text-emerald-800,
+.dark .text-emerald-700,
+.dark .text-emerald-600 {
+  color: #6ee7b7;
+}
+
+.dark .ring-emerald-100 {
+  --tw-ring-color: rgb(52 211 153 / 0.55);
+}
+
+/* Ticker-style sky cards should feel energetic. */
+.dark .border-sky-200.bg-sky-50,
+.dark .border-sky-300.bg-sky-50 {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(5 45 72 / 0.98),
+      rgb(6 60 82 / 0.92)
+    );
+  border-color: #0891b2;
+  box-shadow:
+    0 0 0 1px rgb(34 211 238 / 0.08),
+    0 8px 24px rgb(0 0 0 / 0.22);
+}
+
+/* More dimensional controls and cards. */
+.dark .shadow-sm {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 8px 20px rgb(0 0 0 / 0.12);
+}
+
+.dark .shadow-lg,
+.dark .shadow-xl {
+  box-shadow:
+    0 16px 40px rgb(0 0 0 / 0.42),
+    0 0 0 1px rgb(255 255 255 / 0.025);
+}
+
+/* Keep dropdowns and form controls distinct from card surfaces. */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: #0b1426;
+  border-color: #455a78;
+}
+
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgb(14 165 233 / 0.14);
+}
+
+/* Better dark button surfaces where bg-white is used intentionally. */
+.dark button.bg-white,
+.dark a.bg-white {
+  background-color: #15233a;
+}
+
+.dark button.bg-white:hover,
+.dark a.bg-white:hover {
+  background-color: #1d304d;
+}
+
+.dark .home-current-slate {
+  background:
+    linear-gradient(
+      145deg,
+      rgb(17 28 49 / 0.98),
+      rgb(12 23 42 / 0.98)
+    );
+  border-color: #3a4d6c;
+}
+
+.dark .home-winner-card {
+  background:
+    radial-gradient(
+      circle at 92% 15%,
+      rgb(245 158 11 / 0.18),
+      transparent 12rem
+    ),
+    linear-gradient(
+      135deg,
+      #40170a,
+      #5a2108
+    );
+  border-color: #f97316;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.04),
+    0 10px 28px rgb(120 53 15 / 0.22);
+}
+
+.dark .home-winner-card .text-orange-700 {
+  color: #fbbf24;
+}
+
+.dark .home-winner-card .text-slate-900 {
+  color: #fff7ed;
+}
+
+.dark .home-winner-card .text-slate-600 {
+  color: #fed7aa;
+}
+
+/* =========================================================
+   111 FANTASY SPORTS DESIGN SYSTEM
+   ========================================================= */
+
+:root {
+  --app-page: #f8fafc;
+  --app-surface: #ffffff;
+  --app-surface-raised: #ffffff;
+  --app-surface-soft: #f1f5f9;
+  --app-border: #e2e8f0;
+  --app-border-strong: #cbd5e1;
+
+  --app-text: #0f172a;
+  --app-text-soft: #475569;
+  --app-text-muted: #64748b;
+
+  --app-blue: #0284c7;
+  --app-blue-bright: #38bdf8;
+  --app-blue-soft: #e0f2fe;
+
+  --app-gold: #eab308;
+  --app-gold-bright: #facc15;
+  --app-orange: #f97316;
+  --app-orange-bright: #fb923c;
+
+  --app-success: #10b981;
+  --app-danger: #ef4444;
+
+  --app-shadow-card:
+    0 1px 2px rgb(15 23 42 / 0.06),
+    0 10px 28px rgb(15 23 42 / 0.06);
+
+  --app-shadow-raised:
+    0 12px 34px rgb(15 23 42 / 0.12);
+
+  --app-shadow-blue:
+    0 0 0 1px rgb(56 189 248 / 0.12),
+    0 10px 30px rgb(2 132 199 / 0.18);
+
+  --app-shadow-gold:
+    0 0 0 1px rgb(250 204 21 / 0.14),
+    0 12px 34px rgb(245 158 11 / 0.22);
+}
+
+html.dark {
+  --app-page: #070d1b;
+  --app-surface: #111c31;
+  --app-surface-raised: #17243b;
+  --app-surface-soft: #1d2a42;
+  --app-border: #344663;
+  --app-border-strong: #49607f;
+
+  --app-text: #f8fafc;
+  --app-text-soft: #cbd5e1;
+  --app-text-muted: #94a3b8;
+
+  --app-blue: #0ea5e9;
+  --app-blue-bright: #38bdf8;
+  --app-blue-soft: #083b5c;
+
+  --app-gold: #facc15;
+  --app-gold-bright: #fde047;
+  --app-orange: #f97316;
+  --app-orange-bright: #fb923c;
+
+  --app-success: #34d399;
+  --app-danger: #f87171;
+
+  --app-shadow-card:
+    0 1px 2px rgb(0 0 0 / 0.35),
+    0 12px 30px rgb(0 0 0 / 0.2);
+
+  --app-shadow-raised:
+    0 18px 48px rgb(0 0 0 / 0.42);
+
+  --app-shadow-blue:
+    0 0 0 1px rgb(56 189 248 / 0.2),
+    0 12px 34px rgb(14 165 233 / 0.2);
+
+  --app-shadow-gold:
+    0 0 0 1px rgb(250 204 21 / 0.22),
+    0 14px 38px rgb(249 115 22 / 0.2);
+}
+
+/* Shared surfaces */
+
+.app-surface {
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-card);
+}
+
+.app-surface-raised {
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-raised);
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-raised);
+}
+
+.app-interactive {
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+@media (hover: hover) {
+  .app-interactive:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.app-interactive:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Desktop navigation */
+
+.app-desktop-nav {
+  border-color: var(--app-border);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--app-surface-raised) 96%, transparent),
+      color-mix(in srgb, var(--app-surface) 96%, transparent)
+    );
+  box-shadow: var(--app-shadow-card);
+}
+
+.app-desktop-link {
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+@media (hover: hover) {
+  .app-desktop-link:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.dark .app-desktop-link-active {
+  border-color: #38bdf8 !important;
+  background:
+    linear-gradient(
+      135deg,
+      rgb(2 132 199 / 0.92),
+      rgb(8 145 178 / 0.82)
+    ) !important;
+  color: #ffffff !important;
+  box-shadow: var(--app-shadow-blue);
+}
+
+.dark .app-desktop-link-idle {
+  border-color: var(--app-border) !important;
+  background: #15233a !important;
+  color: #dbeafe !important;
+}
+
+.dark .app-desktop-link-idle:hover {
+  border-color: #0ea5e9 !important;
+  background: #1c3150 !important;
+  color: #ffffff !important;
+}
+
+/* Global mobile header */
+
+.app-mobile-header {
+  border-color: var(--app-border);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--app-surface-raised) 98%, transparent),
+      color-mix(in srgb, var(--app-surface) 98%, transparent)
+    );
+  box-shadow: var(--app-shadow-card);
+}
+
+.dark .app-mobile-header {
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 0.24),
+    inset 0 -1px 0 rgb(56 189 248 / 0.05);
+}
+
+/* Mobile bottom navigation */
+
+.app-mobile-nav-shield {
+  background: var(--app-surface-raised);
+}
+
+.app-mobile-bottom-nav {
+  border-color: var(--app-border-strong);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--app-surface-raised) 99%, transparent),
+      color-mix(in srgb, var(--app-surface) 99%, transparent)
+    );
+  box-shadow:
+    0 -1px 0 rgb(255 255 255 / 0.03),
+    0 -14px 34px rgb(2 6 23 / 0.2);
+}
+
+.dark .app-mobile-bottom-nav {
+  border-top-color: #49607f;
+  background:
+    linear-gradient(
+      180deg,
+      #1b2b45 0%,
+      #132139 70%,
+      #101c31 100%
+    );
+  box-shadow:
+    0 -1px 0 rgb(56 189 248 / 0.14),
+    0 -16px 42px rgb(0 0 0 / 0.5);
+}
+
+.app-mobile-nav-item {
+  position: relative;
+  min-height: 52px;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.app-mobile-nav-item:active {
+  transform: scale(0.96);
+}
+
+.dark .app-mobile-nav-idle {
+  color: #a8b8ce !important;
+}
+
+.dark .app-mobile-nav-idle:hover {
+  background: #213452 !important;
+  color: #ffffff !important;
+}
+
+.dark .app-mobile-nav-active {
+  background:
+    linear-gradient(
+      145deg,
+      rgb(2 132 199 / 0.96),
+      rgb(8 145 178 / 0.88)
+    ) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 0 0 1px rgb(125 211 252 / 0.28),
+    0 6px 20px rgb(14 165 233 / 0.3);
+}
+
+.dark .app-mobile-nav-active::after {
+  position: absolute;
+  right: 22%;
+  bottom: 2px;
+  left: 22%;
+  height: 2px;
+  border-radius: 999px;
+  background: #fde047;
+  box-shadow: 0 0 10px rgb(250 204 21 / 0.65);
+  content: "";
+}
+
+/* Dropdown panels */
+
+.app-dropdown-panel {
+  border-color: var(--app-border);
+  background: var(--app-surface-raised);
+  box-shadow: var(--app-shadow-raised);
+}
+
+.dark .app-dropdown-panel {
+  background:
+    linear-gradient(
+      145deg,
+      #17243b,
+      #111c31
+    );
+}
+
+/* Respect reduced-motion preferences */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-interactive,
+  .app-desktop-link,
+  .app-mobile-nav-item {
+    transition: none !important;
+  }
+
+  .app-interactive:hover,
+  .app-desktop-link:hover {
+    transform: none !important;
+  }
+}
+
+/* =========================================================
+   HOME — CHAMPIONSHIP PRESENTATION
+   ========================================================= */
+
+.dark .home-winner-card {
+  background:
+    radial-gradient(
+      circle at 88% 10%,
+      rgb(253 224 71 / 0.22),
+      transparent 11rem
+    ),
+    radial-gradient(
+      circle at 12% 100%,
+      rgb(251 146 60 / 0.16),
+      transparent 14rem
+    ),
+    linear-gradient(
+      135deg,
+      #7c2d12 0%,
+      #a43f08 48%,
+      #c4510a 100%
+    );
+  border: 2px solid #fb923c;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 0 0 1px rgb(250 204 21 / 0.12),
+    0 16px 38px rgb(249 115 22 / 0.25);
+}
+
+.dark .home-winner-card .text-orange-700 {
+  color: #fde047;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.dark .home-winner-name {
+  color: #fff4bd !important;
+  text-shadow:
+    0 1px 0 rgb(0 0 0 / 0.2),
+    0 0 18px rgb(250 204 21 / 0.15);
+}
+
+.dark .home-winner-name:hover {
+  color: #ffffff !important;
+}
+
+.dark .home-winner-card .text-slate-600 {
+  color: #ffedd5;
+}
+
+.dark .home-winner-row {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(120 53 15 / 0.48),
+      rgb(17 28 49 / 0.55) 55%,
+      rgb(17 28 49 / 0.9)
+    ) !important;
+  box-shadow:
+    inset 6px 0 0 #facc15,
+    inset 0 1px 0 rgb(250 204 21 / 0.08);
+}
+
+.dark .home-winner-row td:first-child {
+  color: #fef3c7;
+  font-weight: 700;
+}
+
+/* Refresh gets an electric-blue raised treatment. */
+.dark .home-winner-card button.border-sky-200 {
+  border-color: #38bdf8;
+  background:
+    linear-gradient(
+      145deg,
+      #153150,
+      #0b233c
+    );
+  color: #e0f2fe;
+  box-shadow:
+    0 0 0 1px rgb(56 189 248 / 0.12),
+    0 8px 22px rgb(2 132 199 / 0.2);
+}
+
+@media (hover: hover) {
+  .dark .home-winner-card button.border-sky-200:hover {
+    transform: translateY(-1px);
+    background:
+      linear-gradient(
+        145deg,
+        #075985,
+        #0c4a6e
+      );
+    box-shadow:
+      0 0 0 1px rgb(125 211 252 / 0.24),
+      0 10px 28px rgb(14 165 233 / 0.28);
+  }
+}
+
+/* =========================================================
+   FINAL HOME WINNER OVERRIDE
+   Intentionally last so older experiments cannot override it.
+   ========================================================= */
+
+html.dark .home-winner-card {
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      rgb(254 240 138 / 0.42) 0,
+      rgb(251 191 36 / 0.18) 18%,
+      transparent 38%
+    ),
+    linear-gradient(
+      118deg,
+      #9a3412 0%,
+      #c2410c 42%,
+      #ea580c 72%,
+      #f97316 100%
+    ) !important;
+
+  border: 2px solid #fb923c !important;
+
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 0 0 1px rgb(250 204 21 / 0.22),
+    0 12px 34px rgb(249 115 22 / 0.3) !important;
+}
+
+html.dark .home-winner-card .text-orange-700 {
+  color: #fef08a !important;
+  font-weight: 900;
+  text-shadow: 0 1px 8px rgb(69 26 3 / 0.55);
+}
+
+html.dark .home-winner-card .home-winner-name {
+  color: #ffffff !important;
+  text-shadow:
+    0 2px 3px rgb(67 20 7 / 0.4),
+    0 0 18px rgb(254 240 138 / 0.22);
+}
+
+html.dark .home-winner-card .text-slate-600 {
+  color: #ffedd5 !important;
+}
+
+html.dark .home-winner-row {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(194 65 12 / 0.62) 0%,
+      rgb(124 45 18 / 0.38) 34%,
+      rgb(17 28 49 / 0.92) 78%
+    ) !important;
+
+  box-shadow:
+    inset 7px 0 0 #facc15,
+    inset 0 1px 0 rgb(253 224 71 / 0.12) !important;
+}
+
+html.dark .home-winner-row td:first-child {
+  color: #fef3c7 !important;
+  font-weight: 800;
+}
+
+/* =========================================================
+   SCOREBOARD EMPHASIS
+   Make the fantasy scores the visual focus.
+   ========================================================= */
+
+.dark .home-current-slate table tbody td:nth-child(2),
+.dark .home-current-slate table tbody td:nth-child(3) {
+  color: #f8fafc !important;
+  font-weight: 800;
+  font-size: 1.18rem;
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+/* First-place scores become championship gold */
+
+.dark .home-winner-row td:nth-child(2),
+.dark .home-winner-row td:nth-child(3) {
+  color: #fde047 !important;
+  text-shadow:
+    0 0 10px rgb(250 204 21 / 0.28),
+    0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+/* Player names slightly de-emphasized */
+
+.dark .home-current-slate table tbody td:first-child {
+  color: #dbeafe;
+  font-size: 1.08rem;
+}
+
+/* Games remain bold but secondary */
+
+.dark .home-current-slate table tbody td:last-child {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+/* Header labels */
+
+.dark .home-current-slate table thead th {
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.dark .home-current-slate table thead th span,
+.dark .home-current-slate table thead small {
+  color: #94a3b8;
+}
+
+/* =========================================================
+   SCORE EMPHASIS
+   ========================================================= */
+
+/* Fantasy points should be the star of the table */
+
+.dark .home-current-slate tbody td:nth-child(2),
+.dark .home-current-slate tbody td:nth-child(3) {
+  color: #f8fafc !important;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+/* Winning scores get championship gold */
+
+.dark .home-winner-row td:nth-child(2),
+.dark .home-winner-row td:nth-child(3) {
+  color: #fde047 !important;
+  text-shadow:
+    0 0 10px rgb(250 204 21 / 0.28),
+    0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+/* Player names become secondary */
+
+.dark .home-current-slate tbody td:first-child {
+  color: #dbeafe;
+  font-size: 1.05rem;
+}
+
+/* Games stay bold but don't compete with Score */
+
+.dark .home-current-slate tbody td:last-child {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+
+/* =========================================================
+   TABLE HEADER POLISH
+   ========================================================= */
+
+.dark .home-current-slate thead {
+  background:
+    linear-gradient(
+      180deg,
+      #253652,
+      #22314b
+    );
+}
+
+.dark .home-current-slate thead th {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.dark .home-current-slate thead th small,
+.dark .home-current-slate thead th span {
+  color: #94a3b8;
+}
+
+
+/* =========================================================
+   HOME ACTION BUTTONS
+   Match View Scores with the electric-blue Refresh treatment.
+   ========================================================= */
+
+.dark .home-current-slate > div:first-child > a {
+  border-color: #38bdf8 !important;
+  background:
+    linear-gradient(
+      145deg,
+      #153150,
+      #0b233c
+    ) !important;
+  color: #e0f2fe !important;
+  box-shadow:
+    0 0 0 1px rgb(56 189 248 / 0.12),
+    0 8px 22px rgb(2 132 199 / 0.18);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    box-shadow 150ms ease;
+}
+
+@media (hover: hover) {
+  .dark .home-current-slate > div:first-child > a:hover {
+    transform: translateY(-1px);
+    border-color: #7dd3fc !important;
+    background:
+      linear-gradient(
+        145deg,
+        #075985,
+        #0c4a6e
+      ) !important;
+    color: #ffffff !important;
+    box-shadow:
+      0 0 0 1px rgb(125 211 252 / 0.24),
+      0 10px 28px rgb(14 165 233 / 0.28);
+  }
+}
+
+.dark .home-current-slate > div:first-child > a:active {
+  transform: scale(0.98);
+}
+
+/* =========================================================
+   111 FANTASY — LIGHT MODE POLISH
+   Same hierarchy as dark mode, adapted for daylight.
+   ========================================================= */
+
+/* Page and surface depth */
+
+html:not(.dark) body {
+  background:
+    radial-gradient(
+      circle at 12% -8%,
+      rgb(14 165 233 / 0.08),
+      transparent 28rem
+    ),
+    radial-gradient(
+      circle at 94% 8%,
+      rgb(249 115 22 / 0.06),
+      transparent 26rem
+    ),
+    #f8fafc;
+}
+
+html:not(.dark) .app-desktop-nav,
+html:not(.dark) .app-mobile-header {
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff,
+      #f8fbff
+    );
+  border-color: #dbe5f1;
+}
+
+html:not(.dark) .app-desktop-link-active {
+  border-color: #38bdf8 !important;
+  background:
+    linear-gradient(
+      135deg,
+      #e0f2fe,
+      #bae6fd
+    ) !important;
+  color: #075985 !important;
+  box-shadow:
+    0 0 0 1px rgb(56 189 248 / 0.12),
+    0 8px 20px rgb(2 132 199 / 0.12);
+}
+
+html:not(.dark) .app-desktop-link-idle {
+  background: #ffffff !important;
+  color: #334155 !important;
+}
+
+/* Mobile navigation */
+
+html:not(.dark) .app-mobile-bottom-nav {
+  border-top-color: #cbd5e1;
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #f8fafc 100%
+    );
+  box-shadow:
+    0 -1px 0 rgb(255 255 255 / 0.8),
+    0 -14px 32px rgb(15 23 42 / 0.12);
+}
+
+html:not(.dark) .app-mobile-nav-shield {
+  background: #f8fafc;
+}
+
+html:not(.dark) .app-mobile-nav-active {
+  background:
+    linear-gradient(
+      145deg,
+      #e0f2fe,
+      #bae6fd
+    ) !important;
+  color: #075985 !important;
+  box-shadow:
+    0 0 0 1px rgb(14 165 233 / 0.18),
+    0 7px 18px rgb(2 132 199 / 0.13);
+}
+
+html:not(.dark) .app-mobile-nav-active::after {
+  position: absolute;
+  right: 22%;
+  bottom: 2px;
+  left: 22%;
+  height: 3px;
+  border-radius: 999px;
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgb(245 158 11 / 0.35);
+  content: "";
+}
+
+html:not(.dark) .app-mobile-nav-idle {
+  color: #64748b !important;
+}
+
+/* =========================================================
+   HOME — LIGHT CHAMPIONSHIP PRESENTATION
+   ========================================================= */
+
+html:not(.dark) .home-current-slate {
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #fbfdff
+    );
+  border-color: #dbe5f1;
+}
+
+html:not(.dark) .home-winner-card {
+  background:
+    radial-gradient(
+      circle at 90% 10%,
+      rgb(254 240 138 / 0.85),
+      transparent 11rem
+    ),
+    linear-gradient(
+      118deg,
+      #fff7ed 0%,
+      #ffedd5 40%,
+      #fed7aa 72%,
+      #fdba74 100%
+    ) !important;
+
+  border: 2px solid #fb923c !important;
+
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 0 0 1px rgb(245 158 11 / 0.1),
+    0 12px 30px rgb(249 115 22 / 0.16) !important;
+}
+
+html:not(.dark) .home-winner-card .text-orange-700 {
+  color: #c2410c !important;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+html:not(.dark) .home-winner-card .home-winner-name {
+  color: #172554 !important;
+  text-shadow: none;
+}
+
+html:not(.dark) .home-winner-card .home-winner-name:hover {
+  color: #075985 !important;
+}
+
+html:not(.dark) .home-winner-card .text-slate-600 {
+  color: #9a3412 !important;
+}
+
+/* Refresh button */
+
+html:not(.dark) .home-winner-card button.border-sky-200 {
+  border-color: #0ea5e9 !important;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #e0f2fe
+    ) !important;
+  color: #075985 !important;
+  box-shadow:
+    0 0 0 1px rgb(14 165 233 / 0.08),
+    0 7px 18px rgb(2 132 199 / 0.12);
+}
+
+@media (hover: hover) {
+  html:not(.dark) .home-winner-card button.border-sky-200:hover {
+    transform: translateY(-1px);
+    border-color: #0284c7 !important;
+    background:
+      linear-gradient(
+        145deg,
+        #e0f2fe,
+        #bae6fd
+      ) !important;
+    box-shadow:
+      0 0 0 1px rgb(14 165 233 / 0.15),
+      0 9px 24px rgb(2 132 199 / 0.16);
+  }
+}
+
+/* View Scores button */
+
+html:not(.dark) .home-current-slate > div:first-child > a {
+  border-color: #38bdf8 !important;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #e0f2fe
+    ) !important;
+  color: #075985 !important;
+  box-shadow:
+    0 0 0 1px rgb(56 189 248 / 0.08),
+    0 7px 18px rgb(2 132 199 / 0.1);
+}
+
+@media (hover: hover) {
+  html:not(.dark) .home-current-slate > div:first-child > a:hover {
+    transform: translateY(-1px);
+    border-color: #0284c7 !important;
+    background:
+      linear-gradient(
+        145deg,
+        #e0f2fe,
+        #bae6fd
+      ) !important;
+    color: #075985 !important;
+    box-shadow:
+      0 9px 24px rgb(2 132 199 / 0.15);
+  }
+}
+
+/* =========================================================
+   LIGHT SCOREBOARD EMPHASIS
+   ========================================================= */
+
+html:not(.dark) .home-current-slate table tbody td:nth-child(2),
+html:not(.dark) .home-current-slate table tbody td:nth-child(3) {
+  color: #0f172a !important;
+  font-size: 1.15rem;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+html:not(.dark) .home-winner-row {
+  background:
+    linear-gradient(
+      90deg,
+      #fef3c7 0%,
+      #fff7ed 42%,
+      #ffffff 100%
+    ) !important;
+
+  box-shadow:
+    inset 7px 0 0 #f59e0b,
+    inset 0 1px 0 rgb(245 158 11 / 0.1) !important;
+}
+
+html:not(.dark) .home-winner-row td:first-child {
+  color: #78350f !important;
+  font-weight: 800;
+}
+
+html:not(.dark) .home-winner-row td:nth-child(2),
+html:not(.dark) .home-winner-row td:nth-child(3) {
+  color: #b45309 !important;
+  font-weight: 900;
+}
+
+html:not(.dark) .home-current-slate table tbody td:first-child {
+  color: #1e3a5f;
+  font-size: 1.05rem;
+}
+
+html:not(.dark) .home-current-slate table tbody td:last-child {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+/* Table header */
+
+html:not(.dark) .home-current-slate thead {
+  background:
+    linear-gradient(
+      180deg,
+      #eaf2fb,
+      #e2e8f0
+    );
+}
+
+html:not(.dark) .home-current-slate thead th {
+  color: #1e293b;
+  font-weight: 750;
+}
+
+html:not(.dark) .home-current-slate thead th span,
+html:not(.dark) .home-current-slate thead th small {
+  color: #64748b;
+}
+
+/* Keep score links visually important rather than link-like */
+
+html:not(.dark)
+  .home-current-slate
+  table
+  tbody
+  td:nth-child(2)
+  button {
+  color: inherit !important;
+  font: inherit;
+}
+
+html:not(.dark)
+  .home-current-slate
+  table
+  tbody
+  td:nth-child(2)
+  button:hover {
+  color: #0369a1 !important;
+}
+
+/* Subtle row hover without overwhelming the winner */
+
+@media (hover: hover) {
+  html:not(.dark)
+    .home-current-slate
+    tbody
+    tr:not(.home-winner-row):hover {
+    background-color: #f0f9ff;
+  }
+}
+
+/* =========================================================
+   FINAL LIGHT-MODE HOME OVERRIDES
+   Kept last to beat existing Tailwind utility colors.
+   ========================================================= */
+
+html.light .home-winner-card,
+html:not(.dark) .home-winner-card {
+  background:
+    radial-gradient(
+      circle at 88% 10%,
+      rgb(254 240 138 / 0.8),
+      transparent 12rem
+    ),
+    linear-gradient(
+      118deg,
+      #ffedd5 0%,
+      #fed7aa 45%,
+      #fdba74 75%,
+      #fb923c 100%
+    ) !important;
+
+  border: 2px solid #f97316 !important;
+
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.75),
+    0 0 0 1px rgb(245 158 11 / 0.12),
+    0 12px 30px rgb(249 115 22 / 0.18) !important;
+}
+
+html.light .home-winner-card .text-orange-700,
+html:not(.dark) .home-winner-card .text-orange-700 {
+  color: #9a3412 !important;
+  font-weight: 900;
+}
+
+html.light .home-winner-card .home-winner-name,
+html:not(.dark) .home-winner-card .home-winner-name {
+  color: #172554 !important;
+}
+
+html.light .home-winner-card .text-slate-600,
+html:not(.dark) .home-winner-card .text-slate-600 {
+  color: #7c2d12 !important;
+}
+
+/* Score and projection are the primary table values. */
+
+html.light .home-current-slate tbody td:nth-child(2),
+html.light .home-current-slate tbody td:nth-child(3),
+html:not(.dark) .home-current-slate tbody td:nth-child(2),
+html:not(.dark) .home-current-slate tbody td:nth-child(3) {
+  color: #0f172a !important;
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+}
+
+html.light .home-current-slate tbody td:nth-child(2) button,
+html:not(.dark) .home-current-slate tbody td:nth-child(2) button {
+  color: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* Championship treatment for the first-place row. */
+
+html.light .home-winner-row,
+html:not(.dark) .home-winner-row {
+  background:
+    linear-gradient(
+      90deg,
+      #fef3c7 0%,
+      #fff7ed 46%,
+      #ffffff 100%
+    ) !important;
+
+  box-shadow:
+    inset 7px 0 0 #f59e0b,
+    inset 0 1px 0 rgb(245 158 11 / 0.12) !important;
+}
+
+html.light .home-winner-row td:first-child,
+html:not(.dark) .home-winner-row td:first-child {
+  color: #78350f !important;
+  font-weight: 800 !important;
+}
+
+html.light .home-winner-row td:nth-child(2),
+html.light .home-winner-row td:nth-child(3),
+html:not(.dark) .home-winner-row td:nth-child(2),
+html:not(.dark) .home-winner-row td:nth-child(3) {
+  color: #b45309 !important;
+  font-weight: 900 !important;
+}
+
+html.light .home-winner-row td:nth-child(2) button,
+html:not(.dark) .home-winner-row td:nth-child(2) button {
+  color: #b45309 !important;
+  font-weight: 900 !important;
+}
+
+/* =========================================================
+   FINAL LIGHT WINNER CARD
+   Softer, premium championship treatment.
+   ========================================================= */
+
+html.light .home-winner-card,
+html:not(.dark) .home-winner-card {
+  background:
+    radial-gradient(
+      circle at 90% 12%,
+      rgb(254 240 138 / 0.32),
+      transparent 13rem
+    ),
+    linear-gradient(
+      115deg,
+      #fffaf3 0%,
+      #fff4e5 42%,
+      #ffe8c7 78%,
+      #ffd6a0 100%
+    ) !important;
+
+  border: 2px solid #fb923c !important;
+
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    0 0 0 1px rgb(251 146 60 / 0.10),
+    0 10px 24px rgb(249 115 22 / 0.10) !important;
+}
+
+html.light .home-winner-card .text-orange-700,
+html:not(.dark) .home-winner-card .text-orange-700 {
+  color: #b45309 !important;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+html.light .home-winner-card .home-winner-name,
+html:not(.dark) .home-winner-card .home-winner-name {
+  color: #172554 !important;
+  text-shadow: none;
+}
+
+html.light .home-winner-card .text-slate-600,
+html:not(.dark) .home-winner-card .text-slate-600 {
+  color: #7c2d12 !important;
+}
+

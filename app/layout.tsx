@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import ThemeProvider from "@/components/theme/ThemeProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,10 +13,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   manifest: "/manifest.json",
-  title: "NBA Fantasy Playoffs",
-  description: "Fantasy NBA playoffs tracker, lineups, standings, and stats",
+  title: "111 Fantasy Sports",
+  description:
+    "Fantasy NBA playoffs tracker, lineups, standings, profiles, and stats",
 };
 
 export default function RootLayout({
@@ -26,9 +28,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }

@@ -407,7 +407,7 @@ export default function HomePage() {
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="home-current-slate rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -450,7 +450,7 @@ export default function HomePage() {
             </div>
           ) : (
             <>
-              <div className="relative mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+              <div className="home-winner-card relative mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">
                 <button
                   type="button"
                   onClick={() =>
@@ -480,7 +480,7 @@ export default function HomePage() {
                           name: leader.teamName,
                         })
                       }
-                      className="mt-2 text-2xl font-bold text-slate-900 hover:text-sky-700 hover:underline"
+                      className="home-winner-name mt-2 text-2xl font-bold text-slate-900 hover:text-sky-700 hover:underline"
                     >
                       {leader ? leader.teamName : "—"}
                     </button>
@@ -539,7 +539,9 @@ export default function HomePage() {
                         <tr
                           key={`${row.slate_id}-${row.team_id}`}
                           className={`border-t border-slate-100 ${
-                            index === 0 ? "bg-orange-50/50" : ""
+                            index === 0
+                              ? "home-winner-row bg-orange-50/50"
+                              : ""
                           }`}
                         >
                           <td className="px-3 py-3 font-medium">

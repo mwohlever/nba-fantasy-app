@@ -25,7 +25,10 @@ type CurrentUser = {
 };
 
 type ProfileTab = "overview" | "awards" | "settings";
-type SettingsTab = "profile" | "notifications" | "security";
+type SettingsTab =
+  | "profile"
+  | "notifications"
+  | "security";
 
 type NotificationPreferences = {
   notificationsEnabled: boolean;
