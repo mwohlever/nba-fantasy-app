@@ -59,9 +59,15 @@ const adminGroups = [
     cards: [
       {
         href: "/admin/players",
-        title: "Manage Players",
+        title: "Manage NBA Players",
         description:
           "Edit names, NBA IDs, teams, active status, and availability.",
+      },
+      {
+        href: "/admin/league-awards",
+        title: "League Awards",
+        description:
+          "Create and manage custom seasonal awards for each league member.",
       },
     ],
   },

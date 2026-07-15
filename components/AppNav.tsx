@@ -62,8 +62,17 @@ const desktopAdminGroups = [
     ],
   },
   {
-    label: "Players",
-    links: [{ href: "/admin/players", label: "Manage Players" }],
+    label: "Players & League",
+    links: [
+      {
+        href: "/admin/players",
+        label: "Manage NBA Players",
+      },
+      {
+        href: "/admin/league-awards",
+        label: "League Awards",
+      },
+    ],
   },
 ];
 
@@ -75,7 +84,7 @@ const profileLinks = [
   },
   {
     href: "/profile?tab=awards",
-    label: "Awards",
+    label: "Trophy Case",
     tab: "awards",
   },
   {

@@ -38,6 +38,7 @@ export async function GET(req: Request) {
       { data: playerStats },
       { data: slateTeamConfigs },
       { data: teamUser },
+      { data: leagueAwards },
     ] = await Promise.all([
       supabaseAdmin.from("teams").select("id, name").eq("id", teamId).single(),
       supabaseAdmin.from("teams").select("id, name"),
@@ -65,6 +66,16 @@ export async function GET(req: Request) {
         .select("avatar_url")
         .eq("team_id", teamId)
         .maybeSingle(),
+      supabaseAdmin
+        .from("league_awards")
+        .select(
+          "id, season, team_id, title, emoji, description, rarity, display_order, featured"
+        )
+        .eq("team_id", teamId)
+        .order("season", { ascending: false })
+        .order("featured", { ascending: false })
+        .order("display_order", { ascending: true })
+        .order("id", { ascending: true }),
     ]);
 
     const safeTeam = team ?? { id: teamId, name: "Unknown Team" };
@@ -312,6 +323,151 @@ export async function GET(req: Request) {
     const seasonStreaks = getWinStreaks(seasonRows);
     const careerStreaks = getWinStreaks(completedRows);
 
+    const chronologicalRows = [...completedRows].sort((a: any, b: any) =>
+      String(a.slateStart).localeCompare(String(b.slateStart))
+    );
+
+    function countConsecutiveWindows(
+      rows: any[],
+      requiredLength: number,
+      predicate: (row: any) => boolean
+    ) {
+      let count = 0;
+
+      for (let index = 0; index <= rows.length - requiredLength; index += 1) {
+        const window = rows.slice(index, index + requiredLength);
+
+        if (window.every(predicate)) {
+          count += 1;
+        }
+      }
+
+      return count;
+    }
+
+    function getLongestStreak(
+      rows: any[],
+      predicate: (row: any) => boolean
+    ) {
+      let longest = 0;
+      let current = 0;
+
+      rows.forEach((row) => {
+        if (predicate(row)) {
+          current += 1;
+          longest = Math.max(longest, current);
+        } else {
+          current = 0;
+        }
+      });
+
+      return longest;
+    }
+
+    const score175 = completedRows.filter(
+      (row: any) => Number(row.score) >= 175
+    ).length;
+
+    const score200 = completedRows.filter(
+      (row: any) => Number(row.score) >= 200
+    ).length;
+
+    const score225 = completedRows.filter(
+      (row: any) => Number(row.score) >= 225
+    ).length;
+
+    const score250 = completedRows.filter(
+      (row: any) => Number(row.score) >= 250
+    ).length;
+
+    const backToBackWins = countConsecutiveWindows(
+      chronologicalRows,
+      2,
+      (row) => row.finishPosition === 1
+    );
+
+    const threePeats = countConsecutiveWindows(
+      chronologicalRows,
+      3,
+      (row) => row.finishPosition === 1
+    );
+
+    const longestPodiumStreak = getLongestStreak(
+      chronologicalRows,
+      (row) =>
+        row.finishPosition !== null &&
+        Number(row.finishPosition) <= 2
+    );
+
+    const winningMargins = completedRows
+      .filter((row: any) => row.finishPosition === 1)
+      .map((row: any) => {
+        const slateResults = safeResults
+          .filter(
+            (result: any) =>
+              Number(result.slate_id) === Number(row.slateId) &&
+              Number(result.fantasy_points ?? 0) > 0
+          )
+          .sort(
+            (a: any, b: any) =>
+              Number(b.fantasy_points ?? 0) -
+              Number(a.fantasy_points ?? 0)
+          );
+
+        const winningResult = slateResults.find(
+          (result: any) => Number(result.team_id) === Number(teamId)
+        );
+
+        const runnerUpResult = slateResults.find(
+          (result: any) => Number(result.team_id) !== Number(teamId)
+        );
+
+        if (!winningResult || !runnerUpResult) return null;
+
+        return round(
+          Number(winningResult.fantasy_points ?? 0) -
+            Number(runnerUpResult.fantasy_points ?? 0)
+        );
+      })
+      .filter(
+        (margin: number | null): margin is number =>
+          margin !== null && margin >= 0
+      );
+
+    const photoFinishMargins = winningMargins.filter(
+      (margin) => margin < 2
+    );
+
+    const statementWinMargins = winningMargins.filter(
+      (margin) => margin >= 30
+    );
+
+    const podiumFinishes = completedRows.filter(
+      (row: any) =>
+        row.finishPosition !== null &&
+        Number(row.finishPosition) <= 3
+    ).length;
+
+    const milestones = {
+      score175,
+      score200,
+      score225,
+      score250,
+      backToBackWins,
+      threePeats,
+      longestPodiumStreak,
+      photoFinishWins: photoFinishMargins.length,
+      statementWins: statementWinMargins.length,
+      closestWinningMargin:
+        winningMargins.length > 0
+          ? round(Math.min(...winningMargins))
+          : null,
+      largestWinningMargin:
+        winningMargins.length > 0
+          ? round(Math.max(...winningMargins))
+          : null,
+    };
+
     return NextResponse.json({
       success: true,
       team: {
@@ -328,6 +484,7 @@ export async function GET(req: Request) {
       },
       careerSummary: {
         ...careerSummaryBase,
+        podiumFinishes,
         bestScore: bestSlate ? round(bestSlate.score) : null,
         worstScore: worstSlate ? round(worstSlate.score) : null,
         longestWinStreak: careerStreaks.longest,
@@ -358,6 +515,8 @@ export async function GET(req: Request) {
         bestSlate,
         worstSlate,
       },
+      milestones,
+      leagueAwards: leagueAwards ?? [],
       recentSlates: selectedRows.slice(0, 8),
     });
   } catch (error) {

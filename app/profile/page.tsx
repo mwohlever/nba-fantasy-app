@@ -11,6 +11,10 @@ import { Suspense, useEffect, useState } from "react";
 import PushDeviceControls from "@/components/profile/PushDeviceControls";
 import ChangePinForm from "@/components/profile/ChangePinForm";
 import ProfilePictureSettings from "@/components/profile/ProfilePictureSettings";
+import TrophyCase, {
+  type LeagueAward,
+  type TrophyMilestones,
+} from "@/components/profile/TrophyCase";
 
 type CurrentUser = {
   id: string;
@@ -43,6 +47,7 @@ type TeamProfile = {
     slatesPlayed: number;
     wins: number;
     runnerUps: number;
+    podiumFinishes: number;
     winRate: number | null;
     avgFinish: number | null;
     avgScore: number | null;
@@ -53,6 +58,7 @@ type TeamProfile = {
     slatesPlayed: number;
     wins: number;
     runnerUps: number;
+    podiumFinishes: number;
     winRate: number | null;
     avgFinish: number | null;
     avgScore: number | null;
@@ -85,6 +91,8 @@ type TeamProfile = {
       finishPosition: number | null;
     } | null;
   };
+  milestones: TrophyMilestones;
+  leagueAwards: LeagueAward[];
   recentSlates: Array<{
     slateId: number;
     slateLabel: string;
@@ -488,7 +496,11 @@ function ProfilePageContent() {
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { id: "overview", label: "Overview", icon: "📊" },
-                  { id: "awards", label: "Awards", icon: "🏆" },
+                  {
+                    id: "awards",
+                    label: "Trophy Case",
+                    icon: "🏆",
+                  },
                   { id: "settings", label: "Settings", icon: "⚙️" },
                 ].map((tab) => {
                   const isActive = activeTab === tab.id;
@@ -824,18 +836,23 @@ function ProfilePageContent() {
                 ) : null}
 
                 {activeTab === "awards" ? (
-                  <section className="rounded-3xl border border-amber-200 bg-amber-50/70 p-6 text-center shadow-sm">
-                    <div className="text-5xl">🏆</div>
-
-                    <h2 className="mt-4 text-2xl font-bold text-slate-900">
-                      Trophy Case Coming Soon
-                    </h2>
-
-                    <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
-                      Season awards, championships, and future All-111 honors will
-                      live here.
-                    </p>
-                  </section>
+                  <TrophyCase
+                    teamName={profile.team.name}
+                    career={{
+                      wins: profile.careerSummary.wins,
+                      runnerUps: profile.careerSummary.runnerUps,
+                      podiumFinishes:
+                        profile.careerSummary.podiumFinishes,
+                      bestScore: profile.careerSummary.bestScore,
+                      avgFinish: profile.careerSummary.avgFinish,
+                      longestWinStreak:
+                        profile.careerSummary.longestWinStreak,
+                      slatesPlayed:
+                        profile.careerSummary.slatesPlayed,
+                    }}
+                    milestones={profile.milestones}
+                    leagueAwards={profile.leagueAwards}
+                  />
                 ) : null}
 
                 {activeTab === "settings" ? (
