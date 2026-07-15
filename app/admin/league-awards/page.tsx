@@ -543,7 +543,7 @@ export default function LeagueAwardsAdminPage() {
                     </div>
 
                     <label className="mt-3 block">
-                      <span className="text-xs font-semibold text-slate-500">
+                      <span className="text-xs font-semibold text-[#64748b]">
                         Custom emoji
                       </span>
 
@@ -755,7 +755,7 @@ export default function LeagueAwardsAdminPage() {
                 {filteredAwards.map((award) => (
                   <article
                     key={award.id}
-                    className={`rounded-3xl border p-5 shadow-sm ${
+                    className={`rounded-3xl border p-5 shadow-sm text-[#0f172a] ${
                       rarityStyles[award.rarity]
                     } ${
                       award.featured
@@ -768,7 +768,7 @@ export default function LeagueAwardsAdminPage() {
                         {award.rarity}
                       </span>
 
-                      <span className="text-xs font-semibold text-slate-500">
+                      <span className="text-xs font-semibold text-[#64748b]">
                         Order {award.display_order}
                       </span>
                     </div>
@@ -777,16 +777,16 @@ export default function LeagueAwardsAdminPage() {
                       {award.emoji}
                     </div>
 
-                    <h3 className="mt-3 text-xl font-black">
+                    <h3 className="mt-3 text-xl font-black text-[#0f172a]">
                       {award.title}
                     </h3>
 
-                    <div className="mt-1 text-sm font-bold text-slate-600">
+                    <div className="mt-1 text-sm font-bold text-[#334155]">
                       {award.season} • {getTeamName(award)}
                     </div>
 
                     {award.description ? (
-                      <p className="mt-3 text-sm leading-6 text-slate-600">
+                      <p className="mt-3 text-sm leading-6 text-[#475569]">
                         {award.description}
                       </p>
                     ) : null}
