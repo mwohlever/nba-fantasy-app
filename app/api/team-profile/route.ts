@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
-}
-
-function formatSlateLabel(slate: any) {
-  const start = slate?.start_date ?? slate?.date ?? "";
-  const end = slate?.end_date ?? slate?.date ?? "";
-  return start && end && start !== end ? `${start} - ${end}` : start || "Unknown slate";
 }
 
 function getSeasonFromSlate(slate: any) {
@@ -162,7 +157,7 @@ export async function GET(req: Request) {
 
         return {
           slateId: result.slate_id,
-          slateLabel: formatSlateLabel(slate),
+          slateLabel: formatSlateDateLabel(slate),
           slateStart: slate?.start_date ?? slate?.date ?? "",
           season: getSeasonFromSlate(slate),
           score: Number(result.fantasy_points ?? 0),
@@ -202,11 +197,18 @@ export async function GET(req: Request) {
 
       const wins = rows.filter((row) => row.finishPosition === 1).length;
       const runnerUps = rows.filter((row) => row.finishPosition === 2).length;
+      const podiumFinishes = rows.filter(
+        (row) =>
+          row.finishPosition !== null &&
+          row.finishPosition !== undefined &&
+          Number(row.finishPosition) <= 3
+      ).length;
 
       return {
         slatesPlayed: rows.length,
         wins,
         runnerUps,
+        podiumFinishes,
         winRate: rows.length > 0 ? round((wins / rows.length) * 100, 1) : null,
         avgFinish:
           finishes.length > 0
@@ -442,12 +444,6 @@ export async function GET(req: Request) {
       (margin) => margin >= 30
     );
 
-    const podiumFinishes = completedRows.filter(
-      (row: any) =>
-        row.finishPosition !== null &&
-        Number(row.finishPosition) <= 3
-    ).length;
-
     const milestones = {
       score175,
       score200,
@@ -484,7 +480,6 @@ export async function GET(req: Request) {
       },
       careerSummary: {
         ...careerSummaryBase,
-        podiumFinishes,
         bestScore: bestSlate ? round(bestSlate.score) : null,
         worstScore: worstSlate ? round(worstSlate.score) : null,
         longestWinStreak: careerStreaks.longest,

@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
 import RefreshPlayersButton from "@/components/lineups/RefreshPlayersButton";
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 
 function getTodayDateString() {
   const now = new Date();
@@ -11,10 +12,6 @@ function getTodayDateString() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function formatSlateLabel(startDate: string, endDate: string) {
-  return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 }
 
 type Slate = {
@@ -107,7 +104,10 @@ export default async function DraftLineupsPage() {
         date: slate.date,
         start_date: startDate,
         end_date: endDate,
-        label: formatSlateLabel(startDate, endDate),
+        label: formatSlateDateLabel({
+          start_date: startDate,
+          end_date: endDate,
+        }),
         is_locked: slate.is_locked,
       };
     }) ?? [];

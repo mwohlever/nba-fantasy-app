@@ -1,5 +1,7 @@
 "use client";
 
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
@@ -389,9 +391,11 @@ export default function HomePage() {
         : "Open";
 
   const slateDateLabel = latestSlate
-    ? latestSlate.start_date === latestSlate.end_date
-      ? latestSlate.start_date
-      : `${latestSlate.start_date} → ${latestSlate.end_date}`
+    ? formatSlateDateLabel({
+        date: latestSlate.date,
+        start_date: latestSlate.start_date,
+        end_date: latestSlate.end_date,
+      })
     : "No slate";
 
   return (
@@ -428,7 +432,7 @@ export default function HomePage() {
               </div>
 
               <div className="mt-1 text-sm text-slate-500">
-                {latestSlate ? latestSlate.label : "No slate available"}
+                {latestSlate ? slateDateLabel : "No slate available"}
               </div>
             </div>
 
@@ -566,7 +570,7 @@ export default function HomePage() {
                                   slateId: row.slate_id,
                                   teamId: row.team_id,
                                   teamName: row.teamName,
-                                  slateLabel: latestSlate?.label ?? String(row.slate_id),
+                                  slateLabel: latestSlate ? slateDateLabel : String(row.slate_id),
                                 })
                               }
                               className="font-medium text-sky-700 hover:underline"

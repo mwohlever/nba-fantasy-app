@@ -445,7 +445,7 @@ export default function TrophyCase({
             <HardwareItem
               emoji="🏆"
               value={career.wins}
-              label="Championships"
+              label="Wins"
               detail={`${career.slatesPlayed} career slates`}
               featured
             />
