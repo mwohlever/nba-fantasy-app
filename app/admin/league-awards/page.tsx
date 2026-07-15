@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
+import CollectibleCard from "@/components/collectibles/CollectibleCard";
 
 type AdminTab = "create" | "manage";
 type AwardRarity = "common" | "rare" | "epic" | "legendary";
@@ -86,17 +87,6 @@ const AWARD_EMOJIS = [
   "🤡",
 ];
 
-const rarityStyles: Record<AwardRarity, string> = {
-  common:
-    "border-slate-300 bg-gradient-to-br from-white to-slate-100",
-  rare:
-    "border-sky-300 bg-gradient-to-br from-white to-sky-100",
-  epic:
-    "border-violet-300 bg-gradient-to-br from-white to-violet-100",
-  legendary:
-    "border-amber-300 bg-gradient-to-br from-amber-50 to-orange-100",
-};
-
 function getTeamName(award: LeagueAward) {
   if (Array.isArray(award.teams)) {
     return award.teams[0]?.name ?? `Team ${award.team_id}`;
@@ -113,10 +103,12 @@ function AwardPreview({
   teamName: string;
 }) {
   return (
-    <article
-      className={`relative overflow-hidden rounded-3xl border p-6 text-center shadow-lg ${
-        rarityStyles[form.rarity]
-      } ${form.featured ? "min-h-[330px]" : "min-h-[280px]"}`}
+    <CollectibleCard
+      rarity={form.rarity}
+      featured={form.featured}
+      className={`relative overflow-hidden p-6 text-center ${
+        form.featured ? "min-h-[330px]" : "min-h-[280px]"
+      }`}
     >
       {form.featured ? (
         <div className="absolute right-4 top-4 rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-amber-800">
@@ -124,7 +116,7 @@ function AwardPreview({
         </div>
       ) : null}
 
-      <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
+      <div className="collectible-rarity">
         {form.rarity}
       </div>
 
@@ -132,19 +124,19 @@ function AwardPreview({
         {form.emoji || "🏆"}
       </div>
 
-      <h3 className="mt-5 text-2xl font-black text-slate-950">
+      <h3 className="collectible-title mt-5 text-2xl font-black">
         {form.title || "Award Title"}
       </h3>
 
-      <div className="mt-2 text-sm font-bold text-slate-700">
+      <div className="collectible-meta mt-2 text-sm font-bold">
         {form.season} • {teamName || "Winner"}
       </div>
 
-      <p className="mx-auto mt-4 max-w-sm text-sm leading-6 text-slate-600">
+      <p className="collectible-copy mx-auto mt-4 max-w-sm text-sm leading-6">
         {form.description ||
           "The award description will appear here."}
       </p>
-    </article>
+    </CollectibleCard>
   );
 }
 
@@ -753,22 +745,22 @@ export default function LeagueAwardsAdminPage() {
             ) : (
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {filteredAwards.map((award) => (
-                  <article
+                  <CollectibleCard
                     key={award.id}
-                    className={`rounded-3xl border p-5 shadow-sm text-[#0f172a] ${
-                      rarityStyles[award.rarity]
-                    } ${
+                    rarity={award.rarity}
+                    featured={award.featured}
+                    className={`p-5 ${
                       award.featured
                         ? "md:col-span-2 xl:col-span-2"
                         : ""
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                      <span className="collectible-pill">
                         {award.rarity}
                       </span>
 
-                      <span className="text-xs font-semibold text-[#64748b]">
+                      <span className="collectible-muted text-xs font-semibold">
                         Order {award.display_order}
                       </span>
                     </div>
@@ -777,16 +769,16 @@ export default function LeagueAwardsAdminPage() {
                       {award.emoji}
                     </div>
 
-                    <h3 className="mt-3 text-xl font-black text-[#0f172a]">
+                    <h3 className="collectible-title mt-3 text-xl font-black">
                       {award.title}
                     </h3>
 
-                    <div className="mt-1 text-sm font-bold text-[#334155]">
+                    <div className="collectible-meta mt-1 text-sm font-bold">
                       {award.season} • {getTeamName(award)}
                     </div>
 
                     {award.description ? (
-                      <p className="mt-3 text-sm leading-6 text-[#475569]">
+                      <p className="collectible-copy mt-3 text-sm leading-6">
                         {award.description}
                       </p>
                     ) : null}
@@ -797,7 +789,7 @@ export default function LeagueAwardsAdminPage() {
                       </div>
                     ) : null}
 
-                    <div className="mt-5 flex gap-2 border-t border-slate-900/10 pt-4">
+                    <div className="collectible-divider mt-5 flex gap-2 border-t pt-4">
                       <button
                         type="button"
                         onClick={() => beginEdit(award)}
@@ -816,7 +808,7 @@ export default function LeagueAwardsAdminPage() {
                         Delete
                       </button>
                     </div>
-                  </article>
+                  </CollectibleCard>
                 ))}
               </div>
             )}

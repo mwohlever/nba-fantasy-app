@@ -1773,3 +1773,406 @@ html:not(.dark) .home-winner-card .text-slate-600 {
   color: #7c2d12 !important;
 }
 
+
+/* =========================================================
+   COLLECTIBLE CARD SYSTEM
+   Shared by awards, previews, and milestone badges.
+   These cards intentionally retain light plaque surfaces in
+   both themes, so their internal colors are self-contained.
+   ========================================================= */
+
+.collectible-card {
+  --collectible-title: #0f172a;
+  --collectible-meta: #334155;
+  --collectible-copy: #475569;
+  --collectible-muted: #64748b;
+  --collectible-divider: rgb(15 23 42 / 0.12);
+
+  position: relative;
+  border-width: 1px;
+  border-style: solid;
+  color: var(--collectible-title) !important;
+  box-shadow:
+    0 10px 28px rgb(15 23 42 / 0.1),
+    inset 0 1px 0 rgb(255 255 255 / 0.8);
+}
+
+.collectible-card--common {
+  border-color: #cbd5e1;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f8fafc 55%,
+      #eef2f7 100%
+    );
+}
+
+.collectible-card--rare {
+  border-color: #38bdf8;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f0f9ff 52%,
+      #dff3ff 100%
+    );
+}
+
+.collectible-card--epic {
+  border-color: #8b5cf6;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f7f4ff 52%,
+      #eee8ff 100%
+    );
+}
+
+.collectible-card--legendary {
+  border-color: #f59e0b;
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      rgb(253 224 71 / 0.22),
+      transparent 12rem
+    ),
+    linear-gradient(
+      145deg,
+      #fffdf5 0%,
+      #fff7e6 52%,
+      #ffedcc 100%
+    );
+}
+
+.collectible-card--featured {
+  border-width: 2px;
+  box-shadow:
+    0 0 0 1px rgb(245 158 11 / 0.1),
+    0 16px 38px rgb(180 83 9 / 0.16),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.collectible-card--locked {
+  --collectible-title: #475569;
+  --collectible-meta: #64748b;
+  --collectible-copy: #64748b;
+  --collectible-muted: #94a3b8;
+
+  border-color: #94a3b8;
+  background:
+    linear-gradient(
+      145deg,
+      #e2e8f0 0%,
+      #cbd5e1 100%
+    );
+  filter: grayscale(0.7);
+  opacity: 0.72;
+}
+
+.collectible-title {
+  color: var(--collectible-title) !important;
+}
+
+.collectible-meta {
+  color: var(--collectible-meta) !important;
+}
+
+.collectible-copy {
+  color: var(--collectible-copy) !important;
+}
+
+.collectible-muted {
+  color: var(--collectible-muted) !important;
+}
+
+.collectible-divider {
+  border-color: var(--collectible-divider) !important;
+}
+
+.collectible-rarity {
+  color: #64748b !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.collectible-card--rare .collectible-rarity {
+  color: #0369a1 !important;
+}
+
+.collectible-card--epic .collectible-rarity {
+  color: #6d28d9 !important;
+}
+
+.collectible-card--legendary .collectible-rarity {
+  color: #b45309 !important;
+}
+
+.collectible-pill,
+.collectible-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.9);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.78);
+  color: #334155 !important;
+  font-weight: 800;
+}
+
+.collectible-pill {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.collectible-count {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+}
+
+.collectible-pill--locked {
+  border-color: #94a3b8;
+  background: rgb(203 213 225 / 0.86);
+  color: #475569 !important;
+}
+
+html.dark .collectible-card,
+html.dark .collectible-card * {
+  color: inherit;
+}
+
+html.dark .collectible-title {
+  color: var(--collectible-title) !important;
+}
+
+html.dark .collectible-meta {
+  color: var(--collectible-meta) !important;
+}
+
+html.dark .collectible-copy {
+  color: var(--collectible-copy) !important;
+}
+
+html.dark .collectible-muted {
+  color: var(--collectible-muted) !important;
+}
+
+html.dark .collectible-rarity {
+  color: #64748b !important;
+}
+
+html.dark .collectible-card--rare .collectible-rarity {
+  color: #0369a1 !important;
+}
+
+html.dark .collectible-card--epic .collectible-rarity {
+  color: #6d28d9 !important;
+}
+
+html.dark .collectible-card--legendary .collectible-rarity {
+  color: #b45309 !important;
+}
+
+html.dark .collectible-pill,
+html.dark .collectible-count {
+  color: #334155 !important;
+  background: rgb(255 255 255 / 0.82);
+}
+
+html.dark .collectible-pill--locked {
+  color: #475569 !important;
+  background: rgb(203 213 225 / 0.86);
+}
+
+@media (hover: hover) {
+  .collectible-card:not(.collectible-card--locked) {
+    transition:
+      transform 170ms ease,
+      box-shadow 170ms ease;
+  }
+
+  .collectible-card:not(.collectible-card--locked):hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 16px 38px rgb(15 23 42 / 0.16),
+      inset 0 1px 0 rgb(255 255 255 / 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collectible-card {
+    transition: none !important;
+  }
+
+  .collectible-card:hover {
+    transform: none !important;
+  }
+}
+
+/* =========================================================
+   TROPHY CASE CONTENT SECTIONS
+   Career and League Awards now match the Milestones shell.
+   ========================================================= */
+
+.trophy-content-section {
+  border-color: var(--app-border);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--app-surface-raised) 98%, transparent),
+      color-mix(in srgb, var(--app-surface) 98%, transparent)
+    );
+  color: var(--app-text);
+  box-shadow: var(--app-shadow-card);
+}
+
+.trophy-section-title {
+  color: var(--app-text) !important;
+}
+
+.trophy-section-copy {
+  color: var(--app-text-soft) !important;
+}
+
+.trophy-section-label {
+  color: var(--app-text-muted) !important;
+}
+
+.trophy-section-kicker--gold {
+  color: #d97706 !important;
+}
+
+html.dark .trophy-section-kicker--gold {
+  color: #fbbf24 !important;
+}
+
+.trophy-season-select {
+  border-color: #f59e0b;
+  background: var(--app-surface-raised);
+  color: var(--app-text);
+}
+
+.trophy-season-select:focus {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 0.16);
+}
+
+/* Career hardware cards intentionally use light collectible surfaces. */
+
+.hardware-card {
+  color: #0f172a !important;
+  box-shadow:
+    0 10px 28px rgb(15 23 42 / 0.12),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.hardware-card--standard {
+  border-color: #94a3b8;
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #f8fafc 58%,
+      #edf2f7 100%
+    );
+}
+
+.hardware-card--featured {
+  border-color: #f59e0b;
+  background:
+    radial-gradient(
+      circle at 82% 12%,
+      rgb(253 224 71 / 0.22),
+      transparent 10rem
+    ),
+    linear-gradient(
+      145deg,
+      #fffdf5 0%,
+      #fff7e6 58%,
+      #ffebc2 100%
+    );
+  box-shadow:
+    0 0 0 1px rgb(245 158 11 / 0.1),
+    0 14px 34px rgb(180 83 9 / 0.14),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.hardware-card-glow--featured {
+  background: rgb(252 211 77 / 0.36);
+}
+
+.hardware-card-glow--standard {
+  background: rgb(148 163 184 / 0.24);
+}
+
+.hardware-card-value {
+  color: #0f172a !important;
+}
+
+.hardware-card-label {
+  color: #475569 !important;
+}
+
+.hardware-card-detail {
+  color: #64748b !important;
+}
+
+html.dark .hardware-card,
+html.dark .hardware-card * {
+  color: inherit;
+}
+
+html.dark .hardware-card-value {
+  color: #0f172a !important;
+}
+
+html.dark .hardware-card-label {
+  color: #475569 !important;
+}
+
+html.dark .hardware-card-detail {
+  color: #64748b !important;
+}
+
+.trophy-empty-state {
+  border-color: var(--app-border-strong);
+  background: var(--app-surface-soft);
+}
+
+.trophy-empty-title {
+  color: var(--app-text) !important;
+}
+
+.trophy-empty-copy {
+  color: var(--app-text-muted) !important;
+}
+
+@media (hover: hover) {
+  .hardware-card {
+    transition:
+      transform 170ms ease,
+      box-shadow 170ms ease;
+  }
+
+  .hardware-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 16px 38px rgb(15 23 42 / 0.16),
+      inset 0 1px 0 rgb(255 255 255 / 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hardware-card {
+    transition: none !important;
+  }
+
+  .hardware-card:hover {
+    transform: none !important;
+  }
+}
