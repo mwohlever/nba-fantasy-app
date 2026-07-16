@@ -27,6 +27,8 @@ type Props = {
     player: Player,
     teamId: number
   ) => Promise<void>;
+  onInspectPlayer: (player: Player) => void;
+  hidden?: boolean;
   isAssigningPlayer: boolean;
   isSaving: boolean;
 };
@@ -49,6 +51,8 @@ export default function SlotDraftModal({
   isAvailabilityLoading,
   getOwnerTeamForPlayer,
   handleAssignPlayerToTeam,
+  onInspectPlayer,
+  hidden = false,
   isAssigningPlayer,
   isSaving,
 }: Props) {
@@ -122,7 +126,7 @@ export default function SlotDraftModal({
     showAllPlayers,
   ]);
 
-  if (!targetDraftSlot) return null;
+  if (!targetDraftSlot || hidden) return null;
 
   async function draftPlayer(player: Player) {
     if (!targetDraftSlot) return;
@@ -260,18 +264,18 @@ export default function SlotDraftModal({
                   playerAverageMap.get(player.id);
 
                 return (
-                  <button
+                  <article
                     key={player.id}
-                    type="button"
-                    onClick={() =>
-                      void draftPlayer(player)
-                    }
-                    disabled={
-                      isAssigningPlayer || isSaving
-                    }
                     className="slot-draft-player"
                   >
-                    <div className="flex min-w-0 items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onInspectPlayer(player)
+                      }
+                      className="slot-draft-player-inspect"
+                      aria-label={`View stats for ${player.name}`}
+                    >
                       <PlayerHeadshot
                         nbaPlayerId={
                           player.nba_player_id
@@ -289,11 +293,29 @@ export default function SlotDraftModal({
                           {player.position_group} • Proj{" "}
                           {fmt(projection)}
                         </div>
-                      </div>
-                    </div>
 
-                    <span>Draft</span>
-                  </button>
+                        <div className="slot-draft-player-view-label">
+                          View player stats
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void draftPlayer(player)
+                      }
+                      disabled={
+                        isAssigningPlayer || isSaving
+                      }
+                      className="slot-draft-player-action"
+                      aria-label={`Draft ${player.name} to ${targetDraftSlot.teamName}`}
+                    >
+                      {isAssigningPlayer || isSaving
+                        ? "Saving…"
+                        : "Draft"}
+                    </button>
+                  </article>
                 );
               })}
             </div>

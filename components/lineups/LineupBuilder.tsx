@@ -89,6 +89,10 @@ export default function LineupBuilder({
   const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
     useState<number[]>([]);
   const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+  const [
+    isInspectingPlayerFromSlot,
+    setIsInspectingPlayerFromSlot,
+  ] = useState(false);
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
   const [targetDraftSlot, setTargetDraftSlot] = useState<{
     teamId: number;
@@ -1138,6 +1142,29 @@ export default function LineupBuilder({
     ? getOwnerTeamForPlayer(draftingPlayer.id)
     : null;
 
+  function inspectPlayerFromSlot(player: Player) {
+    setIsInspectingPlayerFromSlot(true);
+    setDraftingPlayer(player);
+  }
+
+  const setDraftingPlayerWithSlotRestore:
+    React.Dispatch<React.SetStateAction<Player | null>> = (
+      value
+    ) => {
+      setDraftingPlayer((currentPlayer) => {
+        const nextPlayer =
+          typeof value === "function"
+            ? value(currentPlayer)
+            : value;
+
+        if (!nextPlayer) {
+          setIsInspectingPlayerFromSlot(false);
+        }
+
+        return nextPlayer;
+      });
+    };
+
   const lineupControls = (
     <LineupControls
       selectedSlateId={selectedSlateId}
@@ -1341,6 +1368,8 @@ export default function LineupBuilder({
         isAvailabilityLoading={isAvailabilityLoading}
         getOwnerTeamForPlayer={getOwnerTeamForPlayer}
         handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        onInspectPlayer={inspectPlayerFromSlot}
+        hidden={isInspectingPlayerFromSlot}
         isAssigningPlayer={isAssigningPlayer}
         isSaving={isSaving}
       />
@@ -1354,7 +1383,9 @@ export default function LineupBuilder({
 
       <DraftPlayerModal
         draftingPlayer={draftingPlayer}
-        setDraftingPlayer={setDraftingPlayer}
+        setDraftingPlayer={
+          setDraftingPlayerWithSlotRestore
+        }
         playerAverageMap={playerAverageMap}
         playerProjections={playerProjections}
         availablePlayerIdSet={availablePlayerIdSet}
