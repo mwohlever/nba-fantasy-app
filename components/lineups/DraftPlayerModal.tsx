@@ -52,6 +52,9 @@ type Props = {
     teamName: string;
     positionGroup: "G" | "F/C";
   } | null;
+  handleDraftToTargetSlot: (
+    player: Player
+  ) => Promise<void>;
 };
 
 export default function DraftPlayerModal({
@@ -72,6 +75,7 @@ export default function DraftPlayerModal({
   getOwnerTeamIdForPlayer,
   handleAssignPlayerToTeam,
   targetDraftSlot,
+  handleDraftToTargetSlot,
 }: Props) {
   void draftingPlayerHistory;
 
@@ -109,6 +113,9 @@ export default function DraftPlayerModal({
         handleAssignPlayerToTeam
       }
       targetDraftSlot={targetDraftSlot}
+      handleDraftToTargetSlot={
+        handleDraftToTargetSlot
+      }
       handleRemovePlayerFromTeam={
         handleRemovePlayerFromTeam
       }

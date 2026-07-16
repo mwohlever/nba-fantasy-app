@@ -1165,6 +1165,21 @@ export default function LineupBuilder({
       });
     };
 
+  async function handleDraftToTargetSlot(
+    player: Player
+  ) {
+    if (!targetDraftSlot) return;
+
+    await handleAssignPlayerToTeam(
+      player,
+      targetDraftSlot.teamId
+    );
+
+    setDraftingPlayer(null);
+    setIsInspectingPlayerFromSlot(false);
+    setTargetDraftSlot(null);
+  }
+
   const lineupControls = (
     <LineupControls
       selectedSlateId={selectedSlateId}
@@ -1401,6 +1416,9 @@ export default function LineupBuilder({
         getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
         handleAssignPlayerToTeam={handleAssignPlayerToTeam}
         targetDraftSlot={targetDraftSlot}
+        handleDraftToTargetSlot={
+          handleDraftToTargetSlot
+        }
       />
     </div>
   );

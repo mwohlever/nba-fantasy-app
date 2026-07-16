@@ -126,7 +126,7 @@ export default function SlotDraftModal({
     showAllPlayers,
   ]);
 
-  if (!targetDraftSlot || hidden) return null;
+  if (!targetDraftSlot) return null;
 
   async function draftPlayer(player: Player) {
     if (!targetDraftSlot) return;
@@ -142,8 +142,17 @@ export default function SlotDraftModal({
 
   return (
     <div
-      className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center"
-      onClick={() => setTargetDraftSlot(null)}
+      className={`mobile-modal-safe slot-draft-overlay fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center ${
+        hidden
+          ? "slot-draft-overlay--hidden"
+          : ""
+      }`}
+      aria-hidden={hidden}
+      onClick={() => {
+        if (!hidden) {
+          setTargetDraftSlot(null);
+        }
+      }}
     >
       <section
         className="mobile-modal-panel-safe slot-draft-modal flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border shadow-2xl"
@@ -231,7 +240,7 @@ export default function SlotDraftModal({
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-24 sm:p-5">
+        <div className="slot-draft-results min-h-0 flex-1 overflow-y-auto p-4 pb-24 sm:p-5">
           {isAvailabilityLoading ? (
             <div className="slot-draft-empty">
               <div aria-hidden="true">🏀</div>

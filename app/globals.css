@@ -6034,3 +6034,145 @@ html.dark .hardware-card-detail {
   }
 }
 
+
+/* =========================================================
+   PLAYER PROFILE — MOBILE FULL-HEIGHT SHEET
+   The generic mobile modal rules reserve space for the
+   bottom navigation. This profile sits above the navigation,
+   so it can safely use nearly the full viewport.
+   ========================================================= */
+
+@media (max-width: 639px) {
+  .player-modal-overlay.mobile-modal-safe {
+    align-items: flex-start !important;
+    padding-top: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+    padding-left: 0.5rem !important;
+    overflow: hidden !important;
+  }
+
+  .player-modal-shell.mobile-modal-panel-safe {
+    max-height: calc(100dvh - 1rem) !important;
+    min-height: calc(100dvh - 1rem);
+    border-radius: 1.35rem;
+    overflow: hidden !important;
+  }
+
+  .player-modal-header {
+    padding: 0.85rem;
+  }
+
+  .player-modal-highlight-grid {
+    gap: 0.65rem;
+    margin-top: 0.8rem;
+  }
+
+  .player-modal-highlight {
+    min-height: 6.4rem;
+    padding: 0.8rem;
+  }
+
+  .player-modal-actions {
+    padding: 0.8rem;
+  }
+}
+
+
+/* =========================================================
+   SLOT SEARCH — MOBILE FULL-HEIGHT + SCROLL PRESERVATION
+   ========================================================= */
+
+.slot-draft-overlay--hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/*
+ * Keep the search sheet mounted behind the player profile.
+ * Because its DOM is not removed, its internal scroll position,
+ * search term, and All Players selection remain unchanged.
+ */
+.slot-draft-overlay {
+  transition: opacity 120ms ease;
+}
+
+@media (max-width: 639px) {
+  /*
+   * Use the full space between the top of the viewport and the
+   * fixed mobile navigation rather than letting the modal shrink
+   * to the height of its content.
+   */
+  .slot-draft-overlay.mobile-modal-safe {
+    align-items: flex-start !important;
+    padding-top: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    padding-bottom: 8.5rem !important;
+    padding-left: 0.5rem !important;
+    overflow: hidden !important;
+  }
+
+  .slot-draft-modal.mobile-modal-panel-safe {
+    height: calc(100dvh - 9rem) !important;
+    min-height: calc(100dvh - 9rem) !important;
+    max-height: calc(100dvh - 9rem) !important;
+    border-radius: 1.35rem;
+    overflow: hidden !important;
+  }
+}
+
+
+/* =========================================================
+   SLOT DRAFT RESULTS LAYOUT
+   Fill remaining modal height on mobile
+   ========================================================= */
+
+.slot-draft-results{
+  display:flex;
+  flex-direction:column;
+}
+
+.slot-draft-player-list{
+  display:grid;
+  gap:.6rem;
+  flex:1;
+  align-content:start;
+}
+
+.slot-draft-empty{
+  flex:1;
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+
+.slot-draft-search{
+  padding:.75rem 1rem;
+}
+
+.slot-draft-header{
+  padding:.9rem 1rem;
+}
+
+
+/* =========================================================
+   SLOT DRAFT MODAL — REMOVE EXTRA SPACE ABOVE MOBILE NAV
+   Previous rules reserved more bottom space than the fixed
+   navigation actually needs.
+   ========================================================= */
+
+@media (max-width: 639px) {
+  .slot-draft-overlay.mobile-modal-safe {
+    padding-bottom: 5rem !important;
+  }
+
+  .slot-draft-modal.mobile-modal-panel-safe {
+    height: calc(100dvh - 5.5rem) !important;
+    min-height: calc(100dvh - 5.5rem) !important;
+    max-height: calc(100dvh - 5.5rem) !important;
+  }
+}
+
