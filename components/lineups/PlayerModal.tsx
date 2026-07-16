@@ -88,6 +88,11 @@ type DraftProps = SharedProps & {
     player: Player,
     teamId: number
   ) => Promise<void>;
+  targetDraftSlot?: {
+    teamId: number;
+    teamName: string;
+    positionGroup: "G" | "F/C";
+  } | null;
   handleRemovePlayerFromTeam: (
     player: Player
   ) => Promise<void>;
@@ -382,6 +387,25 @@ export default function PlayerModal(props: Props) {
 
         {isDraftMode ? (
           <section className="player-modal-actions">
+
+            {props.targetDraftSlot ? (
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={async () => {
+                  await props.handleAssignPlayerToTeam(
+                    player,
+                    props.targetDraftSlot!.teamId
+                  );
+                  onClose();
+                }}
+                className="mb-4 flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 py-4 text-base font-bold text-white shadow transition hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {isBusy
+                  ? "Drafting..."
+                  : `Draft to ${props.targetDraftSlot.positionGroup} Slot`}
+              </button>
+            ) : null}
             <div className="player-modal-actions-heading">
               <div>
                 <span>Roster action</span>

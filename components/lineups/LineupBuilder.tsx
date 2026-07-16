@@ -1400,6 +1400,7 @@ export default function LineupBuilder({
         getTeamAssignmentStatus={getTeamAssignmentStatus}
         getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
         handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        targetDraftSlot={targetDraftSlot}
       />
     </div>
   );
