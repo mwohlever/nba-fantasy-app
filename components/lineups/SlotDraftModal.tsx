@@ -183,17 +183,19 @@ export default function SlotDraftModal({
             </label>
 
             <div
-              className="slot-draft-availability-segment"
+              className="inline-flex shrink-0 rounded-full border border-slate-300 bg-slate-100 p-1 dark:border-slate-600 dark:bg-slate-800"
+              role="group"
               aria-label="Player availability"
             >
               <button
                 type="button"
                 onClick={() => setShowAllPlayers(false)}
-                className={
+                aria-pressed={!showAllPlayers}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
                   !showAllPlayers
-                    ? "slot-draft-availability-segment-active"
-                    : ""
-                }
+                    ? "bg-sky-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                }`}
               >
                 On This Slate
               </button>
@@ -201,11 +203,12 @@ export default function SlotDraftModal({
               <button
                 type="button"
                 onClick={() => setShowAllPlayers(true)}
-                className={
+                aria-pressed={showAllPlayers}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
                   showAllPlayers
-                    ? "slot-draft-availability-segment-active"
-                    : ""
-                }
+                    ? "bg-sky-600 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+                }`}
               >
                 All Players
               </button>
