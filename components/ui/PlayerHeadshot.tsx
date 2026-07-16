@@ -1,7 +1,7 @@
 type PlayerHeadshotProps = {
   nbaPlayerId?: number | null;
   playerName?: string;
-  size?: "xs" | "sm" | "md";
+  size?: "xs" | "sm" | "md" | "xl";
   className?: string;
 };
 
@@ -9,6 +9,7 @@ const sizeClasses = {
   xs: "h-6 w-6",
   sm: "h-8 w-8",
   md: "h-10 w-10",
+  xl: "h-20 w-20 sm:h-24 sm:w-24",
 };
 
 export default function PlayerHeadshot({

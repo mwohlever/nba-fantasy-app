@@ -5,6 +5,8 @@ import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import SlotDraftModal from "@/components/lineups/SlotDraftModal";
 import PlayerPool from "@/components/lineups/PlayerPool";
+import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
+import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LineupControls from "@/components/lineups/LineupControls";
 import type {
@@ -92,6 +94,10 @@ export default function LineupBuilder({
     teamName: string;
     positionGroup: "G" | "F/C";
   } | null>(null);
+
+  const [draftPageTab, setDraftPageTab] = useState<
+    "lineup" | "players"
+  >("lineup");
 
   const [lastRefreshSummary, setLastRefreshSummary] = useState<{
     gamesFound?: number;
@@ -803,7 +809,7 @@ export default function LineupBuilder({
       setLineupsState(lineupsResult.lineups ?? []);
       setPlayerStatsState(statsResult.playerStats ?? []);
       setTeamResultsState(resultsResult.teamResults ?? []);
-      setSaveMessage("Loaded slate.");
+      setSaveMessage("");
     } catch (error) {
       if (loadId !== latestSlateLoadRef.current) return;
       console.error(error);
@@ -1157,27 +1163,32 @@ export default function LineupBuilder({
       ) : null}
 
       {currentUser?.role === "admin" && viewMode === "draft" ? (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <label className="flex cursor-pointer items-start gap-3">
+        <section className="draft-admin-toggle">
+          <div>
+            <strong>Proxy Pick Notifications</strong>
+            <span>
+              Notify the next drafter after an admin-entered pick.
+            </span>
+          </div>
+
+          <label className="draft-admin-switch">
             <input
               type="checkbox"
               checked={notifyNextDrafterForProxyPicks}
               onChange={(event) =>
-                setNotifyNextDrafterForProxyPicks(event.target.checked)
+                setNotifyNextDrafterForProxyPicks(
+                  event.target.checked
+                )
               }
-              className="mt-1 h-4 w-4 rounded border-amber-300"
             />
 
-            <span>
-              <span className="block text-sm font-semibold text-amber-950">
-                Notify the next drafter for proxy picks
-              </span>
+            <span aria-hidden="true" />
 
-              <span className="mt-1 block text-xs leading-5 text-amber-800">
-                Leave this off while entering picks submitted through the group
-                text. Your own draft picks still notify the next person.
-              </span>
-            </span>
+            <em>
+              {notifyNextDrafterForProxyPicks
+                ? "On"
+                : "Off"}
+            </em>
           </label>
         </section>
       ) : null}
@@ -1200,154 +1211,91 @@ export default function LineupBuilder({
 
       {viewMode === "draft" ? (
         <>
-          <PlayerPool
-            players={players}
-            filteredPlayers={filteredPlayers}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            positionFilter={positionFilter}
-            setPositionFilter={setPositionFilter}
-            onSlateOnly={onSlateOnly}
-            setOnSlateOnly={setOnSlateOnly}
-            isAvailabilityLoading={isAvailabilityLoading}
-            availablePlayerIdsForSlate={availablePlayerIdsForSlate}
-            availablePlayerIdSet={availablePlayerIdSet}
-            playerAverageMap={playerAverageMap}
-            playerProjections={playerProjections}
-            getOwnerTeamForPlayer={getOwnerTeamForPlayer}
-            setDraftingPlayer={setDraftingPlayer}
-            isAssigningPlayer={isAssigningPlayer}
-            pillBase={pillBase}
-            activePill={activePill}
-            inactivePill={inactivePill}
-          />
+          <section className="draft-page-tabs">
+            <button
+              type="button"
+              onClick={() => setDraftPageTab("lineup")}
+              className={`draft-page-tab ${
+                draftPageTab === "lineup"
+                  ? "draft-page-tab--active"
+                  : ""
+              }`}
+            >
+              <span aria-hidden="true">🏀</span>
+              <span>Lineup</span>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Draft Board
-              </h2>
-              <p className="text-sm text-slate-600">
-                Team rosters, draft positions, and remaining positional needs.
-              </p>
-            </div>
+              {currentUser?.teamId ? (
+                <span className="draft-page-tab-count">
+                  {getPlayersForTeam(currentUser.teamId).length}/5
+                </span>
+              ) : null}
+            </button>
 
-            <div className="space-y-4">
-              {orderedTeamsForSlate.map((team) => {
-                const rosterPlayers = getPlayersForTeam(team.id);
-                const draftOrder = (team as any).draft_order;
-                const isParticipating = (team as any).is_participating !== false;
-
-                const guards = rosterPlayers.filter(
-                  (p) => p.position_group === "G"
-                );
-                const fcs = rosterPlayers.filter(
-                  (p) => p.position_group === "F/C"
-                );
-
-                const rosterRows: Array<{ slot: string; player: Player | null }> = [
-                  { slot: "G", player: guards[0] ?? null },
-                  { slot: "G", player: guards[1] ?? null },
-                  { slot: "F/C", player: fcs[0] ?? null },
-                  { slot: "F/C", player: fcs[1] ?? null },
-                  { slot: "F/C", player: fcs[2] ?? null },
-                ];
-
-                const projectedTotal = rosterPlayers.reduce(
-                  (sum, player) => sum + getPlayerProjectionScore(player.id),
-                  0
-                );
-
-                return (
-                  <div
-                    key={team.id}
-                    className={`overflow-hidden rounded-2xl border border-slate-200 bg-white ${
-                      !isParticipating ? "opacity-70" : ""
-                    }`}
-                  >
-                    <div className="flex flex-col gap-2 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-lg font-semibold text-slate-900">
-                          {team.name}
-                          {!isParticipating ? " (Out)" : ""}
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          Draft Position #{draftOrder ?? "—"}
-                        </div>
-                        <div className="text-sm font-semibold text-slate-900">
-                          Projected Total: {projectedTotal.toFixed(1)}
-                        </div>
-                      </div>
-
-                      <div className="text-sm font-medium text-sky-700">
-                        {getDraftNeeds(team.id)}
-                      </div>
-                    </div>
-
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-100 text-slate-700">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Slot</th>
-                          <th className="px-3 py-2 text-left">Player</th>
-                          <th className="px-3 py-2 text-left">Proj</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        {rosterRows.map((row, index) => (
-                          <tr
-                            key={`${team.id}-${index}`}
-                            className="border-b border-slate-100"
-                          >
-                            <td className="px-3 py-2 font-medium">{row.slot}</td>
-
-                            <td className="px-3 py-2">
-                              {row.player ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setDraftingPlayer(row.player)}
-                                  className="flex items-center gap-2 font-medium text-sky-700 hover:underline"
-                                >
-                                  <PlayerHeadshot
-                                    nbaPlayerId={row.player.nba_player_id}
-                                    playerName={row.player.name}
-                                    size="sm"
-                                  />
-
-                                  <span>{row.player.name}</span>
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setTargetDraftSlot({
-                                      teamId: team.id,
-                                      teamName: team.name,
-                                      positionGroup: row.slot as "G" | "F/C",
-                                    })
-                                  }
-                                  className="rounded-lg border border-dashed border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
-                                >
-                                  + Draft {row.slot}
-                                </button>
-                              )}
-                            </td>
-
-                            <td className="px-3 py-2 font-semibold text-slate-700">
-                              {row.player
-                                ? getPlayerProjectionScore(row.player.id).toFixed(1)
-                                : "—"}
-                            </td>
-
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                );
-              })}
-            </div>
+            <button
+              type="button"
+              onClick={() => setDraftPageTab("players")}
+              className={`draft-page-tab ${
+                draftPageTab === "players"
+                  ? "draft-page-tab--active"
+                  : ""
+              }`}
+            >
+              <span aria-hidden="true">🔎</span>
+              <span>Players</span>
+            </button>
           </section>
+
+          {draftPageTab === "lineup" ? (
+            <DraftRosterCourt
+              teamId={currentUser?.teamId ?? null}
+              teamName={currentUser?.displayName ?? null}
+              players={
+                currentUser?.teamId
+                  ? getPlayersForTeam(currentUser.teamId)
+                  : []
+              }
+              isLocked={Boolean(selectedSlate?.is_locked)}
+              setDraftingPlayer={setDraftingPlayer}
+              setTargetDraftSlot={setTargetDraftSlot}
+            />
+          ) : (
+            <PlayerPool
+              players={players}
+              filteredPlayers={filteredPlayers}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              positionFilter={positionFilter}
+              setPositionFilter={setPositionFilter}
+              onSlateOnly={onSlateOnly}
+              setOnSlateOnly={setOnSlateOnly}
+              isAvailabilityLoading={isAvailabilityLoading}
+              availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+              availablePlayerIdSet={availablePlayerIdSet}
+              playerAverageMap={playerAverageMap}
+              playerProjections={playerProjections}
+              getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+              setDraftingPlayer={setDraftingPlayer}
+              isAssigningPlayer={isAssigningPlayer}
+              pillBase={pillBase}
+              activePill={activePill}
+              inactivePill={inactivePill}
+            />
+          )}
+
+          <LeagueLineupCards
+            teams={orderedTeamsForSlate}
+            currentTeamId={currentUser?.teamId ?? null}
+            getPlayersForTeam={getPlayersForTeam}
+            getPlayerProjectionScore={
+              getPlayerProjectionScore
+            }
+            getDraftNeeds={getDraftNeeds}
+            setDraftingPlayer={setDraftingPlayer}
+            setTargetDraftSlot={setTargetDraftSlot}
+            isLocked={Boolean(
+              selectedSlate?.is_locked
+            )}
+          />
         </>
       ) : (
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">

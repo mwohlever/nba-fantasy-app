@@ -214,17 +214,18 @@ export default async function DraftLineupsPage() {
       <div className="mx-auto max-w-[1600px] space-y-6">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
-              <p className="mt-2 text-sm text-slate-600">
-                Draft players and build your lineup for the current slate.
-              </p>
+        <section className="draft-page-intro">
+          <div>
+            <div className="draft-page-intro-kicker">
+              111 Fantasy Sports
             </div>
 
-            <RefreshPlayersButton />
+            <h1>Draft</h1>
+
+            <p>Build your five-player lineup.</p>
           </div>
+
+          <RefreshPlayersButton />
         </section>
 
         <LineupBuilder

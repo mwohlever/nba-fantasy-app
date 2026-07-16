@@ -1,5 +1,7 @@
 "use client";
 
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+
 import AppNav from "@/components/AppNav";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -328,7 +330,13 @@ router.push("/lineups/draft");
                 Slate Name Preview
               </div>
               <div className="mt-1 text-lg font-semibold text-slate-900">
-                {previewLabel}
+                {formatSlateDateLabel({
+                  start_date: startDate,
+                  end_date:
+                    multipleDays && endDate
+                      ? endDate
+                      : startDate,
+                })}
               </div>
             </div>
 

@@ -54,6 +54,78 @@ export default function LineupControls({
   const inactivePill =
     "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
 
+  if (isDraftPage) {
+    return (
+      <section className="draft-compact-controls">
+        <div className="draft-compact-controls-main">
+          <label className="draft-compact-field">
+            <span>Season</span>
+
+            <select
+              value={selectedSeason}
+              onChange={(event) =>
+                setSelectedSeason(event.target.value)
+              }
+            >
+              {seasons.map((season) => (
+                <option key={season} value={season}>
+                  {season}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="draft-compact-field draft-compact-field--slate">
+            <span>Slate</span>
+
+            <select
+              value={selectedSlateId}
+              onChange={(event) =>
+                setSelectedSlateId(event.target.value)
+              }
+            >
+              {slates.map((slate) => (
+                <option key={slate.id} value={slate.id}>
+                  {slate.label ?? slate.date}
+                  {slate.is_locked ? " (Locked)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="draft-compact-meta">
+          <div className="draft-compact-status">
+            <span
+              className={`draft-compact-status-dot ${
+                selectedSlate?.is_locked
+                  ? "draft-compact-status-dot--locked"
+                  : "draft-compact-status-dot--open"
+              }`}
+            />
+
+            <span>
+              {isSlateLoading
+                ? "Loading slate..."
+                : selectedSlate
+                  ? selectedSlate.is_locked
+                    ? "Slate locked"
+                    : "Slate open"
+                  : "No slate selected"}
+            </span>
+          </div>
+
+          <Link
+            href="/standings"
+            className="draft-compact-standings-link"
+          >
+            View standings →
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
