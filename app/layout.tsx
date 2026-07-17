@@ -31,6 +31,39 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var savedTheme = localStorage.getItem("111-fantasy-theme");
+
+                  if (
+                    savedTheme !== "light" &&
+                    savedTheme !== "dark" &&
+                    savedTheme !== "system"
+                  ) {
+                    savedTheme = "dark";
+                    localStorage.setItem("111-fantasy-theme", "dark");
+                  }
+
+                  var theme = savedTheme === "light" ? "light" : "dark";
+                  var root = document.documentElement;
+
+                  root.classList.remove("light", "dark");
+                  root.classList.add(theme);
+                  root.style.colorScheme = theme;
+                } catch (error) {
+                  document.documentElement.classList.add("dark");
+                  document.documentElement.style.colorScheme = "dark";
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
+
       <body className="min-h-full flex flex-col">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
