@@ -25,6 +25,7 @@ type Slate = {
 type SavedLineup = {
   team_id: number;
   player_ids: number[];
+  pregame_projected_points: number | null;
 };
 
 type SlateTeamConfig = {
@@ -190,18 +191,47 @@ export default async function ScoresLineupsPage() {
         id,
         team_id,
         lineup_players (
-          player_id
+          player_id,
+          projected_fantasy_points
         )
         `
       )
       .eq("slate_id", selectedSlateId);
 
     savedLineupsForInitialSlate =
-      lineupsData?.map((lineup) => ({
-        team_id: lineup.team_id,
-        player_ids:
-          lineup.lineup_players?.map((lp: { player_id: number }) => lp.player_id) ?? [],
-      })) ?? [];
+      lineupsData?.map((lineup) => {
+        const lineupPlayerRows =
+          lineup.lineup_players?.map(
+            (lp: {
+              player_id: number;
+              projected_fantasy_points: number | null;
+            }) => lp
+          ) ?? [];
+
+        const hasCompleteProjectionSnapshot =
+          lineupPlayerRows.length > 0 &&
+          lineupPlayerRows.every(
+            (lp) =>
+              lp.projected_fantasy_points !== null &&
+              Number.isFinite(Number(lp.projected_fantasy_points))
+          );
+
+        return {
+          team_id: lineup.team_id,
+          player_ids: lineupPlayerRows.map((lp) => lp.player_id),
+          pregame_projected_points: hasCompleteProjectionSnapshot
+            ? Number(
+                lineupPlayerRows
+                  .reduce(
+                    (sum, lp) =>
+                      sum + Number(lp.projected_fantasy_points ?? 0),
+                    0
+                  )
+                  .toFixed(1)
+              )
+            : null,
+        };
+      }) ?? [];
 
     const { data: statsData } = await supabaseAdmin
       .from("player_slate_stats")

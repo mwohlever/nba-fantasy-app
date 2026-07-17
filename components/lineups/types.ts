@@ -38,6 +38,7 @@ export type Slate = {
 export type SavedLineup = {
   team_id: number;
   player_ids: number[];
+  pregame_projected_points?: number | null;
 };
 
 export type PlayerStat = {

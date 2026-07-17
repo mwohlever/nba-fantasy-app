@@ -325,6 +325,20 @@ export default function LineupBuilder({
     return Number.isFinite(Number(value)) ? Number(value) : 0;
   };
 
+  const getPregameProjectedTeamTotal = (teamId: number) => {
+    const lineup = lineupsState.find(
+      (item) => item.team_id === teamId
+    );
+
+    const value = lineup?.pregame_projected_points;
+
+    return value !== null &&
+      value !== undefined &&
+      Number.isFinite(Number(value))
+      ? Number(value)
+      : null;
+  };
+
   const teamResultsMap = useMemo(() => {
     const map = new Map<number, TeamResult>();
     teamResultsState.forEach((result) => {
@@ -1365,6 +1379,9 @@ export default function LineupBuilder({
           getRawPlayerStat={getRawPlayerStat}
           getLiveProjectedTeamTotal={
             getLiveProjectedTeamTotal
+          }
+          getPregameProjectedTeamTotal={
+            getPregameProjectedTeamTotal
           }
           liveWinPctMap={liveWinPctMap}
           playerProjections={playerProjections}

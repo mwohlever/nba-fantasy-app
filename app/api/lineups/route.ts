@@ -20,6 +20,7 @@ type LineupRow = {
 type LineupPlayerRow = {
   lineup_id: number;
   player_id: number;
+  projected_fantasy_points: number | null;
 };
 
 function getSlateSeason(date: string | null | undefined) {
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
     const { data: lineupPlayers, error: lineupPlayersError } =
       await supabaseAdmin
         .from("lineup_players")
-        .select("lineup_id, player_id")
+        .select("lineup_id, player_id, projected_fantasy_points")
         .in("lineup_id", lineupIds);
 
     if (lineupPlayersError) {
@@ -89,12 +90,35 @@ export async function GET(request: NextRequest) {
 
     const safeLineupPlayers = (lineupPlayers ?? []) as LineupPlayerRow[];
 
-    const grouped = safeLineups.map((lineup) => ({
-      team_id: lineup.team_id,
-      player_ids: safeLineupPlayers
-        .filter((lp) => lp.lineup_id === lineup.id)
-        .map((lp) => lp.player_id),
-    }));
+    const grouped = safeLineups.map((lineup) => {
+      const lineupPlayerRows = safeLineupPlayers.filter(
+        (lp) => lp.lineup_id === lineup.id
+      );
+
+      const hasCompleteProjectionSnapshot =
+        lineupPlayerRows.length > 0 &&
+        lineupPlayerRows.every(
+          (lp) =>
+            lp.projected_fantasy_points !== null &&
+            Number.isFinite(Number(lp.projected_fantasy_points))
+        );
+
+      return {
+        team_id: lineup.team_id,
+        player_ids: lineupPlayerRows.map((lp) => lp.player_id),
+        pregame_projected_points: hasCompleteProjectionSnapshot
+          ? Number(
+              lineupPlayerRows
+                .reduce(
+                  (sum, lp) =>
+                    sum + Number(lp.projected_fantasy_points ?? 0),
+                  0
+                )
+                .toFixed(1)
+            )
+          : null,
+      };
+    });
 
     return NextResponse.json({
       success: true,

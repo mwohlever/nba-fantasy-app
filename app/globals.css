@@ -6453,6 +6453,57 @@ html:not(.dark) .home-current-slate--final .home-win-badge {
   font-variant-numeric: tabular-nums;
 }
 
+.home-projection-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  padding: 0.3rem 0.48rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-projection-delta-icon {
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.home-projection-delta--positive {
+  background: rgb(16 185 129 / 0.14);
+  color: #6ee7b7;
+}
+
+.home-projection-delta--negative {
+  background: rgb(244 63 94 / 0.14);
+  color: #fda4af;
+}
+
+.home-projection-delta--neutral {
+  background: rgb(148 163 184 / 0.14);
+  color: #cbd5e1;
+}
+
+html.light .home-projection-delta--positive,
+html:not(.dark) .home-projection-delta--positive {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+html.light .home-projection-delta--negative,
+html:not(.dark) .home-projection-delta--negative {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+html.light .home-projection-delta--neutral,
+html:not(.dark) .home-projection-delta--neutral {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 /* Human-readable game progress. */
 .home-games-status {
   display: flex;
@@ -6906,3 +6957,173 @@ html:not(.dark) .home-games-status-v2-left {
     margin-bottom: 0.65rem;
   }
 }
+
+/* =========================================================
+   SCORES — COMPACT TEAM STATUS
+   ========================================================= */
+
+.scores-selected-team-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  border: 1px solid rgb(71 85 105 / 0.72);
+  border-radius: 1rem;
+  background: rgb(30 41 59 / 0.58);
+  padding: 0.7rem 0.85rem;
+}
+
+.scores-selected-team-status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.scores-selected-team-status-item > span {
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.scores-selected-team-status-item > strong {
+  color: #f8fafc;
+  font-size: 0.95rem;
+  font-weight: 850;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.scores-selected-team-status-divider {
+  width: 1px;
+  height: 1.3rem;
+  background: #475569;
+}
+
+.scores-team-projection-delta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.26rem 0.48rem;
+  font-size: 0.86rem !important;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.scores-team-projection-delta--positive {
+  background: rgb(16 185 129 / 0.14);
+  color: #6ee7b7 !important;
+}
+
+.scores-team-projection-delta--negative {
+  background: rgb(244 63 94 / 0.14);
+  color: #fda4af !important;
+}
+
+.scores-team-projection-delta--neutral {
+  min-width: 2.2rem;
+  background: rgb(148 163 184 / 0.14);
+  color: #cbd5e1 !important;
+}
+
+.scores-selected-team-game-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.scores-selected-team-game-status span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.scores-selected-team-game-status i {
+  color: #64748b;
+  font-style: normal;
+}
+
+html.light .scores-selected-team-status-bar,
+html:not(.dark) .scores-selected-team-status-bar {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+html.light .scores-selected-team-status-item > span,
+html:not(.dark) .scores-selected-team-status-item > span {
+  color: #64748b;
+}
+
+html.light .scores-selected-team-status-item > strong,
+html:not(.dark) .scores-selected-team-status-item > strong {
+  color: #0f172a;
+}
+
+html.light .scores-team-projection-delta--positive,
+html:not(.dark) .scores-team-projection-delta--positive {
+  background: #ecfdf5;
+  color: #047857 !important;
+}
+
+html.light .scores-team-projection-delta--negative,
+html:not(.dark) .scores-team-projection-delta--negative {
+  background: #fff1f2;
+  color: #be123c !important;
+}
+
+html.light .scores-team-projection-delta--neutral,
+html:not(.dark) .scores-team-projection-delta--neutral {
+  background: #e2e8f0;
+  color: #475569 !important;
+}
+
+html.light .scores-selected-team-game-status,
+html:not(.dark) .scores-selected-team-game-status {
+  color: #475569;
+}
+
+@media (max-width: 639px) {
+  .scores-selected-team-status-bar {
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.62rem 0.7rem;
+  }
+
+  .scores-selected-team-status-item {
+    gap: 0.35rem;
+  }
+
+  .scores-selected-team-status-item > span {
+    font-size: 0.62rem;
+  }
+
+  .scores-selected-team-status-item > strong {
+    font-size: 0.86rem;
+  }
+
+  .scores-selected-team-status-divider {
+    height: 1rem;
+  }
+
+  .scores-team-projection-delta {
+    padding: 0.22rem 0.4rem;
+    font-size: 0.78rem !important;
+  }
+
+  .scores-selected-team-game-status {
+    font-size: 0.74rem;
+  }
+}
+

@@ -48,6 +48,7 @@ type Lineup = {
 type LineupPlayer = {
   lineup_id: number;
   player_id: number;
+  projected_fantasy_points: number | null;
 };
 
 type Player = {
@@ -175,7 +176,7 @@ export async function GET() {
         .range(0, 20000),
       supabaseAdmin
         .from("lineup_players")
-        .select("lineup_id, player_id")
+        .select("lineup_id, player_id, projected_fantasy_points")
         .range(0, 20000),
       supabaseAdmin.from("players").select("id, name, nba_player_id").order("name", { ascending: true }),
       supabaseAdmin
@@ -505,7 +506,7 @@ export async function GET() {
     });
 
     const latestLineupsByTeamId = new Map<number, Lineup>();
-    const latestPlayerIdsByLineupId = new Map<number, number[]>();
+    const latestLineupPlayersByLineupId = new Map<number, LineupPlayer[]>();
 
     if (latestSlate) {
       const { data: latestLineupsData, error: latestLineupsError } =
@@ -533,7 +534,7 @@ export async function GET() {
         const { data: latestLineupPlayersData, error: latestLineupPlayersError } =
           await supabaseAdmin
             .from("lineup_players")
-            .select("lineup_id, player_id")
+            .select("lineup_id, player_id, projected_fantasy_points")
             .in("lineup_id", latestLineupIds);
 
         if (latestLineupPlayersError) {
@@ -544,15 +545,20 @@ export async function GET() {
         }
 
         (latestLineupPlayersData ?? []).forEach((lineupPlayer) => {
-          const existing =
-            latestPlayerIdsByLineupId.get(Number(lineupPlayer.lineup_id)) ?? [];
+          const lineupId = Number(lineupPlayer.lineup_id);
+          const existing = latestLineupPlayersByLineupId.get(lineupId) ?? [];
 
-          existing.push(Number(lineupPlayer.player_id));
+          existing.push({
+            lineup_id: lineupId,
+            player_id: Number(lineupPlayer.player_id),
+            projected_fantasy_points:
+              lineupPlayer.projected_fantasy_points === null ||
+              lineupPlayer.projected_fantasy_points === undefined
+                ? null
+                : Number(lineupPlayer.projected_fantasy_points),
+          });
 
-          latestPlayerIdsByLineupId.set(
-            Number(lineupPlayer.lineup_id),
-            existing
-          );
+          latestLineupPlayersByLineupId.set(lineupId, existing);
         });
       }
     }
@@ -571,11 +577,13 @@ export async function GET() {
       const lineup = latestLineupsByTeamId.get(teamId);
       if (!lineup) return Number(result?.fantasy_points ?? 0);
 
-      const playerIds = latestPlayerIdsByLineupId.get(lineup.id) ?? [];
+      const lineupPlayers =
+        latestLineupPlayersByLineupId.get(lineup.id) ?? [];
 
       let hasRemainingUpside = false;
 
-      const projectedTotal = playerIds.reduce((sum, playerId) => {
+      const projectedTotal = lineupPlayers.reduce((sum, lineupPlayer) => {
+        const playerId = lineupPlayer.player_id;
         const stat = statBySlateAndPlayer.get(`${latestSlate.id}:${playerId}`);
         const current = Number(stat?.fantasy_points ?? 0);
         const projection = projectionByPlayerId.get(playerId) ?? 0;
@@ -597,6 +605,32 @@ export async function GET() {
       return projectedTotal;
     }
 
+    function getPregameTeamTotal(teamId: number): number | null {
+      const lineup = latestLineupsByTeamId.get(teamId);
+      if (!lineup) return null;
+
+      const lineupPlayers =
+        latestLineupPlayersByLineupId.get(lineup.id) ?? [];
+
+      if (lineupPlayers.length === 0) return null;
+
+      const hasMissingProjection = lineupPlayers.some(
+        (lineupPlayer) =>
+          lineupPlayer.projected_fantasy_points === null ||
+          !Number.isFinite(lineupPlayer.projected_fantasy_points)
+      );
+
+      if (hasMissingProjection) return null;
+
+      return round1(
+        lineupPlayers.reduce(
+          (sum, lineupPlayer) =>
+            sum + Number(lineupPlayer.projected_fantasy_points ?? 0),
+          0
+        )
+      );
+    }
+
     const latestSlateRowsBase = latestSlate
       ? safeResults
           .filter((row) => row.slate_id === latestSlate.id)
@@ -607,6 +641,7 @@ export async function GET() {
               "Unknown Team",
             avatarUrl: avatarUrlByTeamId.get(row.team_id) ?? null,
             projected_points: round1(getProjectedTeamTotal(row.team_id)),
+            pregame_projected_points: getPregameTeamTotal(row.team_id),
             win_probability: 0,
 
           }))

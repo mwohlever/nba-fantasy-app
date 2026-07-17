@@ -53,6 +53,7 @@ type Props = {
   getPlayerStat: (playerId: number) => PlayerBoxScore;
   getRawPlayerStat: (playerId: number) => PlayerStat | null;
   getLiveProjectedTeamTotal: (teamId: number) => number;
+  getPregameProjectedTeamTotal: (teamId: number) => number | null;
   liveWinPctMap: Map<number, number>;
   playerProjections: Record<number, any>;
   controls?: ReactNode;
@@ -133,6 +134,7 @@ export default function ScoresDashboard({
   getPlayerStat,
   getRawPlayerStat,
   getLiveProjectedTeamTotal,
+  getPregameProjectedTeamTotal,
   liveWinPctMap,
   playerProjections,
   controls,
@@ -214,6 +216,9 @@ export default function ScoresDashboard({
   const selectedProjection =
     getLiveProjectedTeamTotal(selectedTeam.id);
 
+  const selectedPregameProjection =
+    getPregameProjectedTeamTotal(selectedTeam.id);
+
   const selectedWinPct =
     liveWinPctMap.get(selectedTeam.id) ?? 0;
 
@@ -272,6 +277,56 @@ export default function ScoresDashboard({
           progressTotal) *
         100
       : 0;
+
+  const isFinal =
+    selectedSlate?.is_locked === true ||
+    (selectedStats.games_completed > 0 &&
+      selectedStats.games_in_progress === 0 &&
+      selectedStats.games_remaining === 0);
+
+  const hasLiveGames =
+    selectedStats.games_in_progress > 0;
+
+  const hasStarted =
+    selectedStats.games_completed > 0 ||
+    hasLiveGames;
+
+  const projectionDifference =
+    selectedPregameProjection !== null
+      ? Number(
+          (
+            Number(selectedStats.total ?? 0) -
+            selectedPregameProjection
+          ).toFixed(1)
+        )
+      : null;
+
+  const projectionDifferenceIsNeutral =
+    projectionDifference !== null &&
+    Math.abs(projectionDifference) <= 1;
+
+  const projectionDifferenceIsPositive =
+    projectionDifference !== null &&
+    projectionDifference > 1;
+
+  const projectionDifferenceDisplay =
+    projectionDifference === null
+      ? "—"
+      : projectionDifference > 0
+        ? `+${projectionDifference.toFixed(1)}`
+        : projectionDifference.toFixed(1);
+
+  const gameStatusParts = [
+    selectedStats.games_completed > 0
+      ? `${selectedStats.games_completed} Final`
+      : null,
+    selectedStats.games_in_progress > 0
+      ? `${selectedStats.games_in_progress} Live`
+      : null,
+    selectedStats.games_remaining > 0
+      ? `${selectedStats.games_remaining} Left`
+      : null,
+  ].filter(Boolean);
 
   return (
     <section className="scores-dashboard-shell">
@@ -488,41 +543,82 @@ export default function ScoresDashboard({
           </div>
         </header>
 
-        <div className="scores-selected-team-summary">
-          <div>
-            <span>Projected</span>
-            <strong>
-              {formatScore(selectedProjection)}
-            </strong>
-          </div>
+        <div className="scores-selected-team-status-bar">
+          {isFinal ? (
+            <div className="scores-selected-team-status-item">
+              <span>vs projection</span>
 
-          <div>
-            <span>Win chance</span>
-            <strong>
-              {selectedWinPct.toFixed(0)}%
-            </strong>
-          </div>
+              <strong
+                className={`scores-team-projection-delta ${
+                  projectionDifference === null ||
+                  projectionDifferenceIsNeutral
+                    ? "scores-team-projection-delta--neutral"
+                    : projectionDifferenceIsPositive
+                      ? "scores-team-projection-delta--positive"
+                      : "scores-team-projection-delta--negative"
+                }`}
+                title={
+                  selectedPregameProjection !== null
+                    ? `Pregame projection: ${formatScore(
+                        selectedPregameProjection
+                      )}`
+                    : "No saved pregame projection"
+                }
+              >
+                {projectionDifference === null
+                  ? "—"
+                  : `${
+                      projectionDifferenceIsNeutral
+                        ? "—"
+                        : projectionDifferenceIsPositive
+                          ? "▲"
+                          : "▼"
+                    } ${projectionDifferenceDisplay}`}
+              </strong>
+            </div>
+          ) : (
+            <>
+              <div className="scores-selected-team-status-item">
+                <span>
+                  {hasStarted
+                    ? "Projected final"
+                    : "Pregame projection"}
+                </span>
 
-          <div>
-            <span>Final</span>
-            <strong>
-              {selectedStats.games_completed}
-            </strong>
-          </div>
+                <strong>
+                  {hasStarted
+                    ? formatScore(selectedProjection)
+                    : selectedPregameProjection !== null
+                      ? formatScore(selectedPregameProjection)
+                      : formatScore(selectedProjection)}
+                </strong>
+              </div>
 
-          <div>
-            <span>Live</span>
-            <strong>
-              {selectedStats.games_in_progress}
-            </strong>
-          </div>
+              <div className="scores-selected-team-status-divider" aria-hidden="true" />
 
-          <div>
-            <span>Remaining</span>
-            <strong>
-              {selectedStats.games_remaining}
-            </strong>
-          </div>
+              <div className="scores-selected-team-status-item">
+                <span>Win chance</span>
+                <strong>{selectedWinPct.toFixed(0)}%</strong>
+              </div>
+            </>
+          )}
+
+          {gameStatusParts.length > 0 ? (
+            <>
+              <div className="scores-selected-team-status-divider" aria-hidden="true" />
+
+              <div className="scores-selected-team-game-status">
+                {gameStatusParts.map((part, index) => (
+                  <span key={String(part)}>
+                    {index > 0 ? (
+                      <i aria-hidden="true">•</i>
+                    ) : null}
+                    {part}
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : null}
         </div>
 
         <div className="scores-game-progress">

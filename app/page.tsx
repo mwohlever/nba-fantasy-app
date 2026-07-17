@@ -34,6 +34,7 @@ type LatestSlateRow = {
   games_in_progress: number | null;
   games_remaining: number | null;
   projected_points?: number | null;
+  pregame_projected_points?: number | null;
   win_probability?: number | null;
 };
 
@@ -417,6 +418,26 @@ export default function HomePage() {
 
   const slateHeading = "Current Slate";
 
+  const activeSlateStartTime = latestSlate?.first_game_start_time
+    ? new Date(latestSlate.first_game_start_time)
+    : null;
+
+  const hasSlateStarted =
+    activeSlateStartTime !== null &&
+    activeSlateStartTime.getTime() <= Date.now();
+
+  const isFinalSlate =
+    latestSlate?.is_locked === true ||
+    (!hasLiveGames && hasCompletedGames && !hasRemainingGames);
+
+  const scoreColumnLabel = isFinalSlate ? "Final" : "Current";
+
+  const projectionColumnLabel = isFinalSlate
+    ? "vs Proj."
+    : hasSlateStarted
+      ? "Proj. Final"
+      : "Pregame Proj.";
+
   const slateBadge = hasLiveGames
     ? "LIVE"
     : hasCompletedGames && !hasRemainingGames
@@ -454,14 +475,6 @@ export default function HomePage() {
   const nextSlateStartTime = nextSlate?.first_game_start_time
     ? new Date(nextSlate.first_game_start_time)
     : null;
-
-  const activeSlateStartTime = latestSlate?.first_game_start_time
-    ? new Date(latestSlate.first_game_start_time)
-    : null;
-
-  const hasSlateStarted =
-    activeSlateStartTime !== null &&
-    activeSlateStartTime.getTime() <= Date.now();
 
   const shouldShowRefreshStats =
     Boolean(latestSlate) && hasSlateStarted && !latestSlate?.is_locked;
@@ -637,8 +650,12 @@ export default function HomePage() {
                     <thead className="bg-slate-100 text-slate-700">
                       <tr className="text-left">
                         <th className="px-3 py-3 font-semibold">Team</th>
-                        <th className="px-2 py-3 font-semibold">Score</th>
-                        <th className="px-2 py-3 font-semibold">Proj</th>
+                        <th className="px-2 py-3 font-semibold">
+                          {scoreColumnLabel}
+                        </th>
+                        <th className="px-2 py-3 font-semibold">
+                          {projectionColumnLabel}
+                        </th>
                         <th className="px-2 py-3 font-semibold">Win %</th>
                         <th className="px-2 py-3 font-semibold">Games</th>
                       </tr>
@@ -693,10 +710,74 @@ export default function HomePage() {
                             </button>
                           </td>
                           <td className="home-projection-value-v2 px-2 py-3">
-                            {row.projected_points !== null &&
-                            row.projected_points !== undefined
-                              ? roundTo(Number(row.projected_points))
-                              : "—"}
+                            {isFinalSlate ? (
+                              row.pregame_projected_points !== null &&
+                              row.pregame_projected_points !== undefined ? (
+                                (() => {
+                                  const difference = roundTo(
+                                    Number(row.fantasy_points ?? 0) -
+                                      Number(row.pregame_projected_points),
+                                    1
+                                  );
+
+                                  const isNeutral = Math.abs(difference) <= 1;
+                                  const isPositive = difference > 1;
+
+                                  const displayDifference =
+                                    difference > 0
+                                      ? `+${difference.toFixed(1)}`
+                                      : difference.toFixed(1);
+
+                                  return (
+                                    <span
+                                      className={`home-projection-delta ${
+                                        isNeutral
+                                          ? "home-projection-delta--neutral"
+                                          : isPositive
+                                            ? "home-projection-delta--positive"
+                                            : "home-projection-delta--negative"
+                                      }`}
+                                      title={`Pregame projection: ${roundTo(
+                                        Number(row.pregame_projected_points),
+                                        1
+                                      )}`}
+                                      aria-label={`${
+                                        isNeutral
+                                          ? "Matched projection"
+                                          : isPositive
+                                            ? "Exceeded projection"
+                                            : "Finished below projection"
+                                      } by ${Math.abs(difference).toFixed(
+                                        1
+                                      )} fantasy points. Pregame projection ${roundTo(
+                                        Number(row.pregame_projected_points),
+                                        1
+                                      )}.`}
+                                    >
+                                      <span
+                                        className="home-projection-delta-icon"
+                                        aria-hidden="true"
+                                      >
+                                        {isNeutral
+                                          ? "—"
+                                          : isPositive
+                                            ? "▲"
+                                            : "▼"}
+                                      </span>
+
+                                      <span>{displayDifference}</span>
+                                    </span>
+                                  );
+                                })()
+                              ) : (
+                                "—"
+                              )
+                            ) : row.projected_points !== null &&
+                              row.projected_points !== undefined ? (
+                              roundTo(Number(row.projected_points))
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="px-2 py-3">
                             {row.win_probability !== null &&
