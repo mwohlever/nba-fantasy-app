@@ -153,6 +153,46 @@ function resultEmoji(position: number | null) {
   return "";
 }
 
+function formatSlateLabel(label: string) {
+  const dateMatches = label.match(/\d{4}-\d{2}-\d{2}/g);
+
+  if (!dateMatches || dateMatches.length === 0) {
+    return label;
+  }
+
+  const parseDate = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  };
+
+  const monthName = (date: Date) =>
+    date.toLocaleDateString("en-US", {
+      month: "short",
+      timeZone: "UTC",
+    });
+
+  const start = parseDate(dateMatches[0]);
+  const startMonth = monthName(start);
+  const startDay = start.getUTCDate();
+
+  if (dateMatches.length === 1) {
+    return `${startMonth} ${startDay}`;
+  }
+
+  const end = parseDate(dateMatches[dateMatches.length - 1]);
+  const endMonth = monthName(end);
+  const endDay = end.getUTCDate();
+
+  if (
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth()
+  ) {
+    return `${startMonth} ${startDay}-${endDay}`;
+  }
+
+  return `${startMonth} ${startDay}-${endMonth} ${endDay}`;
+}
+
 function projectionSourceLabel(source: string | null | undefined) {
   if (!source) {
     return "No saved source";
@@ -320,7 +360,7 @@ export default function PlayerModal(props: Props) {
               {nbaAverage !== null ? (
                 <>
                   <span aria-hidden="true">•</span>
-                  <span>NBA Avg {fmt(nbaAverage)}</span>
+                  <span>Reg. Season {fmt(nbaAverage)}</span>
                 </>
               ) : null}
             </div>
@@ -329,15 +369,13 @@ export default function PlayerModal(props: Props) {
 
         <div className="player-modal-highlight-grid">
           <div className="player-modal-highlight player-modal-highlight--primary">
-            <span>Projection</span>
-
+            <span>Projection</span>{" "}
             <strong>
               {fmt(projectionScore)}
               {projectionBadges.includes("trophy") ? " 🏆" : ""}
               {projectionBadges.includes("hot") ? " 🔥" : ""}
               {projectionBadges.includes("cold") ? " 🧊" : ""}
             </strong>
-
             <small>
               {projectionConfidence
                 ? `${String(projectionConfidence).toUpperCase()} confidence`
@@ -426,7 +464,10 @@ export default function PlayerModal(props: Props) {
           {props.orderedTeamsForSlate.map((team) => {
             const teamStats = props.getTeamStats(team.id);
 
-            const status = props.getTeamAssignmentStatus(team.id, currentPlayer);
+            const status = props.getTeamAssignmentStatus(
+              team.id,
+              currentPlayer,
+            );
 
             const isCurrentOwner =
               props.getOwnerTeamIdForPlayer(currentPlayer.id) === team.id;
@@ -522,7 +563,7 @@ export default function PlayerModal(props: Props) {
                   }`}
                 >
                   <div className="player-modal-history-date">
-                    {row.slateLabel}
+                    {formatSlateLabel(row.slateLabel)}
                   </div>
 
                   <div className="player-modal-history-score">
@@ -548,8 +589,7 @@ export default function PlayerModal(props: Props) {
                     </>
                   ) : (
                     <div className="player-modal-history-projection">
-                      <span>Projection</span>
-                      <strong>Not saved</strong>
+                      <span>Projection</span> <strong>—</strong>
                     </div>
                   )}
 
@@ -562,13 +602,60 @@ export default function PlayerModal(props: Props) {
                     <span>{row.teamName}</span>
                   </div>
 
-                  <div className="player-modal-history-stats">
-                    <span>{row.points} PTS</span>
-                    <span>{row.rebounds} REB</span>
-                    <span>{row.assists} AST</span>
-                    <span>{row.steals} STL</span>
-                    <span>{row.blocks} BLK</span>
-                    <span>{row.turnovers} TO</span>
+                  <div className="mt-4 grid grid-cols-3 gap-x-3 gap-y-3 border-t border-slate-600/40 pt-4">
+                    <div className="text-center">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        PTS
+                      </span>
+                      <strong className="mt-1 block text-sm font-bold text-slate-100">
+                        {row.points}
+                      </strong>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        REB
+                      </span>
+                      <strong className="mt-1 block text-sm font-bold text-slate-100">
+                        {row.rebounds}
+                      </strong>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        AST
+                      </span>
+                      <strong className="mt-1 block text-sm font-bold text-slate-100">
+                        {row.assists}
+                      </strong>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        STL
+                      </span>
+                      <strong className="mt-1 block text-sm font-bold text-slate-100">
+                        {row.steals}
+                      </strong>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        BLK
+                      </span>
+                      <strong className="mt-1 block text-sm font-bold text-slate-100">
+                        {row.blocks}
+                      </strong>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        TO
+                      </span>
+                      <strong className="mt-1 block text-sm font-bold text-slate-100">
+                        {row.turnovers}
+                      </strong>
+                    </div>
                   </div>
                 </article>
               );
