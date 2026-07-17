@@ -8,6 +8,7 @@ import AppNav from "@/components/AppNav";
 import FunFactCarousel from "@/components/home/FunFactCarousel";
 import TeamProfileModal from "@/components/TeamProfileModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import TeamAvatar from "@/components/ui/TeamAvatar";
 import SeasonAwards from "@/components/home/SeasonAwards";
 
 type LatestSlate = {
@@ -24,6 +25,7 @@ type LatestSlateRow = {
   slate_id: number;
   team_id: number;
   teamName: string;
+  avatarUrl: string | null;
   fantasy_points: number | null;
   finish_position: number | null;
   games_completed: number | null;
@@ -93,6 +95,92 @@ type SlateRosterRow = {
   turnovers: number;
   fantasyPoints: number;
 };
+
+function GamesStatus({
+  completed,
+  inProgress,
+  remaining,
+}: {
+  completed: number | null;
+  inProgress: number | null;
+  remaining: number | null;
+}) {
+  const finalCount = Number(completed ?? 0);
+  const liveCount = Number(inProgress ?? 0);
+  const leftCount = Number(remaining ?? 0);
+
+  return (
+    <div
+      className="home-games-status-v2"
+      aria-label={`${finalCount} final, ${liveCount} live, ${leftCount} remaining`}
+    >
+      <span className="home-games-status-v2-final">
+        {finalCount} Final
+      </span>
+
+      {liveCount > 0 ? (
+        <>
+          <span className="home-games-status-v2-divider" aria-hidden="true">
+            ·
+          </span>
+
+          <span className="home-games-status-v2-live">
+            <span className="home-games-status-v2-dot" aria-hidden="true" />
+            {liveCount} Live
+          </span>
+        </>
+      ) : null}
+
+      {leftCount > 0 ? (
+        <>
+          <span className="home-games-status-v2-divider" aria-hidden="true">
+            ·
+          </span>
+
+          <span className="home-games-status-v2-left">
+            {leftCount} Left
+          </span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function TeamProfileButton({
+  teamName,
+  avatarUrl,
+  featured = false,
+  onClick,
+}: {
+  teamName: string;
+  avatarUrl?: string | null;
+  featured?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`home-team-profile-button ${
+        featured ? "home-team-profile-button--featured" : ""
+      }`}
+      aria-label={`View ${teamName}'s profile`}
+      title={`View ${teamName}'s profile`}
+    >
+      <TeamAvatar
+        teamName={teamName}
+        avatarUrl={avatarUrl}
+        size={featured ? "md" : "sm"}
+      />
+
+      <span className="home-team-profile-name">{teamName}</span>
+
+      <span className="home-team-profile-chevron" aria-hidden="true">
+        ›
+      </span>
+    </button>
+  );
+}
 
 function roundTo(value: number, digits = 1) {
   return Number(value.toFixed(digits));
@@ -475,19 +563,25 @@ export default function HomePage() {
                     <div className="text-xs uppercase tracking-wide text-orange-700">
                       {leaderLabel}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        leader &&
-                        setProfileTeam({
-                          id: leader.team_id,
-                          name: leader.teamName,
-                        })
-                      }
-                      className="home-winner-name mt-2 text-2xl font-bold text-slate-900 hover:text-sky-700 hover:underline"
-                    >
-                      {leader ? leader.teamName : "—"}
-                    </button>
+                    <div className="mt-2">
+                      {leader ? (
+                        <TeamProfileButton
+                          teamName={leader.teamName}
+                          avatarUrl={leader.avatarUrl}
+                          featured
+                          onClick={() =>
+                            setProfileTeam({
+                              id: leader.team_id,
+                              name: leader.teamName,
+                            })
+                          }
+                        />
+                      ) : (
+                        <div className="home-winner-name text-2xl font-bold text-slate-900">
+                          —
+                        </div>
+                      )}
+                    </div>
                     <div className="mt-1 text-sm text-slate-600">
                       {leader
                         ? `${roundTo(Number(leader.fantasy_points ?? 0))} pts`
@@ -526,15 +620,12 @@ export default function HomePage() {
                   <table className="w-full table-fixed border-collapse text-sm">
                     <thead className="bg-slate-100 text-slate-700">
                       <tr className="text-left">
-                        <th className="px-3 py-3 font-semibold">Player</th>
+                        <th className="px-3 py-3 font-semibold">Team</th>
                         <th className="px-2 py-3 font-semibold">Score</th>
                         <th className="px-2 py-3 font-semibold">Proj</th>
                         <th className="px-2 py-3 font-semibold">Win %</th>
                         <th className="px-2 py-3 font-semibold">
-                          <div>Games</div>
-                          <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                            C/IP/R
-                          </div>
+                          Games
                         </th>
                       </tr>
                     </thead>
@@ -548,19 +639,17 @@ export default function HomePage() {
                               : ""
                           }`}
                         >
-                          <td className="px-3 py-3 font-medium">
-                            <button
-                              type="button"
+                          <td className="px-3 py-2.5">
+                            <TeamProfileButton
+                              teamName={row.teamName}
+                              avatarUrl={row.avatarUrl}
                               onClick={() =>
                                 setProfileTeam({
                                   id: row.team_id,
                                   name: row.teamName,
                                 })
                               }
-                              className="hover:text-sky-700 hover:underline"
-                            >
-                              {row.teamName}
-                            </button>
+                            />
                           </td>
                           <td className="px-2 py-3">
                             <button
@@ -570,16 +659,30 @@ export default function HomePage() {
                                   slateId: row.slate_id,
                                   teamId: row.team_id,
                                   teamName: row.teamName,
-                                  slateLabel: latestSlate ? slateDateLabel : String(row.slate_id),
+                                  slateLabel: latestSlate
+                                    ? slateDateLabel
+                                    : String(row.slate_id),
                                 })
                               }
-                              className="font-medium text-sky-700 hover:underline"
+                              className="home-score-pill-v2"
+                              aria-label={`View ${row.teamName}'s box score`}
+                              title={`View ${row.teamName}'s box score`}
                             >
-                              {roundTo(Number(row.fantasy_points ?? 0))}
+                              <span>
+                                {roundTo(Number(row.fantasy_points ?? 0))}
+                              </span>
+
+                              <span
+                                className="home-score-pill-v2-chevron"
+                                aria-hidden="true"
+                              >
+                                ›
+                              </span>
                             </button>
                           </td>
-                          <td className="px-2 py-3 font-semibold text-sky-700">
-                            {row.projected_points !== null && row.projected_points !== undefined
+                          <td className="home-projection-value-v2 px-2 py-3">
+                            {row.projected_points !== null &&
+                            row.projected_points !== undefined
                               ? roundTo(Number(row.projected_points))
                               : "—"}
                           </td>
@@ -592,8 +695,12 @@ export default function HomePage() {
                               "—"
                             )}
                           </td>
-                          <td className="px-2 py-3 font-semibold tabular-nums">
-                            {row.games_completed ?? 0} / {row.games_in_progress ?? 0} / {row.games_remaining ?? 0}
+                          <td className="px-2 py-3">
+                            <GamesStatus
+                              completed={row.games_completed}
+                              inProgress={row.games_in_progress}
+                              remaining={row.games_remaining}
+                            />
                           </td>
                         </tr>
                       ))}

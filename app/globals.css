@@ -6210,3 +6210,572 @@ html.dark .hardware-card-detail {
     text-overflow: ellipsis;
   }
 }
+
+/* =========================================================
+   HOME SCOREBOARD — FINAL TYPOGRAPHY AND GAME STATUS POLISH
+   ========================================================= */
+
+/* Actual score remains the strongest table value. */
+.home-current-slate .home-score-value {
+  color: #38bdf8 !important;
+  font-size: 1.15rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  transition: color 150ms ease;
+}
+
+.home-current-slate .home-score-value:hover {
+  color: #7dd3fc !important;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Projection is useful, but visually secondary to actual score. */
+.home-current-slate .home-projection-value {
+  color: #e2e8f0 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Human-readable game state. */
+.home-games-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28rem;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-games-status-final {
+  color: #e2e8f0;
+}
+
+.home-games-status-divider {
+  color: #64748b;
+}
+
+.home-games-status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: #f87171;
+  font-weight: 800;
+}
+
+.home-games-status-live-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background-color: currentColor;
+  box-shadow: 0 0 0 3px rgb(248 113 113 / 0.12);
+  animation: home-games-live-pulse 1.8s ease-in-out infinite;
+}
+
+.home-games-status-left {
+  color: #94a3b8;
+}
+
+@keyframes home-games-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Win probabilities matter less after the winner is settled. */
+.home-current-slate--final .home-win-badge {
+  background-color: rgb(15 118 110 / 0.25) !important;
+  border-color: rgb(52 211 153 / 0.35);
+  color: #6ee7b7 !important;
+  box-shadow: none;
+  opacity: 0.86;
+}
+
+/* Light-mode equivalents. */
+html.light .home-current-slate .home-score-value,
+html:not(.dark) .home-current-slate .home-score-value {
+  color: #0369a1 !important;
+}
+
+html.light .home-current-slate .home-score-value:hover,
+html:not(.dark) .home-current-slate .home-score-value:hover {
+  color: #0284c7 !important;
+}
+
+html.light .home-current-slate .home-projection-value,
+html:not(.dark) .home-current-slate .home-projection-value {
+  color: #334155 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+html.light .home-games-status,
+html:not(.dark) .home-games-status {
+  color: #475569;
+}
+
+html.light .home-games-status-final,
+html:not(.dark) .home-games-status-final {
+  color: #334155;
+}
+
+html.light .home-games-status-divider,
+html:not(.dark) .home-games-status-divider {
+  color: #94a3b8;
+}
+
+html.light .home-games-status-left,
+html:not(.dark) .home-games-status-left {
+  color: #64748b;
+}
+
+html.light .home-current-slate--final .home-win-badge,
+html:not(.dark) .home-current-slate--final .home-win-badge {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  opacity: 0.8;
+}
+
+/* Preserve the compact mobile table. */
+@media (max-width: 639px) {
+  .home-games-status {
+    max-width: 5.5rem;
+    gap: 0.2rem;
+    font-size: 0.72rem;
+    white-space: normal;
+  }
+
+  .home-games-status-divider {
+    display: none;
+  }
+
+  .home-games-status-live,
+  .home-games-status-left {
+    width: 100%;
+  }
+
+  .home-current-slate .home-projection-value {
+    font-size: 0.92rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-games-status-live-dot {
+    animation: none;
+  }
+}
+
+/* =========================================================
+   HOME SCOREBOARD — SCORE MODAL + GAME STATUS
+   ========================================================= */
+
+/* The score opens the team box-score modal. */
+.home-current-slate .home-score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 4.7rem;
+  justify-content: center;
+  border: 1px solid rgb(148 163 184 / 0.4);
+  border-radius: 9999px;
+  background: rgb(30 41 59 / 0.72);
+  padding: 0.42rem 0.72rem;
+  color: #f8fafc !important;
+  font-size: 0.98rem !important;
+  font-weight: 800 !important;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 1px 2px rgb(0 0 0 / 0.15);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.home-current-slate .home-score-pill:hover {
+  border-color: rgb(56 189 248 / 0.8);
+  background: rgb(51 65 85 / 0.96);
+  color: #ffffff !important;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 4px 10px rgb(0 0 0 / 0.2);
+}
+
+.home-current-slate .home-score-pill:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.home-score-pill-chevron {
+  color: #94a3b8;
+  font-size: 1.05rem;
+  line-height: 0.8;
+  transition:
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.home-score-pill:hover .home-score-pill-chevron {
+  color: #7dd3fc;
+  transform: translateX(2px);
+}
+
+/* Projection is intentionally plain and secondary. */
+.home-current-slate .home-projection-value {
+  color: #e2e8f0 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  letter-spacing: -0.01em !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Human-readable game progress. */
+.home-games-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28rem;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-games-status-final {
+  color: #e2e8f0;
+  font-weight: 750;
+}
+
+.home-games-status-divider {
+  color: #64748b;
+}
+
+.home-games-status-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  color: #fb7185;
+  font-weight: 800;
+}
+
+.home-games-status-live-dot {
+  height: 0.4rem;
+  width: 0.4rem;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background: currentColor;
+  box-shadow: 0 0 0 3px rgb(251 113 133 / 0.12);
+  animation: home-games-live-pulse 1.8s ease-in-out infinite;
+}
+
+.home-games-status-left {
+  color: #94a3b8;
+}
+
+@keyframes home-games-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Light mode. */
+html.light .home-current-slate .home-score-pill,
+html:not(.dark) .home-current-slate .home-score-pill {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a !important;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 3px rgb(15 23 42 / 0.1);
+}
+
+html.light .home-current-slate .home-score-pill:hover,
+html:not(.dark) .home-current-slate .home-score-pill:hover {
+  border-color: #38bdf8;
+  background: #f0f9ff;
+  color: #075985 !important;
+}
+
+html.light .home-current-slate .home-projection-value,
+html:not(.dark) .home-current-slate .home-projection-value {
+  color: #334155 !important;
+}
+
+html.light .home-games-status,
+html:not(.dark) .home-games-status {
+  color: #475569;
+}
+
+html.light .home-games-status-final,
+html:not(.dark) .home-games-status-final {
+  color: #334155;
+}
+
+html.light .home-games-status-divider,
+html:not(.dark) .home-games-status-divider {
+  color: #94a3b8;
+}
+
+html.light .home-games-status-left,
+html:not(.dark) .home-games-status-left {
+  color: #64748b;
+}
+
+@media (max-width: 639px) {
+  .home-current-slate .home-score-pill {
+    min-width: 4.2rem;
+    padding: 0.38rem 0.58rem;
+    font-size: 0.9rem !important;
+  }
+
+  .home-current-slate .home-projection-value {
+    font-size: 0.92rem !important;
+  }
+
+  .home-games-status {
+    max-width: 5.6rem;
+    gap: 0.15rem 0.25rem;
+    font-size: 0.72rem;
+    white-space: normal;
+  }
+
+  .home-games-status-divider {
+    display: none;
+  }
+
+  .home-games-status-live,
+  .home-games-status-left {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-games-status-live-dot {
+    animation: none;
+  }
+}
+
+/* =========================================================
+   HOME SCOREBOARD V2 — SCORE ACTION + READABLE GAME STATUS
+   ========================================================= */
+
+.home-current-slate .home-score-pill-v2 {
+  display: inline-flex !important;
+  min-width: 5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid rgb(148 163 184 / 0.42);
+  border-radius: 9999px;
+  background: rgb(30 41 59 / 0.78);
+  padding: 0.42rem 0.7rem;
+  color: #f8fafc !important;
+  font-size: 0.96rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.015em;
+  text-decoration: none !important;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 1px 3px rgb(0 0 0 / 0.18);
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.home-current-slate .home-score-pill-v2:hover {
+  border-color: #64748b;
+  background: #334155;
+  color: #ffffff !important;
+  text-decoration: none !important;
+  transform: translateY(-1px);
+}
+
+.home-current-slate .home-score-pill-v2:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+.home-score-pill-v2-chevron {
+  color: #94a3b8;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 0.8;
+  transition:
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.home-score-pill-v2:hover .home-score-pill-v2-chevron {
+  color: #e2e8f0;
+  transform: translateX(2px);
+}
+
+/* Projection is plain text and intentionally secondary. */
+.home-current-slate .home-projection-value-v2 {
+  color: #e2e8f0 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.01em !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Human-readable game progress. */
+.home-games-status-v2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28rem;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-games-status-v2-final {
+  color: #e2e8f0;
+  font-weight: 750;
+}
+
+.home-games-status-v2-divider {
+  color: #64748b;
+}
+
+.home-games-status-v2-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #fb7185;
+  font-weight: 800;
+}
+
+.home-games-status-v2-dot {
+  height: 0.4rem;
+  width: 0.4rem;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: home-games-status-v2-pulse 1.8s ease-in-out infinite;
+}
+
+.home-games-status-v2-left {
+  color: #94a3b8;
+}
+
+@keyframes home-games-status-v2-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Light mode. */
+html.light .home-current-slate .home-score-pill-v2,
+html:not(.dark) .home-current-slate .home-score-pill-v2 {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a !important;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 1px 3px rgb(15 23 42 / 0.1);
+}
+
+html.light .home-current-slate .home-score-pill-v2:hover,
+html:not(.dark) .home-current-slate .home-score-pill-v2:hover {
+  border-color: #94a3b8;
+  background: #f1f5f9;
+  color: #0f172a !important;
+}
+
+html.light .home-current-slate .home-projection-value-v2,
+html:not(.dark) .home-current-slate .home-projection-value-v2 {
+  color: #334155 !important;
+}
+
+html.light .home-games-status-v2-final,
+html:not(.dark) .home-games-status-v2-final {
+  color: #334155;
+}
+
+html.light .home-games-status-v2-divider,
+html:not(.dark) .home-games-status-v2-divider {
+  color: #94a3b8;
+}
+
+html.light .home-games-status-v2-left,
+html:not(.dark) .home-games-status-v2-left {
+  color: #64748b;
+}
+
+@media (max-width: 639px) {
+  .home-current-slate .home-score-pill-v2 {
+    min-width: 4.25rem;
+    gap: 0.22rem;
+    padding: 0.38rem 0.52rem;
+    font-size: 0.88rem !important;
+  }
+
+  .home-current-slate .home-projection-value-v2 {
+    font-size: 0.9rem !important;
+  }
+
+  .home-games-status-v2 {
+    max-width: 5.5rem;
+    gap: 0.15rem 0.22rem;
+    font-size: 0.72rem;
+    white-space: normal;
+  }
+
+  .home-games-status-v2-divider {
+    display: none;
+  }
+
+  .home-games-status-v2-live,
+  .home-games-status-v2-left {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-games-status-v2-dot {
+    animation: none;
+  }
+}
