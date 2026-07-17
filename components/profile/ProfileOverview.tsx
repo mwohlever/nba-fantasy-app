@@ -324,64 +324,6 @@ export default function ProfileOverview({
       </section>
 
       <section className="profile-section-shell">
-        <div>
-          <div className="profile-section-kicker">
-            Player identity
-          </div>
-
-          <h2 className="profile-section-title">
-            Signature picks
-          </h2>
-
-          <p className="profile-section-copy">
-            The NBA players most connected to this fantasy career.
-          </p>
-        </div>
-
-        <div className="profile-signature-strip mt-5">
-          <SpotlightCard
-            eyebrow="Most Drafted"
-            icon="⭐"
-            title={career.favoritePlayer?.playerName ?? "No favorite yet"}
-            primary={
-              career.favoritePlayer
-                ? `${career.favoritePlayer.count} drafts`
-                : "No completed drafts"
-            }
-            secondary="The most frequently selected player"
-          />
-
-          <SpotlightCard
-            eyebrow="Highest Average"
-            icon="📈"
-            title={career.bestAvgPlayer?.playerName ?? "No leader yet"}
-            primary={
-              career.bestAvgPlayer
-                ? `${fmt(career.bestAvgPlayer.avg)} FP`
-                : "No completed games"
-            }
-            secondary={
-              career.bestAvgPlayer
-                ? `Across ${career.bestAvgPlayer.count} games`
-                : "Average will appear after completed games"
-            }
-          />
-
-          <SpotlightCard
-            eyebrow="Best Pick Ever"
-            icon="💎"
-            title={career.bestPickEver?.playerName ?? "No record yet"}
-            primary={
-              career.bestPickEver
-                ? `${fmt(career.bestPickEver.fantasyPoints)} FP`
-                : "No completed picks"
-            }
-            secondary={career.bestPickEver?.slateLabel}
-          />
-        </div>
-      </section>
-
-      <section className="profile-section-shell">
         <div className="flex items-end justify-between gap-4">
           <div>
             <div className="profile-section-kicker">
@@ -458,6 +400,64 @@ export default function ProfileOverview({
             ))}
           </div>
         )}
+      </section>
+
+      <section className="profile-section-shell">
+        <div>
+          <div className="profile-section-kicker">
+            Player identity
+          </div>
+
+          <h2 className="profile-section-title">
+            Signature picks
+          </h2>
+
+          <p className="profile-section-copy">
+            The NBA players most connected to this fantasy career.
+          </p>
+        </div>
+
+        <div className="profile-signature-strip mt-5">
+          <SpotlightCard
+            eyebrow="Most Drafted"
+            icon="⭐"
+            title={career.favoritePlayer?.playerName ?? "No favorite yet"}
+            primary={
+              career.favoritePlayer
+                ? `${career.favoritePlayer.count} drafts`
+                : "No completed drafts"
+            }
+            secondary="The most frequently selected player"
+          />
+
+          <SpotlightCard
+            eyebrow="Highest Average"
+            icon="📈"
+            title={career.bestAvgPlayer?.playerName ?? "No leader yet"}
+            primary={
+              career.bestAvgPlayer
+                ? `${fmt(career.bestAvgPlayer.avg)} FP`
+                : "No completed games"
+            }
+            secondary={
+              career.bestAvgPlayer
+                ? `Across ${career.bestAvgPlayer.count} games`
+                : "Average will appear after completed games"
+            }
+          />
+
+          <SpotlightCard
+            eyebrow="Best Pick Ever"
+            icon="💎"
+            title={career.bestPickEver?.playerName ?? "No record yet"}
+            primary={
+              career.bestPickEver
+                ? `${fmt(career.bestPickEver.fantasyPoints)} FP`
+                : "No completed picks"
+            }
+            secondary={career.bestPickEver?.slateLabel}
+          />
+        </div>
       </section>
 
       {selectedSlateId !== null ? (

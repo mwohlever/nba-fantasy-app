@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
 import { notifyNextDrafter } from "@/lib/draftNotifications";
+import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
 
 type SaveLineupBody = {
   slateId?: number;
@@ -21,6 +22,11 @@ type LineupPlayerRow = {
   player_id: number;
 };
 
+function getSlateSeason(date: string | null | undefined) {
+  const year = date?.slice(0, 4);
+  return year && /^\d{4}$/.test(year) ? year : "2026";
+}
+
 export async function GET(request: NextRequest) {
   try {
     const slateIdParam = request.nextUrl.searchParams.get("slateId");
@@ -28,7 +34,7 @@ export async function GET(request: NextRequest) {
     if (!slateIdParam) {
       return NextResponse.json(
         { error: "slateId is required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -37,7 +43,7 @@ export async function GET(request: NextRequest) {
     if (!Number.isFinite(slateId)) {
       return NextResponse.json(
         { error: "slateId must be a valid number." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -48,8 +54,10 @@ export async function GET(request: NextRequest) {
 
     if (lineupsError) {
       return NextResponse.json(
-        { error: `Failed to load lineups: ${lineupsError.message}` },
-        { status: 500 }
+        {
+          error: `Failed to load lineups: ${lineupsError.message}`,
+        },
+        { status: 500 },
       );
     }
 
@@ -64,15 +72,18 @@ export async function GET(request: NextRequest) {
 
     const lineupIds = safeLineups.map((lineup) => lineup.id);
 
-    const { data: lineupPlayers, error: lineupPlayersError } = await supabaseAdmin
-      .from("lineup_players")
-      .select("lineup_id, player_id")
-      .in("lineup_id", lineupIds);
+    const { data: lineupPlayers, error: lineupPlayersError } =
+      await supabaseAdmin
+        .from("lineup_players")
+        .select("lineup_id, player_id")
+        .in("lineup_id", lineupIds);
 
     if (lineupPlayersError) {
       return NextResponse.json(
-        { error: `Failed to load lineup players: ${lineupPlayersError.message}` },
-        { status: 500 }
+        {
+          error: `Failed to load lineup players: ${lineupPlayersError.message}`,
+        },
+        { status: 500 },
       );
     }
 
@@ -91,9 +102,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { error: "Unexpected server error while loading lineups." },
-      { status: 500 }
+      {
+        error: "Unexpected server error while loading lineups.",
+      },
+      { status: 500 },
     );
   }
 }
@@ -103,56 +117,63 @@ export async function POST(request: Request) {
     const currentUser = await getCurrentUser();
 
     if (!currentUser) {
-      return NextResponse.json(
-        { error: "Login required." },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Login required." }, { status: 401 });
     }
 
     const body = (await request.json()) as SaveLineupBody;
+
     const slateId = body.slateId;
     const teamId = body.teamId;
     const playerIds = body.playerIds ?? [];
 
     if (!slateId || !teamId || !Array.isArray(playerIds)) {
       return NextResponse.json(
-        { error: "slateId, teamId, and playerIds are required." },
-        { status: 400 }
+        {
+          error: "slateId, teamId, and playerIds are required.",
+        },
+        { status: 400 },
       );
     }
 
-if (playerIds.length > 5) {
-  return NextResponse.json(
-    { error: "A lineup can include at most 5 players." },
-    { status: 400 }
-  );
-}
+    if (playerIds.length > 5) {
+      return NextResponse.json(
+        {
+          error: "A lineup can include at most 5 players.",
+        },
+        { status: 400 },
+      );
+    }
+
     const uniquePlayerIds = [...new Set(playerIds)];
 
     if (uniquePlayerIds.length !== playerIds.length) {
       return NextResponse.json(
-        { error: "Duplicate players are not allowed in a lineup." },
-        { status: 400 }
+        {
+          error: "Duplicate players are not allowed in a lineup.",
+        },
+        { status: 400 },
       );
     }
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
-      .select("id, date, is_locked")
+      .select("id, date, start_date, end_date, is_locked")
       .eq("id", slateId)
       .single();
 
     if (slateError || !slate) {
       return NextResponse.json(
         { error: "Selected slate not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (slate.is_locked) {
       return NextResponse.json(
-        { error: "This slate is locked. Lineups can no longer be edited." },
-        { status: 400 }
+        {
+          error: "This slate is locked. Lineups can no longer be edited.",
+        },
+        { status: 400 },
       );
     }
 
@@ -165,19 +186,24 @@ if (playerIds.length > 5) {
     if (teamError || !team) {
       return NextResponse.json(
         { error: "Selected team not found." },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    const { data: players, error: playersError } = await supabaseAdmin
-      .from("players")
-      .select("id, name, position_group, is_active, nba_player_id")
-      .in("id", uniquePlayerIds);
+    const { data: players, error: playersError } =
+      uniquePlayerIds.length > 0
+        ? await supabaseAdmin
+            .from("players")
+            .select("id, name, position_group, is_active, nba_player_id")
+            .in("id", uniquePlayerIds)
+        : { data: [], error: null };
 
     if (playersError || !players || players.length !== uniquePlayerIds.length) {
       return NextResponse.json(
-        { error: "One or more selected players were not found." },
-        { status: 400 }
+        {
+          error: "One or more selected players were not found.",
+        },
+        { status: 400 },
       );
     }
 
@@ -185,36 +211,44 @@ if (playerIds.length > 5) {
 
     if (inactivePlayers.length > 0) {
       return NextResponse.json(
-        { error: "Inactive players cannot be used in a lineup." },
-        { status: 400 }
+        {
+          error: "Inactive players cannot be used in a lineup.",
+        },
+        { status: 400 },
       );
     }
 
     const guardCount = players.filter(
-      (player) => player.position_group === "G"
+      (player) => player.position_group === "G",
     ).length;
+
     const fcCount = players.filter(
-      (player) => player.position_group === "F/C"
+      (player) => player.position_group === "F/C",
     ).length;
 
     if (guardCount > 2 || fcCount > 3) {
       return NextResponse.json(
-        { error: "A lineup can have at most 2 Guards and 3 F/C players." },
-        { status: 400 }
+        {
+          error: "A lineup can have at most 2 Guards and 3 F/C players.",
+        },
+        { status: 400 },
       );
     }
 
-    const { data: existingLineup, error: existingLineupError } = await supabaseAdmin
-      .from("lineups")
-      .select("id, lineup_players(player_id)")
-      .eq("team_id", teamId)
-      .eq("slate_id", slateId)
-      .maybeSingle();
+    const { data: existingLineup, error: existingLineupError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, lineup_players(player_id)")
+        .eq("team_id", teamId)
+        .eq("slate_id", slateId)
+        .maybeSingle();
 
     if (existingLineupError) {
       return NextResponse.json(
-        { error: `Failed to check existing lineup: ${existingLineupError.message}` },
-        { status: 500 }
+        {
+          error: `Failed to check existing lineup: ${existingLineupError.message}`,
+        },
+        { status: 500 },
       );
     }
 
@@ -229,11 +263,15 @@ if (playerIds.length > 5) {
       : [];
 
     const previousPlayerIdSet = new Set(previousPlayerIds);
+
+    const nextPlayerIdSet = new Set(uniquePlayerIds);
+
     const addedPlayerIds = uniquePlayerIds.filter(
-      (playerId) => !previousPlayerIdSet.has(playerId)
+      (playerId) => !previousPlayerIdSet.has(playerId),
     );
+
     const removedPlayerIds = previousPlayerIds.filter(
-      (playerId) => !uniquePlayerIds.includes(playerId)
+      (playerId) => !nextPlayerIdSet.has(playerId),
     );
 
     const isSingleNewDraftPick =
@@ -241,74 +279,93 @@ if (playerIds.length > 5) {
       removedPlayerIds.length === 0 &&
       uniquePlayerIds.length === previousPlayerIds.length + 1;
 
+    let lineupId: number;
+
     if (existingLineup) {
-      const { error: deleteLineupPlayersError } = await supabaseAdmin
-        .from("lineup_players")
-        .delete()
-        .eq("lineup_id", existingLineup.id);
-
-      if (deleteLineupPlayersError) {
-        return NextResponse.json(
-          {
-            error: `Failed to clear existing lineup players: ${deleteLineupPlayersError.message}`,
-          },
-          { status: 500 }
-        );
-      }
-
-      const { error: deleteExistingError } = await supabaseAdmin
+      lineupId = Number(existingLineup.id);
+    } else {
+      const { data: createdLineup, error: lineupError } = await supabaseAdmin
         .from("lineups")
-        .delete()
-        .eq("id", existingLineup.id);
+        .insert({
+          team_id: teamId,
+          slate_id: slateId,
+        })
+        .select("id")
+        .single();
 
-      if (deleteExistingError) {
+      if (lineupError || !createdLineup) {
         return NextResponse.json(
-          { error: `Failed to replace existing lineup: ${deleteExistingError.message}` },
-          { status: 500 }
+          {
+            error: `Failed to create lineup: ${
+              lineupError?.message ?? "Unknown error"
+            }`,
+          },
+          { status: 500 },
+        );
+      }
+
+      lineupId = Number(createdLineup.id);
+    }
+
+    if (removedPlayerIds.length > 0) {
+      const { error: removePlayersError } = await supabaseAdmin
+        .from("lineup_players")
+        .delete()
+        .eq("lineup_id", lineupId)
+        .in("player_id", removedPlayerIds);
+
+      if (removePlayersError) {
+        return NextResponse.json(
+          {
+            error: `Failed to remove lineup players: ${removePlayersError.message}`,
+          },
+          { status: 500 },
         );
       }
     }
 
-    const { data: lineup, error: lineupError } = await supabaseAdmin
-      .from("lineups")
-      .insert({
-        team_id: teamId,
-        slate_id: slateId,
-      })
-      .select("id")
-      .single();
+    if (addedPlayerIds.length > 0) {
+      const season = getSlateSeason(slate.start_date ?? slate.date);
 
-    if (lineupError || !lineup) {
-      return NextResponse.json(
-        { error: `Failed to create lineup: ${lineupError?.message}` },
-        { status: 500 }
-      );
-    }
+      const projectionResult = await getPlayerProjectionsForSeason(season);
 
-    const lineupPlayersPayload = uniquePlayerIds.map((playerId) => ({
-      lineup_id: lineup.id,
-      player_id: playerId,
-    }));
+      const projectedAt = new Date().toISOString();
 
-    if (lineupPlayersPayload.length > 0) {
-      const { error: lineupPlayersError } = await supabaseAdmin
+      const addedRows = addedPlayerIds.map((playerId) => {
+        const projection = projectionResult.projections[playerId];
+
+        const projectedFantasyPoints =
+          projection?.projection === null ||
+          projection?.projection === undefined
+            ? null
+            : Number(projection.projection);
+
+        return {
+          lineup_id: lineupId,
+          player_id: playerId,
+          projected_fantasy_points: projectedFantasyPoints,
+          projection_confidence: projection?.confidence ?? null,
+          projection_source: projection?.source ?? "none",
+          projected_at: projectedFantasyPoints !== null ? projectedAt : null,
+        };
+      });
+
+      const { error: insertPlayersError } = await supabaseAdmin
         .from("lineup_players")
-        .insert(lineupPlayersPayload);
+        .insert(addedRows);
 
-      if (lineupPlayersError) {
+      if (insertPlayersError) {
         return NextResponse.json(
           {
-            error: `Failed to save lineup players: ${lineupPlayersError.message}`,
+            error: `Failed to save newly added lineup players: ${insertPlayersError.message}`,
           },
-          { status: 500 }
+          { status: 500 },
         );
       }
     }
 
     const notificationRequested =
-      currentUser.role === "admin"
-        ? body.notifyNextDrafter === true
-        : true;
+      currentUser.role === "admin" ? body.notifyNextDrafter === true : true;
 
     let draftNotification = null;
 
@@ -318,7 +375,7 @@ if (playerIds.length > 5) {
       } catch (notificationError) {
         console.error(
           "Lineup saved, but the next-drafter notification failed",
-          notificationError
+          notificationError,
         );
 
         draftNotification = {
@@ -333,17 +390,22 @@ if (playerIds.length > 5) {
     return NextResponse.json({
       success: true,
       message: "Lineup saved successfully.",
-      lineupId: lineup.id,
+      lineupId,
       slateId: slate.id,
       slateDate: slate.date,
       teamName: team.name,
+      addedPlayerIds,
+      removedPlayerIds,
       draftNotification,
     });
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { error: "Unexpected server error while saving lineup." },
-      { status: 500 }
+      {
+        error: "Unexpected server error while saving lineup.",
+      },
+      { status: 500 },
     );
   }
 }

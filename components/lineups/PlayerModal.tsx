@@ -383,29 +383,27 @@ export default function PlayerModal(props: Props) {
             </small>
           </div>
 
-          <div className="player-modal-highlight">
-            <span>Status</span>
+          {isDraftMode ? (
+            <div className="player-modal-highlight">
+              <span>Status</span>
 
-            <strong>
-              {ownerTeam
-                ? ownerTeam.name
-                : isOnSlate
-                  ? "Available"
-                  : isDraftMode
-                    ? "Not playing"
-                    : "Career"}
-            </strong>
+              <strong>
+                {ownerTeam
+                  ? ownerTeam.name
+                  : isOnSlate
+                    ? "Available"
+                    : "Not playing"}
+              </strong>
 
-            <small>
-              {ownerTeam
-                ? "Current roster"
-                : isOnSlate
-                  ? "Playing this slate"
-                  : isDraftMode
-                    ? "Not scheduled"
-                    : `${season === "all" ? "All-time" : season} view`}
-            </small>
-          </div>
+              <small>
+                {ownerTeam
+                  ? "Current roster"
+                  : isOnSlate
+                    ? "Playing this slate"
+                    : "Not scheduled"}
+              </small>
+            </div>
+          ) : null}
         </div>
       </header>
     );

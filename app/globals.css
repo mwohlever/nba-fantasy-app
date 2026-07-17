@@ -6205,7 +6205,9 @@ html.dark .hardware-card-detail {
     max-width: calc(100% - 5.5rem);
   }
 
-  .home-winner-card .home-team-profile-button--featured .home-team-profile-name {
+  .home-winner-card
+    .home-team-profile-button--featured
+    .home-team-profile-name {
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -6777,5 +6779,130 @@ html:not(.dark) .home-games-status-v2-left {
 @media (prefers-reduced-motion: reduce) {
   .home-games-status-v2-dot {
     animation: none;
+  }
+}
+
+/* ===== Home lineup modal + compact mobile scoreboard ===== */
+
+.home-lineup-breakdown-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 0.8rem;
+}
+
+.home-lineup-breakdown-heading h4 {
+  color: var(--app-text);
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.home-lineup-breakdown-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  color: var(--app-text-muted);
+}
+
+.home-lineup-breakdown-total span {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.home-lineup-breakdown-total strong {
+  color: var(--app-text);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.home-lineup-player-link {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.home-lineup-player-link:hover span:last-child {
+  color: var(--app-blue);
+}
+
+.home-lineup-player-link:focus-visible {
+  border-radius: 0.65rem;
+  outline: 3px solid rgb(14 165 233 / 0.25);
+  outline-offset: 3px;
+}
+
+.home-lineup-player-link--table {
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+@media (max-width: 639px) {
+  .home-current-slate tbody .home-team-profile-button {
+    width: 2.6rem !important;
+    min-width: 2.6rem !important;
+    max-width: 2.6rem !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    overflow: hidden;
+  }
+
+  .home-current-slate tbody .home-team-profile-name,
+  .home-current-slate tbody .home-team-profile-chevron {
+    display: none !important;
+  }
+
+  .home-current-slate table th:nth-child(1),
+  .home-current-slate table td:nth-child(1) {
+    width: 17%;
+    padding-right: 0.2rem;
+    padding-left: 0.55rem;
+  }
+
+  .home-current-slate table th:nth-child(2),
+  .home-current-slate table td:nth-child(2) {
+    width: 23%;
+    padding-right: 0.3rem;
+    padding-left: 0.25rem;
+  }
+
+  .home-current-slate table th:nth-child(3),
+  .home-current-slate table td:nth-child(3) {
+    width: 18%;
+    padding-right: 0.25rem;
+    padding-left: 0.3rem;
+  }
+
+  .home-current-slate table th:nth-child(4),
+  .home-current-slate table td:nth-child(4) {
+    width: 19%;
+    padding-right: 0.2rem;
+    padding-left: 0.2rem;
+  }
+
+  .home-current-slate table th:nth-child(5),
+  .home-current-slate table td:nth-child(5) {
+    width: 23%;
+    padding-right: 0.35rem;
+    padding-left: 0.25rem;
+  }
+
+  .home-current-slate .home-score-pill-v2 {
+    min-width: 0;
+    gap: 0.15rem;
+    padding-right: 0.4rem;
+    padding-left: 0.5rem;
+    font-size: 0.82rem;
+  }
+
+  .home-current-slate .home-projection-value-v2 {
+    white-space: nowrap;
+    font-size: 0.82rem;
+  }
+
+  .home-lineup-breakdown-heading {
+    margin-bottom: 0.65rem;
   }
 }

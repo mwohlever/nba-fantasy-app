@@ -10,6 +10,8 @@ import TeamProfileModal from "@/components/TeamProfileModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import SeasonAwards from "@/components/home/SeasonAwards";
+import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import type { Player } from "@/components/lineups/types";
 
 type LatestSlate = {
   id: number;
@@ -86,7 +88,7 @@ type SlateRosterRow = {
   playerId: number;
   name: string;
   nbaPlayerId: number | null;
-  positionGroup: string | null;
+  positionGroup: "G" | "F/C" | null;
   points: number;
   rebounds: number;
   assists: number;
@@ -95,6 +97,23 @@ type SlateRosterRow = {
   turnovers: number;
   fantasyPoints: number;
 };
+
+const EMPTY_PLAYER_AVERAGE_MAP = new Map<number, number>();
+const EMPTY_PLAYER_PROJECTIONS: Record<number, any> = {};
+
+function rosterRowToPlayer(row: SlateRosterRow): Player | null {
+  if (row.positionGroup !== "G" && row.positionGroup !== "F/C") {
+    return null;
+  }
+
+  return {
+    id: row.playerId,
+    name: row.name,
+    position_group: row.positionGroup,
+    is_active: true,
+    nba_player_id: row.nbaPlayerId,
+  };
+}
 
 function GamesStatus({
   completed,
@@ -114,9 +133,7 @@ function GamesStatus({
       className="home-games-status-v2"
       aria-label={`${finalCount} final, ${liveCount} live, ${leftCount} remaining`}
     >
-      <span className="home-games-status-v2-final">
-        {finalCount} Final
-      </span>
+      <span className="home-games-status-v2-final">{finalCount} Final</span>
 
       {liveCount > 0 ? (
         <>
@@ -137,9 +154,7 @@ function GamesStatus({
             ·
           </span>
 
-          <span className="home-games-status-v2-left">
-            {leftCount} Left
-          </span>
+          <span className="home-games-status-v2-left">{leftCount} Left</span>
         </>
       ) : null}
     </div>
@@ -186,18 +201,23 @@ function roundTo(value: number, digits = 1) {
   return Number(value.toFixed(digits));
 }
 
-
-
 export default function HomePage() {
   const [data, setData] = useState<HomeSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [profileTeam, setProfileTeam] = useState<{ id: number; name: string } | null>(null);
+  const [profileTeam, setProfileTeam] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const [slateRosterModal, setSlateRosterModal] =
     useState<SlateRosterModalState>(null);
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
-  const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(null);
+  const [selectedRosterPlayer, setSelectedRosterPlayer] =
+    useState<Player | null>(null);
+  const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(
+    null,
+  );
 
   function parseStatusTextMinutesRemaining(statusText?: string | null) {
     if (!statusText) return null;
@@ -225,7 +245,7 @@ export default function HomePage() {
     const baseline = Number(row.projection ?? row.averageProjection ?? 30);
 
     const remainingMinutes = parseStatusTextMinutesRemaining(
-      row.gameStatusText
+      row.gameStatusText,
     );
 
     if (remainingMinutes === 0) return current;
@@ -246,9 +266,9 @@ export default function HomePage() {
   }
   const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
   const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
-  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   async function refreshSlateStatsById(slateId: number) {
     try {
@@ -326,8 +346,6 @@ export default function HomePage() {
     void loadHomeSummary();
   }, []);
 
-
-
   useEffect(() => {
     if (!slateRosterModal) {
       setSlateRosterRows([]);
@@ -344,7 +362,7 @@ export default function HomePage() {
 
         const response = await fetch(
           `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}`,
-          { cache: "no-store" }
+          { cache: "no-store" },
         );
 
         const result = await response.json();
@@ -377,8 +395,6 @@ export default function HomePage() {
     };
   }, [slateRosterModal]);
 
-
-
   const latestSlate = data?.latestSlate ?? null;
   const latestSlateRows = data?.latestSlateRows ?? [];
   const seasonSnapshot = data?.seasonSnapshot ?? [];
@@ -388,15 +404,15 @@ export default function HomePage() {
   const leader = latestSlateRows[0] ?? null;
 
   const hasLiveGames = latestSlateRows.some(
-    (row) => Number(row.games_in_progress ?? 0) > 0
+    (row) => Number(row.games_in_progress ?? 0) > 0,
   );
 
   const hasCompletedGames = latestSlateRows.some(
-    (row) => Number(row.games_completed ?? 0) > 0
+    (row) => Number(row.games_completed ?? 0) > 0,
   );
 
   const hasRemainingGames = latestSlateRows.some(
-    (row) => Number(row.games_remaining ?? 0) > 0
+    (row) => Number(row.games_remaining ?? 0) > 0,
   );
 
   const slateHeading = "Current Slate";
@@ -435,7 +451,6 @@ export default function HomePage() {
     };
   }, [nextSlate?.id, nextSlate?.first_game_start_time]);
 
-
   const nextSlateStartTime = nextSlate?.first_game_start_time
     ? new Date(nextSlate.first_game_start_time)
     : null;
@@ -445,7 +460,8 @@ export default function HomePage() {
     : null;
 
   const hasSlateStarted =
-    activeSlateStartTime !== null && activeSlateStartTime.getTime() <= Date.now();
+    activeSlateStartTime !== null &&
+    activeSlateStartTime.getTime() <= Date.now();
 
   const shouldShowRefreshStats =
     Boolean(latestSlate) && hasSlateStarted && !latestSlate?.is_locked;
@@ -458,17 +474,17 @@ export default function HomePage() {
     !hasLiveGames &&
     latestSlateIsFinal;
 
-  const tipoffTime = shouldShowTipoff && nextSlateStartTime
-    ? nextSlateStartTime.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone: "America/New_York",
-      })
-    : null;
+  const tipoffTime =
+    shouldShowTipoff && nextSlateStartTime
+      ? nextSlateStartTime.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone: "America/New_York",
+        })
+      : null;
 
-  const tipoffLabel = shouldShowTipoff && nextSlate
-    ? `Next slate ${nextSlate.label}`
-    : null;
+  const tipoffLabel =
+    shouldShowTipoff && nextSlate ? `Next slate ${nextSlate.label}` : null;
 
   const slateStatusLabel = hasLiveGames
     ? "Live"
@@ -487,7 +503,7 @@ export default function HomePage() {
     : "No slate";
 
   return (
-<main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
+    <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
@@ -624,9 +640,7 @@ export default function HomePage() {
                         <th className="px-2 py-3 font-semibold">Score</th>
                         <th className="px-2 py-3 font-semibold">Proj</th>
                         <th className="px-2 py-3 font-semibold">Win %</th>
-                        <th className="px-2 py-3 font-semibold">
-                          Games
-                        </th>
+                        <th className="px-2 py-3 font-semibold">Games</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white text-slate-800">
@@ -634,9 +648,7 @@ export default function HomePage() {
                         <tr
                           key={`${row.slate_id}-${row.team_id}`}
                           className={`border-t border-slate-100 ${
-                            index === 0
-                              ? "home-winner-row bg-orange-50/50"
-                              : ""
+                            index === 0 ? "home-winner-row bg-orange-50/50" : ""
                           }`}
                         >
                           <td className="px-3 py-2.5">
@@ -687,7 +699,8 @@ export default function HomePage() {
                               : "—"}
                           </td>
                           <td className="px-2 py-3">
-                            {row.win_probability !== null && row.win_probability !== undefined ? (
+                            {row.win_probability !== null &&
+                            row.win_probability !== undefined ? (
                               <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                                 {roundTo(Number(row.win_probability), 0)}%
                               </span>
@@ -711,9 +724,7 @@ export default function HomePage() {
             </>
           )}
         </section>
-
       </div>
-
 
       {slateRosterModal ? (
         <div
@@ -728,13 +739,17 @@ export default function HomePage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-                    Slate Roster
+                    Box Score
                   </div>
                   <h3 className="mt-1 text-2xl font-bold text-slate-900">
-                    {slateRosterModal.teamName}
+                    {slateRosterModal.teamName}&apos;s Lineup
                   </h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    {slateRosterModal.slateLabel} • Total {slateRosterTotal.toFixed(1)}
+                    {slateRosterModal.slateLabel}
+                    <span className="mx-2 text-slate-300">•</span>
+                    <span className="font-semibold text-slate-700">
+                      {slateRosterTotal.toFixed(1)} Fantasy Points
+                    </span>
                   </p>
                 </div>
 
@@ -759,6 +774,15 @@ export default function HomePage() {
                 </div>
               ) : (
                 <div>
+                  <div className="home-lineup-breakdown-heading">
+                    <h4>Player Breakdown</h4>
+
+                    <div className="home-lineup-breakdown-total">
+                      <span>Total</span>
+                      <strong>{slateRosterTotal.toFixed(1)}</strong>
+                    </div>
+                  </div>
+
                   <div className="space-y-2 sm:hidden">
                     {slateRosterRows.map((row) => (
                       <div
@@ -766,29 +790,39 @@ export default function HomePage() {
                         className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            className="home-lineup-player-link"
+                            onClick={() => {
+                              const player = rosterRowToPlayer(row);
+                              if (player) setSelectedRosterPlayer(player);
+                            }}
+                            aria-label={`View ${row.name}'s player profile`}
+                          >
                             <PlayerHeadshot
                               nbaPlayerId={row.nbaPlayerId}
                               playerName={row.name}
                               size="sm"
                             />
 
-                            <div>
-                              <div className="text-xs font-semibold text-slate-500">
+                            <span>
+                              <span className="block text-xs font-semibold text-slate-500">
                                 {row.positionGroup ?? "—"}
-                              </div>
-                              <div className="text-base font-semibold text-slate-900">
+                              </span>
+                              <span className="block text-base font-semibold text-slate-900">
                                 {row.name}
-                              </div>
-                            </div>
-                          </div>
+                              </span>
+                            </span>
+                          </button>
                           <div className="text-right text-base font-bold text-slate-900">
                             {Number(row.fantasyPoints ?? 0).toFixed(1)}
                           </div>
                         </div>
 
                         <div className="mt-2 text-xs leading-relaxed text-slate-600">
-                          {row.points} pts • {row.rebounds} reb • {row.assists} ast • {row.steals} stl • {row.blocks} blk • {row.turnovers} TO
+                          {row.points} pts • {row.rebounds} reb • {row.assists}{" "}
+                          ast • {row.steals} stl • {row.blocks} blk •{" "}
+                          {row.turnovers} TO
                         </div>
 
                         <div className="mt-2 flex items-center justify-between text-xs">
@@ -805,73 +839,104 @@ export default function HomePage() {
                   </div>
 
                   <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 sm:block">
-                  <table className="min-w-[720px] w-full text-sm">
-                    <thead className="bg-slate-100 text-slate-700">
-                      <tr className="text-left">
-                        <th className="px-3 py-2">Pos</th>
-                        <th className="px-3 py-2">Player</th>
-                        <th className="px-3 py-2 text-right">PTS</th>
-                        <th className="px-3 py-2 text-right">REB</th>
-                        <th className="px-3 py-2 text-right">AST</th>
-                        <th className="px-3 py-2 text-right">STL</th>
-                        <th className="px-3 py-2 text-right">BLK</th>
-                        <th className="px-3 py-2 text-right">TO</th>
-                        <th className="px-3 py-2 text-right">Total</th>
-                        <th className="px-3 py-2 text-right">Proj</th>
-                        <th className="px-3 py-2 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {slateRosterRows.map((row) => (
-                        <tr key={row.playerId} className="border-t border-slate-100">
-                          <td className="px-3 py-2 font-medium">
-                            {row.positionGroup ?? "—"}
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-2 font-medium text-slate-900">
-                              <PlayerHeadshot
-                                nbaPlayerId={row.nbaPlayerId}
-                                playerName={row.name}
-                                size="xs"
-                              />
-                              <span>{row.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-right">{row.points}</td>
-                          <td className="px-3 py-2 text-right">{row.rebounds}</td>
-                          <td className="px-3 py-2 text-right">{row.assists}</td>
-                          <td className="px-3 py-2 text-right">{row.steals}</td>
-                          <td className="px-3 py-2 text-right">{row.blocks}</td>
-                          <td className="px-3 py-2 text-right">{row.turnovers}</td>
-                          <td className="px-3 py-2 text-right font-semibold">
-                            {Number(row.fantasyPoints ?? 0).toFixed(1)}
-                          </td>
+                    <table className="min-w-[720px] w-full text-sm">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr className="text-left">
+                          <th className="px-3 py-2">Pos</th>
+                          <th className="px-3 py-2">Player</th>
+                          <th className="px-3 py-2 text-right">PTS</th>
+                          <th className="px-3 py-2 text-right">REB</th>
+                          <th className="px-3 py-2 text-right">AST</th>
+                          <th className="px-3 py-2 text-right">STL</th>
+                          <th className="px-3 py-2 text-right">BLK</th>
+                          <th className="px-3 py-2 text-right">TO</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                          <th className="px-3 py-2 text-right">Proj</th>
+                          <th className="px-3 py-2 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {slateRosterRows.map((row) => (
+                          <tr
+                            key={row.playerId}
+                            className="border-t border-slate-100"
+                          >
+                            <td className="px-3 py-2 font-medium">
+                              {row.positionGroup ?? "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                className="home-lineup-player-link home-lineup-player-link--table"
+                                onClick={() => {
+                                  const player = rosterRowToPlayer(row);
+                                  if (player) setSelectedRosterPlayer(player);
+                                }}
+                                aria-label={`View ${row.name}'s player profile`}
+                              >
+                                <PlayerHeadshot
+                                  nbaPlayerId={row.nbaPlayerId}
+                                  playerName={row.name}
+                                  size="xs"
+                                />
+                                <span>{row.name}</span>
+                              </button>
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {row.points}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {row.rebounds}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {row.assists}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {row.steals}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {row.blocks}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {row.turnovers}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold">
+                              {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                            </td>
 
-                          <td className="px-3 py-2 text-right font-semibold text-sky-700">
-                            {getProjectedFantasyPoints(row).toFixed(1)}
-                          </td>
+                            <td className="px-3 py-2 text-right font-semibold text-sky-700">
+                              {getProjectedFantasyPoints(row).toFixed(1)}
+                            </td>
 
-                          <td className="px-3 py-2 text-right text-xs font-medium text-slate-500">
-                            {getPlayerStatusLabel(row)}
+                            <td className="px-3 py-2 text-right text-xs font-medium text-slate-500">
+                              {getPlayerStatusLabel(row)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
+                          <td className="px-3 py-2" />
+                          <td className="px-3 py-2">Total</td>
+                          <td className="px-3 py-2 text-right" colSpan={6} />
+                          <td className="px-3 py-2 text-right">
+                            {slateRosterTotal.toFixed(1)}
                           </td>
                         </tr>
-                      ))}
-                      <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
-                        <td className="px-3 py-2" />
-                        <td className="px-3 py-2">Total</td>
-                        <td className="px-3 py-2 text-right" colSpan={6} />
-                        <td className="px-3 py-2 text-right">
-                          {slateRosterTotal.toFixed(1)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
                   </div>
-                </div>              )}
+                </div>
+              )}
             </div>
           </div>
         </div>
       ) : null}
+
+      <ReadOnlyPlayerModal
+        player={selectedRosterPlayer}
+        setPlayer={setSelectedRosterPlayer}
+        playerAverageMap={EMPTY_PLAYER_AVERAGE_MAP}
+        playerProjections={EMPTY_PLAYER_PROJECTIONS}
+      />
 
       <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
     </main>

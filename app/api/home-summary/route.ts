@@ -226,6 +226,34 @@ export async function GET() {
     }
 
     const safeTeams = (teams ?? []) as Team[];
+
+    const { data: teamUsers, error: teamUsersError } = await supabaseAdmin
+      .from("app_users")
+      .select("team_id, avatar_url")
+      .not("team_id", "is", null);
+
+    if (teamUsersError) {
+      return NextResponse.json(
+        {
+          error:
+            teamUsersError.message ||
+            "Failed to load team profile pictures.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const avatarUrlByTeamId = new Map<number, string | null>();
+
+    (teamUsers ?? []).forEach((user) => {
+      if (user.team_id === null || user.team_id === undefined) return;
+
+      avatarUrlByTeamId.set(
+        Number(user.team_id),
+        user.avatar_url ?? null
+      );
+    });
+
     const safeSlates = (slates ?? []) as Slate[];
     const safeResults = (teamSlateResults ?? []) as TeamSlateResult[];
     const safeLineups = (lineups ?? []) as Lineup[];
@@ -577,6 +605,7 @@ export async function GET() {
             teamName:
               safeTeams.find((team) => team.id === row.team_id)?.name ??
               "Unknown Team",
+            avatarUrl: avatarUrlByTeamId.get(row.team_id) ?? null,
             projected_points: round1(getProjectedTeamTotal(row.team_id)),
             win_probability: 0,
 
