@@ -7127,3 +7127,360 @@ html:not(.dark) .scores-selected-team-game-status {
   }
 }
 
+/* =========================================================
+   STANDINGS — HOME-STYLE TABLES
+   ========================================================= */
+
+.standings-panel {
+  color: var(--app-text, #0f172a);
+}
+
+.standings-table-shell {
+  background: var(--app-surface, #ffffff);
+}
+
+.standings-table {
+  min-width: 55rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.standings-team-style-table {
+  min-width: 50rem;
+}
+
+.standings-table-head {
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+}
+
+.standings-table-head th {
+  color: var(--app-text-muted, #475569);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.standings-header-button {
+  color: inherit;
+  text-align: left;
+}
+
+.standings-header-button:hover {
+  color: var(--app-blue, #0369a1);
+}
+
+.standings-table-row {
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.standings-table-row:hover {
+  background: rgb(14 165 233 / 0.055);
+}
+
+.standings-table-row--leader {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(245 158 11 / 0.11),
+      rgb(245 158 11 / 0.035)
+    );
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
+.standings-rank-cell {
+  color: var(--app-text-muted, #64748b);
+  font-size: 0.86rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.standings-number-cell {
+  color: var(--app-text, #1e293b);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.standings-team-button {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.65rem;
+  border-radius: 0.8rem;
+  color: var(--app-text, #0f172a);
+  font-weight: 800;
+  text-align: left;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.standings-team-button:hover {
+  color: var(--app-blue, #0369a1);
+  transform: translateX(1px);
+}
+
+.standings-team-button:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 3px;
+}
+
+.standings-team-button img {
+  flex-shrink: 0;
+}
+
+.standings-detail-tabs {
+  border: 1px solid var(--app-border, #e2e8f0);
+}
+
+.standings-detail-tab,
+.standings-detail-tab--active {
+  flex: 1;
+}
+
+html.dark .standings-panel {
+  border-color: #344663;
+  background: #111c31;
+}
+
+html.dark .standings-table-shell,
+html.dark .standings-table-body {
+  background: #0c1729;
+}
+
+html.dark .standings-table-head {
+  border-color: #344663;
+  background: #1d2a42;
+  color: #d6e2f1;
+}
+
+html.dark .standings-table-row {
+  border-color: #22314b;
+}
+
+html.dark .standings-table-row:hover {
+  background: rgb(14 116 144 / 0.13);
+}
+
+html.dark .standings-table-row--leader {
+  background:
+    linear-gradient(
+      90deg,
+      rgb(245 158 11 / 0.17),
+      rgb(30 41 59 / 0.32)
+    );
+}
+
+html.dark .standings-number-cell,
+html.dark .standings-team-button {
+  color: #e2e8f0;
+}
+
+html.dark .standings-rank-cell {
+  color: #a8bad2;
+}
+
+html.dark .standings-team-button:hover,
+html.dark .standings-header-button:hover {
+  color: #7dd3fc;
+}
+
+html.dark .standings-team-button img {
+  --tw-ring-color: #334155;
+}
+
+html.dark .standings-detail-tabs {
+  border-color: #344663;
+  background: #0c1729;
+}
+
+html.dark .standings-detail-tab {
+  color: #a8bad2;
+}
+
+html.dark .standings-detail-tab:hover {
+  background: #1d2a42;
+  color: #f8fafc;
+}
+
+html.dark .standings-detail-tab--active {
+  background: linear-gradient(135deg, #075985, #0e7490);
+  color: #ffffff;
+}
+
+
+/* =========================================================
+   SEASON AWARDS — DARK-MODE SAFE PANELS
+   ========================================================= */
+
+.season-awards-panel {
+  color: var(--app-text, #0f172a);
+}
+
+.season-awards-panel--gold {
+  border-color: #fcd34d;
+  background:
+    linear-gradient(
+      145deg,
+      rgb(255 251 235 / 0.96),
+      rgb(254 243 199 / 0.65)
+    );
+}
+
+.season-awards-panel--blue {
+  border-color: #7dd3fc;
+  background:
+    linear-gradient(
+      145deg,
+      rgb(240 249 255 / 0.98),
+      rgb(224 242 254 / 0.72)
+    );
+}
+
+.season-awards-title,
+.season-award-winner,
+.first-team-name,
+.first-team-score {
+  color: #0f172a;
+}
+
+.season-awards-description,
+.season-award-detail,
+.first-team-meta,
+.first-team-rank {
+  color: #64748b;
+}
+
+.season-award-card {
+  border-color: #fcd34d;
+  background: rgb(255 255 255 / 0.84);
+}
+
+.season-award-label {
+  color: #b45309;
+}
+
+.first-team-card {
+  border-color: #bae6fd;
+  background: rgb(255 255 255 / 0.86);
+}
+
+html.dark .season-awards-panel--gold {
+  border-color: rgb(245 158 11 / 0.56);
+  background:
+    radial-gradient(
+      circle at 15% 0%,
+      rgb(245 158 11 / 0.12),
+      transparent 17rem
+    ),
+    #111c31;
+}
+
+html.dark .season-awards-panel--blue {
+  border-color: rgb(56 189 248 / 0.48);
+  background:
+    radial-gradient(
+      circle at 90% 0%,
+      rgb(14 165 233 / 0.13),
+      transparent 18rem
+    ),
+    #111c31;
+}
+
+html.dark .season-awards-title,
+html.dark .season-award-winner,
+html.dark .first-team-name,
+html.dark .first-team-score {
+  color: #f8fafc;
+}
+
+html.dark .season-awards-description,
+html.dark .season-award-detail,
+html.dark .first-team-meta {
+  color: #a8bad2;
+}
+
+html.dark .season-award-card {
+  border-color: rgb(245 158 11 / 0.42);
+  background:
+    linear-gradient(
+      145deg,
+      rgb(30 41 59 / 0.94),
+      rgb(15 23 42 / 0.86)
+    );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.025),
+    0 8px 20px rgb(0 0 0 / 0.12);
+}
+
+html.dark .season-award-label {
+  color: #fbbf24;
+}
+
+html.dark .first-team-card {
+  border-color: rgb(56 189 248 / 0.34);
+  background:
+    linear-gradient(
+      145deg,
+      rgb(30 41 59 / 0.94),
+      rgb(15 23 42 / 0.86)
+    );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.025),
+    0 8px 20px rgb(0 0 0 / 0.12);
+}
+
+html.dark .first-team-rank {
+  color: #7dd3fc;
+}
+
+html.dark .first-team-card img {
+  --tw-ring-color: #334155;
+}
+
+@media (max-width: 639px) {
+  .standings-panel {
+    padding: 0.8rem;
+  }
+
+  .standings-table {
+    min-width: 51rem;
+    font-size: 0.78rem;
+  }
+
+  .standings-team-style-table {
+    min-width: 47rem;
+  }
+
+  .standings-table-head th {
+    font-size: 0.64rem;
+  }
+
+  .standings-team-button {
+    gap: 0.45rem;
+  }
+
+  .standings-rank-cell {
+    font-size: 0.76rem;
+  }
+
+  .season-awards-panel {
+    padding: 1rem;
+  }
+
+  .season-award-card,
+  .first-team-card {
+    padding: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .standings-table-row,
+  .standings-team-button {
+    transition: none;
+  }
+}
+

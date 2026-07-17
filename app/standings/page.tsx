@@ -3,6 +3,7 @@
 import AppNav from "@/components/AppNav";
 import SeasonAwards from "@/components/home/SeasonAwards";
 import TeamProfileModal from "@/components/TeamProfileModal";
+import TeamAvatar from "@/components/ui/TeamAvatar";
 import { useEffect, useMemo, useState } from "react";
 
 type StandingRow = {
@@ -273,7 +274,23 @@ export default function StandingsPage() {
     return rows;
   }, [teamStats, standings, teamStatsSortKey, teamStatsSortDirection]);
 
-  const headerButtonClass = "font-semibold transition hover:text-slate-900";
+  const headerButtonClass =
+    "standings-header-button font-semibold transition";
+
+  function getStandingRankLabel(index: number) {
+    const isDefaultStandingsOrder =
+      sortKey === "wins" && sortDirection === "desc";
+
+    if (!isDefaultStandingsOrder) {
+      return `${index + 1}.`;
+    }
+
+    if (index === 0) return "🥇";
+    if (index === 1) return "🥈";
+    if (index === 2) return "🥉";
+
+    return `${index + 1}.`;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
@@ -335,7 +352,7 @@ export default function StandingsPage() {
           </div>
         ) : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="standings-panel rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           {isLoading ? (
             <div className="px-2 py-6 text-sm text-slate-600">Loading standings...</div>
           ) : sortedStandings.length === 0 ? (
@@ -343,61 +360,71 @@ export default function StandingsPage() {
               No season summary data found for this season.
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="standings-table-shell overflow-hidden rounded-2xl border border-slate-200">
               <div className="overflow-x-auto">
-                <table className="min-w-full table-fixed border-collapse text-sm">
-                  <thead className="bg-slate-100 text-slate-700">
+                <table className="standings-table min-w-full table-fixed border-collapse text-sm">
+                  <thead className="standings-table-head bg-slate-100 text-slate-700">
                     <tr className="text-left">
-                      <th className="w-[16%] px-3 py-3">
+                      <th className="w-[7%] px-2 py-3 text-center">
+                        Rank
+                      </th>
+
+                      <th className="w-[21%] px-3 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("name")}>
-                          Name{getSortArrow("name")}
+                          Team{getSortArrow("name")}
                         </button>
                       </th>
-                      <th className="w-[12%] px-3 py-3">
+                      <th className="w-[12%] px-2 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("wins")}>
                           Wins{getSortArrow("wins")}
                         </button>
                       </th>
-                      <th className="w-[12%] px-3 py-3">
+                      <th className="w-[12%] px-2 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("runner_ups")}>
                           Runner-ups{getSortArrow("runner_ups")}
                         </button>
                       </th>
-                      <th className="w-[12%] px-3 py-3">
+                      <th className="w-[12%] px-2 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("avg_finish")}>
                           Avg Finish{getSortArrow("avg_finish")}
                         </button>
                       </th>
-                      <th className="w-[12%] px-3 py-3">
+                      <th className="w-[12%] px-2 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("avg_score")}>
                           Avg Score{getSortArrow("avg_score")}
                         </button>
                       </th>
-                      <th className="w-[12%] px-3 py-3">
+                      <th className="w-[12%] px-2 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("high_score")}>
                           High Score{getSortArrow("high_score")}
                         </button>
                       </th>
-                      <th className="w-[12%] px-3 py-3">
+                      <th className="w-[12%] px-2 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("low_score")}>
                           Low Score{getSortArrow("low_score")}
                         </button>
                       </th>
-                      <th className="w-[12%] px-3 py-3">
+                      <th className="w-[12%] px-2 py-3">
                         <button className={headerButtonClass} onClick={() => handleSort("slates_played")}>
                           Slates Played{getSortArrow("slates_played")}
                         </button>
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white text-slate-800">
+                  <tbody className="standings-table-body bg-white text-slate-800">
                     {sortedStandings.map((row, index) => (
                       <tr
                         key={`${row.season}-${row.team_id}`}
-                        className={`border-t border-slate-100 ${
-                          index === 0 ? "bg-orange-50/50" : ""
+                        className={`standings-table-row border-t border-slate-100 ${
+                          index === 0
+                            ? "standings-table-row--leader bg-orange-50/50"
+                            : ""
                         }`}
                       >
+                        <td className="standings-rank-cell px-2 py-3 text-center">
+                          {getStandingRankLabel(index)}
+                        </td>
+
                         <td className="px-3 py-3 font-medium">
                           <button
                             type="button"
@@ -407,18 +434,35 @@ export default function StandingsPage() {
                                 name: row.name,
                               })
                             }
-                            className="font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                            className="standings-team-button"
+                            aria-label={`Open ${row.name} team profile`}
                           >
-                            {row.name}
+                            <TeamAvatar
+                              teamName={row.name}
+                              size="sm"
+                            />
+
+                            <span>{row.name}</span>
                           </button>
                         </td>
-                        <td className="px-3 py-3">{row.wins}</td>
-                        <td className="px-3 py-3">{row.runner_ups}</td>
-                        <td className="px-3 py-3">{formatNumber(row.avg_finish, 2)}</td>
-                        <td className="px-3 py-3">{formatNumber(row.avg_score, 2)}</td>
-                        <td className="px-3 py-3">{formatNumber(row.high_score, 2)}</td>
-                        <td className="px-3 py-3">{formatNumber(row.low_score, 2)}</td>
-                        <td className="px-3 py-3">{row.slates_played}</td>
+
+                        <td className="standings-number-cell px-2 py-3">{row.wins}</td>
+                        <td className="standings-number-cell px-2 py-3">{row.runner_ups}</td>
+                        <td className="standings-number-cell px-2 py-3">
+                          {formatNumber(row.avg_finish, 2)}
+                        </td>
+                        <td className="standings-number-cell px-2 py-3">
+                          {formatNumber(row.avg_score, 2)}
+                        </td>
+                        <td className="standings-number-cell px-2 py-3">
+                          {formatNumber(row.high_score, 2)}
+                        </td>
+                        <td className="standings-number-cell px-2 py-3">
+                          {formatNumber(row.low_score, 2)}
+                        </td>
+                        <td className="standings-number-cell px-2 py-3">
+                          {row.slates_played}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -427,9 +471,9 @@ export default function StandingsPage() {
             </div>
           )}
         </section>
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className="standings-panel rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 overflow-x-auto">
-            <div className="inline-flex min-w-full gap-2 rounded-2xl bg-slate-100 p-1 sm:min-w-0">
+            <div className="standings-detail-tabs inline-flex min-w-full gap-2 rounded-2xl bg-slate-100 p-1 sm:min-w-0">
               {[
                 { id: "team-style", label: "Team Style" },
                 { id: "draft-position", label: "Draft Position" },
@@ -444,8 +488,8 @@ export default function StandingsPage() {
                     onClick={() => setActiveDetailTab(tab.id as DetailTab)}
                     className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition ${
                       isActive
-                        ? "bg-white text-sky-900 shadow-sm"
-                        : "text-slate-600 hover:bg-white/70 hover:text-slate-900"
+                        ? "standings-detail-tab--active bg-white text-sky-900 shadow-sm"
+                        : "standings-detail-tab text-slate-600 hover:bg-white/70 hover:text-slate-900"
                     }`}
                   >
                     {tab.label}
@@ -483,10 +527,10 @@ export default function StandingsPage() {
                   No team stats available for this season.
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="standings-table-shell overflow-hidden rounded-2xl border border-slate-200">
                   <div className="overflow-x-auto">
-                    <table className="min-w-full table-fixed border-collapse text-sm">
-                      <thead className="bg-slate-100 text-slate-700">
+                    <table className="standings-table standings-team-style-table min-w-full table-fixed border-collapse text-sm">
+                      <thead className="standings-table-head bg-slate-100 text-slate-700">
                         <tr className="text-left">
                           <th className="w-[16%] px-3 py-3">
                             <button className={headerButtonClass} onClick={() => handleTeamStatsSort("name")}>
@@ -530,9 +574,12 @@ export default function StandingsPage() {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white text-slate-800">
+                      <tbody className="standings-table-body bg-white text-slate-800">
                         {teamStatsWithNames.map((row) => (
-                          <tr key={row.teamId} className="border-t border-slate-100">
+                          <tr
+                            key={row.teamId}
+                            className="standings-table-row border-t border-slate-100"
+                          >
                             <td className="px-3 py-3 font-medium">
                               <button
                                 type="button"
@@ -542,18 +589,39 @@ export default function StandingsPage() {
                                     name: row.name,
                                   })
                                 }
-                                className="font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                                className="standings-team-button"
+                                aria-label={`Open ${row.name} team profile`}
                               >
-                                {row.name}
+                                <TeamAvatar
+                                  teamName={row.name}
+                                  size="sm"
+                                />
+
+                                <span>{row.name}</span>
                               </button>
                             </td>
-                            <td className="px-3 py-3 text-right">{row.slateCount}</td>
-                            <td className="px-3 py-3 text-right">{row.pointsPerSlate}</td>
-                            <td className="px-3 py-3 text-right">{row.reboundsPerSlate}</td>
-                            <td className="px-3 py-3 text-right">{row.assistsPerSlate}</td>
-                            <td className="px-3 py-3 text-right">{row.stealsPerSlate}</td>
-                            <td className="px-3 py-3 text-right">{row.blocksPerSlate}</td>
-                            <td className="px-3 py-3 text-right">{row.turnoversPerSlate}</td>
+
+                            <td className="standings-number-cell px-3 py-3 text-right">
+                              {row.slateCount}
+                            </td>
+                            <td className="standings-number-cell px-3 py-3 text-right">
+                              {row.pointsPerSlate}
+                            </td>
+                            <td className="standings-number-cell px-3 py-3 text-right">
+                              {row.reboundsPerSlate}
+                            </td>
+                            <td className="standings-number-cell px-3 py-3 text-right">
+                              {row.assistsPerSlate}
+                            </td>
+                            <td className="standings-number-cell px-3 py-3 text-right">
+                              {row.stealsPerSlate}
+                            </td>
+                            <td className="standings-number-cell px-3 py-3 text-right">
+                              {row.blocksPerSlate}
+                            </td>
+                            <td className="standings-number-cell px-3 py-3 text-right">
+                              {row.turnoversPerSlate}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -602,9 +670,9 @@ export default function StandingsPage() {
                   No draft position data available yet.
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="bg-slate-100 text-slate-700">
+                <div className="standings-table-shell overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="standings-table min-w-full text-left text-sm">
+                    <thead className="standings-table-head bg-slate-100 text-slate-700">
                       <tr>
                         <th className="px-4 py-3">Draft Slot</th>
                         <th className="px-4 py-3">Wins</th>
@@ -615,9 +683,12 @@ export default function StandingsPage() {
                       </tr>
                     </thead>
 
-                    <tbody className="bg-white text-slate-800">
+                    <tbody className="standings-table-body bg-white text-slate-800">
                       {draftPositionResults.map((row) => (
-                        <tr key={row.draft_order} className="border-t border-slate-100">
+                        <tr
+                          key={row.draft_order}
+                          className="standings-table-row border-t border-slate-100"
+                        >
                           <td className="px-4 py-3 font-semibold">#{row.draft_order}</td>
                           <td className="px-4 py-3">{row.wins}</td>
                           <td className="px-4 py-3">{row.runner_ups}</td>
