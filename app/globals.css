@@ -7484,3 +7484,55 @@ html.dark .first-team-card img {
   }
 }
 
+
+
+/* =========================================================
+   PLAYER MODAL — DETAILS CHEVRONS
+   ========================================================= */
+
+.player-modal-details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.player-modal-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.player-modal-details-summary-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.player-modal-details-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-blue, #0ea5e9);
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(0deg);
+  transition: transform 160ms ease;
+}
+
+.player-modal-details[open] .player-modal-details-chevron {
+  transform: rotate(180deg);
+}
+
+@media (hover: hover) {
+  .player-modal-details > summary:hover {
+    background: rgb(14 165 233 / 0.06);
+  }
+}
+
+html.dark .player-modal-details-chevron {
+  color: #38bdf8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-modal-details-chevron {
+    transition: none;
+  }
+}

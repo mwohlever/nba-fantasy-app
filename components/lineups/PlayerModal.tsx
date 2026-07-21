@@ -741,7 +741,16 @@ export default function PlayerModal(props: Props) {
         <summary>
           <span>Projection Details</span>
 
-          <strong>{fmt(projectionScore)} FP</strong>
+          <span className="player-modal-details-summary-meta">
+            <strong>{fmt(projectionScore)} FP</strong>
+
+            <span
+              className="player-modal-details-chevron"
+              aria-hidden="true"
+            >
+             ⌄
+            </span>
+          </span>
         </summary>
 
         <div className="player-modal-projection-grid">
@@ -859,7 +868,16 @@ export default function PlayerModal(props: Props) {
         <summary>
           <span>More career numbers</span>
 
-          <strong>Best {fmt(profile.summary.bestFantasyPoints)}</strong>
+          <span className="player-modal-details-summary-meta">
+            <strong>Best {fmt(profile.summary.bestFantasyPoints)}</strong>
+
+            <span
+              className="player-modal-details-chevron"
+              aria-hidden="true"
+            >
+             ⌄
+            </span>
+          </span>
         </summary>
 
         <div className="player-modal-projection-grid">
