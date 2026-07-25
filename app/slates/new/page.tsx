@@ -49,6 +49,7 @@ export default function NewSlatePage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [previousSlateLabel, setPreviousSlateLabel] = useState("");
+  const [sport, setSport] = useState<"nba" | "nfl">("nba");
 
   useEffect(() => {
     void loadSlateSetup();
@@ -221,6 +222,7 @@ setTeams(
         body: JSON.stringify({
           startDate,
           endDate: effectiveEndDate,
+          sport,
 teamSelections: teams
   .filter((team) => team.is_participating)
   .sort((a, b) => a.draft_order - b.draft_order)
@@ -307,6 +309,28 @@ router.push("/lineups/draft");
                   />
                   Multiple days?
                 </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Sport
+              </label>
+              <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                {(["nba", "nfl"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setSport(option)}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                      sport === option
+                        ? "bg-sky-600 text-white"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    {option.toUpperCase()}
+                  </button>
+                ))}
               </div>
             </div>
 

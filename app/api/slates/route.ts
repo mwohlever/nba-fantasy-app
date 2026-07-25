@@ -471,6 +471,7 @@ export async function POST(request: NextRequest) {
 
     const startDate = body?.startDate;
     const endDate = body?.endDate;
+    const sport = body?.sport === "nfl" ? "nfl" : "nba";
 
     const teamConfigs = Array.isArray(body?.teamSelections)
       ? body.teamSelections
@@ -543,6 +544,7 @@ export async function POST(request: NextRequest) {
       firstGameStartTime: string | null;
     }> = [];
 
+    if (sport === "nba") {
     for (const date of dates) {
       const detected = await getNbaTeamsAndFirstGameTimeForDate(date);
 
@@ -565,6 +567,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    }
     const nbaTeamAbbreviations = Array.from(nbaTeamSet).sort();
 
     const { data: newSlate, error: insertSlateError } = await supabaseAdmin
@@ -574,11 +577,12 @@ export async function POST(request: NextRequest) {
         start_date: startDate,
         end_date: endDate,
         is_locked: false,
+        sport,
         nba_team_abbreviations: nbaTeamAbbreviations,
         first_game_start_time: firstGameStartTime,
       })
       .select(
-        "id, date, start_date, end_date, is_locked, nba_team_abbreviations, first_game_start_time"
+        "id, date, start_date, end_date, is_locked, sport, nba_team_abbreviations, first_game_start_time"
       )
       .single();
 
@@ -613,6 +617,7 @@ export async function POST(request: NextRequest) {
 
     // Automatically pin NBA games for this slate so multi-day stat refreshes
     // rebuild from a stable full game list instead of relying on "today" scoreboards.
+    if (sport === "nba") {
     try {
       const dateCodes = new Set(dates.map((date) => date.replaceAll("-", "")));
       const slateTeamCodes = new Set(nbaTeamAbbreviations);
@@ -701,6 +706,7 @@ export async function POST(request: NextRequest) {
         "Unexpected error while auto-creating slate_nba_games:",
         slateGamesInsertError
       );
+    }
     }
 
     return NextResponse.json({
