@@ -703,25 +703,49 @@ export default function LineupBuilder({
 
   const liveWinPctMap = computeWinPctMap();
 
+  function getEffectiveRosterSlots() {
+    return rosterSlots.length > 0
+      ? rosterSlots
+      : [
+          { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+          { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+        ];
+  }
+
+  function getRosterTotalSlots() {
+    return getEffectiveRosterSlots().reduce(
+      (sum, slot) => sum + slot.slot_count,
+      0
+    );
+  }
+
+  function countPlayersByPosition(playerList: Player[]) {
+    const map = new Map<string, number>();
+    playerList.forEach((player) => {
+      map.set(
+        player.position_group,
+        (map.get(player.position_group) ?? 0) + 1
+      );
+    });
+    return map;
+  }
+
   function getDraftNeeds(teamId: number) {
     const teamPlayers = getPlayersForTeam(teamId);
-    const guards = teamPlayers.filter(
-      (player) => player.position_group === "G"
-    ).length;
-    const fcs = teamPlayers.filter(
-      (player) => player.position_group === "F/C"
-    ).length;
-
-    const neededGuards = Math.max(0, 2 - guards);
-    const neededFcs = Math.max(0, 3 - fcs);
-
-    if (neededGuards === 0 && neededFcs === 0) {
-      return "Roster full";
-    }
+    const counts = countPlayersByPosition(teamPlayers);
+    const slots = getEffectiveRosterSlots();
 
     const parts: string[] = [];
-    if (neededGuards > 0) parts.push(`${neededGuards} G`);
-    if (neededFcs > 0) parts.push(`${neededFcs} F/C`);
+
+    slots.forEach((slot) => {
+      const have = counts.get(slot.position) ?? 0;
+      const needed = Math.max(0, slot.slot_count - have);
+      if (needed > 0) parts.push(`${needed} ${slot.position}`);
+    });
+
+    if (parts.length === 0) {
+      return "Roster full";
+    }
 
     return `Needs ${parts.join(" • ")}`;
   }
@@ -770,21 +794,20 @@ export default function LineupBuilder({
     }
 
     const nextPlayers = [...teamPlayers, player];
-    const nextGuardCount = nextPlayers.filter(
-      (item) => item.position_group === "G"
-    ).length;
-    const nextFcCount = nextPlayers.filter(
-      (item) => item.position_group === "F/C"
-    ).length;
+    const totalSlots = getRosterTotalSlots();
 
-    if (nextPlayers.length > 5) {
+    if (nextPlayers.length > totalSlots) {
       return { canAssign: false, reason: "Lineup full" };
     }
-    if (nextGuardCount > 2) {
-      return { canAssign: false, reason: "Too many G" };
-    }
-    if (nextFcCount > 3) {
-      return { canAssign: false, reason: "Too many F/C" };
+
+    const nextCounts = countPlayersByPosition(nextPlayers);
+    const slots = getEffectiveRosterSlots();
+
+    for (const slot of slots) {
+      const count = nextCounts.get(slot.position) ?? 0;
+      if (count > slot.slot_count) {
+        return { canAssign: false, reason: `Too many ${slot.position}` };
+      }
     }
 
     return { canAssign: true, reason: "" };
@@ -979,19 +1002,24 @@ export default function LineupBuilder({
       return false;
     }
 
-    const nextGuardCount = playerList.filter(
-      (player) => player.position_group === "G"
-    ).length;
-    const nextFcCount = playerList.filter(
-      (player) => player.position_group === "F/C"
-    ).length;
+    const totalSlots = getRosterTotalSlots();
+    const slots = getEffectiveRosterSlots();
+    const listCounts = countPlayersByPosition(playerList);
 
-    if (playerList.length > 5) {
-      setSaveMessage("A lineup can have at most 5 players.");
+    if (playerList.length > totalSlots) {
+      setSaveMessage(`A lineup can have at most ${totalSlots} players.`);
       return false;
     }
-    if (nextGuardCount > 2 || nextFcCount > 3) {
-      setSaveMessage("A lineup can have at most 2 Guards and 3 F/C players.");
+
+    const overLimitSlot = slots.find(
+      (slot) => (listCounts.get(slot.position) ?? 0) > slot.slot_count
+    );
+
+    if (overLimitSlot) {
+      const limitDescription = slots
+        .map((slot) => `${slot.slot_count} ${slot.position}`)
+        .join(" and ");
+      setSaveMessage(`A lineup can have at most ${limitDescription}.`);
       return false;
     }
 
@@ -1362,6 +1390,7 @@ export default function LineupBuilder({
               getPlayerProjectionScore
             }
             getDraftNeeds={getDraftNeeds}
+            rosterSlots={rosterSlots}
             setDraftingPlayer={setDraftingPlayer}
             setTargetDraftSlot={setTargetDraftSlot}
             isLocked={Boolean(

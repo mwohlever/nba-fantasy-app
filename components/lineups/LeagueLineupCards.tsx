@@ -5,7 +5,8 @@ import TeamAvatar from "@/components/ui/TeamAvatar";
 import type {
   OrderedTeam,
   Player,
-TargetDraftSlot,
+  RosterSlotConfig,
+  TargetDraftSlot,
 } from "@/components/lineups/types";
 
 type Props = {
@@ -14,26 +15,19 @@ type Props = {
   getPlayersForTeam: (teamId: number) => Player[];
   getPlayerProjectionScore: (playerId: number) => number;
   getDraftNeeds: (teamId: number) => string;
-  setDraftingPlayer: React.Dispatch<
-    React.SetStateAction<Player | null>
-  >;
-  setTargetDraftSlot: React.Dispatch<
-    React.SetStateAction<TargetDraftSlot | null>
-  >;
+  rosterSlots: RosterSlotConfig[];
+  setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
   isLocked: boolean;
 };
 
 type MiniSlotProps = {
   player: Player | null;
-  positionGroup: "G" | "F/C";
+  positionGroup: string;
   team: OrderedTeam;
   isLocked: boolean;
-  setDraftingPlayer: React.Dispatch<
-    React.SetStateAction<Player | null>
-  >;
-  setTargetDraftSlot: React.Dispatch<
-    React.SetStateAction<TargetDraftSlot | null>
-  >;
+  setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
 };
 
 function MiniSlot({
@@ -87,12 +81,18 @@ function MiniSlot({
   );
 }
 
+const FALLBACK_ROSTER_SLOTS: RosterSlotConfig[] = [
+  { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+  { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+];
+
 export default function LeagueLineupCards({
   teams,
   currentTeamId,
   getPlayersForTeam,
   getPlayerProjectionScore,
   getDraftNeeds,
+  rosterSlots,
   setDraftingPlayer,
   setTargetDraftSlot,
   isLocked,
@@ -104,6 +104,14 @@ export default function LeagueLineupCards({
   if (otherTeams.length === 0) {
     return null;
   }
+
+  const effectiveSlots =
+    rosterSlots.length > 0 ? rosterSlots : FALLBACK_ROSTER_SLOTS;
+
+  const totalSlots = effectiveSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
+  );
 
   return (
     <section className="league-lineups-shell">
@@ -128,23 +136,14 @@ export default function LeagueLineupCards({
       <div className="league-lineups-strip">
         {otherTeams.map((team) => {
           const rosterPlayers = getPlayersForTeam(team.id);
-          const guards = rosterPlayers.filter(
-            (player) => player.position_group === "G"
-          );
-          const frontcourt = rosterPlayers.filter(
-            (player) => player.position_group === "F/C"
-          );
 
-          const guardSlots: Array<Player | null> = [
-            guards[0] ?? null,
-            guards[1] ?? null,
-          ];
-
-          const frontcourtSlots: Array<Player | null> = [
-            frontcourt[0] ?? null,
-            frontcourt[1] ?? null,
-            frontcourt[2] ?? null,
-          ];
+          const playersByPosition = new Map<string, Player[]>();
+          rosterPlayers.forEach((player) => {
+            const existing =
+              playersByPosition.get(player.position_group) ?? [];
+            existing.push(player);
+            playersByPosition.set(player.position_group, existing);
+          });
 
           const projectedTotal = rosterPlayers.reduce(
             (sum, player) =>
@@ -153,7 +152,7 @@ export default function LeagueLineupCards({
           );
 
           const rosterCount = rosterPlayers.length;
-          const isComplete = rosterCount === 5;
+          const isComplete = rosterCount === totalSlots;
           const isParticipating =
             team.is_participating !== false;
 
@@ -191,45 +190,46 @@ export default function LeagueLineupCards({
                       : ""
                   }`}
                 >
-                  {rosterCount}/5
+                  {rosterCount}/{totalSlots}
                 </div>
               </div>
 
               <div className="league-lineup-formation">
-                <div className="league-lineup-row league-lineup-row--guards">
-                  {guardSlots.map((player, index) => (
-                    <MiniSlot
-                      key={`g-${team.id}-${index}`}
-                      player={player}
-                      positionGroup="G"
-                      team={team}
-                      isLocked={isLocked}
-                      setDraftingPlayer={setDraftingPlayer}
-                      setTargetDraftSlot={setTargetDraftSlot}
-                    />
-                  ))}
-                </div>
+                {effectiveSlots.map((slotConfig) => {
+                  const positionPlayers =
+                    playersByPosition.get(slotConfig.position) ?? [];
 
-                <div className="league-lineup-row league-lineup-row--frontcourt">
-                  {frontcourtSlots.map((player, index) => (
-                    <MiniSlot
-                      key={`fc-${team.id}-${index}`}
-                      player={player}
-                      positionGroup="F/C"
-                      team={team}
-                      isLocked={isLocked}
-                      setDraftingPlayer={setDraftingPlayer}
-                      setTargetDraftSlot={setTargetDraftSlot}
-                    />
-                  ))}
-                </div>
+                  const slotList: Array<Player | null> = Array.from(
+                    { length: slotConfig.slot_count },
+                    (_, index) => positionPlayers[index] ?? null
+                  );
+
+                  return (
+                    <div
+                      key={slotConfig.position}
+                      className="league-lineup-row"
+                    >
+                      {slotList.map((player, index) => (
+                        <MiniSlot
+                          key={`${slotConfig.position}-${team.id}-${index}`}
+                          player={player}
+                          positionGroup={slotConfig.position}
+                          team={team}
+                          isLocked={isLocked}
+                          setDraftingPlayer={setDraftingPlayer}
+                          setTargetDraftSlot={setTargetDraftSlot}
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="league-lineup-progress">
                 <div
                   style={{
                     width: `${Math.min(
-                      (rosterCount / 5) * 100,
+                      (rosterCount / totalSlots) * 100,
                       100
                     )}%`,
                   }}
