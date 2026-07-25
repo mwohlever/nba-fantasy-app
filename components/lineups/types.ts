@@ -1,10 +1,23 @@
 export type Player = {
   id: number;
   name: string;
-  position_group: "G" | "F/C";
+  position_group: string;
   is_active: boolean;
   is_playing_today?: boolean | null;
   nba_player_id?: number | null;
+};
+
+export type RosterSlotConfig = {
+  sport: string;
+  position: string;
+  slot_count: number;
+  display_order: number | null;
+};
+
+export type TargetDraftSlot = {
+  teamId: number;
+  teamName: string;
+  positionGroup: string;
 };
 
 export type PlayerHistoryDetailRow = {
@@ -88,6 +101,7 @@ export type Props = {
   savedLineupsForInitialSlate: SavedLineup[];
   playerStats: PlayerStat[];
   teamResults: TeamResult[];
+  rosterSlots?: RosterSlotConfig[];
   defaultViewMode?: ViewMode;
 };
 

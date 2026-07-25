@@ -5,6 +5,7 @@ import type {
   OrderedTeam,
   Player,
   PlayerHistoryDetailRow,
+  TargetDraftSlot,
 } from "@/components/lineups/types";
 
 type TeamStats = {
@@ -47,11 +48,7 @@ type Props = {
     player: Player,
     teamId: number
   ) => Promise<void>;
-  targetDraftSlot: {
-    teamId: number;
-    teamName: string;
-    positionGroup: "G" | "F/C";
-  } | null;
+  targetDraftSlot: TargetDraftSlot | null;
   handleDraftToTargetSlot: (
     player: Player
   ) => Promise<void>;

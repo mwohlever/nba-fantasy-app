@@ -91,7 +91,7 @@ type DraftProps = SharedProps & {
   targetDraftSlot?: {
     teamId: number;
     teamName: string;
-    positionGroup: "G" | "F/C";
+    positionGroup: string;
   } | null;
   handleDraftToTargetSlot?: (player: Player) => Promise<void>;
   handleRemovePlayerFromTeam: (player: Player) => Promise<void>;

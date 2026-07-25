@@ -16,10 +16,12 @@ import type {
   PlayerStat,
   PositionFilter,
   Props,
+  RosterSlotConfig,
   SavedLineup,
   Team,
   TeamResult,
   ViewMode,
+  TargetDraftSlot,
 } from "@/components/lineups/types";
 
 export default function LineupBuilder({
@@ -32,6 +34,7 @@ export default function LineupBuilder({
   savedLineupsForInitialSlate,
   playerStats,
   teamResults,
+  rosterSlots = [],
   defaultViewMode,
 }: Props) {
   const [selectedSlateId, setSelectedSlateId] = useState<string>(
@@ -94,11 +97,8 @@ export default function LineupBuilder({
     setIsInspectingPlayerFromSlot,
   ] = useState(false);
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
-  const [targetDraftSlot, setTargetDraftSlot] = useState<{
-    teamId: number;
-    teamName: string;
-    positionGroup: "G" | "F/C";
-  } | null>(null);
+  const [targetDraftSlot, setTargetDraftSlot] =
+    useState<TargetDraftSlot | null>(null);
 
   const [draftPageTab, setDraftPageTab] = useState<
     "lineup" | "players"
@@ -1325,6 +1325,7 @@ export default function LineupBuilder({
                   ? getPlayersForTeam(currentUser.teamId)
                   : []
               }
+              rosterSlots={rosterSlots}
               isLocked={Boolean(selectedSlate?.is_locked)}
               setDraftingPlayer={setDraftingPlayer}
               setTargetDraftSlot={setTargetDraftSlot}

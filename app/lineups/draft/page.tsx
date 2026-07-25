@@ -21,6 +21,7 @@ type Slate = {
   end_date?: string;
   label?: string;
   is_locked: boolean;
+  sport?: string;
 };
 
 type SavedLineup = {
@@ -53,7 +54,7 @@ export default async function DraftLineupsPage() {
     supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
     supabaseAdmin
       .from("slates")
-      .select("id, date, start_date, end_date, is_locked")
+      .select("id, date, start_date, end_date, is_locked, sport")
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
     supabaseAdmin
@@ -109,6 +110,7 @@ export default async function DraftLineupsPage() {
           end_date: endDate,
         }),
         is_locked: slate.is_locked,
+        sport: slate.sport ?? "nba",
       };
     }) ?? [];
 
@@ -173,6 +175,25 @@ export default async function DraftLineupsPage() {
   let savedLineupsForInitialSlate: SavedLineup[] = [];
   let playerStats: any[] = [];
   let teamResults: any[] = [];
+  let rosterSlots: Array<{
+    sport: string;
+    position: string;
+    slot_count: number;
+    display_order: number | null;
+  }> = [];
+
+  const selectedSlate = safeSlates.find(
+    (slate) => slate.id === selectedSlateId
+  );
+  const selectedSport = selectedSlate?.sport ?? "nba";
+
+  const { data: rosterSlotsData } = await supabaseAdmin
+    .from("roster_slots")
+    .select("sport, position, slot_count, display_order")
+    .eq("sport", selectedSport)
+    .order("display_order", { ascending: true });
+
+  rosterSlots = rosterSlotsData ?? [];
 
   if (selectedSlateId) {
     const { data: lineupsData } = await supabaseAdmin
@@ -238,6 +259,7 @@ export default async function DraftLineupsPage() {
           savedLineupsForInitialSlate={savedLineupsForInitialSlate}
           playerStats={playerStats}
           teamResults={teamResults}
+          rosterSlots={rosterSlots}
           defaultViewMode="draft"
         />
       </div>

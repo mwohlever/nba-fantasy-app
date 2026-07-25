@@ -1,32 +1,29 @@
 "use client";
 
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
-import type { Player } from "@/components/lineups/types";
-
-type TargetDraftSlot = {
-  teamId: number;
-  teamName: string;
-  positionGroup: "G" | "F/C";
-};
+import type {
+  Player,
+  RosterSlotConfig,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
 
 type Props = {
   teamId: number | null;
   teamName: string | null;
   players: Player[];
+  rosterSlots: RosterSlotConfig[];
   isLocked: boolean;
   setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
-  setTargetDraftSlot: React.Dispatch<
-    React.SetStateAction<TargetDraftSlot | null>
-  >;
+  setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
 };
 
 type SlotProps = {
   player: Player | null;
-  positionGroup: "G" | "F/C";
+  positionGroup: string;
   slotNumber: number;
   disabled: boolean;
   onPlayerClick: (player: Player) => void;
-  onEmptyClick: (positionGroup: "G" | "F/C") => void;
+  onEmptyClick: (positionGroup: string) => void;
 };
 
 function DraftRosterSlot({
@@ -92,33 +89,37 @@ export default function DraftRosterCourt({
   teamId,
   teamName,
   players,
+  rosterSlots,
   isLocked,
   setDraftingPlayer,
   setTargetDraftSlot,
 }: Props) {
-  const guards = players.filter(
-    (player) => player.position_group === "G"
+  // Fallback to NBA's 2G/3F-C shape if no roster_slots rows were found,
+  // so nothing breaks if this ever runs before the config is seeded.
+  const effectiveSlots: RosterSlotConfig[] =
+    rosterSlots.length > 0
+      ? rosterSlots
+      : [
+          { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+          { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+        ];
+
+  const totalSlots = effectiveSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
   );
 
-  const frontcourt = players.filter(
-    (player) => player.position_group === "F/C"
-  );
+  const playersByPosition = new Map<string, Player[]>();
+  for (const player of players) {
+    const existing = playersByPosition.get(player.position_group) ?? [];
+    existing.push(player);
+    playersByPosition.set(player.position_group, existing);
+  }
 
-  const guardSlots: Array<Player | null> = [
-    guards[0] ?? null,
-    guards[1] ?? null,
-  ];
+  const completedSlots = Math.min(players.length, totalSlots);
+  const progressPercent = totalSlots > 0 ? (completedSlots / totalSlots) * 100 : 0;
 
-  const frontcourtSlots: Array<Player | null> = [
-    frontcourt[0] ?? null,
-    frontcourt[1] ?? null,
-    frontcourt[2] ?? null,
-  ];
-
-  const completedSlots = Math.min(players.length, 5);
-  const progressPercent = (completedSlots / 5) * 100;
-
-  function openEmptySlot(positionGroup: "G" | "F/C") {
+  function openEmptySlot(positionGroup: string) {
     if (!teamId || !teamName || isLocked) return;
 
     setTargetDraftSlot({
@@ -142,8 +143,8 @@ export default function DraftRosterCourt({
         </div>
 
         <div className="draft-roster-count">
-          <strong>{completedSlots}/5</strong>
-          <span>{completedSlots === 5 ? "Complete" : "Filled"}</span>
+          <strong>{completedSlots}/{totalSlots}</strong>
+          <span>{completedSlots === totalSlots ? "Complete" : "Filled"}</span>
         </div>
       </div>
 
@@ -155,39 +156,39 @@ export default function DraftRosterCourt({
       </div>
 
       <div className="draft-roster-formation">
-        <div className="draft-roster-row draft-roster-row--guards">
-          {guardSlots.map((player, index) => (
-            <DraftRosterSlot
-              key={`guard-${index}`}
-              player={player}
-              positionGroup="G"
-              slotNumber={index + 1}
-              disabled={!teamId || isLocked}
-              onPlayerClick={setDraftingPlayer}
-              onEmptyClick={openEmptySlot}
-            />
-          ))}
-        </div>
+        {effectiveSlots.map((slotConfig) => {
+          const positionPlayers = playersByPosition.get(slotConfig.position) ?? [];
 
-        <div className="draft-roster-row draft-roster-row--frontcourt">
-          {frontcourtSlots.map((player, index) => (
-            <DraftRosterSlot
-              key={`frontcourt-${index}`}
-              player={player}
-              positionGroup="F/C"
-              slotNumber={index + 1}
-              disabled={!teamId || isLocked}
-              onPlayerClick={setDraftingPlayer}
-              onEmptyClick={openEmptySlot}
-            />
-          ))}
-        </div>
+          const slots: Array<Player | null> = Array.from(
+            { length: slotConfig.slot_count },
+            (_, index) => positionPlayers[index] ?? null
+          );
+
+          return (
+            <div
+              key={slotConfig.position}
+              className="draft-roster-row"
+            >
+              {slots.map((player, index) => (
+                <DraftRosterSlot
+                  key={`${slotConfig.position}-${index}`}
+                  player={player}
+                  positionGroup={slotConfig.position}
+                  slotNumber={index + 1}
+                  disabled={!teamId || isLocked}
+                  onPlayerClick={setDraftingPlayer}
+                  onEmptyClick={openEmptySlot}
+                />
+              ))}
+            </div>
+          );
+        })}
       </div>
 
       <div className="draft-roster-footer">
         {isLocked ? (
           <span>🔒 This slate is locked</span>
-        ) : completedSlots === 5 ? (
+        ) : completedSlots === totalSlots ? (
           <span>✅ Lineup complete</span>
         ) : (
           <span>Tap an empty spot to draft a player</span>

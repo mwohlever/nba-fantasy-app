@@ -5,13 +5,8 @@ import TeamAvatar from "@/components/ui/TeamAvatar";
 import type {
   OrderedTeam,
   Player,
+TargetDraftSlot,
 } from "@/components/lineups/types";
-
-type TargetDraftSlot = {
-  teamId: number;
-  teamName: string;
-  positionGroup: "G" | "F/C";
-};
 
 type Props = {
   teams: OrderedTeam[];

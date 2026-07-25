@@ -2,13 +2,9 @@
 
 import { useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
-import type { Player } from "@/components/lineups/types";
-
-type TargetDraftSlot = {
-  teamId: number;
-  teamName: string;
-  positionGroup: "G" | "F/C";
-};
+import type { Player,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
 
 type Props = {
   targetDraftSlot: TargetDraftSlot | null;
