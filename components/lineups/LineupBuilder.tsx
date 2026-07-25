@@ -1379,6 +1379,7 @@ export default function LineupBuilder({
               pillBase={pillBase}
               activePill={activePill}
               inactivePill={inactivePill}
+              rosterSlots={rosterSlots}
             />
           )}
 

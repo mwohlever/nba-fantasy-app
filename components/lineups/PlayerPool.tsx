@@ -5,6 +5,7 @@ import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type {
   Player,
   PositionFilter,
+  RosterSlotConfig,
   Team,
 } from "@/components/lineups/types";
 
@@ -38,6 +39,7 @@ type PlayerPoolProps = {
   pillBase: string;
   activePill: string;
   inactivePill: string;
+  rosterSlots?: RosterSlotConfig[];
 };
 
 type SortOption =
@@ -70,6 +72,7 @@ export default function PlayerPool({
   getOwnerTeamForPlayer,
   setDraftingPlayer,
   isAssigningPlayer,
+  rosterSlots = [],
 }: PlayerPoolProps) {
   const [sortBy, setSortBy] =
     useState<SortOption>("projection");
@@ -177,7 +180,11 @@ export default function PlayerPool({
             className="draft-player-segment"
             aria-label="Position filter"
           >
-            {(["All", "G", "F/C"] as const).map(
+            {(
+              rosterSlots.length > 0
+                ? ["All", ...rosterSlots.map((slot) => slot.position)]
+                : ["All", "G", "F/C"]
+            ).map(
               (position) => (
                 <button
                   key={position}

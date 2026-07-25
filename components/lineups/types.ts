@@ -105,7 +105,7 @@ export type Props = {
   defaultViewMode?: ViewMode;
 };
 
-export type PositionFilter = "All" | "G" | "F/C";
+export type PositionFilter = string;
 export type ViewMode = "draft" | "scoring";
 
 export type OrderedTeam = Team & {
