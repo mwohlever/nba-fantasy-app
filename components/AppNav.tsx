@@ -10,7 +10,7 @@ import {
 } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSelectedSport } from "@/components/providers/SportProvider";
-import { SPORTS } from "@/lib/sports";
+import { SPORTS, getSportConfig } from "@/lib/sports";
 
 type CurrentUser = {
   id: string;
@@ -116,6 +116,10 @@ function AppNavContent() {
 
   const desktopUserRef = useRef<HTMLDivElement | null>(null);
   const mobileMoreRef = useRef<HTMLDivElement | null>(null);
+  const desktopSportRef = useRef<HTMLDivElement | null>(null);
+  const mobileSportRef = useRef<HTMLDivElement | null>(null);
+  const [desktopSportOpen, setDesktopSportOpen] = useState(false);
+  const [mobileSportOpen, setMobileSportOpen] = useState(false);
 
   const isAdmin = currentUser?.role === "admin";
 
@@ -195,6 +199,14 @@ function AppNavContent() {
 
       if (mobileMoreRef.current && !mobileMoreRef.current.contains(target)) {
         setMobileMoreOpen(false);
+      }
+
+      if (desktopSportRef.current && !desktopSportRef.current.contains(target)) {
+        setDesktopSportOpen(false);
+      }
+
+      if (mobileSportRef.current && !mobileSportRef.current.contains(target)) {
+        setMobileSportOpen(false);
       }
     }
 
@@ -286,20 +298,42 @@ function AppNavContent() {
             </Link>
           </div>
 
-          <div className="relative flex items-center gap-3" ref={desktopUserRef}>
-            <select
-              aria-label="Select sport"
-              value={selectedSport}
-              onChange={(e) => setSelectedSport(e.target.value)}
-              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition hover:border-sky-300"
+          <div className="flex items-center gap-3">
+          <div className="relative" ref={desktopSportRef}>
+            <button
+              type="button"
+              onClick={() => setDesktopSportOpen((open) => !open)}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-300"
             >
-              {SPORTS.map((sport) => (
-                <option key={sport.key} value={sport.key}>
-                  {sport.emoji} {sport.label}
-                </option>
-              ))}
-            </select>
+              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
+              <span>{getSportConfig(selectedSport).label}</span>
+              <span aria-hidden="true">▾</span>
+            </button>
 
+            {desktopSportOpen ? (
+              <div className="app-dropdown-panel absolute left-0 z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                {SPORTS.map((sport) => (
+                  <button
+                    key={sport.key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSport(sport.key);
+                      setDesktopSportOpen(false);
+                    }}
+                    className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                      selectedSport === sport.key
+                        ? "bg-sky-100 font-semibold text-sky-900"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {sport.emoji} {sport.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative" ref={desktopUserRef}>
             {isUserLoading ? (
               <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400">
                 Loading...
@@ -432,6 +466,7 @@ function AppNavContent() {
               </Link>
             )}
           </div>
+          </div>
         </div>
       </nav>
 
@@ -458,18 +493,39 @@ function AppNavContent() {
           <MobileAccountMenu />
         </div>
 
-        <select
-          aria-label="Select sport"
-          value={selectedSport}
-          onChange={(e) => setSelectedSport(e.target.value)}
-          className="self-start rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 outline-none"
-        >
-          {SPORTS.map((sport) => (
-            <option key={sport.key} value={sport.key}>
-              {sport.emoji} {sport.label}
-            </option>
-          ))}
-        </select>
+        <div className="relative self-start" ref={mobileSportRef}>
+          <button
+            type="button"
+            onClick={() => setMobileSportOpen((open) => !open)}
+            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700"
+          >
+            <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
+            <span>{getSportConfig(selectedSport).label}</span>
+            <span aria-hidden="true">▾</span>
+          </button>
+
+          {mobileSportOpen ? (
+            <div className="app-dropdown-panel absolute left-0 z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+              {SPORTS.map((sport) => (
+                <button
+                  key={sport.key}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSport(sport.key);
+                    setMobileSportOpen(false);
+                  }}
+                  className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                    selectedSport === sport.key
+                      ? "bg-sky-100 font-semibold text-sky-900"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  {sport.emoji} {sport.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </nav>
 
       {/* White shield behind mobile nav */}
