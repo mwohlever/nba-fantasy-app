@@ -8,12 +8,14 @@ const SPORT_STORAGE_KEY = "111-fantasy-sport";
 type SportContextValue = {
   selectedSport: string;
   setSelectedSport: (sport: string) => void;
+  isHydrated: boolean;
 };
 
 const SportContext = createContext<SportContextValue | undefined>(undefined);
 
 export default function SportProvider({ children }: { children: React.ReactNode }) {
   const [selectedSport, setSelectedSportState] = useState<string>(DEFAULT_SPORT);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     try {
@@ -23,6 +25,8 @@ export default function SportProvider({ children }: { children: React.ReactNode 
       }
     } catch (error) {
       console.error("Failed to read stored sport", error);
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
@@ -36,7 +40,7 @@ export default function SportProvider({ children }: { children: React.ReactNode 
   }
 
   return (
-    <SportContext.Provider value={{ selectedSport, setSelectedSport }}>
+    <SportContext.Provider value={{ selectedSport, setSelectedSport, isHydrated }}>
       {children}
     </SportContext.Provider>
   );

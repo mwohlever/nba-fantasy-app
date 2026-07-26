@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStatColumns } from "@/lib/statColumns";
+import { DEFAULT_SPORT } from "@/lib/sports";
 
 type LineupRow = {
   id: number;
@@ -12,17 +14,6 @@ type LineupPlayerRow = {
   player_id: number;
 };
 
-type StatRow = {
-  player_id: number;
-  slate_id: number;
-  points: number | null;
-  rebounds: number | null;
-  assists: number | null;
-  steals: number | null;
-  blocks: number | null;
-  turnovers: number | null;
-};
-
 type TeamSlateResultRow = {
   team_id: number;
   slate_id: number;
@@ -32,16 +23,21 @@ type TeamSlateResultRow = {
 export async function GET(req: NextRequest) {
   try {
     const season = req.nextUrl.searchParams.get("season");
+    const sport = req.nextUrl.searchParams.get("sport") ?? DEFAULT_SPORT;
 
     if (!season) {
       return NextResponse.json({ error: "season is required" }, { status: 400 });
     }
 
     const isAllTime = season === "all";
+    const statColumns = getStatColumns(sport);
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
 
     let slateQuery = supabaseAdmin
       .from("slates")
-      .select("id, start_date");
+      .select("id, start_date")
+      .eq("sport", sport);
 
     if (!isAllTime) {
       slateQuery = slateQuery
@@ -56,7 +52,7 @@ export async function GET(req: NextRequest) {
     const slateIds = (slates ?? []).map((slate) => Number(slate.id));
 
     if (slateIds.length === 0) {
-      return NextResponse.json({ success: true, teams: [] });
+      return NextResponse.json({ success: true, sport, teams: [] });
     }
 
     const { data: lineups, error: lineupError } = await supabaseAdmin
@@ -70,7 +66,7 @@ export async function GET(req: NextRequest) {
     const lineupIds = safeLineups.map((lineup) => Number(lineup.id));
 
     if (lineupIds.length === 0) {
-      return NextResponse.json({ success: true, teams: [] });
+      return NextResponse.json({ success: true, sport, teams: [] });
     }
 
     const { data: lineupPlayers, error: lpError } = await supabaseAdmin
@@ -86,18 +82,20 @@ export async function GET(req: NextRequest) {
     );
 
     if (playerIds.length === 0) {
-      return NextResponse.json({ success: true, teams: [] });
+      return NextResponse.json({ success: true, sport, teams: [] });
     }
 
+    const statSelectColumns = ["player_id", "slate_id", ...statColumns.map((c) => c.key)].join(", ");
+
     const { data: stats, error: statsError } = await supabaseAdmin
-      .from("player_slate_stats")
-      .select("player_id, slate_id, points, rebounds, assists, steals, blocks, turnovers")
+      .from(statsTable)
+      .select(statSelectColumns)
       .in("slate_id", slateIds)
       .in("player_id", playerIds);
 
     if (statsError) throw new Error(statsError.message);
 
-    const safeStats = (stats ?? []) as StatRow[];
+    const safeStats = (stats ?? []) as any[];
 
     const { data: teamSlateResults, error: resultsError } = await supabaseAdmin
       .from("team_slate_results")
@@ -122,23 +120,12 @@ export async function GET(req: NextRequest) {
     const lineupMap = new Map<number, LineupRow>();
     safeLineups.forEach((lineup) => lineupMap.set(Number(lineup.id), lineup));
 
-    const statsMap = new Map<string, StatRow>();
+    const statsMap = new Map<string, any>();
     safeStats.forEach((stat) => {
       statsMap.set(`${Number(stat.player_id)}-${Number(stat.slate_id)}`, stat);
     });
 
-    const teamTotals = new Map<
-      number,
-      {
-        slateIds: Set<number>;
-        points: number;
-        rebounds: number;
-        assists: number;
-        steals: number;
-        blocks: number;
-        turnovers: number;
-      }
-    >();
+    const teamTotals = new Map<number, { slateIds: Set<number>; totals: Record<string, number> }>();
 
     safeLineupPlayers.forEach((lp) => {
       const lineup = lineupMap.get(Number(lp.lineup_id));
@@ -147,65 +134,51 @@ export async function GET(req: NextRequest) {
       const stat = statsMap.get(`${Number(lp.player_id)}-${Number(lineup.slate_id)}`);
       if (!stat) return;
 
-      const statPoints = Number(stat.points ?? 0);
-      const statRebounds = Number(stat.rebounds ?? 0);
-      const statAssists = Number(stat.assists ?? 0);
-      const statSteals = Number(stat.steals ?? 0);
-      const statBlocks = Number(stat.blocks ?? 0);
-      const statTurnovers = Number(stat.turnovers ?? 0);
+      const rowValues: Record<string, number> = {};
+      let hasRealStat = false;
 
-      const hasRealStat =
-        statPoints > 0 ||
-        statRebounds > 0 ||
-        statAssists > 0 ||
-        statSteals > 0 ||
-        statBlocks > 0 ||
-        statTurnovers > 0;
+      statColumns.forEach((column) => {
+        const value = Number(stat[column.key] ?? 0);
+        rowValues[column.key] = value;
+        if (value > 0) hasRealStat = true;
+      });
 
       if (!hasRealStat) return;
 
       const teamId = Number(lineup.team_id);
 
       const existing =
-        teamTotals.get(teamId) ??
-        {
+        teamTotals.get(teamId) ?? {
           slateIds: new Set<number>(),
-          points: 0,
-          rebounds: 0,
-          assists: 0,
-          steals: 0,
-          blocks: 0,
-          turnovers: 0,
+          totals: Object.fromEntries(statColumns.map((c) => [c.key, 0])),
         };
 
       existing.slateIds.add(Number(lineup.slate_id));
-      existing.points += statPoints;
-      existing.rebounds += statRebounds;
-      existing.assists += statAssists;
-      existing.steals += statSteals;
-      existing.blocks += statBlocks;
-      existing.turnovers += statTurnovers;
+
+      statColumns.forEach((column) => {
+        existing.totals[column.key] += rowValues[column.key];
+      });
 
       teamTotals.set(teamId, existing);
     });
 
-    const teams = Array.from(teamTotals.entries()).map(([teamId, totals]) => {
+    const teams = Array.from(teamTotals.entries()).map(([teamId, data]) => {
       const officialSlates = officialSlateCountByTeam.get(teamId);
-const slateCount = officialSlates ? officialSlates.size : totals.slateIds.size || 1;
+      const slateCount = officialSlates ? officialSlates.size : data.slateIds.size || 1;
+
+      const perSlate: Record<string, number> = {};
+      statColumns.forEach((column) => {
+        perSlate[column.key] = Number((data.totals[column.key] / slateCount).toFixed(1));
+      });
 
       return {
         teamId,
         slateCount,
-        pointsPerSlate: Number((totals.points / slateCount).toFixed(1)),
-        reboundsPerSlate: Number((totals.rebounds / slateCount).toFixed(1)),
-        assistsPerSlate: Number((totals.assists / slateCount).toFixed(1)),
-        stealsPerSlate: Number((totals.steals / slateCount).toFixed(1)),
-        blocksPerSlate: Number((totals.blocks / slateCount).toFixed(1)),
-        turnoversPerSlate: Number((totals.turnovers / slateCount).toFixed(1)),
+        stats: perSlate,
       };
     });
 
-    return NextResponse.json({ success: true, season, teams });
+    return NextResponse.json({ success: true, sport, season, statColumns, teams });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

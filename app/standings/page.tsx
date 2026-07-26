@@ -37,15 +37,15 @@ type StandingsResponse = {
   draftPositionResults: DraftPositionRow[];
 };
 
+type StatColumn = {
+  key: string;
+  label: string;
+};
+
 type TeamStatsRow = {
   teamId: number;
   slateCount: number;
-  pointsPerSlate: number;
-  reboundsPerSlate: number;
-  assistsPerSlate: number;
-  stealsPerSlate: number;
-  blocksPerSlate: number;
-  turnoversPerSlate: number;
+  stats: Record<string, number>;
 };
 
 type SortKey =
@@ -58,15 +58,7 @@ type SortKey =
   | "low_score"
   | "slates_played";
 
-type TeamStatsSortKey =
-  | "name"
-  | "slateCount"
-  | "pointsPerSlate"
-  | "reboundsPerSlate"
-  | "assistsPerSlate"
-  | "stealsPerSlate"
-  | "blocksPerSlate"
-  | "turnoversPerSlate";
+type TeamStatsSortKey = string;
 
 type SortDirection = "asc" | "desc";
 type DetailTab = "team-style" | "draft-position" | "awards";
@@ -126,10 +118,11 @@ function compareValues(
 export default function StandingsPage() {
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStatsRow[]>([]);
+  const [teamStatColumns, setTeamStatColumns] = useState<StatColumn[]>([]);
   const [draftPositionResults, setDraftPositionResults] = useState<DraftPositionRow[]>([]);
   const [availableSeasons, setAvailableSeasons] = useState<number[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<number | "all" | "">("");
-  const { selectedSport } = useSelectedSport();
+  const { selectedSport, isHydrated } = useSelectedSport();
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("wins");
@@ -143,9 +136,10 @@ export default function StandingsPage() {
   const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(null);
 
   useEffect(() => {
+    if (!isHydrated) return;
     setSelectedSeason("");
     void loadStandings("", selectedSport);
-  }, [selectedSport]);
+  }, [selectedSport, isHydrated]);
 
   async function loadStandings(
     seasonOverride?: number | "all" | "",
@@ -208,8 +202,10 @@ export default function StandingsPage() {
 
           if (statsResponse.ok) {
             setTeamStats(statsResult.teams ?? []);
+            setTeamStatColumns(statsResult.statColumns ?? []);
           } else {
             setTeamStats([]);
+            setTeamStatColumns([]);
           }
         } catch (statsError) {
           console.error("Failed to load team stats", statsError);
@@ -271,12 +267,14 @@ export default function StandingsPage() {
       name: nameMap.get(row.teamId) ?? `Team ${row.teamId}`,
     }));
 
+    function getSortValue(row: TeamStatsRow & { name: string }) {
+      if (teamStatsSortKey === "name") return row.name;
+      if (teamStatsSortKey === "slateCount") return row.slateCount;
+      return row.stats[teamStatsSortKey] ?? null;
+    }
+
     rows.sort((a, b) =>
-      compareValues(
-        a[teamStatsSortKey] as string | number | null,
-        b[teamStatsSortKey] as string | number | null,
-        teamStatsSortDirection
-      )
+      compareValues(getSortValue(a), getSortValue(b), teamStatsSortDirection)
     );
 
     return rows;
@@ -550,36 +548,13 @@ export default function StandingsPage() {
                               Slates{getTeamStatsSortArrow("slateCount")}
                             </button>
                           </th>
-                          <th className="w-[12%] px-3 py-3 text-right">
-                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("pointsPerSlate")}>
-                              PTS{getTeamStatsSortArrow("pointsPerSlate")}
-                            </button>
-                          </th>
-                          <th className="w-[12%] px-3 py-3 text-right">
-                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("reboundsPerSlate")}>
-                              REB{getTeamStatsSortArrow("reboundsPerSlate")}
-                            </button>
-                          </th>
-                          <th className="w-[12%] px-3 py-3 text-right">
-                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("assistsPerSlate")}>
-                              AST{getTeamStatsSortArrow("assistsPerSlate")}
-                            </button>
-                          </th>
-                          <th className="w-[12%] px-3 py-3 text-right">
-                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("stealsPerSlate")}>
-                              STL{getTeamStatsSortArrow("stealsPerSlate")}
-                            </button>
-                          </th>
-                          <th className="w-[12%] px-3 py-3 text-right">
-                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("blocksPerSlate")}>
-                              BLK{getTeamStatsSortArrow("blocksPerSlate")}
-                            </button>
-                          </th>
-                          <th className="w-[12%] px-3 py-3 text-right">
-                            <button className={headerButtonClass} onClick={() => handleTeamStatsSort("turnoversPerSlate")}>
-                              TO{getTeamStatsSortArrow("turnoversPerSlate")}
-                            </button>
-                          </th>
+                          {teamStatColumns.map((column) => (
+                            <th key={column.key} className="w-[12%] px-3 py-3 text-right">
+                              <button className={headerButtonClass} onClick={() => handleTeamStatsSort(column.key)}>
+                                {column.label}{getTeamStatsSortArrow(column.key)}
+                              </button>
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody className="standings-table-body bg-white text-slate-800">
@@ -612,24 +587,14 @@ export default function StandingsPage() {
                             <td className="standings-number-cell px-3 py-3 text-right">
                               {row.slateCount}
                             </td>
-                            <td className="standings-number-cell px-3 py-3 text-right">
-                              {row.pointsPerSlate}
-                            </td>
-                            <td className="standings-number-cell px-3 py-3 text-right">
-                              {row.reboundsPerSlate}
-                            </td>
-                            <td className="standings-number-cell px-3 py-3 text-right">
-                              {row.assistsPerSlate}
-                            </td>
-                            <td className="standings-number-cell px-3 py-3 text-right">
-                              {row.stealsPerSlate}
-                            </td>
-                            <td className="standings-number-cell px-3 py-3 text-right">
-                              {row.blocksPerSlate}
-                            </td>
-                            <td className="standings-number-cell px-3 py-3 text-right">
-                              {row.turnoversPerSlate}
-                            </td>
+                            {teamStatColumns.map((column) => (
+                              <td
+                                key={column.key}
+                                className="standings-number-cell px-3 py-3 text-right"
+                              >
+                                {row.stats[column.key] ?? 0}
+                              </td>
+                            ))}
                           </tr>
                         ))}
                       </tbody>
