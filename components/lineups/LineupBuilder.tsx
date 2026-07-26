@@ -10,6 +10,7 @@ import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
 import ScoresDashboard from "@/components/lineups/ScoresDashboard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LineupControls from "@/components/lineups/LineupControls";
+import { getStatColumns } from "@/lib/statColumns";
 import type {
   Player,
   PlayerHistoryDetailRow,
@@ -498,46 +499,48 @@ export default function LineupBuilder({
       (player) => player.position_group === "F/C"
     ).length;
 
-    let points = 0;
-    let rebounds = 0;
-    let assists = 0;
-    let steals = 0;
-    let blocks = 0;
-    let turnovers = 0;
+    const sport = selectedSlate?.sport ?? "nba";
+    const statColumns = getStatColumns(sport);
+
+    const statTotals: Record<string, number> = {};
+    statColumns.forEach((column) => {
+      statTotals[column.key] = 0;
+    });
 
     teamPlayers.forEach((player) => {
-      const stat = playerStatsMap.get(player.id);
+      const stat = playerStatsMap.get(player.id) as any;
       if (!stat) return;
 
-      points += stat.points ?? 0;
-      rebounds += stat.rebounds ?? 0;
-      assists += stat.assists ?? 0;
-      steals += stat.steals ?? 0;
-      blocks += stat.blocks ?? 0;
-      turnovers += stat.turnovers ?? 0;
+      statColumns.forEach((column) => {
+        statTotals[column.key] += Number(stat[column.key] ?? 0);
+      });
     });
 
     const teamResult = teamResultsMap.get(teamId);
 
+    const nbaFallback =
+      (statTotals.points ?? 0) +
+      (statTotals.rebounds ?? 0) * 1.2 +
+      (statTotals.assists ?? 0) * 1.5 +
+      (statTotals.steals ?? 0) * 2 +
+      (statTotals.blocks ?? 0) * 2 -
+      (statTotals.turnovers ?? 0);
+
     const total =
       teamResult?.fantasy_points ??
-      (points +
-        rebounds * 1.2 +
-        assists * 1.5 +
-        steals * 2 +
-        blocks * 2 -
-        turnovers);
+      (sport === "nba" ? nbaFallback : 0);
 
     return {
       totalPlayers: teamPlayers.length,
       guards,
       fcPlayers,
-      points,
-      rebounds,
-      assists,
-      steals,
-      blocks,
-      turnovers,
+      statTotals,
+      points: statTotals.points ?? 0,
+      rebounds: statTotals.rebounds ?? 0,
+      assists: statTotals.assists ?? 0,
+      steals: statTotals.steals ?? 0,
+      blocks: statTotals.blocks ?? 0,
+      turnovers: statTotals.turnovers ?? 0,
       total,
       games_completed: teamResult?.games_completed ?? 0,
       games_in_progress: teamResult?.games_in_progress ?? 0,
@@ -547,15 +550,23 @@ export default function LineupBuilder({
   }
 
   function getPlayerStat(playerId: number) {
-    const stat = playerStatsMap.get(playerId);
+    const stat = playerStatsMap.get(playerId) as any;
+    const sport = selectedSlate?.sport ?? "nba";
+    const statColumns = getStatColumns(sport);
+
+    const statValues: Record<string, number> = {};
+    statColumns.forEach((column) => {
+      statValues[column.key] = Number(stat?.[column.key] ?? 0);
+    });
 
     return {
-      points: stat?.points ?? 0,
-      rebounds: stat?.rebounds ?? 0,
-      assists: stat?.assists ?? 0,
-      steals: stat?.steals ?? 0,
-      blocks: stat?.blocks ?? 0,
-      turnovers: stat?.turnovers ?? 0,
+      ...statValues,
+      points: statValues.points ?? 0,
+      rebounds: statValues.rebounds ?? 0,
+      assists: statValues.assists ?? 0,
+      steals: statValues.steals ?? 0,
+      blocks: statValues.blocks ?? 0,
+      turnovers: statValues.turnovers ?? 0,
       fantasy_points: stat?.fantasy_points ?? 0,
     };
   }

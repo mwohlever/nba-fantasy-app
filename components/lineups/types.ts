@@ -46,6 +46,7 @@ export type Slate = {
   end_date?: string;
   label?: string;
   is_locked: boolean;
+  sport?: string;
 };
 
 export type SavedLineup = {

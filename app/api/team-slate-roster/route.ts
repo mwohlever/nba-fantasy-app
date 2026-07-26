@@ -1,30 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-
-type PlayerRow = {
-  id: number;
-  name: string;
-  nba_player_id: number | null;
-  position_group: "G" | "F/C" | null;
-};
-
-type StatRow = {
-  player_id: number;
-  points: number | null;
-  rebounds: number | null;
-  assists: number | null;
-  steals: number | null;
-  blocks: number | null;
-  turnovers: number | null;
-  fantasy_points: number | null;
-  game_status: number | null;
-  game_status_text: string | null;
-  period: number | null;
-  game_clock: string | null;
-};
+import { getStatColumns } from "@/lib/statColumns";
 
 function getSlotOrder(positionGroup: string | null, index: number) {
-  if (positionGroup === "G") return index;
+  if (positionGroup === "G" || positionGroup === "QB") return index;
   return 100 + index;
 }
 
@@ -39,6 +18,15 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const { data: slate } = await supabaseAdmin
+      .from("slates")
+      .select("sport")
+      .eq("id", slateId)
+      .maybeSingle();
+
+    const sport = slate?.sport === "nfl" ? "nfl" : "nba";
+    const statColumns = getStatColumns(sport);
 
     const { data: team } = await supabaseAdmin
       .from("teams")
@@ -62,6 +50,8 @@ export async function GET(request: NextRequest) {
         success: true,
         team: team ?? null,
         slateId,
+        sport,
+        statColumns,
         roster: [],
         total: 0,
       });
@@ -86,8 +76,82 @@ export async function GET(request: NextRequest) {
         success: true,
         team: team ?? null,
         slateId,
+        sport,
+        statColumns,
         roster: [],
         total: 0,
+      });
+    }
+
+    if (sport === "nfl") {
+      const [{ data: players, error: playersError }, { data: stats, error: statsError }] =
+        await Promise.all([
+          supabaseAdmin
+            .from("players_nfl")
+            .select("id, name, nfl_player_id, position")
+            .in("id", playerIds),
+          supabaseAdmin
+            .from("player_nfl_slate_stats")
+            .select(
+              "player_id, passing_yards, passing_tds, passing_ints, rushing_yards, rushing_tds, receiving_yards, receiving_tds, receptions, fumbles_lost, fantasy_points, game_status, game_status_text"
+            )
+            .eq("slate_id", slateId)
+            .in("player_id", playerIds),
+        ]);
+
+      if (playersError) {
+        return NextResponse.json({ error: playersError.message }, { status: 500 });
+      }
+
+      if (statsError) {
+        return NextResponse.json({ error: statsError.message }, { status: 500 });
+      }
+
+      const playerMap = new Map<number, any>();
+      (players ?? []).forEach((player) => playerMap.set(Number(player.id), player));
+
+      const statMap = new Map<number, any>();
+      (stats ?? []).forEach((stat) => statMap.set(Number(stat.player_id), stat));
+
+      const roster = playerIds
+        .map((playerId, index) => {
+          const player = playerMap.get(playerId);
+          const stat = statMap.get(playerId) ?? {};
+
+          const statValues: Record<string, number> = {};
+          statColumns.forEach((column) => {
+            statValues[column.key] = Number(stat[column.key] ?? 0);
+          });
+
+          return {
+            playerId,
+            name: player?.name ?? `Player ${playerId}`,
+            nbaPlayerId: null,
+            positionGroup: player?.position ?? null,
+            ...statValues,
+            fantasyPoints: stat?.fantasy_points ?? 0,
+            gameStatus: stat?.game_status ?? null,
+            gameStatusText: stat?.game_status_text ?? null,
+            period: null,
+            gameClock: null,
+            sortOrder: getSlotOrder(player?.position ?? null, index),
+          };
+        })
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      const total = roster.reduce(
+        (sum, row) => sum + Number(row.fantasyPoints ?? 0),
+        0
+      );
+
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns,
+        roster,
+        total,
       });
     }
 
@@ -114,28 +178,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: statsError.message }, { status: 500 });
     }
 
-    const playerMap = new Map<number, PlayerRow>();
-    (players ?? []).forEach((player) => playerMap.set(Number(player.id), player as PlayerRow));
+    const playerMap = new Map<number, any>();
+    (players ?? []).forEach((player) => playerMap.set(Number(player.id), player));
 
-    const statMap = new Map<number, StatRow>();
-    (stats ?? []).forEach((stat) => statMap.set(Number(stat.player_id), stat as StatRow));
+    const statMap = new Map<number, any>();
+    (stats ?? []).forEach((stat) => statMap.set(Number(stat.player_id), stat));
 
     const roster = playerIds
       .map((playerId, index) => {
         const player = playerMap.get(playerId);
-        const stat = statMap.get(playerId);
+        const stat = statMap.get(playerId) ?? {};
+
+        const statValues: Record<string, number> = {};
+        statColumns.forEach((column) => {
+          statValues[column.key] = Number(stat[column.key] ?? 0);
+        });
 
         return {
           playerId,
           name: player?.name ?? `Player ${playerId}`,
           nbaPlayerId: player?.nba_player_id ?? null,
           positionGroup: player?.position_group ?? null,
-          points: stat?.points ?? 0,
-          rebounds: stat?.rebounds ?? 0,
-          assists: stat?.assists ?? 0,
-          steals: stat?.steals ?? 0,
-          blocks: stat?.blocks ?? 0,
-          turnovers: stat?.turnovers ?? 0,
+          ...statValues,
           fantasyPoints: stat?.fantasy_points ?? 0,
           gameStatus: stat?.game_status ?? null,
           gameStatusText: stat?.game_status_text ?? null,
@@ -155,6 +219,8 @@ export async function GET(request: NextRequest) {
       success: true,
       team: team ?? null,
       slateId,
+      sport,
+      statColumns,
       roster,
       total,
     });
