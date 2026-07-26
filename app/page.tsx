@@ -12,6 +12,7 @@ import TeamAvatar from "@/components/ui/TeamAvatar";
 import SeasonAwards from "@/components/home/SeasonAwards";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import type { Player } from "@/components/lineups/types";
+import { getStatColumns, type StatColumn } from "@/lib/statColumns";
 
 type LatestSlate = {
   id: number;
@@ -89,21 +90,18 @@ type SlateRosterRow = {
   playerId: number;
   name: string;
   nbaPlayerId: number | null;
-  positionGroup: "G" | "F/C" | null;
-  points: number;
-  rebounds: number;
-  assists: number;
-  steals: number;
-  blocks: number;
-  turnovers: number;
+  positionGroup: string | null;
   fantasyPoints: number;
+  gameStatus?: number | null;
+  gameStatusText?: string | null;
+  [statKey: string]: any;
 };
 
 const EMPTY_PLAYER_AVERAGE_MAP = new Map<number, number>();
 const EMPTY_PLAYER_PROJECTIONS: Record<number, any> = {};
 
 function rosterRowToPlayer(row: SlateRosterRow): Player | null {
-  if (row.positionGroup !== "G" && row.positionGroup !== "F/C") {
+  if (!row.positionGroup) {
     return null;
   }
 
@@ -214,6 +212,8 @@ export default function HomePage() {
     useState<SlateRosterModalState>(null);
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+  const [slateRosterStatColumns, setSlateRosterStatColumns] =
+    useState<StatColumn[]>(getStatColumns("nba"));
   const [selectedRosterPlayer, setSelectedRosterPlayer] =
     useState<Player | null>(null);
   const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(
@@ -379,6 +379,9 @@ export default function HomePage() {
 
         setSlateRosterRows(result.roster ?? []);
         setSlateRosterTotal(Number(result.total ?? 0));
+        setSlateRosterStatColumns(
+          result.statColumns ?? getStatColumns(result.sport ?? "nba"),
+        );
       } catch (error) {
         console.error(error);
         if (!isActive) return;
@@ -901,9 +904,12 @@ export default function HomePage() {
                         </div>
 
                         <div className="mt-2 text-xs leading-relaxed text-slate-600">
-                          {row.points} pts • {row.rebounds} reb • {row.assists}{" "}
-                          ast • {row.steals} stl • {row.blocks} blk •{" "}
-                          {row.turnovers} TO
+                          {slateRosterStatColumns
+                            .map(
+                              (column) =>
+                                `${row[column.key] ?? 0} ${column.label}`,
+                            )
+                            .join(" • ")}
                         </div>
 
                         <div className="mt-2 flex items-center justify-between text-xs">
@@ -925,12 +931,14 @@ export default function HomePage() {
                         <tr className="text-left">
                           <th className="px-3 py-2">Pos</th>
                           <th className="px-3 py-2">Player</th>
-                          <th className="px-3 py-2 text-right">PTS</th>
-                          <th className="px-3 py-2 text-right">REB</th>
-                          <th className="px-3 py-2 text-right">AST</th>
-                          <th className="px-3 py-2 text-right">STL</th>
-                          <th className="px-3 py-2 text-right">BLK</th>
-                          <th className="px-3 py-2 text-right">TO</th>
+                          {slateRosterStatColumns.map((column) => (
+                            <th
+                              key={column.key}
+                              className="px-3 py-2 text-right"
+                            >
+                              {column.label}
+                            </th>
+                          ))}
                           <th className="px-3 py-2 text-right">Total</th>
                           <th className="px-3 py-2 text-right">Proj</th>
                           <th className="px-3 py-2 text-right">Status</th>
@@ -963,24 +971,14 @@ export default function HomePage() {
                                 <span>{row.name}</span>
                               </button>
                             </td>
-                            <td className="px-3 py-2 text-right">
-                              {row.points}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {row.rebounds}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {row.assists}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {row.steals}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {row.blocks}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {row.turnovers}
-                            </td>
+                            {slateRosterStatColumns.map((column) => (
+                              <td
+                                key={column.key}
+                                className="px-3 py-2 text-right"
+                              >
+                                {row[column.key] ?? 0}
+                              </td>
+                            ))}
                             <td className="px-3 py-2 text-right font-semibold">
                               {Number(row.fantasyPoints ?? 0).toFixed(1)}
                             </td>
@@ -997,7 +995,10 @@ export default function HomePage() {
                         <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
                           <td className="px-3 py-2" />
                           <td className="px-3 py-2">Total</td>
-                          <td className="px-3 py-2 text-right" colSpan={6} />
+                          <td
+                            className="px-3 py-2 text-right"
+                            colSpan={slateRosterStatColumns.length}
+                          />
                           <td className="px-3 py-2 text-right">
                             {slateRosterTotal.toFixed(1)}
                           </td>
