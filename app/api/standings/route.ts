@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { DEFAULT_SPORT } from "@/lib/sports";
 
 type TeamRow = {
   id: number;
@@ -10,6 +11,7 @@ type SlateRow = {
   id: number;
   start_date: string;
   is_locked: boolean;
+  sport: string | null;
 };
 
 type TeamSlateResultRow = {
@@ -50,6 +52,7 @@ function roundTo(value: number, digits = 2) {
 export async function GET(request: NextRequest) {
   try {
     const seasonParam = request.nextUrl.searchParams.get("season");
+    const sport = request.nextUrl.searchParams.get("sport") ?? DEFAULT_SPORT;
 
     const [
       { data: teams, error: teamsError },
@@ -60,8 +63,9 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
       supabaseAdmin
         .from("slates")
-        .select("id, start_date, is_locked")
+        .select("id, start_date, is_locked, sport")
         .eq("is_locked", true)
+        .eq("sport", sport)
         .order("start_date", { ascending: true }),
       supabaseAdmin
         .from("team_slate_results")
@@ -90,10 +94,15 @@ export async function GET(request: NextRequest) {
     const safeResults = (teamSlateResults ?? []) as TeamSlateResultRow[];
     const safeSlateTeams = (slateTeams ?? []) as SlateTeamRow[];
 
+    // Only slates matching the requested sport ended up in safeSlates
+    // (filtered at the query level above), so this map only contains
+    // sport-relevant slate ids.
     const slateSeasonMap = new Map<number, number>();
     safeSlates.forEach((slate) => {
       slateSeasonMap.set(slate.id, getSeasonFromDate(slate.start_date));
     });
+
+    const relevantSlateIds = new Set(safeSlates.map((slate) => slate.id));
 
     const availableSeasons = Array.from(
       new Set(
@@ -113,6 +122,8 @@ export async function GET(request: NextRequest) {
           : availableSeasons[0] ?? null;
 
     const seasonResults = safeResults.filter((row) => {
+      if (!relevantSlateIds.has(row.slate_id)) return false;
+
       const slateSeason = slateSeasonMap.get(row.slate_id);
 
       if (!slateSeason) return false;
@@ -124,23 +135,13 @@ export async function GET(request: NextRequest) {
     const slateTeamBySlateTeamId = new Map<string, SlateTeamRow>();
 
     safeSlateTeams.forEach((row) => {
+      if (!relevantSlateIds.has(row.slate_id)) return;
       slateTeamBySlateTeamId.set(`${row.slate_id}:${row.team_id}`, row);
     });
 
-    const draftPositionMap = new Map<
-      number,
-      {
-        draft_order: number;
-        wins: number;
-        runner_ups: number;
-        total_finish: number;
-        total_score: number;
-        slates_played: number;
-      }
-    >();
+    const draftPositionMap = new Map<number, { draft_order: number; wins: number; runner_ups: number; total_finish: number; total_score: number; slates_played: number; }>();
 
     seasonResults.forEach((result) => {
-
       const slateTeam = slateTeamBySlateTeamId.get(
         `${result.slate_id}:${result.team_id}`
       );
@@ -227,6 +228,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      sport,
       selectedSeason,
       availableSeasons,
       standings,

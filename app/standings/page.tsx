@@ -5,6 +5,7 @@ import SeasonAwards from "@/components/home/SeasonAwards";
 import TeamProfileModal from "@/components/TeamProfileModal";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { useEffect, useMemo, useState } from "react";
+import { SPORTS, DEFAULT_SPORT } from "@/lib/sports";
 
 type StandingRow = {
   season: number;
@@ -128,6 +129,7 @@ export default function StandingsPage() {
   const [draftPositionResults, setDraftPositionResults] = useState<DraftPositionRow[]>([]);
   const [availableSeasons, setAvailableSeasons] = useState<number[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<number | "all" | "">("");
+  const [selectedSport, setSelectedSport] = useState<string>(DEFAULT_SPORT);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("wins");
@@ -141,21 +143,26 @@ export default function StandingsPage() {
   const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(null);
 
   useEffect(() => {
-    void loadStandings();
-  }, []);
+    void loadStandings(undefined, selectedSport);
+  }, [selectedSport]);
 
-  async function loadStandings(seasonOverride?: number | "all" | "") {
+  async function loadStandings(
+    seasonOverride?: number | "all" | "",
+    sportOverride?: string,
+  ) {
     try {
       setIsLoading(true);
       setErrorMessage("");
 
       const seasonToUse =
         seasonOverride !== undefined ? seasonOverride : selectedSeason;
+      const sportToUse =
+        sportOverride !== undefined ? sportOverride : selectedSport;
 
       const url =
         seasonToUse === "" || seasonToUse === null
-          ? "/api/standings"
-          : `/api/standings?season=${seasonToUse}`;
+          ? `/api/standings?sport=${sportToUse}`
+          : `/api/standings?season=${seasonToUse}&sport=${sportToUse}`;
 
       const response = await fetch(url);
       const result = (await response.json()) as StandingsResponse | { error?: string };
@@ -180,7 +187,7 @@ export default function StandingsPage() {
 
       if (statsSeason !== "" && statsSeason !== null && statsSeason !== "all") {
         try {
-          const awardsResponse = await fetch(`/api/season-awards?season=${statsSeason}`);
+          const awardsResponse = await fetch(`/api/season-awards?season=${statsSeason}&sport=${sportToUse}`);
           const awardsResult = await awardsResponse.json();
 
           if (awardsResponse.ok && awardsResult?.success) {
@@ -195,7 +202,7 @@ export default function StandingsPage() {
 
 
         try {
-          const statsResponse = await fetch(`/api/team-stats?season=${statsSeason}`);
+          const statsResponse = await fetch(`/api/team-stats?season=${statsSeason}&sport=${sportToUse}`);
           const statsResult = await statsResponse.json();
 
           if (statsResponse.ok) {
@@ -304,6 +311,32 @@ export default function StandingsPage() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div>
+                <label
+                  htmlFor="sport-select"
+                  className="mb-1 block text-xs font-medium text-slate-600"
+                >
+                  Sport
+                </label>
+                <select
+                  id="sport-select"
+                  value={selectedSport}
+                  onChange={async (e) => {
+                    const nextSport = e.target.value;
+                    setSelectedSport(nextSport);
+                    setSelectedSeason("");
+                    await loadStandings("", nextSport);
+                  }}
+                  className="min-w-[120px] rounded-xl border border-slate-200 bg-white px-3 py-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
+                >
+                  {SPORTS.map((sport) => (
+                    <option key={sport.key} value={sport.key}>
+                      {sport.emoji} {sport.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label
                   htmlFor="season-select"
