@@ -1414,6 +1414,7 @@ export default function LineupBuilder({
         <ScoresDashboard
           teams={orderedTeamsForSlate}
           selectedSlate={selectedSlate}
+          rosterSlots={rosterSlots}
           lastRefreshSummary={lastRefreshSummary}
           getPlayersForTeam={getPlayersForTeam}
           getTeamStats={getTeamStats}

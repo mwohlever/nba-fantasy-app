@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
+import { getStatColumns } from "@/lib/statColumns";
 import type {
   OrderedTeam,
   Player,
   PlayerStat,
+  RosterSlotConfig,
   Slate,
 } from "@/components/lineups/types";
 
@@ -15,6 +17,7 @@ type TeamStats = {
   totalPlayers: number;
   guards: number;
   fcPlayers: number;
+  statTotals?: Record<string, number>;
   points: number;
   rebounds: number;
   assists: number;
@@ -28,13 +31,7 @@ type TeamStats = {
   finish_position: number | null;
 };
 
-type PlayerBoxScore = {
-  points: number;
-  rebounds: number;
-  assists: number;
-  steals: number;
-  blocks: number;
-  turnovers: number;
+type PlayerBoxScore = Record<string, number> & {
   fantasy_points: number;
 };
 
@@ -47,6 +44,7 @@ type RefreshSummary = {
 type Props = {
   teams: OrderedTeam[];
   selectedSlate: Slate | null;
+  rosterSlots?: RosterSlotConfig[];
   lastRefreshSummary: RefreshSummary;
   getPlayersForTeam: (teamId: number) => Player[];
   getTeamStats: (teamId: number) => TeamStats;
@@ -59,6 +57,11 @@ type Props = {
   controls?: ReactNode;
   setProfilePlayer: (player: Player | null) => void;
 };
+
+const FALLBACK_ROSTER_SLOTS: RosterSlotConfig[] = [
+  { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+  { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+];
 
 function formatScore(value: number | null | undefined) {
   const numeric = Number(value ?? 0);
@@ -128,6 +131,7 @@ function medalForPosition(position: number) {
 export default function ScoresDashboard({
   teams,
   selectedSlate,
+  rosterSlots,
   lastRefreshSummary,
   getPlayersForTeam,
   getTeamStats,
@@ -140,6 +144,19 @@ export default function ScoresDashboard({
   controls,
   setProfilePlayer,
 }: Props) {
+  const sport = selectedSlate?.sport ?? "nba";
+  const statColumns = getStatColumns(sport);
+
+  const effectiveRosterSlots =
+    rosterSlots && rosterSlots.length > 0
+      ? rosterSlots
+      : FALLBACK_ROSTER_SLOTS;
+
+  const totalRosterSlots = effectiveRosterSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
+  );
+
   const participatingTeams = useMemo(
     () =>
       teams.filter(
@@ -231,33 +248,30 @@ export default function ScoresDashboard({
     selectedTeam.id
   );
 
-  const guards = players.filter(
-    (player) => player.position_group === "G"
-  );
-
-  const frontcourt = players.filter(
-    (player) => player.position_group === "F/C"
-  );
+  const playersByPosition = new Map<string, Player[]>();
+  players.forEach((player) => {
+    const existing =
+      playersByPosition.get(player.position_group) ?? [];
+    existing.push(player);
+    playersByPosition.set(player.position_group, existing);
+  });
 
   const rosterRows: Array<{
-    slot: "G" | "F/C";
+    slot: string;
     player: Player | null;
-  }> = [
-    { slot: "G", player: guards[0] ?? null },
-    { slot: "G", player: guards[1] ?? null },
-    {
-      slot: "F/C",
-      player: frontcourt[0] ?? null,
-    },
-    {
-      slot: "F/C",
-      player: frontcourt[1] ?? null,
-    },
-    {
-      slot: "F/C",
-      player: frontcourt[2] ?? null,
-    },
-  ];
+  }> = [];
+
+  effectiveRosterSlots.forEach((slotConfig) => {
+    const positionPlayers =
+      playersByPosition.get(slotConfig.position) ?? [];
+
+    for (let i = 0; i < slotConfig.slot_count; i += 1) {
+      rosterRows.push({
+        slot: slotConfig.position,
+        player: positionPlayers[i] ?? null,
+      });
+    }
+  });
 
   const progressTotal =
     selectedStats.games_completed +
@@ -684,6 +698,9 @@ export default function ScoresDashboard({
               Number.isFinite(playerProjection) &&
               playerProjection > 0;
 
+            const primaryColumns = statColumns.slice(0, 3);
+            const secondaryColumns = statColumns.slice(3);
+
             return (
               <article
                 key={row.player.id}
@@ -758,61 +775,50 @@ export default function ScoresDashboard({
                 </button>
 
                 <div className="scores-player-primary-stats">
-                  <div>
-                    <span>PTS</span>
-                    <strong>{playerStat.points}</strong>
-                  </div>
-
-                  <div>
-                    <span>REB</span>
-                    <strong>{playerStat.rebounds}</strong>
-                  </div>
-
-                  <div>
-                    <span>AST</span>
-                    <strong>{playerStat.assists}</strong>
-                  </div>
+                  {primaryColumns.map((column) => (
+                    <div key={column.key}>
+                      <span>{column.label}</span>
+                      <strong>{playerStat[column.key] ?? 0}</strong>
+                    </div>
+                  ))}
                 </div>
 
-                <details className="scores-player-more">
-                  <summary>
-                    <span>More Stats</span>
+                {secondaryColumns.length > 0 ? (
+                  <details className="scores-player-more">
+                    <summary>
+                      <span>More Stats</span>
 
-                    <strong>
-                      STL {playerStat.steals}
-                      <span aria-hidden="true"> • </span>
-                      BLK {playerStat.blocks}
-                      <span aria-hidden="true"> • </span>
-                      TO {playerStat.turnovers}
-                    </strong>
-                  </summary>
-
-                  <div className="scores-player-secondary-stats">
-                    <div>
-                      <span>STL</span>
-                      <strong>{playerStat.steals}</strong>
-                    </div>
-
-                    <div>
-                      <span>BLK</span>
-                      <strong>{playerStat.blocks}</strong>
-                    </div>
-
-                    <div>
-                      <span>TO</span>
-                      <strong>{playerStat.turnovers}</strong>
-                    </div>
-
-                    <div>
-                      <span>Projected</span>
                       <strong>
-                        {hasProjection
-                          ? formatScore(playerProjection)
-                          : "—"}
+                        {secondaryColumns.map((column, i) => (
+                          <span key={column.key}>
+                            {i > 0 ? (
+                              <span aria-hidden="true"> • </span>
+                            ) : null}
+                            {column.label} {playerStat[column.key] ?? 0}
+                          </span>
+                        ))}
                       </strong>
+                    </summary>
+
+                    <div className="scores-player-secondary-stats">
+                      {secondaryColumns.map((column) => (
+                        <div key={column.key}>
+                          <span>{column.label}</span>
+                          <strong>{playerStat[column.key] ?? 0}</strong>
+                        </div>
+                      ))}
+
+                      <div>
+                        <span>Projected</span>
+                        <strong>
+                          {hasProjection
+                            ? formatScore(playerProjection)
+                            : "—"}
+                        </strong>
+                      </div>
                     </div>
-                  </div>
-                </details>
+                  </details>
+                ) : null}
               </article>
             );
           })}
@@ -828,45 +834,14 @@ export default function ScoresDashboard({
           </summary>
 
           <div>
-            <div>
-              <span>PTS</span>
-              <strong>{selectedStats.points}</strong>
-            </div>
-
-            <div>
-              <span>REB</span>
-              <strong>
-                {selectedStats.rebounds}
-              </strong>
-            </div>
-
-            <div>
-              <span>AST</span>
-              <strong>
-                {selectedStats.assists}
-              </strong>
-            </div>
-
-            <div>
-              <span>STL</span>
-              <strong>
-                {selectedStats.steals}
-              </strong>
-            </div>
-
-            <div>
-              <span>BLK</span>
-              <strong>
-                {selectedStats.blocks}
-              </strong>
-            </div>
-
-            <div>
-              <span>TO</span>
-              <strong>
-                {selectedStats.turnovers}
-              </strong>
-            </div>
+            {statColumns.map((column) => (
+              <div key={column.key}>
+                <span>{column.label}</span>
+                <strong>
+                  {selectedStats.statTotals?.[column.key] ?? 0}
+                </strong>
+              </div>
+            ))}
           </div>
         </details>
       </section>
