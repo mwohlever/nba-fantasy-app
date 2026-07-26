@@ -9,6 +9,8 @@ import {
   useSearchParams,
 } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { SPORTS } from "@/lib/sports";
 
 type CurrentUser = {
   id: string;
@@ -99,6 +101,7 @@ function AppNavContent() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedSport, setSelectedSport } = useSelectedSport();
 
   const activeProfileTab =
     pathname.startsWith("/profile")
@@ -283,7 +286,20 @@ function AppNavContent() {
             </Link>
           </div>
 
-          <div className="relative" ref={desktopUserRef}>
+          <div className="relative flex items-center gap-3" ref={desktopUserRef}>
+            <select
+              aria-label="Select sport"
+              value={selectedSport}
+              onChange={(e) => setSelectedSport(e.target.value)}
+              className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition hover:border-sky-300"
+            >
+              {SPORTS.map((sport) => (
+                <option key={sport.key} value={sport.key}>
+                  {sport.emoji} {sport.label}
+                </option>
+              ))}
+            </select>
+
             {isUserLoading ? (
               <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400">
                 Loading...
@@ -420,25 +436,40 @@ function AppNavContent() {
       </nav>
 
       {/* Global mobile account header */}
-      <nav className="app-mobile-header mb-6 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
-        <Link
-          href="/"
-          className="flex min-w-0 items-center gap-3"
-          aria-label="111 Fantasy Sports home"
+      <nav className="app-mobile-header mb-6 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
+        <div className="flex items-center justify-between">
+          <Link
+            href="/"
+            className="flex min-w-0 items-center gap-3"
+            aria-label="111 Fantasy Sports home"
+          >
+            <img
+              src="/icon-192.png"
+              alt=""
+              aria-hidden="true"
+              className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-sm"
+            />
+
+            <span className="truncate text-lg font-bold tracking-tight text-slate-900">
+              111 Fantasy Sports
+            </span>
+          </Link>
+
+          <MobileAccountMenu />
+        </div>
+
+        <select
+          aria-label="Select sport"
+          value={selectedSport}
+          onChange={(e) => setSelectedSport(e.target.value)}
+          className="self-start rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 outline-none"
         >
-          <img
-            src="/icon-192.png"
-            alt=""
-            aria-hidden="true"
-            className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-sm"
-          />
-
-          <span className="truncate text-lg font-bold tracking-tight text-slate-900">
-            111 Fantasy Sports
-          </span>
-        </Link>
-
-        <MobileAccountMenu />
+          {SPORTS.map((sport) => (
+            <option key={sport.key} value={sport.key}>
+              {sport.emoji} {sport.label}
+            </option>
+          ))}
+        </select>
       </nav>
 
       {/* White shield behind mobile nav */}

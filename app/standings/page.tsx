@@ -5,7 +5,7 @@ import SeasonAwards from "@/components/home/SeasonAwards";
 import TeamProfileModal from "@/components/TeamProfileModal";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { useEffect, useMemo, useState } from "react";
-import { SPORTS, DEFAULT_SPORT } from "@/lib/sports";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type StandingRow = {
   season: number;
@@ -129,7 +129,7 @@ export default function StandingsPage() {
   const [draftPositionResults, setDraftPositionResults] = useState<DraftPositionRow[]>([]);
   const [availableSeasons, setAvailableSeasons] = useState<number[]>([]);
   const [selectedSeason, setSelectedSeason] = useState<number | "all" | "">("");
-  const [selectedSport, setSelectedSport] = useState<string>(DEFAULT_SPORT);
+  const { selectedSport } = useSelectedSport();
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("wins");
@@ -143,7 +143,8 @@ export default function StandingsPage() {
   const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(null);
 
   useEffect(() => {
-    void loadStandings(undefined, selectedSport);
+    setSelectedSeason("");
+    void loadStandings("", selectedSport);
   }, [selectedSport]);
 
   async function loadStandings(
@@ -311,32 +312,6 @@ export default function StandingsPage() {
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div>
-                <label
-                  htmlFor="sport-select"
-                  className="mb-1 block text-xs font-medium text-slate-600"
-                >
-                  Sport
-                </label>
-                <select
-                  id="sport-select"
-                  value={selectedSport}
-                  onChange={async (e) => {
-                    const nextSport = e.target.value;
-                    setSelectedSport(nextSport);
-                    setSelectedSeason("");
-                    await loadStandings("", nextSport);
-                  }}
-                  className="min-w-[120px] rounded-xl border border-slate-200 bg-white px-3 py-3.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
-                >
-                  {SPORTS.map((sport) => (
-                    <option key={sport.key} value={sport.key}>
-                      {sport.emoji} {sport.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               <div>
                 <label
                   htmlFor="season-select"
