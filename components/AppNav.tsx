@@ -311,7 +311,7 @@ function AppNavContent() {
             </button>
 
             {desktopSportOpen ? (
-              <div className="app-dropdown-panel absolute left-0 z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+              <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
                 {SPORTS.map((sport) => (
                   <button
                     key={sport.key}
@@ -377,7 +377,7 @@ function AppNavContent() {
                 </button>
 
                 {desktopUserOpen ? (
-                  <div className="app-dropdown-panel absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                  <div className="app-dropdown-panel absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
                     <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Profile
                     </div>
@@ -505,7 +505,7 @@ function AppNavContent() {
           </button>
 
           {mobileSportOpen ? (
-            <div className="app-dropdown-panel absolute left-0 z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+            <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
               {SPORTS.map((sport) => (
                 <button
                   key={sport.key}
