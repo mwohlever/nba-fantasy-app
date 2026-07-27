@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/requireAdminApi";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { SPORTS, DEFAULT_SPORT } from "@/lib/sports";
 
 type AwardRarity = "common" | "rare" | "epic" | "legendary";
 
 type AwardBody = {
   id?: number;
   season?: number;
+  sport?: string;
   teamId?: number;
   title?: string;
   emoji?: string;
@@ -23,8 +25,11 @@ const VALID_RARITIES = new Set<AwardRarity>([
   "legendary",
 ]);
 
+const VALID_SPORTS = new Set(SPORTS.map((sport) => sport.key));
+
 function validateAward(body: AwardBody) {
   const season = Number(body.season);
+  const sport = String(body.sport ?? DEFAULT_SPORT).trim();
   const teamId = Number(body.teamId);
   const title = String(body.title ?? "").trim();
   const emoji = String(body.emoji ?? "🏆").trim();
@@ -36,6 +41,12 @@ function validateAward(body: AwardBody) {
   if (!Number.isInteger(season) || season < 2023 || season > 2100) {
     return {
       error: "Enter a valid season between 2023 and 2100.",
+    };
+  }
+
+  if (!VALID_SPORTS.has(sport)) {
+    return {
+      error: "Choose a valid sport.",
     };
   }
 
@@ -78,6 +89,7 @@ function validateAward(body: AwardBody) {
   return {
     values: {
       season,
+      sport,
       team_id: teamId,
       title,
       emoji,
@@ -98,6 +110,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const seasonParam = searchParams.get("season");
     const season = seasonParam ? Number(seasonParam) : null;
+    const sportParam = searchParams.get("sport");
 
     let query = supabaseAdmin
       .from("league_awards")
@@ -105,6 +118,7 @@ export async function GET(request: Request) {
         `
           id,
           season,
+          sport,
           team_id,
           title,
           emoji,
@@ -127,6 +141,10 @@ export async function GET(request: Request) {
 
     if (season && Number.isInteger(season)) {
       query = query.eq("season", season);
+    }
+
+    if (sportParam) {
+      query = query.eq("sport", sportParam);
     }
 
     const { data, error } = await query;

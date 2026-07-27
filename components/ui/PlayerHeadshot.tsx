@@ -1,5 +1,6 @@
 type PlayerHeadshotProps = {
   nbaPlayerId?: number | null;
+  nflPlayerId?: number | null;
   playerName?: string;
   size?: "xs" | "sm" | "md" | "xl";
   className?: string;
@@ -14,13 +15,16 @@ const sizeClasses = {
 
 export default function PlayerHeadshot({
   nbaPlayerId,
+  nflPlayerId,
   playerName,
   size = "sm",
   className = "",
 }: PlayerHeadshotProps) {
   const imageUrl = nbaPlayerId
     ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaPlayerId}.png`
-    : null;
+    : nflPlayerId
+      ? `https://a.espncdn.com/i/headshots/nfl/players/full/${nflPlayerId}.png`
+      : null;
 
   return (
     <div

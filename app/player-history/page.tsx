@@ -5,11 +5,13 @@ import AppNav from "@/components/AppNav";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type { Player } from "@/components/lineups/types";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type PlayerHistoryRow = {
   player_id: number;
   player_name: string;
   nba_player_id: number | null;
+  nfl_player_id: number | null;
   times_drafted: number;
   avg_score: number;
   high_score: number;
@@ -38,6 +40,8 @@ type ApiResponse = {
 };
 
 export default function PlayerHistoryPage() {
+  const { selectedSport, isHydrated } = useSelectedSport();
+
   const [playerProjections, setPlayerProjections] = useState<Record<number, any>>({});
   const [rows, setRows] = useState<PlayerHistoryRow[]>([]);
   const [season, setSeason] = useState<number | "all">(2026);
@@ -50,10 +54,18 @@ export default function PlayerHistoryPage() {
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
 
   useEffect(() => {
+    if (!isHydrated) return;
     void loadPlayerHistory();
-  }, [season]);
+  }, [isHydrated, selectedSport, season]);
 
   useEffect(() => {
+    if (!isHydrated) return;
+
+    if (selectedSport !== "nba") {
+      setPlayerProjections({});
+      return;
+    }
+
     async function loadPlayerProjections() {
       try {
         const response = await fetch(
@@ -70,16 +82,19 @@ export default function PlayerHistoryPage() {
     }
 
     void loadPlayerProjections();
-  }, [season]);
+  }, [isHydrated, selectedSport, season]);
 
   async function loadPlayerHistory() {
     try {
       setIsLoading(true);
       setMessage("");
 
-      const response = await fetch(`/api/player-history?season=${season}`, {
-        cache: "no-store",
-      });
+      const response = await fetch(
+        `/api/player-history?season=${season}&sport=${selectedSport}`,
+        {
+          cache: "no-store",
+        }
+      );
       const result = (await response.json()) as ApiResponse | { error?: string };
 
       if (!response.ok) {
@@ -362,6 +377,7 @@ export default function PlayerHistoryPage() {
                         >
                           <PlayerHeadshot
                             nbaPlayerId={row.nba_player_id}
+                            nflPlayerId={row.nfl_player_id}
                             playerName={row.player_name}
                             size="xs"
                           />

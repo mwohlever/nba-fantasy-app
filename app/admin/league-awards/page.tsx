@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import CollectibleCard from "@/components/collectibles/CollectibleCard";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { DEFAULT_SPORT } from "@/lib/sports";
 
 type AdminTab = "create" | "manage";
 type AwardRarity = "common" | "rare" | "epic" | "legendary";
@@ -26,6 +28,7 @@ type RelatedTeam =
 type LeagueAward = {
   id: number;
   season: number;
+  sport: string;
   team_id: number;
   title: string;
   emoji: string;
@@ -38,6 +41,7 @@ type LeagueAward = {
 
 type AwardForm = {
   season: number;
+  sport: string;
   teamId: string;
   title: string;
   emoji: string;
@@ -51,6 +55,7 @@ const currentYear = new Date().getFullYear();
 
 const emptyForm: AwardForm = {
   season: currentYear,
+  sport: DEFAULT_SPORT,
   teamId: "",
   title: "",
   emoji: "🏆",
@@ -141,6 +146,8 @@ function AwardPreview({
 }
 
 export default function LeagueAwardsAdminPage() {
+  const { selectedSport, isHydrated } = useSelectedSport();
+
   const [activeTab, setActiveTab] =
     useState<AdminTab>("create");
 
@@ -162,7 +169,7 @@ export default function LeagueAwardsAdminPage() {
       setIsLoading(true);
 
       const response = await fetch(
-        "/api/admin/league-awards",
+        `/api/admin/league-awards?sport=${selectedSport}`,
         {
           cache: "no-store",
         }
@@ -201,8 +208,9 @@ export default function LeagueAwardsAdminPage() {
   }
 
   useEffect(() => {
+    if (!isHydrated) return;
     void loadAwards();
-  }, []);
+  }, [isHydrated, selectedSport]);
 
   const availableSeasons = useMemo(() => {
     const values = new Set<number>([
@@ -229,6 +237,7 @@ export default function LeagueAwardsAdminPage() {
     setEditingId(null);
     setForm({
       ...emptyForm,
+      sport: selectedSport,
       teamId: teams[0] ? String(teams[0].id) : "",
     });
   }
@@ -238,6 +247,7 @@ export default function LeagueAwardsAdminPage() {
 
     setForm({
       season: award.season,
+      sport: award.sport,
       teamId: String(award.team_id),
       title: award.title,
       emoji: award.emoji,
@@ -277,6 +287,7 @@ export default function LeagueAwardsAdminPage() {
           body: JSON.stringify({
             id: editingId ?? undefined,
             season: form.season,
+            sport: form.sport,
             teamId: Number(form.teamId),
             title: form.title,
             emoji: form.emoji,

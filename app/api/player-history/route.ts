@@ -11,8 +11,7 @@ type SlateRow = {
 type PlayerRow = {
   id: number;
   name: string;
-  nba_player_id: number | null;
-  position_group: string | null;
+  external_id: number | null;
 };
 
 type LineupRow = {
@@ -49,6 +48,8 @@ function roundTo(value: number, digits = 2) {
 export async function GET(request: NextRequest) {
   try {
     const seasonParam = request.nextUrl.searchParams.get("season");
+    const sportParam = request.nextUrl.searchParams.get("sport");
+    const sport = sportParam === "nfl" ? "nfl" : "nba";
     const isAllTime = seasonParam === "all";
     const selectedSeason =
       isAllTime
@@ -65,14 +66,24 @@ export async function GET(request: NextRequest) {
       { data: playerSlateStats, error: playerSlateStatsError },
       { data: teamSlateResults, error: teamSlateResultsError },
     ] = await Promise.all([
-	supabaseAdmin
+        supabaseAdmin
   .from("slates")
   .select("id, start_date, date, is_locked")
-  .eq("is_locked", true),
-      supabaseAdmin.from("players").select("id, name, nba_player_id, position_group").order("name", { ascending: true }),
+  .eq("is_locked", true)
+  .eq("sport", sport),
+      supabaseAdmin
+        .from(sport === "nfl" ? "players_nfl" : "players")
+        .select(
+          sport === "nfl"
+            ? "id, name, external_id:nfl_player_id"
+            : "id, name, external_id:nba_player_id"
+        )
+        .order("name", { ascending: true }),
       supabaseAdmin.from("lineups").select("id, slate_id, team_id"),
       supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
-      supabaseAdmin.from("player_slate_stats").select("slate_id, player_id, fantasy_points"),
+      supabaseAdmin
+        .from(sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats")
+        .select("slate_id, player_id, fantasy_points"),
       supabaseAdmin.from("team_slate_results").select("slate_id, team_id, finish_position"),
     ]);
 
@@ -140,7 +151,7 @@ export async function GET(request: NextRequest) {
       {
         player_id: number;
         player_name: string;
-        nba_player_id: number | null;
+        external_id: number | null;
         times_drafted: number;
         scores: number[];
         winning_lineups: number;
@@ -165,7 +176,7 @@ export async function GET(request: NextRequest) {
       const current = playerAggMap.get(player.id) ?? {
         player_id: player.id,
         player_name: player.name,
-        nba_player_id: player.nba_player_id,
+        external_id: player.external_id,
         times_drafted: 0,
         scores: [],
         winning_lineups: 0,
@@ -208,7 +219,8 @@ export async function GET(request: NextRequest) {
         return {
           player_id: row.player_id,
           player_name: row.player_name,
-          nba_player_id: row.nba_player_id,
+          nba_player_id: sport === "nba" ? row.external_id : null,
+          nfl_player_id: sport === "nfl" ? row.external_id : null,
           times_drafted: row.times_drafted,
           avg_score: avgScore,
           high_score: highScore,
@@ -227,6 +239,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       season: selectedSeason,
+      sport,
       playerHistory,
     });
   } catch (error) {
