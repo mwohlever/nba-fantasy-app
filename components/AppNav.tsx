@@ -123,6 +123,22 @@ function AppNavContent() {
 
   const isAdmin = currentUser?.role === "admin";
 
+  function getLinkHref(href: string) {
+    if (href === "/lineups/draft" || href === "/lineups/scores") {
+      return `${href}?sport=${selectedSport}`;
+    }
+
+    return href;
+  }
+
+  function handleSelectSport(sportKey: string) {
+    setSelectedSport(sportKey);
+
+    if (pathname === "/lineups/draft" || pathname === "/lineups/scores") {
+      router.push(`${pathname}?sport=${sportKey}`);
+    }
+  }
+
   const moreIsActive =
     pathname.startsWith("/standings") ||
     pathname.startsWith("/player-history");
@@ -279,7 +295,7 @@ function AppNavContent() {
             {mainLinks.map((link) => (
               <Link
                 key={link.href}
-                href={link.href}
+                href={getLinkHref(link.href)}
                 className={desktopLinkClass(link.href)}
               >
                 {link.label}
@@ -317,7 +333,7 @@ function AppNavContent() {
                     key={sport.key}
                     type="button"
                     onClick={() => {
-                      setSelectedSport(sport.key);
+                      handleSelectSport(sport.key);
                       setDesktopSportOpen(false);
                     }}
                     className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
@@ -511,7 +527,7 @@ function AppNavContent() {
                   key={sport.key}
                   type="button"
                   onClick={() => {
-                    setSelectedSport(sport.key);
+                    handleSelectSport(sport.key);
                     setMobileSportOpen(false);
                   }}
                   className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
@@ -571,7 +587,7 @@ function AppNavContent() {
           {mainLinks.map((link) => (
             <Link
               key={link.href}
-              href={link.href}
+              href={getLinkHref(link.href)}
               className={mobileLinkClass(link.href)}
             >
               <span className="text-lg leading-none">{link.icon}</span>

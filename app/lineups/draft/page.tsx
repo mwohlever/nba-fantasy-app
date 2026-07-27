@@ -36,25 +36,43 @@ type SlateTeamConfig = {
   is_participating: boolean;
 };
 
-export default async function DraftLineupsPage() {
+export default async function DraftLineupsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sport?: string | string[] }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const sportParam = Array.isArray(resolvedSearchParams?.sport)
+    ? resolvedSearchParams.sport[0]
+    : resolvedSearchParams?.sport;
+  const sport = sportParam === "nfl" ? "nfl" : "nba";
+
   const today = getTodayDateString();
 
+  const playersTable = sport === "nfl" ? "players_nfl" : "players";
+  const playersSelect =
+    sport === "nfl"
+      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+      : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+  const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+
   const [
-    { data: players, error: playersError },
+    { data: rawPlayers, error: playersError },
     { data: teams, error: teamsError },
     { data: slates, error: slatesError },
     { data: slateTeams, error: slateTeamsError },
     { data: allPlayerStats, error: allPlayerStatsError },
   ] = await Promise.all([
     supabaseAdmin
-      .from("players")
-      .select("id, name, position_group, is_active, is_playing_today, nba_player_id")
+      .from(playersTable)
+      .select(playersSelect)
       .eq("is_active", true)
       .order("name", { ascending: true }),
     supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
     supabaseAdmin
       .from("slates")
       .select("id, date, start_date, end_date, is_locked, sport")
+      .eq("sport", sport)
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
     supabaseAdmin
@@ -62,7 +80,7 @@ export default async function DraftLineupsPage() {
       .select("slate_id, team_id, draft_order, is_participating")
       .order("slate_id", { ascending: true })
       .order("draft_order", { ascending: true }),
-    supabaseAdmin.from("player_slate_stats").select("player_id, fantasy_points"),
+    supabaseAdmin.from(statsTable).select("player_id, fantasy_points"),
   ]);
 
   if (
@@ -94,6 +112,28 @@ export default async function DraftLineupsPage() {
       </main>
     );
   }
+
+  const normalizedPlayers = (rawPlayers ?? []).map((p: any) =>
+    sport === "nfl"
+      ? {
+          id: p.id,
+          name: p.name,
+          position_group: p.position,
+          is_active: p.is_active,
+          is_playing_today: p.is_playing_this_week,
+          nba_player_id: null,
+          nfl_player_id: p.nfl_player_id,
+        }
+      : {
+          id: p.id,
+          name: p.name,
+          position_group: p.position_group,
+          is_active: p.is_active,
+          is_playing_today: p.is_playing_today,
+          nba_player_id: p.nba_player_id,
+          nfl_player_id: null,
+        }
+  );
 
   const safeSlates: Slate[] =
     (slates ?? []).map((slate) => {
@@ -182,15 +222,10 @@ export default async function DraftLineupsPage() {
     display_order: number | null;
   }> = [];
 
-  const selectedSlate = safeSlates.find(
-    (slate) => slate.id === selectedSlateId
-  );
-  const selectedSport = selectedSlate?.sport ?? "nba";
-
   const { data: rosterSlotsData } = await supabaseAdmin
     .from("roster_slots")
     .select("sport, position, slot_count, display_order")
-    .eq("sport", selectedSport)
+    .eq("sport", sport)
     .order("display_order", { ascending: true });
 
   rosterSlots = rosterSlotsData ?? [];
@@ -217,7 +252,7 @@ export default async function DraftLineupsPage() {
       })) ?? [];
 
     const { data: statsData } = await supabaseAdmin
-      .from("player_slate_stats")
+      .from(statsTable)
       .select("*")
       .eq("slate_id", selectedSlateId);
 
@@ -250,7 +285,7 @@ export default async function DraftLineupsPage() {
         </section>
 
         <LineupBuilder
-          players={players ?? []}
+          players={normalizedPlayers}
           teams={teams ?? []}
           slates={safeSlates}
           slateTeamConfigs={safeSlateTeams}
@@ -261,6 +296,7 @@ export default async function DraftLineupsPage() {
           teamResults={teamResults}
           rosterSlots={rosterSlots}
           defaultViewMode="draft"
+          sport={sport}
         />
       </div>
     </main>

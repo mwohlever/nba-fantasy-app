@@ -241,7 +241,7 @@ teamSelections: teams
         return;
       }
 
-router.push("/lineups/draft");
+router.push(`/lineups/draft?sport=${sport}`);
       router.refresh();
     } catch (error) {
       console.error(error);

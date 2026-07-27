@@ -285,6 +285,9 @@ export default function SlotDraftModal({
                         nbaPlayerId={
                           player.nba_player_id
                         }
+                        nflPlayerId={
+                          player.nfl_player_id
+                        }
                         playerName={player.name}
                         size="md"
                       />

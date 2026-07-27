@@ -11,6 +11,8 @@ import ScoresDashboard from "@/components/lineups/ScoresDashboard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import LineupControls from "@/components/lineups/LineupControls";
 import { getStatColumns } from "@/lib/statColumns";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { getSportConfig } from "@/lib/sports";
 import type {
   Player,
   PlayerHistoryDetailRow,
@@ -37,7 +39,16 @@ export default function LineupBuilder({
   teamResults,
   rosterSlots = [],
   defaultViewMode,
+  sport,
 }: Props) {
+  const { selectedSport, setSelectedSport } = useSelectedSport();
+
+  useEffect(() => {
+    if (sport && sport !== selectedSport) {
+      setSelectedSport(sport);
+    }
+  }, [sport]);
+
   const [selectedSlateId, setSelectedSlateId] = useState<string>(
     initialSelectedSlateId ? String(initialSelectedSlateId) : ""
   );
@@ -125,9 +136,11 @@ export default function LineupBuilder({
   const filteredSlates = useMemo(() => {
     return slates.filter((slate) => {
       const date = slate.start_date ?? slate.date;
-      return date?.startsWith(selectedSeason);
+      const matchesSeason = date?.startsWith(selectedSeason);
+      const matchesSport = (slate.sport ?? "nba") === selectedSport;
+      return matchesSeason && matchesSport;
     });
-  }, [slates, selectedSeason]);
+  }, [slates, selectedSeason, selectedSport]);
 
   const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
   const selectedSlate =
@@ -302,6 +315,11 @@ export default function LineupBuilder({
   useEffect(() => {
     if (!selectedSeason) return;
 
+    if ((sport ?? "nba") !== "nba") {
+      setPlayerProjections({});
+      return;
+    }
+
     fetch(`/api/player-projections?season=${selectedSeason}`, { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => setPlayerProjections(data.projections || {}))
@@ -309,7 +327,7 @@ export default function LineupBuilder({
         console.error("Failed to load player projections", error);
         setPlayerProjections({});
       });
-  }, [selectedSeason]);
+  }, [selectedSeason, sport]);
 
   const playerAverageMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -1331,12 +1349,12 @@ export default function LineupBuilder({
                   : ""
               }`}
             >
-              <span aria-hidden="true">🏀</span>
+              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
               <span>Lineup</span>
 
               {currentUser?.teamId ? (
                 <span className="draft-page-tab-count">
-                  {getPlayersForTeam(currentUser.teamId).length}/5
+                  {getPlayersForTeam(currentUser.teamId).length}/{getRosterTotalSlots()}
                 </span>
               ) : null}
             </button>

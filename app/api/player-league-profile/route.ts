@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStatColumns } from "@/lib/statColumns";
 
 type PlayerRow = {
   id: number;
@@ -43,13 +44,8 @@ type TeamResultRow = {
 type PlayerStatRow = {
   slate_id: number;
   player_id: number;
-  points: number | null;
-  rebounds: number | null;
-  assists: number | null;
-  steals: number | null;
-  blocks: number | null;
-  turnovers: number | null;
   fantasy_points: number | null;
+  [key: string]: unknown;
 };
 
 type DraftedRow = {
@@ -64,12 +60,7 @@ type RecentHistoryRow = {
   season: number | null;
   teamName: string;
   finishPosition: number | null;
-  points: number;
-  rebounds: number;
-  assists: number;
-  steals: number;
-  blocks: number;
-  turnovers: number;
+  stats: Record<string, number>;
   fantasyPoints: number | null;
   projectedFantasyPoints: number | null;
   projectionDifference: number | null;
@@ -102,6 +93,8 @@ export async function GET(request: Request) {
     const playerId = Number(searchParams.get("playerId"));
     const seasonParam = searchParams.get("season") ?? "all";
     const isAllTime = seasonParam === "all";
+    const sportParam = searchParams.get("sport");
+    const sport = sportParam === "nfl" ? "nfl" : "nba";
 
     if (!Number.isFinite(playerId) || playerId <= 0) {
       return NextResponse.json(
@@ -118,6 +111,15 @@ export async function GET(request: Request) {
     ) {
       return NextResponse.json({ error: "Invalid season." }, { status: 400 });
     }
+
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const playersSelect =
+      sport === "nfl" ? "id, name, position_group:position" : "id, name, position_group";
+    const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+    const statColumns = getStatColumns(sport);
+    const statsSelect = `slate_id, player_id, fantasy_points, ${statColumns
+      .map((column) => column.key)
+      .join(", ")}`;
 
     /*
      * The generated Supabase Database type has not yet been refreshed with
@@ -137,8 +139,8 @@ export async function GET(request: Request) {
       statsResponse,
     ] = await Promise.all([
       db
-        .from("players")
-        .select("id, name, position_group")
+        .from(playersTable)
+        .select(playersSelect)
         .eq("id", playerId)
         .maybeSingle(),
 
@@ -153,17 +155,15 @@ export async function GET(request: Request) {
 
       db.from("teams").select("id, name"),
 
-      db.from("slates").select("id, date, start_date, end_date"),
+      db.from("slates").select("id, date, start_date, end_date").eq("sport", sport),
 
       db
         .from("team_slate_results")
         .select("slate_id, team_id, finish_position"),
 
       db
-        .from("player_slate_stats")
-        .select(
-          "slate_id, player_id, points, rebounds, assists, steals, blocks, turnovers, fantasy_points",
-        )
+        .from(statsTable)
+        .select(statsSelect)
         .eq("player_id", playerId),
     ]);
 
@@ -237,8 +237,9 @@ export async function GET(request: Request) {
       })
       .filter((row): row is DraftedRow => row !== null);
 
-    const allHistory: RecentHistoryRow[] = draftedRows.map(
-      ({ lineup, lineupPlayer }) => {
+    const allHistory: RecentHistoryRow[] = draftedRows
+      .filter(({ lineup }) => slateById.has(lineup.slate_id))
+      .map(({ lineup, lineupPlayer }) => {
         const team = teamById.get(lineup.team_id);
         const slate = slateById.get(lineup.slate_id);
 
@@ -270,6 +271,11 @@ export async function GET(request: Request) {
             ? round(fantasyPoints - projectedFantasyPoints)
             : null;
 
+        const statsObj: Record<string, number> = {};
+        statColumns.forEach((column) => {
+          statsObj[column.key] = numberOrZero(stat?.[column.key]);
+        });
+
         return {
           slateId: lineup.slate_id,
           slateLabel,
@@ -277,12 +283,7 @@ export async function GET(request: Request) {
           season: season !== null && Number.isFinite(season) ? season : null,
           teamName: team?.name ?? "Unknown",
           finishPosition: numberOrNull(result?.finish_position),
-          points: numberOrZero(stat?.points),
-          rebounds: numberOrZero(stat?.rebounds),
-          assists: numberOrZero(stat?.assists),
-          steals: numberOrZero(stat?.steals),
-          blocks: numberOrZero(stat?.blocks),
-          turnovers: numberOrZero(stat?.turnovers),
+          stats: statsObj,
           fantasyPoints,
           projectedFantasyPoints,
           projectionDifference,
@@ -290,8 +291,7 @@ export async function GET(request: Request) {
           projectionSource: lineupPlayer.projection_source ?? null,
           projectedAt: lineupPlayer.projected_at ?? null,
         };
-      },
-    );
+      });
 
     const filteredHistory = allHistory.filter((row) => {
       if (isAllTime) {

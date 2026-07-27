@@ -331,6 +331,9 @@ export default function PlayerPool({
                   nbaPlayerId={
                     player.nba_player_id
                   }
+                  nflPlayerId={
+                    player.nfl_player_id
+                  }
                   playerName={player.name}
                   size="md"
                   className="draft-player-card-headshot"

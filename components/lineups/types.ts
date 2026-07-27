@@ -5,6 +5,7 @@ export type Player = {
   is_active: boolean;
   is_playing_today?: boolean | null;
   nba_player_id?: number | null;
+  nfl_player_id?: number | null;
 };
 
 export type RosterSlotConfig = {
@@ -104,6 +105,7 @@ export type Props = {
   teamResults: TeamResult[];
   rosterSlots?: RosterSlotConfig[];
   defaultViewMode?: ViewMode;
+  sport?: string;
 };
 
 export type PositionFilter = string;

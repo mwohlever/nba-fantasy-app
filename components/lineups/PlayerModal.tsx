@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import type { OrderedTeam, Player } from "@/components/lineups/types";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { getStatColumns } from "@/lib/statColumns";
 
 type TeamStats = {
   totalPlayers: number;
@@ -50,12 +52,7 @@ type Profile = {
     slateLabel: string;
     teamName: string;
     finishPosition: number | null;
-    points: number;
-    rebounds: number;
-    assists: number;
-    steals: number;
-    blocks: number;
-    turnovers: number;
+    stats: Record<string, number>;
     fantasyPoints: number | null;
     projectedFantasyPoints: number | null;
     projectionDifference: number | null;
@@ -218,6 +215,7 @@ function projectionSourceLabel(source: string | null | undefined) {
 
 export default function PlayerModal(props: Props) {
   const { player, onClose, playerAverageMap, playerProjections } = props;
+  const { selectedSport } = useSelectedSport();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
@@ -238,7 +236,7 @@ export default function PlayerModal(props: Props) {
         setIsProfileLoading(true);
 
         const response = await fetch(
-          `/api/player-league-profile?playerId=${currentPlayer.id}&season=${season}`,
+          `/api/player-league-profile?playerId=${currentPlayer.id}&season=${season}&sport=${selectedSport}`,
           {
             cache: "no-store",
           },
@@ -341,6 +339,7 @@ export default function PlayerModal(props: Props) {
           <div className="player-modal-headshot-wrap">
             <PlayerHeadshot
               nbaPlayerId={currentPlayer.nba_player_id}
+              nflPlayerId={currentPlayer.nfl_player_id}
               playerName={currentPlayer.name}
               size="xl"
               className="player-modal-headshot"
@@ -601,59 +600,16 @@ export default function PlayerModal(props: Props) {
                   </div>
 
                   <div className="mt-4 grid grid-cols-3 gap-x-3 gap-y-3 border-t border-slate-600/40 pt-4">
-                    <div className="text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        PTS
-                      </span>
-                      <strong className="mt-1 block text-sm font-bold text-slate-100">
-                        {row.points}
-                      </strong>
-                    </div>
-
-                    <div className="text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        REB
-                      </span>
-                      <strong className="mt-1 block text-sm font-bold text-slate-100">
-                        {row.rebounds}
-                      </strong>
-                    </div>
-
-                    <div className="text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        AST
-                      </span>
-                      <strong className="mt-1 block text-sm font-bold text-slate-100">
-                        {row.assists}
-                      </strong>
-                    </div>
-
-                    <div className="text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        STL
-                      </span>
-                      <strong className="mt-1 block text-sm font-bold text-slate-100">
-                        {row.steals}
-                      </strong>
-                    </div>
-
-                    <div className="text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        BLK
-                      </span>
-                      <strong className="mt-1 block text-sm font-bold text-slate-100">
-                        {row.blocks}
-                      </strong>
-                    </div>
-
-                    <div className="text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        TO
-                      </span>
-                      <strong className="mt-1 block text-sm font-bold text-slate-100">
-                        {row.turnovers}
-                      </strong>
-                    </div>
+                    {getStatColumns(selectedSport).map((column) => (
+                      <div key={column.key} className="text-center">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          {column.label}
+                        </span>
+                        <strong className="mt-1 block text-sm font-bold text-slate-100">
+                          {row.stats[column.key] ?? 0}
+                        </strong>
+                      </div>
+                    ))}
                   </div>
                 </article>
               );
