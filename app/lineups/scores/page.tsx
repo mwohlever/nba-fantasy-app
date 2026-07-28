@@ -224,6 +224,20 @@ export default async function ScoresLineupsPage({
   let savedLineupsForInitialSlate: SavedLineup[] = [];
   let playerStats: any[] = [];
   let teamResults: any[] = [];
+  let rosterSlots: Array<{
+    sport: string;
+    position: string;
+    slot_count: number;
+    display_order: number | null;
+  }> = [];
+
+  const { data: rosterSlotsData } = await supabaseAdmin
+    .from("roster_slots")
+    .select("sport, position, slot_count, display_order")
+    .eq("sport", sport)
+    .order("display_order", { ascending: true });
+
+  rosterSlots = rosterSlotsData ?? [];
 
   if (selectedSlateId) {
     const { data: lineupsData } = await supabaseAdmin
@@ -304,6 +318,7 @@ export default async function ScoresLineupsPage({
           savedLineupsForInitialSlate={savedLineupsForInitialSlate}
           playerStats={playerStats}
           teamResults={teamResults}
+          rosterSlots={rosterSlots}
           defaultViewMode="scoring"
           sport={sport}
         />

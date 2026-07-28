@@ -655,21 +655,29 @@ export default function ScoresDashboard({
           {rosterRows.map((row, index) => {
             if (!row.player) {
               return (
-                <div
+                <article
                   key={`${row.slot}-${index}`}
                   className="scores-player-card scores-player-card--empty"
                 >
-                  <div className="scores-player-empty-circle">
-                    +
-                  </div>
+                  <div className="scores-player-card-main">
+                    <div className="scores-player-identity">
+                      <div className="scores-player-empty-circle">
+                        +
+                      </div>
 
-                  <div>
-                    <strong>
-                      Empty {row.slot} slot
-                    </strong>
-                    <span>No player drafted</span>
+                      <div className="min-w-0">
+                        <div className="scores-player-name-row">
+                          <strong>
+                            Empty {row.slot} slot
+                          </strong>
+                        </div>
+                        <span className="scores-player-empty-subtext">
+                          No player drafted
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </article>
               );
             }
 

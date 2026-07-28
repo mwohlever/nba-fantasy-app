@@ -4938,33 +4938,30 @@ html.dark .hardware-card-detail {
 }
 
 .scores-player-card--empty {
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
   border-style: dashed;
   color: var(--app-text-muted);
 }
 
 .scores-player-empty-circle {
   display: flex;
-  height: 2.6rem;
-  width: 2.6rem;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  height: 2.5rem;
+  width: 2.5rem;
   align-items: center;
   justify-content: center;
   border: 1px dashed var(--app-border-strong);
   border-radius: 999px;
+  color: var(--app-text-muted);
   font-size: 1.2rem;
 }
 
-.scores-player-card--empty strong {
+.scores-player-empty-subtext {
   display: block;
-  color: var(--app-text);
-  font-size: 0.75rem;
-}
-
-.scores-player-card--empty span {
-  display: block;
-  margin-top: 0.1rem;
-  font-size: 0.62rem;
+  margin-top: 0.15rem;
+  color: var(--app-text-muted);
+  font-size: 0.7rem;
 }
 
 .scores-player-identity {
