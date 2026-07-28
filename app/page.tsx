@@ -13,6 +13,7 @@ import SeasonAwards from "@/components/home/SeasonAwards";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import type { Player } from "@/components/lineups/types";
 import { getStatColumns, type StatColumn } from "@/lib/statColumns";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type LatestSlate = {
   id: number;
@@ -90,6 +91,7 @@ type SlateRosterRow = {
   playerId: number;
   name: string;
   nbaPlayerId: number | null;
+  nflPlayerId: number | null;
   positionGroup: string | null;
   fantasyPoints: number;
   gameStatus?: number | null;
@@ -111,6 +113,7 @@ function rosterRowToPlayer(row: SlateRosterRow): Player | null {
     position_group: row.positionGroup,
     is_active: true,
     nba_player_id: row.nbaPlayerId,
+    nfl_player_id: row.nflPlayerId,
   };
 }
 
@@ -201,6 +204,7 @@ function roundTo(value: number, digits = 1) {
 }
 
 export default function HomePage() {
+  const { selectedSport } = useSelectedSport();
   const [data, setData] = useState<HomeSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -314,13 +318,12 @@ export default function HomePage() {
       setIsLoading(true);
       setMessage("");
 
-      const [response, awardsResponse] = await Promise.all([
-        fetch("/api/home-summary", { cache: "no-store" }),
-        fetch("/api/season-awards", { cache: "no-store" }),
-      ]);
+      const response = await fetch(
+        `/api/home-summary?sport=${selectedSport}`,
+        { cache: "no-store" }
+      );
 
       const result = await response.json();
-      const awardsResult = await awardsResponse.json();
 
       if (!response.ok) {
         setMessage(result.error || "Failed to load home summary.");
@@ -329,10 +332,19 @@ export default function HomePage() {
 
       setData(result);
 
-      if (awardsResponse.ok) {
-        setSeasonAwards(awardsResult);
+      if (selectedSport === "nba") {
+        const awardsResponse = await fetch("/api/season-awards", {
+          cache: "no-store",
+        });
+        const awardsResult = await awardsResponse.json();
+
+        if (awardsResponse.ok) {
+          setSeasonAwards(awardsResult);
+        } else {
+          console.error("Failed to load season awards", awardsResult);
+          setSeasonAwards(null);
+        }
       } else {
-        console.error("Failed to load season awards", awardsResult);
         setSeasonAwards(null);
       }
     } catch (error) {
@@ -345,7 +357,7 @@ export default function HomePage() {
 
   useEffect(() => {
     void loadHomeSummary();
-  }, []);
+  }, [selectedSport]);
 
   useEffect(() => {
     if (!slateRosterModal) {
@@ -362,7 +374,7 @@ export default function HomePage() {
         setIsSlateRosterLoading(true);
 
         const response = await fetch(
-          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}`,
+          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}&sport=${selectedSport}`,
           { cache: "no-store" },
         );
 
@@ -523,7 +535,7 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
-        <FunFactCarousel facts={funFacts} />
+        <FunFactCarousel facts={funFacts} sport={selectedSport} />
 
         {message ? (
           <section className="rounded-3xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-800 shadow-sm">
@@ -557,7 +569,7 @@ export default function HomePage() {
             </div>
 
             <Link
-              href="/lineups/scores"
+              href={`/lineups/scores?sport=${selectedSport}`}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
             >
               View Scores
@@ -885,6 +897,7 @@ export default function HomePage() {
                           >
                             <PlayerHeadshot
                               nbaPlayerId={row.nbaPlayerId}
+                              nflPlayerId={row.nflPlayerId}
                               playerName={row.name}
                               size="sm"
                             />
@@ -965,6 +978,7 @@ export default function HomePage() {
                               >
                                 <PlayerHeadshot
                                   nbaPlayerId={row.nbaPlayerId}
+                                  nflPlayerId={row.nflPlayerId}
                                   playerName={row.name}
                                   size="xs"
                                 />

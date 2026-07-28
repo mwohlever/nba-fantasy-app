@@ -54,7 +54,7 @@ type LineupPlayer = {
 type Player = {
   id: number;
   name: string;
-  nba_player_id: number | null;
+  external_id: number | null;
 };
 
 type PlayerSlateStat = {
@@ -145,8 +145,22 @@ function getMinutesRemainingForStat(stat?: PlayerSlateStat | null) {
   return 48;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const sportParam = searchParams.get("sport");
+    const sport = sportParam === "nfl" ? "nfl" : "nba";
+
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const playersSelect =
+      sport === "nfl"
+        ? "id, name, external_id:nfl_player_id"
+        : "id, name, external_id:nba_player_id";
+    const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+    const statsSelect =
+      sport === "nfl"
+        ? "slate_id, player_id, fantasy_points, game_status, game_status_text"
+        : "slate_id, player_id, fantasy_points, game_status, game_status_text, period, game_clock";
     const [
       { data: teams, error: teamsError },
       { data: slates, error: slatesError },
@@ -163,6 +177,7 @@ export async function GET() {
       supabaseAdmin
         .from("slates")
         .select("id, date, start_date, end_date, is_locked, first_game_start_time")
+        .eq("sport", sport)
         .order("start_date", { ascending: false })
         .order("end_date", { ascending: false }),
       supabaseAdmin
@@ -178,10 +193,10 @@ export async function GET() {
         .from("lineup_players")
         .select("lineup_id, player_id, projected_fantasy_points")
         .range(0, 20000),
-      supabaseAdmin.from("players").select("id, name, nba_player_id").order("name", { ascending: true }),
+      supabaseAdmin.from(playersTable).select(playersSelect).order("name", { ascending: true }),
       supabaseAdmin
-        .from("player_slate_stats")
-        .select("slate_id, player_id, fantasy_points, game_status, game_status_text, period, game_clock")
+        .from(statsTable)
+        .select(statsSelect)
         .order("slate_id", { ascending: false })
         .range(0, 20000),
       supabaseAdmin.from("season_team_summary").select("season, team_id, runner_ups"),
@@ -189,10 +204,12 @@ export async function GET() {
         .from("slate_teams")
         .select("slate_id, team_id, draft_order, is_participating")
         .range(0, 20000),
-      supabaseAdmin
-        .from("player_nba_season_averages")
-        .select("season, nba_player_id, fantasy_points")
-        .range(0, 5000),
+      sport === "nba"
+        ? supabaseAdmin
+            .from("player_nba_season_averages")
+            .select("season, nba_player_id, fantasy_points")
+            .range(0, 5000)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     if (
@@ -260,7 +277,7 @@ export async function GET() {
     const safeLineups = (lineups ?? []) as Lineup[];
     const safeLineupPlayers = (lineupPlayers ?? []) as LineupPlayer[];
     const safePlayers = (players ?? []) as Player[];
-    const safePlayerSlateStats = (playerSlateStats ?? []) as PlayerSlateStat[];
+    const safePlayerSlateStats = (playerSlateStats ?? []) as unknown as PlayerSlateStat[];
     const safeSeasonTeamSummary = (seasonTeamSummary ?? []) as SeasonTeamSummary[];
     const safeSlateTeams = (slateTeams ?? []) as SlateTeam[];
     const safeNbaSeasonAverages = (nbaSeasonAverages ?? []) as NbaSeasonAverage[];
@@ -438,6 +455,7 @@ export async function GET() {
 
     const fallbackProjectionByPlayerId = new Map<number, number>();
 
+    if (sport === "nba") {
     safePlayers.forEach((player) => {
       const scoreRows = (scoresByPlayer.get(player.id) ?? []).sort((a, b) =>
         a.slateDate.localeCompare(b.slateDate)
@@ -463,8 +481,8 @@ export async function GET() {
           ? finishes.reduce((sum, finish) => sum + finish, 0) / finishes.length
           : null;
 
-      const nbaSeasonAverage = player.nba_player_id
-        ? nbaAverageByNbaId.get(Number(player.nba_player_id)) ?? null
+      const nbaSeasonAverage = player.external_id
+        ? nbaAverageByNbaId.get(Number(player.external_id)) ?? null
         : null;
 
       let projection: number | null = null;
@@ -504,6 +522,7 @@ export async function GET() {
         }
       }
     });
+    }
 
     const latestLineupsByTeamId = new Map<number, Lineup>();
     const latestLineupPlayersByLineupId = new Map<number, LineupPlayer[]>();
@@ -570,7 +589,7 @@ export async function GET() {
         (row) => row.slate_id === latestSlate.id && row.team_id === teamId
       );
 
-      if (latestSlate.is_locked) {
+      if (sport !== "nba" || latestSlate.is_locked) {
         return Number(result?.fantasy_points ?? 0);
       }
 
@@ -974,8 +993,16 @@ export async function GET() {
             )[0]
         : null;
 
+    const sportLineupIds = new Set(
+      safeLineups
+        .filter((lineup) => normalizedSlateById.has(lineup.slate_id))
+        .map((lineup) => lineup.id)
+    );
+
     const playerDraftCounts = new Map<number, number>();
     safeLineupPlayers.forEach((row) => {
+      if (!sportLineupIds.has(row.lineup_id)) return;
+
       playerDraftCounts.set(
         row.player_id,
         (playerDraftCounts.get(row.player_id) ?? 0) + 1
@@ -1171,25 +1198,14 @@ export async function GET() {
           }
         : null,
 
-      {
-        label: "🏆 Champion",
-        value: "Mark",
-      },
-
-      {
-        label: "👑 Consistency King",
-        value: "Josh",
-      },
-
-      {
-        label: "🛡 DPOY",
-        value: "Jon",
-      },
-
-      {
-        label: "😂 Last Laugh",
-        value: "Andy",
-      },
+      ...(sport === "nba"
+        ? [
+            { label: "🏆 Champion", value: "Mark" },
+            { label: "👑 Consistency King", value: "Josh" },
+            { label: "🛡 DPOY", value: "Jon" },
+            { label: "😂 Last Laugh", value: "Andy" },
+          ]
+        : []),
 
       mostWinsAllTime
         ? {
@@ -1271,6 +1287,15 @@ export async function GET() {
         : null,
     ].filter(Boolean));
 
+    const hasCompletedSportSlate = normalizedSlates.some(
+      (slate) => slate.is_locked
+    );
+
+    const finalFunFacts =
+      sport === "nfl" && !hasCompletedSportSlate
+        ? [{ label: "🏈", value: "Welcome to 111 Fantasy Football!" }]
+        : funFacts;
+
     return NextResponse.json({
       success: true,
       latestSlate: latestSlate
@@ -1297,7 +1322,7 @@ export async function GET() {
         : null,
       latestSlateRows,
       seasonSnapshot,
-      funFacts,
+      funFacts: finalFunFacts,
       latestSeason,
     });
   } catch (error) {
