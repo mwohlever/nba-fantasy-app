@@ -3,12 +3,13 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const NOTIFICATION_TEMPLATE_DEFAULTS = {
   draft_turn: {
     notificationType: "draft_turn",
-    titleTemplate: "🏀 Your turn to draft!",
+    titleTemplate: "{sportEmoji} Your turn to draft!",
     bodyTemplate:
       "{teamName}, you're on the clock for your {roundOrdinal} round pick.",
     description:
       "Sent to the next participant after a draft pick is submitted.",
     availablePlaceholders: [
+      "{sportEmoji}",
       "{teamName}",
       "{slateLabel}",
       "{roundNumber}",
@@ -19,12 +20,13 @@ export const NOTIFICATION_TEMPLATE_DEFAULTS = {
   },
   draft_final_pick: {
     notificationType: "draft_final_pick",
-    titleTemplate: "🏀 Last pick!",
+    titleTemplate: "{sportEmoji} Last pick!",
     bodyTemplate:
       "{teamName}, you're on the clock for your last pick — you need a {positionNeed}!",
     description:
-      "Sent when the next participant is making their fifth and final draft pick.",
+      "Sent when the next participant is making their final draft pick.",
     availablePlaceholders: [
+      "{sportEmoji}",
       "{teamName}",
       "{slateLabel}",
       "{roundNumber}",
@@ -36,12 +38,13 @@ export const NOTIFICATION_TEMPLATE_DEFAULTS = {
   },
   player_finished: {
     notificationType: "player_finished",
-    titleTemplate: "🏀 {playerName} finished!",
+    titleTemplate: "{sportEmoji} {playerName} finished!",
     bodyTemplate:
       "{playerName} finished with {fantasyPoints} fantasy points for {teamName}.",
     description:
       "Sent when one of a participant's drafted players finishes a game.",
     availablePlaceholders: [
+      "{sportEmoji}",
       "{playerName}",
       "{fantasyPoints}",
       "{teamName}",

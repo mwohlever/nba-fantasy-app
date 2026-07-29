@@ -1,6 +1,8 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { getSportConfig } from "@/lib/sports";
 import { useEffect, useMemo, useState } from "react";
 
 type NotificationTemplateType =
@@ -23,13 +25,17 @@ type EditableTemplate = {
   bodyTemplate: string;
 };
 
-const TEMPLATE_LABELS: Record<NotificationTemplateType, string> = {
-  draft_turn: "🏀 Draft Turn",
-  draft_final_pick: "🏁 Final Draft Pick",
-  player_finished: "📈 Player Finished Game",
-  slate_complete: "🏆 Slate Complete",
-  slate_complete_winner: "🥇 Slate Winner",
-};
+function getTemplateLabels(
+  sportEmoji: string
+): Record<NotificationTemplateType, string> {
+  return {
+    draft_turn: `${sportEmoji} Draft Turn`,
+    draft_final_pick: "🏁 Final Draft Pick",
+    player_finished: `${sportEmoji} Player Finished Game`,
+    slate_complete: "🏆 Slate Complete",
+    slate_complete_winner: "🥇 Slate Winner",
+  };
+}
 
 const TEMPLATE_ORDER: NotificationTemplateType[] = [
   "draft_turn",
@@ -56,8 +62,11 @@ const PREVIEW_VALUES: Record<string, string> = {
   "{finishOrdinal}": "2nd",
 };
 
-function renderPreview(value: string) {
-  return Object.entries(PREVIEW_VALUES).reduce(
+function renderPreview(
+  value: string,
+  extraValues: Record<string, string> = {}
+) {
+  return Object.entries({ ...PREVIEW_VALUES, ...extraValues }).reduce(
     (result, [placeholder, replacement]) =>
       result.replaceAll(placeholder, replacement),
     value
@@ -78,6 +87,11 @@ function emptyDrafts() {
 }
 
 export default function NotificationTemplatesPage() {
+  const { selectedSport } = useSelectedSport();
+  const sportEmoji = getSportConfig(selectedSport).emoji;
+  const previewOverrides = { "{sportEmoji}": sportEmoji };
+  const TEMPLATE_LABELS = getTemplateLabels(sportEmoji);
+
   const [activeTemplateType, setActiveTemplateType] =
     useState<NotificationTemplateType>("draft_turn");
 
@@ -374,10 +388,10 @@ export default function NotificationTemplatesPage() {
 
                 <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="font-semibold">
-                    {renderPreview(activeDraft.titleTemplate)}
+                    {renderPreview(activeDraft.titleTemplate, previewOverrides)}
                   </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    {renderPreview(activeDraft.bodyTemplate)}
+                    {renderPreview(activeDraft.bodyTemplate, previewOverrides)}
                   </div>
                 </div>
               </div>

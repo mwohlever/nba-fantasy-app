@@ -4,12 +4,14 @@ import {
 } from "@/lib/notificationTemplates";
 import { sendLoggedNotification } from "@/lib/notifications";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSportConfig } from "@/lib/sports";
 
 type SlateInput = {
   id: number;
   date: string;
   start_date: string;
   end_date: string;
+  sport?: string;
 };
 
 type PlayerInput = {
@@ -161,6 +163,7 @@ export async function notifyNewlyFinishedPlayers(input: {
       fantasyPoints,
       teamName,
       slateLabel,
+      sportEmoji: getSportConfig(input.slate.sport).emoji,
     };
 
     const title = renderNotificationTemplate(
@@ -202,6 +205,7 @@ export async function notifyNewlyFinishedPlayers(input: {
         fantasyPoints: Number(fantasyPoints),
         teamName,
         slateLabel,
+        sportEmoji: getSportConfig(input.slate.sport).emoji,
       },
     });
 

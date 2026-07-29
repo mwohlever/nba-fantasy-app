@@ -275,6 +275,7 @@ export async function POST(request: Request) {
           date: safeSlate.date,
           start_date: safeSlate.start_date,
           end_date: safeSlate.end_date,
+          sport: "nfl",
         },
         players: players.map((player) => ({
           id: player.id,

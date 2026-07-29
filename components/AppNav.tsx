@@ -129,7 +129,6 @@ function AppNavContent() {
     "/lineups/scores",
     "/slates/new",
     "/admin/slates",
-    "/admin/slate-games",
     "/admin/notification-templates",
     "/admin/notification-history",
   ];

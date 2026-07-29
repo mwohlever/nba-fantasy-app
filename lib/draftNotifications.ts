@@ -6,6 +6,7 @@ import {
   renderNotificationTemplate,
   type NotificationTemplateType,
 } from "@/lib/notificationTemplates";
+import { getSportConfig } from "@/lib/sports";
 
 type SlateTeamRow = {
   team_id: number;
@@ -41,7 +42,12 @@ type NotificationPreferenceRow = {
 
 type PlayerPositionRow = {
   id: number;
-  position_group: "G" | "F/C";
+  position: string;
+};
+
+type RosterSlotConfig = {
+  position: string;
+  slot_count: number;
 };
 
 export type DraftNotificationResult = PushResult & {
@@ -76,28 +82,37 @@ function getOrdinal(value: number) {
   }
 }
 
-function getRemainingNeeds(guardCount: number, fcCount: number) {
-  const guardNeed = Math.max(0, 2 - guardCount);
-  const fcNeed = Math.max(0, 3 - fcCount);
-
+function getRemainingNeeds(
+  positionCounts: Map<string, number>,
+  rosterSlots: RosterSlotConfig[]
+) {
   const parts: string[] = [];
 
-  if (guardNeed > 0) {
-    parts.push(`${guardNeed} G`);
-  }
+  for (const slot of rosterSlots) {
+    const have = positionCounts.get(slot.position) ?? 0;
+    const need = Math.max(0, slot.slot_count - have);
 
-  if (fcNeed > 0) {
-    parts.push(`${fcNeed} F/C`);
+    if (need > 0) {
+      parts.push(`${need} ${slot.position}`);
+    }
   }
 
   return parts.length > 0 ? parts.join(" and ") : "roster complete";
 }
 
-function getFinalPositionNeed(guardCount: number, fcCount: number) {
-  if (guardCount >= 2) return "F/C";
-  if (fcCount >= 3) return "G";
+function getFinalPositionNeed(
+  positionCounts: Map<string, number>,
+  rosterSlots: RosterSlotConfig[]
+) {
+  for (const slot of rosterSlots) {
+    const have = positionCounts.get(slot.position) ?? 0;
 
-  return "G or F/C";
+    if (have < slot.slot_count) {
+      return slot.position;
+    }
+  }
+
+  return "any open slot";
 }
 
 export async function notifyNextDrafter(
@@ -105,13 +120,34 @@ export async function notifyNextDrafter(
 ): Promise<DraftNotificationResult> {
   const { data: slate, error: slateError } = await supabaseAdmin
     .from("slates")
-    .select("id, date, start_date, end_date")
+    .select("id, date, start_date, end_date, sport")
     .eq("id", slateId)
     .single();
 
   if (slateError || !slate) {
     throw new Error(slateError?.message ?? "Slate not found.");
   }
+
+  const sport = slate.sport === "nfl" ? "nfl" : "nba";
+
+  const { data: rosterSlotsData, error: rosterSlotsError } =
+    await supabaseAdmin
+      .from("roster_slots")
+      .select("position, slot_count")
+      .eq("sport", sport)
+      .order("display_order", { ascending: true });
+
+  if (rosterSlotsError) {
+    throw new Error(
+      `Failed to load roster slot configuration: ${rosterSlotsError.message}`
+    );
+  }
+
+  const rosterSlots = (rosterSlotsData ?? []) as RosterSlotConfig[];
+  const totalSlots = rosterSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
+  );
 
   const { data: slateTeams, error: slateTeamsError } = await supabaseAdmin
     .from("slate_teams")
@@ -161,7 +197,7 @@ export async function notifyNextDrafter(
   );
 
   const totalTeams = orderedTeams.length;
-  const maxPicks = totalTeams * 5;
+  const maxPicks = totalTeams * totalSlots;
 
   if (totalDrafted >= maxPicks) {
     return {
@@ -201,14 +237,16 @@ export async function notifyNextDrafter(
   const nextTeamPlayerIds =
     nextTeamLineup?.lineup_players?.map((row) => Number(row.player_id)) ?? [];
 
-  let guardCount = 0;
-  let fcCount = 0;
+  const positionCounts = new Map<string, number>();
 
   if (nextTeamPlayerIds.length > 0) {
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const positionColumn = sport === "nfl" ? "position" : "position_group";
+
     const { data: rosterPlayers, error: rosterPlayersError } =
       await supabaseAdmin
-        .from("players")
-        .select("id, position_group")
+        .from(playersTable)
+        .select(`id, position:${positionColumn}`)
         .in("id", nextTeamPlayerIds);
 
     if (rosterPlayersError) {
@@ -218,15 +256,14 @@ export async function notifyNextDrafter(
     }
 
     for (const player of (rosterPlayers ?? []) as PlayerPositionRow[]) {
-      if (player.position_group === "G") {
-        guardCount += 1;
-      } else if (player.position_group === "F/C") {
-        fcCount += 1;
-      }
+      positionCounts.set(
+        player.position,
+        (positionCounts.get(player.position) ?? 0) + 1
+      );
     }
   }
 
-  const isFinalPick = nextTeamPlayerIds.length === 4;
+  const isFinalPick = nextTeamPlayerIds.length === totalSlots - 1;
 
   const { data: appUser, error: appUserError } = await supabaseAdmin
     .from("app_users")
@@ -304,8 +341,9 @@ export async function notifyNextDrafter(
     roundNumber,
     roundOrdinal: getOrdinal(roundNumber),
     overallPickNumber,
-    positionNeed: getFinalPositionNeed(guardCount, fcCount),
-    remainingNeeds: getRemainingNeeds(guardCount, fcCount),
+    positionNeed: getFinalPositionNeed(positionCounts, rosterSlots),
+    remainingNeeds: getRemainingNeeds(positionCounts, rosterSlots),
+    sportEmoji: getSportConfig(sport).emoji,
   };
 
   const renderedTitle = renderNotificationTemplate(
@@ -332,8 +370,9 @@ export async function notifyNextDrafter(
       roundNumber,
       roundOrdinal: getOrdinal(roundNumber),
       overallPickNumber,
-      positionNeed: getFinalPositionNeed(guardCount, fcCount),
-      remainingNeeds: getRemainingNeeds(guardCount, fcCount),
+      positionNeed: getFinalPositionNeed(positionCounts, rosterSlots),
+      remainingNeeds: getRemainingNeeds(positionCounts, rosterSlots),
+      sportEmoji: getSportConfig(sport).emoji,
     },
   });
 
