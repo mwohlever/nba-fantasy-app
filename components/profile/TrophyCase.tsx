@@ -35,6 +35,15 @@ export type TrophyMilestones = {
   largestWinningMargin: number | null;
 };
 
+export type MilestoneThresholds = {
+  score175: number;
+  score200: number;
+  score225: number;
+  score250: number;
+  photoFinishMargin: number;
+  statementWinMargin: number;
+};
+
 type Props = {
   teamName: string;
   career: {
@@ -48,6 +57,7 @@ type Props = {
   };
   milestones: TrophyMilestones;
   leagueAwards: LeagueAward[];
+  thresholds: MilestoneThresholds;
 };
 
 type BadgeDefinition = {
@@ -198,6 +208,7 @@ export default function TrophyCase({
   career,
   milestones,
   leagueAwards,
+  thresholds,
 }: Props) {
   const [activeTab, setActiveTab] =
     useState<TrophyTab>("milestones");
@@ -222,8 +233,8 @@ export default function TrophyCase({
     {
       id: "score-175",
       emoji: "💯",
-      name: "175 Club",
-      description: "Score at least 175 fantasy points in a completed slate.",
+      name: `${thresholds.score175} Club`,
+      description: `Score at least ${thresholds.score175} fantasy points in a completed slate.`,
       rarity: "common",
       unlocked: milestones.score175 > 0,
       count: milestones.score175,
@@ -235,8 +246,8 @@ export default function TrophyCase({
     {
       id: "score-200",
       emoji: "🔥",
-      name: "200 Club",
-      description: "Break the 200-point barrier in a completed slate.",
+      name: `${thresholds.score200} Club`,
+      description: `Break the ${thresholds.score200}-point barrier in a completed slate.`,
       rarity: "rare",
       unlocked: milestones.score200 > 0,
       count: milestones.score200,
@@ -245,14 +256,14 @@ export default function TrophyCase({
       }`,
       progress:
         careerBest > 0
-          ? `${formatNumber(Math.max(200 - careerBest, 0))} points away`
+          ? `${formatNumber(Math.max(thresholds.score200 - careerBest, 0))} points away`
           : "No completed slate yet",
     },
     {
       id: "score-225",
       emoji: "🚀",
-      name: "225 Club",
-      description: "Reach the elite 225-point scoring tier.",
+      name: `${thresholds.score225} Club`,
+      description: `Reach the elite ${thresholds.score225}-point scoring tier.`,
       rarity: "epic",
       unlocked: milestones.score225 > 0,
       count: milestones.score225,
@@ -261,14 +272,14 @@ export default function TrophyCase({
       }`,
       progress:
         careerBest > 0
-          ? `${formatNumber(Math.max(225 - careerBest, 0))} points away`
+          ? `${formatNumber(Math.max(thresholds.score225 - careerBest, 0))} points away`
           : "No completed slate yet",
     },
     {
       id: "score-250",
       emoji: "🌋",
-      name: "250 Club",
-      description: "Deliver a legendary 250-point slate.",
+      name: `${thresholds.score250} Club`,
+      description: `Deliver a legendary ${thresholds.score250}-point slate.`,
       rarity: "legendary",
       unlocked: milestones.score250 > 0,
       count: milestones.score250,
@@ -277,7 +288,7 @@ export default function TrophyCase({
       }`,
       progress:
         careerBest > 0
-          ? `${formatNumber(Math.max(250 - careerBest, 0))} points away`
+          ? `${formatNumber(Math.max(thresholds.score250 - careerBest, 0))} points away`
           : "No completed slate yet",
     },
   ];
@@ -323,7 +334,7 @@ export default function TrophyCase({
       id: "photo-finish",
       emoji: "📸",
       name: "Photo Finish",
-      description: "Win a completed slate by fewer than two points.",
+      description: `Win a completed slate by fewer than ${thresholds.photoFinishMargin} points.`,
       rarity: "epic",
       unlocked: milestones.photoFinishWins > 0,
       count: milestones.photoFinishWins,
@@ -333,13 +344,13 @@ export default function TrophyCase({
               milestones.closestWinningMargin
             )} points`
           : undefined,
-      progress: "Win by fewer than 2.0 points",
+      progress: `Win by fewer than ${formatNumber(thresholds.photoFinishMargin)} points`,
     },
     {
       id: "statement-win",
       emoji: "💪",
       name: "Statement Win",
-      description: "Win a completed slate by at least 30 points.",
+      description: `Win a completed slate by at least ${thresholds.statementWinMargin} points.`,
       rarity: "rare",
       unlocked: milestones.statementWins > 0,
       count: milestones.statementWins,
@@ -349,7 +360,7 @@ export default function TrophyCase({
               milestones.largestWinningMargin
             )} points`
           : undefined,
-      progress: "Win by at least 30.0 points",
+      progress: `Win by at least ${formatNumber(thresholds.statementWinMargin)} points`,
     },
   ];
 

@@ -8,6 +8,7 @@ import {
   useSearchParams,
 } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type CurrentUser = {
   id: string;
@@ -81,6 +82,10 @@ const adminGroups = [
         label: "Manage NBA Players",
       },
       {
+        href: "/admin/players-nfl",
+        label: "Manage NFL Players",
+      },
+      {
         href: "/admin/league-awards",
         label: "League Awards",
       },
@@ -88,10 +93,36 @@ const adminGroups = [
   },
 ];
 
+const sportScopedPaths = [
+  "/profile",
+  "/lineups/draft",
+  "/lineups/scores",
+  "/slates/new",
+  "/admin/slates",
+  "/admin/notification-templates",
+  "/admin/notification-history",
+];
+
+function appendSportParam(href: string, sport: string) {
+  const separator = href.includes("?") ? "&" : "?";
+  return `${href}${separator}sport=${sport}`;
+}
+
+function getLinkHref(href: string, sport: string) {
+  const basePath = href.split("?")[0];
+
+  if (sportScopedPaths.includes(basePath)) {
+    return appendSportParam(href, sport);
+  }
+
+  return href;
+}
+
 function MobileAccountMenuContent() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { selectedSport } = useSelectedSport();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -297,7 +328,7 @@ function MobileAccountMenuContent() {
             return (
               <Link
                 key={link.href}
-                href={link.href}
+                href={getLinkHref(link.href, selectedSport)}
                 onClick={() => setIsOpen(false)}
                 className={`block rounded-xl px-3 py-2.5 text-sm transition ${
                   isActive
@@ -335,7 +366,7 @@ function MobileAccountMenuContent() {
                   {group.links.map((link) => (
                     <Link
                       key={link.href}
-                      href={link.href}
+                      href={getLinkHref(link.href, selectedSport)}
                       onClick={() => setIsOpen(false)}
                       className={`block rounded-xl px-3 py-2.5 text-sm transition ${
                         isAdminLinkActive(link.href)

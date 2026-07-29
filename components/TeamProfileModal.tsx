@@ -5,7 +5,9 @@ import ProfileOverview from "@/components/profile/ProfileOverview";
 import TrophyCase, {
   type LeagueAward,
   type TrophyMilestones,
+  type MilestoneThresholds,
 } from "@/components/profile/TrophyCase";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type SeasonValue = number | "all";
 type ProfileTab = "overview" | "awards";
@@ -68,6 +70,7 @@ type TeamProfile = {
     } | null;
   };
   milestones: TrophyMilestones;
+  milestoneThresholds: MilestoneThresholds;
   leagueAwards: LeagueAward[];
   recentSlates: Array<{
     slateId: number;
@@ -100,6 +103,7 @@ const TEAM_HEADSHOTS: Record<string, string> = {
 };
 
 export default function TeamProfileModal({ team, setTeam }: Props) {
+  const { selectedSport } = useSelectedSport();
   const [profile, setProfile] = useState<TeamProfile | null>(null);
   const [season, setSeason] = useState<SeasonValue>("all");
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
@@ -134,7 +138,7 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
         setMessage("");
 
         const response = await fetch(
-          `/api/team-profile?teamId=${currentTeam.id}&season=${season}`,
+          `/api/team-profile?teamId=${currentTeam.id}&season=${season}&sport=${selectedSport}`,
           {
             cache: "no-store",
           }
@@ -175,7 +179,7 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
     return () => {
       active = false;
     };
-  }, [team, season]);
+  }, [team, season, selectedSport]);
 
   useEffect(() => {
     if (!team) return;
@@ -346,6 +350,7 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
                     }}
                     milestones={profile.milestones}
                     leagueAwards={profile.leagueAwards}
+                    thresholds={profile.milestoneThresholds}
                   />
                 ) : null}
               </>

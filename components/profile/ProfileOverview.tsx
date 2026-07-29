@@ -413,7 +413,7 @@ export default function ProfileOverview({
           </h2>
 
           <p className="profile-section-copy">
-            The NBA players most connected to this fantasy career.
+            The players most connected to this fantasy career.
           </p>
         </div>
 

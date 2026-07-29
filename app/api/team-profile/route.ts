@@ -11,16 +11,44 @@ function getSeasonFromSlate(slate: any) {
   return date ? new Date(`${date}T00:00:00`).getFullYear() : new Date().getFullYear();
 }
 
+const MILESTONE_THRESHOLDS: Record<string, { score175: number; score200: number; score225: number; score250: number; photoFinishMargin: number; statementWinMargin: number }> = {
+  nba: {
+    score175: 175,
+    score200: 200,
+    score225: 225,
+    score250: 250,
+    photoFinishMargin: 2,
+    statementWinMargin: 30,
+  },
+  // Placeholder NFL thresholds — NFL fantasy scoring runs on a different
+  // scale than NBA's. Revisit these once real NFL slate data exists to
+  // calibrate against.
+  nfl: {
+    score175: 120,
+    score200: 140,
+    score225: 160,
+    score250: 180,
+    photoFinishMargin: 2,
+    statementWinMargin: 25,
+  },
+};
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const teamId = Number(searchParams.get("teamId"));
     const seasonParam = searchParams.get("season");
     const isAllTime = !seasonParam || seasonParam === "all";
+    const sportParam = searchParams.get("sport");
+    const sport = sportParam === "nfl" ? "nfl" : "nba";
 
     if (!teamId || Number.isNaN(teamId)) {
       return NextResponse.json({ error: "Missing or invalid teamId." }, { status: 400 });
     }
+
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const positionColumn = sport === "nfl" ? "position" : "position_group";
+    const thresholds = MILESTONE_THRESHOLDS[sport];
 
     const [
       { data: team },
@@ -37,7 +65,10 @@ export async function GET(req: Request) {
     ] = await Promise.all([
       supabaseAdmin.from("teams").select("id, name").eq("id", teamId).single(),
       supabaseAdmin.from("teams").select("id, name"),
-      supabaseAdmin.from("slates").select("id, date, start_date, end_date, is_locked"),
+      supabaseAdmin
+        .from("slates")
+        .select("id, date, start_date, end_date, is_locked")
+        .eq("sport", sport),
       supabaseAdmin.from("team_slate_results").select("*"),
       supabaseAdmin
         .from("lineups")
@@ -49,7 +80,9 @@ export async function GET(req: Request) {
         .select("lineup_id, player_id")
         .order("lineup_id", { ascending: false })
         .range(0, 20000),
-      supabaseAdmin.from("players").select("id, name, position_group"),
+      supabaseAdmin
+        .from(playersTable)
+        .select(`id, name, position_group:${positionColumn}`),
       supabaseAdmin
         .from("player_slate_stats")
         .select("*")
@@ -67,6 +100,7 @@ export async function GET(req: Request) {
           "id, season, team_id, title, emoji, description, rarity, display_order, featured"
         )
         .eq("team_id", teamId)
+        .eq("sport", sport)
         .order("season", { ascending: false })
         .order("featured", { ascending: false })
         .order("display_order", { ascending: true })
@@ -83,12 +117,15 @@ export async function GET(req: Request) {
     const safeSlateTeamConfigs = slateTeamConfigs ?? [];
 
     const slateMap = new Map(safeSlates.map((s: any) => [s.id, s]));
+    const slateIds = new Set(safeSlates.map((s: any) => s.id));
     const playerMap = new Map(safePlayers.map((p: any) => [p.id, p]));
     const statBySlatePlayerKey = new Map(
-      safePlayerStats.map((stat: any) => [
-        `${Number(stat.slate_id)}-${Number(stat.player_id)}`,
-        stat,
-      ])
+      safePlayerStats
+        .filter((stat: any) => slateIds.has(stat.slate_id))
+        .map((stat: any) => [
+          `${Number(stat.slate_id)}-${Number(stat.player_id)}`,
+          stat,
+        ])
     );
 
     const latestSeason =
@@ -97,7 +134,7 @@ export async function GET(req: Request) {
         : new Date().getFullYear();
 
     const allTeamRows = safeResults
-      .filter((r: any) => r.team_id === teamId && (r.fantasy_points ?? 0) > 0)
+      .filter((r: any) => r.team_id === teamId && slateIds.has(r.slate_id) && (r.fantasy_points ?? 0) > 0)
       .map((result: any) => {
         const slate = slateMap.get(result.slate_id);
         const lineup = safeLineups.find(
@@ -233,7 +270,7 @@ export async function GET(req: Request) {
     const playerScores = new Map<number, number[]>();
 
     safeLineups
-      .filter((l: any) => l.team_id === teamId)
+      .filter((l: any) => l.team_id === teamId && slateIds.has(l.slate_id))
       .forEach((lineup: any) => {
         safeLineupPlayers
           .filter((lp: any) => lp.lineup_id === lineup.id)
@@ -367,19 +404,19 @@ export async function GET(req: Request) {
     }
 
     const score175 = completedRows.filter(
-      (row: any) => Number(row.score) >= 175
+      (row: any) => Number(row.score) >= thresholds.score175
     ).length;
 
     const score200 = completedRows.filter(
-      (row: any) => Number(row.score) >= 200
+      (row: any) => Number(row.score) >= thresholds.score200
     ).length;
 
     const score225 = completedRows.filter(
-      (row: any) => Number(row.score) >= 225
+      (row: any) => Number(row.score) >= thresholds.score225
     ).length;
 
     const score250 = completedRows.filter(
-      (row: any) => Number(row.score) >= 250
+      (row: any) => Number(row.score) >= thresholds.score250
     ).length;
 
     const backToBackWins = countConsecutiveWindows(
@@ -408,6 +445,7 @@ export async function GET(req: Request) {
           .filter(
             (result: any) =>
               Number(result.slate_id) === Number(row.slateId) &&
+              slateIds.has(result.slate_id) &&
               Number(result.fantasy_points ?? 0) > 0
           )
           .sort(
@@ -437,11 +475,11 @@ export async function GET(req: Request) {
       );
 
     const photoFinishMargins = winningMargins.filter(
-      (margin) => margin < 2
+      (margin) => margin < thresholds.photoFinishMargin
     );
 
     const statementWinMargins = winningMargins.filter(
-      (margin) => margin >= 30
+      (margin) => margin >= thresholds.statementWinMargin
     );
 
     const milestones = {
@@ -466,6 +504,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       success: true,
+      sport,
       team: {
         id: safeTeam.id,
         name: safeTeam.name,
@@ -511,6 +550,7 @@ export async function GET(req: Request) {
         worstSlate,
       },
       milestones,
+      milestoneThresholds: thresholds,
       leagueAwards: leagueAwards ?? [],
       recentSlates: selectedRows.slice(0, 8),
     });

@@ -10,11 +10,13 @@ import {
 import { Suspense, useEffect, useState } from "react";
 import PushDeviceControls from "@/components/profile/PushDeviceControls";
 import ChangePinForm from "@/components/profile/ChangePinForm";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 import ProfilePictureSettings from "@/components/profile/ProfilePictureSettings";
 import ProfileOverview from "@/components/profile/ProfileOverview";
 import TrophyCase, {
   type LeagueAward,
   type TrophyMilestones,
+  type MilestoneThresholds,
 } from "@/components/profile/TrophyCase";
 
 type CurrentUser = {
@@ -96,6 +98,7 @@ type TeamProfile = {
     } | null;
   };
   milestones: TrophyMilestones;
+  milestoneThresholds: MilestoneThresholds;
   leagueAwards: LeagueAward[];
   recentSlates: Array<{
     slateId: number;
@@ -204,6 +207,7 @@ function StatCard({
 }
 
 function ProfilePageContent() {
+  const { selectedSport } = useSelectedSport();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -288,7 +292,7 @@ function ProfilePageContent() {
         setMessage("");
 
         const response = await fetch(
-          `/api/team-profile?teamId=${currentUser.teamId}&season=${season}`,
+          `/api/team-profile?teamId=${currentUser.teamId}&season=${season}&sport=${selectedSport}`,
           {
             cache: "no-store",
           }
@@ -326,7 +330,7 @@ function ProfilePageContent() {
     return () => {
       active = false;
     };
-  }, [user, season]);
+  }, [user, season, selectedSport]);
 
 
   useEffect(() => {
@@ -571,6 +575,7 @@ function ProfilePageContent() {
                     }}
                     milestones={profile.milestones}
                     leagueAwards={profile.leagueAwards}
+                    thresholds={profile.milestoneThresholds}
                   />
                 ) : null}
 

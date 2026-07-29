@@ -129,6 +129,7 @@ function AppNavContent() {
 
   const sportScopedPaths = [
     "/",
+    "/profile",
     "/lineups/draft",
     "/lineups/scores",
     "/slates/new",
@@ -137,9 +138,16 @@ function AppNavContent() {
     "/admin/notification-history",
   ];
 
+  function appendSportParam(href: string, sport: string) {
+    const separator = href.includes("?") ? "&" : "?";
+    return `${href}${separator}sport=${sport}`;
+  }
+
   function getLinkHref(href: string) {
-    if (sportScopedPaths.includes(href)) {
-      return `${href}?sport=${selectedSport}`;
+    const basePath = href.split("?")[0];
+
+    if (sportScopedPaths.includes(basePath)) {
+      return appendSportParam(href, selectedSport);
     }
 
     return href;
@@ -149,7 +157,7 @@ function AppNavContent() {
     setSelectedSport(sportKey);
 
     if (sportScopedPaths.includes(pathname)) {
-      router.push(`${pathname}?sport=${sportKey}`);
+      router.push(appendSportParam(pathname, sportKey));
     }
   }
 
