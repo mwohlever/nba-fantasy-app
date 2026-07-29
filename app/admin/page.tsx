@@ -64,6 +64,12 @@ const adminGroups = [
           "Edit names, NBA IDs, teams, active status, and availability.",
       },
       {
+        href: "/admin/players-nfl",
+        title: "Manage NFL Players",
+        description:
+          "Edit positions, teams, and active status for NFL players.",
+      },
+      {
         href: "/admin/league-awards",
         title: "League Awards",
         description:

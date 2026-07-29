@@ -51,6 +51,7 @@ export default function NotificationHistoryPage() {
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [sportFilter, setSportFilter] = useState("all");
   const [recipientFilter, setRecipientFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -64,6 +65,7 @@ export default function NotificationHistoryPage() {
 
       if (typeFilter) params.set("type", typeFilter);
       if (statusFilter) params.set("status", statusFilter);
+      if (sportFilter && sportFilter !== "all") params.set("sport", sportFilter);
 
       const response = await fetch(
         `/api/admin/notification-history?${params.toString()}`,
@@ -84,7 +86,7 @@ export default function NotificationHistoryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, typeFilter]);
+  }, [statusFilter, typeFilter, sportFilter]);
 
   useEffect(() => {
     void loadHistory();
@@ -142,7 +144,17 @@ export default function NotificationHistoryPage() {
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4">
+            <select
+              value={sportFilter}
+              onChange={(event) => setSportFilter(event.target.value)}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+            >
+              <option value="all">All sports</option>
+              <option value="nba">NBA</option>
+              <option value="nfl">NFL</option>
+            </select>
+
             <select
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value)}

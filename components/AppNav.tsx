@@ -72,6 +72,10 @@ const desktopAdminGroups = [
         label: "Manage NBA Players",
       },
       {
+        href: "/admin/players-nfl",
+        label: "Manage NFL Players",
+      },
+      {
         href: "/admin/league-awards",
         label: "League Awards",
       },
