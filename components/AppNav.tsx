@@ -123,8 +123,19 @@ function AppNavContent() {
 
   const isAdmin = currentUser?.role === "admin";
 
+  const sportScopedPaths = [
+    "/",
+    "/lineups/draft",
+    "/lineups/scores",
+    "/slates/new",
+    "/admin/slates",
+    "/admin/slate-games",
+    "/admin/notification-templates",
+    "/admin/notification-history",
+  ];
+
   function getLinkHref(href: string) {
-    if (href === "/lineups/draft" || href === "/lineups/scores") {
+    if (sportScopedPaths.includes(href)) {
       return `${href}?sport=${selectedSport}`;
     }
 
@@ -134,7 +145,7 @@ function AppNavContent() {
   function handleSelectSport(sportKey: string) {
     setSelectedSport(sportKey);
 
-    if (pathname === "/lineups/draft" || pathname === "/lineups/scores") {
+    if (sportScopedPaths.includes(pathname)) {
       router.push(`${pathname}?sport=${sportKey}`);
     }
   }
@@ -444,7 +455,7 @@ function AppNavContent() {
                             {group.links.map((link) => (
                               <Link
                                 key={link.href}
-                                href={link.href}
+                                href={getLinkHref(link.href)}
                                 onClick={() => setDesktopUserOpen(false)}
                                 className={`block rounded-xl px-3 py-2 text-sm transition ${
                                   isLinkActive(link.href)

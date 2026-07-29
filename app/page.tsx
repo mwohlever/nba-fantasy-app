@@ -2,8 +2,9 @@
 
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import FunFactCarousel from "@/components/home/FunFactCarousel";
 import TeamProfileModal from "@/components/TeamProfileModal";
@@ -203,8 +204,20 @@ function roundTo(value: number, digits = 1) {
   return Number(value.toFixed(digits));
 }
 
-export default function HomePage() {
-  const { selectedSport } = useSelectedSport();
+function HomePageContent() {
+  const { selectedSport, setSelectedSport } = useSelectedSport();
+  const searchParams = useSearchParams();
+  const sportFromUrl = searchParams.get("sport");
+  const sport =
+    sportFromUrl === "nfl" || sportFromUrl === "nba"
+      ? sportFromUrl
+      : selectedSport;
+
+  useEffect(() => {
+    if (sportFromUrl && sportFromUrl !== selectedSport) {
+      setSelectedSport(sportFromUrl);
+    }
+  }, [sportFromUrl]);
   const [data, setData] = useState<HomeSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -319,7 +332,7 @@ export default function HomePage() {
       setMessage("");
 
       const response = await fetch(
-        `/api/home-summary?sport=${selectedSport}`,
+        `/api/home-summary?sport=${sport}`,
         { cache: "no-store" }
       );
 
@@ -332,7 +345,7 @@ export default function HomePage() {
 
       setData(result);
 
-      if (selectedSport === "nba") {
+      if (sport === "nba") {
         const awardsResponse = await fetch("/api/season-awards", {
           cache: "no-store",
         });
@@ -357,7 +370,7 @@ export default function HomePage() {
 
   useEffect(() => {
     void loadHomeSummary();
-  }, [selectedSport]);
+  }, [sport]);
 
   useEffect(() => {
     if (!slateRosterModal) {
@@ -374,7 +387,7 @@ export default function HomePage() {
         setIsSlateRosterLoading(true);
 
         const response = await fetch(
-          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}&sport=${selectedSport}`,
+          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}&sport=${sport}`,
           { cache: "no-store" },
         );
 
@@ -535,7 +548,7 @@ export default function HomePage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
-        <FunFactCarousel facts={funFacts} sport={selectedSport} />
+        <FunFactCarousel facts={funFacts} sport={sport} />
 
         {message ? (
           <section className="rounded-3xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-800 shadow-sm">
@@ -569,7 +582,7 @@ export default function HomePage() {
             </div>
 
             <Link
-              href={`/lineups/scores?sport=${selectedSport}`}
+              href={`/lineups/scores?sport=${sport}`}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
             >
               View Scores
@@ -1036,5 +1049,13 @@ export default function HomePage() {
 
       <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePageContent />
+    </Suspense>
   );
 }

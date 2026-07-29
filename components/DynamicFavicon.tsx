@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import { getSportConfig } from "@/lib/sports";
 
 export default function DynamicFavicon() {
   const { selectedSport, isHydrated } = useSelectedSport();
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -25,18 +26,10 @@ export default function DynamicFavicon() {
     ctx.textBaseline = "middle";
     ctx.fillText(emoji, 32, 36);
 
-    const dataUrl = canvas.toDataURL("image/png");
-
-    document
-      .querySelectorAll<HTMLLinkElement>("link[rel~='icon']")
-      .forEach((el) => el.parentNode?.removeChild(el));
-
-    const link = document.createElement("link");
-    link.rel = "icon";
-    link.type = "image/png";
-    link.href = dataUrl;
-    document.head.appendChild(link);
+    setDataUrl(canvas.toDataURL("image/png"));
   }, [selectedSport, isHydrated]);
 
-  return null;
+  if (!dataUrl) return null;
+
+  return <link rel="icon" type="image/png" href={dataUrl} />;
 }

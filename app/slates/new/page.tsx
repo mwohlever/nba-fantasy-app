@@ -4,7 +4,7 @@ import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 
 import AppNav from "@/components/AppNav";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type TeamSelection = {
   id: number;
@@ -40,6 +40,7 @@ function normalizeDraftOrder(teams: TeamSelection[]) {
 
 export default function NewSlatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [startDate, setStartDate] = useState("");
   const [multipleDays, setMultipleDays] = useState(false);
@@ -49,7 +50,9 @@ export default function NewSlatePage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [previousSlateLabel, setPreviousSlateLabel] = useState("");
-  const [sport, setSport] = useState<"nba" | "nfl">("nba");
+  const [sport, setSport] = useState<"nba" | "nfl">(() =>
+    searchParams.get("sport") === "nfl" ? "nfl" : "nba"
+  );
 
   useEffect(() => {
     void loadSlateSetup();

@@ -2,14 +2,19 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
 
-export async function GET() {
+export async function GET(request: Request) {
   const authError = await requireAdminApi();
   if (authError) return authError;
 
   try {
+    const { searchParams } = new URL(request.url);
+    const sportParam = searchParams.get("sport");
+    const sport = sportParam === "nfl" ? "nfl" : "nba";
+
     const { data, error } = await supabaseAdmin
       .from("slates")
       .select("id, date, start_date, end_date, is_locked")
+      .eq("sport", sport)
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false });
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppNav from "@/components/AppNav";
 import Link from "next/link";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type SlateListRow = {
   id: number;
@@ -30,6 +31,7 @@ type SlateDetailResponse = {
 };
 
 export default function AdminSlatesPage() {
+  const { selectedSport } = useSelectedSport();
   const [slates, setSlates] = useState<SlateListRow[]>([]);
   const [selectedSlateId, setSelectedSlateId] = useState<number | "">("");
   const [selectedSlate, setSelectedSlate] = useState<
@@ -42,7 +44,9 @@ export default function AdminSlatesPage() {
 
   useEffect(() => {
     void loadSlates();
-  }, []);
+    setSelectedSlateId("");
+    setSelectedSlate(null);
+  }, [selectedSport]);
 
   useEffect(() => {
     if (!selectedSlateId) return;
@@ -54,7 +58,9 @@ export default function AdminSlatesPage() {
       setIsLoading(true);
       setMessage("");
 
-      const response = await fetch("/api/admin/slates");
+      const response = await fetch(
+        `/api/admin/slates?sport=${selectedSport}`
+      );
       const result = await response.json();
 
       if (!response.ok) {
@@ -244,7 +250,7 @@ export default function AdminSlatesPage() {
                 Slate Manager
               </h1>
               <p className="mt-2 text-sm text-slate-600">
-                Edit participation, draft order, lock status, NBA team codes,
+                Edit participation, draft order, lock status, team codes,
                 reseed, or delete a slate.
               </p>
             </div>
@@ -312,7 +318,7 @@ export default function AdminSlatesPage() {
 
                   <div className="mt-4 max-w-xl">
                     <label className="mb-1 block text-xs font-medium text-slate-600">
-                      NBA Team Codes
+                      Team Codes
                     </label>
                     <input
                       type="text"
@@ -327,7 +333,7 @@ export default function AdminSlatesPage() {
                             : prev
                         )
                       }
-                      placeholder="DEN, MIN, NYK, ATL, CLE, TOR"
+                      placeholder="Team abbreviations, comma separated"
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
                     />
                     <p className="mt-1 text-xs text-slate-500">
