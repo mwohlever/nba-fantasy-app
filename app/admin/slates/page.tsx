@@ -12,6 +12,10 @@ type SlateListRow = {
   end_date: string | null;
   is_locked: boolean;
   label: string;
+  sport?: "nba" | "nfl" | "golf";
+  display_name?: string | null;
+  external_event_id?: string | null;
+  cut_penalty_per_round?: number | null;
   nba_team_abbreviations?: string[] | null;
 };
 
@@ -26,6 +30,10 @@ type SlateDetailResponse = {
   success: boolean;
   slate: SlateListRow & {
     nba_team_abbreviations?: string[] | null;
+    sport?: "nba" | "nfl" | "golf";
+    display_name?: string | null;
+    external_event_id?: string | null;
+    cut_penalty_per_round?: number | null;
   };
   teams: SlateTeamRow[];
 };
@@ -313,10 +321,37 @@ export default function AdminSlatesPage() {
                     Current Slate
                   </div>
                   <div className="mt-1 text-xl font-semibold text-slate-900">
-                    {selectedSlate.label}
+                    {selectedSlate.display_name?.trim() ||
+                      selectedSlate.label}
                   </div>
 
-                  <div className="mt-4 max-w-xl">
+                  {selectedSlate.sport === "golf" ? (
+                    <div className="mt-2 space-y-1 text-sm text-slate-600">
+                      <div>
+                        Golf
+                        {selectedSlate.start_date &&
+                        selectedSlate.end_date
+                          ? ` • ${selectedSlate.start_date} - ${selectedSlate.end_date}`
+                          : ""}
+                      </div>
+
+                      <div>
+                        Cut penalty:{" "}
+                        {selectedSlate.cut_penalty_per_round ?? 0} per
+                        missed round
+                      </div>
+
+                      {selectedSlate.external_event_id ? (
+                        <div>
+                          ESPN event:{" "}
+                          {selectedSlate.external_event_id}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {selectedSlate.sport === "nba" ? (
+                    <div className="mt-4 max-w-xl">
                     <label className="mb-1 block text-xs font-medium text-slate-600">
                       Team Codes
                     </label>
@@ -342,6 +377,7 @@ export default function AdminSlatesPage() {
                       occasionally.
                     </p>
                   </div>
+                  ) : null}
                 </div>
 
                 <label className="flex items-center gap-3 text-sm text-slate-700">

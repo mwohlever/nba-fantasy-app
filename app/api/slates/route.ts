@@ -354,10 +354,15 @@ async function getNbaTeamsAndFirstGameTimeForDate(date: string) {
   };
 }
 
-async function getMostRecentCompletedSlateSetup() {
+async function getMostRecentCompletedSlateSetup(
+  sport: "nba" | "nfl" | "golf"
+) {
   const { data: slates, error: slatesError } = await supabaseAdmin
     .from("slates")
-    .select("id, start_date, end_date, date")
+    .select(
+      "id, start_date, end_date, date, display_name, sport"
+    )
+    .eq("sport", sport)
     .order("start_date", { ascending: false })
     .order("end_date", { ascending: false });
 
@@ -414,8 +419,17 @@ function buildSuggestedOrderIds(results: TeamSlateResultRow[], safeTeams: TeamRo
   return [...inverseOrderIds, ...teamsMissingFromSlate];
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const sportParam = searchParams.get("sport");
+
+    const sport: "nba" | "nfl" | "golf" =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
     const { data: teams, error: teamsError } = await supabaseAdmin
       .from("teams")
       .select("id, name")
@@ -429,7 +443,8 @@ export async function GET() {
     }
 
     const safeTeams = (teams ?? []) as TeamRow[];
-    const previousCompleted = await getMostRecentCompletedSlateSetup();
+    const previousCompleted =
+      await getMostRecentCompletedSlateSetup(sport);
 
     const suggestedOrderIds = buildSuggestedOrderIds(
       previousCompleted.results,
@@ -448,6 +463,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      sport,
       teams: safeTeams,
       latestSlate: previousCompleted.slate,
       previousCompletedSlate: previousCompleted.slate,
@@ -469,9 +485,32 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const startDate = body?.startDate;
-    const endDate = body?.endDate;
-    const sport = body?.sport === "nfl" ? "nfl" : "nba";
+    const startDate = String(body?.startDate ?? "").trim();
+    const endDate = String(body?.endDate ?? "").trim();
+
+    const sport: "nba" | "nfl" | "golf" =
+      body?.sport === "nfl"
+        ? "nfl"
+        : body?.sport === "golf"
+          ? "golf"
+          : "nba";
+
+    const displayName =
+      typeof body?.displayName === "string"
+        ? body.displayName.trim()
+        : "";
+
+    const externalEventId =
+      typeof body?.externalEventId === "string"
+        ? body.externalEventId.trim()
+        : "";
+
+    const rawCutPenalty = Number(body?.cutPenaltyPerRound);
+
+    const cutPenaltyPerRound =
+      sport === "golf" && Number.isInteger(rawCutPenalty)
+        ? rawCutPenalty
+        : null;
 
     const teamConfigs = Array.isArray(body?.teamSelections)
       ? body.teamSelections
@@ -484,6 +523,43 @@ export async function POST(request: NextRequest) {
         { error: "Start date and end date are required." },
         { status: 400 }
       );
+    }
+
+    if (endDate < startDate) {
+      return NextResponse.json(
+        { error: "End date cannot be earlier than start date." },
+        { status: 400 }
+      );
+    }
+
+    if (sport === "golf") {
+      if (!displayName) {
+        return NextResponse.json(
+          { error: "Tournament name is required for a Golf slate." },
+          { status: 400 }
+        );
+      }
+
+      if (!externalEventId) {
+        return NextResponse.json(
+          { error: "ESPN event ID is required for a Golf slate." },
+          { status: 400 }
+        );
+      }
+
+      if (
+        cutPenaltyPerRound === null ||
+        cutPenaltyPerRound < 0 ||
+        cutPenaltyPerRound > 100
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Golf cut penalty must be a whole number from 0 through 100.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const { data: teams, error: teamsError } = await supabaseAdmin
@@ -499,7 +575,8 @@ export async function POST(request: NextRequest) {
     }
 
     const safeTeams = teams as TeamRow[];
-    const previousCompleted = await getMostRecentCompletedSlateSetup();
+    const previousCompleted =
+      await getMostRecentCompletedSlateSetup(sport);
     const suggestedOrderIds = buildSuggestedOrderIds(
       previousCompleted.results,
       safeTeams
@@ -578,11 +655,19 @@ export async function POST(request: NextRequest) {
         end_date: endDate,
         is_locked: false,
         sport,
-        nba_team_abbreviations: nbaTeamAbbreviations,
-        first_game_start_time: firstGameStartTime,
+        display_name:
+          sport === "golf" ? displayName : null,
+        external_event_id:
+          sport === "golf" ? externalEventId : null,
+        cut_penalty_per_round:
+          sport === "golf" ? cutPenaltyPerRound : null,
+        nba_team_abbreviations:
+          sport === "nba" ? nbaTeamAbbreviations : [],
+        first_game_start_time:
+          sport === "nba" ? firstGameStartTime : null,
       })
       .select(
-        "id, date, start_date, end_date, is_locked, sport, nba_team_abbreviations, first_game_start_time"
+        "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, nba_team_abbreviations, first_game_start_time"
       )
       .single();
 
@@ -716,6 +801,12 @@ export async function POST(request: NextRequest) {
       nbaTeamAbbreviations,
       firstGameStartTime,
       detectionSources,
+      displayName:
+        sport === "golf" ? displayName : null,
+      externalEventId:
+        sport === "golf" ? externalEventId : null,
+      cutPenaltyPerRound:
+        sport === "golf" ? cutPenaltyPerRound : null,
       previousCompletedSlate: previousCompleted.slate,
     });
   } catch (error) {

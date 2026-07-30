@@ -13,15 +13,40 @@ type TeamSelection = {
   is_participating: boolean;
 };
 
+type SportKey = "nba" | "nfl" | "golf";
+
+type PreviousSlate = {
+  id: number;
+  start_date: string;
+  end_date: string;
+  date: string;
+  display_name?: string | null;
+};
+
 type SetupResponse = {
   success: boolean;
+  sport?: SportKey;
   teams: TeamSelection[];
-  previousSlate: {
-    id: number;
-    start_date: string;
-    end_date: string;
-    date: string;
-  } | null;
+  previousSlate?: PreviousSlate | null;
+  previousCompletedSlate?: PreviousSlate | null;
+  suggestedTeamConfigs?: Array<{
+    team_id: number;
+    draft_order: number;
+    is_participating: boolean;
+  }>;
+};
+
+type GolfTournament = {
+  eventId: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+};
+
+type GolfScheduleResponse = {
+  success: boolean;
+  year: string;
+  tournaments: GolfTournament[];
 };
 
 function formatSlateLabel(startDate: string, endDate: string) {
@@ -50,20 +75,41 @@ export default function NewSlatePage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [previousSlateLabel, setPreviousSlateLabel] = useState("");
-  const [sport, setSport] = useState<"nba" | "nfl">(() =>
-    searchParams.get("sport") === "nfl" ? "nfl" : "nba"
+  const [sport, setSport] = useState<SportKey>(() => {
+    const requestedSport = searchParams.get("sport");
+
+    if (requestedSport === "nfl" || requestedSport === "golf") {
+      return requestedSport;
+    }
+
+    return "nba";
+  });
+
+  const [golfYear, setGolfYear] = useState(() =>
+    String(new Date().getUTCFullYear())
   );
+  const [golfTournaments, setGolfTournaments] = useState<GolfTournament[]>([]);
+  const [selectedGolfEventId, setSelectedGolfEventId] = useState("");
+  const [cutPenaltyPerRound, setCutPenaltyPerRound] = useState(5);
+  const [isLoadingGolfSchedule, setIsLoadingGolfSchedule] = useState(false);
 
   useEffect(() => {
-    void loadSlateSetup();
-  }, []);
+    void loadSlateSetup(sport);
+  }, [sport]);
 
-  async function loadSlateSetup() {
+  useEffect(() => {
+    if (sport !== "golf") return;
+    void loadGolfSchedule(golfYear);
+  }, [sport, golfYear]);
+
+  async function loadSlateSetup(targetSport: SportKey) {
     try {
       setIsLoadingTeams(true);
       setMessage("");
 
-      const response = await fetch("/api/slates");
+      const response = await fetch(
+        `/api/slates?sport=${encodeURIComponent(targetSport)}`
+      );
       const result = (await response.json()) as SetupResponse | { error?: string };
 
       if (!response.ok) {
@@ -75,13 +121,7 @@ export default function NewSlatePage() {
         return;
       }
 
-const safeResult = result as SetupResponse & {
-  suggestedTeamConfigs?: Array<{
-    team_id: number;
-    draft_order: number;
-    is_participating: boolean;
-  }>;
-};
+const safeResult = result as SetupResponse;
 
 const configMap = new Map(
   (safeResult.suggestedTeamConfigs ?? []).map((config) => [
@@ -111,11 +151,19 @@ setTeams(
   })
 );
 
-      if (safeResult.previousSlate) {
-        const label = formatSlateLabel(
-          safeResult.previousSlate.start_date,
-          safeResult.previousSlate.end_date
-        );
+      const previousSlate =
+        safeResult.previousCompletedSlate ??
+        safeResult.previousSlate ??
+        null;
+
+      if (previousSlate) {
+        const label =
+          previousSlate.display_name?.trim() ||
+          formatSlateLabel(
+            previousSlate.start_date,
+            previousSlate.end_date
+          );
+
         setPreviousSlateLabel(label);
       } else {
         setPreviousSlateLabel("");
@@ -127,6 +175,71 @@ setTeams(
       setIsLoadingTeams(false);
     }
   }
+
+  async function loadGolfSchedule(year: string) {
+    try {
+      setIsLoadingGolfSchedule(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/golf/schedule?year=${encodeURIComponent(year)}`,
+        { cache: "no-store" }
+      );
+
+      const result = (await response.json()) as
+        | GolfScheduleResponse
+        | { error?: string };
+
+      if (!response.ok) {
+        setGolfTournaments([]);
+        setSelectedGolfEventId("");
+        setMessage(
+          "error" in result && result.error
+            ? result.error
+            : "Failed to load Golf tournaments."
+        );
+        return;
+      }
+
+      const safeResult = result as GolfScheduleResponse;
+      const tournaments = safeResult.tournaments ?? [];
+
+      setGolfTournaments(tournaments);
+      setSelectedGolfEventId((current) => {
+        if (
+          current &&
+          tournaments.some((tournament) => tournament.eventId === current)
+        ) {
+          return current;
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+
+        const currentOrNext =
+          tournaments.find((tournament) => {
+            const endDate = tournament.endDate?.slice(0, 10);
+            return endDate ? endDate >= today : false;
+          }) ?? tournaments[0];
+
+        return currentOrNext?.eventId ?? "";
+      });
+    } catch (error) {
+      console.error(error);
+      setGolfTournaments([]);
+      setSelectedGolfEventId("");
+      setMessage("Something went wrong while loading Golf tournaments.");
+    } finally {
+      setIsLoadingGolfSchedule(false);
+    }
+  }
+
+  const selectedGolfTournament = useMemo(
+    () =>
+      golfTournaments.find(
+        (tournament) => tournament.eventId === selectedGolfEventId
+      ) ?? null,
+    [golfTournaments, selectedGolfEventId]
+  );
 
   const participatingTeams = useMemo(
     () => teams.filter((team) => team.is_participating),
@@ -140,13 +253,37 @@ setTeams(
 
   const orderedTeams = [...participatingTeams, ...nonParticipatingTeams];
 
-  const effectiveEndDate = multipleDays ? endDate : startDate;
+  const golfStartDate =
+    selectedGolfTournament?.startDate?.slice(0, 10) ?? "";
+
+  const golfEndDate =
+    selectedGolfTournament?.endDate?.slice(0, 10) ?? "";
+
+  const effectiveStartDate =
+    sport === "golf" ? golfStartDate : startDate;
+
+  const effectiveEndDate =
+    sport === "golf"
+      ? golfEndDate
+      : multipleDays
+        ? endDate
+        : startDate;
 
   const previewLabel = useMemo(() => {
-    if (!startDate) return "—";
-    if (!effectiveEndDate) return startDate;
-    return formatSlateLabel(startDate, effectiveEndDate);
-  }, [startDate, effectiveEndDate]);
+    if (sport === "golf") {
+      return selectedGolfTournament?.name ?? "—";
+    }
+
+    if (!effectiveStartDate) return "—";
+    if (!effectiveEndDate) return effectiveStartDate;
+
+    return formatSlateLabel(effectiveStartDate, effectiveEndDate);
+  }, [
+    sport,
+    selectedGolfTournament,
+    effectiveStartDate,
+    effectiveEndDate,
+  ]);
 
   function toggleParticipation(teamId: number) {
     setTeams((prev) => {
@@ -199,19 +336,42 @@ setTeams(
     e.preventDefault();
     setMessage("");
 
-    if (!startDate) {
-      setMessage("Please select a start date.");
-      return;
-    }
+    if (sport === "golf") {
+      if (!selectedGolfTournament) {
+        setMessage("Please select a Golf tournament.");
+        return;
+      }
 
-    if (multipleDays && !endDate) {
-      setMessage("Please select an end date.");
-      return;
-    }
+      if (!effectiveStartDate || !effectiveEndDate) {
+        setMessage("The selected tournament is missing its dates.");
+        return;
+      }
 
-    if (effectiveEndDate < startDate) {
-      setMessage("End date cannot be earlier than start date.");
-      return;
+      if (
+        !Number.isInteger(cutPenaltyPerRound) ||
+        cutPenaltyPerRound < 0 ||
+        cutPenaltyPerRound > 100
+      ) {
+        setMessage(
+          "Cut penalty must be a whole number from 0 through 100."
+        );
+        return;
+      }
+    } else {
+      if (!startDate) {
+        setMessage("Please select a start date.");
+        return;
+      }
+
+      if (multipleDays && !endDate) {
+        setMessage("Please select an end date.");
+        return;
+      }
+
+      if (effectiveEndDate < effectiveStartDate) {
+        setMessage("End date cannot be earlier than start date.");
+        return;
+      }
     }
 
     try {
@@ -223,9 +383,21 @@ setTeams(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          startDate,
+          startDate: effectiveStartDate,
           endDate: effectiveEndDate,
           sport,
+          displayName:
+            sport === "golf"
+              ? selectedGolfTournament?.name
+              : undefined,
+          externalEventId:
+            sport === "golf"
+              ? selectedGolfTournament?.eventId
+              : undefined,
+          cutPenaltyPerRound:
+            sport === "golf"
+              ? cutPenaltyPerRound
+              : undefined,
 teamSelections: teams
   .filter((team) => team.is_participating)
   .sort((a, b) => a.draft_order - b.draft_order)
@@ -244,8 +416,14 @@ teamSelections: teams
         return;
       }
 
-router.push(`/lineups/draft?sport=${sport}`);
-      router.refresh();
+      if (sport === "golf") {
+        setMessage(
+          `${selectedGolfTournament?.name ?? "Golf"} slate created successfully. Golfer syncing and drafting are the next setup steps.`
+        );
+      } else {
+        router.push(`/lineups/draft?sport=${sport}`);
+        router.refresh();
+      }
     } catch (error) {
       console.error(error);
       setMessage("Something went wrong while creating the slate.");
@@ -274,96 +452,207 @@ router.push(`/lineups/draft?sport=${sport}`);
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid gap-5 md:grid-cols-2">
-              <div>
-                <label htmlFor="start-date" className="mb-2 block text-sm font-medium text-slate-700">
-                  Start Date
-                </label>
-                <input
-                  id="start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => {
-                    const nextStart = e.target.value;
-                    setStartDate(nextStart);
-
-                    if (!multipleDays) {
-                      setEndDate(nextStart);
-                    }
-                  }}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">
-                  <input
-                    type="checkbox"
-                    checked={multipleDays}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setMultipleDays(checked);
-
-                      if (!checked) {
-                        setEndDate(startDate);
-                      }
-                    }}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  Multiple days?
-                </label>
-              </div>
-            </div>
-
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Sport
               </label>
+
               <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                {(["nba", "nfl"] as const).map((option) => (
+                {(["nba", "nfl", "golf"] as const).map((option) => (
                   <button
                     key={option}
                     type="button"
-                    onClick={() => setSport(option)}
+                    onClick={() => {
+                      setSport(option);
+                      setMessage("");
+                    }}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                       sport === option
                         ? "bg-sky-600 text-white"
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    {option.toUpperCase()}
+                    {option === "golf" ? "GOLF" : option.toUpperCase()}
                   </button>
                 ))}
               </div>
             </div>
 
-            {multipleDays ? (
-              <div>
-                <label htmlFor="end-date" className="mb-2 block text-sm font-medium text-slate-700">
-                  End Date
-                </label>
-                <input
-                  id="end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
-                />
+            {sport === "golf" ? (
+              <div className="space-y-5">
+                <div className="grid gap-5 md:grid-cols-[180px_1fr]">
+                  <div>
+                    <label
+                      htmlFor="golf-year"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      Season
+                    </label>
+
+                    <input
+                      id="golf-year"
+                      type="number"
+                      min={2000}
+                      max={2100}
+                      value={golfYear}
+                      onChange={(e) => setGolfYear(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="golf-tournament"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      Tournament
+                    </label>
+
+                    <select
+                      id="golf-tournament"
+                      value={selectedGolfEventId}
+                      onChange={(e) =>
+                        setSelectedGolfEventId(e.target.value)
+                      }
+                      disabled={isLoadingGolfSchedule}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300 disabled:opacity-60"
+                    >
+                      <option value="">
+                        {isLoadingGolfSchedule
+                          ? "Loading tournaments..."
+                          : "Select a tournament"}
+                      </option>
+
+                      {golfTournaments.map((tournament) => (
+                        <option
+                          key={tournament.eventId}
+                          value={tournament.eventId}
+                        >
+                          {tournament.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="golf-cut-penalty"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      Cut Penalty per Missed Round
+                    </label>
+
+                    <input
+                      id="golf-cut-penalty"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={cutPenaltyPerRound}
+                      onChange={(e) =>
+                        setCutPenaltyPerRound(Number(e.target.value))
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+                    />
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      A golfer missing two scheduled rounds would receive
+                      twice this amount.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Tournament Dates
+                    </div>
+
+                    <div className="mt-1 font-semibold text-slate-900">
+                      {effectiveStartDate && effectiveEndDate
+                        ? formatSlateDateLabel({
+                            start_date: effectiveStartDate,
+                            end_date: effectiveEndDate,
+                          })
+                        : "Select a tournament"}
+                    </div>
+                  </div>
+                </div>
               </div>
-            ) : null}
+            ) : (
+              <>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="start-date"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      Start Date
+                    </label>
+
+                    <input
+                      id="start-date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        const nextStart = e.target.value;
+                        setStartDate(nextStart);
+
+                        if (!multipleDays) {
+                          setEndDate(nextStart);
+                        }
+                      }}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={multipleDays}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setMultipleDays(checked);
+
+                          if (!checked) {
+                            setEndDate(startDate);
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      Multiple days?
+                    </label>
+                  </div>
+                </div>
+
+                {multipleDays ? (
+                  <div>
+                    <label
+                      htmlFor="end-date"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      End Date
+                    </label>
+
+                    <input
+                      id="end-date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+                    />
+                  </div>
+                ) : null}
+              </>
+            )}
 
             <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4">
               <div className="text-xs uppercase tracking-wide text-orange-700">
                 Slate Name Preview
               </div>
               <div className="mt-1 text-lg font-semibold text-slate-900">
-                {formatSlateDateLabel({
-                  start_date: startDate,
-                  end_date:
-                    multipleDays && endDate
-                      ? endDate
-                      : startDate,
-                })}
+                {previewLabel}
               </div>
             </div>
 
