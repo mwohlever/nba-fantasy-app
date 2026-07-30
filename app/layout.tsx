@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
-  title: "111 Fantasy Sports",
+  title: "111 Sports",
   description:
-    "Fantasy NBA playoffs tracker, lineups, standings, profiles, and stats",
+    "Fantasy sports drafts, live scoring, standings, profiles, and stats",
 };
 
 export default function RootLayout({

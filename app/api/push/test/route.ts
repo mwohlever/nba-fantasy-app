@@ -20,7 +20,7 @@ export async function POST() {
       userId: user.id,
       teamId: user.teamId,
       title: "🏀 Push Notifications Work!",
-      body: `Hey ${user.displayName}, this device is connected to 111 Fantasy.`,
+      body: `Hey ${user.displayName}, this device is connected to 111 Sports.`,
       url: "/profile",
       tag: "push-test",
       metadata: {

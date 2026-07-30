@@ -273,7 +273,7 @@ export default async function DraftLineupsPage({
         <section className="draft-page-intro">
           <div>
             <div className="draft-page-intro-kicker">
-              111 Fantasy Sports
+              111 Sports
             </div>
 
             <h1>Draft</h1>
