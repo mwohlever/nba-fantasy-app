@@ -511,58 +511,54 @@ function AppNavContent() {
       {/* Global mobile account header */}
       <nav className="app-mobile-header mb-6 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
         <div className="flex items-center justify-between">
-          <Link
-            href="/"
-            className="flex min-w-0 items-center gap-3"
-            aria-label="111 Fantasy Sports home"
-          >
-            <img
-              src="/icon-192.png"
-              alt=""
-              aria-hidden="true"
-              className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-sm"
-            />
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative shrink-0" ref={mobileSportRef}>
+              <button
+                type="button"
+                onClick={() => setMobileSportOpen((open) => !open)}
+                aria-label={`Switch sport, currently ${getSportConfig(selectedSport).label}`}
+                className="block"
+              >
+                <img
+                  src={getSportConfig(selectedSport).logo}
+                  alt={`${getSportConfig(selectedSport).label} logo`}
+                  className="h-12 w-12 rounded-full object-cover shadow-sm"
+                />
+              </button>
 
-            <span className="truncate text-lg font-bold tracking-tight text-slate-900">
+              {mobileSportOpen ? (
+                <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                  {SPORTS.map((sport) => (
+                    <button
+                      key={sport.key}
+                      type="button"
+                      onClick={() => {
+                        handleSelectSport(sport.key);
+                        setMobileSportOpen(false);
+                      }}
+                      className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                        selectedSport === sport.key
+                          ? "bg-sky-100 font-semibold text-sky-900"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {sport.emoji} {sport.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <Link
+              href="/"
+              aria-label="111 Fantasy Sports home"
+              className="truncate text-lg font-bold tracking-tight text-slate-900"
+            >
               111 Fantasy Sports
-            </span>
-          </Link>
+            </Link>
+          </div>
 
           <MobileAccountMenu />
-        </div>
-
-        <div className="relative self-start" ref={mobileSportRef}>
-          <button
-            type="button"
-            onClick={() => setMobileSportOpen((open) => !open)}
-            className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700"
-          >
-            <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
-            <span>{getSportConfig(selectedSport).label}</span>
-            <span aria-hidden="true">▾</span>
-          </button>
-
-          {mobileSportOpen ? (
-            <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-              {SPORTS.map((sport) => (
-                <button
-                  key={sport.key}
-                  type="button"
-                  onClick={() => {
-                    handleSelectSport(sport.key);
-                    setMobileSportOpen(false);
-                  }}
-                  className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                    selectedSport === sport.key
-                      ? "bg-sky-100 font-semibold text-sky-900"
-                      : "text-slate-700 hover:bg-slate-100"
-                  }`}
-                >
-                  {sport.emoji} {sport.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
       </nav>
 
