@@ -1,5 +1,7 @@
 export type GolfHoleStat = {
   hole_number: number;
+  par?: number | null;
+  yards?: number | null;
   strokes: number | null;
   relative_to_par: number | null;
   score_display: string | null;

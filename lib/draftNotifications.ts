@@ -128,7 +128,12 @@ export async function notifyNextDrafter(
     throw new Error(slateError?.message ?? "Slate not found.");
   }
 
-  const sport = slate.sport === "nfl" ? "nfl" : "nba";
+  const sport =
+    slate.sport === "nfl"
+      ? "nfl"
+      : slate.sport === "golf"
+        ? "golf"
+        : "nba";
 
   const { data: rosterSlotsData, error: rosterSlotsError } =
     await supabaseAdmin
@@ -239,9 +244,12 @@ export async function notifyNextDrafter(
 
   const positionCounts = new Map<string, number>();
 
-  if (nextTeamPlayerIds.length > 0) {
-    const playersTable = sport === "nfl" ? "players_nfl" : "players";
-    const positionColumn = sport === "nfl" ? "position" : "position_group";
+  if (nextTeamPlayerIds.length > 0 && sport !== "golf") {
+    const playersTable =
+      sport === "nfl" ? "players_nfl" : "players";
+
+    const positionColumn =
+      sport === "nfl" ? "position" : "position_group";
 
     const { data: rosterPlayers, error: rosterPlayersError } =
       await supabaseAdmin
@@ -333,7 +341,22 @@ export async function notifyNextDrafter(
     : "draft_turn";
 
   const notificationTemplate =
-    await getNotificationTemplate(templateType);
+    await getNotificationTemplate(templateType, sport);
+
+  const picksRemaining = Math.max(
+    0,
+    totalSlots - nextTeamPlayerIds.length
+  );
+
+  const positionNeed =
+    sport === "golf"
+      ? ""
+      : getFinalPositionNeed(positionCounts, rosterSlots);
+
+  const remainingNeeds =
+    sport === "golf"
+      ? ""
+      : getRemainingNeeds(positionCounts, rosterSlots);
 
   const templateValues = {
     teamName: nextTeamName,
@@ -341,8 +364,8 @@ export async function notifyNextDrafter(
     roundNumber,
     roundOrdinal: getOrdinal(roundNumber),
     overallPickNumber,
-    positionNeed: getFinalPositionNeed(positionCounts, rosterSlots),
-    remainingNeeds: getRemainingNeeds(positionCounts, rosterSlots),
+    positionNeed,
+    remainingNeeds,
     sportEmoji: getSportConfig(sport).emoji,
   };
 
@@ -370,9 +393,10 @@ export async function notifyNextDrafter(
       roundNumber,
       roundOrdinal: getOrdinal(roundNumber),
       overallPickNumber,
-      positionNeed: getFinalPositionNeed(positionCounts, rosterSlots),
-      remainingNeeds: getRemainingNeeds(positionCounts, rosterSlots),
+      positionNeed,
+      remainingNeeds,
       sportEmoji: getSportConfig(sport).emoji,
+      sport,
     },
   });
 

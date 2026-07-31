@@ -1,0 +1,1077 @@
+============================================================
+LINEUP_PLAYERS REFERENCES IN SQL / MIGRATIONS
+============================================================
+supabase/golf-foundation.sql:41:    references public.golf_players(id)
+supabase/golf-foundation.sql:113:    references public.golf_event_players(id)
+app/lineups/draft/page.tsx:349:          lineup_players (
+app/lineups/draft/page.tsx:364:          lineup.lineup_players?.map(
+app/lineups/draft/page.tsx.before-golf-draft:240:        lineup_players (
+app/lineups/draft/page.tsx.before-golf-draft:251:          lineup.lineup_players?.map((lp: { player_id: number }) => lp.player_id) ?? [],
+app/lineups/scores/page.tsx:316:        lineup_players (
+app/lineups/scores/page.tsx:327:          lineup.lineup_players?.map(
+app/lineups/page.tsx:183:        lineup_players (
+app/lineups/page.tsx:194:          lineup.lineup_players?.map((lp: { player_id: number }) => lp.player_id) ?? [],
+app/api/lineups/route.ts:213:        .from("lineup_players")
+app/api/lineups/route.ts:562:        .select("id, lineup_players(player_id)")
+app/api/lineups/route.ts:582:              lineup_players?:
+app/api/lineups/route.ts:586:          ).lineup_players ?? []
+app/api/lineups/route.ts:645:          .from("lineup_players")
+app/api/lineups/route.ts:703:          .from("lineup_players")
+app/api/lineups/route.ts.before-golf-draft:78:        .from("lineup_players")
+app/api/lineups/route.ts.before-golf-draft:265:        .select("id, lineup_players(player_id)")
+app/api/lineups/route.ts.before-golf-draft:283:              lineup_players?: { player_id: number }[] | null;
+app/api/lineups/route.ts.before-golf-draft:285:          ).lineup_players ?? []
+app/api/lineups/route.ts.before-golf-draft:336:        .from("lineup_players")
+app/api/lineups/route.ts.before-golf-draft:378:        .from("lineup_players")
+app/api/refresh-stats/route.ts.save:28:  lineup_players: { player_id: number }[] | null;
+app/api/refresh-stats/route.ts.save:229:        lineup_players (
+app/api/refresh-stats/route.ts.save:248:          (lineup.lineup_players ?? []).map((lp) => lp.player_id)
+app/api/refresh-stats/route.ts.save:375:        const lineupPlayerIdsForTeam = (lineup.lineup_players ?? []).map(
+app/api/refresh-stats/route.ts.save:579:      const lineupPlayerIdsForTeam = (lineup.lineup_players ?? []).map(
+app/api/refresh-stats/route.ts:21:  lineup_players: { player_id: number }[] | null;
+app/api/refresh-stats/route.ts:260:        lineup_players (
+app/api/refresh-stats/route.ts:277:          (lineup.lineup_players ?? []).map((row) => row.player_id)
+app/api/refresh-stats/route.ts:586:      const playerRows = lineup.lineup_players ?? [];
+app/api/player-history/route.ts:83:      supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
+app/api/home-summary/route.ts:193:        .from("lineup_players")
+app/api/home-summary/route.ts:555:            .from("lineup_players")
+app/api/admin/slates/[slateId]/route.ts:260:        .from("lineup_players")
+app/api/admin/backfill-player-stats/route.ts:30:  lineup_players: { player_id: number }[] | null;
+app/api/admin/backfill-player-stats/route.ts:253:      lineup_players (
+app/api/admin/backfill-player-stats/route.ts:269:        (lineup.lineup_players ?? []).map((lp) => lp.player_id)
+app/api/admin/backfill-player-stats/route.ts:472:    const teamPlayerIds = (lineup.lineup_players ?? []).map((lp) => lp.player_id);
+app/api/admin/manual-stat-correction/route.ts:90:      .select("id, team_id, lineup_players(player_id)")
+app/api/admin/manual-stat-correction/route.ts:96:          (l.lineup_players ?? []).map((lp: any) => Number(lp.player_id))
+app/api/admin/manual-stat-correction/route.ts:113:      const total = (l.lineup_players ?? []).reduce(
+app/api/admin/lineup-correction/route.ts:49:        .from("lineup_players")
+app/api/admin/lineup-correction/route.ts:64:        .from("lineup_players")
+app/api/admin/lineup-correction/route.ts:77:        .from("lineup_players")
+app/api/admin/recompute-slate-results/route.ts:19:      .select("id, team_id, lineup_players(player_id)")
+app/api/admin/recompute-slate-results/route.ts:29:          (lineup.lineup_players ?? []).map((lp: { player_id: number }) =>
+app/api/admin/recompute-slate-results/route.ts:52:      const total = (lineup.lineup_players ?? []).reduce(
+app/api/player-league-profile/route.ts:192:          .from("lineup_players")
+app/api/player-league-profile/route.ts:333:        .from("lineup_players")
+app/api/team-profile/route.ts:79:        .from("lineup_players")
+app/api/team-slate-roster/route.ts:61:      .from("lineup_players")
+app/api/team-stats/route.ts:73:      .from("lineup_players")
+app/api/season-awards/route.ts:56:      supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
+app/api/slate-profile-detail/route.ts:117:        .from("lineup_players")
+app/api/refresh-stats-nfl/route.ts:28:  lineup_players: { player_id: number }[] | null;
+app/api/refresh-stats-nfl/route.ts:102:        lineup_players (
+app/api/refresh-stats-nfl/route.ts:119:          (lineup.lineup_players ?? []).map((row) => row.player_id)
+app/api/refresh-stats-nfl/route.ts:304:      const playerRows = lineup.lineup_players ?? [];
+app/api/refresh-stats-golf/route.ts:580:          lineup_players (
+app/api/refresh-stats-golf/route.ts:606:      const playerIds = (lineup.lineup_players ?? []).map(
+lib/playerProjections.ts:140:        .from("lineup_players")
+lib/draftNotifications.ts:26:  lineup_players:
+lib/draftNotifications.ts:185:    .select("team_id, lineup_players(player_id)")
+lib/draftNotifications.ts:195:    (sum, lineup) => sum + Number(lineup.lineup_players?.length ?? 0),
+lib/draftNotifications.ts:238:    nextTeamLineup?.lineup_players?.map((row) => Number(row.player_id)) ?? [];
+lib/playerFinishedNotifications.ts:24:  lineup_players: { player_id: number }[] | null;
+lib/playerFinishedNotifications.ts:80:            (lineup.lineup_players ?? []).some(
+lib/playerFinishedNotifications.ts:142:      (lineup.lineup_players ?? []).some(
+
+============================================================
+FILE: app/api/lineups/route.ts
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { notifyNextDrafter } from "@/lib/draftNotifications";
+import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
+
+type Sport = "nba" | "nfl" | "golf";
+
+type SaveLineupBody = {
+  slateId?: number;
+  teamId?: number;
+  playerIds?: number[];
+  notifyNextDrafter?: boolean;
+};
+
+type LineupRow = {
+  id: number;
+  team_id: number;
+  slate_id: number;
+};
+
+type LineupPlayerRow = {
+  lineup_id: number;
+  player_id: number;
+  projected_fantasy_points: number | null;
+};
+
+type SlateRow = {
+  id: number;
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  sport: string | null;
+};
+
+type RosterSlotRow = {
+  position: string;
+  slot_count: number;
+};
+
+type NormalizedPlayer = {
+  id: number;
+  name: string;
+  position: string;
+  isActive: boolean;
+};
+
+function normalizeSport(value: string | null | undefined): Sport {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
+function getSlateSeason(date: string | null | undefined) {
+  const year = date?.slice(0, 4);
+  return year && /^\d{4}$/.test(year) ? year : "2026";
+}
+
+function getDefaultRosterSlots(sport: Sport): RosterSlotRow[] {
+  if (sport === "nfl") {
+    return [
+      { position: "QB", slot_count: 1 },
+      { position: "RB", slot_count: 2 },
+      { position: "WR", slot_count: 2 },
+      { position: "TE", slot_count: 1 },
+    ];
+  }
+
+  if (sport === "golf") {
+    return [{ position: "GOLFER", slot_count: 4 }];
+  }
+
+  return [
+    { position: "G", slot_count: 2 },
+    { position: "F/C", slot_count: 3 },
+  ];
+}
+
+async function loadPlayersForSport(
+  sport: Sport,
+  playerIds: number[],
+): Promise<{
+  players: NormalizedPlayer[];
+  error: string | null;
+}> {
+  if (playerIds.length === 0) {
+    return {
+      players: [],
+      error: null,
+    };
+  }
+
+  if (sport === "nfl") {
+    const { data, error } = await supabaseAdmin
+      .from("players_nfl")
+      .select("id, name, position, is_active")
+      .in("id", playerIds);
+
+    if (error) {
+      return {
+        players: [],
+        error: error.message,
+      };
+    }
+
+    return {
+      players: (data ?? []).map((player: any) => ({
+        id: Number(player.id),
+        name: player.name,
+        position: player.position,
+        isActive: Boolean(player.is_active),
+      })),
+      error: null,
+    };
+  }
+
+  if (sport === "golf") {
+    const { data, error } = await supabaseAdmin
+      .from("golf_players")
+      .select("id, display_name, is_active")
+      .in("id", playerIds);
+
+    if (error) {
+      return {
+        players: [],
+        error: error.message,
+      };
+    }
+
+    return {
+      players: (data ?? []).map((player: any) => ({
+        id: Number(player.id),
+        name: player.display_name,
+        position: "GOLFER",
+        isActive: Boolean(player.is_active),
+      })),
+      error: null,
+    };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("players")
+    .select("id, name, position_group, is_active")
+    .in("id", playerIds);
+
+  if (error) {
+    return {
+      players: [],
+      error: error.message,
+    };
+  }
+
+  return {
+    players: (data ?? []).map((player: any) => ({
+      id: Number(player.id),
+      name: player.name,
+      position: player.position_group,
+      isActive: Boolean(player.is_active),
+    })),
+    error: null,
+  };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const slateIdParam = request.nextUrl.searchParams.get("slateId");
+
+    if (!slateIdParam) {
+      return NextResponse.json(
+        { error: "slateId is required." },
+        { status: 400 },
+      );
+    }
+
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "slateId must be a valid number." },
+        { status: 400 },
+      );
+    }
+
+    const { data: lineups, error: lineupsError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, team_id, slate_id")
+        .eq("slate_id", slateId);
+
+    if (lineupsError) {
+      return NextResponse.json(
+        {
+          error: `Failed to load lineups: ${lineupsError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineups = (lineups ?? []) as LineupRow[];
+
+    if (safeLineups.length === 0) {
+      return NextResponse.json({
+        success: true,
+        lineups: [],
+      });
+    }
+
+    const lineupIds = safeLineups.map((lineup) => lineup.id);
+
+    const { data: lineupPlayers, error: lineupPlayersError } =
+      await supabaseAdmin
+        .from("lineup_players")
+        .select(
+          "lineup_id, player_id, projected_fantasy_points",
+        )
+        .in("lineup_id", lineupIds);
+
+    if (lineupPlayersError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load lineup players: ` +
+            lineupPlayersError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineupPlayers =
+      (lineupPlayers ?? []) as LineupPlayerRow[];
+
+    const grouped = safeLineups.map((lineup) => {
+      const lineupPlayerRows = safeLineupPlayers.filter(
+        (lineupPlayer) =>
+          lineupPlayer.lineup_id === lineup.id,
+      );
+
+      const hasCompleteProjectionSnapshot =
+        lineupPlayerRows.length > 0 &&
+        lineupPlayerRows.every(
+          (lineupPlayer) =>
+            lineupPlayer.projected_fantasy_points !== null &&
+            Number.isFinite(
+              Number(
+                lineupPlayer.projected_fantasy_points,
+              ),
+            ),
+        );
+
+      return {
+        team_id: lineup.team_id,
+        player_ids: lineupPlayerRows.map(
+          (lineupPlayer) => lineupPlayer.player_id,
+        ),
+        pregame_projected_points:
+          hasCompleteProjectionSnapshot
+            ? Number(
+                lineupPlayerRows
+                  .reduce(
+                    (sum, lineupPlayer) =>
+                      sum +
+                      Number(
+                        lineupPlayer.projected_fantasy_points ??
+                          0,
+                      ),
+                    0,
+                  )
+                  .toFixed(1),
+              )
+            : null,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      lineups: grouped,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Unexpected server error while loading lineups.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 },
+      );
+    }
+
+    const body = (await request.json()) as SaveLineupBody;
+
+    const slateId = Number(body.slateId);
+    const teamId = Number(body.teamId);
+    const playerIds = Array.isArray(body.playerIds)
+      ? body.playerIds.map(Number)
+      : [];
+
+    if (
+      !Number.isInteger(slateId) ||
+      slateId <= 0 ||
+      !Number.isInteger(teamId) ||
+      teamId <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "slateId, teamId, and playerIds are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      playerIds.some(
+        (playerId) =>
+          !Number.isInteger(playerId) || playerId <= 0,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Every player ID must be a valid positive integer.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const uniquePlayerIds = [...new Set(playerIds)];
+
+    if (uniquePlayerIds.length !== playerIds.length) {
+      return NextResponse.json(
+        {
+          error:
+            "Duplicate players are not allowed in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: slateData, error: slateError } =
+      await supabaseAdmin
+        .from("slates")
+        .select(
+          "id, date, start_date, end_date, is_locked, sport",
+        )
+        .eq("id", slateId)
+        .single();
+
+    if (slateError || !slateData) {
+      return NextResponse.json(
+        { error: "Selected slate not found." },
+        { status: 404 },
+      );
+    }
+
+    const slate = slateData as unknown as SlateRow;
+    const sport = normalizeSport(slate.sport);
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This slate is locked. Lineups can no longer be edited.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: rosterSlotData, error: rosterSlotError } =
+      await supabaseAdmin
+        .from("roster_slots")
+        .select("position, slot_count")
+        .eq("sport", sport)
+        .order("display_order", { ascending: true });
+
+    if (rosterSlotError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load ${sport.toUpperCase()} roster rules: ` +
+            rosterSlotError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const rosterSlots =
+      (rosterSlotData ?? []).length > 0
+        ? ((rosterSlotData ?? []) as RosterSlotRow[])
+        : getDefaultRosterSlots(sport);
+
+    const totalRosterSlots = rosterSlots.reduce(
+      (sum, slot) => sum + Number(slot.slot_count),
+      0,
+    );
+
+    if (uniquePlayerIds.length > totalRosterSlots) {
+      return NextResponse.json(
+        {
+          error:
+            `A ${sport.toUpperCase()} lineup can include at most ` +
+            `${totalRosterSlots} players.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: team, error: teamError } =
+      await supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq("id", teamId)
+        .single();
+
+    if (teamError || !team) {
+      return NextResponse.json(
+        { error: "Selected team not found." },
+        { status: 404 },
+      );
+    }
+
+    const {
+      players,
+      error: playersError,
+    } = await loadPlayersForSport(
+      sport,
+      uniquePlayerIds,
+    );
+
+    if (
+      playersError ||
+      players.length !== uniquePlayerIds.length
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            playersError
+              ? `Failed to validate selected players: ${playersError}`
+              : "One or more selected players were not found.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const inactivePlayers = players.filter(
+      (player) => !player.isActive,
+    );
+
+    if (inactivePlayers.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Inactive players cannot be used in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (sport === "golf" && uniquePlayerIds.length > 0) {
+      const { data: eventPlayers, error: eventPlayersError } =
+        await supabaseAdmin
+          .from("golf_event_players")
+          .select("player_id")
+          .eq("slate_id", slateId)
+          .in("player_id", uniquePlayerIds);
+
+      if (eventPlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to validate the tournament field: " +
+              eventPlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const tournamentPlayerIds = new Set(
+        (eventPlayers ?? []).map((row) =>
+          Number(row.player_id),
+        ),
+      );
+
+      const unavailablePlayers = players.filter(
+        (player) =>
+          !tournamentPlayerIds.has(player.id),
+      );
+
+      if (unavailablePlayers.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              `${unavailablePlayers[0].name} is not in ` +
+              "this tournament field.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const positionCounts = new Map<string, number>();
+
+    players.forEach((player) => {
+      positionCounts.set(
+        player.position,
+        (positionCounts.get(player.position) ?? 0) + 1,
+      );
+    });
+
+    for (const slot of rosterSlots) {
+      const count =
+        positionCounts.get(slot.position) ?? 0;
+
+      if (count > Number(slot.slot_count)) {
+        return NextResponse.json(
+          {
+            error:
+              `A ${sport.toUpperCase()} lineup can have at most ` +
+              `${slot.slot_count} ${slot.position}.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const allowedPositions = new Set(
+      rosterSlots.map((slot) => slot.position),
+    );
+
+    const invalidPositionPlayer = players.find(
+      (player) =>
+        !allowedPositions.has(player.position),
+    );
+
+    if (invalidPositionPlayer) {
+      return NextResponse.json(
+        {
+          error:
+            `${invalidPositionPlayer.name} does not fit a valid ` +
+            `${sport.toUpperCase()} roster slot.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: existingLineup, error: existingLineupError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, lineup_players(player_id)")
+        .eq("team_id", teamId)
+        .eq("slate_id", slateId)
+        .maybeSingle();
+
+    if (existingLineupError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to check existing lineup: ` +
+            existingLineupError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const previousPlayerIds = existingLineup
+      ? (
+          (
+            existingLineup as {
+              lineup_players?:
+                | { player_id: number }[]
+                | null;
+            }
+          ).lineup_players ?? []
+        ).map((row) => Number(row.player_id))
+      : [];
+
+    const previousPlayerIdSet =
+      new Set(previousPlayerIds);
+
+    const nextPlayerIdSet =
+      new Set(uniquePlayerIds);
+
+    const addedPlayerIds = uniquePlayerIds.filter(
+      (playerId) =>
+        !previousPlayerIdSet.has(playerId),
+    );
+
+    const removedPlayerIds = previousPlayerIds.filter(
+      (playerId) =>
+        !nextPlayerIdSet.has(playerId),
+    );
+
+    const isSingleNewDraftPick =
+      addedPlayerIds.length === 1 &&
+      removedPlayerIds.length === 0 &&
+      uniquePlayerIds.length ===
+        previousPlayerIds.length + 1;
+
+    let lineupId: number;
+
+    if (existingLineup) {
+      lineupId = Number(existingLineup.id);
+    } else {
+      const { data: createdLineup, error: lineupError } =
+        await supabaseAdmin
+          .from("lineups")
+          .insert({
+            team_id: teamId,
+            slate_id: slateId,
+          })
+          .select("id")
+          .single();
+
+      if (lineupError || !createdLineup) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to create lineup: ` +
+              (lineupError?.message ??
+                "Unknown error"),
+          },
+          { status: 500 },
+        );
+      }
+
+      lineupId = Number(createdLineup.id);
+    }
+
+    if (removedPlayerIds.length > 0) {
+      const { error: removePlayersError } =
+        await supabaseAdmin
+          .from("lineup_players")
+          .delete()
+          .eq("lineup_id", lineupId)
+          .in("player_id", removedPlayerIds);
+
+      if (removePlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to remove lineup players: ` +
+              removePlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    if (addedPlayerIds.length > 0) {
+      const season = getSlateSeason(
+        slate.start_date ?? slate.date,
+      );
+
+      const projectionResult =
+        sport === "nba"
+          ? await getPlayerProjectionsForSeason(season)
+          : null;
+
+      const projectedAt = new Date().toISOString();
+
+      const addedRows = addedPlayerIds.map((playerId) => {
+        const projection =
+          projectionResult?.projections[playerId];
+
+        const projectedFantasyPoints =
+          projection?.projection === null ||
+          projection?.projection === undefined
+            ? null
+            : Number(projection.projection);
+
+        return {
+          lineup_id: lineupId,
+          player_id: playerId,
+          projected_fantasy_points:
+            projectedFantasyPoints,
+          projection_confidence:
+            projection?.confidence ?? null,
+          projection_source:
+            projection?.source ??
+            (sport === "nba" ? "none" : sport),
+          projected_at:
+            projectedFantasyPoints !== null
+              ? projectedAt
+              : null,
+        };
+      });
+
+      const { error: insertPlayersError } =
+        await supabaseAdmin
+          .from("lineup_players")
+          .insert(addedRows);
+
+      if (insertPlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to save newly added lineup players: ` +
+              insertPlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    const notificationRequested =
+      currentUser.role === "admin"
+        ? body.notifyNextDrafter === true
+        : true;
+
+    let draftNotification = null;
+
+    if (
+      isSingleNewDraftPick &&
+      notificationRequested
+    ) {
+      try {
+        draftNotification =
+          await notifyNextDrafter(slateId);
+      } catch (notificationError) {
+        console.error(
+          "Lineup saved, but the next-drafter notification failed",
+          notificationError,
+        );
+
+        draftNotification = {
+          sent: 0,
+          failed: 1,
+          skipped: true,
+          reason:
+            "Notification failed after the lineup was saved.",
+        };
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Lineup saved successfully.",
+      lineupId,
+      slateId: slate.id,
+      slateDate: slate.date,
+      sport,
+      teamName: team.name,
+      addedPlayerIds,
+      removedPlayerIds,
+      draftNotification,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Unexpected server error while saving the lineup.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+============================================================
+DATABASE TYPES: LINEUP_PLAYERS
+============================================================
+lib/draftNotifications.ts-16-        name: string;
+lib/draftNotifications.ts-17-      }
+lib/draftNotifications.ts-18-    | {
+lib/draftNotifications.ts-19-        name: string;
+lib/draftNotifications.ts-20-      }[]
+lib/draftNotifications.ts-21-    | null;
+lib/draftNotifications.ts-22-};
+lib/draftNotifications.ts-23-
+lib/draftNotifications.ts-24-type LineupRow = {
+lib/draftNotifications.ts-25-  team_id: number;
+lib/draftNotifications.ts:26:  lineup_players:
+lib/draftNotifications.ts-27-    | {
+lib/draftNotifications.ts-28-        player_id: number;
+lib/draftNotifications.ts-29-      }[]
+lib/draftNotifications.ts-30-    | null;
+lib/draftNotifications.ts-31-};
+lib/draftNotifications.ts-32-
+lib/draftNotifications.ts-33-type AppUserRow = {
+lib/draftNotifications.ts-34-  id: string;
+lib/draftNotifications.ts-35-  display_name: string;
+lib/draftNotifications.ts-36-};
+lib/draftNotifications.ts-37-
+lib/draftNotifications.ts-38-type NotificationPreferenceRow = {
+lib/draftNotifications.ts-39-  notifications_enabled: boolean;
+lib/draftNotifications.ts-40-  draft_turn_enabled: boolean;
+lib/draftNotifications.ts-41-};
+lib/draftNotifications.ts-42-
+lib/draftNotifications.ts-43-type PlayerPositionRow = {
+lib/draftNotifications.ts-44-  id: number;
+lib/draftNotifications.ts-45-  position: string;
+lib/draftNotifications.ts-46-};
+lib/draftNotifications.ts-47-
+lib/draftNotifications.ts-48-type RosterSlotConfig = {
+lib/draftNotifications.ts-49-  position: string;
+lib/draftNotifications.ts-50-  slot_count: number;
+lib/draftNotifications.ts-51-};
+lib/draftNotifications.ts-52-
+lib/draftNotifications.ts-53-export type DraftNotificationResult = PushResult & {
+lib/draftNotifications.ts-54-  nextTeamId?: number;
+lib/draftNotifications.ts-55-  nextTeamName?: string;
+lib/draftNotifications.ts-56-};
+lib/draftNotifications.ts-57-
+lib/draftNotifications.ts-58-function getRelatedTeamName(row: SlateTeamRow) {
+lib/draftNotifications.ts-59-  if (Array.isArray(row.teams)) {
+lib/draftNotifications.ts-60-    return row.teams[0]?.name ?? `Team ${row.team_id}`;
+lib/draftNotifications.ts-61-  }
+lib/draftNotifications.ts-62-
+lib/draftNotifications.ts-63-  return row.teams?.name ?? `Team ${row.team_id}`;
+lib/draftNotifications.ts-64-}
+lib/draftNotifications.ts-65-
+lib/draftNotifications.ts-66-function getOrdinal(value: number) {
+lib/draftNotifications.ts-67-  const remainder100 = value % 100;
+lib/draftNotifications.ts-68-
+lib/draftNotifications.ts-69-  if (remainder100 >= 11 && remainder100 <= 13) {
+lib/draftNotifications.ts-70-    return `${value}th`;
+lib/draftNotifications.ts-71-  }
+--
+lib/playerFinishedNotifications.ts-14-  sport?: string;
+lib/playerFinishedNotifications.ts-15-};
+lib/playerFinishedNotifications.ts-16-
+lib/playerFinishedNotifications.ts-17-type PlayerInput = {
+lib/playerFinishedNotifications.ts-18-  id: number;
+lib/playerFinishedNotifications.ts-19-  name: string;
+lib/playerFinishedNotifications.ts-20-};
+lib/playerFinishedNotifications.ts-21-
+lib/playerFinishedNotifications.ts-22-type LineupInput = {
+lib/playerFinishedNotifications.ts-23-  team_id: number;
+lib/playerFinishedNotifications.ts:24:  lineup_players: { player_id: number }[] | null;
+lib/playerFinishedNotifications.ts-25-};
+lib/playerFinishedNotifications.ts-26-
+lib/playerFinishedNotifications.ts-27-type PreviousStatusInput = {
+lib/playerFinishedNotifications.ts-28-  playerId: number;
+lib/playerFinishedNotifications.ts-29-  gameStatus: number | null;
+lib/playerFinishedNotifications.ts-30-};
+lib/playerFinishedNotifications.ts-31-
+lib/playerFinishedNotifications.ts-32-type CurrentStatInput = {
+lib/playerFinishedNotifications.ts-33-  player_id: number;
+lib/playerFinishedNotifications.ts-34-  fantasy_points: number | null;
+lib/playerFinishedNotifications.ts-35-  game_status: number | null;
+lib/playerFinishedNotifications.ts-36-};
+lib/playerFinishedNotifications.ts-37-
+lib/playerFinishedNotifications.ts-38-type AppUserRow = {
+lib/playerFinishedNotifications.ts-39-  id: string;
+lib/playerFinishedNotifications.ts-40-  team_id: number;
+lib/playerFinishedNotifications.ts-41-};
+lib/playerFinishedNotifications.ts-42-
+lib/playerFinishedNotifications.ts-43-type PreferenceRow = {
+lib/playerFinishedNotifications.ts-44-  user_id: string;
+lib/playerFinishedNotifications.ts-45-  notifications_enabled: boolean;
+lib/playerFinishedNotifications.ts-46-  player_finished_enabled: boolean;
+lib/playerFinishedNotifications.ts-47-};
+lib/playerFinishedNotifications.ts-48-
+lib/playerFinishedNotifications.ts-49-export async function notifyNewlyFinishedPlayers(input: {
+lib/playerFinishedNotifications.ts-50-  slate: SlateInput;
+lib/playerFinishedNotifications.ts-51-  players: PlayerInput[];
+lib/playerFinishedNotifications.ts-52-  lineups: LineupInput[];
+lib/playerFinishedNotifications.ts-53-  previousStatuses: PreviousStatusInput[];
+lib/playerFinishedNotifications.ts-54-  currentStats: CurrentStatInput[];
+lib/playerFinishedNotifications.ts-55-}) {
+lib/playerFinishedNotifications.ts-56-  const previousStatusMap = new Map(
+lib/playerFinishedNotifications.ts-57-    input.previousStatuses.map((row) => [row.playerId, row.gameStatus])
+lib/playerFinishedNotifications.ts-58-  );
+lib/playerFinishedNotifications.ts-59-
+lib/playerFinishedNotifications.ts-60-  const newlyFinished = input.currentStats.filter((row) => {
+lib/playerFinishedNotifications.ts-61-    const previousStatus = previousStatusMap.get(row.player_id) ?? null;
+lib/playerFinishedNotifications.ts-62-
+lib/playerFinishedNotifications.ts-63-    return previousStatus !== 3 && row.game_status === 3;
+lib/playerFinishedNotifications.ts-64-  });
+lib/playerFinishedNotifications.ts-65-
+lib/playerFinishedNotifications.ts-66-  if (newlyFinished.length === 0) {
+lib/playerFinishedNotifications.ts-67-    return {
+lib/playerFinishedNotifications.ts-68-      attempted: 0,
+lib/playerFinishedNotifications.ts-69-      sent: 0,
+
+============================================================
+SPORT PLAYER ID USAGE
+============================================================
+app/lineups/draft/page.tsx:71:      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+app/lineups/draft/page.tsx:74:        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+app/lineups/draft/page.tsx:172:        nba_player_id: null,
+app/lineups/draft/page.tsx:173:        nfl_player_id: player.nfl_player_id,
+app/lineups/draft/page.tsx:185:        nba_player_id: null,
+app/lineups/draft/page.tsx:186:        nfl_player_id: null,
+app/lineups/draft/page.tsx:210:      nba_player_id: player.nba_player_id,
+app/lineups/draft/page.tsx:211:      nfl_player_id: null,
+app/lineups/draft/page.tsx.before-golf-draft:55:      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+app/lineups/draft/page.tsx.before-golf-draft:56:      : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+app/lineups/draft/page.tsx.before-golf-draft:124:          nba_player_id: null,
+app/lineups/draft/page.tsx.before-golf-draft:125:          nfl_player_id: p.nfl_player_id,
+app/lineups/draft/page.tsx.before-golf-draft:133:          nba_player_id: p.nba_player_id,
+app/lineups/draft/page.tsx.before-golf-draft:134:          nfl_player_id: null,
+app/lineups/scores/page.tsx:66:      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+app/lineups/scores/page.tsx:69:        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+app/lineups/scores/page.tsx:148:        nba_player_id: null,
+app/lineups/scores/page.tsx:149:        nfl_player_id: p.nfl_player_id,
+app/lineups/scores/page.tsx:160:        nba_player_id: null,
+app/lineups/scores/page.tsx:161:        nfl_player_id: null,
+app/lineups/scores/page.tsx:185:      nba_player_id: p.nba_player_id,
+app/lineups/scores/page.tsx:186:      nfl_player_id: null,
+app/lineups/page.tsx:52:      .select("id, name, position_group, is_active, is_playing_today, nba_player_id")
+app/api/lineups/route.ts.before-golf-draft:221:            .select("id, name, position_group, is_active, nba_player_id")
+app/api/refresh-stats/route.ts.save:21:  nba_player_id?: number | null;
+app/api/refresh-stats/route.ts.save:268:  .select("id, name, position_group, is_active, nba_player_id, team_abbreviation")
+app/api/refresh-stats/route.ts.save:279:  (player) => player.is_active && player.nba_player_id
+app/api/refresh-stats/route.ts.save:306:      if (player.nba_player_id) {
+app/api/refresh-stats/route.ts.save:307:        localPlayersByNbaId.set(player.nba_player_id, player);
+app/api/refresh-stats/route.ts:27:  nba_player_id?: number | null;
+app/api/refresh-stats/route.ts:291:      .select("id, name, nba_player_id, team_abbreviation")
+app/api/refresh-stats/route.ts:305:      if (player.nba_player_id) {
+app/api/refresh-stats/route.ts:306:        playerByNbaId.set(Number(player.nba_player_id), player);
+app/api/sync-players/route.ts:16:  nba_player_id: number | null;
+app/api/sync-players/route.ts:190:          "id, name, nba_player_id, nba_display_name, position_group, is_active, team_abbreviation, roster_status, is_playing_today"
+app/api/sync-players/route.ts:206:      if (player.nba_player_id) {
+app/api/sync-players/route.ts:207:        existingByNbaId.set(player.nba_player_id, player);
+app/api/sync-players/route.ts:214:      nba_player_id: number;
+app/api/sync-players/route.ts:224:      nba_player_id: number;
+app/api/sync-players/route.ts:259:          nba_player_id: nbaPlayerId,
+app/api/sync-players/route.ts:269:          nba_player_id: nbaPlayerId,
+app/api/sync-players/route.ts:288:          nba_player_id: row.nba_player_id,
+app/api/player-history/route.ts:78:            ? "id, name, external_id:nfl_player_id"
+app/api/player-history/route.ts:79:            : "id, name, external_id:nba_player_id"
+app/api/player-history/route.ts:222:          nba_player_id: sport === "nba" ? row.external_id : null,
+app/api/player-history/route.ts:223:          nfl_player_id: sport === "nfl" ? row.external_id : null,
+app/api/home-summary/route.ts:72:  nba_player_id: number;
+app/api/home-summary/route.ts:157:        ? "id, name, external_id:nfl_player_id"
+app/api/home-summary/route.ts:158:        : "id, name, external_id:nba_player_id";
+app/api/home-summary/route.ts:210:            .select("season, nba_player_id, fantasy_points")
+app/api/home-summary/route.ts:395:          nbaAverageByNbaId.set(Number(row.nba_player_id), average);
+app/api/admin/backfill-player-stats/route.ts:23:  nba_player_id?: number | null;
+app/api/admin/backfill-player-stats/route.ts:113:    nba_player_id: number | null;
+app/api/admin/backfill-player-stats/route.ts:290:    .select("id, name, position_group, is_active, nba_player_id, team_abbreviation")
+app/api/admin/backfill-player-stats/route.ts:298:    (player) => player.is_active && player.nba_player_id
+app/api/admin/backfill-player-stats/route.ts:321:    if (player.nba_player_id) {
+app/api/admin/backfill-player-stats/route.ts:322:      localPlayersByNbaId.set(Number(player.nba_player_id), player);
+app/api/admin/backfill-player-stats/route.ts:541:      nba_player_id: player.nba_player_id ?? null,
+app/api/team-slate-roster/route.ts:91:            .select("id, name, nfl_player_id, position")
+app/api/team-slate-roster/route.ts:162:          .select("id, name, nba_player_id, position_group")
+app/api/team-slate-roster/route.ts:200:          nbaPlayerId: player?.nba_player_id ?? null,
+app/api/season-awards/route.ts:16:  nba_player_id: number | null;
+app/api/season-awards/route.ts:57:      supabaseAdmin.from("players").select("id, name, position_group, nba_player_id"),
+app/api/season-awards/route.ts:142:          nbaPlayerId: player.nba_player_id,
+app/api/sync-players-nfl/route.ts:17:  nfl_player_id: number | null;
+app/api/sync-players-nfl/route.ts:80:          "id, name, nfl_player_id, position, team_abbreviation, is_active, is_playing_this_week"
+app/api/sync-players-nfl/route.ts:97:      if (player.nfl_player_id) {
+app/api/sync-players-nfl/route.ts:98:        existingByEspnId.set(player.nfl_player_id, player);
+app/api/sync-players-nfl/route.ts:105:      nfl_player_id: number;
+app/api/sync-players-nfl/route.ts:115:      nfl_player_id: number;
+app/api/sync-players-nfl/route.ts:141:            nfl_player_id: espnId,
+app/api/sync-players-nfl/route.ts:151:            nfl_player_id: espnId,
+app/api/sync-players-nfl/route.ts:187:        .upsert(inserts, { onConflict: "nfl_player_id" })
+app/api/refresh-stats-nfl/route.ts:34:  nfl_player_id: number | null;
+app/api/refresh-stats-nfl/route.ts:133:      .select("id, name, nfl_player_id, team_abbreviation")
+app/api/refresh-stats-nfl/route.ts:149:      if (player.nfl_player_id) {
+app/api/refresh-stats-nfl/route.ts:150:        playerByEspnId.set(String(player.nfl_player_id), player);
+app/player-history/page.tsx:13:  nba_player_id: number | null;
+app/player-history/page.tsx:14:  nfl_player_id: number | null;
+app/player-history/page.tsx:213:      nba_player_id: row.nba_player_id,
+app/player-history/page.tsx:379:                            nbaPlayerId={row.nba_player_id}
+app/player-history/page.tsx:380:                            nflPlayerId={row.nfl_player_id}
+app/page.tsx:116:    nba_player_id: row.nbaPlayerId,
+app/page.tsx:117:    nfl_player_id: row.nflPlayerId,
+components/lineups/SlotDraftModal.tsx:309:                          player.nba_player_id
+components/lineups/SlotDraftModal.tsx:312:                          player.nfl_player_id
+components/lineups/PlayerPool.tsx:382:                    player.nba_player_id
+components/lineups/PlayerPool.tsx:385:                    player.nfl_player_id
+components/lineups/types.ts:26:  nba_player_id?: number | null;
+components/lineups/types.ts:27:  nfl_player_id?: number | null;
+components/lineups/DraftRosterCourt.tsx:65:            nbaPlayerId={player.nba_player_id}
+components/lineups/DraftRosterCourt.tsx:66:            nflPlayerId={player.nfl_player_id}
+components/lineups/LeagueLineupCards.tsx:72:          nbaPlayerId={player.nba_player_id}
+components/lineups/ScoresDashboard.tsx:728:                        row.player.nba_player_id
+components/lineups/PlayerModal.tsx:348:              nbaPlayerId={currentPlayer.nba_player_id}
+components/lineups/PlayerModal.tsx:349:              nflPlayerId={currentPlayer.nfl_player_id}
+components/lineups/PlayerPool.tsx.before-golf-polish:332:                    player.nba_player_id
+components/lineups/PlayerPool.tsx.before-golf-polish:335:                    player.nfl_player_id
+components/lineups/SlotDraftModal.tsx.before-golf-polish:286:                          player.nba_player_id
+components/lineups/SlotDraftModal.tsx.before-golf-polish:289:                          player.nfl_player_id
+components/lineups/DraftRosterCourt.tsx.before-golf-headshots:65:            nbaPlayerId={player.nba_player_id}
+components/lineups/PlayerPool.tsx.before-golf-empty-state:380:                    player.nba_player_id
+components/lineups/PlayerPool.tsx.before-golf-empty-state:383:                    player.nfl_player_id
+lib/playerProjections.ts:6:  nba_player_id: number | null;
+lib/playerProjections.ts:69:    .select("id,name,nba_player_id,is_active")
+lib/playerProjections.ts:93:    .select("season,nba_player_id,player_name,fantasy_points")
+lib/playerProjections.ts:101:    nbaAverageByNbaId.set(Number(row.nba_player_id), Number(row.fantasy_points));
+lib/playerProjections.ts:225:    const nbaSeasonAverage = player.nba_player_id
+lib/playerProjections.ts:226:      ? nbaAverageByNbaId.get(Number(player.nba_player_id)) ?? null

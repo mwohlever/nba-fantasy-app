@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type {
   GolfHoleStat,
@@ -77,6 +78,59 @@ function holeValue(hole: GolfHoleStat) {
     : String(hole.relative_to_par);
 }
 
+function holePar(hole: GolfHoleStat | null | undefined) {
+  if (
+    hole?.par !== null &&
+    hole?.par !== undefined &&
+    Number.isFinite(Number(hole.par))
+  ) {
+    return Number(hole.par);
+  }
+
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined ||
+    hole.relative_to_par === null ||
+    hole.relative_to_par === undefined
+  ) {
+    return null;
+  }
+
+  const par =
+    Number(hole.strokes) -
+    Number(hole.relative_to_par);
+
+  return Number.isFinite(par) ? par : null;
+}
+
+function holeTitle(
+  holeNumber: number,
+  hole: GolfHoleStat,
+) {
+  const par = holePar(hole);
+  const yardage =
+    hole.yards === null ||
+    hole.yards === undefined
+      ? null
+      : Number(hole.yards);
+
+  const courseDetail = [
+    `Hole ${holeNumber}`,
+    par === null ? null : `Par ${par}`,
+    yardage === null ? null : `${yardage} yards`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (hole.strokes === null) {
+    return `${courseDetail} · Not played`;
+  }
+
+  return `${courseDetail} · ${hole.strokes} strokes (${holeValue(
+    hole,
+  )})`;
+}
+
 function PenaltyRound({
   roundNumber,
   score,
@@ -121,78 +175,156 @@ function PenaltyRound({
   );
 }
 
-function RoundScorecard({ round }: { round: GolfRoundStat }) {
+function formatGolfTeeTime(
+  value: string | null | undefined,
+) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function RoundScorecard({
+  round,
+  contextLabel,
+  isExpanded,
+  onToggle,
+}: {
+  round: GolfRoundStat;
+  contextLabel: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
   const holesByNumber = new Map(
     round.holes.map((hole) => [hole.hole_number, hole]),
   );
 
+  const roundProgress =
+    round.holes_completed >= 18
+      ? "Complete"
+      : round.holes_completed > 0
+        ? `Thru ${round.holes_completed}`
+        : formatGolfTeeTime(
+            round.tee_time ?? round.tee_time_raw,
+          ) ?? "Not started";
+
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <header className="mb-4 flex items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Round {round.round_number}
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isExpanded}
+        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-slate-50"
+      >
+        <div className="min-w-0">
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">
+            {contextLabel}
           </span>
 
-          <div className="mt-1 text-sm text-slate-600">
-            {round.holes_completed} holes completed
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <strong className="text-base text-slate-950">
+              Round {round.round_number}
+            </strong>
+
+            <span className="text-sm text-slate-500">
+              {roundProgress}
+            </span>
           </div>
         </div>
 
-        <div className="text-right">
-          <strong className="text-2xl font-black text-slate-950">
-            {formatToPar(round.score_to_par)}
-          </strong>
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="text-right">
+            <strong className="block text-xl font-black text-slate-950">
+              {formatToPar(round.score_to_par)}
+            </strong>
 
-          <span className="ml-2 text-xs font-bold uppercase text-slate-500">
-            {round.strokes ?? "—"} strokes
+            <span className="block text-[10px] font-bold uppercase text-slate-500">
+              {round.strokes ?? "—"} strokes
+            </span>
+          </div>
+
+          <span
+            aria-hidden="true"
+            className={`flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-lg font-bold text-slate-600 transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          >
+            ⌄
           </span>
         </div>
-      </header>
+      </button>
 
-      <div className="overflow-x-auto pb-2">
-        <div className="grid min-w-[700px] grid-cols-18 gap-1.5">
-          {Array.from({ length: 18 }, (_, index) => index + 1).map(
-            (holeNumber) => (
-              <div
-                key={`number-${holeNumber}`}
-                className="text-center text-[10px] font-bold text-slate-400"
-              >
-                {holeNumber}
-              </div>
-            ),
-          )}
+      {isExpanded ? (
+        <div className="border-t border-slate-200 px-4 pb-4 pt-4">
+          <div className="overflow-x-auto pb-2">
+            <div className="grid min-w-[700px] grid-cols-18 gap-1.5">
+              {Array.from({ length: 18 }, (_, index) => index + 1).map(
+                (holeNumber) => (
+                  <div
+                    key={`number-${holeNumber}`}
+                    className="text-center text-[10px] font-bold text-slate-400"
+                  >
+                    {holeNumber}
+                  </div>
+                ),
+              )}
 
-          {Array.from({ length: 18 }, (_, index) => index + 1).map(
-            (holeNumber) => {
-              const hole =
-                holesByNumber.get(holeNumber) ??
-                ({
-                  hole_number: holeNumber,
-                  strokes: null,
-                  relative_to_par: null,
-                  score_display: null,
-                } satisfies GolfHoleStat);
+              {Array.from({ length: 18 }, (_, index) => index + 1).map(
+                (holeNumber) => (
+                  <div
+                    key={`par-${holeNumber}`}
+                    className={
+                      holeNumber === 1
+                        ? "relative text-center text-[9px] font-bold text-slate-500 before:absolute before:right-full before:mr-2 before:content-['Par']"
+                        : "text-center text-[9px] font-bold text-slate-500"
+                    }
+                  >
+                    {holePar(
+                      holesByNumber.get(holeNumber),
+                    ) ?? "—"}
+                  </div>
+                ),
+              )}
 
-              return (
-                <div
-                  key={`score-${holeNumber}`}
-                  className={`flex h-9 items-center justify-center rounded-lg border text-xs font-black ${holeClass(
-                    hole,
-                  )}`}
-                  title={
-                    hole.strokes
-                      ? `Hole ${holeNumber}: ${hole.strokes} strokes`
-                      : `Hole ${holeNumber}: not played`
-                  }
-                >
-                  {holeValue(hole)}
-                </div>
-              );
-            },
-          )}
+              {Array.from({ length: 18 }, (_, index) => index + 1).map(
+                (holeNumber) => {
+                  const hole =
+                    holesByNumber.get(holeNumber) ??
+                    ({
+                      hole_number: holeNumber,
+                      strokes: null,
+                      relative_to_par: null,
+                      score_display: null,
+                    } satisfies GolfHoleStat);
+
+                  return (
+                    <div
+                      key={`score-${holeNumber}`}
+                      className={`flex h-9 items-center justify-center rounded-lg border text-xs font-black ${holeClass(
+                        hole,
+                      )}`}
+                      title={holeTitle(holeNumber, hole)}
+                    >
+                      {holeValue(hole)}
+                    </div>
+                  );
+                },
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
     </section>
   );
 }
@@ -205,6 +337,49 @@ export default function GolfPlayerModal({
   const rounds = [...(stat?.rounds ?? [])].sort(
     (a, b) => a.round_number - b.round_number,
   );
+
+  const activelyPlayingRound =
+    rounds
+      .filter(
+        (round) =>
+          round.holes_completed > 0 &&
+          round.holes_completed < 18,
+      )
+      .at(-1) ?? null;
+
+  const mostRecentPlayedRound =
+    rounds
+      .filter(
+        (round) =>
+          round.holes_completed > 0 ||
+          round.strokes !== null,
+      )
+      .at(-1) ?? null;
+
+  const primaryRound =
+    activelyPlayingRound ?? mostRecentPlayedRound;
+
+  const visibleRounds = rounds.filter(
+    (round) =>
+      round.holes_completed > 0 ||
+      round.strokes !== null ||
+      Boolean(round.tee_time || round.tee_time_raw),
+  );
+
+  const [expandedRoundNumbers, setExpandedRoundNumbers] =
+    useState<number[]>(() =>
+      primaryRound ? [primaryRound.round_number] : [],
+    );
+
+  function toggleRound(roundNumber: number) {
+    setExpandedRoundNumbers((current) =>
+      current.includes(roundNumber)
+        ? current.filter(
+            (value) => value !== roundNumber,
+          )
+        : [...current, roundNumber],
+    );
+  }
 
   const completedRoundNumbers = new Set(
     rounds
@@ -330,12 +505,67 @@ export default function GolfPlayerModal({
             </div>
           ) : (
             <>
-              {rounds.map((round) => (
-                <RoundScorecard
-                  key={`played-${round.round_number}`}
-                  round={round}
-                />
-              ))}
+              {[...visibleRounds]
+                .sort((a, b) => {
+                  const aIsPrimary =
+                    a.round_number ===
+                    primaryRound?.round_number;
+
+                  const bIsPrimary =
+                    b.round_number ===
+                    primaryRound?.round_number;
+
+                  if (aIsPrimary) return -1;
+                  if (bIsPrimary) return 1;
+
+                  const aIsUpcoming =
+                    a.holes_completed === 0 &&
+                    a.strokes === null;
+
+                  const bIsUpcoming =
+                    b.holes_completed === 0 &&
+                    b.strokes === null;
+
+                  if (aIsUpcoming && bIsUpcoming) {
+                    return a.round_number - b.round_number;
+                  }
+
+                  if (aIsUpcoming) return -1;
+                  if (bIsUpcoming) return 1;
+
+                  return b.round_number - a.round_number;
+                })
+                .map((round) => {
+                  const isPrimary =
+                    round.round_number ===
+                    primaryRound?.round_number;
+
+                  const isUpcoming =
+                    round.holes_completed === 0 &&
+                    round.strokes === null;
+
+                  const contextLabel = isPrimary
+                    ? activelyPlayingRound
+                      ? "Current round"
+                      : "Most recent round"
+                    : isUpcoming
+                      ? "Upcoming round"
+                      : "Previous round";
+
+                  return (
+                    <RoundScorecard
+                      key={`played-${round.round_number}`}
+                      round={round}
+                      contextLabel={contextLabel}
+                      isExpanded={expandedRoundNumbers.includes(
+                        round.round_number,
+                      )}
+                      onToggle={() =>
+                        toggleRound(round.round_number)
+                      }
+                    />
+                  );
+                })}
 
               {penaltyRoundNumbers.map(
                 (roundNumber) => (

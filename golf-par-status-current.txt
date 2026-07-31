@@ -1,0 +1,1682 @@
+===== GOLF PROVIDER TYPES AND PAR REFERENCES =====
+1-const ESPN_GOLF_SCOREBOARD_URL =
+2-  "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
+3-
+4-export type GolfTournamentStatus =
+5-  "scheduled" | "in_progress" | "final" | "unknown";
+6-
+7-export type GolfCompetitorStatus =
+8-  | "scheduled"
+9-  | "active"
+10-  | "finished"
+11-  | "cut"
+12-  | "withdrawn"
+13-  | "disqualified"
+14-  | "did_not_start";
+15-
+16-type UnknownRecord = Record<string, unknown>;
+17-
+18-type EspnStatusType = {
+19-  name?: string;
+20-  state?: string;
+21-  completed?: boolean;
+22-  description?: string;
+23-  detail?: string;
+24-  shortDetail?: string;
+25-};
+26-
+27:type EspnHole = {
+28-  value?: number;
+29-  displayValue?: string;
+30-  period?: number;
+31:  scoreType?: {
+32-    displayValue?: string;
+33-  };
+34-};
+35-
+36-type EspnStatistic = {
+37-  value?: number;
+38-  displayValue?: string;
+39-  name?: string;
+40-  label?: string;
+41-  abbreviation?: string;
+42-};
+43-
+44-type EspnStatistics = {
+45-  categories?: Array<{
+46-    name?: string;
+47-    displayName?: string;
+48-    stats?: EspnStatistic[];
+49-  }>;
+50-};
+51-
+52:type EspnRound = {
+53-  value?: number;
+54-  displayValue?: string;
+55-  period?: number;
+56:  linescores?: EspnHole[];
+57-  statistics?: EspnStatistics;
+58-};
+59-
+60-type EspnCompetitor = {
+61-  id?: string;
+62-  uid?: string;
+63-  order?: number;
+64-  score?: string;
+65-  athlete?: {
+66-    fullName?: string;
+67-    displayName?: string;
+68-    shortName?: string;
+69-    links?: Array<{
+70-      href?: string;
+71-      rel?: string[];
+72-    }>;
+73-    flag?: {
+74-      href?: string;
+75-      alt?: string;
+76-    };
+77-  };
+78:  linescores?: EspnRound[];
+79-  statistics?: unknown[];
+80-};
+81-
+82-type EspnCompetition = {
+83-  status?: {
+84-    period?: number;
+85-    type?: EspnStatusType;
+86-  };
+87-  competitors?: EspnCompetitor[];
+88-  broadcasts?: Array<{
+89-    market?: string;
+90-    names?: string[];
+91-  }>;
+92-};
+93-
+94-type EspnEvent = {
+95-  id?: string;
+96-  name?: string;
+97-  shortName?: string;
+98-  date?: string;
+99-  endDate?: string;
+100-  status?: {
+101-    type?: EspnStatusType;
+102-  };
+103-  competitions?: EspnCompetition[];
+104-  links?: Array<{
+105-    href?: string;
+106-    rel?: string[];
+107-  }>;
+108-};
+109-
+110-type EspnCalendarEntry = {
+111-  id?: string;
+112-  label?: string;
+113-  startDate?: string;
+114-  endDate?: string;
+115-  event?: {
+116-    $ref?: string;
+117-  };
+118-};
+119-
+120-type EspnGolfScoreboardPayload = {
+121-  season?: {
+122-    year?: number;
+123-    type?: number;
+124-  };
+125-  leagues?: Array<{
+126-    calendar?: EspnCalendarEntry[];
+127-  }>;
+128-  events?: EspnEvent[];
+129-};
+130-
+131-export type GolfScheduleEvent = {
+132-  espnEventId: string;
+133-  name: string;
+134-  startDate: string | null;
+135-  endDate: string | null;
+136-};
+137-
+138:export type GolfHole = {
+139-  holeNumber: number;
+140-  strokes: number | null;
+141-  relativeToPar: number | null;
+142-  scoreDisplay: string | null;
+143-};
+144-
+145-export type GolfRound = {
+146-  roundNumber: number;
+147-  scoreToPar: number | null;
+148-  scoreDisplay: string | null;
+149-  strokes: number | null;
+150-  holesCompleted: number;
+151-  teeTime: string | null;
+152-  teeTimeRaw: string | null;
+153-  holes: GolfHole[];
+154-};
+155-
+156-export type GolfCompetitor = {
+157-  espnPlayerId: string;
+158-  displayName: string;
+159-  shortName: string | null;
+160-  country: string | null;
+161-  countryFlagUrl: string | null;
+162-  playerUrl: string | null;
+163-
+164-  leaderboardOrder: number | null;
+165-  officialScoreToPar: number | null;
+166-  officialScoreDisplay: string | null;
+167-
+168-  roundsCompleted: number;
+169-  holesCompleted: number;
+170-  currentRound: number | null;
+171-  lastHole: number | null;
+172-
+173-  status: GolfCompetitorStatus;
+174-  teeTime: string | null;
+175-  teeTimeRaw: string | null;
+176-
+177-  rounds: GolfRound[];
+178-};
+179-
+180-export type GolfTournament = {
+181-  espnEventId: string;
+182-  name: string;
+183-  startDate: string | null;
+184-  endDate: string | null;
+185-  status: GolfTournamentStatus;
+186-  statusDescription: string | null;
+187-  currentRound: number | null;
+188-  completed: boolean;
+189-  competitors: GolfCompetitor[];
+190-};
+191-
+192-function safeArray<T>(value: T[] | null | undefined): T[] {
+193-  return Array.isArray(value) ? value : [];
+194-}
+195-
+196-function isRecord(value: unknown): value is UnknownRecord {
+197-  return typeof value === "object" && value !== null;
+198-}
+199-
+200:function parseRelativeToPar(value: unknown): number | null {
+201-  if (typeof value === "number" && Number.isFinite(value)) {
+202-    return value;
+203-  }
+204-
+205-  if (typeof value !== "string") {
+206-    return null;
+207-  }
+208-
+209-  const normalized = value.trim().toUpperCase();
+210-
+211-  if (!normalized) return null;
+212-  if (normalized === "E") return 0;
+213-
+214:  const parsed = Number(normalized.replace("+", ""));
+215:  return Number.isFinite(parsed) ? parsed : null;
+216-}
+217-
+218:function parseEspnDate(value: string | null | undefined): string | null {
+219-  if (!value) return null;
+220-
+221:  const parsed = new Date(value);
+222:  if (Number.isNaN(parsed.getTime())) return null;
+223-
+224:  return parsed.toISOString();
+225-}
+226-
+227-function findPlayerUrl(competitor: EspnCompetitor): string | null {
+228-  const links = safeArray(competitor.athlete?.links);
+229-
+230-  const preferred =
+231-    links.find((link) => link.rel?.includes("playercard")) ??
+232-    links.find((link) => link.rel?.includes("overview")) ??
+233-    links[0];
+234-
+235-  return preferred?.href ?? null;
+236-}
+237-
+238-function findRoundTeeTimeRaw(round: EspnRound): string | null {
+239-  const categories = safeArray(round.statistics?.categories);
+240-
+241-  for (const category of categories) {
+242-    for (const stat of safeArray(category.stats)) {
+243-      const name = [stat.name, stat.label, stat.abbreviation]
+244-        .filter(Boolean)
+245-        .join(" ")
+246-        .toLowerCase();
+247-
+248-      if (
+249-        name.includes("tee") &&
+250-        typeof stat.displayValue === "string" &&
+251-        stat.displayValue.trim()
+252-      ) {
+253-        return stat.displayValue.trim();
+254-      }
+255-    }
+256-  }
+257-
+258-  // The current ESPN golf payload includes an unnamed tee-time value as the
+259-  // final round statistic. Preserve the raw value, but keep this fallback
+260-  // isolated here so the rest of the app never depends on the array position.
+261-  for (const category of categories) {
+262-    const stats = safeArray(category.stats);
+263-    const finalStat = stats.at(-1);
+264-
+265-    if (
+266-      finalStat &&
+267-      finalStat.value === undefined &&
+268-      typeof finalStat.displayValue === "string" &&
+269-      finalStat.displayValue.trim()
+270-    ) {
+271-      return finalStat.displayValue.trim();
+272-    }
+273-  }
+274-
+275-  return null;
+276-}
+277-
+278:function parseTeeTime(raw: string | null): string | null {
+279-  if (!raw) return null;
+280-
+281:  const parsed = new Date(raw);
+282:  if (Number.isNaN(parsed.getTime())) return null;
+283-
+284:  return parsed.toISOString();
+285-}
+286-
+287-function normalizeTournamentStatus(
+288-  status: EspnStatusType | undefined,
+289-): GolfTournamentStatus {
+290-  const state = status?.state?.toLowerCase();
+291-  const name = status?.name?.toUpperCase();
+292-
+293-  if (status?.completed || state === "post" || name === "STATUS_FINAL") {
+294-    return "final";
+295-  }
+296-
+297-  if (state === "in" || name === "STATUS_IN_PROGRESS") {
+298-    return "in_progress";
+299-  }
+300-
+301-  if (state === "pre" || name === "STATUS_SCHEDULED") {
+302-    return "scheduled";
+303-  }
+304-
+305-  return "unknown";
+306-}
+307-
+308-function roundHasActivity(round: GolfRound): boolean {
+309-  return (
+310-    round.holesCompleted > 0 || (round.strokes !== null && round.strokes > 0)
+311-  );
+312-}
+313-
+314-function inferCompetitorStatus(input: {
+315-  tournamentStatus: GolfTournamentStatus;
+316-  tournamentCurrentRound: number | null;
+317-  rounds: GolfRound[];
+318-}): GolfCompetitorStatus {
+319-  const playedRounds = input.rounds.filter(roundHasActivity);
+320-
+321-  const completedRounds = playedRounds.filter(
+322-    (round) => round.holesCompleted === 18,
+323-  ).length;
+324-
+325-  const hasStarted = playedRounds.length > 0;
+326-
+327-  const hasPartialRound = playedRounds.some(
+328-    (round) => round.holesCompleted > 0 && round.holesCompleted < 18,
+329-  );
+330-
+331-  const hasRoundThreeOrLaterActivity = playedRounds.some(
+332-    (round) => round.roundNumber >= 3,
+333-  );
+334-
+335-  const tournamentHasReachedRoundThree =
+336-    input.tournamentStatus === "final" ||
+337-    (input.tournamentCurrentRound ?? 0) >= 3;
+338-
+339-  if (input.tournamentStatus === "scheduled") {
+340-    return "scheduled";
+341-  }
+342-
+343-  if (!hasStarted) {
+344-    return input.tournamentStatus === "final" ? "did_not_start" : "scheduled";
+345-  }
+346-
+347-  if (completedRounds >= 4 && input.tournamentStatus === "final") {
+348-    return "finished";
+349-  }
+350-
+351-  if (
+352-    completedRounds === 2 &&
+353-    !hasRoundThreeOrLaterActivity &&
+354-    tournamentHasReachedRoundThree
+355-  ) {
+356-    return "cut";
+357-  }
+358-
+359-  /*
+360-   * Do not infer withdrawal solely from missing rounds.
+361-   *
+362-   * ESPN's scoreboard payload can report an event as final before all
+363-   * tournament rounds are represented. That previously classified anyone
+364-   * with fewer than four rounds as WD and applied missing-round penalties.
+365-   *
+366-   * Until ESPN provides an explicit competitor-level WD/DQ status, a golfer
+367-   * who started and was not identified as cut should be treated as finished
+368-   * after a genuinely final event.
+369-   */
+370-  if (input.tournamentStatus === "final") {
+371-    return "finished";
+372-  }
+373-
+374-  return "active";
+375-}
+376-
+377:function parseRound(round: EspnRound): GolfRound | null {
+378-  const roundNumber = Number(round.period);
+379-
+380-  if (!Number.isInteger(roundNumber) || roundNumber < 1) {
+381-    return null;
+382-  }
+383-
+384:  const holes = safeArray(round.linescores)
+385-    .map((hole): GolfHole | null => {
+386-      const holeNumber = Number(hole.period);
+387-
+388-      if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
+389-        return null;
+390-      }
+391-
+392-      const strokes =
+393-        typeof hole.value === "number" &&
+394-        Number.isFinite(hole.value) &&
+395-        hole.value > 0
+396-          ? hole.value
+397-          : null;
+398-
+399-      return {
+400-        holeNumber,
+401-        strokes,
+402-        relativeToPar:
+403-          strokes === null
+404-            ? null
+405:            : parseRelativeToPar(hole.scoreType?.displayValue),
+406-        scoreDisplay: strokes === null ? null : (hole.displayValue ?? null),
+407-      };
+408-    })
+409-    .filter((hole): hole is GolfHole => hole !== null && hole.strokes !== null)
+410-    .sort((a, b) => a.holeNumber - b.holeNumber);
+411-
+412-  const rawStrokes =
+413-    typeof round.value === "number" && Number.isFinite(round.value)
+414-      ? round.value
+415-      : null;
+416-
+417-  const displayValue = round.displayValue?.trim() ?? null;
+418-
+419-  const isPlaceholderRound =
+420-    holes.length === 0 &&
+421-    (rawStrokes === 0 || displayValue === "-" || displayValue === "");
+422-
+423-  const teeTimeRaw = findRoundTeeTimeRaw(round);
+424-
+425-  return {
+426-    roundNumber,
+427:    scoreToPar: isPlaceholderRound ? null : parseRelativeToPar(displayValue),
+428-    scoreDisplay: isPlaceholderRound ? null : displayValue,
+429-    strokes: isPlaceholderRound ? null : rawStrokes,
+430-    holesCompleted: holes.length,
+431:    teeTime: parseTeeTime(teeTimeRaw),
+432-    teeTimeRaw,
+433-    holes,
+434-  };
+435-}
+436-
+437:function parseCompetitor(
+438-  competitor: EspnCompetitor,
+439-  tournamentStatus: GolfTournamentStatus,
+440-  tournamentCurrentRound: number | null,
+441-): GolfCompetitor | null {
+442-  const espnPlayerId = String(competitor.id ?? "").trim();
+443-  const displayName = String(
+444-    competitor.athlete?.displayName ?? competitor.athlete?.fullName ?? "",
+445-  ).trim();
+446-
+447-  if (!espnPlayerId || !displayName) {
+448-    return null;
+449-  }
+450-
+451:  const rounds = safeArray(competitor.linescores)
+452:    .map(parseRound)
+453-    .filter((round): round is GolfRound => round !== null)
+454-    .sort((a, b) => a.roundNumber - b.roundNumber);
+455-
+456-  const roundsWithActivity = rounds.filter(roundHasActivity);
+457-
+458-  const currentRound =
+459-    roundsWithActivity.length > 0
+460-      ? Math.max(...roundsWithActivity.map((round) => round.roundNumber))
+461-      : null;
+462-
+463-  const currentRoundRecord =
+464-    currentRound === null
+465-      ? null
+466-      : (rounds.find((round) => round.roundNumber === currentRound) ?? null);
+467-
+468-  const lastHole =
+469-    currentRoundRecord && currentRoundRecord.holes.length > 0
+470-      ? (currentRoundRecord.holes.at(-1)?.holeNumber ?? null)
+471-      : null;
+472-
+473-  const teeTimeRaw =
+474-    currentRoundRecord?.teeTimeRaw ??
+475-    rounds.find((round) => round.teeTimeRaw)?.teeTimeRaw ??
+476-    null;
+477-
+478-  const teeTime =
+479-    currentRoundRecord?.teeTime ??
+480-    rounds.find((round) => round.teeTime)?.teeTime ??
+481-    null;
+482-
+483-  return {
+484-    espnPlayerId,
+485-    displayName,
+486-    shortName: competitor.athlete?.shortName ?? null,
+487-    country: competitor.athlete?.flag?.alt ?? null,
+488-    countryFlagUrl: competitor.athlete?.flag?.href ?? null,
+489-    playerUrl: findPlayerUrl(competitor),
+490-
+491-    leaderboardOrder:
+492-      typeof competitor.order === "number" ? competitor.order : null,
+493:    officialScoreToPar: parseRelativeToPar(competitor.score),
+494-    officialScoreDisplay: competitor.score ?? null,
+495-
+496-    roundsCompleted: rounds.filter((round) => round.holesCompleted === 18)
+497-      .length,
+498-    holesCompleted: rounds.reduce(
+499-      (total, round) => total + round.holesCompleted,
+500-      0,
+501-    ),
+502-    currentRound,
+503-    lastHole,
+504-
+505-    status: inferCompetitorStatus({
+506-      tournamentStatus,
+507-      tournamentCurrentRound,
+508-      rounds,
+509-    }),
+510-    teeTime,
+511-    teeTimeRaw,
+512-
+513-    rounds,
+514-  };
+515-}
+516-
+517:function parseTournament(event: EspnEvent): GolfTournament | null {
+518-  const espnEventId = String(event.id ?? "").trim();
+519-  const name = String(event.name ?? event.shortName ?? "").trim();
+520-
+521-  if (!espnEventId || !name) {
+522-    return null;
+523-  }
+524-
+525-  const competition = event.competitions?.[0];
+526-  const eventStatus = event.status?.type;
+527-  const competitionStatus = competition?.status?.type;
+528-  const statusSource = competitionStatus ?? eventStatus;
+529-
+530-  const reportedStatus = normalizeTournamentStatus(statusSource);
+531-
+532-  const tournamentCurrentRound =
+533-    typeof competition?.status?.period === "number"
+534-      ? competition.status.period
+535-      : null;
+536-
+537:  const scheduledEndDate = parseEspnDate(event.endDate);
+538-  const scheduledEndTime =
+539-    scheduledEndDate === null
+540-      ? null
+541-      : new Date(scheduledEndDate).getTime();
+542-
+543-  const eventHasNotEnded =
+544-    scheduledEndTime !== null &&
+545-    scheduledEndTime >= Date.now();
+546-
+547-  const isPrematureEarlyRoundFinal =
+548-    reportedStatus === "final" &&
+549-    tournamentCurrentRound !== null &&
+550-    tournamentCurrentRound >= 1 &&
+551-    tournamentCurrentRound < 4 &&
+552-    eventHasNotEnded;
+553-
+554-  const normalizedReportedStatus: GolfTournamentStatus =
+555-    isPrematureEarlyRoundFinal
+556-      ? "in_progress"
+557-      : reportedStatus;
+558-
+559-  const preliminaryCompetitors = safeArray(competition?.competitors)
+560-    .map((competitor) =>
+561:      parseCompetitor(
+562-        competitor,
+563-        normalizedReportedStatus,
+564-        tournamentCurrentRound,
+565-      ),
+566-    )
+567-    .filter(
+568-      (competitor): competitor is GolfCompetitor =>
+569-        competitor !== null,
+570-    );
+571-
+572-  /*
+573-   * ESPN can briefly return STATUS_FINAL for the event while the current
+574:   * tournament payload still contains golfers in a partially completed
+575-   * round. Treating that as a true final incorrectly turns every golfer
+576-   * with fewer than four rounds into a withdrawal and applies penalties.
+577-   *
+578:   * A partial round is stronger evidence that the tournament is still live.
+579-   */
+580-  const hasPartialRoundActivity = preliminaryCompetitors.some(
+581-    (competitor) =>
+582-      competitor.rounds.some(
+583-        (round) =>
+584-          round.holesCompleted > 0 &&
+585-          round.holesCompleted < 18,
+586-      ),
+587-  );
+588-
+589-  const status: GolfTournamentStatus =
+590-    normalizedReportedStatus === "final" && hasPartialRoundActivity
+591-      ? "in_progress"
+592-      : normalizedReportedStatus;
+593-
+594-  const competitors =
+595-    status === normalizedReportedStatus
+596-      ? preliminaryCompetitors
+597-      : safeArray(competition?.competitors)
+598-          .map((competitor) =>
+599:            parseCompetitor(
+600-              competitor,
+601-              status,
+602-              tournamentCurrentRound,
+603-            ),
+604-          )
+605-          .filter(
+606-            (competitor): competitor is GolfCompetitor =>
+607-              competitor !== null,
+608-          );
+609-
+610-  competitors.sort((a, b) => {
+611-    const aOrder =
+612-      a.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+613-    const bOrder =
+614-      b.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+615-
+616-    if (aOrder !== bOrder) return aOrder - bOrder;
+617:    return a.displayName.localeCompare(b.displayName);
+618-  });
+619-
+620-  return {
+621-    espnEventId,
+622-    name,
+623:    startDate: parseEspnDate(event.date),
+624:    endDate: parseEspnDate(event.endDate),
+625-    status,
+626-    statusDescription:
+627-      competitionStatus?.detail ??
+628-      competitionStatus?.shortDetail ??
+629-      competitionStatus?.description ??
+630-      eventStatus?.description ??
+631-      null,
+632-    currentRound: tournamentCurrentRound,
+633-    completed: Boolean(statusSource?.completed),
+634-    competitors,
+635-  };
+636-}
+637-
+638-async function fetchGolfPayload(
+639-  dates?: string,
+640-): Promise<EspnGolfScoreboardPayload> {
+641-  const url = dates
+642-    ? `${ESPN_GOLF_SCOREBOARD_URL}?dates=${encodeURIComponent(dates)}`
+643-    : ESPN_GOLF_SCOREBOARD_URL;
+644-
+645-  const response = await fetch(url, {
+646-    cache: "no-store",
+647-    headers: {
+648-      Accept: "application/json",
+649-      "User-Agent": "111-sports-golf-provider/1.0",
+650-    },
+651-  });
+652-
+653-  if (!response.ok) {
+654-    throw new Error(
+655-      `ESPN golf request failed with ${response.status} ${response.statusText}`,
+656-    );
+657-  }
+658-
+659-  const payload: unknown = await response.json();
+660-
+661-  if (!isRecord(payload)) {
+662-    throw new Error("ESPN golf returned an invalid payload.");
+663-  }
+664-
+665-  return payload as EspnGolfScoreboardPayload;
+666-}
+667-
+668-export async function fetchGolfTournaments(
+669-  dates?: string,
+670-): Promise<GolfTournament[]> {
+671-  const payload = await fetchGolfPayload(dates);
+672-
+673-  return safeArray(payload.events)
+674:    .map(parseTournament)
+675-    .filter((tournament): tournament is GolfTournament => tournament !== null);
+676-}
+677-
+678-export async function fetchGolfTournamentByEventId(
+679-  espnEventId: string,
+680-  dates?: string,
+681-): Promise<GolfTournament | null> {
+682-  const normalizedEventId = espnEventId.trim();
+683-
+684-  if (!normalizedEventId) {
+685-    return null;
+686-  }
+687-
+688-  const tournaments = await fetchGolfTournaments(dates);
+689-
+690-  return (
+691-    tournaments.find(
+692-      (tournament) => tournament.espnEventId === normalizedEventId,
+693-    ) ?? null
+694-  );
+695-}
+696-
+697-export async function fetchGolfSchedule(
+698-  dates?: string,
+699-): Promise<GolfScheduleEvent[]> {
+700-  const payload = await fetchGolfPayload(dates);
+701-  const calendar = safeArray(payload.leagues?.[0]?.calendar);
+702-
+703-  const schedule = calendar
+704-    .map((entry): GolfScheduleEvent | null => {
+705-      const espnEventId = String(entry.id ?? "").trim();
+706-      const name = String(entry.label ?? "").trim();
+707-
+708-      if (!espnEventId || !name) {
+709-        return null;
+710-      }
+711-
+712-      return {
+713-        espnEventId,
+714-        name,
+715:        startDate: parseEspnDate(entry.startDate),
+716:        endDate: parseEspnDate(entry.endDate),
+717-      };
+718-    })
+719-    .filter((event): event is GolfScheduleEvent => event !== null);
+720-
+721-  return Array.from(
+722-    new Map(schedule.map((event) => [event.espnEventId, event])).values(),
+723-  ).sort((a, b) => {
+724-    const aDate = a.startDate ?? "";
+725-    const bDate = b.startDate ?? "";
+726-
+727:    return aDate.localeCompare(bDate);
+728-  });
+729-}
+
+===== GOLF REFRESH ROUND AND HOLE MAPPING =====
+284-      headshot_url:
+285-        `https://a.espncdn.com/i/headshots/golf/players/full/` +
+286-        `${competitor.espnPlayerId}.png`,
+287-      is_active: true,
+288-      updated_at: refreshedAt,
+289-    }));
+290-
+291-    const { data: savedPlayersData, error: playersUpsertError } =
+292-      await supabaseAdmin
+293-        .from("golf_players")
+294-        .upsert(golfPlayerRows, {
+295-          onConflict: "espn_player_id",
+296-        })
+297-        .select("id, espn_player_id");
+298-
+299-    if (playersUpsertError) {
+300-      return NextResponse.json(
+301-        {
+302-          error: `Failed to save Golf players: ` + playersUpsertError.message,
+303-        },
+304-        { status: 500 },
+305-      );
+306-    }
+307-
+308-    const savedPlayers = (savedPlayersData ?? []) as GolfPlayerIdRow[];
+309-
+310-    const playerIdByEspnId = new Map(
+311-      savedPlayers.map((player) => [player.espn_player_id, Number(player.id)]),
+312-    );
+313-
+314-    const unresolvedCompetitors = competitors.filter(
+315-      (competitor) => !playerIdByEspnId.has(competitor.espnPlayerId),
+316-    );
+317-
+318-    if (unresolvedCompetitors.length > 0) {
+319-      return NextResponse.json(
+320-        {
+321-          error:
+322-            "Golf players were saved, but one or more database player IDs could not be resolved.",
+323-          unresolvedPlayers: unresolvedCompetitors.map((competitor) => ({
+324-            espnPlayerId: competitor.espnPlayerId,
+325-            displayName: competitor.displayName,
+326-          })),
+327-        },
+328-        { status: 500 },
+329-      );
+330-    }
+331-
+332-    const eventPlayerRows = competitors.map((competitor) => {
+333-      const penaltyStrokes = calculatePenaltyStrokes({
+334:        status: competitor.status,
+335-        roundsCompleted: competitor.roundsCompleted,
+336-        penaltyPerRound,
+337-      });
+338-
+339-      const fantasyScore =
+340-        competitor.officialScoreToPar === null
+341-          ? null
+342-          : competitor.officialScoreToPar + penaltyStrokes;
+343-
+344-      return {
+345-        slate_id: slateId,
+346-        player_id: playerIdByEspnId.get(competitor.espnPlayerId)!,
+347-        leaderboard_order: competitor.leaderboardOrder,
+348-        official_score_to_par: competitor.officialScoreToPar,
+349-        official_score_display: competitor.officialScoreDisplay,
+350-        penalty_strokes: penaltyStrokes,
+351-        fantasy_score: fantasyScore,
+352-        rounds_completed: competitor.roundsCompleted,
+353-        holes_completed: competitor.holesCompleted,
+354:        current_round: competitor.currentRound,
+355-        last_hole: competitor.lastHole,
+356:        status: competitor.status,
+357-        tee_time: competitor.teeTime,
+358-        tee_time_raw: competitor.teeTimeRaw,
+359-        updated_at: refreshedAt,
+360-      };
+361-    });
+362-
+363-    const { data: eventPlayersData, error: eventPlayersUpsertError } =
+364-      await supabaseAdmin
+365-        .from("golf_event_players")
+366-        .upsert(eventPlayerRows, {
+367-          onConflict: "slate_id,player_id",
+368-        })
+369-        .select("id, player_id");
+370-
+371-    if (eventPlayersUpsertError) {
+372-      return NextResponse.json(
+373-        {
+374-          error:
+375-            "Golf players were saved, but the tournament field could not be linked to the slate: " +
+376-            eventPlayersUpsertError.message,
+377-        },
+378-        { status: 500 },
+379-      );
+380-    }
+381-
+382-    const eventPlayers = (eventPlayersData ?? []) as GolfEventPlayerIdRow[];
+383-
+384-    const eventPlayerIdByPlayerId = new Map(
+385-      eventPlayers.map((eventPlayer) => [
+386-        Number(eventPlayer.player_id),
+387-        Number(eventPlayer.id),
+388-      ]),
+389-    );
+390-
+391-    const unresolvedEventPlayers = competitors.filter((competitor) => {
+392-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId);
+393-
+394-      return playerId === undefined || !eventPlayerIdByPlayerId.has(playerId);
+395-    });
+396-
+397-    if (unresolvedEventPlayers.length > 0) {
+398-      return NextResponse.json(
+399-        {
+400-          error:
+401-            "Tournament players were linked to the slate, but one or more event-player IDs could not be resolved.",
+402-          unresolvedPlayers: unresolvedEventPlayers.map(
+403-            (competitor) => competitor.displayName,
+404-          ),
+405-        },
+406-        { status: 500 },
+407-      );
+408-    }
+409-
+410-    const eventPlayerIds = eventPlayers.map((eventPlayer) =>
+411-      Number(eventPlayer.id),
+412-    );
+413-
+414-    const { data: existingRoundsData, error: existingRoundsError } =
+415-      await supabaseAdmin
+416:        .from("golf_rounds")
+417-        .select("id")
+418-        .in("event_player_id", eventPlayerIds);
+419-
+420-    if (existingRoundsError) {
+421-      return NextResponse.json(
+422-        {
+423-          error:
+424-            "Tournament players were saved, but existing Golf rounds could not be read: " +
+425-            existingRoundsError.message,
+426-        },
+427-        { status: 500 },
+428-      );
+429-    }
+430-
+431-    const existingRoundIds = (existingRoundsData ?? []).map((round) =>
+432-      Number(round.id),
+433-    );
+434-
+435-    if (existingRoundIds.length > 0) {
+436-      const { error: holesDeleteError } = await supabaseAdmin
+437:        .from("golf_holes")
+438-        .delete()
+439-        .in("round_id", existingRoundIds);
+440-
+441-      if (holesDeleteError) {
+442-        return NextResponse.json(
+443-          {
+444-            error:
+445-              "Existing Golf holes could not be cleared: " +
+446-              holesDeleteError.message,
+447-          },
+448-          { status: 500 },
+449-        );
+450-      }
+451-    }
+452-
+453-    const { error: roundsDeleteError } = await supabaseAdmin
+454:      .from("golf_rounds")
+455-      .delete()
+456-      .in("event_player_id", eventPlayerIds);
+457-
+458-    if (roundsDeleteError) {
+459-      return NextResponse.json(
+460-        {
+461-          error:
+462-            "Existing Golf rounds could not be cleared: " +
+463-            roundsDeleteError.message,
+464-        },
+465-        { status: 500 },
+466-      );
+467-    }
+468-
+469:    const roundRows = competitors.flatMap((competitor) => {
+470-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+471-
+472-      const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+473-
+474-      return competitor.rounds.map((round) => ({
+475-        event_player_id: eventPlayerId,
+476-        round_number: round.roundNumber,
+477-        score_to_par: round.scoreToPar,
+478-        score_display: round.scoreDisplay,
+479-        strokes: round.strokes,
+480-        holes_completed: round.holesCompleted,
+481-        tee_time: round.teeTime,
+482-        tee_time_raw: round.teeTimeRaw,
+483-        status: getRoundStatus(round, tournament.status),
+484-        updated_at: refreshedAt,
+485-      }));
+486-    });
+487-
+488-    let savedRounds: GolfRoundIdRow[] = [];
+489-
+490:    for (const batch of chunkRows(roundRows, INSERT_BATCH_SIZE)) {
+491-      const { data: insertedRoundsData, error: roundsInsertError } =
+492-        await supabaseAdmin
+493:          .from("golf_rounds")
+494-          .insert(batch)
+495-          .select("id, event_player_id, round_number");
+496-
+497-      if (roundsInsertError) {
+498-        return NextResponse.json(
+499-          {
+500-            error:
+501-              "Golf rounds could not be saved: " + roundsInsertError.message,
+502-          },
+503-          { status: 500 },
+504-        );
+505-      }
+506-
+507-      savedRounds = savedRounds.concat(
+508-        (insertedRoundsData ?? []) as GolfRoundIdRow[],
+509-      );
+510-    }
+511-
+512-    const roundIdByKey = new Map(
+513-      savedRounds.map((round) => [
+514-        `${round.event_player_id}:${round.round_number}`,
+515-        Number(round.id),
+516-      ]),
+517-    );
+518-
+519:    const holeRows = competitors.flatMap((competitor) => {
+520-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+521-
+522-      const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+523-
+524-      return competitor.rounds.flatMap((round) => {
+525-        const roundId = roundIdByKey.get(
+526-          `${eventPlayerId}:${round.roundNumber}`,
+527-        );
+528-
+529-        if (roundId === undefined) {
+530-          return [];
+531-        }
+532-
+533-        return round.holes.map((hole) => ({
+534-          round_id: roundId,
+535-          hole_number: hole.holeNumber,
+536-          strokes: hole.strokes,
+537-          relative_to_par: hole.relativeToPar,
+538-          score_display: hole.scoreDisplay,
+539-          updated_at: refreshedAt,
+540-        }));
+541-      });
+542-    });
+543-
+544:    const holesInsertError = await insertInBatches("golf_holes", holeRows);
+545-
+546-    if (holesInsertError) {
+547-      return NextResponse.json(
+548-        {
+549-          error: "Golf holes could not be saved: " + holesInsertError.message,
+550-        },
+551-        { status: 500 },
+552-      );
+553-    }
+554-
+555-    const statusCounts = competitors.reduce<
+556-      Record<GolfCompetitorStatus, number>
+557-    >(
+558-      (counts, competitor) => {
+559:        counts[competitor.status] += 1;
+560-        return counts;
+561-      },
+562-      {
+563-        scheduled: 0,
+564-        active: 0,
+565-        finished: 0,
+566-        cut: 0,
+567-        withdrawn: 0,
+568-        disqualified: 0,
+569-        did_not_start: 0,
+570-      },
+571-    );
+572-
+573-    const { data: lineupsData, error: lineupsError } =
+574-      await supabaseAdmin
+575-        .from("lineups")
+576-        .select(
+577-          `
+578-          id,
+579-          team_id,
+580-          lineup_players (
+581-            player_id
+582-          )
+583-        `,
+584-        )
+585-        .eq("slate_id", slateId);
+586-
+587-    if (lineupsError) {
+588-      return NextResponse.json(
+589-        {
+590-          error:
+591-            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+592-            lineupsError.message,
+593-        },
+594-        { status: 500 },
+595-      );
+596-    }
+597-
+598-    const eventRowByPlayerId = new Map(
+599-      eventPlayerRows.map((row) => [
+600-        Number(row.player_id),
+601-        row,
+602-      ]),
+603-    );
+604-
+605-    const teamResultRows = (lineupsData ?? []).map((lineup: any) => {
+606-      const playerIds = (lineup.lineup_players ?? []).map(
+607-        (row: any) => Number(row.player_id),
+608-      );
+609-
+610-      const golferRows = playerIds
+611-        .map((playerId: number) => eventRowByPlayerId.get(playerId))
+612-        .filter(Boolean) as typeof eventPlayerRows;
+613-
+614-      const fantasyPoints = golferRows.reduce(
+615-        (sum, row) => sum + Number(row.fantasy_score ?? 0),
+616-        0,
+617-      );
+618-
+619-      const completedStatuses = new Set([
+620-        "finished",
+621-        "cut",
+622-        "withdrawn",
+623-        "disqualified",
+624-      ]);
+625-
+626-      const gamesCompleted = golferRows.filter((row) =>
+627-        completedStatuses.has(String(row.status)),
+628-      ).length;
+629-
+630-      const gamesInProgress = golferRows.filter(
+631-        (row) => row.status === "active",
+632-      ).length;
+633-
+634-      const gamesRemaining = golferRows.filter((row) =>
+635-        ["scheduled", "did_not_start"].includes(String(row.status)),
+636-      ).length;
+637-
+638-      return {
+639-        slate_id: slateId,
+640-        team_id: Number(lineup.team_id),
+641-        fantasy_points: fantasyPoints,
+642-        finish_position: null as number | null,
+643-        games_completed: gamesCompleted,
+644-        games_in_progress: gamesInProgress,
+645-        games_remaining: gamesRemaining,
+646-      };
+647-    });
+648-
+649-    const rankedTeamRows = [...teamResultRows].sort(
+650-      (a, b) => a.fantasy_points - b.fantasy_points,
+651-    );
+652-
+653-    rankedTeamRows.forEach((row, index) => {
+654-      if (
+655-        index > 0 &&
+656-        rankedTeamRows[index - 1].fantasy_points === row.fantasy_points
+657-      ) {
+658-        row.finish_position =
+659-          rankedTeamRows[index - 1].finish_position;
+660-      } else {
+661-        row.finish_position = index + 1;
+662-      }
+663-    });
+664-
+665-    if (rankedTeamRows.length > 0) {
+666-      const { error: teamResultsError } = await supabaseAdmin
+667-        .from("team_slate_results")
+668-        .upsert(rankedTeamRows, {
+669-          onConflict: "slate_id,team_id",
+670-        });
+671-
+672-      if (teamResultsError) {
+673-        return NextResponse.json(
+674-          {
+675-            error:
+676-              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+677-              teamResultsError.message,
+678-          },
+679-          { status: 500 },
+680-        );
+681-      }
+682-    }
+683-
+684-    return NextResponse.json({
+685-      success: true,
+686-      slateId,
+687-      refreshedAt,
+688-      tournament: {
+689-        eventId: tournament.espnEventId,
+690-        name: tournament.name,
+691-        status: tournament.status,
+692-        statusDescription: tournament.statusDescription,
+693:        currentRound: tournament.currentRound,
+694-        completed: tournament.completed,
+695-        startDate: tournament.startDate,
+696-        endDate: tournament.endDate,
+697-      },
+698-      scoring: {
+699-        expectedRounds: EXPECTED_TOURNAMENT_ROUNDS,
+700-        cutPenaltyPerRound: penaltyPerRound,
+701-      },
+702-      statusCounts,
+703-      gamesFound: 1,
+704-      playersUpserted: golfPlayerRows.length,
+705-      eventPlayersUpserted: eventPlayerRows.length,
+706-      playerStatsUpserted: eventPlayerRows.length,
+707-      teamResultsUpserted: rankedTeamRows.length,
+708:      roundsInserted: roundRows.length,
+709:      holesInserted: holeRows.length,
+710-      preview: competitors.slice(0, 10).map((competitor) => {
+711-        const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+712-
+713-        const eventRow = eventPlayerRows.find(
+714-          (row) => row.player_id === playerId,
+715-        );
+716-
+717-        return {
+718-          espnPlayerId: competitor.espnPlayerId,
+719-          displayName: competitor.displayName,
+720-          leaderboardOrder: competitor.leaderboardOrder,
+721-          officialScoreDisplay: competitor.officialScoreDisplay,
+722-          roundsCompleted: competitor.roundsCompleted,
+723-          holesCompleted: competitor.holesCompleted,
+724:          status: competitor.status,
+725-          penaltyStrokes: eventRow?.penalty_strokes ?? 0,
+726-          fantasyScore: eventRow?.fantasy_score ?? null,
+727-        };
+728-      }),
+729-    });
+730-  } catch (error) {
+731-    console.error("Unexpected Golf refresh error:", error);
+732-
+733-    return NextResponse.json(
+734-      {
+735-        error:
+736-          error instanceof Error
+737-            ? error.message
+738-            : "Unexpected server error while refreshing Golf data.",
+739-      },
+740-      { status: 500 },
+741-    );
+742-  }
+743-}
+
+===== CURRENT DASHBOARD STATUS LOGIC =====
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import type {
+  OrderedTeam,
+  Player,
+  PlayerStat,
+  RosterSlotConfig,
+  Slate,
+} from "@/components/lineups/types";
+
+type TeamStats = {
+  totalPlayers: number;
+  total: number;
+  games_completed: number;
+  games_in_progress: number;
+  games_remaining: number;
+  finish_position: number | null;
+};
+
+type RefreshSummary = {
+  gamesFound?: number;
+  playerStatsUpserted?: number;
+  teamResultsUpserted?: number;
+} | null;
+
+type Props = {
+  teams: OrderedTeam[];
+  selectedSlate: Slate | null;
+  rosterSlots?: RosterSlotConfig[];
+  lastRefreshSummary: RefreshSummary;
+  getPlayersForTeam: (teamId: number) => Player[];
+  getTeamStats: (teamId: number) => TeamStats;
+  getRawPlayerStat: (playerId: number) => PlayerStat | null;
+  controls?: ReactNode;
+  setProfilePlayer: (player: Player | null) => void;
+};
+
+function formatGolfScore(value: number | null | undefined) {
+  if (value === null || value === undefined) return "—";
+
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) return "—";
+  if (numeric === 0) return "E";
+  return numeric > 0 ? `+${numeric}` : String(numeric);
+}
+
+function formatLeaderboardPosition(value: number | null | undefined) {
+  if (!value) return "—";
+  return `T${value}`;
+}
+
+function statusMeta(stat: PlayerStat | null) {
+  const status = stat?.status ?? "scheduled";
+
+  if (status === "active") {
+    return {
+      label: "Live",
+      detail: stat?.last_hole
+        ? `R${stat.current_round ?? "—"} · Thru ${stat.last_hole}`
+        : `Round ${stat?.current_round ?? "—"}`,
+      className: "bg-emerald-100 text-emerald-800",
+    };
+  }
+
+  if (status === "finished") {
+    return {
+      label: "Final",
+      detail: "Tournament complete",
+      className: "bg-slate-200 text-slate-700",
+    };
+  }
+
+  if (status === "cut") {
+    return {
+      label: "CUT",
+      detail: "Missed cut",
+      className: "bg-red-100 text-red-800",
+    };
+  }
+
+  if (status === "withdrawn") {
+    return {
+      label: "WD",
+      detail: "Withdrawn",
+      className: "bg-amber-100 text-amber-800",
+    };
+  }
+
+  if (status === "disqualified") {
+    return {
+      label: "DQ",
+      detail: "Disqualified",
+      className: "bg-red-100 text-red-800",
+    };
+  }
+
+  return {
+    label: "Upcoming",
+    detail: stat?.tee_time_raw || "Not started",
+    className: "bg-sky-100 text-sky-800",
+  };
+}
+
+function holePar(hole: {
+  strokes: number | null;
+  relative_to_par: number | null;
+} | null | undefined) {
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined ||
+    hole.relative_to_par === null ||
+    hole.relative_to_par === undefined
+  ) {
+    return null;
+  }
+
+  const par =
+    Number(hole.strokes) -
+    Number(hole.relative_to_par);
+
+  return Number.isFinite(par) ? par : null;
+}
+
+function holeTooltip(
+  holeNumber: number,
+  hole: {
+    strokes: number | null;
+    relative_to_par: number | null;
+  } | null | undefined,
+) {
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined
+  ) {
+    return `Hole ${holeNumber}: not played`;
+  }
+
+  const par = holePar(hole);
+  const relative = relativeLabel(
+    hole.relative_to_par,
+  );
+
+  return par === null
+    ? `Hole ${holeNumber}: ${hole.strokes} strokes (${relative})`
+    : `Hole ${holeNumber}: Par ${par}, ${hole.strokes} strokes (${relative})`;
+}
+
+function relativeClass(relative: number | null | undefined) {
+  if (relative === null || relative === undefined) {
+    return "border-slate-200 bg-slate-50 text-slate-400";
+  }
+
+  if (relative <= -2) {
+    return "border-emerald-700 bg-emerald-700 text-white";
+  }
+
+  if (relative === -1) {
+    return "border-emerald-300 bg-emerald-100 text-emerald-900";
+  }
+
+  if (relative === 0) {
+    return "border-slate-200 bg-white text-slate-700";
+  }
+
+  if (relative === 1) {
+    return "border-red-300 bg-red-100 text-red-900";
+  }
+
+  return "border-red-700 bg-red-700 text-white";
+}
+
+function relativeLabel(relative: number | null | undefined) {
+  if (relative === null || relative === undefined) return "—";
+  if (relative === 0) return "E";
+  return relative > 0 ? `+${relative}` : String(relative);
+
+===== ACTIVE ROUND SELECTION =====
+        <div className="space-y-4 p-4 sm:p-5">
+          {rosterRows.map((player, index) => {
+            if (!player) {
+              return (
+                <article
+                  key={`empty-${index}`}
+                  className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-7 text-center text-sm text-slate-500"
+                >
+                  Empty golfer slot
+                </article>
+              );
+            }
+
+            const stat = getRawPlayerStat(player.id);
+            const status = statusMeta(stat);
+
+            const rounds = [...(stat?.rounds ?? [])].sort(
+              (a, b) => a.round_number - b.round_number,
+            );
+
+            const activeRound =
+              rounds.find(
+                (round) => round.round_number === stat?.current_round,
+              ) ??
+              rounds.filter((round) => round.holes_completed > 0).at(-1) ??
+              null;
+
+            const holesByNumber = new Map(
+              (activeRound?.holes ?? []).map((hole) => [
+                hole.hole_number,
+                hole,
+              ]),
+            );
+
+            return (
+              <button
+                key={player.id}
+                type="button"
+                onClick={() => setProfilePlayer(player)}
+                className="block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-emerald-300 hover:bg-slate-50"
+                aria-label={`Open ${player.name} full Golf scorecard`}
+              >
+                <div className="flex w-full items-center justify-between gap-4 px-4 py-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <PlayerHeadshot
+                      espnGolfPlayerId={player.espn_player_id}
+                      imageUrl={player.headshot_url}
+                      playerName={player.name}
+                      size="md"
+                    />
+
+                    <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="truncate text-lg text-slate-950">
+                        {player.name}
+                      </strong>
+
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${status.className}`}
+                      >
+                        {status.label}
+                      </span>
+                    </div>
+
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                      <span>{status.detail}</span>
+                      <span>
+                        Position{" "}
+                        {formatLeaderboardPosition(
+                          stat?.leaderboard_order,
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <span className="block text-[10px] font-bold uppercase text-emerald-700">
+                      Score
+                    </span>
+
+                    <strong className="mt-1 block text-2xl font-black text-slate-950">
+                      {formatGolfScore(stat?.fantasy_points)}
+                    </strong>
+                  </div>
+                </div>
+
+                {Number(stat?.penalty_strokes ?? 0) > 0 ? (
+                  <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800">
+                    {status.label}: +{stat?.penalty_strokes} added across
+                    unplayed rounds.
+                  </div>
+                ) : null}
+
+                <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Hole-by-hole
+                      </span>
+
+                      <strong className="ml-2 text-sm text-slate-700">
+                        {activeRound
+                          ? `Round ${activeRound.round_number}`
+                          : "Not started"}
+                      </strong>
+                    </div>
+
+                    {activeRound ? (
+                      <span className="text-sm font-black text-slate-950">
+                        {formatGolfScore(activeRound.score_to_par)}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="overflow-x-auto pb-1">
+                    <div className="grid min-w-[680px] grid-cols-18 gap-1">
+                      {Array.from(
+                        { length: 18 },
+                        (_, holeIndex) => holeIndex + 1,
+                      ).map((holeNumber) => (
+
+===== GOLF TYPES =====
+1:export type GolfHoleStat = {
+2-  hole_number: number;
+3-  strokes: number | null;
+4-  relative_to_par: number | null;
+5-  score_display: string | null;
+6-};
+7-
+8:export type GolfRoundStat = {
+9-  round_number: number;
+10-  score_to_par: number | null;
+11-  score_display: string | null;
+12-  strokes: number | null;
+13-  holes_completed: number;
+14-  tee_time?: string | null;
+15-  tee_time_raw?: string | null;
+16-  status: string;
+17:  holes: GolfHoleStat[];
+18-};
+19-
+20-export type Player = {
+21-  id: number;
+22-  name: string;
+23-  position_group: string;
+24-  is_active: boolean;
+25-  is_playing_today?: boolean | null;
+26-  nba_player_id?: number | null;
+27-  nfl_player_id?: number | null;
+28-  espn_player_id?: string | null;
+29-  country?: string | null;
+30-  country_flag_url?: string | null;
+31-  headshot_url?: string | null;
+32-  owgr_player_id?: string | null;
+33-  owgr_rank?: number | null;
+34-  owgr_points?: number | null;
+35-  owgr_updated_at?: string | null;
+36-};
+37-
+38-export type RosterSlotConfig = {
+39-  sport: string;
+40-  position: string;
+41-  slot_count: number;
+42-  display_order: number | null;
+43-};
+44-
+45-export type TargetDraftSlot = {
+46-  teamId: number;
+47-  teamName: string;
+48-  positionGroup: string;
+49-};
+50-
+51-export type PlayerHistoryDetailRow = {
+52-  slateId: number;
+53-  playerId: number;
+54-  date: string | null;
+55-  fantasyPoints: number;
+56-  points: number;
+57-  rebounds: number;
+58-  assists: number;
+59-  steals: number;
+60-  blocks: number;
+61-  turnovers: number;
+62-  isLocked: boolean;
+63-};
+64-
+65-export type Team = {
+66-  id: number;
+67-  name: string;
+68-};
+69-
+70-export type Slate = {
+71-  id: number;
+72-  date: string;
+73-  start_date?: string;
+74-  end_date?: string;
+75-  label?: string;
+76-  is_locked: boolean;
+77-  sport?: string;
+78-};
+79-
+80-export type SavedLineup = {
+81-  team_id: number;
+82-  player_ids: number[];
+83-  pregame_projected_points?: number | null;
+84-};
+85-
+86:export type PlayerStat = {
+87-  player_id: number;
+88-
+89-  points?: number | null;
+90-  rebounds?: number | null;
+91-  assists?: number | null;
+92-  steals?: number | null;
+93-  blocks?: number | null;
+94-  turnovers?: number | null;
+95-
+96-  passing_yards?: number | null;
+97-  passing_tds?: number | null;
+98-  passing_ints?: number | null;
+99-  rushing_yards?: number | null;
+100-  rushing_tds?: number | null;
+101-  receiving_yards?: number | null;
+102-  receiving_tds?: number | null;
+103-  receptions?: number | null;
+104-  fumbles_lost?: number | null;
+105-
+106-  fantasy_points: number | null;
+107-
+108-  game_status?: number | null;
+109-  game_status_text?: string | null;
+110-  period?: number | null;
+111-  game_clock?: string | null;
+112-
+113-  leaderboard_order?: number | null;
+114-  official_score_to_par?: number | null;
+115-  official_score_display?: string | null;
+116-  penalty_strokes?: number | null;
+117-  rounds_completed?: number | null;
+118-  holes_completed?: number | null;
+119-  current_round?: number | null;
+120-  last_hole?: number | null;
+121-  status?: string | null;
+122-  tee_time?: string | null;
+123-  tee_time_raw?: string | null;
+124:  rounds?: GolfRoundStat[];
+125-};
+126-
+127-export type TeamResult = {
+128-  team_id: number;
+129-  fantasy_points: number | null;
+130-  finish_position: number | null;
+131-  games_completed: number | null;
+132-  games_in_progress: number | null;
+133-  games_remaining: number | null;
+134-};
+135-
+136-export type SlateTeamConfig = {
+137-  slate_id: number;
+138-  team_id: number;
+139-  draft_order: number;
+140-  is_participating: boolean;
+141-};
+142-
+143-export type PlayerAverage = {
+144-  player_id: number;
+145-  avg_fantasy_points: number;
+146-};
+147-
+148-export type Props = {
+149-  players: Player[];
+150-  teams: Team[];
+151-  slates: Slate[];
+152-  slateTeamConfigs: SlateTeamConfig[];
+153-  playerAverages: PlayerAverage[];
+154-  initialSelectedSlateId: number | null;
+155-  savedLineupsForInitialSlate: SavedLineup[];
+156:  playerStats: PlayerStat[];
+157-  teamResults: TeamResult[];
+158-  rosterSlots?: RosterSlotConfig[];
+159-  defaultViewMode?: ViewMode;
+160-  sport?: string;
+161-};
+162-
+163-export type PositionFilter = string;
+164-export type ViewMode = "draft" | "scoring";
+165-
+166-export type OrderedTeam = Team & {
+167-  is_participating?: boolean;
+168-  draft_order?: number;
+169-};
+
+===== GOLF DATABASE PAR REFERENCES =====
+components/lineups/GolfPlayerModal.tsx:90:  const par =
+components/lineups/GolfPlayerModal.tsx:94:  return Number.isFinite(par) ? par : null;
+components/lineups/GolfPlayerModal.tsx:105:  const par = holePar(hole);
+components/lineups/GolfPlayerModal.tsx:108:  return par === null
+components/lineups/GolfPlayerModal.tsx:110:    : `Hole ${holeNumber}: Par ${par}, ${hole.strokes} strokes (${relative})`;
+components/lineups/GolfPlayerModal.tsx:202:                key={`par-${holeNumber}`}
+components/lineups/GolfScoresDashboard.tsx:122:  const par =
+components/lineups/GolfScoresDashboard.tsx:126:  return Number.isFinite(par) ? par : null;
+components/lineups/GolfScoresDashboard.tsx:143:  const par = holePar(hole);
+components/lineups/GolfScoresDashboard.tsx:148:  return par === null
+components/lineups/GolfScoresDashboard.tsx:150:    : `Hole ${holeNumber}: Par ${par}, ${hole.strokes} strokes (${relative})`;
+components/lineups/GolfScoresDashboard.tsx:608:                            key={`par-${holeNumber}`}

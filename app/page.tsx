@@ -261,6 +261,77 @@ function formatGolfScore(
   return score > 0 ? `+${score}` : String(score);
 }
 
+function formatGolfRosterStatus(
+  row: SlateRosterRow,
+) {
+  const rawLabel =
+    row.statusLabel?.trim() ?? "";
+
+  const normalizedStatus =
+    row.status?.trim().toLowerCase() ?? "";
+
+  if (normalizedStatus === "cut") {
+    return "✂ Cut";
+  }
+
+  if (normalizedStatus === "withdrawn") {
+    return "⚠ Withdrawn";
+  }
+
+  if (normalizedStatus === "disqualified") {
+    return "⛔ Disqualified";
+  }
+
+  const thruMatch = rawLabel.match(
+    /^R(\d+)\s*·\s*Thru\s+(\d+)$/i,
+  );
+
+  if (thruMatch) {
+    return `🟢 Round ${thruMatch[1]} · Thru ${thruMatch[2]}`;
+  }
+
+  const finishedRoundMatch = rawLabel.match(
+    /^R(\d+)\s*·\s*Finished$/i,
+  );
+
+  if (finishedRoundMatch) {
+    return `✓ Round ${finishedRoundMatch[1]} complete`;
+  }
+
+  const upcomingRoundMatch = rawLabel.match(
+    /^R(\d+)\s*·\s*(Upcoming|Scheduled|Not started)$/i,
+  );
+
+  if (upcomingRoundMatch) {
+    return `⏰ Round ${upcomingRoundMatch[1]} upcoming`;
+  }
+
+  if (/^finished$/i.test(rawLabel)) {
+    return "✓ Tournament complete";
+  }
+
+  if (
+    /^upcoming$/i.test(rawLabel) ||
+    /^scheduled$/i.test(rawLabel) ||
+    /^not started$/i.test(rawLabel)
+  ) {
+    return "⏰ Upcoming";
+  }
+
+  if (rawLabel) {
+    return rawLabel;
+  }
+
+  if (
+    normalizedStatus === "scheduled" ||
+    normalizedStatus === "did_not_start"
+  ) {
+    return "⏰ Upcoming";
+  }
+
+  return "—";
+}
+
 function HomePageContent() {
   const { selectedSport, setSelectedSport } = useSelectedSport();
   const searchParams = useSearchParams();
@@ -640,7 +711,9 @@ function HomePageContent() {
     : null;
 
   const shouldShowRefreshStats =
-    Boolean(latestSlate) && hasSlateStarted && !latestSlate?.is_locked;
+    Boolean(latestSlate) &&
+    !latestSlate?.is_locked &&
+    (isGolf || hasSlateStarted);
 
   const latestSlateIsFinal = latestSlate?.is_locked === true;
 
@@ -1654,8 +1727,9 @@ function HomePageContent() {
                                   </span>
 
                                   <span className="block truncate text-xs text-slate-400">
-                                    {row.statusLabel ??
-                                      "—"}
+                                    {formatGolfRosterStatus(
+                                      row,
+                                    )}
                                   </span>
                                 </span>
                               </button>

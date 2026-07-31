@@ -1,0 +1,3401 @@
+
+
+============================================================
+FILE: app/page.tsx
+============================================================
+"use client";
+
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+
+import { Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import AppNav from "@/components/AppNav";
+import FunFactCarousel from "@/components/home/FunFactCarousel";
+import TeamProfileModal from "@/components/TeamProfileModal";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import SeasonAwards from "@/components/home/SeasonAwards";
+import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import type { Player } from "@/components/lineups/types";
+import { getStatColumns, type StatColumn } from "@/lib/statColumns";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+type LatestSlate = {
+  id: number;
+  date: string;
+  start_date: string;
+  end_date: string;
+  label: string;
+  display_name?: string | null;
+  is_locked: boolean;
+  first_game_start_time: string | null;
+};
+
+type LatestSlateRow = {
+  slate_id: number;
+  team_id: number;
+  teamName: string;
+  avatarUrl: string | null;
+  fantasy_points: number | null;
+  finish_position: number | null;
+  games_completed: number | null;
+  games_in_progress: number | null;
+  games_remaining: number | null;
+  projected_points?: number | null;
+  pregame_projected_points?: number | null;
+  win_probability?: number | null;
+  golf_status_label?: string | null;
+};
+
+type SeasonSnapshotRow = {
+  team_id: number;
+  name: string;
+  wins: number;
+  runner_ups: number;
+  avg_finish: number | null;
+  avg_score: number | null;
+  slates_played: number;
+};
+
+type FunFact = {
+  label: string;
+  value: string;
+  detail?: string;
+};
+
+type SeasonAwardsResponse = {
+  success: boolean;
+  awards: Array<{
+    title: string;
+    emoji: string;
+    winner: string;
+    detail: string;
+  }>;
+  firstTeam: {
+    guards: any[];
+    frontcourt: any[];
+  };
+};
+
+type HomeSummaryResponse = {
+  success: boolean;
+  latestSlate: LatestSlate | null;
+  nextSlate: LatestSlate | null;
+  latestSlateRows: LatestSlateRow[];
+  seasonSnapshot: SeasonSnapshotRow[];
+  funFacts: FunFact[];
+  latestSeason: number;
+};
+
+type SlateRosterModalState = {
+  slateId: number;
+  teamId: number;
+  teamName: string;
+  slateLabel: string;
+} | null;
+
+type SlateRosterRow = {
+  playerId: number;
+  name: string;
+  nbaPlayerId: number | null;
+  nflPlayerId: number | null;
+  espnGolfPlayerId?: string | null;
+  headshotUrl?: string | null;
+  positionGroup: string | null;
+  fantasyPoints: number;
+  officialScore?: number | null;
+  penaltyStrokes?: number;
+  leaderboardOrder?: number | null;
+  status?: string | null;
+  statusLabel?: string | null;
+  currentRound?: number | null;
+  lastHole?: number | null;
+  holesCompleted?: number | null;
+  roundScores?: Array<{
+    roundNumber: number;
+    scoreToPar: number | null;
+    scoreDisplay: string | null;
+    strokes: number | null;
+    holesCompleted: number;
+    status: string | null;
+  }>;
+  gameStatus?: number | null;
+  gameStatusText?: string | null;
+  [statKey: string]: any;
+};
+
+const EMPTY_PLAYER_AVERAGE_MAP = new Map<number, number>();
+const EMPTY_PLAYER_PROJECTIONS: Record<number, any> = {};
+
+function rosterRowToPlayer(row: SlateRosterRow): Player | null {
+  if (!row.positionGroup) {
+    return null;
+  }
+
+  return {
+    id: row.playerId,
+    name: row.name,
+    position_group: row.positionGroup,
+    is_active: true,
+    nba_player_id: row.nbaPlayerId,
+    nfl_player_id: row.nflPlayerId,
+    espn_player_id:
+      row.espnGolfPlayerId ?? null,
+    headshot_url:
+      row.headshotUrl ?? null,
+  };
+}
+
+function GamesStatus({
+  completed,
+  inProgress,
+  remaining,
+}: {
+  completed: number | null;
+  inProgress: number | null;
+  remaining: number | null;
+}) {
+  const finalCount = Number(completed ?? 0);
+  const liveCount = Number(inProgress ?? 0);
+  const leftCount = Number(remaining ?? 0);
+
+  return (
+    <div
+      className="home-games-status-v2"
+      aria-label={`${finalCount} final, ${liveCount} live, ${leftCount} remaining`}
+    >
+      <span className="home-games-status-v2-final">{finalCount} Final</span>
+
+      {liveCount > 0 ? (
+        <>
+          <span className="home-games-status-v2-divider" aria-hidden="true">
+            ·
+          </span>
+
+          <span className="home-games-status-v2-live">
+            <span className="home-games-status-v2-dot" aria-hidden="true" />
+            {liveCount} Live
+          </span>
+        </>
+      ) : null}
+
+      {leftCount > 0 ? (
+        <>
+          <span className="home-games-status-v2-divider" aria-hidden="true">
+            ·
+          </span>
+
+          <span className="home-games-status-v2-left">{leftCount} Left</span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function TeamProfileButton({
+  teamName,
+  avatarUrl,
+  featured = false,
+  onClick,
+}: {
+  teamName: string;
+  avatarUrl?: string | null;
+  featured?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`home-team-profile-button ${
+        featured ? "home-team-profile-button--featured" : ""
+      }`}
+      aria-label={`View ${teamName}'s profile`}
+      title={`View ${teamName}'s profile`}
+    >
+      <TeamAvatar
+        teamName={teamName}
+        avatarUrl={avatarUrl}
+        size={featured ? "md" : "sm"}
+      />
+
+      <span className="home-team-profile-name">{teamName}</span>
+
+      <span className="home-team-profile-chevron" aria-hidden="true">
+        ›
+      </span>
+    </button>
+  );
+}
+
+function roundTo(value: number, digits = 1) {
+  return Number(value.toFixed(digits));
+}
+
+function formatGolfScore(
+  value: number | null | undefined,
+) {
+  const score = Number(value ?? 0);
+
+  if (score === 0) return "E";
+  return score > 0 ? `+${score}` : String(score);
+}
+
+function HomePageContent() {
+  const { selectedSport, setSelectedSport } = useSelectedSport();
+  const searchParams = useSearchParams();
+  const sportFromUrl = searchParams.get("sport");
+  const sport =
+    sportFromUrl === "nfl" ||
+    sportFromUrl === "nba" ||
+    sportFromUrl === "golf"
+      ? sportFromUrl
+      : selectedSport;
+
+  const isGolf = sport === "golf";
+
+  useEffect(() => {
+    if (sportFromUrl && sportFromUrl !== selectedSport) {
+      setSelectedSport(sportFromUrl);
+    }
+  }, [sportFromUrl]);
+  const [data, setData] = useState<HomeSummaryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [profileTeam, setProfileTeam] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [slateRosterModal, setSlateRosterModal] =
+    useState<SlateRosterModalState>(null);
+  const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
+  const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+  const [slateRosterStatColumns, setSlateRosterStatColumns] =
+    useState<StatColumn[]>(getStatColumns("nba"));
+  const [selectedRosterPlayer, setSelectedRosterPlayer] =
+    useState<Player | null>(null);
+  const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(
+    null,
+  );
+
+  function parseStatusTextMinutesRemaining(statusText?: string | null) {
+    if (!statusText) return null;
+
+    const trimmed = statusText.trim();
+
+    if (/final/i.test(trimmed)) return 0;
+
+    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
+
+    if (!match) return null;
+
+    const period = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const seconds = Number(match[3] ?? 0);
+
+    const clockMinutes = minutes + seconds / 60;
+    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
+
+    return periodsRemainingAfterCurrent * 12 + clockMinutes;
+  }
+
+  function getProjectedFantasyPoints(row: any) {
+    const current = Number(row.fantasyPoints ?? 0);
+    const baseline = Number(row.projection ?? row.averageProjection ?? 30);
+
+    const remainingMinutes = parseStatusTextMinutesRemaining(
+      row.gameStatusText,
+    );
+
+    if (remainingMinutes === 0) return current;
+
+    if (remainingMinutes === null) return baseline;
+
+    return current + baseline * (remainingMinutes / 48);
+  }
+
+  function getPlayerStatusLabel(row: any) {
+    const text = row.gameStatusText;
+
+    if (!text) return "Pregame";
+
+    if (/final/i.test(text)) return "Final";
+
+    return text;
+  }
+  const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
+  const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  async function refreshSlateStatsById(slateId: number) {
+    try {
+      setIsRefreshingHomeStats(true);
+      setMessage("");
+
+      const refreshEndpoint =
+        sport === "golf"
+          ? "/api/refresh-stats-golf"
+          : sport === "nfl"
+            ? "/api/refresh-stats-nfl"
+            : "/api/refresh-stats";
+
+      const response = await fetch(refreshEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ slateId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to refresh stats.");
+        return;
+      }
+
+      await loadHomeSummary();
+    } catch (err) {
+      console.error("Failed to refresh stats", err);
+      setMessage("Failed to refresh stats.");
+    } finally {
+      setIsRefreshingHomeStats(false);
+    }
+  }
+
+  async function handleRefreshStats() {
+    if (!latestSlate?.id) {
+      setMessage("No active slate found to refresh.");
+      return;
+    }
+
+    await refreshSlateStatsById(latestSlate.id);
+  }
+
+  async function loadHomeSummary() {
+    try {
+      setIsLoading(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/home-summary?sport=${sport}`,
+        { cache: "no-store" }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to load home summary.");
+        return;
+      }
+
+      setData(result);
+
+      if (sport === "nba") {
+        const awardsResponse = await fetch("/api/season-awards", {
+          cache: "no-store",
+        });
+        const awardsResult = await awardsResponse.json();
+
+        if (awardsResponse.ok) {
+          setSeasonAwards(awardsResult);
+        } else {
+          console.error("Failed to load season awards", awardsResult);
+          setSeasonAwards(null);
+        }
+      } else {
+        setSeasonAwards(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong while loading the home page.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadHomeSummary();
+  }, [sport]);
+
+  useEffect(() => {
+    if (!slateRosterModal) {
+      setSlateRosterRows([]);
+      setSlateRosterTotal(0);
+      return;
+    }
+
+    let isActive = true;
+    const activeSlateRosterModal = slateRosterModal;
+
+    async function loadSlateRoster() {
+      try {
+        setIsSlateRosterLoading(true);
+
+        const response = await fetch(
+          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}&sport=${sport}`,
+          { cache: "no-store" },
+        );
+
+        const result = await response.json();
+
+        if (!isActive) return;
+
+        if (!response.ok) {
+          console.error(result.error || "Failed to load slate roster.");
+          setSlateRosterRows([]);
+          setSlateRosterTotal(0);
+          return;
+        }
+
+        setSlateRosterRows(result.roster ?? []);
+        setSlateRosterTotal(Number(result.total ?? 0));
+        setSlateRosterStatColumns(
+          result.statColumns ?? getStatColumns(result.sport ?? "nba"),
+        );
+      } catch (error) {
+        console.error(error);
+        if (!isActive) return;
+        setSlateRosterRows([]);
+        setSlateRosterTotal(0);
+      } finally {
+        if (isActive) setIsSlateRosterLoading(false);
+      }
+    }
+
+    void loadSlateRoster();
+
+    return () => {
+      isActive = false;
+    };
+  }, [slateRosterModal]);
+
+  const latestSlate = data?.latestSlate ?? null;
+  const latestSlateRows = data?.latestSlateRows ?? [];
+  const seasonSnapshot = data?.seasonSnapshot ?? [];
+  const funFacts = data?.funFacts ?? [];
+  const latestSeason = data?.latestSeason ?? new Date().getFullYear();
+
+  const leader = latestSlateRows[0] ?? null;
+
+  const hasLiveGames = latestSlateRows.some(
+    (row) => Number(row.games_in_progress ?? 0) > 0,
+  );
+
+  const hasCompletedGames = latestSlateRows.some(
+    (row) => Number(row.games_completed ?? 0) > 0,
+  );
+
+  const hasRemainingGames = latestSlateRows.some(
+    (row) => Number(row.games_remaining ?? 0) > 0,
+  );
+
+  const slateHeading =
+    isGolf
+      ? latestSlate?.display_name?.trim() ||
+        latestSlate?.label ||
+        "Current Tournament"
+      : "Current Slate";
+
+  const activeSlateStartTime = latestSlate?.first_game_start_time
+    ? new Date(latestSlate.first_game_start_time)
+    : null;
+
+  const hasSlateStarted =
+    activeSlateStartTime !== null &&
+    activeSlateStartTime.getTime() <= Date.now();
+
+  const isFinalSlate =
+    latestSlate?.is_locked === true ||
+    (!hasLiveGames && hasCompletedGames && !hasRemainingGames);
+
+  const scoreColumnLabel =
+    isGolf
+      ? "Score"
+      : isFinalSlate
+        ? "Final"
+        : "Current";
+
+  const projectionColumnLabel = isFinalSlate
+    ? "vs Proj."
+    : hasSlateStarted
+      ? "Proj. Final"
+      : "Pregame Proj.";
+
+  const slateBadge = hasLiveGames
+    ? "LIVE"
+    : hasCompletedGames && !hasRemainingGames
+      ? "FINAL"
+      : null;
+
+  const leaderLabel =
+    hasCompletedGames && !hasRemainingGames ? "Winner" : "Leader";
+
+  const nextSlate = data?.nextSlate ?? null;
+
+  useEffect(() => {
+    if (!nextSlate?.id || !nextSlate.first_game_start_time) return;
+
+    const tipoffMs = new Date(nextSlate.first_game_start_time).getTime();
+    const delayMs = tipoffMs - Date.now();
+
+    if (delayMs <= 0) return;
+
+    if (autoRefreshTimerRef.current) {
+      clearTimeout(autoRefreshTimerRef.current);
+    }
+
+    autoRefreshTimerRef.current = setTimeout(() => {
+      void refreshSlateStatsById(nextSlate.id);
+    }, delayMs);
+
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearTimeout(autoRefreshTimerRef.current);
+      }
+    };
+  }, [nextSlate?.id, nextSlate?.first_game_start_time]);
+
+  const nextSlateStartTime = nextSlate?.first_game_start_time
+    ? new Date(nextSlate.first_game_start_time)
+    : null;
+
+  const shouldShowRefreshStats =
+    Boolean(latestSlate) && hasSlateStarted && !latestSlate?.is_locked;
+
+  const latestSlateIsFinal = latestSlate?.is_locked === true;
+
+  const shouldShowTipoff =
+    Boolean(nextSlateStartTime) &&
+    !shouldShowRefreshStats &&
+    !hasLiveGames &&
+    latestSlateIsFinal;
+
+  const tipoffTime =
+    shouldShowTipoff && nextSlateStartTime
+      ? nextSlateStartTime.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone: "America/New_York",
+        })
+      : null;
+
+  const tipoffLabel =
+    shouldShowTipoff && nextSlate ? `Next slate ${nextSlate.label}` : null;
+
+  const slateStatusLabel = hasLiveGames
+    ? "Live"
+    : hasCompletedGames && !hasRemainingGames
+      ? "Final"
+      : latestSlate?.is_locked
+        ? "Locked"
+        : "Open";
+
+  const slateDateLabel = latestSlate
+    ? formatSlateDateLabel({
+        date: latestSlate.date,
+        start_date: latestSlate.start_date,
+        end_date: latestSlate.end_date,
+      })
+    : "No slate";
+
+  return (
+    <main
+      className={`min-h-screen px-3 py-5 pb-24 sm:px-4 sm:py-6 sm:pb-6 ${
+        isGolf
+          ? "bg-slate-950 text-slate-100"
+          : "bg-slate-50 text-slate-900"
+      }`}
+    >
+      <div className="mx-auto max-w-7xl space-y-6">
+        <AppNav />
+
+        <FunFactCarousel facts={funFacts} sport={sport} />
+
+        {message ? (
+          <section className="rounded-3xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-800 shadow-sm">
+            {message}
+          </section>
+        ) : null}
+
+        <section
+          className={`home-current-slate rounded-3xl p-5 shadow-sm ${
+            isGolf
+              ? "golf-home-current-slate border border-emerald-800/60 bg-slate-900"
+              : "border border-slate-200 bg-white"
+          }`}
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2
+                  className={`text-2xl font-semibold ${
+                    isGolf
+                      ? "text-white"
+                      : "text-slate-900"
+                  }`}
+                >
+                  {slateHeading}
+                </h2>
+
+                {slateBadge === "LIVE" ? (
+                  <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
+                    LIVE
+                  </span>
+                ) : slateBadge === "FINAL" ? (
+                  <span className="text-xs font-medium text-slate-500">
+                    FINAL
+                  </span>
+                ) : null}
+              </div>
+
+              <div
+                className={`mt-1 text-sm ${
+                  isGolf
+                    ? "text-emerald-100/70"
+                    : "text-slate-500"
+                }`}
+              >
+                {latestSlate ? slateDateLabel : "No slate available"}
+              </div>
+            </div>
+
+            <Link
+              href={`/lineups/scores?sport=${sport}`}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+            >
+              View Scores
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              Loading current slate...
+            </div>
+          ) : latestSlateRows.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              No current slate data available yet.
+            </div>
+          ) : (
+            <>
+              <div
+                className={`home-winner-card relative mb-4 rounded-2xl p-4 ${
+                  isGolf
+                    ? "golf-home-winner-card border border-emerald-500/50 text-white"
+                    : "border border-orange-200 bg-orange-50"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    shouldShowRefreshStats
+                      ? void handleRefreshStats()
+                      : void loadHomeSummary()
+                  }
+                  disabled={isRefreshingHomeStats || isLoading}
+                  className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
+                >
+                  {isRefreshingHomeStats || isLoading
+                    ? "Refreshing..."
+                    : "↻ Refresh"}
+                </button>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="pr-24 sm:pr-0">
+                    <div
+                      className={`text-xs font-bold uppercase tracking-[0.18em] ${
+                        isGolf
+                          ? "text-emerald-200"
+                          : "text-orange-700"
+                      }`}
+                    >
+                      {leaderLabel}
+                    </div>
+                    <div className="mt-2">
+                      {leader ? (
+                        <TeamProfileButton
+                          teamName={leader.teamName}
+                          avatarUrl={leader.avatarUrl}
+                          featured
+                          onClick={() =>
+                            setProfileTeam({
+                              id: leader.team_id,
+                              name: leader.teamName,
+                            })
+                          }
+                        />
+                      ) : (
+                        <div className="home-winner-name text-2xl font-bold text-slate-900">
+                          —
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      className={`mt-2 font-black ${
+                        isGolf
+                          ? "text-3xl text-white"
+                          : "text-sm text-slate-600"
+                      }`}
+                    >
+                      {leader
+                        ? isGolf
+                          ? formatGolfScore(
+                              leader.fantasy_points,
+                            )
+                          : `${roundTo(
+                              Number(
+                                leader.fantasy_points ?? 0,
+                              ),
+                            )} pts`
+                        : "—"}
+                    </div>
+                  </div>
+
+                  {tipoffTime ? (
+                    <div className="absolute right-3 top-14 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:top-16 sm:block sm:min-w-[150px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
+                      <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
+                        Tip-off
+                      </div>
+                      <div className="text-xs font-bold text-slate-900 sm:mt-0.5 sm:text-2xl">
+                        {tipoffTime} ET
+                      </div>
+                      {tipoffLabel ? (
+                        <div className="mt-0.5 hidden text-[10px] font-medium text-slate-500 sm:block">
+                          {tipoffLabel}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                <span>{slateDateLabel}</span>
+                <span className="text-slate-400">•</span>
+                <span>{slateStatusLabel}</span>
+                <span className="text-slate-400">•</span>
+                <span>{latestSlateRows.length} Teams</span>
+              </div>
+
+              {isGolf ? (
+                <div className="overflow-hidden rounded-2xl border border-emerald-800/50 bg-slate-950">
+                  <table className="w-full table-fixed border-collapse text-sm">
+                    <colgroup>
+                      <col className="w-[62%] sm:w-[48%]" />
+                      <col className="w-[38%] sm:w-[22%]" />
+                      <col className="hidden sm:table-column sm:w-[30%]" />
+                    </colgroup>
+
+                    <thead className="bg-emerald-950/80 text-emerald-100">
+                      <tr className="text-left">
+                        <th className="px-3 py-3 font-semibold sm:px-4">
+                          Team
+                        </th>
+
+                        <th className="px-2 py-3 text-right font-semibold sm:px-3">
+                          Score
+                        </th>
+
+                        <th className="hidden px-3 py-3 text-right font-semibold sm:table-cell sm:px-4">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="text-slate-100">
+                      {latestSlateRows.map(
+                        (row, index) => (
+                          <tr
+                            key={`${row.slate_id}-${row.team_id}`}
+                            className={`border-t border-slate-800 ${
+                              index === 0
+                                ? "bg-emerald-950/50"
+                                : "bg-slate-900"
+                            }`}
+                          >
+                            <td className="px-3 py-2.5 sm:px-4 sm:py-3">
+                              <div className="sm:hidden">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setProfileTeam({
+                                      id: row.team_id,
+                                      name: row.teamName,
+                                    })
+                                  }
+                                  className="flex max-w-full items-center gap-2 text-left"
+                                  aria-label={`View ${row.teamName}'s profile`}
+                                >
+                                  <TeamAvatar
+                                    teamName={row.teamName}
+                                    avatarUrl={row.avatarUrl}
+                                    size="sm"
+                                  />
+
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-sm font-bold text-white">
+                                      {row.teamName}
+                                    </span>
+
+                                    <span className="mt-0.5 block truncate text-[11px] font-semibold text-emerald-300">
+                                      {row.golf_status_label ?? "—"}
+                                    </span>
+                                  </span>
+                                </button>
+                              </div>
+
+                              <div className="hidden sm:block">
+                                <TeamProfileButton
+                                  teamName={row.teamName}
+                                  avatarUrl={row.avatarUrl}
+                                  onClick={() =>
+                                    setProfileTeam({
+                                      id: row.team_id,
+                                      name: row.teamName,
+                                    })
+                                  }
+                                />
+                              </div>
+                            </td>
+
+                            <td className="px-2 py-2.5 text-right sm:px-3 sm:py-3">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSlateRosterModal({
+                                    slateId:
+                                      row.slate_id,
+                                    teamId:
+                                      row.team_id,
+                                    teamName:
+                                      row.teamName,
+                                    slateLabel:
+                                      latestSlate
+                                        ? slateDateLabel
+                                        : String(
+                                            row.slate_id,
+                                          ),
+                                  })
+                                }
+                                className="inline-flex min-w-14 items-center justify-end gap-1 rounded-full border border-emerald-600/50 bg-emerald-950/70 px-2.5 py-1 text-base font-black text-white transition hover:bg-emerald-900 sm:min-w-16 sm:px-3 sm:py-1.5 sm:text-lg"
+                              >
+                                {formatGolfScore(
+                                  row.fantasy_points,
+                                )}
+                                <span
+                                  className="text-emerald-300"
+                                  aria-hidden="true"
+                                >
+                                  ›
+                                </span>
+                              </button>
+                            </td>
+
+                            <td className="hidden px-3 py-3 text-right sm:table-cell sm:px-4">
+                              <span
+                                className={`inline-flex max-w-full items-center justify-end rounded-full px-2.5 py-1 text-xs font-bold ${
+                                  row.golf_status_label?.includes(
+                                    "complete",
+                                  ) ||
+                                  row.golf_status_label ===
+                                    "Finished"
+                                    ? "bg-slate-800 text-slate-300"
+                                    : row.golf_status_label?.includes(
+                                          "live",
+                                        )
+                                      ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
+                                      : "bg-slate-800 text-slate-300"
+                                }`}
+                              >
+                                {row.golf_status_label ?? "—"}
+                              </span>
+                            </td>
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="-mx-4 overflow-x-auto px-4">
+                  <table className="w-full table-fixed border-collapse text-sm">
+                    <thead className="bg-slate-100 text-slate-700">
+                      <tr className="text-left">
+                        <th className="px-3 py-3 font-semibold">Team</th>
+                        <th className="px-2 py-3 font-semibold">
+                          {scoreColumnLabel}
+                        </th>
+                        <th className="px-2 py-3 font-semibold">
+                          {projectionColumnLabel}
+                        </th>
+                        <th className="px-2 py-3 font-semibold">Win %</th>
+                        <th className="px-2 py-3 font-semibold">Games</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white text-slate-800">
+                      {latestSlateRows.map((row, index) => (
+                        <tr
+                          key={`${row.slate_id}-${row.team_id}`}
+                          className={`border-t border-slate-100 ${
+                            index === 0 ? "home-winner-row bg-orange-50/50" : ""
+                          }`}
+                        >
+                          <td className="px-3 py-2.5">
+                            <TeamProfileButton
+                              teamName={row.teamName}
+                              avatarUrl={row.avatarUrl}
+                              onClick={() =>
+                                setProfileTeam({
+                                  id: row.team_id,
+                                  name: row.teamName,
+                                })
+                              }
+                            />
+                          </td>
+                          <td className="px-2 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSlateRosterModal({
+                                  slateId: row.slate_id,
+                                  teamId: row.team_id,
+                                  teamName: row.teamName,
+                                  slateLabel: latestSlate
+                                    ? slateDateLabel
+                                    : String(row.slate_id),
+                                })
+                              }
+                              className="home-score-pill-v2"
+                              aria-label={`View ${row.teamName}'s box score`}
+                              title={`View ${row.teamName}'s box score`}
+                            >
+                              <span>
+                                {roundTo(Number(row.fantasy_points ?? 0))}
+                              </span>
+
+                              <span
+                                className="home-score-pill-v2-chevron"
+                                aria-hidden="true"
+                              >
+                                ›
+                              </span>
+                            </button>
+                          </td>
+                          <td className="home-projection-value-v2 px-2 py-3">
+                            {isFinalSlate ? (
+                              row.pregame_projected_points !== null &&
+                              row.pregame_projected_points !== undefined ? (
+                                (() => {
+                                  const difference = roundTo(
+                                    Number(row.fantasy_points ?? 0) -
+                                      Number(row.pregame_projected_points),
+                                    1
+                                  );
+
+                                  const isNeutral = Math.abs(difference) <= 1;
+                                  const isPositive = difference > 1;
+
+                                  const displayDifference =
+                                    difference > 0
+                                      ? `+${difference.toFixed(1)}`
+                                      : difference.toFixed(1);
+
+                                  return (
+                                    <span
+                                      className={`home-projection-delta ${
+                                        isNeutral
+                                          ? "home-projection-delta--neutral"
+                                          : isPositive
+                                            ? "home-projection-delta--positive"
+                                            : "home-projection-delta--negative"
+                                      }`}
+                                      title={`Pregame projection: ${roundTo(
+                                        Number(row.pregame_projected_points),
+                                        1
+                                      )}`}
+                                      aria-label={`${
+                                        isNeutral
+                                          ? "Matched projection"
+                                          : isPositive
+                                            ? "Exceeded projection"
+                                            : "Finished below projection"
+                                      } by ${Math.abs(difference).toFixed(
+                                        1
+                                      )} fantasy points. Pregame projection ${roundTo(
+                                        Number(row.pregame_projected_points),
+                                        1
+                                      )}.`}
+                                    >
+                                      <span
+                                        className="home-projection-delta-icon"
+                                        aria-hidden="true"
+                                      >
+                                        {isNeutral
+                                          ? "—"
+                                          : isPositive
+                                            ? "▲"
+                                            : "▼"}
+                                      </span>
+
+                                      <span>{displayDifference}</span>
+                                    </span>
+                                  );
+                                })()
+                              ) : (
+                                "—"
+                              )
+                            ) : row.projected_points !== null &&
+                              row.projected_points !== undefined ? (
+                              roundTo(Number(row.projected_points))
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-2 py-3">
+                            {row.win_probability !== null &&
+                            row.win_probability !== undefined ? (
+                              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                                {roundTo(Number(row.win_probability), 0)}%
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-2 py-3">
+                            <GamesStatus
+                              completed={row.games_completed}
+                              inProgress={row.games_in_progress}
+                              remaining={row.games_remaining}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              )}
+            </>
+          )}
+        </section>
+      </div>
+
+      {slateRosterModal && isGolf ? (
+        <div
+          className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 px-3 py-4 backdrop-blur-sm sm:items-center"
+          onClick={() =>
+            setSlateRosterModal(null)
+          }
+        >
+          <div
+            className="mobile-modal-panel-safe flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-emerald-700/60 bg-slate-950 text-slate-100 shadow-2xl"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="shrink-0 border-b border-emerald-900/80 bg-gradient-to-r from-emerald-950 to-slate-950 px-4 py-4 sm:px-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
+                    Golf Lineup
+                  </div>
+
+                  <h3 className="mt-1 text-2xl font-bold text-white">
+                    {slateRosterModal.teamName}
+                  </h3>
+
+                  <p className="mt-1 text-sm text-slate-400">
+                    {slateRosterModal.slateLabel}
+                    <span className="mx-2 text-slate-600">
+                      •
+                    </span>
+                    <span className="font-bold text-emerald-300">
+                      {formatGolfScore(
+                        slateRosterTotal,
+                      )}
+                    </span>
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSlateRosterModal(null)
+                  }
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-200 transition hover:border-emerald-600 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-6">
+              {isSlateRosterLoading ? (
+                <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-400">
+                  Loading golfers...
+                </div>
+              ) : slateRosterRows.length ===
+                0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-400">
+                  No golfers found for this lineup.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                  <table className="w-full min-w-[620px] border-collapse text-sm">
+                    <thead className="bg-emerald-950/80 text-emerald-100">
+                      <tr>
+                        <th className="px-3 py-3 text-left font-semibold">
+                          Golfer
+                        </th>
+
+                        {[1, 2, 3, 4].map(
+                          (roundNumber) => (
+                            <th
+                              key={roundNumber}
+                              className="px-2 py-3 text-center font-semibold"
+                            >
+                              R{roundNumber}
+                            </th>
+                          ),
+                        )}
+
+                        <th className="px-3 py-3 text-right font-semibold">
+                          Score
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {slateRosterRows.map(
+                        (row) => (
+                          <tr
+                            key={row.playerId}
+                            className="border-t border-slate-800 bg-slate-900/70"
+                          >
+                            <td className="px-3 py-3">
+                              <button
+                                type="button"
+                                className="flex max-w-[230px] items-center gap-2 text-left"
+                                onClick={() => {
+                                  const player =
+                                    rosterRowToPlayer(
+                                      row,
+                                    );
+
+                                  if (player) {
+                                    setSelectedRosterPlayer(
+                                      player,
+                                    );
+                                  }
+                                }}
+                              >
+                                <PlayerHeadshot
+                                  espnGolfPlayerId={
+                                    row.espnGolfPlayerId
+                                  }
+                                  imageUrl={
+                                    row.headshotUrl
+                                  }
+                                  playerName={
+                                    row.name
+                                  }
+                                  size="sm"
+                                />
+
+                                <span className="min-w-0">
+                                  <span className="block truncate font-semibold text-white">
+                                    {row.name}
+                                  </span>
+
+                                  <span className="block truncate text-xs text-slate-400">
+                                    {row.statusLabel ??
+                                      "—"}
+                                  </span>
+                                </span>
+                              </button>
+                            </td>
+
+                            {[1, 2, 3, 4].map(
+                              (roundNumber) => {
+                                const round =
+                                  row.roundScores?.find(
+                                    (item) =>
+                                      item.roundNumber ===
+                                      roundNumber,
+                                  );
+
+                                return (
+                                  <td
+                                    key={
+                                      roundNumber
+                                    }
+                                    className="px-2 py-3 text-center font-bold text-slate-200"
+                                  >
+                                    {round
+                                      ?.scoreToPar ===
+                                      null ||
+                                    round
+                                      ?.scoreToPar ===
+                                      undefined
+                                      ? "—"
+                                      : formatGolfScore(
+                                          round.scoreToPar,
+                                        )}
+                                  </td>
+                                );
+                              },
+                            )}
+
+                            <td className="px-3 py-3 text-right text-lg font-black text-emerald-300">
+                              {formatGolfScore(
+                                row.fantasyPoints,
+                              )}
+                            </td>
+                          </tr>
+                        ),
+                      )}
+
+                      <tr className="border-t border-emerald-900/80 bg-emerald-950/60">
+                        <td
+                          className="px-3 py-3 font-bold text-emerald-100"
+                          colSpan={5}
+                        >
+                          Team Score
+                        </td>
+
+                        <td className="px-3 py-3 text-right text-xl font-black text-white">
+                          {formatGolfScore(
+                            slateRosterTotal,
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {slateRosterModal && !isGolf ? (
+        <div
+          className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
+          onClick={() => setSlateRosterModal(null)}
+        >
+          <div
+            className="mobile-modal-panel-safe flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="shrink-0 border-b border-slate-200 px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    Box Score
+                  </div>
+                  <h3 className="mt-1 text-2xl font-bold text-slate-900">
+                    {slateRosterModal.teamName}&apos;s Lineup
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {slateRosterModal.slateLabel}
+                    <span className="mx-2 text-slate-300">•</span>
+                    <span className="font-semibold text-slate-700">
+                      {slateRosterTotal.toFixed(1)} Fantasy Points
+                    </span>
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSlateRosterModal(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              {isSlateRosterLoading ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  Loading roster...
+                </div>
+              ) : slateRosterRows.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  No roster found for this slate.
+                </div>
+              ) : (
+                <div>
+                  <div className="home-lineup-breakdown-heading">
+                    <h4>Player Breakdown</h4>
+
+                    <div className="home-lineup-breakdown-total">
+                      <span>Total</span>
+                      <strong>{slateRosterTotal.toFixed(1)}</strong>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 sm:hidden">
+                    {slateRosterRows.map((row) => (
+                      <div
+                        key={row.playerId}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <button
+                            type="button"
+                            className="home-lineup-player-link"
+                            onClick={() => {
+                              const player = rosterRowToPlayer(row);
+                              if (player) setSelectedRosterPlayer(player);
+                            }}
+                            aria-label={`View ${row.name}'s player profile`}
+                          >
+                            <PlayerHeadshot
+                              nbaPlayerId={row.nbaPlayerId}
+                              nflPlayerId={row.nflPlayerId}
+                              playerName={row.name}
+                              size="sm"
+                            />
+
+                            <span>
+                              <span className="block text-xs font-semibold text-slate-500">
+                                {row.positionGroup ?? "—"}
+                              </span>
+                              <span className="block text-base font-semibold text-slate-900">
+                                {row.name}
+                              </span>
+                            </span>
+                          </button>
+                          <div className="text-right text-base font-bold text-slate-900">
+                            {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 text-xs leading-relaxed text-slate-600">
+                          {slateRosterStatColumns
+                            .map(
+                              (column) =>
+                                `${row[column.key] ?? 0} ${column.label}`,
+                            )
+                            .join(" • ")}
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                          <div className="font-semibold text-sky-700">
+                            Proj: {getProjectedFantasyPoints(row).toFixed(1)}
+                          </div>
+
+                          <div className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
+                            {getPlayerStatusLabel(row)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 sm:block">
+                    <table className="min-w-[720px] w-full text-sm">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr className="text-left">
+                          <th className="px-3 py-2">Pos</th>
+                          <th className="px-3 py-2">Player</th>
+                          {slateRosterStatColumns.map((column) => (
+                            <th
+                              key={column.key}
+                              className="px-3 py-2 text-right"
+                            >
+                              {column.label}
+                            </th>
+                          ))}
+                          <th className="px-3 py-2 text-right">Total</th>
+                          <th className="px-3 py-2 text-right">Proj</th>
+                          <th className="px-3 py-2 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {slateRosterRows.map((row) => (
+                          <tr
+                            key={row.playerId}
+                            className="border-t border-slate-100"
+                          >
+                            <td className="px-3 py-2 font-medium">
+                              {row.positionGroup ?? "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                className="home-lineup-player-link home-lineup-player-link--table"
+                                onClick={() => {
+                                  const player = rosterRowToPlayer(row);
+                                  if (player) setSelectedRosterPlayer(player);
+                                }}
+                                aria-label={`View ${row.name}'s player profile`}
+                              >
+                                <PlayerHeadshot
+                                  nbaPlayerId={row.nbaPlayerId}
+                                  nflPlayerId={row.nflPlayerId}
+                                  playerName={row.name}
+                                  size="xs"
+                                />
+                                <span>{row.name}</span>
+                              </button>
+                            </td>
+                            {slateRosterStatColumns.map((column) => (
+                              <td
+                                key={column.key}
+                                className="px-3 py-2 text-right"
+                              >
+                                {row[column.key] ?? 0}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 text-right font-semibold">
+                              {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                            </td>
+
+                            <td className="px-3 py-2 text-right font-semibold text-sky-700">
+                              {getProjectedFantasyPoints(row).toFixed(1)}
+                            </td>
+
+                            <td className="px-3 py-2 text-right text-xs font-medium text-slate-500">
+                              {getPlayerStatusLabel(row)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
+                          <td className="px-3 py-2" />
+                          <td className="px-3 py-2">Total</td>
+                          <td
+                            className="px-3 py-2 text-right"
+                            colSpan={slateRosterStatColumns.length}
+                          />
+                          <td className="px-3 py-2 text-right">
+                            {slateRosterTotal.toFixed(1)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <ReadOnlyPlayerModal
+        player={selectedRosterPlayer}
+        setPlayer={setSelectedRosterPlayer}
+        playerAverageMap={EMPTY_PLAYER_AVERAGE_MAP}
+        playerProjections={EMPTY_PLAYER_PROJECTIONS}
+      />
+
+      <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
+    </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+
+============================================================
+FILE: lib/home/golfHomeSummary.ts
+============================================================
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type GolfSlateRow = {
+  id: number;
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  first_game_start_time: string | null;
+  display_name: string | null;
+};
+
+type TeamResultRow = {
+  slate_id: number;
+  team_id: number;
+  fantasy_points: number | null;
+  finish_position: number | null;
+  games_completed: number | null;
+  games_in_progress: number | null;
+  games_remaining: number | null;
+};
+
+type GolfEventPlayerRow = {
+  id: number;
+  slate_id: number;
+  player_id: number;
+  leaderboard_order: number | null;
+  official_score_to_par: number | null;
+  official_score_display: string | null;
+  fantasy_score: number | null;
+  penalty_strokes: number | null;
+  status: string | null;
+  current_round: number | null;
+  last_hole: number | null;
+  holes_completed: number | null;
+  rounds_completed: number | null;
+};
+
+type GolfPlayerRow = {
+  id: number;
+  display_name: string;
+  short_name: string | null;
+};
+
+type LineupRow = {
+  id: number;
+  slate_id: number;
+  team_id: number;
+};
+
+type LineupPlayerRow = {
+  lineup_id: number;
+  player_id: number;
+};
+
+function formatSlateLabel(
+  startDate: string,
+  endDate: string,
+) {
+  return startDate === endDate
+    ? startDate
+    : `${startDate} - ${endDate}`;
+}
+
+function getSeason(date: string) {
+  return (
+    Number(date.slice(0, 4)) ||
+    new Date().getFullYear()
+  );
+}
+
+function golfScore(
+  value: number | null | undefined,
+) {
+  const score = Number(value ?? 0);
+
+  if (score === 0) return "E";
+  return score > 0 ? `+${score}` : String(score);
+}
+
+function isTerminalGolfStatus(
+  status: string | null | undefined,
+) {
+  return [
+    "finished",
+    "cut",
+    "withdrawn",
+    "disqualified",
+    "did_not_start",
+  ].includes(String(status ?? "").toLowerCase());
+}
+
+function formatTournamentPlayerStatus(
+  player: GolfEventPlayerRow,
+) {
+  const status = String(
+    player.status ?? "",
+  ).toLowerCase();
+
+  if (status === "cut") return "CUT";
+  if (status === "withdrawn") return "WD";
+  if (status === "disqualified") return "DQ";
+  if (status === "did_not_start") return "DNS";
+
+  const round = Number(
+    player.current_round ??
+      Math.max(
+        Number(player.rounds_completed ?? 0),
+        1,
+      ),
+  );
+
+  const currentRoundHoles =
+    Number(player.holes_completed ?? 0) % 18;
+
+  if (
+    status === "finished" ||
+    currentRoundHoles === 0 &&
+      Number(player.holes_completed ?? 0) > 0
+  ) {
+    return `R${round} · F`;
+  }
+
+  if (currentRoundHoles > 0) {
+    return `R${round} · thru ${currentRoundHoles}`;
+  }
+
+  return `R${round}`;
+}
+
+export async function getGolfHomeSummary() {
+  const [
+    { data: slateData, error: slateError },
+    { data: resultData, error: resultError },
+    { data: teamData, error: teamError },
+    { data: teamUserData, error: teamUserError },
+    { data: slateTeamData, error: slateTeamError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("slates")
+      .select(
+        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name",
+      )
+      .eq("sport", "golf")
+      .order("start_date", { ascending: false })
+      .order("end_date", { ascending: false }),
+
+    supabaseAdmin
+      .from("team_slate_results")
+      .select(
+        "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining",
+      ),
+
+    supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .order("name", { ascending: true }),
+
+    supabaseAdmin
+      .from("app_users")
+      .select("team_id, avatar_url")
+      .not("team_id", "is", null),
+
+    supabaseAdmin
+      .from("slate_teams")
+      .select(
+        "slate_id, team_id, is_participating",
+      )
+      .eq("is_participating", true),
+  ]);
+
+  const initialError =
+    slateError ||
+    resultError ||
+    teamError ||
+    teamUserError ||
+    slateTeamError;
+
+  if (initialError) {
+    return NextResponse.json(
+      {
+        error:
+          initialError.message ||
+          "Failed to load Golf home data.",
+      },
+      { status: 500 },
+    );
+  }
+
+  const slates =
+    (slateData ?? []) as GolfSlateRow[];
+
+  const results =
+    (resultData ?? []) as TeamResultRow[];
+
+  const teamNameById = new Map(
+    (teamData ?? []).map((team) => [
+      Number(team.id),
+      String(team.name),
+    ]),
+  );
+
+  const avatarByTeamId =
+    new Map<number, string | null>();
+
+  (teamUserData ?? []).forEach((user) => {
+    if (user.team_id == null) return;
+
+    avatarByTeamId.set(
+      Number(user.team_id),
+      user.avatar_url ?? null,
+    );
+  });
+
+  const participatingTeamIdsBySlate =
+    new Map<number, Set<number>>();
+
+  (slateTeamData ?? []).forEach((row) => {
+    const slateId = Number(row.slate_id);
+
+    const existing =
+      participatingTeamIdsBySlate.get(slateId) ??
+      new Set<number>();
+
+    existing.add(Number(row.team_id));
+
+    participatingTeamIdsBySlate.set(
+      slateId,
+      existing,
+    );
+  });
+
+  const resultsBySlateId =
+    new Map<number, TeamResultRow[]>();
+
+  results.forEach((row) => {
+    const existing =
+      resultsBySlateId.get(row.slate_id) ?? [];
+
+    existing.push(row);
+
+    resultsBySlateId.set(
+      row.slate_id,
+      existing,
+    );
+  });
+
+  const today = new Date()
+    .toISOString()
+    .slice(0, 10);
+
+  const normalizedSlates = slates.map(
+    (slate) => ({
+      ...slate,
+      date:
+        slate.date ??
+        slate.start_date ??
+        today,
+      start_date:
+        slate.start_date ??
+        slate.date ??
+        today,
+      end_date:
+        slate.end_date ??
+        slate.start_date ??
+        slate.date ??
+        today,
+    }),
+  );
+
+  function rowsForSlate(slateId: number) {
+    const participatingIds =
+      participatingTeamIdsBySlate.get(slateId);
+
+    const slateResults =
+      resultsBySlateId.get(slateId) ?? [];
+
+    if (!participatingIds) {
+      return slateResults;
+    }
+
+    return slateResults.filter((row) =>
+      participatingIds.has(row.team_id),
+    );
+  }
+
+  function isLiveSlate(slateId: number) {
+    return rowsForSlate(slateId).some(
+      (row) =>
+        Number(row.games_in_progress ?? 0) > 0,
+    );
+  }
+
+  function isCompleteSlate(slateId: number) {
+    const rows = rowsForSlate(slateId);
+
+    return (
+      rows.length > 0 &&
+      rows.some(
+        (row) =>
+          Number(row.games_completed ?? 0) > 0,
+      ) &&
+      rows.every(
+        (row) =>
+          Number(row.games_in_progress ?? 0) ===
+            0 &&
+          Number(row.games_remaining ?? 0) === 0,
+      )
+    );
+  }
+
+  const now = Date.now();
+
+  const liveSlate =
+    normalizedSlates.find((slate) =>
+      isLiveSlate(slate.id),
+    ) ?? null;
+
+  const startedOpenSlate =
+    normalizedSlates.find((slate) => {
+      if (slate.is_locked) return false;
+
+      const startTime =
+        slate.first_game_start_time
+          ? new Date(
+              slate.first_game_start_time,
+            ).getTime()
+          : new Date(
+              `${slate.start_date}T00:00:00`,
+            ).getTime();
+
+      return startTime <= now;
+    }) ?? null;
+
+  const latestCompletedSlate =
+    normalizedSlates.find(
+      (slate) =>
+        slate.is_locked ||
+        isCompleteSlate(slate.id),
+    ) ?? null;
+
+  const nextSlate =
+    normalizedSlates
+      .filter((slate) => {
+        if (slate.is_locked) return false;
+
+        const startTime =
+          slate.first_game_start_time
+            ? new Date(
+                slate.first_game_start_time,
+              ).getTime()
+            : new Date(
+                `${slate.start_date}T00:00:00`,
+              ).getTime();
+
+        return startTime > now;
+      })
+      .sort((a, b) => {
+        const aTime = new Date(
+          a.first_game_start_time ??
+            `${a.start_date}T00:00:00`,
+        ).getTime();
+
+        const bTime = new Date(
+          b.first_game_start_time ??
+            `${b.start_date}T00:00:00`,
+        ).getTime();
+
+        return aTime - bTime;
+      })[0] ?? null;
+
+  const latestSlate =
+    liveSlate ??
+    startedOpenSlate ??
+    latestCompletedSlate ??
+    nextSlate ??
+    normalizedSlates[0] ??
+    null;
+
+  let latestEventPlayers: GolfEventPlayerRow[] =
+    [];
+
+  let latestGolfPlayers: GolfPlayerRow[] = [];
+  let latestLineups: LineupRow[] = [];
+  let latestLineupPlayers: LineupPlayerRow[] =
+    [];
+
+  if (latestSlate) {
+    const [
+      {
+        data: eventPlayerData,
+        error: eventPlayerError,
+      },
+      {
+        data: golfPlayerData,
+        error: golfPlayerError,
+      },
+      {
+        data: lineupData,
+        error: lineupError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("golf_event_players")
+        .select(
+          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed",
+        )
+        .eq("slate_id", latestSlate.id)
+        .order("leaderboard_order", {
+          ascending: true,
+          nullsFirst: false,
+        }),
+
+      supabaseAdmin
+        .from("golf_players")
+        .select(
+          "id, display_name, short_name",
+        ),
+
+      supabaseAdmin
+        .from("lineups")
+        .select("id, slate_id, team_id")
+        .eq("slate_id", latestSlate.id),
+    ]);
+
+    const detailError =
+      eventPlayerError ||
+      golfPlayerError ||
+      lineupError;
+
+    if (detailError) {
+      return NextResponse.json(
+        {
+          error:
+            detailError.message ||
+            "Failed to load the Golf tournament leaderboard.",
+        },
+        { status: 500 },
+      );
+    }
+
+    latestEventPlayers =
+      (eventPlayerData ??
+        []) as GolfEventPlayerRow[];
+
+    latestGolfPlayers =
+      (golfPlayerData ?? []) as GolfPlayerRow[];
+
+    latestLineups =
+      (lineupData ?? []) as LineupRow[];
+
+    const lineupIds = latestLineups.map(
+      (lineup) => lineup.id,
+    );
+
+    if (lineupIds.length > 0) {
+      const {
+        data: lineupPlayerData,
+        error: lineupPlayerError,
+      } = await supabaseAdmin
+        .from("lineup_players")
+        .select("lineup_id, player_id")
+        .in("lineup_id", lineupIds);
+
+      if (lineupPlayerError) {
+        return NextResponse.json(
+          {
+            error:
+              lineupPlayerError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      latestLineupPlayers =
+        (lineupPlayerData ??
+          []) as LineupPlayerRow[];
+    }
+  }
+
+  const golfPlayerById = new Map(
+    latestGolfPlayers.map((player) => [
+      player.id,
+      player,
+    ]),
+  );
+
+  const eventPlayerByPlayerId = new Map(
+    latestEventPlayers.map((player) => [
+      player.player_id,
+      player,
+    ]),
+  );
+
+  const lineupById = new Map(
+    latestLineups.map((lineup) => [
+      lineup.id,
+      lineup,
+    ]),
+  );
+
+  const playerIdsByTeamId =
+    new Map<number, number[]>();
+
+  const allDraftedPlayerIds = new Set<number>();
+
+  latestLineupPlayers.forEach((row) => {
+    const lineup = lineupById.get(
+      row.lineup_id,
+    );
+
+    if (!lineup) return;
+
+    const existing =
+      playerIdsByTeamId.get(lineup.team_id) ??
+      [];
+
+    existing.push(row.player_id);
+
+    playerIdsByTeamId.set(
+      lineup.team_id,
+      existing,
+    );
+
+    allDraftedPlayerIds.add(row.player_id);
+  });
+
+  function getTeamGolfStatus(teamId: number) {
+    const playerIds =
+      playerIdsByTeamId.get(teamId) ?? [];
+
+    if (playerIds.length === 0) {
+      return "No lineup";
+    }
+
+    const players = playerIds
+      .map((playerId) =>
+        eventPlayerByPlayerId.get(playerId),
+      )
+      .filter(
+        (
+          player,
+        ): player is GolfEventPlayerRow =>
+          Boolean(player),
+      );
+
+    if (players.length === 0) {
+      return `${playerIds.length}/4 drafted`;
+    }
+
+    const currentRound = Math.max(
+      1,
+      ...players.map((player) =>
+        Number(
+          player.current_round ??
+            Math.max(
+              Number(player.rounds_completed ?? 0),
+              1,
+            ),
+        ),
+      ),
+    );
+
+    function currentRoundHoles(
+      player: GolfEventPlayerRow,
+    ) {
+      const totalHoles = Number(
+        player.holes_completed ?? 0,
+      );
+
+      if (totalHoles <= 0) return 0;
+
+      const remainder = totalHoles % 18;
+
+      /*
+       * A multiple of 18 means the current round is complete,
+       * not that the golfer is starting the next round.
+       */
+      return remainder === 0 ? 18 : remainder;
+    }
+
+    const livePlayers = players.filter(
+      (player) => {
+        const status = String(
+          player.status ?? "",
+        ).toLowerCase();
+
+        const holes = currentRoundHoles(player);
+
+        return (
+          status === "active" &&
+          holes > 0 &&
+          holes < 18
+        );
+      },
+    );
+
+    const completedCurrentRound = players.filter(
+      (player) => {
+        const holes = currentRoundHoles(player);
+
+        return (
+          holes === 18 ||
+          isTerminalGolfStatus(player.status)
+        );
+      },
+    );
+
+    if (livePlayers.length > 0) {
+      return `R${currentRound} · ${livePlayers.length} live`;
+    }
+
+    if (
+      completedCurrentRound.length ===
+      players.length
+    ) {
+      return `R${currentRound} complete`;
+    }
+
+    const startedCount = players.filter(
+      (player) =>
+        currentRoundHoles(player) > 0,
+    ).length;
+
+    if (startedCount > 0) {
+      return `R${currentRound} · ${startedCount}/4 finished`;
+    }
+
+    return `R${currentRound} · waiting`;
+  }
+
+  const latestRows = latestSlate
+    ? rowsForSlate(latestSlate.id)
+        .map((row) => ({
+          ...row,
+          teamName:
+            teamNameById.get(row.team_id) ??
+            "Unknown Team",
+          avatarUrl:
+            avatarByTeamId.get(row.team_id) ??
+            null,
+          projected_points: null,
+          pregame_projected_points: null,
+          win_probability: null,
+          golf_status_label:
+            getTeamGolfStatus(row.team_id),
+        }))
+        .sort((a, b) => {
+          const aScore = Number(
+            a.fantasy_points ?? 0,
+          );
+
+          const bScore = Number(
+            b.fantasy_points ?? 0,
+          );
+
+          if (aScore !== bScore) {
+            return aScore - bScore;
+          }
+
+          return a.teamName.localeCompare(
+            b.teamName,
+          );
+        })
+        .map((row, index) => ({
+          ...row,
+          finish_position:
+            row.finish_position ?? index + 1,
+        }))
+    : [];
+
+  const latestSeason = latestSlate
+    ? getSeason(latestSlate.start_date)
+    : new Date().getFullYear();
+
+  const lockedSlateIds = new Set(
+    normalizedSlates
+      .filter(
+        (slate) =>
+          slate.is_locked ||
+          isCompleteSlate(slate.id),
+      )
+      .map((slate) => slate.id),
+  );
+
+  const seasonResults = results.filter(
+    (row) => {
+      const slate = normalizedSlates.find(
+        (item) => item.id === row.slate_id,
+      );
+
+      return (
+        slate &&
+        getSeason(slate.start_date) ===
+          latestSeason &&
+        lockedSlateIds.has(row.slate_id)
+      );
+    },
+  );
+
+  const seasonSnapshot = Array.from(
+    teamNameById.entries(),
+  )
+    .map(([teamId, name]) => {
+      const rows = seasonResults.filter(
+        (row) => row.team_id === teamId,
+      );
+
+      const scores = rows.map((row) =>
+        Number(row.fantasy_points ?? 0),
+      );
+
+      const finishes = rows
+        .map((row) => row.finish_position)
+        .filter(
+          (value): value is number =>
+            value !== null &&
+            value !== undefined,
+        );
+
+      return {
+        team_id: teamId,
+        name,
+        wins: rows.filter(
+          (row) => row.finish_position === 1,
+        ).length,
+        runner_ups: rows.filter(
+          (row) => row.finish_position === 2,
+        ).length,
+        avg_finish:
+          finishes.length > 0
+            ? Number(
+                (
+                  finishes.reduce(
+                    (sum, value) =>
+                      sum + value,
+                    0,
+                  ) / finishes.length
+                ).toFixed(2),
+              )
+            : null,
+        avg_score:
+          scores.length > 0
+            ? Number(
+                (
+                  scores.reduce(
+                    (sum, value) =>
+                      sum + value,
+                    0,
+                  ) / scores.length
+                ).toFixed(2),
+              )
+            : null,
+        slates_played: rows.length,
+      };
+    })
+    .sort((a, b) => {
+      if (b.wins !== a.wins) {
+        return b.wins - a.wins;
+      }
+
+      return (
+        (a.avg_finish ?? 999) -
+        (b.avg_finish ?? 999)
+      );
+    });
+
+  const tournamentFacts =
+    latestEventPlayers
+      .filter(
+        (player) =>
+          player.leaderboard_order !== null,
+      )
+      .slice(0, 25)
+      .map((player) => {
+        const golfPlayer =
+          golfPlayerById.get(player.player_id);
+
+        const drafted =
+          allDraftedPlayerIds.has(
+            player.player_id,
+          );
+
+        const playerName =
+          golfPlayer?.short_name?.trim() ||
+          golfPlayer?.display_name ||
+          `Golfer ${player.player_id}`;
+
+        return {
+          label: `#${player.leaderboard_order}`,
+          value:
+            `${playerName}${drafted ? "*" : ""} ` +
+            `${golfScore(
+              player.official_score_to_par,
+            )}`,
+          detail:
+            formatTournamentPlayerStatus(
+              player,
+            ),
+        };
+      });
+
+  const funFacts =
+    tournamentFacts.length > 0
+      ? tournamentFacts
+      : [
+          {
+            label: "Golf",
+            value:
+              "Tournament leaderboard will appear after the first refresh.",
+          },
+        ];
+
+  function serializeSlate(
+    slate:
+      | (typeof normalizedSlates)[number]
+      | null,
+  ) {
+    if (!slate) return null;
+
+    return {
+      id: slate.id,
+      date: slate.date,
+      start_date: slate.start_date,
+      end_date: slate.end_date,
+      label:
+        slate.display_name?.trim() ||
+        formatSlateLabel(
+          slate.start_date,
+          slate.end_date,
+        ),
+      display_name:
+        slate.display_name ?? null,
+      is_locked: slate.is_locked,
+      first_game_start_time:
+        slate.first_game_start_time,
+    };
+  }
+
+  return NextResponse.json({
+    success: true,
+    latestSlate:
+      serializeSlate(latestSlate),
+    nextSlate: serializeSlate(nextSlate),
+    latestSlateRows: latestRows,
+    seasonSnapshot,
+    funFacts,
+    latestSeason,
+  });
+}
+
+
+============================================================
+FILE: app/api/team-slate-roster/route.ts
+============================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStatColumns } from "@/lib/statColumns";
+
+function getSlotOrder(
+  positionGroup: string | null,
+  index: number,
+) {
+  if (
+    positionGroup === "G" ||
+    positionGroup === "QB"
+  ) {
+    return index;
+  }
+
+  return 100 + index;
+}
+
+function isGolfTerminalStatus(
+  status: string | null | undefined,
+) {
+  return [
+    "finished",
+    "cut",
+    "withdrawn",
+    "disqualified",
+    "did_not_start",
+  ].includes(
+    String(status ?? "").toLowerCase(),
+  );
+}
+
+function golfStatusLabel(input: {
+  status: string | null;
+  currentRound: number | null;
+  holesCompleted: number | null;
+  roundsCompleted: number | null;
+}) {
+  const status = String(
+    input.status ?? "",
+  ).toLowerCase();
+
+  if (status === "cut") return "CUT";
+  if (status === "withdrawn") return "WD";
+  if (status === "disqualified") return "DQ";
+  if (status === "did_not_start") {
+    return "DNS";
+  }
+
+  const round = Number(
+    input.currentRound ??
+      Math.max(
+        Number(input.roundsCompleted ?? 0),
+        1,
+      ),
+  );
+
+  const currentRoundHoles =
+    Number(input.holesCompleted ?? 0) % 18;
+
+  if (
+    status === "finished" ||
+    isGolfTerminalStatus(status)
+  ) {
+    return "Finished";
+  }
+
+  if (currentRoundHoles === 0) {
+    return `R${round} · Finished`;
+  }
+
+  return `R${round} · Thru ${currentRoundHoles}`;
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const slateId = Number(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+    const teamId = Number(
+      request.nextUrl.searchParams.get(
+        "teamId",
+      ),
+    );
+
+    if (!slateId || !teamId) {
+      return NextResponse.json(
+        {
+          error:
+            "slateId and teamId are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: slate,
+      error: slateError,
+    } = await supabaseAdmin
+      .from("slates")
+      .select("sport")
+      .eq("id", slateId)
+      .maybeSingle();
+
+    if (slateError) {
+      return NextResponse.json(
+        { error: slateError.message },
+        { status: 500 },
+      );
+    }
+
+    const sport =
+      slate?.sport === "nfl"
+        ? "nfl"
+        : slate?.sport === "golf"
+          ? "golf"
+          : "nba";
+
+    const statColumns =
+      getStatColumns(sport);
+
+    const { data: team } =
+      await supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq("id", teamId)
+        .maybeSingle();
+
+    const {
+      data: lineup,
+      error: lineupError,
+    } = await supabaseAdmin
+      .from("lineups")
+      .select("id, slate_id, team_id")
+      .eq("slate_id", slateId)
+      .eq("team_id", teamId)
+      .maybeSingle();
+
+    if (lineupError) {
+      return NextResponse.json(
+        { error: lineupError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!lineup) {
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns,
+        roster: [],
+        total: 0,
+      });
+    }
+
+    const {
+      data: lineupPlayers,
+      error: lineupPlayersError,
+    } = await supabaseAdmin
+      .from("lineup_players")
+      .select("player_id")
+      .eq("lineup_id", lineup.id);
+
+    if (lineupPlayersError) {
+      return NextResponse.json(
+        {
+          error:
+            lineupPlayersError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const playerIds = (
+      lineupPlayers ?? []
+    ).map((row) => Number(row.player_id));
+
+    if (playerIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns,
+        roster: [],
+        total: 0,
+      });
+    }
+
+    if (sport === "golf") {
+      const [
+        {
+          data: players,
+          error: playersError,
+        },
+        {
+          data: eventPlayers,
+          error: eventPlayersError,
+        },
+      ] = await Promise.all([
+        supabaseAdmin
+          .from("golf_players")
+          .select(
+            "id, display_name, espn_player_id, headshot_url, country",
+          )
+          .in("id", playerIds),
+
+        supabaseAdmin
+          .from("golf_event_players")
+          .select(
+            "id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed",
+          )
+          .eq("slate_id", slateId)
+          .in("player_id", playerIds),
+      ]);
+
+      if (playersError) {
+        return NextResponse.json(
+          { error: playersError.message },
+          { status: 500 },
+        );
+      }
+
+      if (eventPlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              eventPlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const eventPlayerIds = (
+        eventPlayers ?? []
+      ).map((row) => Number(row.id));
+
+      let rounds: Array<{
+        event_player_id: number;
+        round_number: number;
+        score_to_par: number | null;
+        score_display: string | null;
+        strokes: number | null;
+        holes_completed: number;
+        status: string | null;
+      }> = [];
+
+      if (eventPlayerIds.length > 0) {
+        const {
+          data: roundData,
+          error: roundError,
+        } = await supabaseAdmin
+          .from("golf_rounds")
+          .select(
+            "event_player_id, round_number, score_to_par, score_display, strokes, holes_completed, status",
+          )
+          .in(
+            "event_player_id",
+            eventPlayerIds,
+          )
+          .order("round_number", {
+            ascending: true,
+          });
+
+        if (roundError) {
+          return NextResponse.json(
+            { error: roundError.message },
+            { status: 500 },
+          );
+        }
+
+        rounds =
+          (roundData ?? []) as typeof rounds;
+      }
+
+      const playerMap = new Map(
+        (players ?? []).map((player) => [
+          Number(player.id),
+          player,
+        ]),
+      );
+
+      const eventPlayerMap = new Map(
+        (eventPlayers ?? []).map(
+          (eventPlayer) => [
+            Number(eventPlayer.player_id),
+            eventPlayer,
+          ],
+        ),
+      );
+
+      const roundsByEventPlayerId =
+        new Map<
+          number,
+          typeof rounds
+        >();
+
+      rounds.forEach((round) => {
+        const eventPlayerId = Number(
+          round.event_player_id,
+        );
+
+        const existing =
+          roundsByEventPlayerId.get(
+            eventPlayerId,
+          ) ?? [];
+
+        existing.push(round);
+
+        roundsByEventPlayerId.set(
+          eventPlayerId,
+          existing,
+        );
+      });
+
+      const roster = playerIds.map(
+        (playerId, index) => {
+          const player =
+            playerMap.get(playerId);
+
+          const eventPlayer =
+            eventPlayerMap.get(playerId);
+
+          const playerRounds =
+            eventPlayer
+              ? roundsByEventPlayerId.get(
+                  Number(eventPlayer.id),
+                ) ?? []
+              : [];
+
+          const roundScores = [1, 2, 3, 4].map(
+            (roundNumber) => {
+              const round =
+                playerRounds.find(
+                  (item) =>
+                    Number(
+                      item.round_number,
+                    ) === roundNumber,
+                );
+
+              return {
+                roundNumber,
+                scoreToPar:
+                  round?.score_to_par ??
+                  null,
+                scoreDisplay:
+                  round?.score_display ??
+                  null,
+                strokes:
+                  round?.strokes ?? null,
+                holesCompleted:
+                  Number(
+                    round?.holes_completed ??
+                      0,
+                  ),
+                status:
+                  round?.status ?? null,
+              };
+            },
+          );
+
+          return {
+            playerId,
+            name:
+              player?.display_name ??
+              `Golfer ${playerId}`,
+            nbaPlayerId: null,
+            nflPlayerId: null,
+            espnGolfPlayerId:
+              player?.espn_player_id ??
+              null,
+            headshotUrl:
+              player?.headshot_url ??
+              null,
+            country:
+              player?.country ?? null,
+            positionGroup: "GOLFER",
+            fantasyPoints:
+              eventPlayer?.fantasy_score ??
+              eventPlayer
+                ?.official_score_to_par ??
+              0,
+            officialScore:
+              eventPlayer
+                ?.official_score_to_par ??
+              null,
+            penaltyStrokes:
+              Number(
+                eventPlayer
+                  ?.penalty_strokes ?? 0,
+              ),
+            leaderboardOrder:
+              eventPlayer
+                ?.leaderboard_order ??
+              null,
+            status:
+              eventPlayer?.status ??
+              "scheduled",
+            statusLabel:
+              golfStatusLabel({
+                status:
+                  eventPlayer?.status ??
+                  null,
+                currentRound:
+                  eventPlayer
+                    ?.current_round ??
+                  null,
+                holesCompleted:
+                  eventPlayer
+                    ?.holes_completed ??
+                  null,
+                roundsCompleted:
+                  eventPlayer
+                    ?.rounds_completed ??
+                  null,
+              }),
+            currentRound:
+              eventPlayer
+                ?.current_round ??
+              null,
+            lastHole:
+              eventPlayer?.last_hole ??
+              null,
+            holesCompleted:
+              eventPlayer
+                ?.holes_completed ??
+              0,
+            roundScores,
+            sortOrder: index,
+          };
+        },
+      );
+
+      const total = roster.reduce(
+        (sum, row) =>
+          sum +
+          Number(row.fantasyPoints ?? 0),
+        0,
+      );
+
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns: [],
+        roster,
+        total,
+      });
+    }
+
+    if (sport === "nfl") {
+      const [
+        {
+          data: players,
+          error: playersError,
+        },
+        {
+          data: stats,
+          error: statsError,
+        },
+      ] = await Promise.all([
+        supabaseAdmin
+          .from("players_nfl")
+          .select(
+            "id, name, nfl_player_id, position",
+          )
+          .in("id", playerIds),
+
+        supabaseAdmin
+          .from(
+            "player_nfl_slate_stats",
+          )
+          .select(
+            "player_id, passing_yards, passing_tds, passing_ints, rushing_yards, rushing_tds, receiving_yards, receiving_tds, receptions, fumbles_lost, fantasy_points, game_status, game_status_text",
+          )
+          .eq("slate_id", slateId)
+          .in("player_id", playerIds),
+      ]);
+
+      if (playersError) {
+        return NextResponse.json(
+          { error: playersError.message },
+          { status: 500 },
+        );
+      }
+
+      if (statsError) {
+        return NextResponse.json(
+          { error: statsError.message },
+          { status: 500 },
+        );
+      }
+
+      const playerMap =
+        new Map<number, any>();
+
+      (players ?? []).forEach(
+        (player) =>
+          playerMap.set(
+            Number(player.id),
+            player,
+          ),
+      );
+
+      const statMap =
+        new Map<number, any>();
+
+      (stats ?? []).forEach((stat) =>
+        statMap.set(
+          Number(stat.player_id),
+          stat,
+        ),
+      );
+
+      const roster = playerIds
+        .map((playerId, index) => {
+          const player =
+            playerMap.get(playerId);
+
+          const stat =
+            statMap.get(playerId) ?? {};
+
+          const statValues: Record<
+            string,
+            number
+          > = {};
+
+          statColumns.forEach((column) => {
+            statValues[column.key] = Number(
+              stat[column.key] ?? 0,
+            );
+          });
+
+          return {
+            playerId,
+            name:
+              player?.name ??
+              `Player ${playerId}`,
+            nbaPlayerId: null,
+            nflPlayerId:
+              player?.nfl_player_id ??
+              null,
+            positionGroup:
+              player?.position ?? null,
+            ...statValues,
+            fantasyPoints:
+              stat?.fantasy_points ?? 0,
+            gameStatus:
+              stat?.game_status ?? null,
+            gameStatusText:
+              stat?.game_status_text ??
+              null,
+            period: null,
+            gameClock: null,
+            sortOrder: getSlotOrder(
+              player?.position ?? null,
+              index,
+            ),
+          };
+        })
+        .sort(
+          (a, b) =>
+            a.sortOrder - b.sortOrder,
+        );
+
+      const total = roster.reduce(
+        (sum, row) =>
+          sum +
+          Number(row.fantasyPoints ?? 0),
+        0,
+      );
+
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns,
+        roster,
+        total,
+      });
+    }
+
+    const [
+      {
+        data: players,
+        error: playersError,
+      },
+      {
+        data: stats,
+        error: statsError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("players")
+        .select(
+          "id, name, nba_player_id, position_group",
+        )
+        .in("id", playerIds),
+
+      supabaseAdmin
+        .from("player_slate_stats")
+        .select(
+          "player_id, points, rebounds, assists, steals, blocks, turnovers, fantasy_points, game_status, game_status_text, period, game_clock",
+        )
+        .eq("slate_id", slateId)
+        .in("player_id", playerIds),
+    ]);
+
+    if (playersError) {
+      return NextResponse.json(
+        { error: playersError.message },
+        { status: 500 },
+      );
+    }
+
+    if (statsError) {
+      return NextResponse.json(
+        { error: statsError.message },
+        { status: 500 },
+      );
+    }
+
+    const playerMap =
+      new Map<number, any>();
+
+    (players ?? []).forEach((player) =>
+      playerMap.set(
+        Number(player.id),
+        player,
+      ),
+    );
+
+    const statMap =
+      new Map<number, any>();
+
+    (stats ?? []).forEach((stat) =>
+      statMap.set(
+        Number(stat.player_id),
+        stat,
+      ),
+    );
+
+    const roster = playerIds
+      .map((playerId, index) => {
+        const player =
+          playerMap.get(playerId);
+
+        const stat =
+          statMap.get(playerId) ?? {};
+
+        const statValues: Record<
+          string,
+          number
+        > = {};
+
+        statColumns.forEach((column) => {
+          statValues[column.key] = Number(
+            stat[column.key] ?? 0,
+          );
+        });
+
+        return {
+          playerId,
+          name:
+            player?.name ??
+            `Player ${playerId}`,
+          nbaPlayerId:
+            player?.nba_player_id ??
+            null,
+          nflPlayerId: null,
+          positionGroup:
+            player?.position_group ??
+            null,
+          ...statValues,
+          fantasyPoints:
+            stat?.fantasy_points ?? 0,
+          gameStatus:
+            stat?.game_status ?? null,
+          gameStatusText:
+            stat?.game_status_text ??
+            null,
+          period: stat?.period ?? null,
+          gameClock:
+            stat?.game_clock ?? null,
+          sortOrder: getSlotOrder(
+            player?.position_group ??
+              null,
+            index,
+          ),
+        };
+      })
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder,
+      );
+
+    const total = roster.reduce(
+      (sum, row) =>
+        sum +
+        Number(row.fantasyPoints ?? 0),
+      0,
+    );
+
+    return NextResponse.json({
+      success: true,
+      team: team ?? null,
+      slateId,
+      sport,
+      statColumns,
+      roster,
+      total,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Unexpected server error while loading roster.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+============================================================
+FILE: components/home/FunFactCarousel.tsx
+============================================================
+import { getSportConfig } from "@/lib/sports";
+
+type FunFact = {
+  label: string;
+  value: string;
+  detail?: string;
+};
+
+type Props = {
+  facts: FunFact[];
+  sport?: string;
+};
+
+const MIN_ITEMS_FOR_SMOOTH_LOOP = 8;
+
+export default function FunFactCarousel({
+  facts,
+  sport,
+}: Props) {
+  if (facts.length === 0) return null;
+
+  const isGolf = sport === "golf";
+
+  const items = facts.map((fact) => {
+    const detail = fact.detail
+      ? ` — ${fact.detail}`
+      : "";
+
+    return `${fact.label}: ${fact.value}${detail}`;
+  });
+
+  const repeatCount = Math.max(
+    Math.ceil(
+      MIN_ITEMS_FOR_SMOOTH_LOOP /
+        items.length,
+    ),
+    1,
+  );
+
+  const paddedItems = Array.from(
+    { length: repeatCount },
+    () => items,
+  ).flat();
+
+  const loopItems = [
+    ...paddedItems,
+    ...paddedItems,
+  ];
+
+  const durationSeconds = Math.max(
+    paddedItems.length * 3.2,
+    12,
+  );
+
+  return (
+    <section
+      className={`overflow-hidden rounded-2xl px-3 py-2 shadow-sm ${
+        isGolf
+          ? "border border-emerald-600/60 bg-gradient-to-r from-emerald-950 via-emerald-900 to-slate-950"
+          : "border border-sky-200 bg-sky-50"
+      }`}
+    >
+      <div
+        className={`mb-1 text-xs font-bold uppercase tracking-wide ${
+          isGolf
+            ? "text-emerald-200"
+            : "text-sky-800"
+        }`}
+      >
+        {getSportConfig(sport).emoji}{" "}
+        {isGolf
+          ? "Tournament Leaderboard"
+          : "Around the League"}
+      </div>
+
+      <div
+        className={`overflow-hidden text-sm ${
+          isGolf
+            ? "text-emerald-50"
+            : "text-slate-700"
+        }`}
+      >
+        <div
+          className="fun-fact-ticker flex w-max items-center gap-5 whitespace-nowrap"
+          style={{
+            animationDuration:
+              `${durationSeconds}s`,
+          }}
+        >
+          {loopItems.map(
+            (item, index) => (
+              <span
+                key={`${item}-${index}`}
+              >
+                {item}
+
+                <span
+                  className={`ml-5 ${
+                    isGolf
+                      ? "text-emerald-400"
+                      : "text-sky-500"
+                  }`}
+                >
+                  •
+                </span>
+              </span>
+            ),
+          )}
+        </div>
+      </div>
+
+      {isGolf ? (
+        <div className="mt-1 text-[10px] text-emerald-300/70">
+          * drafted by a fantasy team
+        </div>
+      ) : null}
+
+      <style jsx>{`
+        .fun-fact-ticker {
+          animation-name: fun-fact-scroll;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+
+        .fun-fact-ticker:hover {
+          animation-play-state: paused;
+        }
+
+        @keyframes fun-fact-scroll {
+          from {
+            transform: translateX(0);
+          }
+
+          to {
+            transform: translateX(-50%);
+          }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+
+============================================================
+CURRENT GOLF HOME CSS
+============================================================
+7518-  transform: rotate(180deg);
+7519-}
+7520-
+7521-@media (hover: hover) {
+7522-  .player-modal-details > summary:hover {
+7523-    background: rgb(14 165 233 / 0.06);
+7524-  }
+7525-}
+7526-
+7527-html.dark .player-modal-details-chevron {
+7528-  color: #38bdf8;
+7529-}
+7530-
+7531-@media (prefers-reduced-motion: reduce) {
+7532-  .player-modal-details-chevron {
+7533-    transition: none;
+7534-  }
+7535-}
+7536-
+7537-/* =========================================================
+7538:   GOLF HOME — SPORT-SPECIFIC FINAL OVERRIDES
+7539-   Dedicated classes intentionally beat the championship
+7540-   orange Home rules used by NBA/NFL.
+7541-   ========================================================= */
+7542-
+7543:html .home-current-slate.golf-home-current-slate {
+7544-  background:
+7545-    radial-gradient(
+7546-      circle at 90% 4%,
+7547-      rgb(16 185 129 / 0.12),
+7548-      transparent 22rem
+7549-    ),
+7550-    linear-gradient(
+7551-      145deg,
+7552-      #101d31 0%,
+7553-      #0d192a 55%,
+7554-      #071a19 100%
+7555-    ) !important;
+7556-
+7557-  border-color: rgb(5 150 105 / 0.48) !important;
+7558-}
+7559-
+7560:html .home-winner-card.golf-home-winner-card {
+7561-  background:
+7562-    radial-gradient(
+7563-      circle at 88% 12%,
+7564-      rgb(110 231 183 / 0.28),
+7565-      transparent 13rem
+7566-    ),
+7567-    radial-gradient(
+7568-      circle at 10% 100%,
+7569-      rgb(16 185 129 / 0.18),
+7570-      transparent 17rem
+7571-    ),
+7572-    linear-gradient(
+7573-      120deg,
+7574-      #022c22 0%,
+7575-      #065f46 48%,
+7576-      #047857 75%,
+7577-      #059669 100%
+7578-    ) !important;
+7579-
+7580-  border: 2px solid #10b981 !important;
+7581-
+7582-  box-shadow:
+7583-    inset 0 1px 0 rgb(255 255 255 / 0.1),
+7584-    0 0 0 1px rgb(16 185 129 / 0.14),
+7585-    0 14px 34px rgb(6 78 59 / 0.3) !important;
+7586-}
+7587-
+7588-html
+7589:  .home-winner-card.golf-home-winner-card
+7590-  .home-team-profile-name {
+7591-  color: #ffffff !important;
+7592-}
+7593-
+7594-html
+7595:  .home-winner-card.golf-home-winner-card
+7596-  .home-team-profile-chevron {
+7597-  color: #6ee7b7 !important;
+7598-}
+7599-
+7600-html
+7601:  .home-winner-card.golf-home-winner-card
+7602-  button.border-sky-200 {
+7603-  border-color: rgb(110 231 183 / 0.5) !important;
+7604-  background:
+7605-    linear-gradient(
+7606-      145deg,
+7607-      #064e3b,
+7608-      #022c22
+7609-    ) !important;
+7610-  color: #ecfdf5 !important;
+7611-  box-shadow:
+7612-    0 0 0 1px rgb(52 211 153 / 0.12),
+7613-    0 8px 22px rgb(6 78 59 / 0.28) !important;
+7614-}
+7615-
+7616-@media (max-width: 639px) {
+7617-  html
+7618:    .home-current-slate.golf-home-current-slate {
+7619-    padding: 1rem;
+7620-  }
+7621-
+7622-  html
+7623:    .home-winner-card.golf-home-winner-card {
+7624-    min-height: 0;
+7625-    padding: 0.9rem;
+7626-  }
+7627-
+7628:  .golf-home-current-slate table th,
+7629:  .golf-home-current-slate table td {
+7630-    overflow: hidden;
+7631-  }
+7632-
+7633:  .golf-home-current-slate
+7634-    .home-team-profile-button {
+7635-    max-width: 100%;
+7636-  }
+7637-
+7638:  .golf-home-current-slate
+7639-    .home-team-profile-name {
+7640-    max-width: 6rem;
+7641-    overflow: hidden;
+7642-    text-overflow: ellipsis;
+7643-    white-space: nowrap;
+7644-  }
+7645-}
+7646-
+7647:/* Compact Golf Home rows on phones. */
+7648-@media (max-width: 639px) {
+7649:  .golf-home-current-slate tbody tr {
+7650-    height: auto !important;
+7651-  }
+7652-
+7653:  .golf-home-current-slate tbody td {
+7654-    min-height: 0 !important;
+7655-    vertical-align: middle;
+7656-  }
+7657-
+7658:  .golf-home-current-slate tbody tr button {
+7659-    min-height: 0;
+7660-  }
+7661-}

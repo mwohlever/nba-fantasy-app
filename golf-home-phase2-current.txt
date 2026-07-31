@@ -1,0 +1,3738 @@
+
+
+============================================================
+FILE: app/page.tsx
+============================================================
+"use client";
+
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+
+import { Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import AppNav from "@/components/AppNav";
+import FunFactCarousel from "@/components/home/FunFactCarousel";
+import TeamProfileModal from "@/components/TeamProfileModal";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import SeasonAwards from "@/components/home/SeasonAwards";
+import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import type { Player } from "@/components/lineups/types";
+import { getStatColumns, type StatColumn } from "@/lib/statColumns";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+type LatestSlate = {
+  id: number;
+  date: string;
+  start_date: string;
+  end_date: string;
+  label: string;
+  display_name?: string | null;
+  is_locked: boolean;
+  first_game_start_time: string | null;
+};
+
+type LatestSlateRow = {
+  slate_id: number;
+  team_id: number;
+  teamName: string;
+  avatarUrl: string | null;
+  fantasy_points: number | null;
+  finish_position: number | null;
+  games_completed: number | null;
+  games_in_progress: number | null;
+  games_remaining: number | null;
+  projected_points?: number | null;
+  pregame_projected_points?: number | null;
+  win_probability?: number | null;
+};
+
+type SeasonSnapshotRow = {
+  team_id: number;
+  name: string;
+  wins: number;
+  runner_ups: number;
+  avg_finish: number | null;
+  avg_score: number | null;
+  slates_played: number;
+};
+
+type FunFact = {
+  label: string;
+  value: string;
+  detail?: string;
+};
+
+type SeasonAwardsResponse = {
+  success: boolean;
+  awards: Array<{
+    title: string;
+    emoji: string;
+    winner: string;
+    detail: string;
+  }>;
+  firstTeam: {
+    guards: any[];
+    frontcourt: any[];
+  };
+};
+
+type HomeSummaryResponse = {
+  success: boolean;
+  latestSlate: LatestSlate | null;
+  nextSlate: LatestSlate | null;
+  latestSlateRows: LatestSlateRow[];
+  seasonSnapshot: SeasonSnapshotRow[];
+  funFacts: FunFact[];
+  latestSeason: number;
+};
+
+type SlateRosterModalState = {
+  slateId: number;
+  teamId: number;
+  teamName: string;
+  slateLabel: string;
+} | null;
+
+type SlateRosterRow = {
+  playerId: number;
+  name: string;
+  nbaPlayerId: number | null;
+  nflPlayerId: number | null;
+  positionGroup: string | null;
+  fantasyPoints: number;
+  gameStatus?: number | null;
+  gameStatusText?: string | null;
+  [statKey: string]: any;
+};
+
+const EMPTY_PLAYER_AVERAGE_MAP = new Map<number, number>();
+const EMPTY_PLAYER_PROJECTIONS: Record<number, any> = {};
+
+function rosterRowToPlayer(row: SlateRosterRow): Player | null {
+  if (!row.positionGroup) {
+    return null;
+  }
+
+  return {
+    id: row.playerId,
+    name: row.name,
+    position_group: row.positionGroup,
+    is_active: true,
+    nba_player_id: row.nbaPlayerId,
+    nfl_player_id: row.nflPlayerId,
+  };
+}
+
+function GamesStatus({
+  completed,
+  inProgress,
+  remaining,
+}: {
+  completed: number | null;
+  inProgress: number | null;
+  remaining: number | null;
+}) {
+  const finalCount = Number(completed ?? 0);
+  const liveCount = Number(inProgress ?? 0);
+  const leftCount = Number(remaining ?? 0);
+
+  return (
+    <div
+      className="home-games-status-v2"
+      aria-label={`${finalCount} final, ${liveCount} live, ${leftCount} remaining`}
+    >
+      <span className="home-games-status-v2-final">{finalCount} Final</span>
+
+      {liveCount > 0 ? (
+        <>
+          <span className="home-games-status-v2-divider" aria-hidden="true">
+            ·
+          </span>
+
+          <span className="home-games-status-v2-live">
+            <span className="home-games-status-v2-dot" aria-hidden="true" />
+            {liveCount} Live
+          </span>
+        </>
+      ) : null}
+
+      {leftCount > 0 ? (
+        <>
+          <span className="home-games-status-v2-divider" aria-hidden="true">
+            ·
+          </span>
+
+          <span className="home-games-status-v2-left">{leftCount} Left</span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function TeamProfileButton({
+  teamName,
+  avatarUrl,
+  featured = false,
+  onClick,
+}: {
+  teamName: string;
+  avatarUrl?: string | null;
+  featured?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`home-team-profile-button ${
+        featured ? "home-team-profile-button--featured" : ""
+      }`}
+      aria-label={`View ${teamName}'s profile`}
+      title={`View ${teamName}'s profile`}
+    >
+      <TeamAvatar
+        teamName={teamName}
+        avatarUrl={avatarUrl}
+        size={featured ? "md" : "sm"}
+      />
+
+      <span className="home-team-profile-name">{teamName}</span>
+
+      <span className="home-team-profile-chevron" aria-hidden="true">
+        ›
+      </span>
+    </button>
+  );
+}
+
+function roundTo(value: number, digits = 1) {
+  return Number(value.toFixed(digits));
+}
+
+function formatGolfScore(
+  value: number | null | undefined,
+) {
+  const score = Number(value ?? 0);
+
+  if (score === 0) return "E";
+  return score > 0 ? `+${score}` : String(score);
+}
+
+function HomePageContent() {
+  const { selectedSport, setSelectedSport } = useSelectedSport();
+  const searchParams = useSearchParams();
+  const sportFromUrl = searchParams.get("sport");
+  const sport =
+    sportFromUrl === "nfl" ||
+    sportFromUrl === "nba" ||
+    sportFromUrl === "golf"
+      ? sportFromUrl
+      : selectedSport;
+
+  const isGolf = sport === "golf";
+
+  useEffect(() => {
+    if (sportFromUrl && sportFromUrl !== selectedSport) {
+      setSelectedSport(sportFromUrl);
+    }
+  }, [sportFromUrl]);
+  const [data, setData] = useState<HomeSummaryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [profileTeam, setProfileTeam] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [slateRosterModal, setSlateRosterModal] =
+    useState<SlateRosterModalState>(null);
+  const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
+  const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+  const [slateRosterStatColumns, setSlateRosterStatColumns] =
+    useState<StatColumn[]>(getStatColumns("nba"));
+  const [selectedRosterPlayer, setSelectedRosterPlayer] =
+    useState<Player | null>(null);
+  const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(
+    null,
+  );
+
+  function parseStatusTextMinutesRemaining(statusText?: string | null) {
+    if (!statusText) return null;
+
+    const trimmed = statusText.trim();
+
+    if (/final/i.test(trimmed)) return 0;
+
+    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
+
+    if (!match) return null;
+
+    const period = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const seconds = Number(match[3] ?? 0);
+
+    const clockMinutes = minutes + seconds / 60;
+    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
+
+    return periodsRemainingAfterCurrent * 12 + clockMinutes;
+  }
+
+  function getProjectedFantasyPoints(row: any) {
+    const current = Number(row.fantasyPoints ?? 0);
+    const baseline = Number(row.projection ?? row.averageProjection ?? 30);
+
+    const remainingMinutes = parseStatusTextMinutesRemaining(
+      row.gameStatusText,
+    );
+
+    if (remainingMinutes === 0) return current;
+
+    if (remainingMinutes === null) return baseline;
+
+    return current + baseline * (remainingMinutes / 48);
+  }
+
+  function getPlayerStatusLabel(row: any) {
+    const text = row.gameStatusText;
+
+    if (!text) return "Pregame";
+
+    if (/final/i.test(text)) return "Final";
+
+    return text;
+  }
+  const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
+  const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  async function refreshSlateStatsById(slateId: number) {
+    try {
+      setIsRefreshingHomeStats(true);
+      setMessage("");
+
+      const refreshEndpoint =
+        sport === "golf"
+          ? "/api/refresh-stats-golf"
+          : sport === "nfl"
+            ? "/api/refresh-stats-nfl"
+            : "/api/refresh-stats";
+
+      const response = await fetch(refreshEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ slateId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to refresh stats.");
+        return;
+      }
+
+      await loadHomeSummary();
+    } catch (err) {
+      console.error("Failed to refresh stats", err);
+      setMessage("Failed to refresh stats.");
+    } finally {
+      setIsRefreshingHomeStats(false);
+    }
+  }
+
+  async function handleRefreshStats() {
+    if (!latestSlate?.id) {
+      setMessage("No active slate found to refresh.");
+      return;
+    }
+
+    await refreshSlateStatsById(latestSlate.id);
+  }
+
+  async function loadHomeSummary() {
+    try {
+      setIsLoading(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/home-summary?sport=${sport}`,
+        { cache: "no-store" }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to load home summary.");
+        return;
+      }
+
+      setData(result);
+
+      if (sport === "nba") {
+        const awardsResponse = await fetch("/api/season-awards", {
+          cache: "no-store",
+        });
+        const awardsResult = await awardsResponse.json();
+
+        if (awardsResponse.ok) {
+          setSeasonAwards(awardsResult);
+        } else {
+          console.error("Failed to load season awards", awardsResult);
+          setSeasonAwards(null);
+        }
+      } else {
+        setSeasonAwards(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong while loading the home page.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadHomeSummary();
+  }, [sport]);
+
+  useEffect(() => {
+    if (!slateRosterModal) {
+      setSlateRosterRows([]);
+      setSlateRosterTotal(0);
+      return;
+    }
+
+    let isActive = true;
+    const activeSlateRosterModal = slateRosterModal;
+
+    async function loadSlateRoster() {
+      try {
+        setIsSlateRosterLoading(true);
+
+        const response = await fetch(
+          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}&sport=${sport}`,
+          { cache: "no-store" },
+        );
+
+        const result = await response.json();
+
+        if (!isActive) return;
+
+        if (!response.ok) {
+          console.error(result.error || "Failed to load slate roster.");
+          setSlateRosterRows([]);
+          setSlateRosterTotal(0);
+          return;
+        }
+
+        setSlateRosterRows(result.roster ?? []);
+        setSlateRosterTotal(Number(result.total ?? 0));
+        setSlateRosterStatColumns(
+          result.statColumns ?? getStatColumns(result.sport ?? "nba"),
+        );
+      } catch (error) {
+        console.error(error);
+        if (!isActive) return;
+        setSlateRosterRows([]);
+        setSlateRosterTotal(0);
+      } finally {
+        if (isActive) setIsSlateRosterLoading(false);
+      }
+    }
+
+    void loadSlateRoster();
+
+    return () => {
+      isActive = false;
+    };
+  }, [slateRosterModal]);
+
+  const latestSlate = data?.latestSlate ?? null;
+  const latestSlateRows = data?.latestSlateRows ?? [];
+  const seasonSnapshot = data?.seasonSnapshot ?? [];
+  const funFacts = data?.funFacts ?? [];
+  const latestSeason = data?.latestSeason ?? new Date().getFullYear();
+
+  const leader = latestSlateRows[0] ?? null;
+
+  const hasLiveGames = latestSlateRows.some(
+    (row) => Number(row.games_in_progress ?? 0) > 0,
+  );
+
+  const hasCompletedGames = latestSlateRows.some(
+    (row) => Number(row.games_completed ?? 0) > 0,
+  );
+
+  const hasRemainingGames = latestSlateRows.some(
+    (row) => Number(row.games_remaining ?? 0) > 0,
+  );
+
+  const slateHeading =
+    isGolf
+      ? latestSlate?.display_name?.trim() ||
+        latestSlate?.label ||
+        "Current Tournament"
+      : "Current Slate";
+
+  const activeSlateStartTime = latestSlate?.first_game_start_time
+    ? new Date(latestSlate.first_game_start_time)
+    : null;
+
+  const hasSlateStarted =
+    activeSlateStartTime !== null &&
+    activeSlateStartTime.getTime() <= Date.now();
+
+  const isFinalSlate =
+    latestSlate?.is_locked === true ||
+    (!hasLiveGames && hasCompletedGames && !hasRemainingGames);
+
+  const scoreColumnLabel =
+    isGolf
+      ? "Score"
+      : isFinalSlate
+        ? "Final"
+        : "Current";
+
+  const projectionColumnLabel = isFinalSlate
+    ? "vs Proj."
+    : hasSlateStarted
+      ? "Proj. Final"
+      : "Pregame Proj.";
+
+  const slateBadge = hasLiveGames
+    ? "LIVE"
+    : hasCompletedGames && !hasRemainingGames
+      ? "FINAL"
+      : null;
+
+  const leaderLabel =
+    hasCompletedGames && !hasRemainingGames ? "Winner" : "Leader";
+
+  const nextSlate = data?.nextSlate ?? null;
+
+  useEffect(() => {
+    if (!nextSlate?.id || !nextSlate.first_game_start_time) return;
+
+    const tipoffMs = new Date(nextSlate.first_game_start_time).getTime();
+    const delayMs = tipoffMs - Date.now();
+
+    if (delayMs <= 0) return;
+
+    if (autoRefreshTimerRef.current) {
+      clearTimeout(autoRefreshTimerRef.current);
+    }
+
+    autoRefreshTimerRef.current = setTimeout(() => {
+      void refreshSlateStatsById(nextSlate.id);
+    }, delayMs);
+
+    return () => {
+      if (autoRefreshTimerRef.current) {
+        clearTimeout(autoRefreshTimerRef.current);
+      }
+    };
+  }, [nextSlate?.id, nextSlate?.first_game_start_time]);
+
+  const nextSlateStartTime = nextSlate?.first_game_start_time
+    ? new Date(nextSlate.first_game_start_time)
+    : null;
+
+  const shouldShowRefreshStats =
+    Boolean(latestSlate) && hasSlateStarted && !latestSlate?.is_locked;
+
+  const latestSlateIsFinal = latestSlate?.is_locked === true;
+
+  const shouldShowTipoff =
+    Boolean(nextSlateStartTime) &&
+    !shouldShowRefreshStats &&
+    !hasLiveGames &&
+    latestSlateIsFinal;
+
+  const tipoffTime =
+    shouldShowTipoff && nextSlateStartTime
+      ? nextSlateStartTime.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone: "America/New_York",
+        })
+      : null;
+
+  const tipoffLabel =
+    shouldShowTipoff && nextSlate ? `Next slate ${nextSlate.label}` : null;
+
+  const slateStatusLabel = hasLiveGames
+    ? "Live"
+    : hasCompletedGames && !hasRemainingGames
+      ? "Final"
+      : latestSlate?.is_locked
+        ? "Locked"
+        : "Open";
+
+  const slateDateLabel = latestSlate
+    ? formatSlateDateLabel({
+        date: latestSlate.date,
+        start_date: latestSlate.start_date,
+        end_date: latestSlate.end_date,
+      })
+    : "No slate";
+
+  return (
+    <main
+      className={`min-h-screen px-3 py-5 pb-24 sm:px-4 sm:py-6 sm:pb-6 ${
+        isGolf
+          ? "bg-slate-950 text-slate-100"
+          : "bg-slate-50 text-slate-900"
+      }`}
+    >
+      <div className="mx-auto max-w-7xl space-y-6">
+        <AppNav />
+
+        <FunFactCarousel facts={funFacts} sport={sport} />
+
+        {message ? (
+          <section className="rounded-3xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-800 shadow-sm">
+            {message}
+          </section>
+        ) : null}
+
+        <section
+          className={`home-current-slate rounded-3xl p-5 shadow-sm ${
+            isGolf
+              ? "border border-emerald-800/60 bg-slate-900"
+              : "border border-slate-200 bg-white"
+          }`}
+        >
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2
+                  className={`text-2xl font-semibold ${
+                    isGolf
+                      ? "text-white"
+                      : "text-slate-900"
+                  }`}
+                >
+                  {slateHeading}
+                </h2>
+
+                {slateBadge === "LIVE" ? (
+                  <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
+                    LIVE
+                  </span>
+                ) : slateBadge === "FINAL" ? (
+                  <span className="text-xs font-medium text-slate-500">
+                    FINAL
+                  </span>
+                ) : null}
+              </div>
+
+              <div
+                className={`mt-1 text-sm ${
+                  isGolf
+                    ? "text-emerald-100/70"
+                    : "text-slate-500"
+                }`}
+              >
+                {latestSlate ? slateDateLabel : "No slate available"}
+              </div>
+            </div>
+
+            <Link
+              href={`/lineups/scores?sport=${sport}`}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+            >
+              View Scores
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              Loading current slate...
+            </div>
+          ) : latestSlateRows.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              No current slate data available yet.
+            </div>
+          ) : (
+            <>
+              <div
+                className={`home-winner-card relative mb-4 rounded-2xl p-4 ${
+                  isGolf
+                    ? "border border-emerald-500/50 bg-gradient-to-r from-emerald-950 via-emerald-800 to-emerald-600 text-white"
+                    : "border border-orange-200 bg-orange-50"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() =>
+                    shouldShowRefreshStats
+                      ? void handleRefreshStats()
+                      : void loadHomeSummary()
+                  }
+                  disabled={isRefreshingHomeStats || isLoading}
+                  className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-3 py-1.5 text-xs font-semibold text-sky-800 shadow-sm transition hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-2 sm:text-sm"
+                >
+                  {isRefreshingHomeStats || isLoading
+                    ? "Refreshing..."
+                    : "↻ Refresh"}
+                </button>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="pr-24 sm:pr-0">
+                    <div
+                      className={`text-xs font-bold uppercase tracking-[0.18em] ${
+                        isGolf
+                          ? "text-emerald-200"
+                          : "text-orange-700"
+                      }`}
+                    >
+                      {leaderLabel}
+                    </div>
+                    <div className="mt-2">
+                      {leader ? (
+                        <TeamProfileButton
+                          teamName={leader.teamName}
+                          avatarUrl={leader.avatarUrl}
+                          featured
+                          onClick={() =>
+                            setProfileTeam({
+                              id: leader.team_id,
+                              name: leader.teamName,
+                            })
+                          }
+                        />
+                      ) : (
+                        <div className="home-winner-name text-2xl font-bold text-slate-900">
+                          —
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      className={`mt-2 font-black ${
+                        isGolf
+                          ? "text-3xl text-white"
+                          : "text-sm text-slate-600"
+                      }`}
+                    >
+                      {leader
+                        ? isGolf
+                          ? formatGolfScore(
+                              leader.fantasy_points,
+                            )
+                          : `${roundTo(
+                              Number(
+                                leader.fantasy_points ?? 0,
+                              ),
+                            )} pts`
+                        : "—"}
+                    </div>
+                  </div>
+
+                  {tipoffTime ? (
+                    <div className="absolute right-3 top-14 inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-white px-2.5 py-1 shadow-sm sm:top-16 sm:block sm:min-w-[150px] sm:rounded-xl sm:px-3 sm:py-2 sm:text-center">
+                      <div className="text-[9px] font-semibold uppercase tracking-wide text-sky-700 sm:text-xs">
+                        Tip-off
+                      </div>
+                      <div className="text-xs font-bold text-slate-900 sm:mt-0.5 sm:text-2xl">
+                        {tipoffTime} ET
+                      </div>
+                      {tipoffLabel ? (
+                        <div className="mt-0.5 hidden text-[10px] font-medium text-slate-500 sm:block">
+                          {tipoffLabel}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                <span>{slateDateLabel}</span>
+                <span className="text-slate-400">•</span>
+                <span>{slateStatusLabel}</span>
+                <span className="text-slate-400">•</span>
+                <span>{latestSlateRows.length} Teams</span>
+              </div>
+
+              {isGolf ? (
+                <div className="overflow-hidden rounded-2xl border border-emerald-800/50 bg-slate-950">
+                  <table className="w-full border-collapse text-sm">
+                    <thead className="bg-emerald-950/80 text-emerald-100">
+                      <tr className="text-left">
+                        <th className="px-4 py-3 font-semibold">
+                          Team
+                        </th>
+
+                        <th className="px-3 py-3 text-right font-semibold">
+                          Score
+                        </th>
+
+                        <th className="px-4 py-3 text-right font-semibold">
+                          Golfers
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="text-slate-100">
+                      {latestSlateRows.map(
+                        (row, index) => (
+                          <tr
+                            key={`${row.slate_id}-${row.team_id}`}
+                            className={`border-t border-slate-800 ${
+                              index === 0
+                                ? "bg-emerald-950/50"
+                                : "bg-slate-900"
+                            }`}
+                          >
+                            <td className="px-4 py-3">
+                              <TeamProfileButton
+                                teamName={row.teamName}
+                                avatarUrl={row.avatarUrl}
+                                onClick={() =>
+                                  setProfileTeam({
+                                    id: row.team_id,
+                                    name: row.teamName,
+                                  })
+                                }
+                              />
+                            </td>
+
+                            <td className="px-3 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSlateRosterModal({
+                                    slateId:
+                                      row.slate_id,
+                                    teamId:
+                                      row.team_id,
+                                    teamName:
+                                      row.teamName,
+                                    slateLabel:
+                                      latestSlate
+                                        ? slateDateLabel
+                                        : String(
+                                            row.slate_id,
+                                          ),
+                                  })
+                                }
+                                className="inline-flex min-w-16 items-center justify-end gap-1 rounded-full border border-emerald-600/50 bg-emerald-950/70 px-3 py-1.5 text-lg font-black text-white transition hover:bg-emerald-900"
+                              >
+                                {formatGolfScore(
+                                  row.fantasy_points,
+                                )}
+                                <span
+                                  className="text-emerald-300"
+                                  aria-hidden="true"
+                                >
+                                  ›
+                                </span>
+                              </button>
+                            </td>
+
+                            <td className="px-4 py-3 text-right text-xs font-semibold text-slate-300">
+                              {Number(
+                                row.games_completed ??
+                                  0,
+                              )}{" "}
+                              final
+                              {" · "}
+                              <span className="text-emerald-300">
+                                {Number(
+                                  row.games_in_progress ??
+                                    0,
+                                )}{" "}
+                                live
+                              </span>
+                              {" · "}
+                              {Number(
+                                row.games_remaining ??
+                                  0,
+                              )}{" "}
+                              upcoming
+                            </td>
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="-mx-4 overflow-x-auto px-4">
+                  <table className="w-full table-fixed border-collapse text-sm">
+                    <thead className="bg-slate-100 text-slate-700">
+                      <tr className="text-left">
+                        <th className="px-3 py-3 font-semibold">Team</th>
+                        <th className="px-2 py-3 font-semibold">
+                          {scoreColumnLabel}
+                        </th>
+                        <th className="px-2 py-3 font-semibold">
+                          {projectionColumnLabel}
+                        </th>
+                        <th className="px-2 py-3 font-semibold">Win %</th>
+                        <th className="px-2 py-3 font-semibold">Games</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white text-slate-800">
+                      {latestSlateRows.map((row, index) => (
+                        <tr
+                          key={`${row.slate_id}-${row.team_id}`}
+                          className={`border-t border-slate-100 ${
+                            index === 0 ? "home-winner-row bg-orange-50/50" : ""
+                          }`}
+                        >
+                          <td className="px-3 py-2.5">
+                            <TeamProfileButton
+                              teamName={row.teamName}
+                              avatarUrl={row.avatarUrl}
+                              onClick={() =>
+                                setProfileTeam({
+                                  id: row.team_id,
+                                  name: row.teamName,
+                                })
+                              }
+                            />
+                          </td>
+                          <td className="px-2 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSlateRosterModal({
+                                  slateId: row.slate_id,
+                                  teamId: row.team_id,
+                                  teamName: row.teamName,
+                                  slateLabel: latestSlate
+                                    ? slateDateLabel
+                                    : String(row.slate_id),
+                                })
+                              }
+                              className="home-score-pill-v2"
+                              aria-label={`View ${row.teamName}'s box score`}
+                              title={`View ${row.teamName}'s box score`}
+                            >
+                              <span>
+                                {roundTo(Number(row.fantasy_points ?? 0))}
+                              </span>
+
+                              <span
+                                className="home-score-pill-v2-chevron"
+                                aria-hidden="true"
+                              >
+                                ›
+                              </span>
+                            </button>
+                          </td>
+                          <td className="home-projection-value-v2 px-2 py-3">
+                            {isFinalSlate ? (
+                              row.pregame_projected_points !== null &&
+                              row.pregame_projected_points !== undefined ? (
+                                (() => {
+                                  const difference = roundTo(
+                                    Number(row.fantasy_points ?? 0) -
+                                      Number(row.pregame_projected_points),
+                                    1
+                                  );
+
+                                  const isNeutral = Math.abs(difference) <= 1;
+                                  const isPositive = difference > 1;
+
+                                  const displayDifference =
+                                    difference > 0
+                                      ? `+${difference.toFixed(1)}`
+                                      : difference.toFixed(1);
+
+                                  return (
+                                    <span
+                                      className={`home-projection-delta ${
+                                        isNeutral
+                                          ? "home-projection-delta--neutral"
+                                          : isPositive
+                                            ? "home-projection-delta--positive"
+                                            : "home-projection-delta--negative"
+                                      }`}
+                                      title={`Pregame projection: ${roundTo(
+                                        Number(row.pregame_projected_points),
+                                        1
+                                      )}`}
+                                      aria-label={`${
+                                        isNeutral
+                                          ? "Matched projection"
+                                          : isPositive
+                                            ? "Exceeded projection"
+                                            : "Finished below projection"
+                                      } by ${Math.abs(difference).toFixed(
+                                        1
+                                      )} fantasy points. Pregame projection ${roundTo(
+                                        Number(row.pregame_projected_points),
+                                        1
+                                      )}.`}
+                                    >
+                                      <span
+                                        className="home-projection-delta-icon"
+                                        aria-hidden="true"
+                                      >
+                                        {isNeutral
+                                          ? "—"
+                                          : isPositive
+                                            ? "▲"
+                                            : "▼"}
+                                      </span>
+
+                                      <span>{displayDifference}</span>
+                                    </span>
+                                  );
+                                })()
+                              ) : (
+                                "—"
+                              )
+                            ) : row.projected_points !== null &&
+                              row.projected_points !== undefined ? (
+                              roundTo(Number(row.projected_points))
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-2 py-3">
+                            {row.win_probability !== null &&
+                            row.win_probability !== undefined ? (
+                              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                                {roundTo(Number(row.win_probability), 0)}%
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-2 py-3">
+                            <GamesStatus
+                              completed={row.games_completed}
+                              inProgress={row.games_in_progress}
+                              remaining={row.games_remaining}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              )}
+            </>
+          )}
+        </section>
+      </div>
+
+      {slateRosterModal ? (
+        <div
+          className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
+          onClick={() => setSlateRosterModal(null)}
+        >
+          <div
+            className="mobile-modal-panel-safe flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="shrink-0 border-b border-slate-200 px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    Box Score
+                  </div>
+                  <h3 className="mt-1 text-2xl font-bold text-slate-900">
+                    {slateRosterModal.teamName}&apos;s Lineup
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {slateRosterModal.slateLabel}
+                    <span className="mx-2 text-slate-300">•</span>
+                    <span className="font-semibold text-slate-700">
+                      {slateRosterTotal.toFixed(1)} Fantasy Points
+                    </span>
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSlateRosterModal(null)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              {isSlateRosterLoading ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  Loading roster...
+                </div>
+              ) : slateRosterRows.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                  No roster found for this slate.
+                </div>
+              ) : (
+                <div>
+                  <div className="home-lineup-breakdown-heading">
+                    <h4>Player Breakdown</h4>
+
+                    <div className="home-lineup-breakdown-total">
+                      <span>Total</span>
+                      <strong>{slateRosterTotal.toFixed(1)}</strong>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 sm:hidden">
+                    {slateRosterRows.map((row) => (
+                      <div
+                        key={row.playerId}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <button
+                            type="button"
+                            className="home-lineup-player-link"
+                            onClick={() => {
+                              const player = rosterRowToPlayer(row);
+                              if (player) setSelectedRosterPlayer(player);
+                            }}
+                            aria-label={`View ${row.name}'s player profile`}
+                          >
+                            <PlayerHeadshot
+                              nbaPlayerId={row.nbaPlayerId}
+                              nflPlayerId={row.nflPlayerId}
+                              playerName={row.name}
+                              size="sm"
+                            />
+
+                            <span>
+                              <span className="block text-xs font-semibold text-slate-500">
+                                {row.positionGroup ?? "—"}
+                              </span>
+                              <span className="block text-base font-semibold text-slate-900">
+                                {row.name}
+                              </span>
+                            </span>
+                          </button>
+                          <div className="text-right text-base font-bold text-slate-900">
+                            {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                          </div>
+                        </div>
+
+                        <div className="mt-2 text-xs leading-relaxed text-slate-600">
+                          {slateRosterStatColumns
+                            .map(
+                              (column) =>
+                                `${row[column.key] ?? 0} ${column.label}`,
+                            )
+                            .join(" • ")}
+                        </div>
+
+                        <div className="mt-2 flex items-center justify-between text-xs">
+                          <div className="font-semibold text-sky-700">
+                            Proj: {getProjectedFantasyPoints(row).toFixed(1)}
+                          </div>
+
+                          <div className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
+                            {getPlayerStatusLabel(row)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 sm:block">
+                    <table className="min-w-[720px] w-full text-sm">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr className="text-left">
+                          <th className="px-3 py-2">Pos</th>
+                          <th className="px-3 py-2">Player</th>
+                          {slateRosterStatColumns.map((column) => (
+                            <th
+                              key={column.key}
+                              className="px-3 py-2 text-right"
+                            >
+                              {column.label}
+                            </th>
+                          ))}
+                          <th className="px-3 py-2 text-right">Total</th>
+                          <th className="px-3 py-2 text-right">Proj</th>
+                          <th className="px-3 py-2 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {slateRosterRows.map((row) => (
+                          <tr
+                            key={row.playerId}
+                            className="border-t border-slate-100"
+                          >
+                            <td className="px-3 py-2 font-medium">
+                              {row.positionGroup ?? "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                className="home-lineup-player-link home-lineup-player-link--table"
+                                onClick={() => {
+                                  const player = rosterRowToPlayer(row);
+                                  if (player) setSelectedRosterPlayer(player);
+                                }}
+                                aria-label={`View ${row.name}'s player profile`}
+                              >
+                                <PlayerHeadshot
+                                  nbaPlayerId={row.nbaPlayerId}
+                                  nflPlayerId={row.nflPlayerId}
+                                  playerName={row.name}
+                                  size="xs"
+                                />
+                                <span>{row.name}</span>
+                              </button>
+                            </td>
+                            {slateRosterStatColumns.map((column) => (
+                              <td
+                                key={column.key}
+                                className="px-3 py-2 text-right"
+                              >
+                                {row[column.key] ?? 0}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 text-right font-semibold">
+                              {Number(row.fantasyPoints ?? 0).toFixed(1)}
+                            </td>
+
+                            <td className="px-3 py-2 text-right font-semibold text-sky-700">
+                              {getProjectedFantasyPoints(row).toFixed(1)}
+                            </td>
+
+                            <td className="px-3 py-2 text-right text-xs font-medium text-slate-500">
+                              {getPlayerStatusLabel(row)}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
+                          <td className="px-3 py-2" />
+                          <td className="px-3 py-2">Total</td>
+                          <td
+                            className="px-3 py-2 text-right"
+                            colSpan={slateRosterStatColumns.length}
+                          />
+                          <td className="px-3 py-2 text-right">
+                            {slateRosterTotal.toFixed(1)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <ReadOnlyPlayerModal
+        player={selectedRosterPlayer}
+        setPlayer={setSelectedRosterPlayer}
+        playerAverageMap={EMPTY_PLAYER_AVERAGE_MAP}
+        playerProjections={EMPTY_PLAYER_PROJECTIONS}
+      />
+
+      <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
+    </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+
+============================================================
+FILE: lib/home/golfHomeSummary.ts
+============================================================
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type GolfSlateRow = {
+  id: number;
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  first_game_start_time: string | null;
+  display_name: string | null;
+};
+
+type TeamResultRow = {
+  slate_id: number;
+  team_id: number;
+  fantasy_points: number | null;
+  finish_position: number | null;
+  games_completed: number | null;
+  games_in_progress: number | null;
+  games_remaining: number | null;
+};
+
+function formatSlateLabel(
+  startDate: string,
+  endDate: string,
+) {
+  return startDate === endDate
+    ? startDate
+    : `${startDate} - ${endDate}`;
+}
+
+function getSeason(date: string) {
+  return Number(date.slice(0, 4)) ||
+    new Date().getFullYear();
+}
+
+function golfScore(value: number | null | undefined) {
+  const score = Number(value ?? 0);
+
+  if (score === 0) return "E";
+  return score > 0 ? `+${score}` : String(score);
+}
+
+export async function getGolfHomeSummary() {
+  const [
+    { data: slateData, error: slateError },
+    { data: resultData, error: resultError },
+    { data: teamData, error: teamError },
+    { data: teamUserData, error: teamUserError },
+    { data: slateTeamData, error: slateTeamError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("slates")
+      .select(
+        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name",
+      )
+      .eq("sport", "golf")
+      .order("start_date", { ascending: false })
+      .order("end_date", { ascending: false }),
+
+    supabaseAdmin
+      .from("team_slate_results")
+      .select(
+        "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining",
+      ),
+
+    supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .order("name", { ascending: true }),
+
+    supabaseAdmin
+      .from("app_users")
+      .select("team_id, avatar_url")
+      .not("team_id", "is", null),
+
+    supabaseAdmin
+      .from("slate_teams")
+      .select(
+        "slate_id, team_id, is_participating",
+      )
+      .eq("is_participating", true),
+  ]);
+
+  const error =
+    slateError ||
+    resultError ||
+    teamError ||
+    teamUserError ||
+    slateTeamError;
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error:
+          error.message ||
+          "Failed to load Golf home data.",
+      },
+      { status: 500 },
+    );
+  }
+
+  const slates =
+    (slateData ?? []) as GolfSlateRow[];
+
+  const results =
+    (resultData ?? []) as TeamResultRow[];
+
+  const teamNameById = new Map(
+    (teamData ?? []).map((team) => [
+      Number(team.id),
+      String(team.name),
+    ]),
+  );
+
+  const avatarByTeamId = new Map<number, string | null>();
+
+  (teamUserData ?? []).forEach((user) => {
+    if (user.team_id == null) return;
+
+    avatarByTeamId.set(
+      Number(user.team_id),
+      user.avatar_url ?? null,
+    );
+  });
+
+  const participatingTeamIdsBySlate =
+    new Map<number, Set<number>>();
+
+  (slateTeamData ?? []).forEach((row) => {
+    const slateId = Number(row.slate_id);
+    const existing =
+      participatingTeamIdsBySlate.get(slateId) ??
+      new Set<number>();
+
+    existing.add(Number(row.team_id));
+    participatingTeamIdsBySlate.set(
+      slateId,
+      existing,
+    );
+  });
+
+  const resultsBySlateId =
+    new Map<number, TeamResultRow[]>();
+
+  results.forEach((row) => {
+    const existing =
+      resultsBySlateId.get(row.slate_id) ?? [];
+
+    existing.push(row);
+    resultsBySlateId.set(
+      row.slate_id,
+      existing,
+    );
+  });
+
+  const normalizedSlates = slates.map((slate) => ({
+    ...slate,
+    date:
+      slate.date ??
+      slate.start_date ??
+      new Date().toISOString().slice(0, 10),
+    start_date:
+      slate.start_date ??
+      slate.date ??
+      new Date().toISOString().slice(0, 10),
+    end_date:
+      slate.end_date ??
+      slate.start_date ??
+      slate.date ??
+      new Date().toISOString().slice(0, 10),
+  }));
+
+  function rowsForSlate(slateId: number) {
+    const participatingIds =
+      participatingTeamIdsBySlate.get(slateId);
+
+    const slateResults =
+      resultsBySlateId.get(slateId) ?? [];
+
+    if (!participatingIds) return slateResults;
+
+    return slateResults.filter((row) =>
+      participatingIds.has(row.team_id),
+    );
+  }
+
+  function isLiveSlate(slateId: number) {
+    return rowsForSlate(slateId).some(
+      (row) =>
+        Number(row.games_in_progress ?? 0) > 0,
+    );
+  }
+
+  function isCompleteSlate(slateId: number) {
+    const rows = rowsForSlate(slateId);
+
+    return (
+      rows.length > 0 &&
+      rows.some(
+        (row) =>
+          Number(row.games_completed ?? 0) > 0,
+      ) &&
+      rows.every(
+        (row) =>
+          Number(row.games_in_progress ?? 0) === 0 &&
+          Number(row.games_remaining ?? 0) === 0,
+      )
+    );
+  }
+
+  const now = Date.now();
+
+  const liveSlate =
+    normalizedSlates.find((slate) =>
+      isLiveSlate(slate.id),
+    ) ?? null;
+
+  const startedOpenSlate =
+    normalizedSlates.find((slate) => {
+      if (slate.is_locked) return false;
+
+      const startTime =
+        slate.first_game_start_time
+          ? new Date(
+              slate.first_game_start_time,
+            ).getTime()
+          : new Date(
+              `${slate.start_date}T00:00:00`,
+            ).getTime();
+
+      return startTime <= now;
+    }) ?? null;
+
+  const latestCompletedSlate =
+    normalizedSlates.find(
+      (slate) =>
+        slate.is_locked ||
+        isCompleteSlate(slate.id),
+    ) ?? null;
+
+  const nextSlate =
+    normalizedSlates
+      .filter((slate) => {
+        if (slate.is_locked) return false;
+
+        const startTime =
+          slate.first_game_start_time
+            ? new Date(
+                slate.first_game_start_time,
+              ).getTime()
+            : new Date(
+                `${slate.start_date}T00:00:00`,
+              ).getTime();
+
+        return startTime > now;
+      })
+      .sort((a, b) => {
+        const aTime = new Date(
+          a.first_game_start_time ??
+            `${a.start_date}T00:00:00`,
+        ).getTime();
+
+        const bTime = new Date(
+          b.first_game_start_time ??
+            `${b.start_date}T00:00:00`,
+        ).getTime();
+
+        return aTime - bTime;
+      })[0] ?? null;
+
+  const latestSlate =
+    liveSlate ??
+    startedOpenSlate ??
+    latestCompletedSlate ??
+    nextSlate ??
+    normalizedSlates[0] ??
+    null;
+
+  const latestRows = latestSlate
+    ? rowsForSlate(latestSlate.id)
+        .map((row) => ({
+          ...row,
+          teamName:
+            teamNameById.get(row.team_id) ??
+            "Unknown Team",
+          avatarUrl:
+            avatarByTeamId.get(row.team_id) ??
+            null,
+          projected_points: null,
+          pregame_projected_points: null,
+          win_probability: null,
+        }))
+        .sort((a, b) => {
+          const aScore = Number(
+            a.fantasy_points ?? 0,
+          );
+
+          const bScore = Number(
+            b.fantasy_points ?? 0,
+          );
+
+          if (aScore !== bScore) {
+            return aScore - bScore;
+          }
+
+          return a.teamName.localeCompare(
+            b.teamName,
+          );
+        })
+        .map((row, index) => ({
+          ...row,
+          finish_position:
+            row.finish_position ?? index + 1,
+        }))
+    : [];
+
+  const latestSeason = latestSlate
+    ? getSeason(latestSlate.start_date)
+    : new Date().getFullYear();
+
+  const lockedSlateIds = new Set(
+    normalizedSlates
+      .filter(
+        (slate) =>
+          slate.is_locked ||
+          isCompleteSlate(slate.id),
+      )
+      .map((slate) => slate.id),
+  );
+
+  const seasonResults = results.filter(
+    (row) => {
+      const slate = normalizedSlates.find(
+        (item) => item.id === row.slate_id,
+      );
+
+      return (
+        slate &&
+        getSeason(slate.start_date) ===
+          latestSeason &&
+        lockedSlateIds.has(row.slate_id)
+      );
+    },
+  );
+
+  const seasonSnapshot = Array.from(
+    teamNameById.entries(),
+  )
+    .map(([teamId, name]) => {
+      const rows = seasonResults.filter(
+        (row) => row.team_id === teamId,
+      );
+
+      const scores = rows.map((row) =>
+        Number(row.fantasy_points ?? 0),
+      );
+
+      const finishes = rows
+        .map((row) => row.finish_position)
+        .filter(
+          (value): value is number =>
+            value !== null &&
+            value !== undefined,
+        );
+
+      return {
+        team_id: teamId,
+        name,
+        wins: rows.filter(
+          (row) => row.finish_position === 1,
+        ).length,
+        runner_ups: rows.filter(
+          (row) => row.finish_position === 2,
+        ).length,
+        avg_finish:
+          finishes.length > 0
+            ? Number(
+                (
+                  finishes.reduce(
+                    (sum, value) =>
+                      sum + value,
+                    0,
+                  ) / finishes.length
+                ).toFixed(2),
+              )
+            : null,
+        avg_score:
+          scores.length > 0
+            ? Number(
+                (
+                  scores.reduce(
+                    (sum, value) =>
+                      sum + value,
+                    0,
+                  ) / scores.length
+                ).toFixed(2),
+              )
+            : null,
+        slates_played: rows.length,
+      };
+    })
+    .sort((a, b) => {
+      if (b.wins !== a.wins) {
+        return b.wins - a.wins;
+      }
+
+      return (
+        (a.avg_finish ?? 999) -
+        (b.avg_finish ?? 999)
+      );
+    });
+
+  const leader = latestRows[0] ?? null;
+
+  const funFacts =
+    latestSlate && latestRows.length > 0
+      ? [
+          {
+            label: isLiveSlate(latestSlate.id)
+              ? "Live Leader"
+              : latestSlate.is_locked ||
+                  isCompleteSlate(latestSlate.id)
+                ? "Winner"
+                : "Current Leader",
+            value: leader
+              ? `${leader.teamName} ${golfScore(
+                  leader.fantasy_points,
+                )}`
+              : "—",
+          },
+          ...latestRows.slice(1).map((row) => ({
+            label: "Team Score",
+            value: `${row.teamName} ${golfScore(
+              row.fantasy_points,
+            )}`,
+          })),
+        ]
+      : [
+          {
+            label: "Golf",
+            value:
+              "Welcome to 111 Fantasy Golf!",
+          },
+        ];
+
+  function serializeSlate(
+    slate:
+      | (typeof normalizedSlates)[number]
+      | null,
+  ) {
+    if (!slate) return null;
+
+    return {
+      id: slate.id,
+      date: slate.date,
+      start_date: slate.start_date,
+      end_date: slate.end_date,
+      label:
+        slate.display_name?.trim() ||
+        formatSlateLabel(
+          slate.start_date,
+          slate.end_date,
+        ),
+      display_name:
+        slate.display_name ?? null,
+      is_locked: slate.is_locked,
+      first_game_start_time:
+        slate.first_game_start_time,
+    };
+  }
+
+  return NextResponse.json({
+    success: true,
+    latestSlate: serializeSlate(latestSlate),
+    nextSlate: serializeSlate(nextSlate),
+    latestSlateRows: latestRows,
+    seasonSnapshot,
+    funFacts,
+    latestSeason,
+  });
+}
+
+
+============================================================
+FILE: app/api/team-slate-roster/route.ts
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStatColumns } from "@/lib/statColumns";
+
+function getSlotOrder(positionGroup: string | null, index: number) {
+  if (positionGroup === "G" || positionGroup === "QB") return index;
+  return 100 + index;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const slateId = Number(request.nextUrl.searchParams.get("slateId"));
+    const teamId = Number(request.nextUrl.searchParams.get("teamId"));
+
+    if (!slateId || !teamId) {
+      return NextResponse.json(
+        { error: "slateId and teamId are required." },
+        { status: 400 }
+      );
+    }
+
+    const { data: slate } = await supabaseAdmin
+      .from("slates")
+      .select("sport")
+      .eq("id", slateId)
+      .maybeSingle();
+
+    const sport = slate?.sport === "nfl" ? "nfl" : "nba";
+    const statColumns = getStatColumns(sport);
+
+    const { data: team } = await supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .eq("id", teamId)
+      .maybeSingle();
+
+    const { data: lineup, error: lineupError } = await supabaseAdmin
+      .from("lineups")
+      .select("id, slate_id, team_id")
+      .eq("slate_id", slateId)
+      .eq("team_id", teamId)
+      .maybeSingle();
+
+    if (lineupError) {
+      return NextResponse.json({ error: lineupError.message }, { status: 500 });
+    }
+
+    if (!lineup) {
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns,
+        roster: [],
+        total: 0,
+      });
+    }
+
+    const { data: lineupPlayers, error: lineupPlayersError } = await supabaseAdmin
+      .from("lineup_players")
+      .select("player_id")
+      .eq("lineup_id", lineup.id);
+
+    if (lineupPlayersError) {
+      return NextResponse.json(
+        { error: lineupPlayersError.message },
+        { status: 500 }
+      );
+    }
+
+    const playerIds = (lineupPlayers ?? []).map((row) => Number(row.player_id));
+
+    if (playerIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns,
+        roster: [],
+        total: 0,
+      });
+    }
+
+    if (sport === "nfl") {
+      const [{ data: players, error: playersError }, { data: stats, error: statsError }] =
+        await Promise.all([
+          supabaseAdmin
+            .from("players_nfl")
+            .select("id, name, nfl_player_id, position")
+            .in("id", playerIds),
+          supabaseAdmin
+            .from("player_nfl_slate_stats")
+            .select(
+              "player_id, passing_yards, passing_tds, passing_ints, rushing_yards, rushing_tds, receiving_yards, receiving_tds, receptions, fumbles_lost, fantasy_points, game_status, game_status_text"
+            )
+            .eq("slate_id", slateId)
+            .in("player_id", playerIds),
+        ]);
+
+      if (playersError) {
+        return NextResponse.json({ error: playersError.message }, { status: 500 });
+      }
+
+      if (statsError) {
+        return NextResponse.json({ error: statsError.message }, { status: 500 });
+      }
+
+      const playerMap = new Map<number, any>();
+      (players ?? []).forEach((player) => playerMap.set(Number(player.id), player));
+
+      const statMap = new Map<number, any>();
+      (stats ?? []).forEach((stat) => statMap.set(Number(stat.player_id), stat));
+
+      const roster = playerIds
+        .map((playerId, index) => {
+          const player = playerMap.get(playerId);
+          const stat = statMap.get(playerId) ?? {};
+
+          const statValues: Record<string, number> = {};
+          statColumns.forEach((column) => {
+            statValues[column.key] = Number(stat[column.key] ?? 0);
+          });
+
+          return {
+            playerId,
+            name: player?.name ?? `Player ${playerId}`,
+            nbaPlayerId: null,
+            positionGroup: player?.position ?? null,
+            ...statValues,
+            fantasyPoints: stat?.fantasy_points ?? 0,
+            gameStatus: stat?.game_status ?? null,
+            gameStatusText: stat?.game_status_text ?? null,
+            period: null,
+            gameClock: null,
+            sortOrder: getSlotOrder(player?.position ?? null, index),
+          };
+        })
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      const total = roster.reduce(
+        (sum, row) => sum + Number(row.fantasyPoints ?? 0),
+        0
+      );
+
+      return NextResponse.json({
+        success: true,
+        team: team ?? null,
+        slateId,
+        sport,
+        statColumns,
+        roster,
+        total,
+      });
+    }
+
+    const [{ data: players, error: playersError }, { data: stats, error: statsError }] =
+      await Promise.all([
+        supabaseAdmin
+          .from("players")
+          .select("id, name, nba_player_id, position_group")
+          .in("id", playerIds),
+        supabaseAdmin
+          .from("player_slate_stats")
+          .select(
+            "player_id, points, rebounds, assists, steals, blocks, turnovers, fantasy_points, game_status, game_status_text, period, game_clock"
+          )
+          .eq("slate_id", slateId)
+          .in("player_id", playerIds),
+      ]);
+
+    if (playersError) {
+      return NextResponse.json({ error: playersError.message }, { status: 500 });
+    }
+
+    if (statsError) {
+      return NextResponse.json({ error: statsError.message }, { status: 500 });
+    }
+
+    const playerMap = new Map<number, any>();
+    (players ?? []).forEach((player) => playerMap.set(Number(player.id), player));
+
+    const statMap = new Map<number, any>();
+    (stats ?? []).forEach((stat) => statMap.set(Number(stat.player_id), stat));
+
+    const roster = playerIds
+      .map((playerId, index) => {
+        const player = playerMap.get(playerId);
+        const stat = statMap.get(playerId) ?? {};
+
+        const statValues: Record<string, number> = {};
+        statColumns.forEach((column) => {
+          statValues[column.key] = Number(stat[column.key] ?? 0);
+        });
+
+        return {
+          playerId,
+          name: player?.name ?? `Player ${playerId}`,
+          nbaPlayerId: player?.nba_player_id ?? null,
+          positionGroup: player?.position_group ?? null,
+          ...statValues,
+          fantasyPoints: stat?.fantasy_points ?? 0,
+          gameStatus: stat?.game_status ?? null,
+          gameStatusText: stat?.game_status_text ?? null,
+          period: stat?.period ?? null,
+          gameClock: stat?.game_clock ?? null,
+          sortOrder: getSlotOrder(player?.position_group ?? null, index),
+        };
+      })
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    const total = roster.reduce(
+      (sum, row) => sum + Number(row.fantasyPoints ?? 0),
+      0
+    );
+
+    return NextResponse.json({
+      success: true,
+      team: team ?? null,
+      slateId,
+      sport,
+      statColumns,
+      roster,
+      total,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading roster." },
+      { status: 500 }
+    );
+  }
+}
+
+
+============================================================
+FILE: components/home/FunFactCarousel.tsx
+============================================================
+import { getSportConfig } from "@/lib/sports";
+
+type FunFact = {
+  label: string;
+  value: string;
+  detail?: string;
+};
+
+type Props = {
+  facts: FunFact[];
+  sport?: string;
+};
+
+const MIN_ITEMS_FOR_SMOOTH_LOOP = 8;
+
+export default function FunFactCarousel({ facts, sport }: Props) {
+  if (facts.length === 0) return null;
+
+  const items = facts.map((fact) => {
+    const detail = fact.detail ? ` — ${fact.detail}` : "";
+    return `${fact.label}: ${fact.value}${detail}`;
+  });
+
+  const repeatCount = Math.max(
+    Math.ceil(MIN_ITEMS_FOR_SMOOTH_LOOP / items.length),
+    1
+  );
+
+  const paddedItems = Array.from({ length: repeatCount }, () => items).flat();
+  const loopItems = [...paddedItems, ...paddedItems];
+  const durationSeconds = Math.max(paddedItems.length * 3.2, 12);
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 shadow-sm">
+      <div className="mb-1 text-xs font-bold uppercase tracking-wide text-sky-800">
+        {getSportConfig(sport).emoji} Around the League
+      </div>
+      <div className="overflow-hidden text-sm text-slate-700">
+        <div
+          className="fun-fact-ticker flex w-max items-center gap-5 whitespace-nowrap"
+          style={{ animationDuration: `${durationSeconds}s` }}
+        >
+          {loopItems.map((item, index) => (
+            <span key={`${item}-${index}`}>
+              {item}
+              <span className="ml-5 text-sky-500">•</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <style jsx>{`
+        .fun-fact-ticker {
+          animation-name: fun-fact-scroll;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+        }
+        .fun-fact-ticker:hover {
+          animation-play-state: paused;
+        }
+        @keyframes fun-fact-scroll {
+          from {
+            transform: translateX(0);
+          }
+          to {
+            transform: translateX(-50%);
+          }
+        }
+      `}</style>
+    </section>
+  );
+}
+
+
+============================================================
+RELEVANT HOME CSS
+============================================================
+605-  border-color: #38bdf8;
+606-  box-shadow: 0 0 0 3px rgb(14 165 233 / 0.14);
+607-}
+608-
+609-/* Better dark button surfaces where bg-white is used intentionally. */
+610-.dark button.bg-white,
+611-.dark a.bg-white {
+612-  background-color: #15233a;
+613-}
+614-
+615-.dark button.bg-white:hover,
+616-.dark a.bg-white:hover {
+617-  background-color: #1d304d;
+618-}
+619-
+620:.dark .home-current-slate {
+621-  background: linear-gradient(
+622-    145deg,
+623-    rgb(17 28 49 / 0.98),
+624-    rgb(12 23 42 / 0.98)
+625-  );
+626-  border-color: #3a4d6c;
+627-}
+628-
+629:.dark .home-winner-card {
+630-  background:
+631-    radial-gradient(
+632-      circle at 92% 15%,
+633-      rgb(245 158 11 / 0.18),
+634-      transparent 12rem
+635-    ),
+636-    linear-gradient(135deg, #40170a, #5a2108);
+637-  border-color: #f97316;
+638-  box-shadow:
+639-    inset 0 1px 0 rgb(255 255 255 / 0.04),
+640-    0 10px 28px rgb(120 53 15 / 0.22);
+641-}
+642-
+643:.dark .home-winner-card .text-orange-700 {
+644-  color: #fbbf24;
+645-}
+646-
+647:.dark .home-winner-card .text-slate-900 {
+648-  color: #fff7ed;
+649-}
+650-
+651:.dark .home-winner-card .text-slate-600 {
+652-  color: #fed7aa;
+653-}
+654-
+655-/* =========================================================
+656-   111 FANTASY SPORTS DESIGN SYSTEM
+657-   ========================================================= */
+658-
+659-:root {
+660-  --app-page: #f8fafc;
+661-  --app-surface: #ffffff;
+662-  --app-surface-raised: #ffffff;
+663-  --app-surface-soft: #f1f5f9;
+664-  --app-border: #e2e8f0;
+665-  --app-border-strong: #cbd5e1;
+666-
+667-  --app-text: #0f172a;
+668-  --app-text-soft: #475569;
+669-  --app-text-muted: #64748b;
+670-
+671-  --app-blue: #0284c7;
+672-  --app-blue-bright: #38bdf8;
+673-  --app-blue-soft: #e0f2fe;
+674-
+675-  --app-gold: #eab308;
+676-  --app-gold-bright: #facc15;
+677-  --app-orange: #f97316;
+678-  --app-orange-bright: #fb923c;
+679-
+680-  --app-success: #10b981;
+681-  --app-danger: #ef4444;
+682-
+683-  --app-shadow-card:
+684-    0 1px 2px rgb(15 23 42 / 0.06), 0 10px 28px rgb(15 23 42 / 0.06);
+685-
+686-  --app-shadow-raised: 0 12px 34px rgb(15 23 42 / 0.12);
+--
+922-  .app-desktop-link,
+923-  .app-mobile-nav-item {
+924-    transition: none !important;
+925-  }
+926-
+927-  .app-interactive:hover,
+928-  .app-desktop-link:hover {
+929-    transform: none !important;
+930-  }
+931-}
+932-
+933-/* =========================================================
+934-   HOME — CHAMPIONSHIP PRESENTATION
+935-   ========================================================= */
+936-
+937:.dark .home-winner-card {
+938-  background:
+939-    radial-gradient(
+940-      circle at 88% 10%,
+941-      rgb(253 224 71 / 0.22),
+942-      transparent 11rem
+943-    ),
+944-    radial-gradient(
+945-      circle at 12% 100%,
+946-      rgb(251 146 60 / 0.16),
+947-      transparent 14rem
+948-    ),
+949-    linear-gradient(135deg, #7c2d12 0%, #a43f08 48%, #c4510a 100%);
+950-  border: 2px solid #fb923c;
+951-  box-shadow:
+952-    inset 0 1px 0 rgb(255 255 255 / 0.08),
+953-    0 0 0 1px rgb(250 204 21 / 0.12),
+954-    0 16px 38px rgb(249 115 22 / 0.25);
+955-}
+956-
+957:.dark .home-winner-card .text-orange-700 {
+958-  color: #fde047;
+959-  font-weight: 800;
+960-  letter-spacing: 0.14em;
+961-}
+962-
+963-.dark .home-winner-name {
+964-  color: #fff4bd !important;
+965-  text-shadow:
+966-    0 1px 0 rgb(0 0 0 / 0.2),
+967-    0 0 18px rgb(250 204 21 / 0.15);
+968-}
+969-
+970-.dark .home-winner-name:hover {
+971-  color: #ffffff !important;
+972-}
+973-
+974:.dark .home-winner-card .text-slate-600 {
+975-  color: #ffedd5;
+976-}
+977-
+978-.dark .home-winner-row {
+979-  background: linear-gradient(
+980-    90deg,
+981-    rgb(120 53 15 / 0.48),
+982-    rgb(17 28 49 / 0.55) 55%,
+983-    rgb(17 28 49 / 0.9)
+984-  ) !important;
+985-  box-shadow:
+986-    inset 6px 0 0 #facc15,
+987-    inset 0 1px 0 rgb(250 204 21 / 0.08);
+988-}
+989-
+990-.dark .home-winner-row td:first-child {
+991-  color: #fef3c7;
+992-  font-weight: 700;
+993-}
+994-
+995-/* Refresh gets an electric-blue raised treatment. */
+996:.dark .home-winner-card button.border-sky-200 {
+997-  border-color: #38bdf8;
+998-  background: linear-gradient(145deg, #153150, #0b233c);
+999-  color: #e0f2fe;
+1000-  box-shadow:
+1001-    0 0 0 1px rgb(56 189 248 / 0.12),
+1002-    0 8px 22px rgb(2 132 199 / 0.2);
+1003-}
+1004-
+1005-@media (hover: hover) {
+1006:  .dark .home-winner-card button.border-sky-200:hover {
+1007-    transform: translateY(-1px);
+1008-    background: linear-gradient(145deg, #075985, #0c4a6e);
+1009-    box-shadow:
+1010-      0 0 0 1px rgb(125 211 252 / 0.24),
+1011-      0 10px 28px rgb(14 165 233 / 0.28);
+1012-  }
+1013-}
+1014-
+1015-/* =========================================================
+1016-   FINAL HOME WINNER OVERRIDE
+1017-   Intentionally last so older experiments cannot override it.
+1018-   ========================================================= */
+1019-
+1020:html.dark .home-winner-card {
+1021-  background:
+1022-    radial-gradient(
+1023-      circle at 88% 12%,
+1024-      rgb(254 240 138 / 0.42) 0,
+1025-      rgb(251 191 36 / 0.18) 18%,
+1026-      transparent 38%
+1027-    ),
+1028-    linear-gradient(118deg, #9a3412 0%, #c2410c 42%, #ea580c 72%, #f97316 100%) !important;
+1029-
+1030-  border: 2px solid #fb923c !important;
+1031-
+1032-  box-shadow:
+1033-    inset 0 1px 0 rgb(255 255 255 / 0.18),
+1034-    0 0 0 1px rgb(250 204 21 / 0.22),
+1035-    0 12px 34px rgb(249 115 22 / 0.3) !important;
+1036-}
+1037-
+1038:html.dark .home-winner-card .text-orange-700 {
+1039-  color: #fef08a !important;
+1040-  font-weight: 900;
+1041-  text-shadow: 0 1px 8px rgb(69 26 3 / 0.55);
+1042-}
+1043-
+1044:html.dark .home-winner-card .home-winner-name {
+1045-  color: #ffffff !important;
+1046-  text-shadow:
+1047-    0 2px 3px rgb(67 20 7 / 0.4),
+1048-    0 0 18px rgb(254 240 138 / 0.22);
+1049-}
+1050-
+1051:html.dark .home-winner-card .text-slate-600 {
+1052-  color: #ffedd5 !important;
+1053-}
+1054-
+1055-html.dark .home-winner-row {
+1056-  background: linear-gradient(
+1057-    90deg,
+1058-    rgb(194 65 12 / 0.62) 0%,
+1059-    rgb(124 45 18 / 0.38) 34%,
+1060-    rgb(17 28 49 / 0.92) 78%
+1061-  ) !important;
+1062-
+1063-  box-shadow:
+1064-    inset 7px 0 0 #facc15,
+1065-    inset 0 1px 0 rgb(253 224 71 / 0.12) !important;
+1066-}
+1067-
+1068-html.dark .home-winner-row td:first-child {
+1069-  color: #fef3c7 !important;
+1070-  font-weight: 800;
+1071-}
+1072-
+1073-/* =========================================================
+1074-   SCOREBOARD EMPHASIS
+1075-   Make the fantasy scores the visual focus.
+1076-   ========================================================= */
+1077-
+1078:.dark .home-current-slate table tbody td:nth-child(2),
+1079:.dark .home-current-slate table tbody td:nth-child(3) {
+1080-  color: #f8fafc !important;
+1081-  font-weight: 800;
+1082-  font-size: 1.18rem;
+1083-  letter-spacing: -0.02em;
+1084-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+1085-}
+1086-
+1087-/* First-place scores become championship gold */
+1088-
+1089-.dark .home-winner-row td:nth-child(2),
+1090-.dark .home-winner-row td:nth-child(3) {
+1091-  color: #fde047 !important;
+1092-  text-shadow:
+1093-    0 0 10px rgb(250 204 21 / 0.28),
+1094-    0 1px 2px rgb(0 0 0 / 0.4);
+1095-}
+1096-
+1097-/* Player names slightly de-emphasized */
+1098-
+1099:.dark .home-current-slate table tbody td:first-child {
+1100-  color: #dbeafe;
+1101-  font-size: 1.08rem;
+1102-}
+1103-
+1104-/* Games remain bold but secondary */
+1105-
+1106:.dark .home-current-slate table tbody td:last-child {
+1107-  color: #f8fafc;
+1108-  font-weight: 700;
+1109-}
+1110-
+1111-/* Header labels */
+1112-
+1113:.dark .home-current-slate table thead th {
+1114-  color: #f1f5f9;
+1115-  font-weight: 700;
+1116-}
+1117-
+1118:.dark .home-current-slate table thead th span,
+1119:.dark .home-current-slate table thead small {
+1120-  color: #94a3b8;
+1121-}
+1122-
+1123-/* =========================================================
+1124-   SCORE EMPHASIS
+1125-   ========================================================= */
+1126-
+1127-/* Fantasy points should be the star of the table */
+1128-
+1129:.dark .home-current-slate tbody td:nth-child(2),
+1130:.dark .home-current-slate tbody td:nth-child(3) {
+1131-  color: #f8fafc !important;
+1132-  font-weight: 800;
+1133-  font-size: 1.15rem;
+1134-  letter-spacing: -0.02em;
+1135-}
+1136-
+1137-/* Winning scores get championship gold */
+1138-
+1139-.dark .home-winner-row td:nth-child(2),
+1140-.dark .home-winner-row td:nth-child(3) {
+1141-  color: #fde047 !important;
+1142-  text-shadow:
+1143-    0 0 10px rgb(250 204 21 / 0.28),
+1144-    0 1px 2px rgb(0 0 0 / 0.35);
+1145-}
+1146-
+1147-/* Player names become secondary */
+1148-
+1149:.dark .home-current-slate tbody td:first-child {
+1150-  color: #dbeafe;
+1151-  font-size: 1.05rem;
+1152-}
+1153-
+1154-/* Games stay bold but don't compete with Score */
+1155-
+1156:.dark .home-current-slate tbody td:last-child {
+1157-  color: #f8fafc;
+1158-  font-weight: 700;
+1159-}
+1160-
+1161-/* =========================================================
+1162-   TABLE HEADER POLISH
+1163-   ========================================================= */
+1164-
+1165:.dark .home-current-slate thead {
+1166-  background: linear-gradient(180deg, #253652, #22314b);
+1167-}
+1168-
+1169:.dark .home-current-slate thead th {
+1170-  color: #f8fafc;
+1171-  font-weight: 700;
+1172-}
+1173-
+1174:.dark .home-current-slate thead th small,
+1175:.dark .home-current-slate thead th span {
+1176-  color: #94a3b8;
+1177-}
+1178-
+1179-/* =========================================================
+1180-   HOME ACTION BUTTONS
+1181-   Match View Scores with the electric-blue Refresh treatment.
+1182-   ========================================================= */
+1183-
+1184:.dark .home-current-slate > div:first-child > a {
+1185-  border-color: #38bdf8 !important;
+1186-  background: linear-gradient(145deg, #153150, #0b233c) !important;
+1187-  color: #e0f2fe !important;
+1188-  box-shadow:
+1189-    0 0 0 1px rgb(56 189 248 / 0.12),
+1190-    0 8px 22px rgb(2 132 199 / 0.18);
+1191-  transition:
+1192-    transform 150ms ease,
+1193-    border-color 150ms ease,
+1194-    background 150ms ease,
+1195-    box-shadow 150ms ease;
+1196-}
+1197-
+1198-@media (hover: hover) {
+1199:  .dark .home-current-slate > div:first-child > a:hover {
+1200-    transform: translateY(-1px);
+1201-    border-color: #7dd3fc !important;
+1202-    background: linear-gradient(145deg, #075985, #0c4a6e) !important;
+1203-    color: #ffffff !important;
+1204-    box-shadow:
+1205-      0 0 0 1px rgb(125 211 252 / 0.24),
+1206-      0 10px 28px rgb(14 165 233 / 0.28);
+1207-  }
+1208-}
+1209-
+1210:.dark .home-current-slate > div:first-child > a:active {
+1211-  transform: scale(0.98);
+1212-}
+1213-
+1214-/* =========================================================
+1215-   111 FANTASY — LIGHT MODE POLISH
+1216-   Same hierarchy as dark mode, adapted for daylight.
+1217-   ========================================================= */
+1218-
+1219-/* Page and surface depth */
+1220-
+1221-html:not(.dark) body {
+1222-  background:
+1223-    radial-gradient(
+1224-      circle at 12% -8%,
+1225-      rgb(14 165 233 / 0.08),
+1226-      transparent 28rem
+1227-    ),
+1228-    radial-gradient(
+1229-      circle at 94% 8%,
+1230-      rgb(249 115 22 / 0.06),
+1231-      transparent 26rem
+1232-    ),
+1233-    #f8fafc;
+1234-}
+1235-
+1236-html:not(.dark) .app-desktop-nav,
+1237-html:not(.dark) .app-mobile-header {
+1238-  background: linear-gradient(135deg, #ffffff, #f8fbff);
+1239-  border-color: #dbe5f1;
+1240-}
+1241-
+1242-html:not(.dark) .app-desktop-link-active {
+1243-  border-color: #38bdf8 !important;
+1244-  background: linear-gradient(135deg, #e0f2fe, #bae6fd) !important;
+1245-  color: #075985 !important;
+--
+1283-  height: 3px;
+1284-  border-radius: 999px;
+1285-  background: #f59e0b;
+1286-  box-shadow: 0 0 8px rgb(245 158 11 / 0.35);
+1287-  content: "";
+1288-}
+1289-
+1290-html:not(.dark) .app-mobile-nav-idle {
+1291-  color: #64748b !important;
+1292-}
+1293-
+1294-/* =========================================================
+1295-   HOME — LIGHT CHAMPIONSHIP PRESENTATION
+1296-   ========================================================= */
+1297-
+1298:html:not(.dark) .home-current-slate {
+1299-  background: linear-gradient(145deg, #ffffff, #fbfdff);
+1300-  border-color: #dbe5f1;
+1301-}
+1302-
+1303:html:not(.dark) .home-winner-card {
+1304-  background:
+1305-    radial-gradient(
+1306-      circle at 90% 10%,
+1307-      rgb(254 240 138 / 0.85),
+1308-      transparent 11rem
+1309-    ),
+1310-    linear-gradient(118deg, #fff7ed 0%, #ffedd5 40%, #fed7aa 72%, #fdba74 100%) !important;
+1311-
+1312-  border: 2px solid #fb923c !important;
+1313-
+1314-  box-shadow:
+1315-    inset 0 1px 0 rgb(255 255 255 / 0.9),
+1316-    0 0 0 1px rgb(245 158 11 / 0.1),
+1317-    0 12px 30px rgb(249 115 22 / 0.16) !important;
+1318-}
+1319-
+1320:html:not(.dark) .home-winner-card .text-orange-700 {
+1321-  color: #c2410c !important;
+1322-  font-weight: 900;
+1323-  letter-spacing: 0.14em;
+1324-}
+1325-
+1326:html:not(.dark) .home-winner-card .home-winner-name {
+1327-  color: #172554 !important;
+1328-  text-shadow: none;
+1329-}
+1330-
+1331:html:not(.dark) .home-winner-card .home-winner-name:hover {
+1332-  color: #075985 !important;
+1333-}
+1334-
+1335:html:not(.dark) .home-winner-card .text-slate-600 {
+1336-  color: #9a3412 !important;
+1337-}
+1338-
+1339-/* Refresh button */
+1340-
+1341:html:not(.dark) .home-winner-card button.border-sky-200 {
+1342-  border-color: #0ea5e9 !important;
+1343-  background: linear-gradient(145deg, #ffffff, #e0f2fe) !important;
+1344-  color: #075985 !important;
+1345-  box-shadow:
+1346-    0 0 0 1px rgb(14 165 233 / 0.08),
+1347-    0 7px 18px rgb(2 132 199 / 0.12);
+1348-}
+1349-
+1350-@media (hover: hover) {
+1351:  html:not(.dark) .home-winner-card button.border-sky-200:hover {
+1352-    transform: translateY(-1px);
+1353-    border-color: #0284c7 !important;
+1354-    background: linear-gradient(145deg, #e0f2fe, #bae6fd) !important;
+1355-    box-shadow:
+1356-      0 0 0 1px rgb(14 165 233 / 0.15),
+1357-      0 9px 24px rgb(2 132 199 / 0.16);
+1358-  }
+1359-}
+1360-
+1361-/* View Scores button */
+1362-
+1363:html:not(.dark) .home-current-slate > div:first-child > a {
+1364-  border-color: #38bdf8 !important;
+1365-  background: linear-gradient(145deg, #ffffff, #e0f2fe) !important;
+1366-  color: #075985 !important;
+1367-  box-shadow:
+1368-    0 0 0 1px rgb(56 189 248 / 0.08),
+1369-    0 7px 18px rgb(2 132 199 / 0.1);
+1370-}
+1371-
+1372-@media (hover: hover) {
+1373:  html:not(.dark) .home-current-slate > div:first-child > a:hover {
+1374-    transform: translateY(-1px);
+1375-    border-color: #0284c7 !important;
+1376-    background: linear-gradient(145deg, #e0f2fe, #bae6fd) !important;
+1377-    color: #075985 !important;
+1378-    box-shadow: 0 9px 24px rgb(2 132 199 / 0.15);
+1379-  }
+1380-}
+1381-
+1382-/* =========================================================
+1383-   LIGHT SCOREBOARD EMPHASIS
+1384-   ========================================================= */
+1385-
+1386:html:not(.dark) .home-current-slate table tbody td:nth-child(2),
+1387:html:not(.dark) .home-current-slate table tbody td:nth-child(3) {
+1388-  color: #0f172a !important;
+1389-  font-size: 1.15rem;
+1390-  font-weight: 850;
+1391-  letter-spacing: -0.02em;
+1392-}
+1393-
+1394-html:not(.dark) .home-winner-row {
+1395-  background: linear-gradient(
+1396-    90deg,
+1397-    #fef3c7 0%,
+1398-    #fff7ed 42%,
+1399-    #ffffff 100%
+1400-  ) !important;
+1401-
+1402-  box-shadow:
+1403-    inset 7px 0 0 #f59e0b,
+1404-    inset 0 1px 0 rgb(245 158 11 / 0.1) !important;
+1405-}
+1406-
+1407-html:not(.dark) .home-winner-row td:first-child {
+1408-  color: #78350f !important;
+1409-  font-weight: 800;
+1410-}
+1411-
+1412-html:not(.dark) .home-winner-row td:nth-child(2),
+1413-html:not(.dark) .home-winner-row td:nth-child(3) {
+1414-  color: #b45309 !important;
+1415-  font-weight: 900;
+1416-}
+1417-
+1418:html:not(.dark) .home-current-slate table tbody td:first-child {
+1419-  color: #1e3a5f;
+1420-  font-size: 1.05rem;
+1421-}
+1422-
+1423:html:not(.dark) .home-current-slate table tbody td:last-child {
+1424-  color: #1e293b;
+1425-  font-weight: 700;
+1426-}
+1427-
+1428-/* Table header */
+1429-
+1430:html:not(.dark) .home-current-slate thead {
+1431-  background: linear-gradient(180deg, #eaf2fb, #e2e8f0);
+1432-}
+1433-
+1434:html:not(.dark) .home-current-slate thead th {
+1435-  color: #1e293b;
+1436-  font-weight: 750;
+1437-}
+1438-
+1439:html:not(.dark) .home-current-slate thead th span,
+1440:html:not(.dark) .home-current-slate thead th small {
+1441-  color: #64748b;
+1442-}
+1443-
+1444-/* Keep score links visually important rather than link-like */
+1445-
+1446:html:not(.dark) .home-current-slate table tbody td:nth-child(2) button {
+1447-  color: inherit !important;
+1448-  font: inherit;
+1449-}
+1450-
+1451:html:not(.dark) .home-current-slate table tbody td:nth-child(2) button:hover {
+1452-  color: #0369a1 !important;
+1453-}
+1454-
+1455-/* Subtle row hover without overwhelming the winner */
+1456-
+1457-@media (hover: hover) {
+1458:  html:not(.dark) .home-current-slate tbody tr:not(.home-winner-row):hover {
+1459-    background-color: #f0f9ff;
+1460-  }
+1461-}
+1462-
+1463-/* =========================================================
+1464-   FINAL LIGHT-MODE HOME OVERRIDES
+1465-   Kept last to beat existing Tailwind utility colors.
+1466-   ========================================================= */
+1467-
+1468:html.light .home-winner-card,
+1469:html:not(.dark) .home-winner-card {
+1470-  background:
+1471-    radial-gradient(
+1472-      circle at 88% 10%,
+1473-      rgb(254 240 138 / 0.8),
+1474-      transparent 12rem
+1475-    ),
+1476-    linear-gradient(118deg, #ffedd5 0%, #fed7aa 45%, #fdba74 75%, #fb923c 100%) !important;
+1477-
+1478-  border: 2px solid #f97316 !important;
+1479-
+1480-  box-shadow:
+1481-    inset 0 1px 0 rgb(255 255 255 / 0.75),
+1482-    0 0 0 1px rgb(245 158 11 / 0.12),
+1483-    0 12px 30px rgb(249 115 22 / 0.18) !important;
+1484-}
+1485-
+1486:html.light .home-winner-card .text-orange-700,
+1487:html:not(.dark) .home-winner-card .text-orange-700 {
+1488-  color: #9a3412 !important;
+1489-  font-weight: 900;
+1490-}
+1491-
+1492:html.light .home-winner-card .home-winner-name,
+1493:html:not(.dark) .home-winner-card .home-winner-name {
+1494-  color: #172554 !important;
+1495-}
+1496-
+1497:html.light .home-winner-card .text-slate-600,
+1498:html:not(.dark) .home-winner-card .text-slate-600 {
+1499-  color: #7c2d12 !important;
+1500-}
+1501-
+1502-/* Score and projection are the primary table values. */
+1503-
+1504:html.light .home-current-slate tbody td:nth-child(2),
+1505:html.light .home-current-slate tbody td:nth-child(3),
+1506:html:not(.dark) .home-current-slate tbody td:nth-child(2),
+1507:html:not(.dark) .home-current-slate tbody td:nth-child(3) {
+1508-  color: #0f172a !important;
+1509-  font-size: 1.15rem !important;
+1510-  font-weight: 800 !important;
+1511-  letter-spacing: -0.02em;
+1512-}
+1513-
+1514:html.light .home-current-slate tbody td:nth-child(2) button,
+1515:html:not(.dark) .home-current-slate tbody td:nth-child(2) button {
+1516-  color: inherit !important;
+1517-  font-size: inherit !important;
+1518-  font-weight: inherit !important;
+1519-}
+1520-
+1521-/* Championship treatment for the first-place row. */
+1522-
+1523-html.light .home-winner-row,
+1524-html:not(.dark) .home-winner-row {
+1525-  background: linear-gradient(
+1526-    90deg,
+1527-    #fef3c7 0%,
+1528-    #fff7ed 46%,
+1529-    #ffffff 100%
+1530-  ) !important;
+1531-
+1532-  box-shadow:
+1533-    inset 7px 0 0 #f59e0b,
+1534-    inset 0 1px 0 rgb(245 158 11 / 0.12) !important;
+1535-}
+1536-
+1537-html.light .home-winner-row td:first-child,
+1538-html:not(.dark) .home-winner-row td:first-child {
+1539-  color: #78350f !important;
+1540-  font-weight: 800 !important;
+1541-}
+1542-
+1543-html.light .home-winner-row td:nth-child(2),
+1544-html.light .home-winner-row td:nth-child(3),
+1545-html:not(.dark) .home-winner-row td:nth-child(2),
+1546-html:not(.dark) .home-winner-row td:nth-child(3) {
+1547-  color: #b45309 !important;
+1548-  font-weight: 900 !important;
+1549-}
+1550-
+1551-html.light .home-winner-row td:nth-child(2) button,
+1552-html:not(.dark) .home-winner-row td:nth-child(2) button {
+1553-  color: #b45309 !important;
+1554-  font-weight: 900 !important;
+1555-}
+1556-
+1557-/* =========================================================
+1558-   FINAL LIGHT WINNER CARD
+1559-   Softer, premium championship treatment.
+1560-   ========================================================= */
+1561-
+1562:html.light .home-winner-card,
+1563:html:not(.dark) .home-winner-card {
+1564-  background:
+1565-    radial-gradient(
+1566-      circle at 90% 12%,
+1567-      rgb(254 240 138 / 0.32),
+1568-      transparent 13rem
+1569-    ),
+1570-    linear-gradient(115deg, #fffaf3 0%, #fff4e5 42%, #ffe8c7 78%, #ffd6a0 100%) !important;
+1571-
+1572-  border: 2px solid #fb923c !important;
+1573-
+1574-  box-shadow:
+1575-    inset 0 1px 0 rgb(255 255 255 / 0.95),
+1576-    0 0 0 1px rgb(251 146 60 / 0.1),
+1577-    0 10px 24px rgb(249 115 22 / 0.1) !important;
+1578-}
+1579-
+1580:html.light .home-winner-card .text-orange-700,
+1581:html:not(.dark) .home-winner-card .text-orange-700 {
+1582-  color: #b45309 !important;
+1583-  font-weight: 900;
+1584-  letter-spacing: 0.16em;
+1585-}
+1586-
+1587:html.light .home-winner-card .home-winner-name,
+1588:html:not(.dark) .home-winner-card .home-winner-name {
+1589-  color: #172554 !important;
+1590-  text-shadow: none;
+1591-}
+1592-
+1593:html.light .home-winner-card .text-slate-600,
+1594:html:not(.dark) .home-winner-card .text-slate-600 {
+1595-  color: #7c2d12 !important;
+1596-}
+1597-
+1598-/* =========================================================
+1599-   COLLECTIBLE CARD SYSTEM
+1600-   Shared by awards, previews, and milestone badges.
+1601-   These cards intentionally retain light plaque surfaces in
+1602-   both themes, so their internal colors are self-contained.
+1603-   ========================================================= */
+1604-
+1605-.collectible-card {
+1606-  --collectible-title: #0f172a;
+1607-  --collectible-meta: #334155;
+1608-  --collectible-copy: #475569;
+1609-  --collectible-muted: #64748b;
+1610-  --collectible-divider: rgb(15 23 42 / 0.12);
+1611-
+1612-  position: relative;
+1613-  border-width: 1px;
+1614-  border-style: solid;
+1615-  color: var(--collectible-title) !important;
+1616-  box-shadow:
+1617-    0 10px 28px rgb(15 23 42 / 0.1),
+1618-    inset 0 1px 0 rgb(255 255 255 / 0.8);
+1619-}
+1620-
+1621-.collectible-card--common {
+1622-  border-color: #cbd5e1;
+1623-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 55%, #eef2f7 100%);
+1624-}
+1625-
+1626-.collectible-card--rare {
+1627-  border-color: #38bdf8;
+1628-  background: linear-gradient(145deg, #ffffff 0%, #f0f9ff 52%, #dff3ff 100%);
+1629-}
+--
+6051-  .player-modal-highlight {
+6052-    justify-content: center;
+6053-    padding-inline: 0.55rem;
+6054-  }
+6055-
+6056-  .player-modal-highlight strong {
+6057-    font-size: 0.7rem;
+6058-  }
+6059-}
+6060-
+6061-/* =========================================================
+6062-   HOME SCOREBOARD — TEAM PROFILE IDENTITY
+6063-   Uses uploaded avatars with TeamAvatar's built-in fallback.
+6064-   ========================================================= */
+6065-
+6066:.home-team-profile-button {
+6067-  display: inline-flex;
+6068-  max-width: 100%;
+6069-  align-items: center;
+6070-  gap: 0.55rem;
+6071-  border-radius: 0.75rem;
+6072-  padding: 0.2rem 0.45rem 0.2rem 0.1rem;
+6073-  text-align: left;
+6074-  transition:
+6075-    background-color 160ms ease,
+6076-    color 160ms ease,
+6077-    transform 160ms ease;
+6078-}
+6079-
+6080:.home-team-profile-button:hover {
+6081-  background-color: rgb(14 165 233 / 0.1);
+6082-  color: #0369a1;
+6083-}
+6084-
+6085:.home-team-profile-button:focus-visible {
+6086-  outline: 2px solid #0ea5e9;
+6087-  outline-offset: 2px;
+6088-}
+6089-
+6090-.home-team-profile-name {
+6091-  min-width: 0;
+6092-  overflow: hidden;
+6093-  color: inherit;
+6094-  font-size: 0.95rem;
+6095-  font-weight: 750;
+6096-  line-height: 1.15;
+6097-  text-overflow: ellipsis;
+6098-  white-space: nowrap;
+6099-}
+6100-
+6101-.home-team-profile-chevron {
+6102-  flex: 0 0 auto;
+6103-  color: #94a3b8;
+6104-  font-size: 1.2rem;
+6105-  font-weight: 700;
+6106-  line-height: 1;
+6107-  transition:
+6108-    color 160ms ease,
+6109-    transform 160ms ease;
+6110-}
+6111-
+6112:.home-team-profile-button:hover .home-team-profile-chevron {
+6113-  color: #0284c7;
+6114-  transform: translateX(2px);
+6115-}
+6116-
+6117:.home-team-profile-button--featured {
+6118-  margin-left: -0.1rem;
+6119-  padding: 0.25rem 0.65rem 0.25rem 0.15rem;
+6120-}
+6121-
+6122:.home-team-profile-button--featured .home-team-profile-name {
+6123-  color: #172554;
+6124-  font-size: 1.5rem;
+6125-  font-weight: 850;
+6126-  letter-spacing: -0.025em;
+6127-}
+6128-
+6129:.home-team-profile-button--featured img,
+6130:.home-team-profile-button--featured > div:first-child {
+6131-  box-shadow:
+6132-    0 2px 5px rgb(15 23 42 / 0.18),
+6133-    0 0 0 2px rgb(245 158 11 / 0.45);
+6134-}
+6135-
+6136:.home-current-slate thead th {
+6137-  color: #64748b;
+6138-  font-size: 0.78rem;
+6139-  font-weight: 750;
+6140-  letter-spacing: 0.015em;
+6141-}
+6142-
+6143:.home-current-slate tbody td {
+6144-  vertical-align: middle;
+6145-}
+6146-
+6147:.home-current-slate tbody td:nth-child(4),
+6148:.home-current-slate tbody td:nth-child(5) {
+6149-  font-size: 0.88rem;
+6150-}
+6151-
+6152:.dark .home-team-profile-button {
+6153-  color: #e2e8f0;
+6154-}
+6155-
+6156:.dark .home-team-profile-button:hover {
+6157-  background-color: rgb(14 165 233 / 0.14);
+6158-  color: #7dd3fc;
+6159-}
+6160-
+6161:.dark .home-team-profile-button--featured .home-team-profile-name {
+6162-  color: #fff7ed;
+6163-}
+6164-
+6165:.dark .home-current-slate thead th {
+6166-  color: #cbd5e1;
+6167-}
+6168-
+6169-@media (max-width: 639px) {
+6170:  .home-team-profile-button {
+6171-    gap: 0.4rem;
+6172-    padding-right: 0.2rem;
+6173-  }
+6174-
+6175-  .home-team-profile-name {
+6176-    font-size: 0.88rem;
+6177-  }
+6178-
+6179-  .home-team-profile-chevron {
+6180-    display: none;
+6181-  }
+6182-
+6183:  .home-team-profile-button--featured .home-team-profile-name {
+6184-    font-size: 1.35rem;
+6185-  }
+6186-}
+6187-
+6188-/* Let the winner identity display its full name.
+6189-   Table-row identities remain compact and truncated. */
+6190:.home-team-profile-button--featured {
+6191-  max-width: none;
+6192-}
+6193-
+6194:.home-team-profile-button--featured .home-team-profile-name {
+6195-  overflow: visible;
+6196-  text-overflow: clip;
+6197-  white-space: nowrap;
+6198-}
+6199-
+6200-@media (max-width: 639px) {
+6201:  .home-winner-card .home-team-profile-button--featured {
+6202-    max-width: calc(100% - 5.5rem);
+6203-  }
+6204-
+6205:  .home-winner-card
+6206:    .home-team-profile-button--featured
+6207-    .home-team-profile-name {
+6208-    overflow: hidden;
+6209-    text-overflow: ellipsis;
+6210-  }
+6211-}
+6212-
+6213-/* =========================================================
+6214-   HOME SCOREBOARD — FINAL TYPOGRAPHY AND GAME STATUS POLISH
+6215-   ========================================================= */
+6216-
+6217-/* Actual score remains the strongest table value. */
+6218:.home-current-slate .home-score-value {
+6219-  color: #38bdf8 !important;
+6220-  font-size: 1.15rem !important;
+6221-  font-weight: 800 !important;
+6222-  letter-spacing: -0.02em;
+6223-  line-height: 1;
+6224-  font-variant-numeric: tabular-nums;
+6225-  transition: color 150ms ease;
+6226-}
+6227-
+6228:.home-current-slate .home-score-value:hover {
+6229-  color: #7dd3fc !important;
+6230-  text-decoration: underline;
+6231-  text-underline-offset: 3px;
+6232-}
+6233-
+6234-/* Projection is useful, but visually secondary to actual score. */
+6235:.home-current-slate .home-projection-value {
+6236-  color: #e2e8f0 !important;
+6237-  font-size: 1rem !important;
+6238-  font-weight: 700 !important;
+6239-  letter-spacing: -0.01em !important;
+6240-  line-height: 1;
+6241-  font-variant-numeric: tabular-nums;
+6242-}
+6243-
+6244-/* Human-readable game state. */
+6245-.home-games-status {
+6246-  display: flex;
+6247-  flex-wrap: wrap;
+6248-  align-items: center;
+6249-  gap: 0.28rem;
+6250-  color: #cbd5e1;
+6251-  font-size: 0.82rem;
+6252-  font-weight: 650;
+6253-  line-height: 1.2;
+6254-  white-space: nowrap;
+6255-  font-variant-numeric: tabular-nums;
+6256-}
+6257-
+6258-.home-games-status-final {
+6259-  color: #e2e8f0;
+6260-}
+6261-
+6262-.home-games-status-divider {
+6263-  color: #64748b;
+6264-}
+6265-
+6266-.home-games-status-live {
+6267-  display: inline-flex;
+6268-  align-items: center;
+6269-  gap: 0.28rem;
+6270-  color: #f87171;
+--
+6285-  color: #94a3b8;
+6286-}
+6287-
+6288-@keyframes home-games-live-pulse {
+6289-  0%,
+6290-  100% {
+6291-    opacity: 1;
+6292-  }
+6293-
+6294-  50% {
+6295-    opacity: 0.4;
+6296-  }
+6297-}
+6298-
+6299-/* Win probabilities matter less after the winner is settled. */
+6300:.home-current-slate--final .home-win-badge {
+6301-  background-color: rgb(15 118 110 / 0.25) !important;
+6302-  border-color: rgb(52 211 153 / 0.35);
+6303-  color: #6ee7b7 !important;
+6304-  box-shadow: none;
+6305-  opacity: 0.86;
+6306-}
+6307-
+6308-/* Light-mode equivalents. */
+6309:html.light .home-current-slate .home-score-value,
+6310:html:not(.dark) .home-current-slate .home-score-value {
+6311-  color: #0369a1 !important;
+6312-}
+6313-
+6314:html.light .home-current-slate .home-score-value:hover,
+6315:html:not(.dark) .home-current-slate .home-score-value:hover {
+6316-  color: #0284c7 !important;
+6317-}
+6318-
+6319:html.light .home-current-slate .home-projection-value,
+6320:html:not(.dark) .home-current-slate .home-projection-value {
+6321-  color: #334155 !important;
+6322-  font-size: 1rem !important;
+6323-  font-weight: 700 !important;
+6324-}
+6325-
+6326-html.light .home-games-status,
+6327-html:not(.dark) .home-games-status {
+6328-  color: #475569;
+6329-}
+6330-
+6331-html.light .home-games-status-final,
+6332-html:not(.dark) .home-games-status-final {
+6333-  color: #334155;
+6334-}
+6335-
+6336-html.light .home-games-status-divider,
+6337-html:not(.dark) .home-games-status-divider {
+6338-  color: #94a3b8;
+6339-}
+6340-
+6341-html.light .home-games-status-left,
+6342-html:not(.dark) .home-games-status-left {
+6343-  color: #64748b;
+6344-}
+6345-
+6346:html.light .home-current-slate--final .home-win-badge,
+6347:html:not(.dark) .home-current-slate--final .home-win-badge {
+6348-  background-color: #ecfdf5 !important;
+6349-  color: #047857 !important;
+6350-  opacity: 0.8;
+6351-}
+6352-
+6353-/* Preserve the compact mobile table. */
+6354-@media (max-width: 639px) {
+6355-  .home-games-status {
+6356-    max-width: 5.5rem;
+6357-    gap: 0.2rem;
+6358-    font-size: 0.72rem;
+6359-    white-space: normal;
+6360-  }
+6361-
+6362-  .home-games-status-divider {
+6363-    display: none;
+6364-  }
+6365-
+6366-  .home-games-status-live,
+6367-  .home-games-status-left {
+6368-    width: 100%;
+6369-  }
+6370-
+6371:  .home-current-slate .home-projection-value {
+6372-    font-size: 0.92rem !important;
+6373-  }
+6374-}
+6375-
+6376-@media (prefers-reduced-motion: reduce) {
+6377-  .home-games-status-live-dot {
+6378-    animation: none;
+6379-  }
+6380-}
+6381-
+6382-/* =========================================================
+6383-   HOME SCOREBOARD — SCORE MODAL + GAME STATUS
+6384-   ========================================================= */
+6385-
+6386-/* The score opens the team box-score modal. */
+6387:.home-current-slate .home-score-pill {
+6388-  display: inline-flex;
+6389-  align-items: center;
+6390-  gap: 0.35rem;
+6391-  min-width: 4.7rem;
+6392-  justify-content: center;
+6393-  border: 1px solid rgb(148 163 184 / 0.4);
+6394-  border-radius: 9999px;
+6395-  background: rgb(30 41 59 / 0.72);
+6396-  padding: 0.42rem 0.72rem;
+6397-  color: #f8fafc !important;
+6398-  font-size: 0.98rem !important;
+6399-  font-weight: 800 !important;
+6400-  line-height: 1;
+6401-  letter-spacing: -0.015em;
+6402-  font-variant-numeric: tabular-nums;
+6403-  box-shadow:
+6404-    inset 0 1px 0 rgb(255 255 255 / 0.05),
+6405-    0 1px 2px rgb(0 0 0 / 0.15);
+6406-  transition:
+6407-    border-color 150ms ease,
+6408-    background-color 150ms ease,
+6409-    transform 150ms ease,
+6410-    box-shadow 150ms ease;
+6411-}
+6412-
+6413:.home-current-slate .home-score-pill:hover {
+6414-  border-color: rgb(56 189 248 / 0.8);
+6415-  background: rgb(51 65 85 / 0.96);
+6416-  color: #ffffff !important;
+6417-  text-decoration: none;
+6418-  transform: translateY(-1px);
+6419-  box-shadow:
+6420-    inset 0 1px 0 rgb(255 255 255 / 0.08),
+6421-    0 4px 10px rgb(0 0 0 / 0.2);
+6422-}
+6423-
+6424:.home-current-slate .home-score-pill:focus-visible {
+6425-  outline: 2px solid #38bdf8;
+6426-  outline-offset: 2px;
+6427-}
+6428-
+6429:.home-score-pill-chevron {
+6430-  color: #94a3b8;
+6431-  font-size: 1.05rem;
+6432-  line-height: 0.8;
+6433-  transition:
+6434-    color 150ms ease,
+6435-    transform 150ms ease;
+6436-}
+6437-
+6438:.home-score-pill:hover .home-score-pill-chevron {
+6439-  color: #7dd3fc;
+6440-  transform: translateX(2px);
+6441-}
+6442-
+6443-/* Projection is intentionally plain and secondary. */
+6444:.home-current-slate .home-projection-value {
+6445-  color: #e2e8f0 !important;
+6446-  font-size: 1rem !important;
+6447-  font-weight: 700 !important;
+6448-  line-height: 1;
+6449-  letter-spacing: -0.01em !important;
+6450-  font-variant-numeric: tabular-nums;
+6451-}
+6452-
+6453-.home-projection-delta {
+6454-  display: inline-flex;
+6455-  align-items: center;
+6456-  gap: 0.3rem;
+6457-  border-radius: 9999px;
+6458-  padding: 0.3rem 0.48rem;
+6459-  font-size: 0.82rem;
+6460-  font-weight: 800;
+6461-  line-height: 1;
+6462-  white-space: nowrap;
+6463-  font-variant-numeric: tabular-nums;
+6464-}
+6465-
+6466-.home-projection-delta-icon {
+6467-  font-size: 0.68rem;
+6468-  line-height: 1;
+6469-}
+6470-
+6471-.home-projection-delta--positive {
+6472-  background: rgb(16 185 129 / 0.14);
+6473-  color: #6ee7b7;
+6474-}
+6475-
+6476-.home-projection-delta--negative {
+6477-  background: rgb(244 63 94 / 0.14);
+6478-  color: #fda4af;
+6479-}
+--
+6546-  color: #94a3b8;
+6547-}
+6548-
+6549-@keyframes home-games-live-pulse {
+6550-  0%,
+6551-  100% {
+6552-    opacity: 1;
+6553-  }
+6554-
+6555-  50% {
+6556-    opacity: 0.35;
+6557-  }
+6558-}
+6559-
+6560-/* Light mode. */
+6561:html.light .home-current-slate .home-score-pill,
+6562:html:not(.dark) .home-current-slate .home-score-pill {
+6563-  border-color: #cbd5e1;
+6564-  background: #f8fafc;
+6565-  color: #0f172a !important;
+6566-  box-shadow:
+6567-    inset 0 1px 0 #ffffff,
+6568-    0 1px 3px rgb(15 23 42 / 0.1);
+6569-}
+6570-
+6571:html.light .home-current-slate .home-score-pill:hover,
+6572:html:not(.dark) .home-current-slate .home-score-pill:hover {
+6573-  border-color: #38bdf8;
+6574-  background: #f0f9ff;
+6575-  color: #075985 !important;
+6576-}
+6577-
+6578:html.light .home-current-slate .home-projection-value,
+6579:html:not(.dark) .home-current-slate .home-projection-value {
+6580-  color: #334155 !important;
+6581-}
+6582-
+6583-html.light .home-games-status,
+6584-html:not(.dark) .home-games-status {
+6585-  color: #475569;
+6586-}
+6587-
+6588-html.light .home-games-status-final,
+6589-html:not(.dark) .home-games-status-final {
+6590-  color: #334155;
+6591-}
+6592-
+6593-html.light .home-games-status-divider,
+6594-html:not(.dark) .home-games-status-divider {
+6595-  color: #94a3b8;
+6596-}
+6597-
+6598-html.light .home-games-status-left,
+6599-html:not(.dark) .home-games-status-left {
+6600-  color: #64748b;
+6601-}
+6602-
+6603-@media (max-width: 639px) {
+6604:  .home-current-slate .home-score-pill {
+6605-    min-width: 4.2rem;
+6606-    padding: 0.38rem 0.58rem;
+6607-    font-size: 0.9rem !important;
+6608-  }
+6609-
+6610:  .home-current-slate .home-projection-value {
+6611-    font-size: 0.92rem !important;
+6612-  }
+6613-
+6614-  .home-games-status {
+6615-    max-width: 5.6rem;
+6616-    gap: 0.15rem 0.25rem;
+6617-    font-size: 0.72rem;
+6618-    white-space: normal;
+6619-  }
+6620-
+6621-  .home-games-status-divider {
+6622-    display: none;
+6623-  }
+6624-
+6625-  .home-games-status-live,
+6626-  .home-games-status-left {
+6627-    width: 100%;
+6628-  }
+6629-}
+6630-
+6631-@media (prefers-reduced-motion: reduce) {
+6632-  .home-games-status-live-dot {
+6633-    animation: none;
+6634-  }
+6635-}
+6636-
+6637-/* =========================================================
+6638-   HOME SCOREBOARD V2 — SCORE ACTION + READABLE GAME STATUS
+6639-   ========================================================= */
+6640-
+6641:.home-current-slate .home-score-pill-v2 {
+6642-  display: inline-flex !important;
+6643-  min-width: 5rem;
+6644-  align-items: center;
+6645-  justify-content: center;
+6646-  gap: 0.35rem;
+6647-  border: 1px solid rgb(148 163 184 / 0.42);
+6648-  border-radius: 9999px;
+6649-  background: rgb(30 41 59 / 0.78);
+6650-  padding: 0.42rem 0.7rem;
+6651-  color: #f8fafc !important;
+6652-  font-size: 0.96rem !important;
+6653-  font-weight: 800 !important;
+6654-  line-height: 1 !important;
+6655-  letter-spacing: -0.015em;
+6656-  text-decoration: none !important;
+6657-  font-variant-numeric: tabular-nums;
+6658-  box-shadow:
+6659-    inset 0 1px 0 rgb(255 255 255 / 0.05),
+6660-    0 1px 3px rgb(0 0 0 / 0.18);
+6661-  transition:
+6662-    border-color 150ms ease,
+6663-    background-color 150ms ease,
+6664-    transform 150ms ease;
+6665-}
+6666-
+6667:.home-current-slate .home-score-pill-v2:hover {
+6668-  border-color: #64748b;
+6669-  background: #334155;
+6670-  color: #ffffff !important;
+6671-  text-decoration: none !important;
+6672-  transform: translateY(-1px);
+6673-}
+6674-
+6675:.home-current-slate .home-score-pill-v2:focus-visible {
+6676-  outline: 2px solid #38bdf8;
+6677-  outline-offset: 2px;
+6678-}
+6679-
+6680:.home-score-pill-v2-chevron {
+6681-  color: #94a3b8;
+6682-  font-size: 1.05rem;
+6683-  font-weight: 800;
+6684-  line-height: 0.8;
+6685-  transition:
+6686-    color 150ms ease,
+6687-    transform 150ms ease;
+6688-}
+6689-
+6690:.home-score-pill-v2:hover .home-score-pill-v2-chevron {
+6691-  color: #e2e8f0;
+6692-  transform: translateX(2px);
+6693-}
+6694-
+6695-/* Projection is plain text and intentionally secondary. */
+6696:.home-current-slate .home-projection-value-v2 {
+6697-  color: #e2e8f0 !important;
+6698-  font-size: 1rem !important;
+6699-  font-weight: 700 !important;
+6700-  line-height: 1 !important;
+6701-  letter-spacing: -0.01em !important;
+6702-  font-variant-numeric: tabular-nums;
+6703-}
+6704-
+6705-/* Human-readable game progress. */
+6706-.home-games-status-v2 {
+6707-  display: flex;
+6708-  flex-wrap: wrap;
+6709-  align-items: center;
+6710-  gap: 0.28rem;
+6711-  color: #cbd5e1;
+6712-  font-size: 0.8rem;
+6713-  font-weight: 650;
+6714-  line-height: 1.2;
+6715-  white-space: nowrap;
+6716-  font-variant-numeric: tabular-nums;
+6717-}
+6718-
+6719-.home-games-status-v2-final {
+6720-  color: #e2e8f0;
+6721-  font-weight: 750;
+6722-}
+6723-
+6724-.home-games-status-v2-divider {
+6725-  color: #64748b;
+6726-}
+6727-
+6728-.home-games-status-v2-live {
+6729-  display: inline-flex;
+6730-  align-items: center;
+6731-  gap: 0.25rem;
+--
+6746-  color: #94a3b8;
+6747-}
+6748-
+6749-@keyframes home-games-status-v2-pulse {
+6750-  0%,
+6751-  100% {
+6752-    opacity: 1;
+6753-  }
+6754-
+6755-  50% {
+6756-    opacity: 0.35;
+6757-  }
+6758-}
+6759-
+6760-/* Light mode. */
+6761:html.light .home-current-slate .home-score-pill-v2,
+6762:html:not(.dark) .home-current-slate .home-score-pill-v2 {
+6763-  border-color: #cbd5e1;
+6764-  background: #f8fafc;
+6765-  color: #0f172a !important;
+6766-  box-shadow:
+6767-    inset 0 1px 0 #ffffff,
+6768-    0 1px 3px rgb(15 23 42 / 0.1);
+6769-}
+6770-
+6771:html.light .home-current-slate .home-score-pill-v2:hover,
+6772:html:not(.dark) .home-current-slate .home-score-pill-v2:hover {
+6773-  border-color: #94a3b8;
+6774-  background: #f1f5f9;
+6775-  color: #0f172a !important;
+6776-}
+6777-
+6778:html.light .home-current-slate .home-projection-value-v2,
+6779:html:not(.dark) .home-current-slate .home-projection-value-v2 {
+6780-  color: #334155 !important;
+6781-}
+6782-
+6783-html.light .home-games-status-v2-final,
+6784-html:not(.dark) .home-games-status-v2-final {
+6785-  color: #334155;
+6786-}
+6787-
+6788-html.light .home-games-status-v2-divider,
+6789-html:not(.dark) .home-games-status-v2-divider {
+6790-  color: #94a3b8;
+6791-}
+6792-
+6793-html.light .home-games-status-v2-left,
+6794-html:not(.dark) .home-games-status-v2-left {
+6795-  color: #64748b;
+6796-}
+6797-
+6798-@media (max-width: 639px) {
+6799:  .home-current-slate .home-score-pill-v2 {
+6800-    min-width: 4.25rem;
+6801-    gap: 0.22rem;
+6802-    padding: 0.38rem 0.52rem;
+6803-    font-size: 0.88rem !important;
+6804-  }
+6805-
+6806:  .home-current-slate .home-projection-value-v2 {
+6807-    font-size: 0.9rem !important;
+6808-  }
+6809-
+6810-  .home-games-status-v2 {
+6811-    max-width: 5.5rem;
+6812-    gap: 0.15rem 0.22rem;
+6813-    font-size: 0.72rem;
+6814-    white-space: normal;
+6815-  }
+6816-
+6817-  .home-games-status-v2-divider {
+6818-    display: none;
+6819-  }
+6820-
+6821-  .home-games-status-v2-live,
+6822-  .home-games-status-v2-left {
+6823-    width: 100%;
+6824-  }
+6825-}
+6826-
+6827-@media (prefers-reduced-motion: reduce) {
+6828-  .home-games-status-v2-dot {
+6829-    animation: none;
+6830-  }
+6831-}
+6832-
+6833-/* ===== Home lineup modal + compact mobile scoreboard ===== */
+6834-
+6835:.home-lineup-breakdown-heading {
+6836-  display: flex;
+6837-  align-items: center;
+6838-  justify-content: space-between;
+6839-  gap: 1rem;
+6840-  margin: 0 0 0.8rem;
+6841-}
+6842-
+6843:.home-lineup-breakdown-heading h4 {
+6844-  color: var(--app-text);
+6845-  font-size: 1.05rem;
+6846-  font-weight: 900;
+6847-}
+6848-
+6849:.home-lineup-breakdown-total {
+6850-  display: flex;
+6851-  align-items: baseline;
+6852-  gap: 0.4rem;
+6853-  color: var(--app-text-muted);
+6854-}
+6855-
+6856:.home-lineup-breakdown-total span {
+6857-  font-size: 0.7rem;
+6858-  font-weight: 700;
+6859-}
+6860-
+6861:.home-lineup-breakdown-total strong {
+6862-  color: var(--app-text);
+6863-  font-size: 1rem;
+6864-  font-weight: 900;
+6865-}
+6866-
+6867-.home-lineup-player-link {
+6868-  display: inline-flex;
+6869-  min-width: 0;
+6870-  align-items: center;
+6871-  gap: 0.75rem;
+6872-  text-align: left;
+6873-}
+6874-
+6875-.home-lineup-player-link:hover span:last-child {
+6876-  color: var(--app-blue);
+6877-}
+6878-
+6879-.home-lineup-player-link:focus-visible {
+6880-  border-radius: 0.65rem;
+6881-  outline: 3px solid rgb(14 165 233 / 0.25);
+6882-  outline-offset: 3px;
+6883-}
+6884-
+6885-.home-lineup-player-link--table {
+6886-  gap: 0.5rem;
+6887-  font-weight: 600;
+6888-}
+6889-
+6890-@media (max-width: 639px) {
+6891:  .home-current-slate tbody .home-team-profile-button {
+6892-    width: 2.6rem !important;
+6893-    min-width: 2.6rem !important;
+6894-    max-width: 2.6rem !important;
+6895-    justify-content: center !important;
+6896-    gap: 0 !important;
+6897-    overflow: hidden;
+6898-  }
+6899-
+6900:  .home-current-slate tbody .home-team-profile-name,
+6901:  .home-current-slate tbody .home-team-profile-chevron {
+6902-    display: none !important;
+6903-  }
+6904-
+6905:  .home-current-slate table th:nth-child(1),
+6906:  .home-current-slate table td:nth-child(1) {
+6907-    width: 17%;
+6908-    padding-right: 0.2rem;
+6909-    padding-left: 0.55rem;
+6910-  }
+6911-
+6912:  .home-current-slate table th:nth-child(2),
+6913:  .home-current-slate table td:nth-child(2) {
+6914-    width: 23%;
+6915-    padding-right: 0.3rem;
+6916-    padding-left: 0.25rem;
+6917-  }
+6918-
+6919:  .home-current-slate table th:nth-child(3),
+6920:  .home-current-slate table td:nth-child(3) {
+6921-    width: 18%;
+6922-    padding-right: 0.25rem;
+6923-    padding-left: 0.3rem;
+6924-  }
+6925-
+6926:  .home-current-slate table th:nth-child(4),
+6927:  .home-current-slate table td:nth-child(4) {
+6928-    width: 19%;
+6929-    padding-right: 0.2rem;
+6930-    padding-left: 0.2rem;
+6931-  }
+6932-
+6933:  .home-current-slate table th:nth-child(5),
+6934:  .home-current-slate table td:nth-child(5) {
+6935-    width: 23%;
+6936-    padding-right: 0.35rem;
+6937-    padding-left: 0.25rem;
+6938-  }
+6939-
+6940:  .home-current-slate .home-score-pill-v2 {
+6941-    min-width: 0;
+6942-    gap: 0.15rem;
+6943-    padding-right: 0.4rem;
+6944-    padding-left: 0.5rem;
+6945-    font-size: 0.82rem;
+6946-  }
+6947-
+6948:  .home-current-slate .home-projection-value-v2 {
+6949-    white-space: nowrap;
+6950-    font-size: 0.82rem;
+6951-  }
+6952-
+6953:  .home-lineup-breakdown-heading {
+6954-    margin-bottom: 0.65rem;
+6955-  }
+6956-}
+6957-
+6958-/* =========================================================
+6959-   SCORES — COMPACT TEAM STATUS
+6960-   ========================================================= */
+6961-
+6962-.scores-selected-team-status-bar {
+6963-  display: flex;
+6964-  flex-wrap: wrap;
+6965-  align-items: center;
+6966-  gap: 0.7rem;
+6967-  margin-top: 1rem;
+6968-  border: 1px solid rgb(71 85 105 / 0.72);
+6969-  border-radius: 1rem;
+6970-  background: rgb(30 41 59 / 0.58);
+6971-  padding: 0.7rem 0.85rem;
+6972-}
+6973-
+6974-.scores-selected-team-status-item {
+6975-  display: inline-flex;
+6976-  align-items: center;
+6977-  gap: 0.45rem;
+6978-  white-space: nowrap;
+6979-}
+6980-
+6981-.scores-selected-team-status-item > span {
+6982-  color: #94a3b8;
+6983-  font-size: 0.7rem;
+6984-  font-weight: 750;
+6985-  letter-spacing: 0.055em;
+6986-  text-transform: uppercase;
+6987-}
+6988-
+
+
+============================================================
+GOLF TABLE REFERENCES
+============================================================
+app/api/refresh-stats-golf/route.ts:39:  round_number: number;
+app/api/refresh-stats-golf/route.ts:347:        leaderboard_order: competitor.leaderboardOrder,
+app/api/refresh-stats-golf/route.ts:348:        official_score_to_par: competitor.officialScoreToPar,
+app/api/refresh-stats-golf/route.ts:353:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts:365:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts:416:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts:437:        .from("golf_holes")
+app/api/refresh-stats-golf/route.ts:454:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts:476:        round_number: round.roundNumber,
+app/api/refresh-stats-golf/route.ts:480:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts:493:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts:495:          .select("id, event_player_id, round_number");
+app/api/refresh-stats-golf/route.ts:514:        `${round.event_player_id}:${round.round_number}`,
+app/api/refresh-stats-golf/route.ts:544:    const holesInsertError = await insertInBatches("golf_holes", holeRows);
+app/api/refresh-stats-golf/route.ts:641:        fantasy_points: fantasyPoints,
+app/api/refresh-stats-golf/route.ts:650:      (a, b) => a.fantasy_points - b.fantasy_points,
+app/api/refresh-stats-golf/route.ts:656:        rankedTeamRows[index - 1].fantasy_points === row.fantasy_points
+lib/home/golfHomeSummary.ts:17:  fantasy_points: number | null;
+lib/home/golfHomeSummary.ts:65:        "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining",
+lib/home/golfHomeSummary.ts:297:            a.fantasy_points ?? 0,
+lib/home/golfHomeSummary.ts:301:            b.fantasy_points ?? 0,
+lib/home/golfHomeSummary.ts:357:        Number(row.fantasy_points ?? 0),
+lib/home/golfHomeSummary.ts:429:                  leader.fantasy_points,
+lib/home/golfHomeSummary.ts:436:              row.fantasy_points,
+components/lineups/ScoringBoard.tsx:12:  fantasy_points: number;
+components/lineups/ScoringBoard.tsx:243:                            {stat ? Number(stat.fantasy_points).toFixed(1) : "0.0"}
+components/lineups/LineupBuilder.tsx:341:      map.set(row.player_id, row.avg_fantasy_points);
+components/lineups/LineupBuilder.tsx:561:      return sum + Number(stat?.fantasy_points ?? 0);
+components/lineups/LineupBuilder.tsx:565:      teamResult?.fantasy_points ??
+components/lineups/LineupBuilder.tsx:609:      fantasy_points: stat?.fantasy_points ?? 0,
+components/lineups/LineupBuilder.tsx:696:      const current = Number(stat?.fantasy_points ?? 0);
+components/lineups/types.ts:9:  round_number: number;
+components/lineups/types.ts:13:  holes_completed: number;
+components/lineups/types.ts:106:  fantasy_points: number | null;
+components/lineups/types.ts:113:  leaderboard_order?: number | null;
+components/lineups/types.ts:114:  official_score_to_par?: number | null;
+components/lineups/types.ts:118:  holes_completed?: number | null;
+components/lineups/types.ts:129:  fantasy_points: number | null;
+components/lineups/types.ts:145:  avg_fantasy_points: number;
+components/lineups/ScoresDashboard.tsx:36:  fantasy_points: number;
+components/lineups/ScoresDashboard.tsx:703:              Number(playerStat.fantasy_points ?? 0) -
+components/lineups/ScoresDashboard.tsx:760:                        playerStat.fantasy_points
+components/lineups/GolfPlayerModal.tsx:134:            Round {round.round_number}
+components/lineups/GolfPlayerModal.tsx:138:            {round.holes_completed} holes completed
+components/lineups/GolfPlayerModal.tsx:206:    (a, b) => a.round_number - b.round_number,
+components/lineups/GolfPlayerModal.tsx:213:          round.holes_completed > 0 ||
+components/lineups/GolfPlayerModal.tsx:216:      .map((round) => round.round_number),
+components/lineups/GolfPlayerModal.tsx:303:                {formatPosition(stat?.leaderboard_order)}
+components/lineups/GolfPlayerModal.tsx:313:                {formatToPar(stat?.fantasy_points)}
+components/lineups/GolfPlayerModal.tsx:335:                  key={`played-${round.round_number}`}
+components/lineups/GolfScoresDashboard.tsx:443:              (a, b) => a.round_number - b.round_number,
+components/lineups/GolfScoresDashboard.tsx:448:                (round) => round.round_number === stat?.current_round,
+components/lineups/GolfScoresDashboard.tsx:450:              rounds.filter((round) => round.holes_completed > 0).at(-1) ??
+components/lineups/GolfScoresDashboard.tsx:495:                          stat?.leaderboard_order,
+components/lineups/GolfScoresDashboard.tsx:508:                      {formatGolfScore(stat?.fantasy_points)}
+components/lineups/GolfScoresDashboard.tsx:529:                          ? `Round ${activeRound.round_number}`
+components/lineups/GolfScoresDashboard.tsx.before-single-score:443:              (a, b) => a.round_number - b.round_number,
+components/lineups/GolfScoresDashboard.tsx.before-single-score:448:                (round) => round.round_number === stat?.current_round,
+components/lineups/GolfScoresDashboard.tsx.before-single-score:450:              rounds.filter((round) => round.holes_completed > 0).at(-1) ??
+components/lineups/GolfScoresDashboard.tsx.before-single-score:495:                          stat?.leaderboard_order,
+components/lineups/GolfScoresDashboard.tsx.before-single-score:508:                        {formatGolfScore(stat?.official_score_to_par)}
+components/lineups/GolfScoresDashboard.tsx.before-single-score:517:                        {formatGolfScore(stat?.fantasy_points)}
+components/lineups/GolfScoresDashboard.tsx.before-single-score:538:                          ? `Round ${activeRound.round_number}`
+components/lineups/GolfPlayerModal.tsx.before-single-score:90:            Round {round.round_number}
+components/lineups/GolfPlayerModal.tsx.before-single-score:94:            {round.holes_completed} holes completed
+components/lineups/GolfPlayerModal.tsx.before-single-score:162:    (a, b) => a.round_number - b.round_number,
+components/lineups/GolfPlayerModal.tsx.before-single-score:229:                {formatPosition(stat?.leaderboard_order)}
+components/lineups/GolfPlayerModal.tsx.before-single-score:238:                {formatToPar(stat?.official_score_to_par)}
+components/lineups/GolfPlayerModal.tsx.before-single-score:247:                {formatToPar(stat?.fantasy_points)}
+components/lineups/GolfPlayerModal.tsx.before-single-score:267:                key={round.round_number}

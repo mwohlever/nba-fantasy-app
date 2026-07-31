@@ -1,0 +1,483 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type GolfSlateRow = {
+  id: number;
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  first_game_start_time: string | null;
+  display_name: string | null;
+};
+
+type TeamResultRow = {
+  slate_id: number;
+  team_id: number;
+  fantasy_points: number | null;
+  finish_position: number | null;
+  games_completed: number | null;
+  games_in_progress: number | null;
+  games_remaining: number | null;
+};
+
+function formatSlateLabel(
+  startDate: string,
+  endDate: string,
+) {
+  return startDate === endDate
+    ? startDate
+    : `${startDate} - ${endDate}`;
+}
+
+function getSeason(date: string) {
+  return Number(date.slice(0, 4)) ||
+    new Date().getFullYear();
+}
+
+function golfScore(value: number | null | undefined) {
+  const score = Number(value ?? 0);
+
+  if (score === 0) return "E";
+  return score > 0 ? `+${score}` : String(score);
+}
+
+export async function getGolfHomeSummary() {
+  const [
+    { data: slateData, error: slateError },
+    { data: resultData, error: resultError },
+    { data: teamData, error: teamError },
+    { data: teamUserData, error: teamUserError },
+    { data: slateTeamData, error: slateTeamError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("slates")
+      .select(
+        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name",
+      )
+      .eq("sport", "golf")
+      .order("start_date", { ascending: false })
+      .order("end_date", { ascending: false }),
+
+    supabaseAdmin
+      .from("team_slate_results")
+      .select(
+        "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining",
+      ),
+
+    supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .order("name", { ascending: true }),
+
+    supabaseAdmin
+      .from("app_users")
+      .select("team_id, avatar_url")
+      .not("team_id", "is", null),
+
+    supabaseAdmin
+      .from("slate_teams")
+      .select(
+        "slate_id, team_id, is_participating",
+      )
+      .eq("is_participating", true),
+  ]);
+
+  const error =
+    slateError ||
+    resultError ||
+    teamError ||
+    teamUserError ||
+    slateTeamError;
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error:
+          error.message ||
+          "Failed to load Golf home data.",
+      },
+      { status: 500 },
+    );
+  }
+
+  const slates =
+    (slateData ?? []) as GolfSlateRow[];
+
+  const results =
+    (resultData ?? []) as TeamResultRow[];
+
+  const teamNameById = new Map(
+    (teamData ?? []).map((team) => [
+      Number(team.id),
+      String(team.name),
+    ]),
+  );
+
+  const avatarByTeamId = new Map<number, string | null>();
+
+  (teamUserData ?? []).forEach((user) => {
+    if (user.team_id == null) return;
+
+    avatarByTeamId.set(
+      Number(user.team_id),
+      user.avatar_url ?? null,
+    );
+  });
+
+  const participatingTeamIdsBySlate =
+    new Map<number, Set<number>>();
+
+  (slateTeamData ?? []).forEach((row) => {
+    const slateId = Number(row.slate_id);
+    const existing =
+      participatingTeamIdsBySlate.get(slateId) ??
+      new Set<number>();
+
+    existing.add(Number(row.team_id));
+    participatingTeamIdsBySlate.set(
+      slateId,
+      existing,
+    );
+  });
+
+  const resultsBySlateId =
+    new Map<number, TeamResultRow[]>();
+
+  results.forEach((row) => {
+    const existing =
+      resultsBySlateId.get(row.slate_id) ?? [];
+
+    existing.push(row);
+    resultsBySlateId.set(
+      row.slate_id,
+      existing,
+    );
+  });
+
+  const normalizedSlates = slates.map((slate) => ({
+    ...slate,
+    date:
+      slate.date ??
+      slate.start_date ??
+      new Date().toISOString().slice(0, 10),
+    start_date:
+      slate.start_date ??
+      slate.date ??
+      new Date().toISOString().slice(0, 10),
+    end_date:
+      slate.end_date ??
+      slate.start_date ??
+      slate.date ??
+      new Date().toISOString().slice(0, 10),
+  }));
+
+  function rowsForSlate(slateId: number) {
+    const participatingIds =
+      participatingTeamIdsBySlate.get(slateId);
+
+    const slateResults =
+      resultsBySlateId.get(slateId) ?? [];
+
+    if (!participatingIds) return slateResults;
+
+    return slateResults.filter((row) =>
+      participatingIds.has(row.team_id),
+    );
+  }
+
+  function isLiveSlate(slateId: number) {
+    return rowsForSlate(slateId).some(
+      (row) =>
+        Number(row.games_in_progress ?? 0) > 0,
+    );
+  }
+
+  function isCompleteSlate(slateId: number) {
+    const rows = rowsForSlate(slateId);
+
+    return (
+      rows.length > 0 &&
+      rows.some(
+        (row) =>
+          Number(row.games_completed ?? 0) > 0,
+      ) &&
+      rows.every(
+        (row) =>
+          Number(row.games_in_progress ?? 0) === 0 &&
+          Number(row.games_remaining ?? 0) === 0,
+      )
+    );
+  }
+
+  const now = Date.now();
+
+  const liveSlate =
+    normalizedSlates.find((slate) =>
+      isLiveSlate(slate.id),
+    ) ?? null;
+
+  const startedOpenSlate =
+    normalizedSlates.find((slate) => {
+      if (slate.is_locked) return false;
+
+      const startTime =
+        slate.first_game_start_time
+          ? new Date(
+              slate.first_game_start_time,
+            ).getTime()
+          : new Date(
+              `${slate.start_date}T00:00:00`,
+            ).getTime();
+
+      return startTime <= now;
+    }) ?? null;
+
+  const latestCompletedSlate =
+    normalizedSlates.find(
+      (slate) =>
+        slate.is_locked ||
+        isCompleteSlate(slate.id),
+    ) ?? null;
+
+  const nextSlate =
+    normalizedSlates
+      .filter((slate) => {
+        if (slate.is_locked) return false;
+
+        const startTime =
+          slate.first_game_start_time
+            ? new Date(
+                slate.first_game_start_time,
+              ).getTime()
+            : new Date(
+                `${slate.start_date}T00:00:00`,
+              ).getTime();
+
+        return startTime > now;
+      })
+      .sort((a, b) => {
+        const aTime = new Date(
+          a.first_game_start_time ??
+            `${a.start_date}T00:00:00`,
+        ).getTime();
+
+        const bTime = new Date(
+          b.first_game_start_time ??
+            `${b.start_date}T00:00:00`,
+        ).getTime();
+
+        return aTime - bTime;
+      })[0] ?? null;
+
+  const latestSlate =
+    liveSlate ??
+    startedOpenSlate ??
+    latestCompletedSlate ??
+    nextSlate ??
+    normalizedSlates[0] ??
+    null;
+
+  const latestRows = latestSlate
+    ? rowsForSlate(latestSlate.id)
+        .map((row) => ({
+          ...row,
+          teamName:
+            teamNameById.get(row.team_id) ??
+            "Unknown Team",
+          avatarUrl:
+            avatarByTeamId.get(row.team_id) ??
+            null,
+          projected_points: null,
+          pregame_projected_points: null,
+          win_probability: null,
+        }))
+        .sort((a, b) => {
+          const aScore = Number(
+            a.fantasy_points ?? 0,
+          );
+
+          const bScore = Number(
+            b.fantasy_points ?? 0,
+          );
+
+          if (aScore !== bScore) {
+            return aScore - bScore;
+          }
+
+          return a.teamName.localeCompare(
+            b.teamName,
+          );
+        })
+        .map((row, index) => ({
+          ...row,
+          finish_position:
+            row.finish_position ?? index + 1,
+        }))
+    : [];
+
+  const latestSeason = latestSlate
+    ? getSeason(latestSlate.start_date)
+    : new Date().getFullYear();
+
+  const lockedSlateIds = new Set(
+    normalizedSlates
+      .filter(
+        (slate) =>
+          slate.is_locked ||
+          isCompleteSlate(slate.id),
+      )
+      .map((slate) => slate.id),
+  );
+
+  const seasonResults = results.filter(
+    (row) => {
+      const slate = normalizedSlates.find(
+        (item) => item.id === row.slate_id,
+      );
+
+      return (
+        slate &&
+        getSeason(slate.start_date) ===
+          latestSeason &&
+        lockedSlateIds.has(row.slate_id)
+      );
+    },
+  );
+
+  const seasonSnapshot = Array.from(
+    teamNameById.entries(),
+  )
+    .map(([teamId, name]) => {
+      const rows = seasonResults.filter(
+        (row) => row.team_id === teamId,
+      );
+
+      const scores = rows.map((row) =>
+        Number(row.fantasy_points ?? 0),
+      );
+
+      const finishes = rows
+        .map((row) => row.finish_position)
+        .filter(
+          (value): value is number =>
+            value !== null &&
+            value !== undefined,
+        );
+
+      return {
+        team_id: teamId,
+        name,
+        wins: rows.filter(
+          (row) => row.finish_position === 1,
+        ).length,
+        runner_ups: rows.filter(
+          (row) => row.finish_position === 2,
+        ).length,
+        avg_finish:
+          finishes.length > 0
+            ? Number(
+                (
+                  finishes.reduce(
+                    (sum, value) =>
+                      sum + value,
+                    0,
+                  ) / finishes.length
+                ).toFixed(2),
+              )
+            : null,
+        avg_score:
+          scores.length > 0
+            ? Number(
+                (
+                  scores.reduce(
+                    (sum, value) =>
+                      sum + value,
+                    0,
+                  ) / scores.length
+                ).toFixed(2),
+              )
+            : null,
+        slates_played: rows.length,
+      };
+    })
+    .sort((a, b) => {
+      if (b.wins !== a.wins) {
+        return b.wins - a.wins;
+      }
+
+      return (
+        (a.avg_finish ?? 999) -
+        (b.avg_finish ?? 999)
+      );
+    });
+
+  const leader = latestRows[0] ?? null;
+
+  const funFacts =
+    latestSlate && latestRows.length > 0
+      ? [
+          {
+            label: isLiveSlate(latestSlate.id)
+              ? "Live Leader"
+              : latestSlate.is_locked ||
+                  isCompleteSlate(latestSlate.id)
+                ? "Winner"
+                : "Current Leader",
+            value: leader
+              ? `${leader.teamName} ${golfScore(
+                  leader.fantasy_points,
+                )}`
+              : "—",
+          },
+          ...latestRows.slice(1).map((row) => ({
+            label: "Team Score",
+            value: `${row.teamName} ${golfScore(
+              row.fantasy_points,
+            )}`,
+          })),
+        ]
+      : [
+          {
+            label: "Golf",
+            value:
+              "Welcome to 111 Fantasy Golf!",
+          },
+        ];
+
+  function serializeSlate(
+    slate:
+      | (typeof normalizedSlates)[number]
+      | null,
+  ) {
+    if (!slate) return null;
+
+    return {
+      id: slate.id,
+      date: slate.date,
+      start_date: slate.start_date,
+      end_date: slate.end_date,
+      label:
+        slate.display_name?.trim() ||
+        formatSlateLabel(
+          slate.start_date,
+          slate.end_date,
+        ),
+      display_name:
+        slate.display_name ?? null,
+      is_locked: slate.is_locked,
+      first_game_start_time:
+        slate.first_game_start_time,
+    };
+  }
+
+  return NextResponse.json({
+    success: true,
+    latestSlate: serializeSlate(latestSlate),
+    nextSlate: serializeSlate(nextSlate),
+    latestSlateRows: latestRows,
+    seasonSnapshot,
+    funFacts,
+    latestSeason,
+  });
+}

@@ -9,6 +9,61 @@ function noStoreHeaders() {
   };
 }
 
+type GolfCourseHoleRow = {
+  hole_number: number;
+  par: number;
+  yards: number | null;
+  is_host: boolean;
+};
+
+function mergeGolfRoundHoles(
+  playerHoles: any[],
+  courseHoleByNumber: Map<number, GolfCourseHoleRow>,
+) {
+  const playerHoleByNumber = new Map(
+    (playerHoles ?? []).map((hole: any) => [
+      Number(hole.hole_number),
+      hole,
+    ]),
+  );
+
+  return Array.from(
+    { length: 18 },
+    (_, index) => index + 1,
+  ).map((holeNumber) => {
+    const playerHole =
+      playerHoleByNumber.get(holeNumber);
+
+    const courseHole =
+      courseHoleByNumber.get(holeNumber);
+
+    return {
+      hole_number: holeNumber,
+      par:
+        courseHole?.par === undefined
+          ? null
+          : Number(courseHole.par),
+      yards:
+        courseHole?.yards === null ||
+        courseHole?.yards === undefined
+          ? null
+          : Number(courseHole.yards),
+      strokes:
+        playerHole?.strokes === null ||
+        playerHole?.strokes === undefined
+          ? null
+          : Number(playerHole.strokes),
+      relative_to_par:
+        playerHole?.relative_to_par === null ||
+        playerHole?.relative_to_par === undefined
+          ? null
+          : Number(playerHole.relative_to_par),
+      score_display:
+        playerHole?.score_display ?? null,
+    };
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const slateIdParam = request.nextUrl.searchParams.get("slateId");
@@ -98,6 +153,47 @@ export async function GET(request: NextRequest) {
         );
       }
 
+      const { data: courseHoleData, error: courseHoleError } =
+        await supabaseAdmin
+          .from("golf_course_holes")
+          .select(
+            "hole_number, par, yards, is_host",
+          )
+          .eq("slate_id", slateId)
+          .order("is_host", {
+            ascending: false,
+          })
+          .order("hole_number", {
+            ascending: true,
+          });
+
+      if (courseHoleError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to load Golf course data: ${courseHoleError.message}`,
+          },
+          {
+            status: 500,
+            headers: noStoreHeaders(),
+          },
+        );
+      }
+
+      const courseHoleByNumber =
+        new Map<number, GolfCourseHoleRow>();
+
+      for (const row of courseHoleData ?? []) {
+        const holeNumber = Number(row.hole_number);
+
+        if (!courseHoleByNumber.has(holeNumber)) {
+          courseHoleByNumber.set(
+            holeNumber,
+            row as GolfCourseHoleRow,
+          );
+        }
+      }
+
       const playerStats = (data ?? []).map((row: any) => ({
         player_id: Number(row.player_id),
         leaderboard_order:
@@ -134,21 +230,10 @@ export async function GET(request: NextRequest) {
             tee_time: round.tee_time ?? null,
             tee_time_raw: round.tee_time_raw ?? null,
             status: round.status ?? "scheduled",
-            holes: (round.golf_holes ?? [])
-              .map((hole: any) => ({
-                hole_number: Number(hole.hole_number),
-                strokes:
-                  hole.strokes === null ? null : Number(hole.strokes),
-                relative_to_par:
-                  hole.relative_to_par === null
-                    ? null
-                    : Number(hole.relative_to_par),
-                score_display: hole.score_display ?? null,
-              }))
-              .sort(
-                (a: { hole_number: number }, b: { hole_number: number }) =>
-                  a.hole_number - b.hole_number,
-              ),
+            holes: mergeGolfRoundHoles(
+              round.golf_holes ?? [],
+              courseHoleByNumber,
+            ),
           }))
           .sort(
             (a: { round_number: number }, b: { round_number: number }) =>

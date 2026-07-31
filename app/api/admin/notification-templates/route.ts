@@ -1,26 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getDefaultNotificationTemplate,
   getNotificationTemplate,
+  isNotificationSport,
+  isNotificationTemplateType,
+  normalizeNotificationSport,
   NOTIFICATION_TEMPLATE_DEFAULTS,
+  type NotificationSport,
   type NotificationTemplateType,
 } from "@/lib/notificationTemplates";
 import { requireAdminApi } from "@/lib/requireAdminApi";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type SaveTemplateBody = {
-  notificationType?: string;
-  titleTemplate?: string;
-  bodyTemplate?: string;
-  resetToDefault?: boolean;
+  notificationType?: unknown;
+  sport?: unknown;
+  titleTemplate?: unknown;
+  bodyTemplate?: unknown;
+  resetToDefault?: unknown;
 };
-
-function isSupportedNotificationType(
-  value: string
-): value is NotificationTemplateType {
-  return value in NOTIFICATION_TEMPLATE_DEFAULTS;
-}
 
 function findUnsupportedPlaceholders(
   value: string,
@@ -33,25 +32,32 @@ function findUnsupportedPlaceholders(
   );
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const authError = await requireAdminApi();
   if (authError) return authError;
 
   try {
+    const sport = normalizeNotificationSport(
+      request.nextUrl.searchParams.get("sport")
+    );
+
     const notificationTypes = Object.keys(
-      NOTIFICATION_TEMPLATE_DEFAULTS
+      NOTIFICATION_TEMPLATE_DEFAULTS[sport]
     ) as NotificationTemplateType[];
 
     const templates = await Promise.all(
-      notificationTypes.map((type) => getNotificationTemplate(type))
+      notificationTypes.map((notificationType) =>
+        getNotificationTemplate(notificationType, sport)
+      )
     );
 
-    const defaults = notificationTypes.map((type) =>
-      getDefaultNotificationTemplate(type)
+    const defaults = notificationTypes.map((notificationType) =>
+      getDefaultNotificationTemplate(notificationType, sport)
     );
 
     return NextResponse.json({
       success: true,
+      sport,
       templates,
       defaults,
     });
@@ -80,22 +86,38 @@ export async function PUT(request: Request) {
     }
 
     const body = (await request.json()) as SaveTemplateBody;
-    const notificationType = String(body.notificationType ?? "").trim();
 
-    if (!isSupportedNotificationType(notificationType)) {
+    if (!isNotificationTemplateType(body.notificationType)) {
       return NextResponse.json(
         { error: "Unsupported notification type." },
         { status: 400 }
       );
     }
 
-    const defaults = getDefaultNotificationTemplate(notificationType);
+    if (!isNotificationSport(body.sport)) {
+      return NextResponse.json(
+        { error: "Unsupported sport." },
+        { status: 400 }
+      );
+    }
 
-    const titleTemplate = body.resetToDefault
+    const notificationType: NotificationTemplateType =
+      body.notificationType;
+
+    const sport: NotificationSport = body.sport;
+
+    const defaults = getDefaultNotificationTemplate(
+      notificationType,
+      sport
+    );
+
+    const resetToDefault = body.resetToDefault === true;
+
+    const titleTemplate = resetToDefault
       ? defaults.titleTemplate
       : String(body.titleTemplate ?? "").trim();
 
-    const bodyTemplate = body.resetToDefault
+    const bodyTemplate = resetToDefault
       ? defaults.bodyTemplate
       : String(body.bodyTemplate ?? "").trim();
 
@@ -108,22 +130,29 @@ export async function PUT(request: Request) {
 
     if (titleTemplate.length > 100) {
       return NextResponse.json(
-        { error: "The notification title must be 100 characters or fewer." },
+        {
+          error:
+            "The notification title must be 100 characters or fewer.",
+        },
         { status: 400 }
       );
     }
 
     if (bodyTemplate.length > 240) {
       return NextResponse.json(
-        { error: "The notification message must be 240 characters or fewer." },
+        {
+          error:
+            "The notification message must be 240 characters or fewer.",
+        },
         { status: 400 }
       );
     }
 
-    const unsupportedPlaceholders = findUnsupportedPlaceholders(
-      `${titleTemplate} ${bodyTemplate}`,
-      defaults.availablePlaceholders
-    );
+    const unsupportedPlaceholders =
+      findUnsupportedPlaceholders(
+        `${titleTemplate} ${bodyTemplate}`,
+        defaults.availablePlaceholders
+      );
 
     if (unsupportedPlaceholders.length > 0) {
       return NextResponse.json(
@@ -141,21 +170,31 @@ export async function PUT(request: Request) {
       .upsert(
         {
           notification_type: notificationType,
+          sport,
           title_template: titleTemplate,
           body_template: bodyTemplate,
           description: defaults.description,
-          available_placeholders: defaults.availablePlaceholders,
+          available_placeholders:
+            defaults.availablePlaceholders,
           updated_at: new Date().toISOString(),
           updated_by: currentUser.id,
         },
         {
-          onConflict: "notification_type",
+          onConflict: "notification_type,sport",
         }
       );
 
     if (error) {
+      console.error("Notification template upsert failed", {
+        notificationType,
+        sport,
+        error,
+      });
+
       return NextResponse.json(
-        { error: `Failed to save template: ${error.message}` },
+        {
+          error: `Failed to save template: ${error.message}`,
+        },
         { status: 500 }
       );
     }

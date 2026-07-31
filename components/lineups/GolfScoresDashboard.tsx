@@ -54,15 +54,40 @@ function formatLeaderboardPosition(value: number | null | undefined) {
   return `T${value}`;
 }
 
-function statusMeta(stat: PlayerStat | null) {
+function formatGolfTeeTime(
+  value: string | null | undefined,
+) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function statusMeta(
+  stat: PlayerStat | null,
+  playingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
+  upcomingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
+  mostRecentRound: NonNullable<PlayerStat["rounds"]>[number] | null,
+) {
   const status = stat?.status ?? "scheduled";
 
-  if (status === "active") {
+  if (playingRound) {
     return {
-      label: "Live",
-      detail: stat?.last_hole
-        ? `R${stat.current_round ?? "—"} · Thru ${stat.last_hole}`
-        : `Round ${stat?.current_round ?? "—"}`,
+      label: "🟢 Playing",
+      detail:
+        `R${playingRound.round_number} · ` +
+        `Thru ${playingRound.holes_completed}`,
       className: "bg-emerald-100 text-emerald-800",
     };
   }
@@ -99,11 +124,108 @@ function statusMeta(stat: PlayerStat | null) {
     };
   }
 
+  if (upcomingRound) {
+    return {
+      label: "⏰ Upcoming",
+      detail:
+        `Round ${upcomingRound.round_number}` +
+        `${
+          formatGolfTeeTime(
+            upcomingRound.tee_time ??
+              upcomingRound.tee_time_raw,
+          )
+            ? ` · ${formatGolfTeeTime(
+                upcomingRound.tee_time ??
+                  upcomingRound.tee_time_raw,
+              )}`
+            : ""
+        }`,
+      className: "bg-sky-100 text-sky-800",
+    };
+  }
+
+  if (mostRecentRound?.holes_completed === 18) {
+    return {
+      label: "✓ Round complete",
+      detail: `Round ${mostRecentRound.round_number} complete`,
+      className: "bg-slate-200 text-slate-700",
+    };
+  }
+
   return {
-    label: "Upcoming",
-    detail: stat?.tee_time_raw || "Not started",
+    label: "⏰ Upcoming",
+    detail:
+      formatGolfTeeTime(
+        stat?.tee_time ?? stat?.tee_time_raw,
+      ) ?? "Not started",
     className: "bg-sky-100 text-sky-800",
   };
+}
+
+function holePar(hole: {
+  par?: number | null;
+  strokes: number | null;
+  relative_to_par: number | null;
+} | null | undefined) {
+  if (
+    hole?.par !== null &&
+    hole?.par !== undefined &&
+    Number.isFinite(Number(hole.par))
+  ) {
+    return Number(hole.par);
+  }
+
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined ||
+    hole.relative_to_par === null ||
+    hole.relative_to_par === undefined
+  ) {
+    return null;
+  }
+
+  const par =
+    Number(hole.strokes) -
+    Number(hole.relative_to_par);
+
+  return Number.isFinite(par) ? par : null;
+}
+
+function holeTooltip(
+  holeNumber: number,
+  hole: {
+    par?: number | null;
+    yards?: number | null;
+    strokes: number | null;
+    relative_to_par: number | null;
+  } | null | undefined,
+) {
+  const par = holePar(hole);
+
+  const yardage =
+    hole?.yards === null ||
+    hole?.yards === undefined
+      ? null
+      : Number(hole.yards);
+
+  const courseDetail = [
+    `Hole ${holeNumber}`,
+    par === null ? null : `Par ${par}`,
+    yardage === null ? null : `${yardage} yards`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined
+  ) {
+    return `${courseDetail} · Not played`;
+  }
+
+  return `${courseDetail} · ${hole.strokes} strokes (${relativeLabel(
+    hole.relative_to_par,
+  )})`;
 }
 
 function relativeClass(relative: number | null | undefined) {
@@ -437,21 +559,64 @@ export default function GolfScoresDashboard({
             }
 
             const stat = getRawPlayerStat(player.id);
-            const status = statusMeta(stat);
 
             const rounds = [...(stat?.rounds ?? [])].sort(
               (a, b) => a.round_number - b.round_number,
             );
 
-            const activeRound =
+            const playingRound =
+              rounds
+                .filter(
+                  (round) =>
+                    round.holes_completed > 0 &&
+                    round.holes_completed < 18,
+                )
+                .at(-1) ?? null;
+
+            const upcomingRound =
               rounds.find(
-                (round) => round.round_number === stat?.current_round,
-              ) ??
-              rounds.filter((round) => round.holes_completed > 0).at(-1) ??
+                (round) =>
+                  round.holes_completed === 0 &&
+                  round.strokes === null &&
+                  Boolean(
+                    round.tee_time ||
+                      round.tee_time_raw,
+                  ),
+              ) ?? null;
+
+            const mostRecentRound =
+              rounds
+                .filter(
+                  (round) =>
+                    round.holes_completed > 0 ||
+                    round.strokes !== null,
+                )
+                .at(-1) ?? null;
+
+            const displayRound =
+              playingRound ??
+              mostRecentRound ??
+              upcomingRound ??
+              rounds[0] ??
               null;
 
+            const status = statusMeta(
+              stat,
+              playingRound,
+              upcomingRound,
+              mostRecentRound,
+            );
+
+            const scorecardContext = playingRound
+              ? "Current round"
+              : mostRecentRound
+                ? "Most recent round"
+                : upcomingRound
+                  ? "Upcoming round"
+                  : "Round";
+
             const holesByNumber = new Map(
-              (activeRound?.holes ?? []).map((hole) => [
+              (displayRound?.holes ?? []).map((hole) => [
                 hole.hole_number,
                 hole,
               ]),
@@ -525,15 +690,15 @@ export default function GolfScoresDashboard({
                       </span>
 
                       <strong className="ml-2 text-sm text-slate-700">
-                        {activeRound
-                          ? `Round ${activeRound.round_number}`
+                        {displayRound
+                          ? `${scorecardContext} · Round ${displayRound.round_number}`
                           : "Not started"}
                       </strong>
                     </div>
 
-                    {activeRound ? (
+                    {displayRound ? (
                       <span className="text-sm font-black text-slate-950">
-                        {formatGolfScore(activeRound.score_to_par)}
+                        {formatGolfScore(displayRound.score_to_par)}
                       </span>
                     ) : null}
                   </div>
@@ -556,7 +721,29 @@ export default function GolfScoresDashboard({
                         { length: 18 },
                         (_, holeIndex) => holeIndex + 1,
                       ).map((holeNumber) => {
-                        const hole = holesByNumber.get(holeNumber);
+                        const hole =
+                          holesByNumber.get(holeNumber);
+
+                        return (
+                          <div
+                            key={`par-${holeNumber}`}
+                            className={
+                              holeNumber === 1
+                                ? "relative text-center text-[8px] font-bold text-slate-500 before:absolute before:right-full before:mr-1.5 before:content-['Par']"
+                                : "text-center text-[8px] font-bold text-slate-500"
+                            }
+                          >
+                            {holePar(hole) ?? "—"}
+                          </div>
+                        );
+                      })}
+
+                      {Array.from(
+                        { length: 18 },
+                        (_, holeIndex) => holeIndex + 1,
+                      ).map((holeNumber) => {
+                        const hole =
+                          holesByNumber.get(holeNumber);
 
                         return (
                           <div
@@ -564,13 +751,14 @@ export default function GolfScoresDashboard({
                             className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black ${relativeClass(
                               hole?.relative_to_par,
                             )}`}
-                            title={
-                              hole?.strokes
-                                ? `Hole ${holeNumber}: ${hole.strokes} strokes`
-                                : `Hole ${holeNumber}: not played`
-                            }
+                            title={holeTooltip(
+                              holeNumber,
+                              hole,
+                            )}
                           >
-                            {relativeLabel(hole?.relative_to_par)}
+                            {relativeLabel(
+                              hole?.relative_to_par,
+                            )}
                           </div>
                         );
                       })}

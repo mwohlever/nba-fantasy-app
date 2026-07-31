@@ -2,34 +2,53 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/requireAdminApi";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+type SportKey = "nba" | "nfl" | "golf";
+
+function normalizeSport(value: unknown): SportKey {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
 export async function GET(request: NextRequest) {
   const authError = await requireAdminApi();
   if (authError) return authError;
 
   try {
-    const type = request.nextUrl.searchParams.get("type")?.trim() ?? "";
-    const status = request.nextUrl.searchParams.get("status")?.trim() ?? "";
-    const sport = request.nextUrl.searchParams.get("sport")?.trim() ?? "";
+    const type =
+      request.nextUrl.searchParams.get("type")?.trim() ?? "";
+
+    const status =
+      request.nextUrl.searchParams.get("status")?.trim() ?? "";
+
+    const sport =
+      request.nextUrl.searchParams.get("sport")?.trim() ?? "";
 
     let sportSlateIds: number[] | null = null;
 
     if (sport && sport !== "all") {
+      const normalizedSport = normalizeSport(sport);
+
       const { data: sportSlates, error: sportSlatesError } =
         await supabaseAdmin
           .from("slates")
           .select("id")
-          .eq("sport", sport);
+          .eq("sport", normalizedSport);
 
       if (sportSlatesError) {
         return NextResponse.json(
           {
-            error: `Failed to filter by sport: ${sportSlatesError.message}`,
+            error:
+              `Failed to filter by sport: ` +
+              sportSlatesError.message,
           },
           { status: 500 }
         );
       }
 
-      sportSlateIds = (sportSlates ?? []).map((row) => Number(row.id));
+      sportSlateIds = (sportSlates ?? []).map((row) =>
+        Number(row.id)
+      );
     }
 
     let query = supabaseAdmin
@@ -58,15 +77,18 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
       .limit(250);
 
-    if (type) query = query.eq("notification_type", type);
-    if (status) query = query.eq("status", status);
+    if (type) {
+      query = query.eq("notification_type", type);
+    }
+
+    if (status) {
+      query = query.eq("status", status);
+    }
 
     if (sportSlateIds !== null) {
       query =
         sportSlateIds.length > 0
-          ? query.or(
-              `slate_id.is.null,slate_id.in.(${sportSlateIds.join(",")})`
-            )
+          ? query.in("slate_id", sportSlateIds)
           : query.is("slate_id", null);
     }
 
@@ -74,7 +96,11 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       return NextResponse.json(
-        { error: `Failed to load notification history: ${error.message}` },
+        {
+          error:
+            `Failed to load notification history: ` +
+            error.message,
+        },
         { status: 500 }
       );
     }
@@ -82,52 +108,79 @@ export async function GET(request: NextRequest) {
     const rows = data ?? [];
 
     const userIds = Array.from(
-      new Set(rows.map((row) => row.user_id).filter(Boolean))
+      new Set(
+        rows
+          .map((row) => row.user_id)
+          .filter(Boolean)
+          .map(String)
+      )
     );
 
     const teamIds = Array.from(
-      new Set(rows.map((row) => row.team_id).filter(Boolean))
-    );
-
-    const playerIds = Array.from(
-      new Set(rows.map((row) => row.player_id).filter(Boolean))
+      new Set(
+        rows
+          .map((row) => row.team_id)
+          .filter(Boolean)
+          .map(Number)
+      )
     );
 
     const slateIds = Array.from(
-      new Set(rows.map((row) => row.slate_id).filter(Boolean))
+      new Set(
+        rows
+          .map((row) => row.slate_id)
+          .filter(Boolean)
+          .map(Number)
+      )
     );
 
-    const [{ data: users }, { data: teams }, { data: slates }] =
-      await Promise.all([
-        userIds.length
-          ? supabaseAdmin
-              .from("app_users")
-              .select("id, display_name")
-              .in("id", userIds)
-          : Promise.resolve({ data: [] }),
-        teamIds.length
-          ? supabaseAdmin.from("teams").select("id, name").in("id", teamIds)
-          : Promise.resolve({ data: [] }),
-        slateIds.length
-          ? supabaseAdmin
-              .from("slates")
-              .select("id, date, start_date, end_date, sport")
-              .in("id", slateIds)
-          : Promise.resolve({ data: [] }),
-      ]);
+    const [
+      { data: users },
+      { data: teams },
+      { data: slates },
+    ] = await Promise.all([
+      userIds.length
+        ? supabaseAdmin
+            .from("app_users")
+            .select("id, display_name")
+            .in("id", userIds)
+        : Promise.resolve({ data: [] }),
+
+      teamIds.length
+        ? supabaseAdmin
+            .from("teams")
+            .select("id, name")
+            .in("id", teamIds)
+        : Promise.resolve({ data: [] }),
+
+      slateIds.length
+        ? supabaseAdmin
+            .from("slates")
+            .select(
+              "id, date, start_date, end_date, sport, display_name"
+            )
+            .in("id", slateIds)
+        : Promise.resolve({ data: [] }),
+    ]);
 
     const userMap = new Map(
-      (users ?? []).map((row) => [String(row.id), row.display_name])
+      (users ?? []).map((row) => [
+        String(row.id),
+        row.display_name,
+      ])
     );
 
     const teamMap = new Map(
-      (teams ?? []).map((row) => [Number(row.id), row.name])
+      (teams ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
     );
 
-    const slateSportMap = new Map(
+    const slateSportMap = new Map<number, SportKey>(
       (slates ?? []).map((row) => [
         Number(row.id),
-        row.sport === "nfl" ? "nfl" : "nba",
+        normalizeSport(row.sport),
       ])
     );
 
@@ -136,88 +189,155 @@ export async function GET(request: NextRequest) {
         const startDate = row.start_date ?? row.date;
         const endDate = row.end_date ?? row.date;
 
-        return [
-          Number(row.id),
+        const dateLabel =
           startDate === endDate
             ? startDate
-            : `${startDate} - ${endDate}`,
+            : `${startDate} - ${endDate}`;
+
+        return [
+          Number(row.id),
+          row.display_name?.trim() || dateLabel,
         ];
       })
     );
 
-    const nbaPlayerIds: number[] = [];
-    const nflPlayerIds: number[] = [];
+    const nbaPlayerIds = new Set<number>();
+    const nflPlayerIds = new Set<number>();
+    const golfPlayerIds = new Set<number>();
 
-    rows.forEach((row) => {
-      if (!row.player_id) return;
+    for (const row of rows) {
+      if (!row.player_id) continue;
 
       const rowSport = row.slate_id
         ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
         : "nba";
 
-      if (rowSport === "nfl") {
-        nflPlayerIds.push(Number(row.player_id));
-      } else {
-        nbaPlayerIds.push(Number(row.player_id));
-      }
-    });
+      const playerId = Number(row.player_id);
 
-    const [{ data: nbaPlayers }, { data: nflPlayers }] = await Promise.all([
-      nbaPlayerIds.length
+      if (rowSport === "nfl") {
+        nflPlayerIds.add(playerId);
+      } else if (rowSport === "golf") {
+        golfPlayerIds.add(playerId);
+      } else {
+        nbaPlayerIds.add(playerId);
+      }
+    }
+
+    const [
+      { data: nbaPlayers },
+      { data: nflPlayers },
+      { data: golfPlayers },
+    ] = await Promise.all([
+      nbaPlayerIds.size
         ? supabaseAdmin
             .from("players")
             .select("id, name")
-            .in("id", nbaPlayerIds)
+            .in("id", [...nbaPlayerIds])
         : Promise.resolve({ data: [] }),
-      nflPlayerIds.length
+
+      nflPlayerIds.size
         ? supabaseAdmin
             .from("players_nfl")
             .select("id, name")
-            .in("id", nflPlayerIds)
+            .in("id", [...nflPlayerIds])
+        : Promise.resolve({ data: [] }),
+
+      golfPlayerIds.size
+        ? supabaseAdmin
+            .from("golf_players")
+            .select("id, display_name")
+            .in("id", [...golfPlayerIds])
         : Promise.resolve({ data: [] }),
     ]);
 
     const nbaPlayerMap = new Map(
-      (nbaPlayers ?? []).map((row) => [Number(row.id), row.name])
+      (nbaPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
     );
 
     const nflPlayerMap = new Map(
-      (nflPlayers ?? []).map((row) => [Number(row.id), row.name])
+      (nflPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
     );
 
-    function resolvePlayerName(row: (typeof rows)[number]) {
+    const golfPlayerMap = new Map(
+      (golfPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.display_name,
+      ])
+    );
+
+    function resolvePlayerName(
+      row: (typeof rows)[number]
+    ) {
       if (!row.player_id) return null;
 
       const rowSport = row.slate_id
         ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
         : "nba";
 
-      const map = rowSport === "nfl" ? nflPlayerMap : nbaPlayerMap;
+      const playerId = Number(row.player_id);
 
-      return map.get(Number(row.player_id)) ?? `Player ${row.player_id}`;
+      if (rowSport === "golf") {
+        return (
+          golfPlayerMap.get(playerId) ??
+          `Golfer ${playerId}`
+        );
+      }
+
+      if (rowSport === "nfl") {
+        return (
+          nflPlayerMap.get(playerId) ??
+          `Player ${playerId}`
+        );
+      }
+
+      return (
+        nbaPlayerMap.get(playerId) ??
+        `Player ${playerId}`
+      );
     }
 
     return NextResponse.json({
       success: true,
-      history: rows.map((row) => ({
-        ...row,
-        recipientName: row.user_id
-          ? userMap.get(String(row.user_id)) ?? "Unknown user"
-          : "No recipient",
-        teamName: row.team_id
-          ? teamMap.get(Number(row.team_id)) ?? `Team ${row.team_id}`
-          : null,
-        playerName: resolvePlayerName(row),
-        slateLabel: row.slate_id
-          ? slateMap.get(Number(row.slate_id)) ?? `Slate ${row.slate_id}`
-          : null,
-      })),
+      history: rows.map((row) => {
+        const rowSport = row.slate_id
+          ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+          : null;
+
+        return {
+          ...row,
+          sport: rowSport,
+          recipientName: row.user_id
+            ? userMap.get(String(row.user_id)) ??
+              "Unknown user"
+            : "No recipient",
+          teamName: row.team_id
+            ? teamMap.get(Number(row.team_id)) ??
+              `Team ${row.team_id}`
+            : null,
+          playerName: resolvePlayerName(row),
+          slateLabel: row.slate_id
+            ? slateMap.get(Number(row.slate_id)) ??
+              `Slate ${row.slate_id}`
+            : null,
+        };
+      }),
     });
   } catch (error) {
-    console.error("Failed to load notification history", error);
+    console.error(
+      "Failed to load notification history",
+      error
+    );
 
     return NextResponse.json(
-      { error: "Unable to load notification history." },
+      {
+        error: "Unable to load notification history.",
+      },
       { status: 500 }
     );
   }

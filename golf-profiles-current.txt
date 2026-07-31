@@ -1,0 +1,3953 @@
+
+
+============================================================
+FILE: components/TeamProfileModal.tsx
+============================================================
+"use client";
+
+import { useEffect, useState } from "react";
+import ProfileOverview from "@/components/profile/ProfileOverview";
+import TrophyCase, {
+  type LeagueAward,
+  type TrophyMilestones,
+  type MilestoneThresholds,
+} from "@/components/profile/TrophyCase";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+type SeasonValue = number | "all";
+type ProfileTab = "overview" | "awards";
+
+type TeamProfile = {
+  success: boolean;
+  team: {
+    id: number;
+    name: string;
+    avatarUrl: string | null;
+  };
+  latestSeason: number;
+  selectedSeason: SeasonValue;
+  seasonSummary: {
+    slatesPlayed: number;
+    wins: number;
+    runnerUps: number;
+    podiumFinishes: number;
+    winRate: number | null;
+    avgFinish: number | null;
+    avgScore: number | null;
+    currentWinStreak: number;
+    longestWinStreak: number;
+  };
+  careerSummary: {
+    slatesPlayed: number;
+    wins: number;
+    runnerUps: number;
+    podiumFinishes: number;
+    winRate: number | null;
+    avgFinish: number | null;
+    avgScore: number | null;
+    bestScore: number | null;
+    worstScore: number | null;
+    longestWinStreak: number;
+    favoritePlayer: {
+      playerName: string;
+      count: number;
+    } | null;
+    bestAvgPlayer: {
+      playerName: string;
+      avg: number;
+      count: number;
+    } | null;
+    bestPickEver: {
+      playerName: string;
+      fantasyPoints: number;
+      slateLabel: string;
+      finishPosition: number | null;
+    } | null;
+    bestSlate: {
+      slateLabel: string;
+      score: number;
+      finishPosition: number | null;
+    } | null;
+    worstSlate: {
+      slateLabel: string;
+      score: number;
+      finishPosition: number | null;
+    } | null;
+  };
+  milestones: TrophyMilestones;
+  milestoneThresholds: MilestoneThresholds;
+  leagueAwards: LeagueAward[];
+  recentSlates: Array<{
+    slateId: number;
+    slateLabel: string;
+    score: number;
+    finishPosition: number | null;
+    draftPosition: number | null;
+    topPlayer: {
+      playerName: string;
+      fantasyPoints: number | null;
+    } | null;
+  }>;
+};
+
+type TeamReference = {
+  id: number;
+  name: string;
+};
+
+type Props = {
+  team: TeamReference | null;
+  setTeam: (team: TeamReference | null) => void;
+};
+
+const TEAM_HEADSHOTS: Record<string, string> = {
+  Andy: "/team-headshots/andy.jpg",
+  Jon: "/team-headshots/jon.jpg",
+  Josh: "/team-headshots/josh.jpg",
+  Mark: "/team-headshots/mark.jpg",
+};
+
+export default function TeamProfileModal({ team, setTeam }: Props) {
+  const { selectedSport } = useSelectedSport();
+  const [profile, setProfile] = useState<TeamProfile | null>(null);
+  const [season, setSeason] = useState<SeasonValue>("all");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!team) {
+      setProfile(null);
+      setSeason("all");
+      setActiveTab("overview");
+      setMessage("");
+      setIsLoading(false);
+      return;
+    }
+
+    setProfile(null);
+    setSeason("all");
+    setActiveTab("overview");
+    setMessage("");
+  }, [team?.id]);
+
+  useEffect(() => {
+    if (!team) return;
+
+    const currentTeam = team;
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        setIsLoading(true);
+        setMessage("");
+
+        const response = await fetch(
+          `/api/team-profile?teamId=${currentTeam.id}&season=${season}&sport=${selectedSport}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (active) {
+            setProfile(null);
+            setMessage(
+              result.error || `Unable to load ${currentTeam.name}'s profile.`
+            );
+          }
+
+          return;
+        }
+
+        if (active) {
+          setProfile(result as TeamProfile);
+        }
+      } catch (error) {
+        console.error("Failed to load viewed team profile", error);
+
+        if (active) {
+          setProfile(null);
+          setMessage(`Unable to load ${currentTeam.name}'s profile.`);
+        }
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [team, season, selectedSport]);
+
+  useEffect(() => {
+    if (!team) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setTeam(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [team, setTeam]);
+
+  if (!team) return null;
+
+  const availableSeasons = profile
+    ? Array.from(
+        { length: Math.max(profile.latestSeason - 2023 + 1, 1) },
+        (_, index) => profile.latestSeason - index
+      )
+    : [2026, 2025, 2024, 2023];
+
+  const fallbackHeadshot = TEAM_HEADSHOTS[team.name] ?? null;
+  const headshot = profile?.team.avatarUrl ?? fallbackHeadshot;
+  const displayName = profile?.team.name ?? team.name;
+
+  return (
+    <div
+      className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/75 px-2 py-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-5"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${displayName} league profile`}
+      onClick={() => setTeam(null)}
+    >
+      <div
+        className="mobile-modal-panel-safe flex max-h-[96dvh] w-full max-w-7xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-slate-50 text-slate-900 shadow-2xl sm:max-h-[94dvh] sm:rounded-3xl dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="shrink-0 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur sm:px-6 dark:border-slate-700 dark:bg-slate-900/95">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+              {headshot ? (
+                <img
+                  src={headshot}
+                  alt={`${displayName} profile`}
+                  className="h-16 w-16 shrink-0 rounded-2xl border border-slate-200 object-cover shadow-sm sm:h-24 sm:w-24 sm:rounded-3xl dark:border-slate-700"
+                />
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100 text-2xl font-bold text-slate-500 sm:h-24 sm:w-24 sm:rounded-3xl sm:text-3xl dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  {displayName.slice(0, 1)}
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <div className="text-xs font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+                  League Profile
+                </div>
+
+                <h2 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
+                  {displayName}
+                </h2>
+
+                <p className="mt-1 hidden text-sm text-slate-500 sm:block dark:text-slate-400">
+                  Career stats, awards, and league history.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setTeam(null)}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-xl font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 sm:h-auto sm:w-auto sm:px-4 sm:py-2 sm:text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+              aria-label="Close team profile"
+            >
+              <span className="sm:hidden" aria-hidden="true">
+                ×
+              </span>
+              <span className="hidden sm:inline">Close</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 pb-28 sm:px-5 sm:py-5 sm:pb-6">
+          <div className="mx-auto max-w-7xl space-y-5">
+            <section className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  {
+                    id: "overview",
+                    label: "Overview",
+                    icon: "📊",
+                  },
+                  {
+                    id: "awards",
+                    label: "Trophy Case",
+                    icon: "🏆",
+                  },
+                ].map((tab) => {
+                  const isActive = activeTab === tab.id;
+
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id as ProfileTab)}
+                      className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                        isActive
+                          ? "bg-sky-100 text-sky-900 shadow-sm dark:bg-sky-700 dark:text-white"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                      }`}
+                    >
+                      <span className="mr-1 hidden sm:inline">{tab.icon}</span>
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {message ? (
+              <section className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 shadow-sm dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-200">
+                {message}
+              </section>
+            ) : null}
+
+            {isLoading || !profile ? (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-10 text-center text-sm text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                  {message
+                    ? "Profile unavailable."
+                    : `Loading ${displayName}'s profile...`}
+                </div>
+              </section>
+            ) : (
+              <>
+                {activeTab === "overview" ? (
+                  <ProfileOverview
+                    profile={profile}
+                    teamId={profile.team.id}
+                    season={season}
+                    availableSeasons={availableSeasons}
+                    onSeasonChange={setSeason}
+                  />
+                ) : null}
+
+                {activeTab === "awards" ? (
+                  <TrophyCase
+                    key={profile.team.id}
+                    teamName={profile.team.name}
+                    career={{
+                      wins: profile.careerSummary.wins,
+                      runnerUps: profile.careerSummary.runnerUps,
+                      podiumFinishes:
+                        profile.careerSummary.podiumFinishes,
+                      bestScore: profile.careerSummary.bestScore,
+                      avgFinish: profile.careerSummary.avgFinish,
+                      longestWinStreak:
+                        profile.careerSummary.longestWinStreak,
+                      slatesPlayed: profile.careerSummary.slatesPlayed,
+                    }}
+                    milestones={profile.milestones}
+                    leagueAwards={profile.leagueAwards}
+                    thresholds={profile.milestoneThresholds}
+                  />
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+============================================================
+FILE: app/api/team-profile/route.ts
+============================================================
+import { NextResponse } from "next/server";
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+function round(value: number, digits = 1) {
+  return Number(value.toFixed(digits));
+}
+
+function getSeasonFromSlate(slate: any) {
+  const date = slate?.start_date ?? slate?.date ?? "";
+  return date ? new Date(`${date}T00:00:00`).getFullYear() : new Date().getFullYear();
+}
+
+const MILESTONE_THRESHOLDS: Record<string, { score175: number; score200: number; score225: number; score250: number; photoFinishMargin: number; statementWinMargin: number }> = {
+  nba: {
+    score175: 175,
+    score200: 200,
+    score225: 225,
+    score250: 250,
+    photoFinishMargin: 2,
+    statementWinMargin: 30,
+  },
+  // Placeholder NFL thresholds — NFL fantasy scoring runs on a different
+  // scale than NBA's. Revisit these once real NFL slate data exists to
+  // calibrate against.
+  nfl: {
+    score175: 120,
+    score200: 140,
+    score225: 160,
+    score250: 180,
+    photoFinishMargin: 2,
+    statementWinMargin: 25,
+  },
+};
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const teamId = Number(searchParams.get("teamId"));
+    const seasonParam = searchParams.get("season");
+    const isAllTime = !seasonParam || seasonParam === "all";
+    const sportParam = searchParams.get("sport");
+    const sport = sportParam === "nfl" ? "nfl" : "nba";
+
+    if (!teamId || Number.isNaN(teamId)) {
+      return NextResponse.json({ error: "Missing or invalid teamId." }, { status: 400 });
+    }
+
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const positionColumn = sport === "nfl" ? "position" : "position_group";
+    const thresholds = MILESTONE_THRESHOLDS[sport];
+
+    const [
+      { data: team },
+      { data: teams },
+      { data: slates },
+      { data: results },
+      { data: lineups },
+      { data: lineupPlayers },
+      { data: players },
+      { data: playerStats },
+      { data: slateTeamConfigs },
+      { data: teamUser },
+      { data: leagueAwards },
+    ] = await Promise.all([
+      supabaseAdmin.from("teams").select("id, name").eq("id", teamId).single(),
+      supabaseAdmin.from("teams").select("id, name"),
+      supabaseAdmin
+        .from("slates")
+        .select("id, date, start_date, end_date, is_locked")
+        .eq("sport", sport),
+      supabaseAdmin.from("team_slate_results").select("*"),
+      supabaseAdmin
+        .from("lineups")
+        .select("id, slate_id, team_id")
+        .order("slate_id", { ascending: false })
+        .range(0, 20000),
+      supabaseAdmin
+        .from("lineup_players")
+        .select("lineup_id, player_id")
+        .order("lineup_id", { ascending: false })
+        .range(0, 20000),
+      supabaseAdmin
+        .from(playersTable)
+        .select(`id, name, position_group:${positionColumn}`),
+      supabaseAdmin
+        .from("player_slate_stats")
+        .select("*")
+        .order("slate_id", { ascending: false })
+        .range(0, 20000),
+      supabaseAdmin.from("slate_team_configs").select("slate_id, team_id, draft_order, is_participating"),
+      supabaseAdmin
+        .from("app_users")
+        .select("avatar_url")
+        .eq("team_id", teamId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("league_awards")
+        .select(
+          "id, season, team_id, title, emoji, description, rarity, display_order, featured"
+        )
+        .eq("team_id", teamId)
+        .eq("sport", sport)
+        .order("season", { ascending: false })
+        .order("featured", { ascending: false })
+        .order("display_order", { ascending: true })
+        .order("id", { ascending: true }),
+    ]);
+
+    const safeTeam = team ?? { id: teamId, name: "Unknown Team" };
+    const safeSlates = slates ?? [];
+    const safeResults = results ?? [];
+    const safeLineups = lineups ?? [];
+    const safeLineupPlayers = lineupPlayers ?? [];
+    const safePlayers = players ?? [];
+    const safePlayerStats = playerStats ?? [];
+    const safeSlateTeamConfigs = slateTeamConfigs ?? [];
+
+    const slateMap = new Map(safeSlates.map((s: any) => [s.id, s]));
+    const slateIds = new Set(safeSlates.map((s: any) => s.id));
+    const playerMap = new Map(safePlayers.map((p: any) => [p.id, p]));
+    const statBySlatePlayerKey = new Map(
+      safePlayerStats
+        .filter((stat: any) => slateIds.has(stat.slate_id))
+        .map((stat: any) => [
+          `${Number(stat.slate_id)}-${Number(stat.player_id)}`,
+          stat,
+        ])
+    );
+
+    const latestSeason =
+      safeSlates.length > 0
+        ? Math.max(...safeSlates.map((slate: any) => getSeasonFromSlate(slate)))
+        : new Date().getFullYear();
+
+    const allTeamRows = safeResults
+      .filter((r: any) => r.team_id === teamId && slateIds.has(r.slate_id) && (r.fantasy_points ?? 0) > 0)
+      .map((result: any) => {
+        const slate = slateMap.get(result.slate_id);
+        const lineup = safeLineups.find(
+          (l: any) => l.slate_id === result.slate_id && l.team_id === teamId
+        );
+        const config = safeSlateTeamConfigs.find(
+          (c: any) => c.slate_id === result.slate_id && c.team_id === teamId
+        );
+
+        const draftedPlayerIds = lineup
+          ? safeLineupPlayers
+              .filter((lp: any) => lp.lineup_id === lineup.id)
+              .map((lp: any) => lp.player_id)
+          : [];
+
+        const isCompleted =
+          (result.games_completed ?? 0) > 0 &&
+          (result.games_in_progress ?? 0) === 0 &&
+          (result.games_remaining ?? 0) === 0;
+
+        const draftedPlayerStats = draftedPlayerIds
+          .map((playerId: number) => {
+            const player = playerMap.get(playerId);
+            const stat = statBySlatePlayerKey.get(`${Number(result.slate_id)}-${Number(playerId)}`);
+
+            return {
+              playerId,
+              playerName: player?.name ?? "Unknown Player",
+              positionGroup: player?.position_group ?? null,
+              fantasyPoints: stat?.fantasy_points ?? null,
+            };
+          })
+          .filter((p: any) => p.fantasyPoints !== null);
+
+        const draftedIds = draftedPlayerIds.map((id: any) => Number(id));
+
+        const topPlayer =
+          safePlayerStats
+            .filter(
+              (stat: any) =>
+                Number(stat.slate_id) === Number(result.slate_id) &&
+                draftedIds.includes(Number(stat.player_id)) &&
+                (stat.fantasy_points ?? 0) > 0
+            )
+            .map((stat: any) => {
+              const player = playerMap.get(Number(stat.player_id));
+
+              return {
+                playerId: Number(stat.player_id),
+                playerName: player?.name ?? "Unknown Player",
+                positionGroup: player?.position_group ?? null,
+                fantasyPoints: stat.fantasy_points ?? null,
+              };
+            })
+            .sort((a: any, b: any) => (b.fantasyPoints ?? 0) - (a.fantasyPoints ?? 0))[0] ??
+          null;
+
+        return {
+          slateId: result.slate_id,
+          slateLabel: formatSlateDateLabel(slate),
+          slateStart: slate?.start_date ?? slate?.date ?? "",
+          season: getSeasonFromSlate(slate),
+          score: Number(result.fantasy_points ?? 0),
+          finishPosition: result.finish_position ?? null,
+          gamesCompleted: result.games_completed ?? 0,
+          gamesInProgress: result.games_in_progress ?? 0,
+          gamesRemaining: result.games_remaining ?? 0,
+          draftPosition: config?.draft_order ?? null,
+          topPlayer,
+        };
+      })
+      .sort((a: any, b: any) => String(b.slateStart).localeCompare(String(a.slateStart)));
+
+    const completedRows = allTeamRows.filter(
+      (row: any) =>
+        (row.gamesCompleted ?? 0) > 0 &&
+        (row.gamesInProgress ?? 0) === 0 &&
+        (row.gamesRemaining ?? 0) === 0
+    );
+
+    const selectedSeason =
+      !isAllTime && Number.isFinite(Number(seasonParam))
+        ? Number(seasonParam)
+        : latestSeason;
+
+    const selectedRows = isAllTime
+      ? completedRows
+      : completedRows.filter((row: any) => row.season === selectedSeason);
+
+    const seasonRows = selectedRows;
+
+    function summarize(rows: any[]) {
+      const scores = rows.map((row) => Number(row.score ?? 0));
+      const finishes = rows
+        .map((row) => row.finishPosition)
+        .filter((v) => v !== null && v !== undefined);
+
+      const wins = rows.filter((row) => row.finishPosition === 1).length;
+      const runnerUps = rows.filter((row) => row.finishPosition === 2).length;
+      const podiumFinishes = rows.filter(
+        (row) =>
+          row.finishPosition !== null &&
+          row.finishPosition !== undefined &&
+          Number(row.finishPosition) <= 3
+      ).length;
+
+      return {
+        slatesPlayed: rows.length,
+        wins,
+        runnerUps,
+        podiumFinishes,
+        winRate: rows.length > 0 ? round((wins / rows.length) * 100, 1) : null,
+        avgFinish:
+          finishes.length > 0
+            ? round(finishes.reduce((sum: number, value: number) => sum + value, 0) / finishes.length)
+            : null,
+        avgScore:
+          scores.length > 0
+            ? round(scores.reduce((sum: number, value: number) => sum + value, 0) / scores.length)
+            : null,
+      };
+    }
+
+    const seasonSummary = summarize(seasonRows);
+    const careerSummaryBase = summarize(completedRows);
+
+    const bestSlate =
+      [...completedRows].sort((a: any, b: any) => b.score - a.score)[0] ?? null;
+    const worstSlate =
+      [...completedRows].sort((a: any, b: any) => a.score - b.score)[0] ?? null;
+
+    const playerDraftCounts = new Map<number, number>();
+    const playerScores = new Map<number, number[]>();
+
+    safeLineups
+      .filter((l: any) => l.team_id === teamId && slateIds.has(l.slate_id))
+      .forEach((lineup: any) => {
+        safeLineupPlayers
+          .filter((lp: any) => lp.lineup_id === lineup.id)
+          .forEach((lp: any) => {
+            playerDraftCounts.set(lp.player_id, (playerDraftCounts.get(lp.player_id) ?? 0) + 1);
+
+            const stat = safePlayerStats.find(
+              (s: any) => s.slate_id === lineup.slate_id && s.player_id === lp.player_id
+            );
+
+            if ((stat?.fantasy_points ?? 0) > 0) {
+              const existing = playerScores.get(lp.player_id) ?? [];
+              existing.push(Number(stat.fantasy_points));
+              playerScores.set(lp.player_id, existing);
+            }
+          });
+      });
+
+    const favoritePlayerEntry =
+      [...playerDraftCounts.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
+
+    const bestAvgPlayer =
+      [...playerScores.entries()]
+        .map(([playerId, scores]) => ({
+          playerId,
+          avg: scores.reduce((sum, value) => sum + value, 0) / scores.length,
+          count: scores.length,
+        }))
+        .sort((a, b) => b.avg - a.avg)[0] ?? null;
+
+    const bestPickEver =
+      allTeamRows
+        .flatMap((row: any) => {
+          const lineup = safeLineups.find(
+            (l: any) => l.slate_id === row.slateId && l.team_id === teamId
+          );
+
+          if (!lineup) return [];
+
+          return safeLineupPlayers
+            .filter((lp: any) => lp.lineup_id === lineup.id)
+            .map((lp: any) => {
+              const player = playerMap.get(lp.player_id);
+              const stat = safePlayerStats.find(
+                (s: any) => s.slate_id === row.slateId && s.player_id === lp.player_id
+              );
+
+              return {
+                playerId: lp.player_id,
+                playerName: player?.name ?? "Unknown Player",
+                fantasyPoints: stat?.fantasy_points ?? null,
+                slateLabel: row.slateLabel,
+                finishPosition: row.finishPosition,
+              };
+            });
+        })
+        .filter((pick: any) => pick.fantasyPoints !== null)
+        .sort((a: any, b: any) => Number(b.fantasyPoints ?? 0) - Number(a.fantasyPoints ?? 0))[0] ?? null;
+
+    function getWinStreaks(rows: any[]) {
+      let longest = 0;
+      let current = 0;
+      let running = 0;
+
+      [...rows]
+        .sort((a, b) => String(a.slateStart).localeCompare(String(b.slateStart)))
+        .forEach((row) => {
+          if (row.finishPosition === 1) {
+            running += 1;
+            longest = Math.max(longest, running);
+          } else {
+            running = 0;
+          }
+        });
+
+      [...rows]
+        .sort((a, b) => String(b.slateStart).localeCompare(String(a.slateStart)))
+        .some((row) => {
+          if (row.finishPosition === 1) {
+            current += 1;
+            return false;
+          }
+          return true;
+        });
+
+      return { current, longest };
+    }
+
+    const seasonStreaks = getWinStreaks(seasonRows);
+    const careerStreaks = getWinStreaks(completedRows);
+
+    const chronologicalRows = [...completedRows].sort((a: any, b: any) =>
+      String(a.slateStart).localeCompare(String(b.slateStart))
+    );
+
+    function countConsecutiveWindows(
+      rows: any[],
+      requiredLength: number,
+      predicate: (row: any) => boolean
+    ) {
+      let count = 0;
+
+      for (let index = 0; index <= rows.length - requiredLength; index += 1) {
+        const window = rows.slice(index, index + requiredLength);
+
+        if (window.every(predicate)) {
+          count += 1;
+        }
+      }
+
+      return count;
+    }
+
+    function getLongestStreak(
+      rows: any[],
+      predicate: (row: any) => boolean
+    ) {
+      let longest = 0;
+      let current = 0;
+
+      rows.forEach((row) => {
+        if (predicate(row)) {
+          current += 1;
+          longest = Math.max(longest, current);
+        } else {
+          current = 0;
+        }
+      });
+
+      return longest;
+    }
+
+    const score175 = completedRows.filter(
+      (row: any) => Number(row.score) >= thresholds.score175
+    ).length;
+
+    const score200 = completedRows.filter(
+      (row: any) => Number(row.score) >= thresholds.score200
+    ).length;
+
+    const score225 = completedRows.filter(
+      (row: any) => Number(row.score) >= thresholds.score225
+    ).length;
+
+    const score250 = completedRows.filter(
+      (row: any) => Number(row.score) >= thresholds.score250
+    ).length;
+
+    const backToBackWins = countConsecutiveWindows(
+      chronologicalRows,
+      2,
+      (row) => row.finishPosition === 1
+    );
+
+    const threePeats = countConsecutiveWindows(
+      chronologicalRows,
+      3,
+      (row) => row.finishPosition === 1
+    );
+
+    const longestPodiumStreak = getLongestStreak(
+      chronologicalRows,
+      (row) =>
+        row.finishPosition !== null &&
+        Number(row.finishPosition) <= 2
+    );
+
+    const winningMargins = completedRows
+      .filter((row: any) => row.finishPosition === 1)
+      .map((row: any) => {
+        const slateResults = safeResults
+          .filter(
+            (result: any) =>
+              Number(result.slate_id) === Number(row.slateId) &&
+              slateIds.has(result.slate_id) &&
+              Number(result.fantasy_points ?? 0) > 0
+          )
+          .sort(
+            (a: any, b: any) =>
+              Number(b.fantasy_points ?? 0) -
+              Number(a.fantasy_points ?? 0)
+          );
+
+        const winningResult = slateResults.find(
+          (result: any) => Number(result.team_id) === Number(teamId)
+        );
+
+        const runnerUpResult = slateResults.find(
+          (result: any) => Number(result.team_id) !== Number(teamId)
+        );
+
+        if (!winningResult || !runnerUpResult) return null;
+
+        return round(
+          Number(winningResult.fantasy_points ?? 0) -
+            Number(runnerUpResult.fantasy_points ?? 0)
+        );
+      })
+      .filter(
+        (margin: number | null): margin is number =>
+          margin !== null && margin >= 0
+      );
+
+    const photoFinishMargins = winningMargins.filter(
+      (margin) => margin < thresholds.photoFinishMargin
+    );
+
+    const statementWinMargins = winningMargins.filter(
+      (margin) => margin >= thresholds.statementWinMargin
+    );
+
+    const milestones = {
+      score175,
+      score200,
+      score225,
+      score250,
+      backToBackWins,
+      threePeats,
+      longestPodiumStreak,
+      photoFinishWins: photoFinishMargins.length,
+      statementWins: statementWinMargins.length,
+      closestWinningMargin:
+        winningMargins.length > 0
+          ? round(Math.min(...winningMargins))
+          : null,
+      largestWinningMargin:
+        winningMargins.length > 0
+          ? round(Math.max(...winningMargins))
+          : null,
+    };
+
+    return NextResponse.json({
+      success: true,
+      sport,
+      team: {
+        id: safeTeam.id,
+        name: safeTeam.name,
+        avatarUrl: teamUser?.avatar_url ?? null,
+      },
+      latestSeason,
+      selectedSeason: isAllTime ? "all" : selectedSeason,
+      seasonSummary: {
+        ...seasonSummary,
+        currentWinStreak: seasonStreaks.current,
+        longestWinStreak: seasonStreaks.longest,
+      },
+      careerSummary: {
+        ...careerSummaryBase,
+        bestScore: bestSlate ? round(bestSlate.score) : null,
+        worstScore: worstSlate ? round(worstSlate.score) : null,
+        longestWinStreak: careerStreaks.longest,
+        favoritePlayer: favoritePlayerEntry
+          ? {
+              playerId: favoritePlayerEntry[0],
+              playerName: playerMap.get(favoritePlayerEntry[0])?.name ?? "Unknown Player",
+              count: favoritePlayerEntry[1],
+            }
+          : null,
+        bestAvgPlayer: bestAvgPlayer
+          ? {
+              playerId: bestAvgPlayer.playerId,
+              playerName: playerMap.get(bestAvgPlayer.playerId)?.name ?? "Unknown Player",
+              avg: round(bestAvgPlayer.avg),
+              count: bestAvgPlayer.count,
+            }
+          : null,
+        bestPickEver: bestPickEver
+          ? {
+              playerId: bestPickEver.playerId,
+              playerName: bestPickEver.playerName,
+              fantasyPoints: round(Number(bestPickEver.fantasyPoints)),
+              slateLabel: bestPickEver.slateLabel,
+              finishPosition: bestPickEver.finishPosition,
+            }
+          : null,
+        bestSlate,
+        worstSlate,
+      },
+      milestones,
+      milestoneThresholds: thresholds,
+      leagueAwards: leagueAwards ?? [],
+      recentSlates: selectedRows.slice(0, 8),
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading team profile." },
+      { status: 500 }
+    );
+  }
+}
+
+
+============================================================
+FILE: app/api/team-stats/route.ts
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStatColumns } from "@/lib/statColumns";
+import { DEFAULT_SPORT } from "@/lib/sports";
+
+type LineupRow = {
+  id: number;
+  team_id: number;
+  slate_id: number;
+};
+
+type LineupPlayerRow = {
+  lineup_id: number;
+  player_id: number;
+};
+
+type TeamSlateResultRow = {
+  team_id: number;
+  slate_id: number;
+  fantasy_points: number | null;
+};
+
+export async function GET(req: NextRequest) {
+  try {
+    const season = req.nextUrl.searchParams.get("season");
+    const sport = req.nextUrl.searchParams.get("sport") ?? DEFAULT_SPORT;
+
+    if (!season) {
+      return NextResponse.json({ error: "season is required" }, { status: 400 });
+    }
+
+    const isAllTime = season === "all";
+    const statColumns = getStatColumns(sport);
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+
+    let slateQuery = supabaseAdmin
+      .from("slates")
+      .select("id, start_date")
+      .eq("sport", sport);
+
+    if (!isAllTime) {
+      slateQuery = slateQuery
+        .gte("start_date", `${season}-01-01`)
+        .lte("start_date", `${season}-12-31`);
+    }
+
+    const { data: slates, error: slateError } = await slateQuery;
+
+    if (slateError) throw new Error(slateError.message);
+
+    const slateIds = (slates ?? []).map((slate) => Number(slate.id));
+
+    if (slateIds.length === 0) {
+      return NextResponse.json({ success: true, sport, teams: [] });
+    }
+
+    const { data: lineups, error: lineupError } = await supabaseAdmin
+      .from("lineups")
+      .select("id, team_id, slate_id")
+      .in("slate_id", slateIds);
+
+    if (lineupError) throw new Error(lineupError.message);
+
+    const safeLineups = (lineups ?? []) as LineupRow[];
+    const lineupIds = safeLineups.map((lineup) => Number(lineup.id));
+
+    if (lineupIds.length === 0) {
+      return NextResponse.json({ success: true, sport, teams: [] });
+    }
+
+    const { data: lineupPlayers, error: lpError } = await supabaseAdmin
+      .from("lineup_players")
+      .select("lineup_id, player_id")
+      .in("lineup_id", lineupIds);
+
+    if (lpError) throw new Error(lpError.message);
+
+    const safeLineupPlayers = (lineupPlayers ?? []) as LineupPlayerRow[];
+    const playerIds = Array.from(
+      new Set(safeLineupPlayers.map((lp) => Number(lp.player_id)))
+    );
+
+    if (playerIds.length === 0) {
+      return NextResponse.json({ success: true, sport, teams: [] });
+    }
+
+    const statSelectColumns = ["player_id", "slate_id", ...statColumns.map((c) => c.key)].join(", ");
+
+    const { data: stats, error: statsError } = await supabaseAdmin
+      .from(statsTable)
+      .select(statSelectColumns)
+      .in("slate_id", slateIds)
+      .in("player_id", playerIds);
+
+    if (statsError) throw new Error(statsError.message);
+
+    const safeStats = (stats ?? []) as any[];
+
+    const { data: teamSlateResults, error: resultsError } = await supabaseAdmin
+      .from("team_slate_results")
+      .select("team_id, slate_id, fantasy_points")
+      .in("slate_id", slateIds);
+
+    if (resultsError) throw new Error(resultsError.message);
+
+    const safeTeamSlateResults = (teamSlateResults ?? []) as TeamSlateResultRow[];
+
+    const officialSlateCountByTeam = new Map<number, Set<number>>();
+
+    safeTeamSlateResults.forEach((row) => {
+      if ((row.fantasy_points ?? 0) <= 0) return;
+
+      const teamId = Number(row.team_id);
+      const existing = officialSlateCountByTeam.get(teamId) ?? new Set<number>();
+      existing.add(Number(row.slate_id));
+      officialSlateCountByTeam.set(teamId, existing);
+    });
+
+    const lineupMap = new Map<number, LineupRow>();
+    safeLineups.forEach((lineup) => lineupMap.set(Number(lineup.id), lineup));
+
+    const statsMap = new Map<string, any>();
+    safeStats.forEach((stat) => {
+      statsMap.set(`${Number(stat.player_id)}-${Number(stat.slate_id)}`, stat);
+    });
+
+    const teamTotals = new Map<number, { slateIds: Set<number>; totals: Record<string, number> }>();
+
+    safeLineupPlayers.forEach((lp) => {
+      const lineup = lineupMap.get(Number(lp.lineup_id));
+      if (!lineup) return;
+
+      const stat = statsMap.get(`${Number(lp.player_id)}-${Number(lineup.slate_id)}`);
+      if (!stat) return;
+
+      const rowValues: Record<string, number> = {};
+      let hasRealStat = false;
+
+      statColumns.forEach((column) => {
+        const value = Number(stat[column.key] ?? 0);
+        rowValues[column.key] = value;
+        if (value > 0) hasRealStat = true;
+      });
+
+      if (!hasRealStat) return;
+
+      const teamId = Number(lineup.team_id);
+
+      const existing =
+        teamTotals.get(teamId) ?? {
+          slateIds: new Set<number>(),
+          totals: Object.fromEntries(statColumns.map((c) => [c.key, 0])),
+        };
+
+      existing.slateIds.add(Number(lineup.slate_id));
+
+      statColumns.forEach((column) => {
+        existing.totals[column.key] += rowValues[column.key];
+      });
+
+      teamTotals.set(teamId, existing);
+    });
+
+    const teams = Array.from(teamTotals.entries()).map(([teamId, data]) => {
+      const officialSlates = officialSlateCountByTeam.get(teamId);
+      const slateCount = officialSlates ? officialSlates.size : data.slateIds.size || 1;
+
+      const perSlate: Record<string, number> = {};
+      statColumns.forEach((column) => {
+        perSlate[column.key] = Number((data.totals[column.key] / slateCount).toFixed(1));
+      });
+
+      return {
+        teamId,
+        slateCount,
+        stats: perSlate,
+      };
+    });
+
+    return NextResponse.json({ success: true, sport, season, statColumns, teams });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to load team stats." },
+      { status: 500 }
+    );
+  }
+}
+
+
+============================================================
+FILE: app/profile/page.tsx
+============================================================
+"use client";
+
+import AppNav from "@/components/AppNav";
+import Link from "next/link";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import PushDeviceControls from "@/components/profile/PushDeviceControls";
+import ChangePinForm from "@/components/profile/ChangePinForm";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import ProfilePictureSettings from "@/components/profile/ProfilePictureSettings";
+import ProfileOverview from "@/components/profile/ProfileOverview";
+import TrophyCase, {
+  type LeagueAward,
+  type TrophyMilestones,
+  type MilestoneThresholds,
+} from "@/components/profile/TrophyCase";
+
+type CurrentUser = {
+  id: string;
+  teamId: number;
+  displayName: string;
+  role: "player" | "admin";
+  avatarUrl: string | null;
+};
+
+type ProfileTab = "overview" | "awards" | "settings";
+type SettingsTab =
+  | "profile"
+  | "notifications"
+  | "security";
+
+type NotificationPreferences = {
+  notificationsEnabled: boolean;
+  draftTurnEnabled: boolean;
+  playerFinishedEnabled: boolean;
+  slateFinalEnabled: boolean;
+};
+
+type TeamProfile = {
+  success: boolean;
+  team: {
+    id: number;
+    name: string;
+    avatarUrl: string | null;
+  };
+  latestSeason: number;
+  selectedSeason: number | "all";
+  seasonSummary: {
+    slatesPlayed: number;
+    wins: number;
+    runnerUps: number;
+    podiumFinishes: number;
+    winRate: number | null;
+    avgFinish: number | null;
+    avgScore: number | null;
+    currentWinStreak: number;
+    longestWinStreak: number;
+  };
+  careerSummary: {
+    slatesPlayed: number;
+    wins: number;
+    runnerUps: number;
+    podiumFinishes: number;
+    winRate: number | null;
+    avgFinish: number | null;
+    avgScore: number | null;
+    bestScore: number | null;
+    worstScore: number | null;
+    longestWinStreak: number;
+    favoritePlayer: {
+      playerName: string;
+      count: number;
+    } | null;
+    bestAvgPlayer: {
+      playerName: string;
+      avg: number;
+      count: number;
+    } | null;
+    bestPickEver: {
+      playerName: string;
+      fantasyPoints: number;
+      slateLabel: string;
+      finishPosition: number | null;
+    } | null;
+    bestSlate: {
+      slateLabel: string;
+      score: number;
+      finishPosition: number | null;
+    } | null;
+    worstSlate: {
+      slateLabel: string;
+      score: number;
+      finishPosition: number | null;
+    } | null;
+  };
+  milestones: TrophyMilestones;
+  milestoneThresholds: MilestoneThresholds;
+  leagueAwards: LeagueAward[];
+  recentSlates: Array<{
+    slateId: number;
+    slateLabel: string;
+    score: number;
+    finishPosition: number | null;
+    draftPosition: number | null;
+    topPlayer: {
+      playerName: string;
+      fantasyPoints: number | null;
+    } | null;
+  }>;
+};
+
+const TEAM_HEADSHOTS: Record<string, string> = {
+  Andy: "/team-headshots/andy.jpg",
+  Jon: "/team-headshots/jon.jpg",
+  Josh: "/team-headshots/josh.jpg",
+  Mark: "/team-headshots/mark.jpg",
+};
+
+function fmt(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined) return "—";
+  return Number(value).toFixed(digits);
+}
+
+function SettingToggle({
+  label,
+  description,
+  checked,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-t border-slate-100 py-4 first:border-t-0 first:pt-0 last:pb-0">
+      <div>
+        <div className="font-semibold text-slate-900">{label}</div>
+        <div className="mt-1 text-sm leading-5 text-slate-500">
+          {description}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative h-7 w-12 shrink-0 rounded-full transition ${
+          checked ? "bg-sky-600" : "bg-slate-300"
+        } disabled:cursor-not-allowed disabled:opacity-40`}
+      >
+        <span
+          className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${
+            checked ? "left-6" : "left-1"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  detail,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string | number;
+  detail?: string;
+  tone?: "neutral" | "green" | "orange" | "red";
+}) {
+  const toneClass =
+    tone === "green"
+      ? "border-emerald-200 bg-emerald-50"
+      : tone === "orange"
+        ? "border-orange-200 bg-orange-50"
+        : tone === "red"
+          ? "border-red-200 bg-red-50"
+          : "border-slate-200 bg-white";
+
+  return (
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+
+      <div className="mt-2 text-2xl font-bold text-slate-900">
+        {value}
+      </div>
+
+      {detail ? (
+        <div className="mt-1 text-xs leading-5 text-slate-500">
+          {detail}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ProfilePageContent() {
+  const { selectedSport } = useSelectedSport();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [profile, setProfile] = useState<TeamProfile | null>(null);
+  const [season, setSeason] = useState<number | "all">("all");
+  const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
+  const [activeSettingsTab, setActiveSettingsTab] =
+    useState<SettingsTab>("profile");
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [message, setMessage] = useState("");
+  const [notificationPreferences, setNotificationPreferences] =
+    useState<NotificationPreferences | null>(null);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  const [preferenceMessage, setPreferenceMessage] = useState("");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+
+    if (
+      requestedTab === "overview" ||
+      requestedTab === "awards" ||
+      requestedTab === "settings"
+    ) {
+      setActiveTab(requestedTab);
+    } else {
+      setActiveTab("overview");
+    }
+  }, [searchParams]);
+
+  function changeProfileTab(tab: ProfileTab) {
+    setActiveTab(tab);
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+
+    router.replace(`${pathname}?${params.toString()}`, {
+      scroll: false,
+    });
+  }
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const response = await fetch("/api/me", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.authenticated && result.user) {
+          setUser(result.user as CurrentUser);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("Failed to load current user", error);
+        setMessage("Unable to load your profile.");
+      } finally {
+        setIsLoadingUser(false);
+      }
+    }
+
+    void loadUser();
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+
+    const currentUser = user;
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        setIsLoadingProfile(true);
+        setMessage("");
+
+        const response = await fetch(
+          `/api/team-profile?teamId=${currentUser.teamId}&season=${season}&sport=${selectedSport}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (active) {
+            setMessage(result.error || "Unable to load your profile.");
+            setProfile(null);
+          }
+          return;
+        }
+
+        if (active) {
+          setProfile(result as TeamProfile);
+        }
+      } catch (error) {
+        console.error("Failed to load team profile", error);
+
+        if (active) {
+          setMessage("Unable to load your profile.");
+          setProfile(null);
+        }
+      } finally {
+        if (active) {
+          setIsLoadingProfile(false);
+        }
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [user, season, selectedSport]);
+
+
+  useEffect(() => {
+    if (!user || activeTab !== "settings") return;
+
+    let active = true;
+
+    async function loadPreferences() {
+      try {
+        setIsLoadingPreferences(true);
+        setPreferenceMessage("");
+
+        const response = await fetch("/api/notification-preferences", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          if (active) {
+            setPreferenceMessage(
+              result.error || "Unable to load notification settings."
+            );
+          }
+          return;
+        }
+
+        if (active) {
+          setNotificationPreferences(
+            result.preferences as NotificationPreferences
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load notification preferences", error);
+
+        if (active) {
+          setPreferenceMessage("Unable to load notification settings.");
+        }
+      } finally {
+        if (active) {
+          setIsLoadingPreferences(false);
+        }
+      }
+    }
+
+    void loadPreferences();
+
+    return () => {
+      active = false;
+    };
+  }, [user, activeTab]);
+
+  async function updateNotificationPreferences(
+    nextPreferences: NotificationPreferences
+  ) {
+    const previousPreferences = notificationPreferences;
+
+    try {
+      setNotificationPreferences(nextPreferences);
+      setIsSavingPreferences(true);
+      setPreferenceMessage("");
+
+      const response = await fetch("/api/notification-preferences", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(nextPreferences),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setNotificationPreferences(previousPreferences);
+        setPreferenceMessage(
+          result.error || "Unable to save notification settings."
+        );
+        return;
+      }
+
+      setNotificationPreferences(
+        result.preferences as NotificationPreferences
+      );
+      setPreferenceMessage("Notification settings saved.");
+    } catch (error) {
+      console.error("Failed to update notification preferences", error);
+      setNotificationPreferences(previousPreferences);
+      setPreferenceMessage("Unable to save notification settings.");
+    } finally {
+      setIsSavingPreferences(false);
+    }
+  }
+
+  const availableSeasons = profile
+    ? Array.from(
+        { length: Math.max(profile.latestSeason - 2023 + 1, 1) },
+        (_, index) => profile.latestSeason - index
+      )
+    : [2026, 2025, 2024, 2023];
+
+  const fallbackHeadshot = user
+    ? TEAM_HEADSHOTS[user.displayName] ?? null
+    : null;
+
+  const headshot = user?.avatarUrl ?? fallbackHeadshot;
+
+  const hasDraftPosition =
+    profile?.recentSlates.some((row) => row.draftPosition !== null) ?? false;
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <AppNav />
+
+        {isLoadingUser ? (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="text-sm text-slate-500">Loading profile...</div>
+          </section>
+        ) : !user ? (
+          <section className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+            <div className="text-4xl">🔒</div>
+
+            <h1 className="mt-4 text-2xl font-bold">
+              Login required
+            </h1>
+
+            <p className="mt-2 text-sm text-slate-600">
+              Sign in to view your league profile.
+            </p>
+
+            <Link
+              href="/login"
+              className="mt-5 inline-block rounded-xl bg-sky-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-800"
+            >
+              Go to Login
+            </Link>
+          </section>
+        ) : (
+          <>
+            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex items-center gap-4">
+                {headshot ? (
+                  <img
+                    src={headshot}
+                    alt={`${user.displayName} profile`}
+                    className="h-24 w-24 rounded-3xl border border-slate-200 object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-slate-200 bg-slate-100 text-3xl font-bold text-slate-500">
+                    {user.displayName.slice(0, 1)}
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
+                    League Profile
+                  </div>
+
+                  <h1 className="mt-1 text-3xl font-bold tracking-tight">
+                    {user.displayName}
+                  </h1>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Career stats, awards, and account settings.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "overview", label: "Overview", icon: "📊" },
+                  {
+                    id: "awards",
+                    label: "Trophy Case",
+                    icon: "🏆",
+                  },
+                  { id: "settings", label: "Settings", icon: "⚙️" },
+                ].map((tab) => {
+                  const isActive = activeTab === tab.id;
+
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() =>
+                        changeProfileTab(tab.id as ProfileTab)
+                      }
+                      className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                        isActive
+                          ? "bg-sky-100 text-sky-900 shadow-sm"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      }`}
+                    >
+                      <span className="mr-1 hidden sm:inline">{tab.icon}</span>
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {message ? (
+              <section className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 shadow-sm">
+                {message}
+              </section>
+            ) : null}
+
+            {isLoadingProfile || !profile ? (
+              <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
+                  Loading profile stats...
+                </div>
+              </section>
+            ) : (
+              <>
+                {activeTab === "overview" ? (
+                  <ProfileOverview
+                    profile={profile}
+                    teamId={profile.team.id}
+                    season={season}
+                    availableSeasons={availableSeasons}
+                    onSeasonChange={setSeason}
+                  />
+                ) : null}
+
+                {activeTab === "awards" ? (
+                  <TrophyCase
+                    teamName={profile.team.name}
+                    career={{
+                      wins: profile.careerSummary.wins,
+                      runnerUps: profile.careerSummary.runnerUps,
+                      podiumFinishes:
+                        profile.careerSummary.podiumFinishes,
+                      bestScore: profile.careerSummary.bestScore,
+                      avgFinish: profile.careerSummary.avgFinish,
+                      longestWinStreak:
+                        profile.careerSummary.longestWinStreak,
+                      slatesPlayed:
+                        profile.careerSummary.slatesPlayed,
+                    }}
+                    milestones={profile.milestones}
+                    leagueAwards={profile.leagueAwards}
+                    thresholds={profile.milestoneThresholds}
+                  />
+                ) : null}
+
+                {activeTab === "settings" ? (
+                  <div className="space-y-5">
+                    <section className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          {
+                            id: "profile",
+                            label: "Profile",
+                            icon: "👤",
+                          },
+                          {
+                            id: "notifications",
+                            label: "Notifications",
+                            icon: "🔔",
+                          },
+                          {
+                            id: "security",
+                            label: "Security",
+                            icon: "🔐",
+                          },
+                        ].map((tab) => {
+                          const isActive = activeSettingsTab === tab.id;
+
+                          return (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() =>
+                                setActiveSettingsTab(tab.id as SettingsTab)
+                              }
+                              className={`rounded-2xl px-3 py-2.5 text-sm font-semibold transition ${
+                                isActive
+                                  ? "bg-sky-100 text-sky-900 shadow-sm"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              }`}
+                            >
+                              <span className="mr-1 hidden sm:inline">
+                                {tab.icon}
+                              </span>
+                              {tab.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+
+                    {activeSettingsTab === "profile" && user ? (
+                      <ProfilePictureSettings
+                        displayName={user.displayName}
+                        avatarUrl={user.avatarUrl}
+                        fallbackUrl={fallbackHeadshot}
+                        onAvatarChanged={(avatarUrl) => {
+                          setUser((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  avatarUrl,
+                                }
+                              : current
+                          );
+
+                          window.dispatchEvent(
+                            new CustomEvent(
+                              "profile-avatar-updated",
+                              {
+                                detail: {
+                                  avatarUrl,
+                                },
+                              }
+                            )
+                          );
+                        }}
+                      />
+                    ) : null}
+
+                    {activeSettingsTab === "notifications" ? (
+                      <section className="rounded-3xl border border-sky-200 bg-sky-50 p-5 shadow-sm">
+                        <div>
+                          <h2 className="text-xl font-bold text-slate-900">
+                            Notification Settings
+                          </h2>
+
+                          <p className="mt-1 text-sm text-slate-600">
+                            Choose which league alerts you want to receive.
+                          </p>
+                        </div>
+
+                        <div className="mt-5">
+                          <PushDeviceControls />
+                        </div>
+
+                        {preferenceMessage ? (
+                          <div className="mt-4 rounded-2xl border border-sky-200 bg-white px-4 py-3 text-sm text-sky-800">
+                            {preferenceMessage}
+                          </div>
+                        ) : null}
+
+                        {isLoadingPreferences || !notificationPreferences ? (
+                          <div className="mt-4 rounded-2xl border border-dashed border-sky-300 bg-white/70 px-4 py-8 text-center text-sm text-slate-500">
+                            Loading notification settings...
+                          </div>
+                        ) : (
+                          <div className="mt-5 rounded-2xl border border-sky-200 bg-white p-4">
+                            <SettingToggle
+                              label="Enable Notifications"
+                              description="Master switch for all push notifications."
+                              checked={
+                                notificationPreferences.notificationsEnabled
+                              }
+                              disabled={isSavingPreferences}
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  notificationsEnabled: checked,
+                                })
+                              }
+                            />
+
+                            <SettingToggle
+                              label="Draft Turn"
+                              description="Notify me when it is my turn to make a pick."
+                              checked={
+                                notificationPreferences.draftTurnEnabled
+                              }
+                              disabled={
+                                isSavingPreferences ||
+                                !notificationPreferences.notificationsEnabled
+                              }
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  draftTurnEnabled: checked,
+                                })
+                              }
+                            />
+
+                            <SettingToggle
+                              label="Player Finished"
+                              description="Notify me when one of my drafted players finishes."
+                              checked={
+                                notificationPreferences.playerFinishedEnabled
+                              }
+                              disabled={
+                                isSavingPreferences ||
+                                !notificationPreferences.notificationsEnabled
+                              }
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  playerFinishedEnabled: checked,
+                                })
+                              }
+                            />
+
+                            <SettingToggle
+                              label="Slate Final"
+                              description="Notify me when the slate standings become final."
+                              checked={
+                                notificationPreferences.slateFinalEnabled
+                              }
+                              disabled={
+                                isSavingPreferences ||
+                                !notificationPreferences.notificationsEnabled
+                              }
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  slateFinalEnabled: checked,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+
+                        <p className="mt-4 text-xs leading-5 text-slate-500">
+                          These choices are saved to your league account.
+                          Push delivery also requires this device to be
+                          registered.
+                        </p>
+                      </section>
+                    ) : null}
+
+                    {activeSettingsTab === "security" ? (
+                      <ChangePinForm />
+                    ) : null}
+                  </div>
+                ) : null}
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
+          <div className="mx-auto max-w-7xl">
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-sm text-slate-500">
+                Loading profile...
+              </div>
+            </section>
+          </div>
+        </main>
+      }
+    >
+      <ProfilePageContent />
+    </Suspense>
+  );
+}
+
+
+============================================================
+FILE: app/api/season-awards/route.ts
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+function roundTo(value: number, digits = 1) {
+  return Number(value.toFixed(digits));
+}
+
+function getSeasonFromDate(dateString: string) {
+  return new Date(`${dateString}T00:00:00`).getFullYear();
+}
+
+type PlayerRow = {
+  id: number;
+  name: string;
+  position_group: "G" | "F/C" | null;
+  nba_player_id: number | null;
+};
+
+export async function GET(request: NextRequest) {
+  try {
+    const requestedSeason = request.nextUrl.searchParams.get("season");
+    const season = requestedSeason ? Number(requestedSeason) : 2026;
+
+    if (!Number.isFinite(season)) {
+      return NextResponse.json(
+        { error: "Invalid season." },
+        { status: 400 }
+      );
+    }
+
+    if (season !== 2026) {
+      return NextResponse.json({
+        success: true,
+        season,
+        awards: [],
+        firstTeam: {
+          guards: [],
+          frontcourt: [],
+        },
+      });
+    }
+
+    const [
+      { data: teams },
+      { data: slates },
+      { data: results },
+      { data: lineups },
+      { data: lineupPlayers },
+      { data: players },
+      { data: stats },
+    ] = await Promise.all([
+      supabaseAdmin.from("teams").select("id, name"),
+      supabaseAdmin.from("slates").select("id, start_date"),
+      supabaseAdmin.from("team_slate_results").select("slate_id, team_id, fantasy_points, finish_position"),
+      supabaseAdmin.from("lineups").select("id, slate_id, team_id"),
+      supabaseAdmin.from("lineup_players").select("lineup_id, player_id"),
+      supabaseAdmin.from("players").select("id, name, position_group, nba_player_id"),
+      supabaseAdmin.from("player_slate_stats").select("slate_id, player_id, fantasy_points, steals, blocks"),
+    ]);
+
+    const seasonSlateIds = new Set(
+      (slates ?? [])
+        .filter((s) => getSeasonFromDate(s.start_date) === season)
+        .map((s) => Number(s.id))
+    );
+
+    const teamName = new Map((teams ?? []).map((t) => [Number(t.id), t.name]));
+    const playerMap = new Map<number, PlayerRow>(
+      ((players ?? []) as PlayerRow[]).map((p) => [Number(p.id), p])
+    );
+
+    const seasonResults = (results ?? []).filter((r) => seasonSlateIds.has(Number(r.slate_id)));
+
+    const teamAgg = new Map<number, { finishes: number[]; wins: number }>();
+    for (const r of seasonResults) {
+      if ((r.fantasy_points ?? 0) <= 0 || !r.finish_position) continue;
+
+      const teamId = Number(r.team_id);
+      const current = teamAgg.get(teamId) ?? { finishes: [], wins: 0 };
+
+      current.finishes.push(Number(r.finish_position));
+      if (r.finish_position === 1) current.wins += 1;
+
+      teamAgg.set(teamId, current);
+    }
+
+    const survivor = [...teamAgg.entries()]
+      .map(([teamId, row]) => ({
+        teamId,
+        name: teamName.get(teamId) ?? `Team ${teamId}`,
+        avgFinish: row.finishes.length
+          ? roundTo(row.finishes.reduce((a, b) => a + b, 0) / row.finishes.length, 2)
+          : null,
+      }))
+      .filter((row) => row.avgFinish !== null)
+      .sort((a, b) => Number(a.avgFinish) - Number(b.avgFinish))[0];
+
+    const lineupById = new Map((lineups ?? []).map((l) => [Number(l.id), l]));
+
+    const statMap = new Map(
+      (stats ?? [])
+        .filter((s) => seasonSlateIds.has(Number(s.slate_id)))
+        .map((s) => [`${s.slate_id}:${s.player_id}`, s])
+    );
+
+    const playerAgg = new Map<number, {
+      playerId: number;
+      name: string;
+      positionGroup: "G" | "F/C" | null;
+      nbaPlayerId: number | null;
+      games: number;
+      totalFantasy: number;
+      steals: number;
+      blocks: number;
+    }>();
+
+    const teamDefenseAgg = new Map<number, {
+      slateIds: Set<number>;
+      steals: number;
+      blocks: number;
+    }>();
+
+    for (const lp of lineupPlayers ?? []) {
+      const lineup = lineupById.get(Number(lp.lineup_id));
+      if (!lineup || !seasonSlateIds.has(Number(lineup.slate_id))) continue;
+
+      const stat = statMap.get(`${lineup.slate_id}:${lp.player_id}`);
+      if (!stat) continue;
+
+      const player = playerMap.get(Number(lp.player_id));
+      if (!player) continue;
+
+      const fantasy = Number(stat.fantasy_points ?? 0);
+      const steals = Number(stat.steals ?? 0);
+      const blocks = Number(stat.blocks ?? 0);
+
+      if (fantasy > 0) {
+        const current = playerAgg.get(player.id) ?? {
+          playerId: player.id,
+          name: player.name,
+          positionGroup: player.position_group,
+          nbaPlayerId: player.nba_player_id,
+          games: 0,
+          totalFantasy: 0,
+          steals: 0,
+          blocks: 0,
+        };
+
+        current.games += 1;
+        current.totalFantasy += fantasy;
+        current.steals += steals;
+        current.blocks += blocks;
+
+        playerAgg.set(player.id, current);
+      }
+
+      const teamId = Number(lineup.team_id);
+      const teamCurrent = teamDefenseAgg.get(teamId) ?? {
+        slateIds: new Set<number>(),
+        steals: 0,
+        blocks: 0,
+      };
+
+      teamCurrent.slateIds.add(Number(lineup.slate_id));
+      teamCurrent.steals += steals;
+      teamCurrent.blocks += blocks;
+
+      teamDefenseAgg.set(teamId, teamCurrent);
+    }
+
+    const playerRows = [...playerAgg.values()].map((p) => ({
+      ...p,
+      avgFantasy: roundTo(p.totalFantasy / p.games, 1),
+      stocks: p.steals + p.blocks,
+    }));
+
+    const teamDefenseRows = [...teamDefenseAgg.entries()]
+      .map(([teamId, row]) => {
+        const slates = row.slateIds.size || 1;
+        return {
+          teamId,
+          name: teamName.get(teamId) ?? `Team ${teamId}`,
+          avgStocks: roundTo((row.steals + row.blocks) / slates, 1),
+          totalStocks: row.steals + row.blocks,
+        };
+      })
+      .sort((a, b) => b.avgStocks - a.avgStocks);
+
+    const dpoyTeam = teamDefenseRows[0];
+
+    const eligible = playerRows.filter((p) => p.games >= 5);
+
+    const guards = eligible
+      .filter((p) => p.positionGroup === "G")
+      .sort((a, b) => b.avgFantasy - a.avgFantasy)
+      .slice(0, 2);
+
+    const frontcourt = eligible
+      .filter((p) => p.positionGroup === "F/C")
+      .sort((a, b) => b.avgFantasy - a.avgFantasy)
+      .slice(0, 3);
+
+    return NextResponse.json({
+      success: true,
+      season,
+      awards: [
+        {
+          title: "Championship Belt",
+          emoji: "🏆",
+          winner: "Mark",
+          detail: `${season} season champion`,
+        },
+        {
+          title: "Consistency King",
+          emoji: "👑",
+          winner: survivor?.name ?? "Josh",
+          detail: survivor?.avgFinish
+            ? `Best average finish: ${survivor.avgFinish}`
+            : "Best average finish",
+        },
+        {
+          title: "DPOY",
+          emoji: "🛡️",
+          winner: "Jon",
+          detail: "League-best 9.7 steals + blocks per slate",
+        },
+        {
+          title: "Last Laugh Award",
+          emoji: "😂",
+          winner: "Andy",
+          detail: "Winner of the final slate",
+        },
+      ],
+      firstTeam: {
+        guards,
+        frontcourt,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading season awards." },
+      { status: 500 }
+    );
+  }
+}
+
+
+============================================================
+FILE: components/home/SeasonAwards.tsx
+============================================================
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+
+type Award = {
+  title: string;
+  emoji: string;
+  winner: string;
+  detail: string;
+};
+
+type FirstTeamPlayer = {
+  playerId: number;
+  name: string;
+  positionGroup: "G" | "F/C" | null;
+  nbaPlayerId: number | null;
+  games: number;
+  avgFantasy: number;
+};
+
+type SeasonAwardsProps = {
+  season?: number | string;
+  awards: Award[];
+  guards: FirstTeamPlayer[];
+  frontcourt: FirstTeamPlayer[];
+};
+
+export default function SeasonAwards({ season,
+  awards,
+  guards,
+  frontcourt,
+}: SeasonAwardsProps) {
+  const firstTeam = [...guards, ...frontcourt];
+
+  return (
+    <section className="season-awards-grid grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <section className="season-awards-panel season-awards-panel--gold rounded-3xl border p-5 shadow-sm">
+        <div className="mb-4">
+          <h2 className="season-awards-title text-2xl font-bold">
+            {season ?? 'Season'} Season Awards
+          </h2>
+          <p className="season-awards-description mt-1 text-sm">
+            End-of-season hardware for the league.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {awards.map((award) => (
+            <div
+              key={award.title}
+              className="season-award-card rounded-2xl border px-4 py-3"
+            >
+              <div className="text-2xl">{award.emoji}</div>
+              <div className="season-award-label mt-2 text-sm font-semibold uppercase tracking-wide">
+                {award.title}
+              </div>
+              <div className="season-award-winner mt-1 text-xl font-bold">
+                {award.winner}
+              </div>
+              <div className="season-award-detail mt-1 text-sm">
+                {award.detail}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="season-awards-panel season-awards-panel--blue rounded-3xl border p-5 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-2xl font-bold text-slate-900">
+            All-111 First Team
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Top 2 guards and top 3 F/C by average fantasy points, minimum 5 games.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {firstTeam.map((player, index) => (
+            <div
+              key={player.playerId}
+              className="first-team-card flex items-center justify-between gap-3 rounded-2xl border px-4 py-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="first-team-rank w-6 text-sm font-bold">
+                  {index + 1}
+                </div>
+                <PlayerHeadshot
+                  nbaPlayerId={player.nbaPlayerId}
+                  playerName={player.name}
+                  size="sm"
+                />
+                <div>
+                  <div className="first-team-name font-semibold">
+                    {player.name}
+                  </div>
+                  <div className="first-team-meta text-xs">
+                    {player.positionGroup}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <div className="first-team-score text-lg font-bold">
+                  {player.avgFantasy.toFixed(1)}
+                </div>
+                <div className="first-team-meta text-xs">Avg FP</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+
+============================================================
+FILE: components/AppNav.tsx
+============================================================
+"use client";
+
+import Link from "next/link";
+import MobileAccountMenu from "@/components/MobileAccountMenu";
+import DarkModeToggle from "@/components/theme/DarkModeToggle";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { SPORTS, getSportConfig } from "@/lib/sports";
+
+type CurrentUser = {
+  id: string;
+  teamId: number;
+  displayName: string;
+  role: "player" | "admin";
+  avatarUrl: string | null;
+};
+
+function getFallbackProfileImage(displayName: string) {
+  const imageMap: Record<string, string> = {
+    mark: "/team-headshots/mark.jpg",
+    andy: "/team-headshots/andy.jpg",
+    jon: "/team-headshots/jon.jpg",
+    josh: "/team-headshots/josh.jpg",
+  };
+
+  return imageMap[displayName.trim().toLowerCase()] ?? null;
+}
+
+const mainLinks = [
+  { href: "/", label: "Home", icon: "⌂" },
+  { href: "/lineups/draft", label: "Draft", icon: "✎" },
+  { href: "/lineups/scores", label: "Scores", icon: "▦" },
+];
+
+const desktopAdminGroups = [
+  {
+    label: "Overview",
+    links: [{ href: "/admin", label: "Admin Home" }],
+  },
+  {
+    label: "Slates",
+    links: [
+      { href: "/slates/new", label: "Create Slate" },
+      { href: "/admin/slates", label: "Manage Slates" },
+      { href: "/admin/slate-games", label: "Slate NBA Games" },
+      { href: "/admin/corrections", label: "Corrections" },
+    ],
+  },
+  {
+    label: "Notifications",
+    links: [
+      {
+        href: "/admin/notification-templates",
+        label: "Notification Templates",
+      },
+      {
+        href: "/admin/notification-history",
+        label: "Notification History",
+      },
+    ],
+  },
+  {
+    label: "Players & League",
+    links: [
+      {
+        href: "/admin/players",
+        label: "Manage NBA Players",
+      },
+      {
+        href: "/admin/players-nfl",
+        label: "Manage NFL Players",
+      },
+      {
+        href: "/admin/league-awards",
+        label: "League Awards",
+      },
+    ],
+  },
+];
+
+const profileLinks = [
+  {
+    href: "/profile?tab=overview",
+    label: "Overview",
+    tab: "overview",
+  },
+  {
+    href: "/profile?tab=awards",
+    label: "Trophy Case",
+    tab: "awards",
+  },
+  {
+    href: "/profile?tab=settings",
+    label: "Settings",
+    tab: "settings",
+  },
+];
+
+function AppNavContent() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { selectedSport, setSelectedSport } = useSelectedSport();
+
+  const activeProfileTab =
+    pathname.startsWith("/profile")
+      ? searchParams.get("tab") ?? "overview"
+      : null;
+
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [desktopUserOpen, setDesktopUserOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const desktopUserRef = useRef<HTMLDivElement | null>(null);
+  const mobileMoreRef = useRef<HTMLDivElement | null>(null);
+  const desktopSportRef = useRef<HTMLDivElement | null>(null);
+  const mobileSportRef = useRef<HTMLDivElement | null>(null);
+  const [desktopSportOpen, setDesktopSportOpen] = useState(false);
+  const [mobileSportOpen, setMobileSportOpen] = useState(false);
+
+  const isAdmin = currentUser?.role === "admin";
+
+  const sportScopedPaths = [
+    "/",
+    "/profile",
+    "/lineups/draft",
+    "/lineups/scores",
+    "/slates/new",
+    "/admin/slates",
+    "/admin/notification-templates",
+    "/admin/notification-history",
+  ];
+
+  function appendSportParam(href: string, sport: string) {
+    const separator = href.includes("?") ? "&" : "?";
+    return `${href}${separator}sport=${sport}`;
+  }
+
+  function getLinkHref(href: string) {
+    const basePath = href.split("?")[0];
+
+    if (sportScopedPaths.includes(basePath)) {
+      return appendSportParam(href, selectedSport);
+    }
+
+    return href;
+  }
+
+  function handleSelectSport(sportKey: string) {
+    setSelectedSport(sportKey);
+
+    if (sportScopedPaths.includes(pathname)) {
+      router.push(appendSportParam(pathname, sportKey));
+    }
+  }
+
+  const moreIsActive =
+    pathname.startsWith("/standings") ||
+    pathname.startsWith("/player-history");
+
+  const userMenuIsActive =
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/slates");
+
+  useEffect(() => {
+    function handleAvatarUpdated(event: Event) {
+      const customEvent = event as CustomEvent<{
+        avatarUrl: string | null;
+      }>;
+
+      setCurrentUser((current) =>
+        current
+          ? {
+              ...current,
+              avatarUrl: customEvent.detail.avatarUrl,
+            }
+          : current
+      );
+    }
+
+    window.addEventListener(
+      "profile-avatar-updated",
+      handleAvatarUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "profile-avatar-updated",
+        handleAvatarUpdated
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/me", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.authenticated && result.user) {
+          setCurrentUser(result.user as CurrentUser);
+        } else {
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error("Failed to load current user", error);
+        setCurrentUser(null);
+      } finally {
+        setIsUserLoading(false);
+      }
+    }
+
+    void loadCurrentUser();
+  }, [pathname]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+
+      if (
+        desktopUserRef.current &&
+        !desktopUserRef.current.contains(target)
+      ) {
+        setDesktopUserOpen(false);
+      }
+
+      if (mobileMoreRef.current && !mobileMoreRef.current.contains(target)) {
+        setMobileMoreOpen(false);
+      }
+
+      if (desktopSportRef.current && !desktopSportRef.current.contains(target)) {
+        setDesktopSportOpen(false);
+      }
+
+      if (mobileSportRef.current && !mobileSportRef.current.contains(target)) {
+        setMobileSportOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function handleLogout() {
+    try {
+      setIsLoggingOut(true);
+
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Logout failed.");
+      }
+
+      setCurrentUser(null);
+      setDesktopUserOpen(false);
+      setMobileMoreOpen(false);
+
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      window.alert("Unable to log out right now.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
+
+  function isLinkActive(href: string) {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
+  function desktopLinkClass(href: string) {
+    const active = isLinkActive(href);
+
+    return `app-desktop-link rounded-full border px-4 py-2 text-sm font-medium ${
+      active
+        ? "app-desktop-link-active border-sky-300 bg-sky-100 text-sky-900 shadow-sm"
+        : "app-desktop-link-idle border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+    }`;
+  }
+
+  function mobileLinkClass(href: string) {
+    const active = isLinkActive(href);
+
+    return `app-mobile-nav-item flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium ${
+      active
+        ? "app-mobile-nav-active bg-sky-100 text-sky-900"
+        : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+    }`;
+  }
+
+  const mobileMoreLinks = [
+    { href: "/standings", label: "Standings" },
+    { href: "/player-history", label: "Player History" },
+  ];
+
+  return (
+    <>
+      {/* Desktop nav only */}
+      <nav className="app-desktop-nav mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {mainLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={getLinkHref(link.href)}
+                className={desktopLinkClass(link.href)}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+            <Link href="/standings" className={desktopLinkClass("/standings")}>
+              Standings
+            </Link>
+
+            <Link
+              href="/player-history"
+              className={desktopLinkClass("/player-history")}
+            >
+              Player History
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-3">
+          <div className="relative" ref={desktopSportRef}>
+            <button
+              type="button"
+              onClick={() => setDesktopSportOpen((open) => !open)}
+              className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-300"
+            >
+              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
+              <span>{getSportConfig(selectedSport).label}</span>
+              <span aria-hidden="true">▾</span>
+            </button>
+
+            {desktopSportOpen ? (
+              <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                {SPORTS.map((sport) => (
+                  <button
+                    key={sport.key}
+                    type="button"
+                    onClick={() => {
+                      handleSelectSport(sport.key);
+                      setDesktopSportOpen(false);
+                    }}
+                    className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                      selectedSport === sport.key
+                        ? "bg-sky-100 font-semibold text-sky-900"
+                        : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {sport.emoji} {sport.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative" ref={desktopUserRef}>
+            {isUserLoading ? (
+              <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-400">
+                Loading...
+              </div>
+            ) : currentUser ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setDesktopUserOpen((open) => !open)}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                    userMenuIsActive
+                      ? "border-sky-300 bg-sky-100 text-sky-900 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    {currentUser.avatarUrl ||
+                    getFallbackProfileImage(currentUser.displayName) ? (
+                      <img
+                        src={
+                          currentUser.avatarUrl ??
+                          getFallbackProfileImage(
+                            currentUser.displayName
+                          ) ??
+                          undefined
+                        }
+                        alt={`${currentUser.displayName} profile`}
+                        className="h-8 w-8 rounded-full object-cover ring-1 ring-white shadow-sm"
+                      />
+                    ) : (
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-200 text-xs font-bold text-sky-900">
+                        {currentUser.displayName
+                          .slice(0, 1)
+                          .toUpperCase()}
+                      </span>
+                    )}
+
+                    <span>{currentUser.displayName}</span>
+                    <span aria-hidden="true">▾</span>
+                  </span>
+                </button>
+
+                {desktopUserOpen ? (
+                  <div className="app-dropdown-panel absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                    <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Profile
+                    </div>
+
+                    {profileLinks.map((link) => {
+                      const isActive =
+                        pathname.startsWith("/profile") &&
+                        activeProfileTab === link.tab;
+
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          onClick={() => setDesktopUserOpen(false)}
+                          className={`block rounded-xl px-3 py-2 text-sm transition ${
+                            isActive
+                              ? "bg-sky-100 font-semibold text-sky-900"
+                              : "text-slate-700 hover:bg-slate-100"
+                          }`}
+                        >
+                          {link.label}
+                        </Link>
+                      );
+                    })}
+
+                    <div className="my-2 border-t border-slate-200" />
+
+              <DarkModeToggle />
+
+              {isAdmin ? (
+                      <>
+                        <div className="my-2 border-t border-slate-200" />
+
+                        <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Admin
+                        </div>
+
+                        {desktopAdminGroups.map((group, groupIndex) => (
+                          <div key={group.label}>
+                            {groupIndex > 0 ? (
+                              <div className="my-2 border-t border-slate-100" />
+                            ) : null}
+
+                            <div className="px-3 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                              {group.label}
+                            </div>
+
+                            {group.links.map((link) => (
+                              <Link
+                                key={link.href}
+                                href={getLinkHref(link.href)}
+                                onClick={() => setDesktopUserOpen(false)}
+                                className={`block rounded-xl px-3 py-2 text-sm transition ${
+                                  isLinkActive(link.href)
+                                    ? "bg-sky-100 font-semibold text-sky-900"
+                                    : "text-slate-700 hover:bg-slate-100"
+                                }`}
+                              >
+                                {link.label}
+                              </Link>
+                            ))}
+                          </div>
+                        ))}
+                      </>
+                    ) : null}
+
+                    <div className="my-2 border-t border-slate-200" />
+
+                    <button
+                      type="button"
+                      onClick={() => void handleLogout()}
+                      disabled={isLoggingOut}
+                      className="block w-full rounded-xl px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {isLoggingOut ? "Logging out..." : "Logout"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-full border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 transition hover:bg-sky-100"
+              >
+                Join Your Team
+              </Link>
+            )}
+          </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Global mobile account header */}
+      <nav className="app-mobile-header mb-6 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
+        <div className="flex items-center justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative shrink-0" ref={mobileSportRef}>
+              <button
+                type="button"
+                onClick={() => setMobileSportOpen((open) => !open)}
+                aria-label={`Switch sport, currently ${getSportConfig(selectedSport).label}`}
+                className="block"
+              >
+                <img
+                  src={getSportConfig(selectedSport).logo}
+                  alt={`${getSportConfig(selectedSport).label} logo`}
+                  className="h-12 w-12 rounded-full object-cover shadow-sm"
+                />
+              </button>
+
+              {mobileSportOpen ? (
+                <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                  {SPORTS.map((sport) => (
+                    <button
+                      key={sport.key}
+                      type="button"
+                      onClick={() => {
+                        handleSelectSport(sport.key);
+                        setMobileSportOpen(false);
+                      }}
+                      className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                        selectedSport === sport.key
+                          ? "bg-sky-100 font-semibold text-sky-900"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      {sport.emoji} {sport.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            <Link
+              href="/"
+              aria-label="111 Fantasy Sports home"
+              className="truncate text-lg font-bold tracking-tight text-slate-900"
+            >
+              111 Fantasy Sports
+            </Link>
+          </div>
+
+          <MobileAccountMenu />
+        </div>
+      </nav>
+
+      {/* White shield behind mobile nav */}
+      <div
+        className="app-mobile-nav-shield fixed bottom-[-56px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
+        aria-hidden="true"
+      />
+
+      {/* Mobile bottom nav only */}
+      <div
+        ref={mobileMoreRef}
+        className="app-mobile-bottom-nav fixed bottom-[-48px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[58px] pt-2 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
+      >
+        {mobileMoreOpen ? (
+          <div className="app-dropdown-panel absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+            {mobileMoreLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMoreOpen(false)}
+                className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
+                  (
+                    link.href.startsWith("/profile?")
+                      ? pathname.startsWith("/profile") &&
+                        activeProfileTab ===
+                          new URLSearchParams(
+                            link.href.split("?")[1] ?? ""
+                          ).get("tab")
+                      : isLinkActive(link.href)
+                  )
+                    ? "bg-sky-100 text-sky-900"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+
+          </div>
+        ) : null}
+
+        <div className="mx-auto grid max-w-xl grid-cols-4 gap-1">
+          {mainLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={getLinkHref(link.href)}
+              className={mobileLinkClass(link.href)}
+            >
+              <span className="text-lg leading-none">{link.icon}</span>
+              <span>{link.label}</span>
+            </Link>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setMobileMoreOpen((open) => !open)}
+            className={`app-mobile-nav-item flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium ${
+              moreIsActive
+                ? "app-mobile-nav-active bg-sky-100 text-sky-900"
+                : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            }`}
+          >
+            <span className="text-lg leading-none">⋯</span>
+            <span>More</span>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+
+export default function AppNav() {
+  return (
+    <Suspense
+      fallback={
+        <nav className="app-desktop-nav mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
+          <div className="h-10" />
+        </nav>
+      }
+    >
+      <AppNavContent />
+    </Suspense>
+  );
+}
+
+
+============================================================
+RELEVANT NAV / PROFILE CSS
+============================================================
+805-  background: #15233a !important;
+806-  color: #dbeafe !important;
+807-}
+808-
+809-.dark .app-desktop-link-idle:hover {
+810-  border-color: #0ea5e9 !important;
+811-  background: #1c3150 !important;
+812-  color: #ffffff !important;
+813-}
+814-
+815-/* Global mobile header */
+816-
+817-.app-mobile-header {
+818-  border-color: var(--app-border);
+819-  background: linear-gradient(
+820-    135deg,
+821-    color-mix(in srgb, var(--app-surface-raised) 98%, transparent),
+822-    color-mix(in srgb, var(--app-surface) 98%, transparent)
+823-  );
+824-  box-shadow: var(--app-shadow-card);
+825-}
+826-
+827-.dark .app-mobile-header {
+828-  box-shadow:
+829-    0 12px 34px rgb(0 0 0 / 0.24),
+830-    inset 0 -1px 0 rgb(56 189 248 / 0.05);
+831-}
+832-
+833-/* Mobile bottom navigation */
+834-
+835:.app-mobile-nav-shield {
+836-  background: var(--app-surface-raised);
+837-}
+838-
+839:.app-mobile-bottom-nav {
+840-  border-color: var(--app-border-strong);
+841-  background: linear-gradient(
+842-    180deg,
+843-    color-mix(in srgb, var(--app-surface-raised) 99%, transparent),
+844-    color-mix(in srgb, var(--app-surface) 99%, transparent)
+845-  );
+846-  box-shadow:
+847-    0 -1px 0 rgb(255 255 255 / 0.03),
+848-    0 -14px 34px rgb(2 6 23 / 0.2);
+849-}
+850-
+851:.dark .app-mobile-bottom-nav {
+852-  border-top-color: #49607f;
+853-  background: linear-gradient(180deg, #1b2b45 0%, #132139 70%, #101c31 100%);
+854-  box-shadow:
+855-    0 -1px 0 rgb(56 189 248 / 0.14),
+856-    0 -16px 42px rgb(0 0 0 / 0.5);
+857-}
+858-
+859:.app-mobile-nav-item {
+860-  position: relative;
+861-  min-height: 52px;
+862-  transition:
+863-    transform 150ms ease,
+864-    background-color 150ms ease,
+865-    color 150ms ease,
+866-    box-shadow 150ms ease;
+867-}
+868-
+869:.app-mobile-nav-item:active {
+870-  transform: scale(0.96);
+871-}
+872-
+873:.dark .app-mobile-nav-idle {
+874-  color: #a8b8ce !important;
+875-}
+876-
+877:.dark .app-mobile-nav-idle:hover {
+878-  background: #213452 !important;
+879-  color: #ffffff !important;
+880-}
+881-
+882:.dark .app-mobile-nav-active {
+883-  background: linear-gradient(
+884-    145deg,
+885-    rgb(2 132 199 / 0.96),
+886-    rgb(8 145 178 / 0.88)
+887-  ) !important;
+888-  color: #ffffff !important;
+889-  box-shadow:
+890-    0 0 0 1px rgb(125 211 252 / 0.28),
+891-    0 6px 20px rgb(14 165 233 / 0.3);
+892-}
+893-
+894:.dark .app-mobile-nav-active::after {
+895-  position: absolute;
+896-  right: 22%;
+897-  bottom: 2px;
+898-  left: 22%;
+899-  height: 2px;
+900-  border-radius: 999px;
+901-  background: #fde047;
+902-  box-shadow: 0 0 10px rgb(250 204 21 / 0.65);
+903-  content: "";
+904-}
+905-
+906-/* Dropdown panels */
+907-
+908-.app-dropdown-panel {
+909-  border-color: var(--app-border);
+910-  background: var(--app-surface-raised);
+911-  box-shadow: var(--app-shadow-raised);
+912-}
+913-
+914-.dark .app-dropdown-panel {
+915-  background: linear-gradient(145deg, #17243b, #111c31);
+916-}
+917-
+918-/* Respect reduced-motion preferences */
+919-
+920-@media (prefers-reduced-motion: reduce) {
+921-  .app-interactive,
+922-  .app-desktop-link,
+923:  .app-mobile-nav-item {
+924-    transition: none !important;
+925-  }
+926-
+927-  .app-interactive:hover,
+928-  .app-desktop-link:hover {
+929-    transform: none !important;
+930-  }
+931-}
+932-
+933-/* =========================================================
+934-   HOME — CHAMPIONSHIP PRESENTATION
+935-   ========================================================= */
+936-
+937-.dark .home-winner-card {
+938-  background:
+939-    radial-gradient(
+940-      circle at 88% 10%,
+941-      rgb(253 224 71 / 0.22),
+942-      transparent 11rem
+943-    ),
+944-    radial-gradient(
+945-      circle at 12% 100%,
+946-      rgb(251 146 60 / 0.16),
+947-      transparent 14rem
+948-    ),
+949-    linear-gradient(135deg, #7c2d12 0%, #a43f08 48%, #c4510a 100%);
+950-  border: 2px solid #fb923c;
+951-  box-shadow:
+952-    inset 0 1px 0 rgb(255 255 255 / 0.08),
+953-    0 0 0 1px rgb(250 204 21 / 0.12),
+954-    0 16px 38px rgb(249 115 22 / 0.25);
+955-}
+956-
+957-.dark .home-winner-card .text-orange-700 {
+958-  color: #fde047;
+959-  font-weight: 800;
+960-  letter-spacing: 0.14em;
+961-}
+962-
+963-.dark .home-winner-name {
+964-  color: #fff4bd !important;
+965-  text-shadow:
+966-    0 1px 0 rgb(0 0 0 / 0.2),
+967-    0 0 18px rgb(250 204 21 / 0.15);
+968-}
+969-
+970-.dark .home-winner-name:hover {
+971-  color: #ffffff !important;
+972-}
+973-
+974-.dark .home-winner-card .text-slate-600 {
+975-  color: #ffedd5;
+976-}
+977-
+978-.dark .home-winner-row {
+979-  background: linear-gradient(
+980-    90deg,
+981-    rgb(120 53 15 / 0.48),
+982-    rgb(17 28 49 / 0.55) 55%,
+983-    rgb(17 28 49 / 0.9)
+984-  ) !important;
+985-  box-shadow:
+986-    inset 6px 0 0 #facc15,
+987-    inset 0 1px 0 rgb(250 204 21 / 0.08);
+988-}
+989-
+990-.dark .home-winner-row td:first-child {
+991-  color: #fef3c7;
+992-  font-weight: 700;
+993-}
+994-
+995-/* Refresh gets an electric-blue raised treatment. */
+996-.dark .home-winner-card button.border-sky-200 {
+997-  border-color: #38bdf8;
+998-  background: linear-gradient(145deg, #153150, #0b233c);
+999-  color: #e0f2fe;
+1000-  box-shadow:
+1001-    0 0 0 1px rgb(56 189 248 / 0.12),
+1002-    0 8px 22px rgb(2 132 199 / 0.2);
+1003-}
+1004-
+1005-@media (hover: hover) {
+1006-  .dark .home-winner-card button.border-sky-200:hover {
+1007-    transform: translateY(-1px);
+1008-    background: linear-gradient(145deg, #075985, #0c4a6e);
+1009-    box-shadow:
+1010-      0 0 0 1px rgb(125 211 252 / 0.24),
+1011-      0 10px 28px rgb(14 165 233 / 0.28);
+1012-  }
+1013-}
+1014-
+1015-/* =========================================================
+1016-   FINAL HOME WINNER OVERRIDE
+1017-   Intentionally last so older experiments cannot override it.
+1018-   ========================================================= */
+1019-
+1020-html.dark .home-winner-card {
+1021-  background:
+1022-    radial-gradient(
+1023-      circle at 88% 12%,
+1024-      rgb(254 240 138 / 0.42) 0,
+1025-      rgb(251 191 36 / 0.18) 18%,
+1026-      transparent 38%
+1027-    ),
+1028-    linear-gradient(118deg, #9a3412 0%, #c2410c 42%, #ea580c 72%, #f97316 100%) !important;
+1029-
+1030-  border: 2px solid #fb923c !important;
+1031-
+1032-  box-shadow:
+1033-    inset 0 1px 0 rgb(255 255 255 / 0.18),
+1034-    0 0 0 1px rgb(250 204 21 / 0.22),
+1035-    0 12px 34px rgb(249 115 22 / 0.3) !important;
+1036-}
+1037-
+1038-html.dark .home-winner-card .text-orange-700 {
+1039-  color: #fef08a !important;
+1040-  font-weight: 900;
+1041-  text-shadow: 0 1px 8px rgb(69 26 3 / 0.55);
+1042-}
+1043-
+--
+1228-    radial-gradient(
+1229-      circle at 94% 8%,
+1230-      rgb(249 115 22 / 0.06),
+1231-      transparent 26rem
+1232-    ),
+1233-    #f8fafc;
+1234-}
+1235-
+1236-html:not(.dark) .app-desktop-nav,
+1237-html:not(.dark) .app-mobile-header {
+1238-  background: linear-gradient(135deg, #ffffff, #f8fbff);
+1239-  border-color: #dbe5f1;
+1240-}
+1241-
+1242-html:not(.dark) .app-desktop-link-active {
+1243-  border-color: #38bdf8 !important;
+1244-  background: linear-gradient(135deg, #e0f2fe, #bae6fd) !important;
+1245-  color: #075985 !important;
+1246-  box-shadow:
+1247-    0 0 0 1px rgb(56 189 248 / 0.12),
+1248-    0 8px 20px rgb(2 132 199 / 0.12);
+1249-}
+1250-
+1251-html:not(.dark) .app-desktop-link-idle {
+1252-  background: #ffffff !important;
+1253-  color: #334155 !important;
+1254-}
+1255-
+1256-/* Mobile navigation */
+1257-
+1258:html:not(.dark) .app-mobile-bottom-nav {
+1259-  border-top-color: #cbd5e1;
+1260-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+1261-  box-shadow:
+1262-    0 -1px 0 rgb(255 255 255 / 0.8),
+1263-    0 -14px 32px rgb(15 23 42 / 0.12);
+1264-}
+1265-
+1266:html:not(.dark) .app-mobile-nav-shield {
+1267-  background: #f8fafc;
+1268-}
+1269-
+1270:html:not(.dark) .app-mobile-nav-active {
+1271-  background: linear-gradient(145deg, #e0f2fe, #bae6fd) !important;
+1272-  color: #075985 !important;
+1273-  box-shadow:
+1274-    0 0 0 1px rgb(14 165 233 / 0.18),
+1275-    0 7px 18px rgb(2 132 199 / 0.13);
+1276-}
+1277-
+1278:html:not(.dark) .app-mobile-nav-active::after {
+1279-  position: absolute;
+1280-  right: 22%;
+1281-  bottom: 2px;
+1282-  left: 22%;
+1283-  height: 3px;
+1284-  border-radius: 999px;
+1285-  background: #f59e0b;
+1286-  box-shadow: 0 0 8px rgb(245 158 11 / 0.35);
+1287-  content: "";
+1288-}
+1289-
+1290:html:not(.dark) .app-mobile-nav-idle {
+1291-  color: #64748b !important;
+1292-}
+1293-
+1294-/* =========================================================
+1295-   HOME — LIGHT CHAMPIONSHIP PRESENTATION
+1296-   ========================================================= */
+1297-
+1298-html:not(.dark) .home-current-slate {
+1299-  background: linear-gradient(145deg, #ffffff, #fbfdff);
+1300-  border-color: #dbe5f1;
+1301-}
+1302-
+1303-html:not(.dark) .home-winner-card {
+1304-  background:
+1305-    radial-gradient(
+1306-      circle at 90% 10%,
+1307-      rgb(254 240 138 / 0.85),
+1308-      transparent 11rem
+1309-    ),
+1310-    linear-gradient(118deg, #fff7ed 0%, #ffedd5 40%, #fed7aa 72%, #fdba74 100%) !important;
+1311-
+1312-  border: 2px solid #fb923c !important;
+1313-
+1314-  box-shadow:
+1315-    inset 0 1px 0 rgb(255 255 255 / 0.9),
+1316-    0 0 0 1px rgb(245 158 11 / 0.1),
+1317-    0 12px 30px rgb(249 115 22 / 0.16) !important;
+1318-}
+1319-
+1320-html:not(.dark) .home-winner-card .text-orange-700 {
+1321-  color: #c2410c !important;
+1322-  font-weight: 900;
+1323-  letter-spacing: 0.14em;
+1324-}
+1325-
+1326-html:not(.dark) .home-winner-card .home-winner-name {
+1327-  color: #172554 !important;
+1328-  text-shadow: none;
+1329-}
+1330-
+1331-html:not(.dark) .home-winner-card .home-winner-name:hover {
+1332-  color: #075985 !important;
+1333-}
+1334-
+1335-html:not(.dark) .home-winner-card .text-slate-600 {
+1336-  color: #9a3412 !important;
+1337-}
+1338-
+1339-/* Refresh button */
+1340-
+1341-html:not(.dark) .home-winner-card button.border-sky-200 {
+1342-  border-color: #0ea5e9 !important;
+1343-  background: linear-gradient(145deg, #ffffff, #e0f2fe) !important;
+1344-  color: #075985 !important;
+1345-  box-shadow:
+1346-    0 0 0 1px rgb(14 165 233 / 0.08),
+1347-    0 7px 18px rgb(2 132 199 / 0.12);
+1348-}
+1349-
+1350-@media (hover: hover) {
+1351-  html:not(.dark) .home-winner-card button.border-sky-200:hover {
+1352-    transform: translateY(-1px);
+1353-    border-color: #0284c7 !important;
+1354-    background: linear-gradient(145deg, #e0f2fe, #bae6fd) !important;
+1355-    box-shadow:
+1356-      0 0 0 1px rgb(14 165 233 / 0.15),
+1357-      0 9px 24px rgb(2 132 199 / 0.16);
+1358-  }
+1359-}
+1360-
+1361-/* View Scores button */
+1362-
+1363-html:not(.dark) .home-current-slate > div:first-child > a {
+1364-  border-color: #38bdf8 !important;
+1365-  background: linear-gradient(145deg, #ffffff, #e0f2fe) !important;
+1366-  color: #075985 !important;
+1367-  box-shadow:
+1368-    0 0 0 1px rgb(56 189 248 / 0.08),
+1369-    0 7px 18px rgb(2 132 199 / 0.1);
+1370-}
+1371-
+1372-@media (hover: hover) {
+1373-  html:not(.dark) .home-current-slate > div:first-child > a:hover {
+1374-    transform: translateY(-1px);
+1375-    border-color: #0284c7 !important;
+1376-    background: linear-gradient(145deg, #e0f2fe, #bae6fd) !important;
+1377-    color: #075985 !important;
+1378-    box-shadow: 0 9px 24px rgb(2 132 199 / 0.15);
+1379-  }
+1380-}
+1381-
+1382-/* =========================================================
+1383-   LIGHT SCOREBOARD EMPHASIS
+1384-   ========================================================= */
+1385-
+1386-html:not(.dark) .home-current-slate table tbody td:nth-child(2),
+1387-html:not(.dark) .home-current-slate table tbody td:nth-child(3) {
+1388-  color: #0f172a !important;
+1389-  font-size: 1.15rem;
+1390-  font-weight: 850;
+1391-  letter-spacing: -0.02em;
+1392-}
+1393-
+1394-html:not(.dark) .home-winner-row {
+1395-  background: linear-gradient(
+1396-    90deg,
+1397-    #fef3c7 0%,
+1398-    #fff7ed 42%,
+1399-    #ffffff 100%
+1400-  ) !important;
+1401-
+1402-  box-shadow:
+1403-    inset 7px 0 0 #f59e0b,
+1404-    inset 0 1px 0 rgb(245 158 11 / 0.1) !important;
+1405-}
+1406-
+1407-html:not(.dark) .home-winner-row td:first-child {
+1408-  color: #78350f !important;
+1409-  font-weight: 800;
+1410-}
+--
+6036-.player-modal-highlight strong {
+6037-  margin-top: 0;
+6038-  font-size: 0.76rem;
+6039-  white-space: nowrap;
+6040-}
+6041-
+6042-.player-modal-highlight small {
+6043-  display: none;
+6044-}
+6045-
+6046-@media (max-width: 520px) {
+6047-  .player-modal-highlight-grid {
+6048-    grid-template-columns: repeat(2, minmax(0, 1fr));
+6049-  }
+6050-
+6051-  .player-modal-highlight {
+6052-    justify-content: center;
+6053-    padding-inline: 0.55rem;
+6054-  }
+6055-
+6056-  .player-modal-highlight strong {
+6057-    font-size: 0.7rem;
+6058-  }
+6059-}
+6060-
+6061-/* =========================================================
+6062-   HOME SCOREBOARD — TEAM PROFILE IDENTITY
+6063-   Uses uploaded avatars with TeamAvatar's built-in fallback.
+6064-   ========================================================= */
+6065-
+6066:.home-team-profile-button {
+6067-  display: inline-flex;
+6068-  max-width: 100%;
+6069-  align-items: center;
+6070-  gap: 0.55rem;
+6071-  border-radius: 0.75rem;
+6072-  padding: 0.2rem 0.45rem 0.2rem 0.1rem;
+6073-  text-align: left;
+6074-  transition:
+6075-    background-color 160ms ease,
+6076-    color 160ms ease,
+6077-    transform 160ms ease;
+6078-}
+6079-
+6080:.home-team-profile-button:hover {
+6081-  background-color: rgb(14 165 233 / 0.1);
+6082-  color: #0369a1;
+6083-}
+6084-
+6085:.home-team-profile-button:focus-visible {
+6086-  outline: 2px solid #0ea5e9;
+6087-  outline-offset: 2px;
+6088-}
+6089-
+6090:.home-team-profile-name {
+6091-  min-width: 0;
+6092-  overflow: hidden;
+6093-  color: inherit;
+6094-  font-size: 0.95rem;
+6095-  font-weight: 750;
+6096-  line-height: 1.15;
+6097-  text-overflow: ellipsis;
+6098-  white-space: nowrap;
+6099-}
+6100-
+6101:.home-team-profile-chevron {
+6102-  flex: 0 0 auto;
+6103-  color: #94a3b8;
+6104-  font-size: 1.2rem;
+6105-  font-weight: 700;
+6106-  line-height: 1;
+6107-  transition:
+6108-    color 160ms ease,
+6109-    transform 160ms ease;
+6110-}
+6111-
+6112:.home-team-profile-button:hover .home-team-profile-chevron {
+6113-  color: #0284c7;
+6114-  transform: translateX(2px);
+6115-}
+6116-
+6117:.home-team-profile-button--featured {
+6118-  margin-left: -0.1rem;
+6119-  padding: 0.25rem 0.65rem 0.25rem 0.15rem;
+6120-}
+6121-
+6122:.home-team-profile-button--featured .home-team-profile-name {
+6123-  color: #172554;
+6124-  font-size: 1.5rem;
+6125-  font-weight: 850;
+6126-  letter-spacing: -0.025em;
+6127-}
+6128-
+6129:.home-team-profile-button--featured img,
+6130:.home-team-profile-button--featured > div:first-child {
+6131-  box-shadow:
+6132-    0 2px 5px rgb(15 23 42 / 0.18),
+6133-    0 0 0 2px rgb(245 158 11 / 0.45);
+6134-}
+6135-
+6136-.home-current-slate thead th {
+6137-  color: #64748b;
+6138-  font-size: 0.78rem;
+6139-  font-weight: 750;
+6140-  letter-spacing: 0.015em;
+6141-}
+6142-
+6143-.home-current-slate tbody td {
+6144-  vertical-align: middle;
+6145-}
+6146-
+6147-.home-current-slate tbody td:nth-child(4),
+6148-.home-current-slate tbody td:nth-child(5) {
+6149-  font-size: 0.88rem;
+6150-}
+6151-
+6152:.dark .home-team-profile-button {
+6153-  color: #e2e8f0;
+6154-}
+6155-
+6156:.dark .home-team-profile-button:hover {
+6157-  background-color: rgb(14 165 233 / 0.14);
+6158-  color: #7dd3fc;
+6159-}
+6160-
+6161:.dark .home-team-profile-button--featured .home-team-profile-name {
+6162-  color: #fff7ed;
+6163-}
+6164-
+6165-.dark .home-current-slate thead th {
+6166-  color: #cbd5e1;
+6167-}
+6168-
+6169-@media (max-width: 639px) {
+6170:  .home-team-profile-button {
+6171-    gap: 0.4rem;
+6172-    padding-right: 0.2rem;
+6173-  }
+6174-
+6175:  .home-team-profile-name {
+6176-    font-size: 0.88rem;
+6177-  }
+6178-
+6179:  .home-team-profile-chevron {
+6180-    display: none;
+6181-  }
+6182-
+6183:  .home-team-profile-button--featured .home-team-profile-name {
+6184-    font-size: 1.35rem;
+6185-  }
+6186-}
+6187-
+6188-/* Let the winner identity display its full name.
+6189-   Table-row identities remain compact and truncated. */
+6190:.home-team-profile-button--featured {
+6191-  max-width: none;
+6192-}
+6193-
+6194:.home-team-profile-button--featured .home-team-profile-name {
+6195-  overflow: visible;
+6196-  text-overflow: clip;
+6197-  white-space: nowrap;
+6198-}
+6199-
+6200-@media (max-width: 639px) {
+6201:  .home-winner-card .home-team-profile-button--featured {
+6202-    max-width: calc(100% - 5.5rem);
+6203-  }
+6204-
+6205-  .home-winner-card
+6206:    .home-team-profile-button--featured
+6207:    .home-team-profile-name {
+6208-    overflow: hidden;
+6209-    text-overflow: ellipsis;
+6210-  }
+6211-}
+6212-
+6213-/* =========================================================
+6214-   HOME SCOREBOARD — FINAL TYPOGRAPHY AND GAME STATUS POLISH
+6215-   ========================================================= */
+6216-
+6217-/* Actual score remains the strongest table value. */
+6218-.home-current-slate .home-score-value {
+6219-  color: #38bdf8 !important;
+6220-  font-size: 1.15rem !important;
+6221-  font-weight: 800 !important;
+6222-  letter-spacing: -0.02em;
+6223-  line-height: 1;
+6224-  font-variant-numeric: tabular-nums;
+6225-  transition: color 150ms ease;
+6226-}
+6227-
+6228-.home-current-slate .home-score-value:hover {
+6229-  color: #7dd3fc !important;
+6230-  text-decoration: underline;
+6231-  text-underline-offset: 3px;
+6232-}
+6233-
+6234-/* Projection is useful, but visually secondary to actual score. */
+6235-.home-current-slate .home-projection-value {
+6236-  color: #e2e8f0 !important;
+6237-  font-size: 1rem !important;
+6238-  font-weight: 700 !important;
+6239-  letter-spacing: -0.01em !important;
+6240-  line-height: 1;
+6241-  font-variant-numeric: tabular-nums;
+6242-}
+6243-
+6244-/* Human-readable game state. */
+6245-.home-games-status {
+6246-  display: flex;
+6247-  flex-wrap: wrap;
+6248-  align-items: center;
+6249-  gap: 0.28rem;
+6250-  color: #cbd5e1;
+6251-  font-size: 0.82rem;
+6252-  font-weight: 650;
+6253-  line-height: 1.2;
+6254-  white-space: nowrap;
+6255-  font-variant-numeric: tabular-nums;
+6256-}
+6257-
+6258-.home-games-status-final {
+6259-  color: #e2e8f0;
+6260-}
+6261-
+6262-.home-games-status-divider {
+6263-  color: #64748b;
+6264-}
+6265-
+6266-.home-games-status-live {
+6267-  display: inline-flex;
+6268-  align-items: center;
+6269-  gap: 0.28rem;
+6270-  color: #f87171;
+6271-  font-weight: 800;
+6272-}
+6273-
+6274-.home-games-status-live-dot {
+6275-  width: 0.42rem;
+6276-  height: 0.42rem;
+6277-  flex: 0 0 auto;
+6278-  border-radius: 9999px;
+6279-  background-color: currentColor;
+6280-  box-shadow: 0 0 0 3px rgb(248 113 113 / 0.12);
+6281-  animation: home-games-live-pulse 1.8s ease-in-out infinite;
+6282-}
+6283-
+6284-.home-games-status-left {
+6285-  color: #94a3b8;
+6286-}
+6287-
+6288-@keyframes home-games-live-pulse {
+6289-  0%,
+6290-  100% {
+6291-    opacity: 1;
+6292-  }
+6293-
+6294-  50% {
+6295-    opacity: 0.4;
+6296-  }
+6297-}
+6298-
+6299-/* Win probabilities matter less after the winner is settled. */
+6300-.home-current-slate--final .home-win-badge {
+6301-  background-color: rgb(15 118 110 / 0.25) !important;
+6302-  border-color: rgb(52 211 153 / 0.35);
+6303-  color: #6ee7b7 !important;
+6304-  box-shadow: none;
+6305-  opacity: 0.86;
+6306-}
+6307-
+6308-/* Light-mode equivalents. */
+6309-html.light .home-current-slate .home-score-value,
+6310-html:not(.dark) .home-current-slate .home-score-value {
+6311-  color: #0369a1 !important;
+6312-}
+6313-
+6314-html.light .home-current-slate .home-score-value:hover,
+6315-html:not(.dark) .home-current-slate .home-score-value:hover {
+6316-  color: #0284c7 !important;
+6317-}
+6318-
+6319-html.light .home-current-slate .home-projection-value,
+6320-html:not(.dark) .home-current-slate .home-projection-value {
+6321-  color: #334155 !important;
+6322-  font-size: 1rem !important;
+6323-  font-weight: 700 !important;
+6324-}
+6325-
+6326-html.light .home-games-status,
+6327-html:not(.dark) .home-games-status {
+--
+6861-.home-lineup-breakdown-total strong {
+6862-  color: var(--app-text);
+6863-  font-size: 1rem;
+6864-  font-weight: 900;
+6865-}
+6866-
+6867-.home-lineup-player-link {
+6868-  display: inline-flex;
+6869-  min-width: 0;
+6870-  align-items: center;
+6871-  gap: 0.75rem;
+6872-  text-align: left;
+6873-}
+6874-
+6875-.home-lineup-player-link:hover span:last-child {
+6876-  color: var(--app-blue);
+6877-}
+6878-
+6879-.home-lineup-player-link:focus-visible {
+6880-  border-radius: 0.65rem;
+6881-  outline: 3px solid rgb(14 165 233 / 0.25);
+6882-  outline-offset: 3px;
+6883-}
+6884-
+6885-.home-lineup-player-link--table {
+6886-  gap: 0.5rem;
+6887-  font-weight: 600;
+6888-}
+6889-
+6890-@media (max-width: 639px) {
+6891:  .home-current-slate tbody .home-team-profile-button {
+6892-    width: 2.6rem !important;
+6893-    min-width: 2.6rem !important;
+6894-    max-width: 2.6rem !important;
+6895-    justify-content: center !important;
+6896-    gap: 0 !important;
+6897-    overflow: hidden;
+6898-  }
+6899-
+6900:  .home-current-slate tbody .home-team-profile-name,
+6901:  .home-current-slate tbody .home-team-profile-chevron {
+6902-    display: none !important;
+6903-  }
+6904-
+6905-  .home-current-slate table th:nth-child(1),
+6906-  .home-current-slate table td:nth-child(1) {
+6907-    width: 17%;
+6908-    padding-right: 0.2rem;
+6909-    padding-left: 0.55rem;
+6910-  }
+6911-
+6912-  .home-current-slate table th:nth-child(2),
+6913-  .home-current-slate table td:nth-child(2) {
+6914-    width: 23%;
+6915-    padding-right: 0.3rem;
+6916-    padding-left: 0.25rem;
+6917-  }
+6918-
+6919-  .home-current-slate table th:nth-child(3),
+6920-  .home-current-slate table td:nth-child(3) {
+6921-    width: 18%;
+6922-    padding-right: 0.25rem;
+6923-    padding-left: 0.3rem;
+6924-  }
+6925-
+6926-  .home-current-slate table th:nth-child(4),
+6927-  .home-current-slate table td:nth-child(4) {
+6928-    width: 19%;
+6929-    padding-right: 0.2rem;
+6930-    padding-left: 0.2rem;
+6931-  }
+6932-
+6933-  .home-current-slate table th:nth-child(5),
+6934-  .home-current-slate table td:nth-child(5) {
+6935-    width: 23%;
+6936-    padding-right: 0.35rem;
+6937-    padding-left: 0.25rem;
+6938-  }
+6939-
+6940-  .home-current-slate .home-score-pill-v2 {
+6941-    min-width: 0;
+6942-    gap: 0.15rem;
+6943-    padding-right: 0.4rem;
+6944-    padding-left: 0.5rem;
+6945-    font-size: 0.82rem;
+6946-  }
+6947-
+6948-  .home-current-slate .home-projection-value-v2 {
+6949-    white-space: nowrap;
+6950-    font-size: 0.82rem;
+6951-  }
+6952-
+6953-  .home-lineup-breakdown-heading {
+6954-    margin-bottom: 0.65rem;
+6955-  }
+6956-}
+6957-
+6958-/* =========================================================
+6959-   SCORES — COMPACT TEAM STATUS
+6960-   ========================================================= */
+6961-
+6962-.scores-selected-team-status-bar {
+6963-  display: flex;
+6964-  flex-wrap: wrap;
+6965-  align-items: center;
+6966-  gap: 0.7rem;
+6967-  margin-top: 1rem;
+6968-  border: 1px solid rgb(71 85 105 / 0.72);
+6969-  border-radius: 1rem;
+6970-  background: rgb(30 41 59 / 0.58);
+6971-  padding: 0.7rem 0.85rem;
+6972-}
+6973-
+6974-.scores-selected-team-status-item {
+6975-  display: inline-flex;
+6976-  align-items: center;
+6977-  gap: 0.45rem;
+6978-  white-space: nowrap;
+6979-}
+6980-
+6981-.scores-selected-team-status-item > span {
+6982-  color: #94a3b8;
+6983-  font-size: 0.7rem;
+6984-  font-weight: 750;
+6985-  letter-spacing: 0.055em;
+6986-  text-transform: uppercase;
+6987-}
+6988-
+6989-.scores-selected-team-status-item > strong {
+6990-  color: #f8fafc;
+6991-  font-size: 0.95rem;
+6992-  font-weight: 850;
+6993-  line-height: 1;
+6994-  font-variant-numeric: tabular-nums;
+6995-}
+6996-
+6997-.scores-selected-team-status-divider {
+6998-  width: 1px;
+6999-  height: 1.3rem;
+7000-  background: #475569;
+7001-}
+7002-
+7003-.scores-team-projection-delta {
+7004-  display: inline-flex;
+7005-  align-items: center;
+7006-  justify-content: center;
+7007-  gap: 0.25rem;
+7008-  border-radius: 9999px;
+7009-  padding: 0.26rem 0.48rem;
+7010-  font-size: 0.86rem !important;
+7011-  line-height: 1;
+7012-  white-space: nowrap;
+7013-  font-variant-numeric: tabular-nums;
+7014-}
+7015-
+7016-.scores-team-projection-delta--positive {
+7017-  background: rgb(16 185 129 / 0.14);
+7018-  color: #6ee7b7 !important;
+7019-}
+7020-
+7021-.scores-team-projection-delta--negative {
+--
+7560-html .home-winner-card.golf-home-winner-card {
+7561-  background:
+7562-    radial-gradient(
+7563-      circle at 88% 12%,
+7564-      rgb(110 231 183 / 0.28),
+7565-      transparent 13rem
+7566-    ),
+7567-    radial-gradient(
+7568-      circle at 10% 100%,
+7569-      rgb(16 185 129 / 0.18),
+7570-      transparent 17rem
+7571-    ),
+7572-    linear-gradient(
+7573-      120deg,
+7574-      #022c22 0%,
+7575-      #065f46 48%,
+7576-      #047857 75%,
+7577-      #059669 100%
+7578-    ) !important;
+7579-
+7580-  border: 2px solid #10b981 !important;
+7581-
+7582-  box-shadow:
+7583-    inset 0 1px 0 rgb(255 255 255 / 0.1),
+7584-    0 0 0 1px rgb(16 185 129 / 0.14),
+7585-    0 14px 34px rgb(6 78 59 / 0.3) !important;
+7586-}
+7587-
+7588-html
+7589-  .home-winner-card.golf-home-winner-card
+7590:  .home-team-profile-name {
+7591-  color: #ffffff !important;
+7592-}
+7593-
+7594-html
+7595-  .home-winner-card.golf-home-winner-card
+7596:  .home-team-profile-chevron {
+7597-  color: #6ee7b7 !important;
+7598-}
+7599-
+7600-html
+7601-  .home-winner-card.golf-home-winner-card
+7602-  button.border-sky-200 {
+7603-  border-color: rgb(110 231 183 / 0.5) !important;
+7604-  background:
+7605-    linear-gradient(
+7606-      145deg,
+7607-      #064e3b,
+7608-      #022c22
+7609-    ) !important;
+7610-  color: #ecfdf5 !important;
+7611-  box-shadow:
+7612-    0 0 0 1px rgb(52 211 153 / 0.12),
+7613-    0 8px 22px rgb(6 78 59 / 0.28) !important;
+7614-}
+7615-
+7616-@media (max-width: 639px) {
+7617-  html
+7618-    .home-current-slate.golf-home-current-slate {
+7619-    padding: 1rem;
+7620-  }
+7621-
+7622-  html
+7623-    .home-winner-card.golf-home-winner-card {
+7624-    min-height: 0;
+7625-    padding: 0.9rem;
+7626-  }
+7627-
+7628-  .golf-home-current-slate table th,
+7629-  .golf-home-current-slate table td {
+7630-    overflow: hidden;
+7631-  }
+7632-
+7633-  .golf-home-current-slate
+7634:    .home-team-profile-button {
+7635-    max-width: 100%;
+7636-  }
+7637-
+7638-  .golf-home-current-slate
+7639:    .home-team-profile-name {
+7640-    max-width: 6rem;
+7641-    overflow: hidden;
+7642-    text-overflow: ellipsis;
+7643-    white-space: nowrap;
+7644-  }
+7645-}
+7646-
+7647-/* Compact Golf Home rows on phones. */
+7648-@media (max-width: 639px) {
+7649-  .golf-home-current-slate tbody tr {
+7650-    height: auto !important;
+7651-  }
+7652-
+7653-  .golf-home-current-slate tbody td {
+7654-    min-height: 0 !important;
+7655-    vertical-align: middle;
+7656-  }
+7657-
+7658-  .golf-home-current-slate tbody tr button {
+7659-    min-height: 0;
+7660-  }
+7661-}
+7662-
+7663-
+7664-/* Golf Home tournament leaderboard and final phone spacing. */
+7665-@media (max-width: 639px) {
+7666-  .golf-home-current-slate
+7667-    .golf-tournament-owner {
+7668-    max-width: 8rem;
+7669-  }
+7670-
+7671-  .golf-home-current-slate table {
+7672-    max-width: 100%;
+7673-  }
+7674-}

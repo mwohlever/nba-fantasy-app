@@ -1,0 +1,3712 @@
+
+
+============================================================
+FILE: components/lineups/LineupBuilder.tsx
+============================================================
+"use client";
+
+import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
+import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import SlotDraftModal from "@/components/lineups/SlotDraftModal";
+import PlayerPool from "@/components/lineups/PlayerPool";
+import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
+import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
+import ScoresDashboard from "@/components/lineups/ScoresDashboard";
+import { useEffect, useMemo, useRef, useState } from "react";
+import LineupControls from "@/components/lineups/LineupControls";
+import { getStatColumns } from "@/lib/statColumns";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { getSportConfig } from "@/lib/sports";
+import type {
+  Player,
+  PlayerHistoryDetailRow,
+  PlayerStat,
+  PositionFilter,
+  Props,
+  RosterSlotConfig,
+  SavedLineup,
+  Team,
+  TeamResult,
+  ViewMode,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
+
+export default function LineupBuilder({
+  players,
+  teams,
+  slates,
+  slateTeamConfigs,
+  playerAverages,
+  initialSelectedSlateId,
+  savedLineupsForInitialSlate,
+  playerStats,
+  teamResults,
+  rosterSlots = [],
+  defaultViewMode,
+  sport,
+}: Props) {
+  const { selectedSport, setSelectedSport } = useSelectedSport();
+
+  useEffect(() => {
+    if (sport && sport !== selectedSport) {
+      setSelectedSport(sport);
+    }
+  }, [sport]);
+
+  const [selectedSlateId, setSelectedSlateId] = useState<string>(
+    initialSelectedSlateId ? String(initialSelectedSlateId) : ""
+  );
+
+  const [selectedSeason, setSelectedSeason] = useState<string>(() => {
+    const initialSlate = slates.find(
+      (slate) => slate.id === Number(initialSelectedSlateId)
+    );
+
+    const initialDate = initialSlate?.start_date ?? initialSlate?.date ?? "";
+    return initialDate ? initialDate.slice(0, 4) : "2026";
+  });
+  const [message, setMessage] = useState("");
+  const latestSlateLoadRef = useRef(0);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSlateLoading, setIsSlateLoading] = useState(false);
+  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+  const [isAssigningPlayer, setIsAssigningPlayer] = useState(false);
+  const [draftingPlayerHistory, setDraftingPlayerHistory] = useState<
+    PlayerHistoryDetailRow[]
+  >([]);
+  const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] =
+    useState(false);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
+  const [onSlateOnly, setOnSlateOnly] = useState(false);
+  const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+
+  const [compactView, setCompactView] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{
+    teamId: number;
+    displayName: string;
+    role: "player" | "admin";
+  } | null>(null);
+  const [
+    notifyNextDrafterForProxyPicks,
+    setNotifyNextDrafterForProxyPicks,
+  ] = useState(false);
+
+  const [lineupsState, setLineupsState] = useState<SavedLineup[]>(
+    savedLineupsForInitialSlate
+  );
+  const [playerStatsState, setPlayerStatsState] =
+    useState<PlayerStat[]>(playerStats);
+  const [teamResultsState, setTeamResultsState] =
+    useState<TeamResult[]>(teamResults);
+  const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
+    useState<number[]>([]);
+  const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+  const [
+    isInspectingPlayerFromSlot,
+    setIsInspectingPlayerFromSlot,
+  ] = useState(false);
+  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+  const [targetDraftSlot, setTargetDraftSlot] =
+    useState<TargetDraftSlot | null>(null);
+
+  const [draftPageTab, setDraftPageTab] = useState<
+    "lineup" | "players"
+  >("lineup");
+
+  const [lastRefreshSummary, setLastRefreshSummary] = useState<{
+    gamesFound?: number;
+    playerStatsUpserted?: number;
+    teamResultsUpserted?: number;
+  } | null>(null);
+
+  const seasons = useMemo(() => {
+    const uniqueYears = new Set<string>();
+
+    slates.forEach((slate) => {
+      const date = slate.start_date ?? slate.date;
+      if (date) uniqueYears.add(date.slice(0, 4));
+    });
+
+    return Array.from(uniqueYears).sort((a, b) => Number(b) - Number(a));
+  }, [slates]);
+
+  const filteredSlates = useMemo(() => {
+    return slates.filter((slate) => {
+      const date = slate.start_date ?? slate.date;
+      const matchesSeason = date?.startsWith(selectedSeason);
+      const matchesSport = (slate.sport ?? "nba") === selectedSport;
+      return matchesSeason && matchesSport;
+    });
+  }, [slates, selectedSeason, selectedSport]);
+
+  const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
+  const selectedSlate =
+    slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
+
+  const selectedSlateDisplay =
+    selectedSlate?.label ?? selectedSlate?.date ?? "No slate selected";
+
+  useEffect(() => {
+    setHasMounted(true);
+    if (window.innerWidth < 768) {
+      setCompactView(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/me", {
+          cache: "no-store",
+        });
+
+        const result = await response.json();
+
+        if (!isActive) return;
+
+        if (!response.ok) {
+          setCurrentUser(null);
+          return;
+        }
+
+        setCurrentUser(result.user ?? null);
+      } catch (error) {
+        console.error("Failed to load current user", error);
+
+        if (isActive) {
+          setCurrentUser(null);
+        }
+      }
+    }
+
+    void loadCurrentUser();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!filteredSlates.length) return;
+
+    const selectedStillInYear = filteredSlates.some(
+      (slate) => String(slate.id) === selectedSlateId
+    );
+
+    if (!selectedStillInYear) {
+      setSelectedSlateId(String(filteredSlates[0].id));
+    }
+  }, [filteredSlates, selectedSlateId]);
+
+  useEffect(() => {
+    if (!draftingPlayer) {
+      setDraftingPlayerHistory([]);
+      setIsDraftingPlayerHistoryLoading(false);
+      return;
+    }
+
+    async function loadDraftingPlayerHistory() {
+      if ((sport ?? selectedSport) === "golf") {
+        setDraftingPlayerHistory([]);
+        setIsDraftingPlayerHistoryLoading(false);
+        return;
+      }
+
+      try {
+        setIsDraftingPlayerHistoryLoading(true);
+
+        if (!draftingPlayer) return;
+
+        const response = await fetch(
+          `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
+          { cache: "no-store" }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          console.error(result.error || "Failed to load player history detail.");
+          setDraftingPlayerHistory([]);
+          return;
+        }
+
+        setDraftingPlayerHistory(result.history ?? []);
+      } catch (error) {
+        console.error(error);
+        setDraftingPlayerHistory([]);
+      } finally {
+        setIsDraftingPlayerHistoryLoading(false);
+      }
+    }
+
+    void loadDraftingPlayerHistory();
+  }, [draftingPlayer, sport, selectedSport]);
+
+  useEffect(() => {
+    setPlayerStatsState(playerStats);
+  }, [playerStats]);
+
+  useEffect(() => {
+    setTeamResultsState(teamResults);
+  }, [teamResults]);
+
+  useEffect(() => {
+    if (!selectedSlateIdNumber) return;
+
+    let isActive = true;
+
+    async function loadAvailability() {
+      try {
+        setIsAvailabilityLoading(true);
+
+        const res = await fetch(
+          `/api/slate-availability?slateId=${selectedSlateIdNumber}`,
+          { cache: "no-store" }
+        );
+        const data = await res.json();
+
+        if (!isActive) return;
+
+        const nextIds = data.availablePlayerIds || [];
+        setAvailablePlayerIdsForSlate(nextIds);
+      } catch (err) {
+        console.error("Failed to load availability", err);
+        if (!isActive) return;
+        setAvailablePlayerIdsForSlate([]);
+      } finally {
+        if (isActive) {
+          setIsAvailabilityLoading(false);
+        }
+      }
+    }
+
+    void loadAvailability();
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedSlateIdNumber]);
+
+  useEffect(() => {
+    if (!autoRefreshEnabled || !selectedSlateIdNumber) return;
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void refreshStatsForSelectedSlate(true);
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [autoRefreshEnabled, selectedSlateIdNumber]);
+
+  useEffect(() => {
+    if (!selectedSlateIdNumber) return;
+    void loadSlateLineups(selectedSlateIdNumber);
+  }, [selectedSlateIdNumber]);
+
+  const playerStatsMap = useMemo(() => {
+    const map = new Map<number, PlayerStat>();
+    playerStatsState.forEach((stat) => {
+      map.set(stat.player_id, stat);
+    });
+    return map;
+  }, [playerStatsState]);
+
+  const [playerProjections, setPlayerProjections] = useState<Record<number, any>>({});
+
+  useEffect(() => {
+    if (!selectedSeason) return;
+
+    if ((sport ?? "nba") !== "nba") {
+      setPlayerProjections({});
+      return;
+    }
+
+    fetch(`/api/player-projections?season=${selectedSeason}`, { cache: "no-store" })
+      .then((res) => res.json())
+      .then((data) => setPlayerProjections(data.projections || {}))
+      .catch((error) => {
+        console.error("Failed to load player projections", error);
+        setPlayerProjections({});
+      });
+  }, [selectedSeason, sport]);
+
+  const playerAverageMap = useMemo(() => {
+    const map = new Map<number, number>();
+    playerAverages.forEach((row) => {
+      map.set(row.player_id, row.avg_fantasy_points);
+    });
+    return map;
+  }, [playerAverages]);
+
+  const getPlayerProjectionScore = (playerId: number) => {
+    const projected = playerProjections?.[playerId]?.projection;
+    const fallback = playerAverageMap.get(playerId);
+    const value = projected ?? fallback ?? 0;
+    return Number.isFinite(Number(value)) ? Number(value) : 0;
+  };
+
+  const getPregameProjectedTeamTotal = (teamId: number) => {
+    const lineup = lineupsState.find(
+      (item) => item.team_id === teamId
+    );
+
+    const value = lineup?.pregame_projected_points;
+
+    return value !== null &&
+      value !== undefined &&
+      Number.isFinite(Number(value))
+      ? Number(value)
+      : null;
+  };
+
+  const teamResultsMap = useMemo(() => {
+    const map = new Map<number, TeamResult>();
+    teamResultsState.forEach((result) => {
+      map.set(result.team_id, result);
+    });
+    return map;
+  }, [teamResultsState]);
+
+  const availablePlayerIdSet = useMemo(
+    () => new Set(availablePlayerIdsForSlate),
+    [availablePlayerIdsForSlate]
+  );
+
+  const teamsById = useMemo(() => {
+    const map = new Map<number, Team>();
+    teams.forEach((team) => map.set(team.id, team));
+    return map;
+  }, [teams]);
+
+  const orderedTeamsForSlate = useMemo(() => {
+    if (!selectedSlateIdNumber) return teams;
+
+    const configs = slateTeamConfigs
+      .filter((config) => config.slate_id === selectedSlateIdNumber)
+      .sort((a, b) => a.draft_order - b.draft_order);
+
+    if (configs.length === 0) return teams;
+
+    const configuredIds = configs.map((config) => config.team_id);
+    const configuredTeams = configs
+      .map((config) => {
+        const team = teamsById.get(config.team_id);
+        if (!team) return null;
+
+        return {
+          ...team,
+          is_participating: config.is_participating,
+          draft_order: config.draft_order,
+        };
+      })
+      .filter(Boolean) as Array<
+      Team & { is_participating?: boolean; draft_order?: number }
+    >;
+
+    const missingTeams = teams
+      .filter((team) => !configuredIds.includes(team.id))
+      .map((team, index) => ({
+        ...team,
+        is_participating: true,
+        draft_order: configuredTeams.length + index + 1,
+      }));
+
+    return [...configuredTeams, ...missingTeams];
+  }, [selectedSlateIdNumber, slateTeamConfigs, teams, teamsById]);
+
+  const participatingTeamIds = useMemo(() => {
+    return new Set(
+      orderedTeamsForSlate
+        .filter((team) => (team as any).is_participating !== false)
+        .map((team) => team.id)
+    );
+  }, [orderedTeamsForSlate]);
+
+  const filteredPlayers = useMemo(() => {
+    return players
+      .filter((player) => {
+        if (
+          searchTerm &&
+          !player.name.toLowerCase().includes(searchTerm.toLowerCase())
+        ) {
+          return false;
+        }
+
+        if (positionFilter !== "All" && player.position_group !== positionFilter) {
+          return false;
+        }
+
+        if (onSlateOnly && !isAvailabilityLoading) {
+          return availablePlayerIdSet.has(player.id);
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const avgA = playerAverageMap.get(a.id);
+        const avgB = playerAverageMap.get(b.id);
+
+        if (avgA == null && avgB == null) return 0;
+        if (avgA == null) return 1;
+        if (avgB == null) return -1;
+
+        return avgB - avgA;
+      });
+  }, [
+    players,
+    searchTerm,
+    positionFilter,
+    onSlateOnly,
+    isAvailabilityLoading,
+    availablePlayerIdSet,
+    playerAverageMap,
+  ]);
+
+  function getLineupForTeam(teamId: number) {
+    return lineupsState.find((item) => item.team_id === teamId) ?? null;
+  }
+
+  const playersById = useMemo(() => {
+    const map = new Map<number, Player>();
+    players.forEach((player) => {
+      map.set(player.id, player);
+    });
+    return map;
+  }, [players]);
+
+  function getPlayersForTeam(teamId: number) {
+    const lineup = getLineupForTeam(teamId);
+    if (!lineup) return [];
+
+    return lineup.player_ids
+      .map((playerId) => {
+        const player = playersById.get(playerId);
+
+        if (player) return player;
+
+        return {
+          id: playerId,
+          name: `Player ${playerId}`,
+          position_group: "G" as "G" | "F/C",
+          is_active: false,
+          is_playing_today: null,
+        };
+      })
+      .filter((p): p is Player => Boolean(p));
+  }
+
+  function getOwnerTeamIdForPlayer(playerId: number) {
+    const owner = lineupsState.find((lineup) =>
+      lineup.player_ids.includes(playerId)
+    );
+    return owner?.team_id ?? null;
+  }
+
+  function getOwnerTeamForPlayer(playerId: number) {
+    const ownerTeamId = getOwnerTeamIdForPlayer(playerId);
+    if (!ownerTeamId) return null;
+    return orderedTeamsForSlate.find((team) => team.id === ownerTeamId) ?? null;
+  }
+
+  function getTeamStats(teamId: number) {
+    const teamPlayers = getPlayersForTeam(teamId);
+
+    const guards = teamPlayers.filter(
+      (player) => player.position_group === "G"
+    ).length;
+    const fcPlayers = teamPlayers.filter(
+      (player) => player.position_group === "F/C"
+    ).length;
+
+    const sport = selectedSlate?.sport ?? "nba";
+    const statColumns = getStatColumns(sport);
+
+    const statTotals: Record<string, number> = {};
+    statColumns.forEach((column) => {
+      statTotals[column.key] = 0;
+    });
+
+    teamPlayers.forEach((player) => {
+      const stat = playerStatsMap.get(player.id) as any;
+      if (!stat) return;
+
+      statColumns.forEach((column) => {
+        statTotals[column.key] += Number(stat[column.key] ?? 0);
+      });
+    });
+
+    const teamResult = teamResultsMap.get(teamId);
+
+    const nbaFallback =
+      (statTotals.points ?? 0) +
+      (statTotals.rebounds ?? 0) * 1.2 +
+      (statTotals.assists ?? 0) * 1.5 +
+      (statTotals.steals ?? 0) * 2 +
+      (statTotals.blocks ?? 0) * 2 -
+      (statTotals.turnovers ?? 0);
+
+    const playerFantasyTotal = teamPlayers.reduce((sum, player) => {
+      const stat = playerStatsMap.get(player.id);
+      return sum + Number(stat?.fantasy_points ?? 0);
+    }, 0);
+
+    const total =
+      teamResult?.fantasy_points ??
+      (sport === "nba"
+        ? nbaFallback
+        : sport === "golf"
+          ? playerFantasyTotal
+          : 0);
+
+    return {
+      totalPlayers: teamPlayers.length,
+      guards,
+      fcPlayers,
+      statTotals,
+      points: statTotals.points ?? 0,
+      rebounds: statTotals.rebounds ?? 0,
+      assists: statTotals.assists ?? 0,
+      steals: statTotals.steals ?? 0,
+      blocks: statTotals.blocks ?? 0,
+      turnovers: statTotals.turnovers ?? 0,
+      total,
+      games_completed: teamResult?.games_completed ?? 0,
+      games_in_progress: teamResult?.games_in_progress ?? 0,
+      games_remaining: teamResult?.games_remaining ?? 0,
+      finish_position: teamResult?.finish_position ?? null,
+    };
+  }
+
+  function getPlayerStat(playerId: number) {
+    const stat = playerStatsMap.get(playerId) as any;
+    const sport = selectedSlate?.sport ?? "nba";
+    const statColumns = getStatColumns(sport);
+
+    const statValues: Record<string, number> = {};
+    statColumns.forEach((column) => {
+      statValues[column.key] = Number(stat?.[column.key] ?? 0);
+    });
+
+    return {
+      ...statValues,
+      points: statValues.points ?? 0,
+      rebounds: statValues.rebounds ?? 0,
+      assists: statValues.assists ?? 0,
+      steals: statValues.steals ?? 0,
+      blocks: statValues.blocks ?? 0,
+      turnovers: statValues.turnovers ?? 0,
+      fantasy_points: stat?.fantasy_points ?? 0,
+    };
+  }
+
+  function getRawPlayerStat(playerId: number) {
+    return playerStatsMap.get(playerId) ?? null;
+  }
+
+  // ===== LIVE WIN % HELPERS =====
+
+  function parseNbaIsoClockMinutes(gameClock?: string | null) {
+    if (!gameClock) return null;
+
+    const match = gameClock.match(/^PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
+    if (!match) return null;
+
+    const minutes = Number(match[1] ?? 0);
+    const seconds = Number(match[2] ?? 0);
+
+    return minutes + seconds / 60;
+  }
+
+  function parseStatusTextMinutesRemaining(statusText?: string | null) {
+    if (!statusText) return null;
+
+    const trimmed = statusText.trim();
+
+    if (/final/i.test(trimmed)) return 0;
+
+    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
+    if (!match) return null;
+
+    const period = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const seconds = Number(match[3] ?? 0);
+
+    if (!Number.isFinite(period)) return null;
+
+    const clockMinutes = minutes + seconds / 60;
+    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
+
+    return periodsRemainingAfterCurrent * 12 + clockMinutes;
+  }
+
+  function getMinutesRemainingForPlayer(stat?: PlayerStat) {
+    const gameStatus = stat?.game_status ?? null;
+
+    if (gameStatus === 3) return 0;
+
+    const period = stat?.period ?? null;
+    const clockMinutes = parseNbaIsoClockMinutes(stat?.game_clock);
+
+    if (gameStatus === 2 && period && clockMinutes !== null) {
+      const regulationPeriods = 4;
+      const periodsRemainingAfterCurrent = Math.max(
+        regulationPeriods - period,
+        0
+      );
+
+      return periodsRemainingAfterCurrent * 12 + clockMinutes;
+    }
+
+    const statusTextMinutes = parseStatusTextMinutesRemaining(
+      stat?.game_status_text
+    );
+
+    if (statusTextMinutes !== null) return statusTextMinutes;
+
+    return 48;
+  }
+
+  function getLiveProjectedTeamTotal(teamId: number) {
+    const stats = getTeamStats(teamId);
+
+    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+      return Number(stats.total ?? 0);
+    }
+
+    if (selectedSlate?.is_locked) {
+      return Number(stats.total ?? 0);
+    }
+
+    const teamPlayers = getPlayersForTeam(teamId);
+
+    return teamPlayers.reduce((sum, player) => {
+      const stat = playerStatsMap.get(player.id);
+
+      const current = Number(stat?.fantasy_points ?? 0);
+
+      const projection =
+        playerProjections?.[player.id]?.projection ??
+        playerAverageMap.get(player.id) ??
+        0;
+
+      const minutesRemaining = getMinutesRemainingForPlayer(stat);
+      const remainingFactor = minutesRemaining / 48;
+
+      const projected =
+        minutesRemaining <= 0
+          ? current
+          : current + projection * remainingFactor;
+
+      return sum + projected;
+    }, 0);
+  }
+
+  function computeWinPctMap() {
+    const map = new Map<number, number>();
+
+    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+      return map;
+    }
+
+    if (selectedSlate?.is_locked) {
+      const rows = orderedTeamsForSlate
+        .map((team) => ({
+          teamId: team.id,
+          total: Number(getTeamStats(team.id).total ?? 0),
+        }))
+        .sort((a, b) => b.total - a.total);
+
+      const winnerTeamId = rows[0]?.teamId ?? null;
+
+      rows.forEach((row) => {
+        map.set(row.teamId, row.teamId === winnerTeamId ? 100 : 0);
+      });
+
+      return map;
+    }
+
+    const k = 20;
+
+    const teams = orderedTeamsForSlate.map((team) => ({
+      teamId: team.id,
+      projected: getLiveProjectedTeamTotal(team.id),
+    }));
+
+    const weights = teams.map((t) => ({
+      ...t,
+      weight: Math.exp(t.projected / k),
+    }));
+
+    const totalWeight = weights.reduce((sum, t) => sum + t.weight, 0);
+
+    weights.forEach((t) => {
+      let pct = (t.weight / totalWeight) * 100;
+      pct = Math.max(5, Math.min(95, pct));
+      map.set(t.teamId, pct);
+    });
+
+    return map;
+  }
+
+  const liveWinPctMap = computeWinPctMap();
+
+  function getEffectiveRosterSlots() {
+    if (rosterSlots.length > 0) {
+      return rosterSlots;
+    }
+
+    const activeSport = selectedSlate?.sport ?? selectedSport;
+
+    if (activeSport === "golf") {
+      return [
+        {
+          sport: "golf",
+          position: "GOLFER",
+          slot_count: 4,
+          display_order: 1,
+        },
+      ];
+    }
+
+    return [
+      { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+      { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+    ];
+  }
+
+  function getRosterTotalSlots() {
+    return getEffectiveRosterSlots().reduce(
+      (sum, slot) => sum + slot.slot_count,
+      0
+    );
+  }
+
+  function countPlayersByPosition(playerList: Player[]) {
+    const map = new Map<string, number>();
+    playerList.forEach((player) => {
+      map.set(
+        player.position_group,
+        (map.get(player.position_group) ?? 0) + 1
+      );
+    });
+    return map;
+  }
+
+  function getDraftNeeds(teamId: number) {
+    const teamPlayers = getPlayersForTeam(teamId);
+    const counts = countPlayersByPosition(teamPlayers);
+    const slots = getEffectiveRosterSlots();
+
+    const parts: string[] = [];
+
+    slots.forEach((slot) => {
+      const have = counts.get(slot.position) ?? 0;
+      const needed = Math.max(0, slot.slot_count - have);
+      if (needed > 0) parts.push(`${needed} ${slot.position}`);
+    });
+
+    if (parts.length === 0) {
+      return "Roster full";
+    }
+
+    return `Needs ${parts.join(" • ")}`;
+  }
+
+  const dailySummary = useMemo(() => {
+    const rows = orderedTeamsForSlate.map((team) => {
+      const stats = getTeamStats(team.id);
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        total: Number(stats.total ?? 0),
+        games_completed: Number(stats.games_completed ?? 0),
+        games_in_progress: Number(stats.games_in_progress ?? 0),
+        games_remaining: Number(stats.games_remaining ?? 0),
+        finish_position: stats.finish_position,
+        is_participating: (team as any).is_participating !== false,
+      };
+    });
+
+    const leader =
+      rows
+        .filter((row) => row.is_participating)
+        .sort((a, b) =>
+        (selectedSlate?.sport ?? selectedSport) === "golf"
+          ? a.total - b.total
+          : b.total - a.total,
+      )[0] ?? null;
+
+    return {
+      leader,
+      rows,
+    };
+  }, [orderedTeamsForSlate, teamResultsState, playerStatsState, lineupsState]);
+
+  function getTeamAssignmentStatus(teamId: number, player: Player) {
+    const team = orderedTeamsForSlate.find((item) => item.id === teamId);
+    const teamPlayers = getPlayersForTeam(teamId);
+    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const isParticipating = (team as any)?.is_participating !== false;
+
+    if (!selectedSlateIdNumber) {
+      return { canAssign: false, reason: "No slate selected" };
+    }
+    if (selectedSlate?.is_locked) {
+      return { canAssign: false, reason: "Slate locked" };
+    }
+    if (!isParticipating) return { canAssign: false, reason: "Out" };
+    if (ownerTeamId === teamId) {
+      return { canAssign: false, reason: "Already here" };
+    }
+
+    const nextPlayers = [...teamPlayers, player];
+    const totalSlots = getRosterTotalSlots();
+
+    if (nextPlayers.length > totalSlots) {
+      return { canAssign: false, reason: "Lineup full" };
+    }
+
+    const nextCounts = countPlayersByPosition(nextPlayers);
+    const slots = getEffectiveRosterSlots();
+
+    for (const slot of slots) {
+      const count = nextCounts.get(slot.position) ?? 0;
+      if (count > slot.slot_count) {
+        return { canAssign: false, reason: `Too many ${slot.position}` };
+      }
+    }
+
+    return { canAssign: true, reason: "" };
+  }
+
+  async function loadSlateLineups(nextSlateId: number) {
+    const loadId = ++latestSlateLoadRef.current;
+
+    setLineupsState([]);
+    setPlayerStatsState([]);
+    setTeamResultsState([]);
+
+    try {
+      setIsSlateLoading(true);
+      setMessage("");
+      setSaveMessage("");
+
+      const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
+        fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
+        fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
+        fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
+      ]);
+
+      const lineupsResult = await lineupsResponse.json();
+      const statsResult = await statsResponse.json();
+      const resultsResult = await resultsResponse.json();
+
+      if (loadId !== latestSlateLoadRef.current) return;
+
+      if (!lineupsResponse.ok) {
+        setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
+        return;
+      }
+
+      if (!statsResponse.ok) {
+        setSaveMessage(statsResult.error || "Failed to load player stats.");
+        return;
+      }
+
+      if (!resultsResponse.ok) {
+        setSaveMessage(resultsResult.error || "Failed to load team results.");
+        return;
+      }
+
+      setLineupsState(lineupsResult.lineups ?? []);
+      setPlayerStatsState(statsResult.playerStats ?? []);
+      setTeamResultsState(resultsResult.teamResults ?? []);
+      setSaveMessage("");
+    } catch (error) {
+      if (loadId !== latestSlateLoadRef.current) return;
+      console.error(error);
+      setSaveMessage("Something went wrong while loading the slate.");
+    } finally {
+      if (loadId === latestSlateLoadRef.current) {
+        setIsSlateLoading(false);
+      }
+    }
+
+    try {
+      setIsAvailabilityLoading(true);
+
+      const availabilityResponse = await fetch(
+        `/api/slate-availability?slateId=${nextSlateId}`,
+        { cache: "no-store" }
+      );
+
+      const availabilityResult = await availabilityResponse.json();
+
+      if (loadId !== latestSlateLoadRef.current) return;
+
+      if (!availabilityResponse.ok) {
+        console.error(
+          availabilityResult.error || "Failed to load slate availability."
+        );
+        setAvailablePlayerIdsForSlate([]);
+        return;
+      }
+
+      setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+    } catch (error) {
+      if (loadId !== latestSlateLoadRef.current) return;
+      console.error(error);
+      setAvailablePlayerIdsForSlate([]);
+    } finally {
+      if (loadId === latestSlateLoadRef.current) {
+        setIsAvailabilityLoading(false);
+      }
+    }
+  }
+
+  async function refreshStatsForSelectedSlate(isSilent = false) {
+    if (!selectedSlateIdNumber) {
+      if (!isSilent) alert("No slate selected.");
+      return;
+    }
+
+    try {
+      setIsRefreshingStats(true);
+      if (!isSilent) {
+        setMessage("");
+        setSaveMessage("");
+      }
+
+      const refreshEndpoint =
+        selectedSlate?.sport === "nfl"
+          ? "/api/refresh-stats-nfl"
+          : selectedSlate?.sport === "golf"
+            ? "/api/refresh-stats-golf"
+            : "/api/refresh-stats";
+
+      const refreshResponse = await fetch(refreshEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slateId: selectedSlateIdNumber }),
+        cache: "no-store",
+      });
+
+      const refreshResult = await refreshResponse.json();
+
+      if (!refreshResponse.ok) {
+        if (!isSilent) {
+          alert(refreshResult.error || "Failed to refresh stats.");
+        } else {
+          console.error(refreshResult.error || "Failed to refresh stats.");
+        }
+        return;
+      }
+
+      setLastRefreshSummary({
+        gamesFound: refreshResult.gamesFound,
+        playerStatsUpserted: refreshResult.playerStatsUpserted,
+        teamResultsUpserted: refreshResult.teamResultsUpserted,
+      });
+
+      const [statsResponse, resultsResponse] = await Promise.all([
+        fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, {
+          cache: "no-store",
+        }),
+        fetch(`/api/team-results?slateId=${selectedSlateIdNumber}`, {
+          cache: "no-store",
+        }),
+      ]);
+
+      const statsResult = await statsResponse.json();
+      const resultsResult = await resultsResponse.json();
+
+      setPlayerStatsState(statsResult.playerStats ?? []);
+      setTeamResultsState(resultsResult.teamResults ?? []);
+      setLastUpdatedAt(new Date().toISOString());
+
+      if (!isSilent) {
+        setSaveMessage("Stats refreshed successfully.");
+      }
+
+      fetch(`/api/slate-availability?slateId=${selectedSlateIdNumber}`, {
+        cache: "no-store",
+      })
+        .then((res) => res.json())
+        .then((availabilityResult) => {
+          setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    } catch (error) {
+      console.error(error);
+      if (!isSilent) alert("Something went wrong while refreshing stats.");
+    } finally {
+      setIsRefreshingStats(false);
+    }
+  }
+
+  async function persistLineupForTeam(
+    teamId: number,
+    playerList: Player[],
+    successMessage?: string,
+    options?: {
+      allowEmpty?: boolean;
+      notifyNextDrafter?: boolean;
+    }
+  ) {
+    setSaveMessage("");
+    setMessage("");
+
+    if (!selectedSlateIdNumber) {
+      setSaveMessage("Please choose a slate before saving.");
+      return false;
+    }
+    if (!participatingTeamIds.has(teamId)) {
+      setSaveMessage("That team is not participating in this slate.");
+      return false;
+    }
+    if (selectedSlate?.is_locked) {
+      setSaveMessage("This slate is locked.");
+      return false;
+    }
+    if (!options?.allowEmpty && playerList.length === 0) {
+      setSaveMessage("Select at least 1 player before saving.");
+      return false;
+    }
+
+    const totalSlots = getRosterTotalSlots();
+    const slots = getEffectiveRosterSlots();
+    const listCounts = countPlayersByPosition(playerList);
+
+    if (playerList.length > totalSlots) {
+      setSaveMessage(`A lineup can have at most ${totalSlots} players.`);
+      return false;
+    }
+
+    const overLimitSlot = slots.find(
+      (slot) => (listCounts.get(slot.position) ?? 0) > slot.slot_count
+    );
+
+    if (overLimitSlot) {
+      const limitDescription = slots
+        .map((slot) => `${slot.slot_count} ${slot.position}`)
+        .join(" and ");
+      setSaveMessage(`A lineup can have at most ${limitDescription}.`);
+      return false;
+    }
+
+    try {
+      setIsSaving(true);
+
+      const response = await fetch("/api/lineups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slateId: selectedSlateIdNumber,
+          teamId,
+          playerIds: playerList.map((player) => player.id),
+          notifyNextDrafter: options?.notifyNextDrafter === true,
+        }),
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setSaveMessage(result.error || "Failed to save lineup.");
+        return false;
+      }
+
+      setLineupsState((prev) => {
+        const otherTeams = prev.filter((lineup) => lineup.team_id !== teamId);
+        return [
+          ...otherTeams,
+          {
+            team_id: teamId,
+            player_ids: playerList.map((player) => player.id),
+          },
+        ];
+      });
+
+      if (successMessage) setSaveMessage(successMessage);
+      return true;
+    } catch (error) {
+      console.error(error);
+      setSaveMessage("Something went wrong while saving the lineup.");
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
+    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
+    if (!targetTeam) return;
+
+    const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
+    if (!assignmentStatus.canAssign) {
+      setSaveMessage(assignmentStatus.reason);
+      return;
+    }
+
+    const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const targetPlayers = getPlayersForTeam(targetTeamId);
+
+    if (currentOwnerTeamId === targetTeamId) {
+      setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
+      return;
+    }
+
+    try {
+      setIsAssigningPlayer(true);
+
+      if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
+        const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
+          (item) => item.id !== player.id
+        );
+
+        const removed = await persistLineupForTeam(
+          currentOwnerTeamId,
+          ownerPlayers,
+          undefined,
+          { allowEmpty: true }
+        );
+
+        if (!removed) return;
+      }
+
+      const isAdminProxyPick =
+        currentUser?.role === "admin" &&
+        targetTeamId !== currentUser.teamId;
+
+      const shouldNotifyNextDrafter = isAdminProxyPick
+        ? notifyNextDrafterForProxyPicks
+        : true;
+
+      const added = await persistLineupForTeam(
+        targetTeamId,
+        [...targetPlayers, player],
+        `${player.name} drafted to ${targetTeam.name}.`,
+        {
+          notifyNextDrafter: shouldNotifyNextDrafter,
+        }
+      );
+
+      if (!added) return;
+
+      setDraftingPlayer(null);
+      setSearchTerm("");
+
+      if (selectedSlateIdNumber) {
+        void loadSlateLineups(selectedSlateIdNumber);
+      }
+    } finally {
+      setIsAssigningPlayer(false);
+    }
+  }
+
+  async function handleRemovePlayerFromTeam(player: Player) {
+    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+    const ownerTeam = getOwnerTeamForPlayer(player.id);
+
+    if (!ownerTeamId || !ownerTeam) return;
+
+    try {
+      setIsAssigningPlayer(true);
+
+      const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
+        (item) => item.id !== player.id
+      );
+
+      const removed = await persistLineupForTeam(
+        ownerTeamId,
+        nextPlayers,
+        `${player.name} removed from ${ownerTeam.name}.`,
+        { allowEmpty: true }
+      );
+
+      if (!removed) return;
+
+      setDraftingPlayer(null);
+      setSearchTerm("");
+
+      if (selectedSlateIdNumber) {
+        void loadSlateLineups(selectedSlateIdNumber);
+      }
+    } finally {
+      setIsAssigningPlayer(false);
+    }
+  }
+
+  const pillBase =
+    "rounded-full border px-3 py-1.5 text-xs font-medium transition";
+  const activePill = "border-sky-300 bg-sky-100 text-sky-900";
+  const inactivePill =
+    "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
+
+  const scoreTableCellClass = compactView
+    ? "px-0 py-0 text-xs"
+    : "px-3 py-2 text-sm";
+
+  const scoreTableHeaderClass = compactView
+    ? "border-b border-slate-200 px-0 py-0 font-semibold"
+    : "border-b border-slate-200 px-3 py-2 font-semibold";
+
+  const ownerTeamForDraftingPlayer = draftingPlayer
+    ? getOwnerTeamForPlayer(draftingPlayer.id)
+    : null;
+
+  function inspectPlayerFromSlot(player: Player) {
+    setIsInspectingPlayerFromSlot(true);
+    setDraftingPlayer(player);
+  }
+
+  const setDraftingPlayerWithSlotRestore:
+    React.Dispatch<React.SetStateAction<Player | null>> = (
+      value
+    ) => {
+      setDraftingPlayer((currentPlayer) => {
+        const nextPlayer =
+          typeof value === "function"
+            ? value(currentPlayer)
+            : value;
+
+        if (!nextPlayer) {
+          setIsInspectingPlayerFromSlot(false);
+        }
+
+        return nextPlayer;
+      });
+    };
+
+  async function handleDraftToTargetSlot(
+    player: Player
+  ) {
+    if (!targetDraftSlot) return;
+
+    await handleAssignPlayerToTeam(
+      player,
+      targetDraftSlot.teamId
+    );
+
+    setDraftingPlayer(null);
+    setIsInspectingPlayerFromSlot(false);
+    setTargetDraftSlot(null);
+  }
+
+  const lineupControls = (
+    <LineupControls
+      selectedSlateId={selectedSlateId}
+      setSelectedSlateId={setSelectedSlateId}
+      slates={filteredSlates}
+      selectedSlate={selectedSlate}
+      selectedSlateDisplay={selectedSlateDisplay}
+      selectedSlateIdNumber={selectedSlateIdNumber}
+      isRefreshingStats={isRefreshingStats}
+      refreshStatsForSelectedSlate={
+        refreshStatsForSelectedSlate
+      }
+      autoRefreshEnabled={autoRefreshEnabled}
+      setAutoRefreshEnabled={
+        setAutoRefreshEnabled
+      }
+      compactView={compactView}
+      setCompactView={setCompactView}
+      hasMounted={hasMounted}
+      isSlateLoading={isSlateLoading}
+      lastUpdatedAt={lastUpdatedAt}
+      seasons={seasons}
+      selectedSeason={selectedSeason}
+      setSelectedSeason={setSelectedSeason}
+    />
+  );
+
+  return (
+    <div className="space-y-6">
+      {viewMode === "draft"
+        ? lineupControls
+        : null}
+
+      {message ? (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+          {message}
+        </div>
+      ) : null}
+
+      {currentUser?.role === "admin" && viewMode === "draft" ? (
+        <section className="draft-admin-toggle">
+          <div>
+            <strong>Proxy Pick Notifications</strong>
+            <span>
+              Notify the next drafter after an admin-entered pick.
+            </span>
+          </div>
+
+          <label className="draft-admin-switch">
+            <input
+              type="checkbox"
+              checked={notifyNextDrafterForProxyPicks}
+              onChange={(event) =>
+                setNotifyNextDrafterForProxyPicks(
+                  event.target.checked
+                )
+              }
+            />
+
+            <span aria-hidden="true" />
+
+            <em>
+              {notifyNextDrafterForProxyPicks
+                ? "On"
+                : "Off"}
+            </em>
+          </label>
+        </section>
+      ) : null}
+
+      {saveMessage ? (
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm ${
+            saveMessage.toLowerCase().includes("success") ||
+            saveMessage.toLowerCase().includes("loaded") ||
+            saveMessage.toLowerCase().includes("drafted") ||
+            saveMessage.toLowerCase().includes("removed") ||
+            saveMessage.toLowerCase().includes("refreshed")
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      ) : null}
+
+      {viewMode === "draft" ? (
+        <>
+          <section className="draft-page-tabs">
+            <button
+              type="button"
+              onClick={() => setDraftPageTab("lineup")}
+              className={`draft-page-tab ${
+                draftPageTab === "lineup"
+                  ? "draft-page-tab--active"
+                  : ""
+              }`}
+            >
+              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
+              <span>Lineup</span>
+
+              {currentUser?.teamId ? (
+                <span className="draft-page-tab-count">
+                  {getPlayersForTeam(currentUser.teamId).length}/{getRosterTotalSlots()}
+                </span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDraftPageTab("players")}
+              className={`draft-page-tab ${
+                draftPageTab === "players"
+                  ? "draft-page-tab--active"
+                  : ""
+              }`}
+            >
+              <span aria-hidden="true">🔎</span>
+              <span>Players</span>
+            </button>
+          </section>
+
+          {draftPageTab === "lineup" ? (
+            <DraftRosterCourt
+              teamId={currentUser?.teamId ?? null}
+              teamName={currentUser?.displayName ?? null}
+              players={
+                currentUser?.teamId
+                  ? getPlayersForTeam(currentUser.teamId)
+                  : []
+              }
+              rosterSlots={rosterSlots}
+              isLocked={Boolean(selectedSlate?.is_locked)}
+              setDraftingPlayer={setDraftingPlayer}
+              setTargetDraftSlot={setTargetDraftSlot}
+            />
+          ) : (
+            <PlayerPool
+              players={players}
+              filteredPlayers={filteredPlayers}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              positionFilter={positionFilter}
+              setPositionFilter={setPositionFilter}
+              onSlateOnly={onSlateOnly}
+              setOnSlateOnly={setOnSlateOnly}
+              isAvailabilityLoading={isAvailabilityLoading}
+              availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+              availablePlayerIdSet={availablePlayerIdSet}
+              playerAverageMap={playerAverageMap}
+              playerProjections={playerProjections}
+              getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+              setDraftingPlayer={setDraftingPlayer}
+              isAssigningPlayer={isAssigningPlayer}
+              pillBase={pillBase}
+              activePill={activePill}
+              inactivePill={inactivePill}
+              rosterSlots={rosterSlots}
+            />
+          )}
+
+          <LeagueLineupCards
+            teams={orderedTeamsForSlate}
+            currentTeamId={currentUser?.teamId ?? null}
+            getPlayersForTeam={getPlayersForTeam}
+            getPlayerProjectionScore={
+              getPlayerProjectionScore
+            }
+            getDraftNeeds={getDraftNeeds}
+            rosterSlots={rosterSlots}
+            setDraftingPlayer={setDraftingPlayer}
+            setTargetDraftSlot={setTargetDraftSlot}
+            isLocked={Boolean(
+              selectedSlate?.is_locked
+            )}
+          />
+        </>
+      ) : (
+        <ScoresDashboard
+          teams={orderedTeamsForSlate}
+          selectedSlate={selectedSlate}
+          rosterSlots={rosterSlots}
+          lastRefreshSummary={lastRefreshSummary}
+          getPlayersForTeam={getPlayersForTeam}
+          getTeamStats={getTeamStats}
+          getPlayerStat={getPlayerStat}
+          getRawPlayerStat={getRawPlayerStat}
+          getLiveProjectedTeamTotal={
+            getLiveProjectedTeamTotal
+          }
+          getPregameProjectedTeamTotal={
+            getPregameProjectedTeamTotal
+          }
+          liveWinPctMap={liveWinPctMap}
+          playerProjections={playerProjections}
+          controls={lineupControls}
+          setProfilePlayer={setProfilePlayer}
+        />
+      )}
+
+      <SlotDraftModal
+        targetDraftSlot={targetDraftSlot}
+        setTargetDraftSlot={setTargetDraftSlot}
+        players={players}
+        playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
+        availablePlayerIdSet={availablePlayerIdSet}
+        isAvailabilityLoading={isAvailabilityLoading}
+        getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        onInspectPlayer={inspectPlayerFromSlot}
+        hidden={isInspectingPlayerFromSlot}
+        isAssigningPlayer={isAssigningPlayer}
+        isSaving={isSaving}
+      />
+
+      <ReadOnlyPlayerModal
+        player={profilePlayer}
+        setPlayer={setProfilePlayer}
+        playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
+        golfStat={
+          profilePlayer
+            ? getRawPlayerStat(profilePlayer.id)
+            : null
+        }
+      />
+
+      <DraftPlayerModal
+        draftingPlayer={draftingPlayer}
+        setDraftingPlayer={
+          setDraftingPlayerWithSlotRestore
+        }
+        playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
+        availablePlayerIdSet={availablePlayerIdSet}
+        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+        isAssigningPlayer={isAssigningPlayer}
+        isSaving={isSaving}
+        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+        draftingPlayerHistory={draftingPlayerHistory}
+        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+        orderedTeamsForSlate={orderedTeamsForSlate}
+        getTeamStats={getTeamStats}
+        getTeamAssignmentStatus={getTeamAssignmentStatus}
+        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        targetDraftSlot={targetDraftSlot}
+        handleDraftToTargetSlot={
+          handleDraftToTargetSlot
+        }
+      />
+    </div>
+  );
+}
+
+
+============================================================
+FILE: components/lineups/PlayerModal.tsx
+============================================================
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import type { OrderedTeam, Player } from "@/components/lineups/types";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { getStatColumns } from "@/lib/statColumns";
+
+type TeamStats = {
+  totalPlayers: number;
+  guards: number;
+  fcPlayers: number;
+};
+
+type AssignmentStatus = {
+  canAssign: boolean;
+  reason: string;
+};
+
+type Profile = {
+  player?: {
+    id: number;
+    name: string;
+    position_group: string | null;
+  };
+  summary: {
+    timesDrafted: number;
+    wins: number;
+    runnerUps: number;
+    winRate: number | null;
+    draftedMostBy: {
+      teamName: string;
+      count: number;
+    } | null;
+    draftedByBreakdown: Array<{
+      teamName: string;
+      count: number;
+    }>;
+    averageFantasyPoints: number | null;
+    bestFantasyPoints: number | null;
+    worstFantasyPoints: number | null;
+    averageFinish?: number | null;
+    projectionSampleSize?: number;
+    averageProjectionDifference?: number | null;
+    exceededProjectionCount?: number;
+    missedProjectionCount?: number;
+    matchedProjectionCount?: number;
+  };
+  recentHistory: Array<{
+    slateId?: number;
+    slateLabel: string;
+    teamName: string;
+    finishPosition: number | null;
+    stats: Record<string, number>;
+    fantasyPoints: number | null;
+    projectedFantasyPoints: number | null;
+    projectionDifference: number | null;
+    projectionConfidence: string | null;
+    projectionSource: string | null;
+    projectedAt: string | null;
+  }>;
+};
+
+type SharedProps = {
+  player: Player | null;
+  onClose: () => void;
+  playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
+};
+
+type ViewProps = SharedProps & {
+  mode: "view";
+};
+
+type DraftProps = SharedProps & {
+  mode: "draft";
+  availablePlayerIdSet: Set<number>;
+  ownerTeam: OrderedTeam | null;
+  isAssigningPlayer: boolean;
+  isSaving: boolean;
+  isExternalLoading?: boolean;
+  orderedTeamsForSlate: OrderedTeam[];
+  getTeamStats: (teamId: number) => TeamStats;
+  getTeamAssignmentStatus: (teamId: number, player: Player) => AssignmentStatus;
+  getOwnerTeamIdForPlayer: (playerId: number) => number | null;
+  handleAssignPlayerToTeam: (player: Player, teamId: number) => Promise<void>;
+  targetDraftSlot?: {
+    teamId: number;
+    teamName: string;
+    positionGroup: string;
+  } | null;
+  handleDraftToTargetSlot?: (player: Player) => Promise<void>;
+  handleRemovePlayerFromTeam: (player: Player) => Promise<void>;
+};
+
+type Props = ViewProps | DraftProps;
+
+function fmt(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  return Number(value).toFixed(digits);
+}
+
+function signedFmt(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  const formatted = Math.abs(Number(value)).toFixed(digits);
+
+  if (value > 0) {
+    return `+${formatted}`;
+  }
+
+  if (value < 0) {
+    return `-${formatted}`;
+  }
+
+  return formatted;
+}
+
+function ordinal(position: number | null) {
+  if (!position) return "—";
+
+  const mod100 = position % 100;
+
+  if (mod100 >= 11 && mod100 <= 13) {
+    return `${position}th`;
+  }
+
+  const suffix =
+    position % 10 === 1
+      ? "st"
+      : position % 10 === 2
+        ? "nd"
+        : position % 10 === 3
+          ? "rd"
+          : "th";
+
+  return `${position}${suffix}`;
+}
+
+function resultEmoji(position: number | null) {
+  if (position === 1) return "🥇";
+  if (position === 2) return "🥈";
+  if (position === 3) return "🥉";
+  return "";
+}
+
+function formatSlateLabel(label: string) {
+  const dateMatches = label.match(/\d{4}-\d{2}-\d{2}/g);
+
+  if (!dateMatches || dateMatches.length === 0) {
+    return label;
+  }
+
+  const parseDate = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  };
+
+  const monthName = (date: Date) =>
+    date.toLocaleDateString("en-US", {
+      month: "short",
+      timeZone: "UTC",
+    });
+
+  const start = parseDate(dateMatches[0]);
+  const startMonth = monthName(start);
+  const startDay = start.getUTCDate();
+
+  if (dateMatches.length === 1) {
+    return `${startMonth} ${startDay}`;
+  }
+
+  const end = parseDate(dateMatches[dateMatches.length - 1]);
+  const endMonth = monthName(end);
+  const endDay = end.getUTCDate();
+
+  if (
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth()
+  ) {
+    return `${startMonth} ${startDay}-${endDay}`;
+  }
+
+  return `${startMonth} ${startDay}-${endMonth} ${endDay}`;
+}
+
+function projectionSourceLabel(source: string | null | undefined) {
+  if (!source) {
+    return "No saved source";
+  }
+
+  if (source === "league") {
+    return "League data";
+  }
+
+  if (source === "nbaSeasonAverage") {
+    return "NBA season average";
+  }
+
+  if (source === "fallback") {
+    return "Fallback";
+  }
+
+  return source
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+export default function PlayerModal(props: Props) {
+  const { player, onClose, playerAverageMap, playerProjections } = props;
+  const { selectedSport } = useSelectedSport();
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [season, setSeason] = useState<string>("2026");
+
+  useEffect(() => {
+    if (!player) {
+      setProfile(null);
+      setIsProfileLoading(false);
+      return;
+    }
+
+    const currentPlayer = player;
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        setIsProfileLoading(true);
+
+        const response = await fetch(
+          `/api/player-league-profile?playerId=${currentPlayer.id}&season=${season}&sport=${selectedSport}`,
+          {
+            cache: "no-store",
+          },
+        );
+
+        const result = await response.json();
+
+        if (!active) return;
+
+        if (!response.ok) {
+          console.error(result.error || "Failed to load player profile.");
+          setProfile(null);
+          return;
+        }
+
+        setProfile(result as Profile);
+      } catch (error) {
+        console.error("Failed to load player profile", error);
+
+        if (active) {
+          setProfile(null);
+        }
+      } finally {
+        if (active) {
+          setIsProfileLoading(false);
+        }
+      }
+    }
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [player, season]);
+
+  const draftedByRows = useMemo(() => {
+    if (!profile) return [];
+
+    const rows = [...profile.summary.draftedByBreakdown].sort(
+      (a, b) => b.count - a.count,
+    );
+
+    const maximum = Math.max(...rows.map((row) => row.count), 1);
+
+    return rows.map((row) => ({
+      ...row,
+      percentage: (row.count / maximum) * 100,
+    }));
+  }, [profile]);
+
+  if (!player) return null;
+
+  const currentPlayer = player;
+
+  const projectionMeta = playerProjections?.[currentPlayer.id];
+
+  const projectionScore =
+    projectionMeta?.projection ??
+    playerAverageMap.get(currentPlayer.id) ??
+    null;
+
+  const projectionBadges = projectionMeta?.badges ?? [];
+
+  const projectionConfidence = projectionMeta?.confidence ?? null;
+
+  const projectionSource =
+    projectionMeta?.source === "league"
+      ? "League data"
+      : projectionMeta?.source === "nbaSeasonAverage"
+        ? "NBA season average"
+        : "Fallback";
+
+  const nbaAverage = projectionMeta?.nbaSeasonAverage ?? null;
+
+  const isDraftMode = props.mode === "draft";
+  const ownerTeam = isDraftMode ? props.ownerTeam : null;
+
+  const isOnSlate =
+    isDraftMode && props.availablePlayerIdSet.has(currentPlayer.id);
+
+  const isBusy = isDraftMode && (props.isAssigningPlayer || props.isSaving);
+
+  const isLoading =
+    isProfileLoading || (isDraftMode && props.isExternalLoading === true);
+
+  function renderHeader() {
+    return (
+      <header className="player-modal-header">
+        <button
+          type="button"
+          onClick={onClose}
+          className="player-modal-close"
+          aria-label="Close player profile"
+        >
+          ×
+        </button>
+
+        <div className="player-modal-identity">
+          <div className="player-modal-headshot-wrap">
+            <PlayerHeadshot
+              nbaPlayerId={currentPlayer.nba_player_id}
+              nflPlayerId={currentPlayer.nfl_player_id}
+              playerName={currentPlayer.name}
+              size="xl"
+              className="player-modal-headshot"
+            />
+          </div>
+
+          <div className="min-w-0">
+            <div className="player-modal-kicker">
+              {isDraftMode ? "Draft decision" : "Player profile"}
+            </div>
+
+            <h2>{currentPlayer.name}</h2>
+
+            <div className="player-modal-subtitle">
+              <span>{currentPlayer.position_group}</span>
+
+              {nbaAverage !== null ? (
+                <>
+                  <span aria-hidden="true">•</span>
+                  <span>Reg. Season {fmt(nbaAverage)}</span>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="player-modal-highlight-grid">
+          <div className="player-modal-highlight player-modal-highlight--primary">
+            <span>Projection</span>{" "}
+            <strong>
+              {fmt(projectionScore)}
+              {projectionBadges.includes("trophy") ? " 🏆" : ""}
+              {projectionBadges.includes("hot") ? " 🔥" : ""}
+              {projectionBadges.includes("cold") ? " 🧊" : ""}
+            </strong>
+            <small>
+              {projectionConfidence
+                ? `${String(projectionConfidence).toUpperCase()} confidence`
+                : projectionSource}
+            </small>
+          </div>
+
+          {isDraftMode ? (
+            <div className="player-modal-highlight">
+              <span>Status</span>
+
+              <strong>
+                {ownerTeam
+                  ? ownerTeam.name
+                  : isOnSlate
+                    ? "Available"
+                    : "Not playing"}
+              </strong>
+
+              <small>
+                {ownerTeam
+                  ? "Current roster"
+                  : isOnSlate
+                    ? "Playing this slate"
+                    : "Not scheduled"}
+              </small>
+            </div>
+          ) : null}
+        </div>
+      </header>
+    );
+  }
+
+  function renderDraftActions() {
+    if (!isDraftMode) {
+      return null;
+    }
+
+    return (
+      <section className="player-modal-actions">
+        {props.targetDraftSlot ? (
+          <button
+            type="button"
+            disabled={isBusy}
+            onClick={() => {
+              if (!props.handleDraftToTargetSlot) {
+                return;
+              }
+
+              void props.handleDraftToTargetSlot(currentPlayer);
+            }}
+            className="mb-4 flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 py-4 text-base font-bold text-white shadow transition hover:bg-emerald-700 disabled:opacity-60"
+          >
+            {isBusy
+              ? "Drafting..."
+              : `Draft to ${props.targetDraftSlot.positionGroup} Slot`}
+          </button>
+        ) : null}
+
+        <div className="player-modal-actions-heading">
+          <div>
+            <span>Roster action</span>
+
+            <strong>
+              {ownerTeam ? `Currently on ${ownerTeam.name}` : "Choose a lineup"}
+            </strong>
+          </div>
+
+          {ownerTeam ? (
+            <button
+              type="button"
+              onClick={() =>
+                void props.handleRemovePlayerFromTeam(currentPlayer)
+              }
+              disabled={isBusy}
+              className="player-modal-remove"
+            >
+              {isBusy ? "Working…" : `Remove from ${ownerTeam.name}`}
+            </button>
+          ) : null}
+        </div>
+
+        <div className="player-modal-team-strip">
+          {props.orderedTeamsForSlate.map((team) => {
+            const teamStats = props.getTeamStats(team.id);
+
+            const status = props.getTeamAssignmentStatus(
+              team.id,
+              currentPlayer,
+            );
+
+            const isCurrentOwner =
+              props.getOwnerTeamIdForPlayer(currentPlayer.id) === team.id;
+
+            const isParticipating = team.is_participating !== false;
+
+            return (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() =>
+                  void props.handleAssignPlayerToTeam(currentPlayer, team.id)
+                }
+                disabled={!status.canAssign || isBusy || isCurrentOwner}
+                className={`player-modal-team-action ${
+                  isCurrentOwner
+                    ? "player-modal-team-action--current"
+                    : status.canAssign
+                      ? "player-modal-team-action--available"
+                      : ""
+                }`}
+              >
+                <TeamAvatar teamName={team.name} size="sm" />
+
+                <span>
+                  <strong>{team.name}</strong>
+
+                  <small>
+                    {isCurrentOwner
+                      ? "Current lineup"
+                      : status.canAssign
+                        ? ownerTeam
+                          ? "Move here"
+                          : "Draft here"
+                        : status.reason}
+                  </small>
+                </span>
+
+                <em>
+                  {teamStats.totalPlayers}/5
+                  {!isParticipating ? " • Out" : ""}
+                </em>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
+  function renderRecentDrafts() {
+    if (!profile) {
+      return null;
+    }
+
+    return (
+      <section>
+        <div className="player-modal-section-heading">
+          <div>
+            <div className="player-modal-section-kicker">Recent form</div>
+
+            <h3>Recent Drafts</h3>
+          </div>
+
+          <span>Swipe →</span>
+        </div>
+
+        {profile.recentHistory.length === 0 ? (
+          <div className="player-modal-empty">
+            No draft history for this view.
+          </div>
+        ) : (
+          <div className="player-modal-history-strip">
+            {profile.recentHistory.slice(0, 8).map((row, index) => {
+              const hasProjection = row.projectedFantasyPoints !== null;
+
+              const deltaClass =
+                row.projectionDifference !== null &&
+                row.projectionDifference > 0
+                  ? "player-modal-history-delta--positive"
+                  : row.projectionDifference !== null &&
+                      row.projectionDifference < 0
+                    ? "player-modal-history-delta--negative"
+                    : "";
+
+              return (
+                <article
+                  key={`${row.slateId ?? row.slateLabel}-${index}`}
+                  className={`player-modal-history-card ${
+                    row.finishPosition === 1
+                      ? "player-modal-history-card--winner"
+                      : ""
+                  }`}
+                >
+                  <div className="player-modal-history-date">
+                    {formatSlateLabel(row.slateLabel)}
+                  </div>
+
+                  <div className="player-modal-history-score">
+                    {fmt(row.fantasyPoints)}
+                    <span>FP</span>
+                  </div>
+
+                  {hasProjection ? (
+                    <>
+                      <div
+                        className={`player-modal-history-delta ${deltaClass}`}
+                      >
+                        <strong>{signedFmt(row.projectionDifference)}</strong>
+
+                        <span>vs projection</span>
+                      </div>
+
+                      <div className="player-modal-history-projection">
+                        <span>Projected</span>
+
+                        <strong>{fmt(row.projectedFantasyPoints)} FP</strong>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="player-modal-history-projection">
+                      <span>Projection</span> <strong>—</strong>
+                    </div>
+                  )}
+
+                  <div className="player-modal-history-result">
+                    <strong>
+                      {resultEmoji(row.finishPosition)}{" "}
+                      {ordinal(row.finishPosition)}
+                    </strong>
+
+                    <span>{row.teamName}</span>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-x-3 gap-y-3 border-t border-slate-600/40 pt-4">
+                    {getStatColumns(selectedSport).map((column) => (
+                      <div key={column.key} className="text-center">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          {column.label}
+                        </span>
+                        <strong className="mt-1 block text-sm font-bold text-slate-100">
+                          {row.stats[column.key] ?? 0}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderSnapshot() {
+    if (!profile) {
+      return null;
+    }
+
+    return (
+      <section>
+        <div className="player-modal-toolbar">
+          <div>
+            <div className="player-modal-section-kicker">
+              Performance résumé
+            </div>
+
+            <h3>{season === "all" ? "All-Time" : season} Snapshot</h3>
+          </div>
+
+          <label>
+            <span>View</span>
+
+            <select
+              value={season}
+              onChange={(event) => setSeason(event.target.value)}
+            >
+              <option value="2026">2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="all">All-Time</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="player-modal-resume">
+          <div>
+            <span>Drafted</span>
+            <strong>{profile.summary.timesDrafted}</strong>
+          </div>
+
+          <div>
+            <span>Wins</span>
+            <strong>{profile.summary.wins}</strong>
+          </div>
+
+          <div>
+            <span>🥈 2nd</span>
+            <strong>{profile.summary.runnerUps}</strong>
+          </div>
+
+          <div>
+            <span>Win rate</span>
+            <strong>{fmt(profile.summary.winRate)}%</strong>
+          </div>
+
+          <div>
+            <span>Avg FP</span>
+            <strong>{fmt(profile.summary.averageFantasyPoints)}</strong>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function renderProjectionDetails() {
+    if (!profile) {
+      return null;
+    }
+
+    const projectionSampleSize = profile.summary.projectionSampleSize ?? 0;
+
+    const averageProjectionDifference =
+      profile.summary.averageProjectionDifference ?? null;
+
+    return (
+      <details className="player-modal-details">
+        <summary>
+          <span>Projection Details</span>
+
+          <span className="player-modal-details-summary-meta">
+            <strong>{fmt(projectionScore)} FP</strong>
+
+            <span
+              className="player-modal-details-chevron"
+              aria-hidden="true"
+            >
+             ⌄
+            </span>
+          </span>
+        </summary>
+
+        <div className="player-modal-projection-grid">
+          <div>
+            <span>NBA season avg</span>
+            <strong>{fmt(projectionMeta?.nbaSeasonAverage)}</strong>
+          </div>
+
+          <div>
+            <span>App season avg</span>
+            <strong>{fmt(projectionMeta?.seasonAvg)}</strong>
+          </div>
+
+          <div>
+            <span>Recent app avg</span>
+            <strong>{fmt(projectionMeta?.recentAvg)}</strong>
+          </div>
+
+          <div>
+            <span>Avg finish</span>
+            <strong>{fmt(projectionMeta?.avgFinish)}</strong>
+          </div>
+
+          <div>
+            <span>Confidence</span>
+            <strong>
+              {projectionConfidence
+                ? String(projectionConfidence).toUpperCase()
+                : "—"}
+            </strong>
+          </div>
+
+          <div>
+            <span>Source</span>
+            <strong>{projectionSource}</strong>
+          </div>
+
+          <div>
+            <span>Historical +/-</span>
+            <strong>{signedFmt(averageProjectionDifference)}</strong>
+          </div>
+
+          <div>
+            <span>Projection samples</span>
+            <strong>{projectionSampleSize}</strong>
+          </div>
+        </div>
+
+        <p>
+          Projection uses 50% NBA average, 30% app season average, 20% recent
+          app average, plus finish and hot/cold adjustments.
+        </p>
+
+        {projectionSampleSize > 0 ? (
+          <p>
+            In this view, the player exceeded projection{" "}
+            {profile.summary.exceededProjectionCount ?? 0} times, matched it{" "}
+            {profile.summary.matchedProjectionCount ?? 0} times, and missed it{" "}
+            {profile.summary.missedProjectionCount ?? 0} times.
+          </p>
+        ) : null}
+      </details>
+    );
+  }
+
+  function renderOwnership() {
+    if (!profile) {
+      return null;
+    }
+
+    return (
+      <section>
+        <div className="player-modal-section-heading">
+          <div>
+            <div className="player-modal-section-kicker">Ownership history</div>
+
+            <h3>Drafted By</h3>
+          </div>
+        </div>
+
+        {draftedByRows.length === 0 ? (
+          <div className="player-modal-empty">No ownership history yet.</div>
+        ) : (
+          <div className="player-modal-ownership">
+            {draftedByRows.map((row) => (
+              <div key={row.teamName} className="player-modal-owner-row">
+                <div className="player-modal-owner-label">
+                  <span>{row.teamName}</span>
+
+                  <strong>{row.count}</strong>
+                </div>
+
+                <div className="player-modal-owner-track">
+                  <div
+                    style={{
+                      width: `${row.percentage}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderCareerDetails() {
+    if (!profile) {
+      return null;
+    }
+
+    return (
+      <details className="player-modal-details">
+        <summary>
+          <span>More career numbers</span>
+
+          <span className="player-modal-details-summary-meta">
+            <strong>Best {fmt(profile.summary.bestFantasyPoints)}</strong>
+
+            <span
+              className="player-modal-details-chevron"
+              aria-hidden="true"
+            >
+             ⌄
+            </span>
+          </span>
+        </summary>
+
+        <div className="player-modal-projection-grid">
+          <div>
+            <span>Average</span>
+            <strong>{fmt(profile.summary.averageFantasyPoints)}</strong>
+          </div>
+
+          <div>
+            <span>Best</span>
+            <strong>{fmt(profile.summary.bestFantasyPoints)}</strong>
+          </div>
+
+          <div>
+            <span>Worst</span>
+            <strong>{fmt(profile.summary.worstFantasyPoints)}</strong>
+          </div>
+
+          <div>
+            <span>Avg finish</span>
+            <strong>{fmt(profile.summary.averageFinish)}</strong>
+          </div>
+
+          <div>
+            <span>Most drafted by</span>
+            <strong>{profile.summary.draftedMostBy?.teamName ?? "—"}</strong>
+          </div>
+
+          <div>
+            <span>Most-owner drafts</span>
+            <strong>{profile.summary.draftedMostBy?.count ?? "—"}</strong>
+          </div>
+        </div>
+      </details>
+    );
+  }
+
+  return (
+    <div
+      className="mobile-modal-safe player-modal-overlay fixed inset-0 z-[11000] flex items-end justify-center px-3 py-4 sm:items-center"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${currentPlayer.name} player profile`}
+        className="mobile-modal-panel-safe player-modal-shell flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden"
+      >
+        {renderHeader()}
+
+        {renderDraftActions()}
+
+        <div className="player-modal-body">
+          {isLoading ? (
+            <div className="player-modal-empty">Loading player profile…</div>
+          ) : !profile ? (
+            <div className="player-modal-empty">
+              Player history could not be loaded.
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {renderRecentDrafts()}
+
+              {renderSnapshot()}
+
+              {renderProjectionDetails()}
+
+              {renderOwnership()}
+
+              {renderCareerDetails()}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+
+============================================================
+FILE: components/lineups/types.ts
+============================================================
+export type GolfHoleStat = {
+  hole_number: number;
+  strokes: number | null;
+  relative_to_par: number | null;
+  score_display: string | null;
+};
+
+export type GolfRoundStat = {
+  round_number: number;
+  score_to_par: number | null;
+  score_display: string | null;
+  strokes: number | null;
+  holes_completed: number;
+  tee_time?: string | null;
+  tee_time_raw?: string | null;
+  status: string;
+  holes: GolfHoleStat[];
+};
+
+export type Player = {
+  id: number;
+  name: string;
+  position_group: string;
+  is_active: boolean;
+  is_playing_today?: boolean | null;
+  nba_player_id?: number | null;
+  nfl_player_id?: number | null;
+  espn_player_id?: string | null;
+  country?: string | null;
+  country_flag_url?: string | null;
+};
+
+export type RosterSlotConfig = {
+  sport: string;
+  position: string;
+  slot_count: number;
+  display_order: number | null;
+};
+
+export type TargetDraftSlot = {
+  teamId: number;
+  teamName: string;
+  positionGroup: string;
+};
+
+export type PlayerHistoryDetailRow = {
+  slateId: number;
+  playerId: number;
+  date: string | null;
+  fantasyPoints: number;
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+  isLocked: boolean;
+};
+
+export type Team = {
+  id: number;
+  name: string;
+};
+
+export type Slate = {
+  id: number;
+  date: string;
+  start_date?: string;
+  end_date?: string;
+  label?: string;
+  is_locked: boolean;
+  sport?: string;
+};
+
+export type SavedLineup = {
+  team_id: number;
+  player_ids: number[];
+  pregame_projected_points?: number | null;
+};
+
+export type PlayerStat = {
+  player_id: number;
+
+  points?: number | null;
+  rebounds?: number | null;
+  assists?: number | null;
+  steals?: number | null;
+  blocks?: number | null;
+  turnovers?: number | null;
+
+  passing_yards?: number | null;
+  passing_tds?: number | null;
+  passing_ints?: number | null;
+  rushing_yards?: number | null;
+  rushing_tds?: number | null;
+  receiving_yards?: number | null;
+  receiving_tds?: number | null;
+  receptions?: number | null;
+  fumbles_lost?: number | null;
+
+  fantasy_points: number | null;
+
+  game_status?: number | null;
+  game_status_text?: string | null;
+  period?: number | null;
+  game_clock?: string | null;
+
+  leaderboard_order?: number | null;
+  official_score_to_par?: number | null;
+  official_score_display?: string | null;
+  penalty_strokes?: number | null;
+  rounds_completed?: number | null;
+  holes_completed?: number | null;
+  current_round?: number | null;
+  last_hole?: number | null;
+  status?: string | null;
+  tee_time?: string | null;
+  tee_time_raw?: string | null;
+  rounds?: GolfRoundStat[];
+};
+
+export type TeamResult = {
+  team_id: number;
+  fantasy_points: number | null;
+  finish_position: number | null;
+  games_completed: number | null;
+  games_in_progress: number | null;
+  games_remaining: number | null;
+};
+
+export type SlateTeamConfig = {
+  slate_id: number;
+  team_id: number;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+export type PlayerAverage = {
+  player_id: number;
+  avg_fantasy_points: number;
+};
+
+export type Props = {
+  players: Player[];
+  teams: Team[];
+  slates: Slate[];
+  slateTeamConfigs: SlateTeamConfig[];
+  playerAverages: PlayerAverage[];
+  initialSelectedSlateId: number | null;
+  savedLineupsForInitialSlate: SavedLineup[];
+  playerStats: PlayerStat[];
+  teamResults: TeamResult[];
+  rosterSlots?: RosterSlotConfig[];
+  defaultViewMode?: ViewMode;
+  sport?: string;
+};
+
+export type PositionFilter = string;
+export type ViewMode = "draft" | "scoring";
+
+export type OrderedTeam = Team & {
+  is_participating?: boolean;
+  draft_order?: number;
+};
+
+
+============================================================
+FILE: app/lineups/draft/page.tsx
+============================================================
+export const dynamic = "force-dynamic";
+
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import AppNav from "@/components/AppNav";
+import LineupBuilder from "@/components/lineups/LineupBuilder";
+import RefreshPlayersButton from "@/components/lineups/RefreshPlayersButton";
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+type Slate = {
+  id: number;
+  date: string;
+  start_date?: string;
+  end_date?: string;
+  label?: string;
+  is_locked: boolean;
+  sport?: string;
+};
+
+type SavedLineup = {
+  team_id: number;
+  player_ids: number[];
+};
+
+type SlateTeamConfig = {
+  slate_id: number;
+  team_id: number;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+export default async function DraftLineupsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sport?: string | string[] }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const sportParam = Array.isArray(resolvedSearchParams?.sport)
+    ? resolvedSearchParams.sport[0]
+    : resolvedSearchParams?.sport;
+  const sport = sportParam === "nfl" ? "nfl" : "nba";
+
+  const today = getTodayDateString();
+
+  const playersTable = sport === "nfl" ? "players_nfl" : "players";
+  const playersSelect =
+    sport === "nfl"
+      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+      : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+  const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+
+  const [
+    { data: rawPlayers, error: playersError },
+    { data: teams, error: teamsError },
+    { data: slates, error: slatesError },
+    { data: slateTeams, error: slateTeamsError },
+    { data: allPlayerStats, error: allPlayerStatsError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from(playersTable)
+      .select(playersSelect)
+      .eq("is_active", true)
+      .order("name", { ascending: true }),
+    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+    supabaseAdmin
+      .from("slates")
+      .select("id, date, start_date, end_date, is_locked, sport")
+      .eq("sport", sport)
+      .order("start_date", { ascending: false })
+      .order("end_date", { ascending: false }),
+    supabaseAdmin
+      .from("slate_teams")
+      .select("slate_id, team_id, draft_order, is_participating")
+      .order("slate_id", { ascending: true })
+      .order("draft_order", { ascending: true }),
+    supabaseAdmin.from(statsTable).select("player_id, fantasy_points"),
+  ]);
+
+  if (
+    playersError ||
+    teamsError ||
+    slatesError ||
+    slateTeamsError ||
+    allPlayerStatsError
+  ) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+        <div className="mx-auto max-w-[1600px] space-y-6">
+          <AppNav />
+
+          <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
+            <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
+            <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
+              Failed to load page data.
+              <div className="mt-2 text-sm text-red-600">
+                {playersError?.message ||
+                  teamsError?.message ||
+                  slatesError?.message ||
+                  slateTeamsError?.message ||
+                  allPlayerStatsError?.message}
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  const normalizedPlayers = (rawPlayers ?? []).map((p: any) =>
+    sport === "nfl"
+      ? {
+          id: p.id,
+          name: p.name,
+          position_group: p.position,
+          is_active: p.is_active,
+          is_playing_today: p.is_playing_this_week,
+          nba_player_id: null,
+          nfl_player_id: p.nfl_player_id,
+        }
+      : {
+          id: p.id,
+          name: p.name,
+          position_group: p.position_group,
+          is_active: p.is_active,
+          is_playing_today: p.is_playing_today,
+          nba_player_id: p.nba_player_id,
+          nfl_player_id: null,
+        }
+  );
+
+  const safeSlates: Slate[] =
+    (slates ?? []).map((slate) => {
+      const startDate = slate.start_date ?? slate.date;
+      const endDate = slate.end_date ?? slate.date;
+
+      return {
+        id: slate.id,
+        date: slate.date,
+        start_date: startDate,
+        end_date: endDate,
+        label: formatSlateDateLabel({
+          start_date: startDate,
+          end_date: endDate,
+        }),
+        is_locked: slate.is_locked,
+        sport: slate.sport ?? "nba",
+      };
+    }) ?? [];
+
+  const safeSlateTeams = (slateTeams ?? []) as SlateTeamConfig[];
+
+  const safeAllPlayerStats = allPlayerStats ?? [];
+  const playerAverageMap = new Map<number, { total: number; count: number }>();
+
+  safeAllPlayerStats.forEach((row) => {
+    const playerId = Number(row.player_id);
+    const fantasyPoints = Number(row.fantasy_points ?? 0);
+
+
+    if (!Number.isFinite(playerId)) return;
+    if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
+
+    const existing = playerAverageMap.get(playerId) ?? { total: 0, count: 0 };
+    playerAverageMap.set(playerId, {
+      total: existing.total + fantasyPoints,
+      count: existing.count + 1,
+    });
+  });
+
+  const playerAverages = Array.from(playerAverageMap.entries()).map(
+    ([player_id, stats]) => ({
+      player_id,
+      avg_fantasy_points:
+        stats.count > 0 ? Number((stats.total / stats.count).toFixed(2)) : 0,
+    })
+  );
+
+  let selectedSlateId =
+    safeSlates.find((slate) => slate.date === today)?.id ?? safeSlates[0]?.id ?? null;
+
+  if (!selectedSlateId && safeSlates.length === 0) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+        <div className="mx-auto max-w-[1600px] space-y-6">
+          <AppNav />
+
+          <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Draft players and build your lineup for the current slate.
+                </p>
+              </div>
+
+              <RefreshPlayersButton />
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              No slates exist yet. Create one first.
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  let savedLineupsForInitialSlate: SavedLineup[] = [];
+  let playerStats: any[] = [];
+  let teamResults: any[] = [];
+  let rosterSlots: Array<{
+    sport: string;
+    position: string;
+    slot_count: number;
+    display_order: number | null;
+  }> = [];
+
+  const { data: rosterSlotsData } = await supabaseAdmin
+    .from("roster_slots")
+    .select("sport, position, slot_count, display_order")
+    .eq("sport", sport)
+    .order("display_order", { ascending: true });
+
+  rosterSlots = rosterSlotsData ?? [];
+
+  if (selectedSlateId) {
+    const { data: lineupsData } = await supabaseAdmin
+      .from("lineups")
+      .select(
+        `
+        id,
+        team_id,
+        lineup_players (
+          player_id
+        )
+        `
+      )
+      .eq("slate_id", selectedSlateId);
+
+    savedLineupsForInitialSlate =
+      lineupsData?.map((lineup) => ({
+        team_id: lineup.team_id,
+        player_ids:
+          lineup.lineup_players?.map((lp: { player_id: number }) => lp.player_id) ?? [],
+      })) ?? [];
+
+    const { data: statsData } = await supabaseAdmin
+      .from(statsTable)
+      .select("*")
+      .eq("slate_id", selectedSlateId);
+
+    const { data: teamResultsData } = await supabaseAdmin
+      .from("team_slate_results")
+      .select("*")
+      .eq("slate_id", selectedSlateId);
+
+    playerStats = statsData ?? [];
+    teamResults = teamResultsData ?? [];
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <AppNav />
+
+        <section className="draft-page-intro">
+          <div>
+            <div className="draft-page-intro-kicker">
+              111 Sports
+            </div>
+
+            <h1>Draft</h1>
+
+            <p>Build your five-player lineup.</p>
+          </div>
+
+          <RefreshPlayersButton />
+        </section>
+
+        <LineupBuilder
+          players={normalizedPlayers}
+          teams={teams ?? []}
+          slates={safeSlates}
+          slateTeamConfigs={safeSlateTeams}
+          playerAverages={playerAverages}
+          initialSelectedSlateId={selectedSlateId}
+          savedLineupsForInitialSlate={savedLineupsForInitialSlate}
+          playerStats={playerStats}
+          teamResults={teamResults}
+          rosterSlots={rosterSlots}
+          defaultViewMode="draft"
+          sport={sport}
+        />
+      </div>
+    </main>
+  );
+}
+
+
+============================================================
+FILE: app/api/lineups/route.ts
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { notifyNextDrafter } from "@/lib/draftNotifications";
+import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
+
+type SaveLineupBody = {
+  slateId?: number;
+  teamId?: number;
+  playerIds?: number[];
+  notifyNextDrafter?: boolean;
+};
+
+type LineupRow = {
+  id: number;
+  team_id: number;
+  slate_id: number;
+};
+
+type LineupPlayerRow = {
+  lineup_id: number;
+  player_id: number;
+  projected_fantasy_points: number | null;
+};
+
+function getSlateSeason(date: string | null | undefined) {
+  const year = date?.slice(0, 4);
+  return year && /^\d{4}$/.test(year) ? year : "2026";
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const slateIdParam = request.nextUrl.searchParams.get("slateId");
+
+    if (!slateIdParam) {
+      return NextResponse.json(
+        { error: "slateId is required." },
+        { status: 400 },
+      );
+    }
+
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "slateId must be a valid number." },
+        { status: 400 },
+      );
+    }
+
+    const { data: lineups, error: lineupsError } = await supabaseAdmin
+      .from("lineups")
+      .select("id, team_id, slate_id")
+      .eq("slate_id", slateId);
+
+    if (lineupsError) {
+      return NextResponse.json(
+        {
+          error: `Failed to load lineups: ${lineupsError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineups = (lineups ?? []) as LineupRow[];
+
+    if (safeLineups.length === 0) {
+      return NextResponse.json({
+        success: true,
+        lineups: [],
+      });
+    }
+
+    const lineupIds = safeLineups.map((lineup) => lineup.id);
+
+    const { data: lineupPlayers, error: lineupPlayersError } =
+      await supabaseAdmin
+        .from("lineup_players")
+        .select("lineup_id, player_id, projected_fantasy_points")
+        .in("lineup_id", lineupIds);
+
+    if (lineupPlayersError) {
+      return NextResponse.json(
+        {
+          error: `Failed to load lineup players: ${lineupPlayersError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineupPlayers = (lineupPlayers ?? []) as LineupPlayerRow[];
+
+    const grouped = safeLineups.map((lineup) => {
+      const lineupPlayerRows = safeLineupPlayers.filter(
+        (lp) => lp.lineup_id === lineup.id
+      );
+
+      const hasCompleteProjectionSnapshot =
+        lineupPlayerRows.length > 0 &&
+        lineupPlayerRows.every(
+          (lp) =>
+            lp.projected_fantasy_points !== null &&
+            Number.isFinite(Number(lp.projected_fantasy_points))
+        );
+
+      return {
+        team_id: lineup.team_id,
+        player_ids: lineupPlayerRows.map((lp) => lp.player_id),
+        pregame_projected_points: hasCompleteProjectionSnapshot
+          ? Number(
+              lineupPlayerRows
+                .reduce(
+                  (sum, lp) =>
+                    sum + Number(lp.projected_fantasy_points ?? 0),
+                  0
+                )
+                .toFixed(1)
+            )
+          : null,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      lineups: grouped,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error: "Unexpected server error while loading lineups.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "Login required." }, { status: 401 });
+    }
+
+    const body = (await request.json()) as SaveLineupBody;
+
+    const slateId = body.slateId;
+    const teamId = body.teamId;
+    const playerIds = body.playerIds ?? [];
+
+    if (!slateId || !teamId || !Array.isArray(playerIds)) {
+      return NextResponse.json(
+        {
+          error: "slateId, teamId, and playerIds are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (playerIds.length > 5) {
+      return NextResponse.json(
+        {
+          error: "A lineup can include at most 5 players.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const uniquePlayerIds = [...new Set(playerIds)];
+
+    if (uniquePlayerIds.length !== playerIds.length) {
+      return NextResponse.json(
+        {
+          error: "Duplicate players are not allowed in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: slate, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, date, start_date, end_date, is_locked")
+      .eq("id", slateId)
+      .single();
+
+    if (slateError || !slate) {
+      return NextResponse.json(
+        { error: "Selected slate not found." },
+        { status: 404 },
+      );
+    }
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error: "This slate is locked. Lineups can no longer be edited.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: team, error: teamError } = await supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .eq("id", teamId)
+      .single();
+
+    if (teamError || !team) {
+      return NextResponse.json(
+        { error: "Selected team not found." },
+        { status: 404 },
+      );
+    }
+
+    const { data: players, error: playersError } =
+      uniquePlayerIds.length > 0
+        ? await supabaseAdmin
+            .from("players")
+            .select("id, name, position_group, is_active, nba_player_id")
+            .in("id", uniquePlayerIds)
+        : { data: [], error: null };
+
+    if (playersError || !players || players.length !== uniquePlayerIds.length) {
+      return NextResponse.json(
+        {
+          error: "One or more selected players were not found.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const inactivePlayers = players.filter((player) => !player.is_active);
+
+    if (inactivePlayers.length > 0) {
+      return NextResponse.json(
+        {
+          error: "Inactive players cannot be used in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const guardCount = players.filter(
+      (player) => player.position_group === "G",
+    ).length;
+
+    const fcCount = players.filter(
+      (player) => player.position_group === "F/C",
+    ).length;
+
+    if (guardCount > 2 || fcCount > 3) {
+      return NextResponse.json(
+        {
+          error: "A lineup can have at most 2 Guards and 3 F/C players.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: existingLineup, error: existingLineupError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, lineup_players(player_id)")
+        .eq("team_id", teamId)
+        .eq("slate_id", slateId)
+        .maybeSingle();
+
+    if (existingLineupError) {
+      return NextResponse.json(
+        {
+          error: `Failed to check existing lineup: ${existingLineupError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    const previousPlayerIds = existingLineup
+      ? (
+          (
+            existingLineup as {
+              lineup_players?: { player_id: number }[] | null;
+            }
+          ).lineup_players ?? []
+        ).map((row) => Number(row.player_id))
+      : [];
+
+    const previousPlayerIdSet = new Set(previousPlayerIds);
+
+    const nextPlayerIdSet = new Set(uniquePlayerIds);
+
+    const addedPlayerIds = uniquePlayerIds.filter(
+      (playerId) => !previousPlayerIdSet.has(playerId),
+    );
+
+    const removedPlayerIds = previousPlayerIds.filter(
+      (playerId) => !nextPlayerIdSet.has(playerId),
+    );
+
+    const isSingleNewDraftPick =
+      addedPlayerIds.length === 1 &&
+      removedPlayerIds.length === 0 &&
+      uniquePlayerIds.length === previousPlayerIds.length + 1;
+
+    let lineupId: number;
+
+    if (existingLineup) {
+      lineupId = Number(existingLineup.id);
+    } else {
+      const { data: createdLineup, error: lineupError } = await supabaseAdmin
+        .from("lineups")
+        .insert({
+          team_id: teamId,
+          slate_id: slateId,
+        })
+        .select("id")
+        .single();
+
+      if (lineupError || !createdLineup) {
+        return NextResponse.json(
+          {
+            error: `Failed to create lineup: ${
+              lineupError?.message ?? "Unknown error"
+            }`,
+          },
+          { status: 500 },
+        );
+      }
+
+      lineupId = Number(createdLineup.id);
+    }
+
+    if (removedPlayerIds.length > 0) {
+      const { error: removePlayersError } = await supabaseAdmin
+        .from("lineup_players")
+        .delete()
+        .eq("lineup_id", lineupId)
+        .in("player_id", removedPlayerIds);
+
+      if (removePlayersError) {
+        return NextResponse.json(
+          {
+            error: `Failed to remove lineup players: ${removePlayersError.message}`,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    if (addedPlayerIds.length > 0) {
+      const season = getSlateSeason(slate.start_date ?? slate.date);
+
+      const projectionResult = await getPlayerProjectionsForSeason(season);
+
+      const projectedAt = new Date().toISOString();
+
+      const addedRows = addedPlayerIds.map((playerId) => {
+        const projection = projectionResult.projections[playerId];
+
+        const projectedFantasyPoints =
+          projection?.projection === null ||
+          projection?.projection === undefined
+            ? null
+            : Number(projection.projection);
+
+        return {
+          lineup_id: lineupId,
+          player_id: playerId,
+          projected_fantasy_points: projectedFantasyPoints,
+          projection_confidence: projection?.confidence ?? null,
+          projection_source: projection?.source ?? "none",
+          projected_at: projectedFantasyPoints !== null ? projectedAt : null,
+        };
+      });
+
+      const { error: insertPlayersError } = await supabaseAdmin
+        .from("lineup_players")
+        .insert(addedRows);
+
+      if (insertPlayersError) {
+        return NextResponse.json(
+          {
+            error: `Failed to save newly added lineup players: ${insertPlayersError.message}`,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    const notificationRequested =
+      currentUser.role === "admin" ? body.notifyNextDrafter === true : true;
+
+    let draftNotification = null;
+
+    if (isSingleNewDraftPick && notificationRequested) {
+      try {
+        draftNotification = await notifyNextDrafter(slateId);
+      } catch (notificationError) {
+        console.error(
+          "Lineup saved, but the next-drafter notification failed",
+          notificationError,
+        );
+
+        draftNotification = {
+          sent: 0,
+          failed: 1,
+          skipped: true,
+          reason: "Notification failed after the lineup was saved.",
+        };
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Lineup saved successfully.",
+      lineupId,
+      slateId: slate.id,
+      slateDate: slate.date,
+      teamName: team.name,
+      addedPlayerIds,
+      removedPlayerIds,
+      draftNotification,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error: "Unexpected server error while saving lineup.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+============================================================
+FILE: app/api/slate-availability/route.ts
+============================================================
+export const dynamic = "force-dynamic";
+
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SlateRecord = {
+  id: number;
+  sport?: string | null;
+  start_date: string;
+  end_date: string;
+  nba_team_abbreviations: string[] | null;
+};
+
+function normalizeTeamCode(raw: string | null) {
+  if (!raw) return null;
+
+  const code = raw.trim().toUpperCase();
+  if (!code) return null;
+
+  const aliasMap: Record<string, string> = {
+    PHO: "PHX",
+    BRK: "BKN",
+    UTH: "UTA",
+    GS: "GSW",
+    SA: "SAS",
+    NO: "NOP",
+  };
+
+  return aliasMap[code] ?? code;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const slateIdParam = request.nextUrl.searchParams.get("slateId");
+
+    if (!slateIdParam) {
+      return NextResponse.json(
+        { error: "slateId is required." },
+        {
+          status: 400,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "slateId must be a valid number." },
+        {
+          status: 400,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
+    const { data: slate, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, sport, start_date, end_date, nba_team_abbreviations")
+      .eq("id", slateId)
+      .single();
+
+    if (slateError || !slate) {
+      return NextResponse.json(
+        { error: "Slate not found." },
+        {
+          status: 404,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
+    const safeSlate = slate as SlateRecord;
+
+    if (safeSlate.sport === "golf") {
+      const { data: eventPlayers, error: eventPlayersError } =
+        await supabaseAdmin
+          .from("golf_event_players")
+          .select("player_id")
+          .eq("slate_id", slateId);
+
+      if (eventPlayersError) {
+        return NextResponse.json(
+          {
+            error: `Failed to load Golf players for slate: ${eventPlayersError.message}`,
+          },
+          {
+            status: 500,
+            headers: {
+              "Cache-Control": "no-store, max-age=0",
+            },
+          },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          slateId,
+          startDate: safeSlate.start_date,
+          endDate: safeSlate.end_date,
+          source: "golf_event_players",
+          debugTeamAbbreviations: [],
+          availablePlayerIds: (eventPlayers ?? []).map((row) =>
+            Number(row.player_id),
+          ),
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        },
+      );
+    }
+
+    const normalizedTeamCodes = (safeSlate.nba_team_abbreviations ?? [])
+      .map((code) => normalizeTeamCode(code))
+      .filter((code): code is string => Boolean(code));
+
+    if (normalizedTeamCodes.length === 0) {
+      return NextResponse.json(
+        {
+          success: true,
+          slateId,
+          startDate: safeSlate.start_date,
+          endDate: safeSlate.end_date,
+          source: "database",
+          debugTeamAbbreviations: [],
+          availablePlayerIds: [],
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
+    const { data: matchingPlayers, error: playersError } = await supabaseAdmin
+      .from("players")
+      .select("id, team_abbreviation")
+      .eq("is_active", true)
+      .in(
+  "team_abbreviation",
+  normalizedTeamCodes.map((c) => c === "NY" ? "NYK" : c)
+);
+
+    if (playersError) {
+      return NextResponse.json(
+        { error: `Failed to load players for slate: ${playersError.message}` },
+        {
+          status: 500,
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        }
+      );
+    }
+
+    const availablePlayerIds = (matchingPlayers ?? [])
+      .map((player) => player.id)
+      .filter((id): id is number => typeof id === "number");
+
+    return NextResponse.json(
+      {
+        success: true,
+        slateId,
+        startDate: safeSlate.start_date,
+        endDate: safeSlate.end_date,
+        source: "database",
+        debugTeamAbbreviations: normalizedTeamCodes,
+        availablePlayerIds,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading slate availability." },
+      {
+        status: 500,
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
+  }
+}
+
+
+============================================================
+FILE: components/lineups/RefreshPlayersButton.tsx
+============================================================
+
+
+"use client";
+
+export default function RefreshPlayersButton() {
+  async function handleRefreshPlayers() {
+    try {
+      const res = await fetch("/api/sync-players", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to refresh players");
+        return;
+      }
+
+      alert(
+        `Players synced! Added: ${data.insertedCount ?? 0}, Updated: ${data.updatedCount ?? 0}`
+      );
+
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+      alert("Something went wrong while refreshing players.");
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleRefreshPlayers}
+      className="rounded-lg border border-blue-400/30 bg-blue-500/15 px-4 py-2 text-sm text-white hover:bg-blue-500/25"
+    >
+      Refresh Players
+    </button>
+  );
+}
+
+
+============================================================
+FILE: components/providers/SportProvider.tsx
+============================================================
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+import { DEFAULT_SPORT } from "@/lib/sports";
+
+const SPORT_STORAGE_KEY = "111-fantasy-sport";
+
+type SportContextValue = {
+  selectedSport: string;
+  setSelectedSport: (sport: string) => void;
+  isHydrated: boolean;
+};
+
+const SportContext = createContext<SportContextValue | undefined>(undefined);
+
+export default function SportProvider({ children }: { children: React.ReactNode }) {
+  const [selectedSport, setSelectedSportState] = useState<string>(DEFAULT_SPORT);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(SPORT_STORAGE_KEY);
+      if (stored) {
+        setSelectedSportState(stored);
+      }
+    } catch (error) {
+      console.error("Failed to read stored sport", error);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  function setSelectedSport(sport: string) {
+    setSelectedSportState(sport);
+    try {
+      window.localStorage.setItem(SPORT_STORAGE_KEY, sport);
+    } catch (error) {
+      console.error("Failed to persist selected sport", error);
+    }
+  }
+
+  return (
+    <SportContext.Provider value={{ selectedSport, setSelectedSport, isHydrated }}>
+      {children}
+    </SportContext.Provider>
+  );
+}
+
+export function useSelectedSport() {
+  const context = useContext(SportContext);
+
+  if (!context) {
+    throw new Error("useSelectedSport must be used within a SportProvider");
+  }
+
+  return context;
+}

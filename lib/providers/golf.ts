@@ -727,3 +727,147 @@ export async function fetchGolfSchedule(
     return aDate.localeCompare(bDate);
   });
 }
+
+export type GolfCourseHole = {
+  holeNumber: number;
+  par: number;
+  yards: number | null;
+};
+
+export type GolfCourse = {
+  espnCourseId: string;
+  name: string | null;
+  totalYards: number | null;
+  totalPar: number | null;
+  parIn: number | null;
+  parOut: number | null;
+  isHost: boolean;
+  holes: GolfCourseHole[];
+};
+
+type EspnLeaderboardCourseHole = {
+  number?: number;
+  shotsToPar?: number;
+  totalYards?: number;
+};
+
+type EspnLeaderboardCourse = {
+  id?: string;
+  name?: string;
+  totalYards?: number;
+  shotsToPar?: number;
+  parIn?: number;
+  parOut?: number;
+  host?: boolean;
+  holes?: EspnLeaderboardCourseHole[];
+};
+
+type EspnLeaderboardPayload = {
+  events?: Array<{
+    courses?: EspnLeaderboardCourse[];
+  }>;
+};
+
+function nullableFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+export async function fetchGolfCoursesByEventId(
+  espnEventId: string,
+): Promise<GolfCourse[]> {
+  const normalizedEventId = espnEventId.trim();
+
+  if (!normalizedEventId) {
+    return [];
+  }
+
+  const url =
+    "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard" +
+    `?event=${encodeURIComponent(normalizedEventId)}`;
+
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "111-sports-golf-course-provider/1.0",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `ESPN Golf course request failed with ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const payload = (await response.json()) as EspnLeaderboardPayload;
+  const courses = payload.events?.[0]?.courses ?? [];
+
+  return courses
+    .map((course): GolfCourse | null => {
+      const espnCourseId = String(course.id ?? "").trim();
+
+      if (!espnCourseId) {
+        return null;
+      }
+
+      const holes = (course.holes ?? [])
+        .map((hole): GolfCourseHole | null => {
+          const holeNumber = Number(hole.number);
+          const par = Number(hole.shotsToPar);
+
+          if (
+            !Number.isInteger(holeNumber) ||
+            holeNumber < 1 ||
+            holeNumber > 18 ||
+            !Number.isInteger(par) ||
+            par < 2 ||
+            par > 7
+          ) {
+            return null;
+          }
+
+          const yards = nullableFiniteNumber(hole.totalYards);
+
+          return {
+            holeNumber,
+            par,
+            yards:
+              yards !== null && yards > 0
+                ? yards
+                : null,
+          };
+        })
+        .filter(
+          (hole): hole is GolfCourseHole =>
+            hole !== null,
+        )
+        .sort(
+          (a, b) => a.holeNumber - b.holeNumber,
+        );
+
+      return {
+        espnCourseId,
+        name:
+          typeof course.name === "string"
+            ? course.name.trim() || null
+            : null,
+        totalYards: nullableFiniteNumber(
+          course.totalYards,
+        ),
+        totalPar: nullableFiniteNumber(
+          course.shotsToPar,
+        ),
+        parIn: nullableFiniteNumber(course.parIn),
+        parOut: nullableFiniteNumber(course.parOut),
+        isHost: Boolean(course.host),
+        holes,
+      };
+    })
+    .filter(
+      (course): course is GolfCourse =>
+        course !== null &&
+        course.holes.length > 0,
+    );
+}
+

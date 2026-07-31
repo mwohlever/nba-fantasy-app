@@ -10,6 +10,7 @@ type SlateInput = {
   date: string;
   start_date: string;
   end_date: string;
+  sport?: string;
 };
 
 type TeamResultInput = {
@@ -151,9 +152,16 @@ export async function notifyCompletedSlate(input: {
   const slateLabel =
     startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 
+  const sport =
+    input.slate.sport === "nfl"
+      ? "nfl"
+      : input.slate.sport === "golf"
+        ? "golf"
+        : "nba";
+
   const [standardTemplate, winnerTemplate] = await Promise.all([
-    getNotificationTemplate("slate_complete"),
-    getNotificationTemplate("slate_complete_winner"),
+    getNotificationTemplate("slate_complete", sport),
+    getNotificationTemplate("slate_complete_winner", sport),
   ]);
 
   let sent = 0;

@@ -126,7 +126,15 @@ export async function notifyNewlyFinishedPlayers(input: {
     input.players.map((player) => [Number(player.id), player.name])
   );
 
-  const template = await getNotificationTemplate("player_finished");
+  const sport =
+    input.slate.sport === "nfl"
+      ? "nfl"
+      : input.slate.sport === "golf"
+        ? "golf"
+        : "nba";
+
+  const template =
+    await getNotificationTemplate("player_finished", sport);
 
   const startDate = input.slate.start_date ?? input.slate.date;
   const endDate = input.slate.end_date ?? input.slate.date;
@@ -163,7 +171,7 @@ export async function notifyNewlyFinishedPlayers(input: {
       fantasyPoints,
       teamName,
       slateLabel,
-      sportEmoji: getSportConfig(input.slate.sport).emoji,
+      sportEmoji: getSportConfig(sport).emoji,
     };
 
     const title = renderNotificationTemplate(
@@ -205,7 +213,7 @@ export async function notifyNewlyFinishedPlayers(input: {
         fantasyPoints: Number(fantasyPoints),
         teamName,
         slateLabel,
-        sportEmoji: getSportConfig(input.slate.sport).emoji,
+        sportEmoji: getSportConfig(sport).emoji,
       },
     });
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
+  fetchGolfCoursesByEventId,
   fetchGolfTournamentByEventId,
   type GolfCompetitor,
   type GolfCompetitorStatus,
@@ -272,6 +273,58 @@ export async function POST(request: Request) {
     }
 
     const refreshedAt = new Date().toISOString();
+
+    let courseHolesUpserted = 0;
+
+    try {
+      const courses = await fetchGolfCoursesByEventId(
+        slate.external_event_id ?? "",
+      );
+
+      const courseRows = courses.flatMap((course) =>
+        course.holes.map((hole) => ({
+          slate_id: slateId,
+          course_id: course.espnCourseId,
+          course_name: course.name,
+          is_host: course.isHost,
+          hole_number: hole.holeNumber,
+          par: hole.par,
+          yards: hole.yards,
+          updated_at: refreshedAt,
+        })),
+      );
+
+      if (courseRows.length > 0) {
+        const { error: courseDeleteError } =
+          await supabaseAdmin
+            .from("golf_course_holes")
+            .delete()
+            .eq("slate_id", slateId);
+
+        if (courseDeleteError) {
+          throw new Error(courseDeleteError.message);
+        }
+
+        const { error: courseUpsertError } =
+          await supabaseAdmin
+            .from("golf_course_holes")
+            .upsert(courseRows, {
+              onConflict:
+                "slate_id,course_id,hole_number",
+            });
+
+        if (courseUpsertError) {
+          throw new Error(courseUpsertError.message);
+        }
+
+        courseHolesUpserted = courseRows.length;
+      }
+    } catch (courseError) {
+      console.error(
+        "Golf player data will refresh, but course-hole data could not be saved:",
+        courseError,
+      );
+    }
     const penaltyPerRound = Math.max(0, slate.cut_penalty_per_round ?? 0);
 
     const golfPlayerRows = competitors.map((competitor) => ({
@@ -707,6 +760,7 @@ export async function POST(request: Request) {
       teamResultsUpserted: rankedTeamRows.length,
       roundsInserted: roundRows.length,
       holesInserted: holeRows.length,
+      courseHolesUpserted,
       preview: competitors.slice(0, 10).map((competitor) => {
         const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
 
