@@ -5720,30 +5720,6 @@ html.dark .hardware-card-detail {
 }
 
 /* =========================================================
-   GOLF PLAYER MODAL — MOBILE FULL-HEIGHT SHEET
-   Override generic mobile modal safety spacing so the Golf
-   scorecard can use nearly the full viewport.
-   ========================================================= */
-
-@media (max-width: 639px) {
-  .golf-player-modal-overlay.mobile-modal-safe {
-    align-items: flex-start !important;
-    padding-top: 0.25rem !important;
-    padding-right: 0.25rem !important;
-    padding-bottom: 0.25rem !important;
-    padding-left: 0.25rem !important;
-    overflow: hidden !important;
-  }
-
-  .golf-player-modal-shell.mobile-modal-panel-safe {
-    max-height: calc(100dvh - 0.5rem) !important;
-    min-height: calc(100dvh - 0.5rem);
-    overflow: hidden !important;
-    border-radius: 1rem;
-  }
-}
-
-/* =========================================================
    PLAYER PROFILE — MOBILE FULL-HEIGHT SHEET
    The generic mobile modal rules reserve space for the
    bottom navigation. This profile sits above the navigation,
