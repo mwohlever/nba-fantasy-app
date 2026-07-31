@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ProfileOverview from "@/components/profile/ProfileOverview";
+import GolfProfileOverview from "@/components/profile/GolfProfileOverview";
 import TrophyCase, {
   type LeagueAward,
   type TrophyMilestones,
@@ -14,6 +15,7 @@ type ProfileTab = "overview" | "awards";
 
 type TeamProfile = {
   success: boolean;
+  sport?: "nba" | "nfl" | "golf";
   team: {
     id: number;
     name: string;
@@ -68,6 +70,28 @@ type TeamProfile = {
       score: number;
       finishPosition: number | null;
     } | null;
+  };
+  golfSummary?: {
+    tournamentsPlayed: number;
+    favoriteGolfer: {
+      playerName: string;
+      count: number;
+    } | null;
+    bestAverageGolfer: {
+      playerName: string;
+      avgScore: number;
+      count: number;
+    } | null;
+    cutsMade: number;
+    cutOpportunities: number;
+    cutsMadePct: number | null;
+    birdies: number;
+    eagles: number;
+    pars: number;
+    bogeys: number;
+    doubleBogeys: number;
+    roundsUnderPar: number;
+    completedRounds: number;
   };
   milestones: TrophyMilestones;
   milestoneThresholds: MilestoneThresholds;
@@ -324,19 +348,43 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
             ) : (
               <>
                 {activeTab === "overview" ? (
-                  <ProfileOverview
-                    profile={profile}
-                    teamId={profile.team.id}
-                    season={season}
-                    availableSeasons={availableSeasons}
-                    onSeasonChange={setSeason}
-                  />
+                  selectedSport === "golf" ? (
+                    <GolfProfileOverview
+                      profile={profile}
+                      teamId={profile.team.id}
+                      season={season}
+                      availableSeasons={availableSeasons}
+                      onSeasonChange={setSeason}
+                    />
+                  ) : (
+                    <ProfileOverview
+                      profile={profile}
+                      teamId={profile.team.id}
+                      season={season}
+                      availableSeasons={availableSeasons}
+                      onSeasonChange={setSeason}
+                    />
+                  )
                 ) : null}
 
                 {activeTab === "awards" ? (
-                  <TrophyCase
+                  <div
+                    className={
+                      selectedSport === "golf"
+                        ? "golf-trophy-theme"
+                        : ""
+                    }
+                  >
+                    <TrophyCase
                     key={profile.team.id}
                     teamName={profile.team.name}
+                    sport={
+                      selectedSport === "golf"
+                        ? "golf"
+                        : selectedSport === "nfl"
+                          ? "nfl"
+                          : "nba"
+                    }
                     career={{
                       wins: profile.careerSummary.wins,
                       runnerUps: profile.careerSummary.runnerUps,
@@ -351,7 +399,8 @@ export default function TeamProfileModal({ team, setTeam }: Props) {
                     milestones={profile.milestones}
                     leagueAwards={profile.leagueAwards}
                     thresholds={profile.milestoneThresholds}
-                  />
+                    />
+                  </div>
                 ) : null}
               </>
             )}

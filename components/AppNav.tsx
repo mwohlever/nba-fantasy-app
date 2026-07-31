@@ -296,7 +296,7 @@ function AppNavContent() {
   function mobileLinkClass(href: string) {
     const active = isLinkActive(href);
 
-    return `app-mobile-nav-item flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium ${
+    return `app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium ${
       active
         ? "app-mobile-nav-active bg-sky-100 text-sky-900"
         : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"
@@ -564,14 +564,14 @@ function AppNavContent() {
 
       {/* White shield behind mobile nav */}
       <div
-        className="app-mobile-nav-shield fixed bottom-[-56px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
+        className="app-mobile-nav-shield pointer-events-none fixed bottom-[-52px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
         aria-hidden="true"
       />
 
       {/* Mobile bottom nav only */}
       <div
         ref={mobileMoreRef}
-        className="app-mobile-bottom-nav fixed bottom-[-48px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[58px] pt-2 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
+        className="app-mobile-bottom-nav fixed bottom-[-42px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[42px] pt-1 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
       >
         {mobileMoreOpen ? (
           <div className="app-dropdown-panel absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
@@ -616,7 +616,7 @@ function AppNavContent() {
           <button
             type="button"
             onClick={() => setMobileMoreOpen((open) => !open)}
-            className={`app-mobile-nav-item flex flex-col items-center justify-center gap-1 rounded-xl px-2 py-2 text-xs font-medium ${
+            className={`app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium ${
               moreIsActive
                 ? "app-mobile-nav-active bg-sky-100 text-sky-900"
                 : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"

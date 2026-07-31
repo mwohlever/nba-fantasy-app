@@ -858,7 +858,7 @@ html.dark {
 
 .app-mobile-nav-item {
   position: relative;
-  min-height: 52px;
+  min-height: 42px;
   transition:
     transform 150ms ease,
     background-color 150ms ease,
@@ -7671,4 +7671,50 @@ html
   .golf-home-current-slate table {
     max-width: 100%;
   }
+}
+
+/* =========================================================
+   GOLF TROPHY CASE THEME
+   Sport-specific overrides; NBA and NFL remain unchanged.
+   ========================================================= */
+
+.golf-trophy-theme {
+  color: #e2e8f0;
+}
+
+.golf-trophy-theme .trophy-content-section {
+  border-color: rgb(6 78 59 / 0.72);
+  background:
+    linear-gradient(
+      145deg,
+      rgb(15 23 42 / 0.98),
+      rgb(2 44 34 / 0.72)
+    );
+}
+
+.golf-trophy-theme .trophy-section-title,
+.golf-trophy-theme .trophy-empty-title {
+  color: #f8fafc;
+}
+
+.golf-trophy-theme .trophy-section-copy,
+.golf-trophy-theme .trophy-section-label,
+.golf-trophy-theme .trophy-empty-copy {
+  color: #94a3b8;
+}
+
+.golf-trophy-theme .trophy-season-select {
+  border-color: rgb(5 150 105 / 0.55);
+  background-color: #020617;
+  color: #d1fae5;
+}
+
+.golf-trophy-theme .trophy-season-select:focus {
+  border-color: #34d399;
+  box-shadow: 0 0 0 3px rgb(16 185 129 / 0.16);
+}
+
+.golf-trophy-theme .trophy-empty-state {
+  border-color: rgb(5 150 105 / 0.45);
+  background-color: rgb(2 44 34 / 0.28);
 }

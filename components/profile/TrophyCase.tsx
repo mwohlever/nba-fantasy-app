@@ -46,6 +46,7 @@ export type MilestoneThresholds = {
 
 type Props = {
   teamName: string;
+  sport?: "nba" | "nfl" | "golf";
   career: {
     wins: number;
     runnerUps: number;
@@ -205,11 +206,13 @@ function MilestoneBadge({ badge }: { badge: BadgeDefinition }) {
 
 export default function TrophyCase({
   teamName,
+  sport = "nba",
   career,
   milestones,
   leagueAwards,
   thresholds,
 }: Props) {
+  const isGolf = sport === "golf";
   const [activeTab, setActiveTab] =
     useState<TrophyTab>("milestones");
 
@@ -369,11 +372,25 @@ export default function TrophyCase({
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-3xl border border-amber-200 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 p-5 text-white shadow-xl">
+      <section
+        className={`overflow-hidden rounded-3xl border p-5 text-white shadow-xl ${
+          isGolf
+            ? "border-emerald-700/70 bg-gradient-to-r from-slate-950 via-emerald-950 to-slate-950"
+            : "border-amber-200 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950"
+        }`}
+      >
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="text-xs font-bold uppercase tracking-[0.25em] text-amber-300">
-              111 Hall of Fame
+            <div
+              className={`text-xs font-bold uppercase tracking-[0.25em] ${
+                isGolf
+                  ? "text-emerald-300"
+                  : "text-amber-300"
+              }`}
+            >
+              {isGolf
+                ? "111 Golf Hall of Fame"
+                : "111 Hall of Fame"}
             </div>
 
             <h2 className="mt-2 text-3xl font-black tracking-tight">
@@ -381,7 +398,9 @@ export default function TrophyCase({
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              Career hardware, rare achievements, and seasonal honors.
+              {isGolf
+                ? "Tournament hardware, scoring milestones, and seasonal honors."
+                : "Career hardware, rare achievements, and seasonal honors."}
             </p>
           </div>
 
@@ -396,7 +415,13 @@ export default function TrophyCase({
         </div>
       </section>
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+      <section
+        className={`rounded-3xl border p-2 shadow-sm ${
+          isGolf
+            ? "border-emerald-900/70 bg-slate-900"
+            : "border-slate-200 bg-white"
+        }`}
+      >
         <div className="grid grid-cols-3 gap-2">
           {[
             {
@@ -424,8 +449,12 @@ export default function TrophyCase({
                 onClick={() => setActiveTab(tab.id as TrophyTab)}
                 className={`rounded-2xl px-2 py-2.5 text-sm font-semibold transition ${
                   isActive
-                    ? "bg-amber-100 text-amber-950 shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    ? isGolf
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "bg-amber-100 text-amber-950 shadow-sm"
+                    : isGolf
+                      ? "text-slate-300 hover:bg-emerald-950/60 hover:text-emerald-200"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
                 <span className="mr-1 hidden sm:inline">{tab.icon}</span>
@@ -439,7 +468,11 @@ export default function TrophyCase({
       {activeTab === "career" ? (
         <section className="trophy-content-section rounded-3xl border p-5 shadow-sm">
           <div className="mb-5">
-            <div className="trophy-section-kicker trophy-section-kicker--gold text-xs font-bold uppercase tracking-[0.2em]">
+            <div className={`trophy-section-kicker text-xs font-bold uppercase tracking-[0.2em] ${
+              isGolf
+                ? "text-emerald-300"
+                : "trophy-section-kicker--gold"
+            }`}>
               Career Hardware
             </div>
 
@@ -534,7 +567,11 @@ export default function TrophyCase({
         <section className="trophy-content-section rounded-3xl border p-5 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="trophy-section-kicker trophy-section-kicker--gold text-xs font-bold uppercase tracking-[0.2em]">
+              <div className={`trophy-section-kicker text-xs font-bold uppercase tracking-[0.2em] ${
+              isGolf
+                ? "text-emerald-300"
+                : "trophy-section-kicker--gold"
+            }`}>
                 Commissioner Honors
               </div>
 

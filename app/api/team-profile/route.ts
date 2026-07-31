@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getGolfTeamProfile } from "@/lib/profile/golfTeamProfile";
 
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
@@ -40,10 +41,22 @@ export async function GET(req: Request) {
     const seasonParam = searchParams.get("season");
     const isAllTime = !seasonParam || seasonParam === "all";
     const sportParam = searchParams.get("sport");
-    const sport = sportParam === "nfl" ? "nfl" : "nba";
+    const sport =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
 
     if (!teamId || Number.isNaN(teamId)) {
       return NextResponse.json({ error: "Missing or invalid teamId." }, { status: 400 });
+    }
+
+    if (sport === "golf") {
+      return getGolfTeamProfile(
+        teamId,
+        seasonParam,
+      );
     }
 
     const playersTable = sport === "nfl" ? "players_nfl" : "players";
