@@ -103,22 +103,6 @@ function holePar(hole: GolfHoleStat | null | undefined) {
   return Number.isFinite(par) ? par : null;
 }
 
-function holeResultName(
-  relative: number | null | undefined,
-) {
-  if (relative === null || relative === undefined) {
-    return "Not played";
-  }
-
-  if (relative <= -3) return "Albatross or better";
-  if (relative === -2) return "Eagle";
-  if (relative === -1) return "Birdie";
-  if (relative === 0) return "Par";
-  if (relative === 1) return "Bogey";
-  if (relative === 2) return "Double bogey";
-  return `+${relative}`;
-}
-
 function holeTitle(
   holeNumber: number,
   hole: GolfHoleStat,
@@ -226,9 +210,6 @@ function RoundScorecard({
     round.holes.map((hole) => [hole.hole_number, hole]),
   );
 
-  const [selectedHoleNumber, setSelectedHoleNumber] =
-    useState<number | null>(null);
-
   const roundProgress =
     round.holes_completed >= 18
       ? "Complete"
@@ -286,13 +267,7 @@ function RoundScorecard({
 
       {isExpanded ? (
         <div className="border-t border-slate-200 px-4 pb-4 pt-4">
-          <div
-            className={`overflow-x-auto ${
-              selectedHoleNumber !== null
-                ? "pb-28"
-                : "pb-2"
-            }`}
-          >
+          <div className="overflow-x-auto pb-2">
             <div className="grid min-w-[700px] grid-cols-18 gap-1.5">
               {Array.from({ length: 18 }, (_, index) => index + 1).map(
                 (holeNumber) => (
@@ -333,87 +308,15 @@ function RoundScorecard({
                       score_display: null,
                     } satisfies GolfHoleStat);
 
-                  const isSelected =
-                    selectedHoleNumber === holeNumber;
-
-                  const par = holePar(hole);
-
-                  const yardage =
-                    hole.yards === null ||
-                    hole.yards === undefined
-                      ? null
-                      : Number(hole.yards);
-
                   return (
                     <div
                       key={`score-${holeNumber}`}
-                      className="relative"
+                      className={`flex h-9 items-center justify-center rounded-lg border text-xs font-black ${holeClass(
+                        hole,
+                      )}`}
+                      title={holeTitle(holeNumber, hole)}
                     >
-                      <button
-                        type="button"
-                        className={`flex h-9 w-full items-center justify-center rounded-lg border text-xs font-black ${holeClass(
-                          hole,
-                        )}`}
-                        title={holeTitle(holeNumber, hole)}
-                        aria-label={holeTitle(
-                          holeNumber,
-                          hole,
-                        )}
-                        aria-expanded={isSelected}
-                        onClick={() =>
-                          setSelectedHoleNumber(
-                            isSelected
-                              ? null
-                              : holeNumber,
-                          )
-                        }
-                        onBlur={() =>
-                          setSelectedHoleNumber(
-                            (current) =>
-                              current === holeNumber
-                                ? null
-                                : current,
-                          )
-                        }
-                      >
-                        {holeValue(hole)}
-                      </button>
-
-                      {isSelected ? (
-                        <div
-                          role="tooltip"
-                          className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
-                        >
-                          <div className="text-xs font-black">
-                            Hole {holeNumber}
-                          </div>
-
-                          <div className="mt-1 text-[11px] text-slate-300">
-                            {par === null
-                              ? "Par —"
-                              : `Par ${par}`}
-
-                            {yardage !== null
-                              ? ` · ${yardage} yards`
-                              : ""}
-                          </div>
-
-                          <div className="mt-1 text-[11px] font-bold text-emerald-300">
-                            {hole.strokes === null
-                              ? "Not played"
-                              : `${hole.strokes} strokes · ${holeResultName(
-                                  hole.relative_to_par,
-                                )} (${holeValue(
-                                  hole,
-                                )})`}
-                          </div>
-
-                          <span
-                            aria-hidden="true"
-                            className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-b-8 border-x-transparent border-b-slate-950"
-                          />
-                        </div>
-                      ) : null}
+                      {holeValue(hole)}
                     </div>
                   );
                 },

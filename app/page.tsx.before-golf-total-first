@@ -1667,10 +1667,6 @@ function HomePageContent() {
                           Golfer
                         </th>
 
-                        <th className="px-3 py-3 text-center font-semibold text-emerald-200">
-                          Total
-                        </th>
-
                         {[1, 2, 3, 4].map(
                           (roundNumber) => (
                             <th
@@ -1681,6 +1677,10 @@ function HomePageContent() {
                             </th>
                           ),
                         )}
+
+                        <th className="px-3 py-3 text-right font-semibold">
+                          Score
+                        </th>
                       </tr>
                     </thead>
 
@@ -1735,12 +1735,6 @@ function HomePageContent() {
                               </button>
                             </td>
 
-                            <td className="px-3 py-3 text-center text-lg font-black text-emerald-300">
-                              {formatGolfScore(
-                                row.fantasyPoints,
-                              )}
-                            </td>
-
                             {[1, 2, 3, 4].map(
                               (roundNumber) => {
                                 const round =
@@ -1772,6 +1766,11 @@ function HomePageContent() {
                               },
                             )}
 
+                            <td className="px-3 py-3 text-right text-lg font-black text-emerald-300">
+                              {formatGolfScore(
+                                row.fantasyPoints,
+                              )}
+                            </td>
                           </tr>
                         ),
                       )}

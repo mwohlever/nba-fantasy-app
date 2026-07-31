@@ -258,22 +258,6 @@ function relativeLabel(relative: number | null | undefined) {
   return relative > 0 ? `+${relative}` : String(relative);
 }
 
-function holeResultName(
-  relative: number | null | undefined,
-) {
-  if (relative === null || relative === undefined) {
-    return "Not played";
-  }
-
-  if (relative <= -3) return "Albatross or better";
-  if (relative === -2) return "Eagle";
-  if (relative === -1) return "Birdie";
-  if (relative === 0) return "Par";
-  if (relative === 1) return "Bogey";
-  if (relative === 2) return "Double bogey";
-  return `+${relative}`;
-}
-
 function medalForPosition(position: number) {
   if (position === 1) return "🥇";
   if (position === 2) return "🥈";
@@ -566,9 +550,6 @@ export default function GolfScoresDashboard({
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(
     leaderboard[0]?.team.id ?? null,
   );
-
-  const [selectedHoleKey, setSelectedHoleKey] =
-    useState<string | null>(null);
 
   useEffect(() => {
     if (
@@ -983,15 +964,7 @@ export default function GolfScoresDashboard({
                     ) : null}
                   </div>
 
-                  <div
-                    className={`overflow-x-auto ${
-                      selectedHoleKey?.startsWith(
-                        `${player.id}:${displayRound?.round_number ?? 0}:`,
-                      )
-                        ? "pb-28"
-                        : "pb-1"
-                    }`}
-                  >
+                  <div className="overflow-x-auto pb-1">
                     <div className="grid min-w-[680px] grid-cols-18 gap-1">
                       {Array.from(
                         { length: 18 },
@@ -1033,119 +1006,20 @@ export default function GolfScoresDashboard({
                         const hole =
                           holesByNumber.get(holeNumber);
 
-                        const holeKey =
-                          `${player.id}:` +
-                          `${displayRound?.round_number ?? 0}:` +
-                          `${holeNumber}`;
-
-                        const isSelected =
-                          selectedHoleKey === holeKey;
-
-                        const par = holePar(hole);
-
-                        const yardage =
-                          hole?.yards === null ||
-                          hole?.yards === undefined
-                            ? null
-                            : Number(hole.yards);
-
                         return (
                           <div
                             key={`hole-${holeNumber}`}
-                            className="relative"
-                            role="button"
-                            tabIndex={0}
+                            className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black ${relativeClass(
+                              hole?.relative_to_par,
+                            )}`}
                             title={holeTooltip(
                               holeNumber,
                               hole,
                             )}
-                            aria-label={holeTooltip(
-                              holeNumber,
-                              hole,
-                            )}
-                            aria-expanded={isSelected}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-
-                              setSelectedHoleKey(
-                                isSelected
-                                  ? null
-                                  : holeKey,
-                              );
-                            }}
-                            onKeyDown={(event) => {
-                              if (
-                                event.key !== "Enter" &&
-                                event.key !== " "
-                              ) {
-                                return;
-                              }
-
-                              event.preventDefault();
-                              event.stopPropagation();
-
-                              setSelectedHoleKey(
-                                isSelected
-                                  ? null
-                                  : holeKey,
-                              );
-                            }}
-                            onBlur={() =>
-                              setSelectedHoleKey(
-                                (current) =>
-                                  current === holeKey
-                                    ? null
-                                    : current,
-                              )
-                            }
                           >
-                            <div
-                              className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black ${relativeClass(
-                                hole?.relative_to_par,
-                              )}`}
-                            >
-                              {relativeLabel(
-                                hole?.relative_to_par,
-                              )}
-                            </div>
-
-                            {isSelected ? (
-                              <div
-                                role="tooltip"
-                                className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
-                              >
-                                <div className="text-xs font-black">
-                                  Hole {holeNumber}
-                                </div>
-
-                                <div className="mt-1 text-[11px] text-slate-300">
-                                  {par === null
-                                    ? "Par —"
-                                    : `Par ${par}`}
-
-                                  {yardage !== null
-                                    ? ` · ${yardage} yards`
-                                    : ""}
-                                </div>
-
-                                <div className="mt-1 text-[11px] font-bold text-emerald-300">
-                                  {hole?.strokes === null ||
-                                  hole?.strokes === undefined
-                                    ? "Not played"
-                                    : `${hole.strokes} strokes · ${holeResultName(
-                                        hole.relative_to_par,
-                                      )} (${relativeLabel(
-                                        hole.relative_to_par,
-                                      )})`}
-                                </div>
-
-                                <span
-                                  aria-hidden="true"
-                                  className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-b-8 border-x-transparent border-b-slate-950"
-                                />
-                              </div>
-                            ) : null}
+                            {relativeLabel(
+                              hole?.relative_to_par,
+                            )}
                           </div>
                         );
                       })}

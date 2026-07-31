@@ -655,43 +655,6 @@ export async function POST(request: Request) {
       ]),
     );
 
-    const competitorByPlayerId = new Map(
-      competitors.map((competitor) => {
-        const playerId = playerIdByEspnId.get(
-          competitor.espnPlayerId,
-        );
-
-        return [
-          Number(playerId),
-          competitor,
-        ] as const;
-      }),
-    );
-
-    const { data: slateTeamData, error: slateTeamError } =
-      await supabaseAdmin
-        .from("slate_teams")
-        .select("team_id, draft_order")
-        .eq("slate_id", slateId);
-
-    if (slateTeamError) {
-      return NextResponse.json(
-        {
-          error:
-            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
-            slateTeamError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const draftOrderByTeamId = new Map(
-      (slateTeamData ?? []).map((row) => [
-        Number(row.team_id),
-        Number(row.draft_order ?? 999),
-      ]),
-    );
-
     const teamResultRows = (lineupsData ?? []).map((lineup: any) => {
       const playerIds = (lineup.lineup_players ?? []).map(
         (row: any) => Number(row.player_id),
@@ -725,96 +688,6 @@ export async function POST(request: Request) {
         ["scheduled", "did_not_start"].includes(String(row.status)),
       ).length;
 
-      const golferCompetitors = playerIds
-        .map((playerId: number) =>
-          competitorByPlayerId.get(playerId),
-        )
-        .filter(Boolean);
-
-      const completedIndividualRounds =
-        golferCompetitors.flatMap((competitor: any) =>
-          (competitor.rounds ?? [])
-            .filter(
-              (round: any) =>
-                Number(round.holesCompleted ?? 0) >= 18 &&
-                round.scoreToPar !== null &&
-                round.scoreToPar !== undefined,
-            )
-            .map((round: any) => ({
-              roundNumber: Number(round.roundNumber),
-              score: Number(round.scoreToPar),
-            })),
-        );
-
-      const bestIndividualRound =
-        completedIndividualRounds.length > 0
-          ? Math.min(
-              ...completedIndividualRounds.map(
-                (round: any) => round.score,
-              ),
-            )
-          : Number.POSITIVE_INFINITY;
-
-      const teamRoundScores: number[] = [];
-
-      for (const roundNumber of [1, 2, 3, 4]) {
-        const roundScores = golferCompetitors
-          .map((competitor: any) =>
-            (competitor.rounds ?? []).find(
-              (round: any) =>
-                Number(round.roundNumber) === roundNumber &&
-                Number(round.holesCompleted ?? 0) >= 18 &&
-                round.scoreToPar !== null &&
-                round.scoreToPar !== undefined,
-            ),
-          )
-          .filter(Boolean)
-          .map((round: any) =>
-            Number(round.scoreToPar),
-          );
-
-        // A team round counts only after every drafted golfer has
-        // completed that round.
-        if (
-          golferCompetitors.length > 0 &&
-          roundScores.length === golferCompetitors.length
-        ) {
-          teamRoundScores.push(
-            roundScores.reduce(
-              (sum: number, score: number) =>
-                sum + score,
-              0,
-            ),
-          );
-        }
-      }
-
-      const bestTeamRound =
-        teamRoundScores.length > 0
-          ? Math.min(...teamRoundScores)
-          : Number.POSITIVE_INFINITY;
-
-      const playedHoles =
-        golferCompetitors.flatMap((competitor: any) =>
-          (competitor.rounds ?? []).flatMap(
-            (round: any) => round.holes ?? [],
-          ),
-        );
-
-      const birdiesOrBetter = playedHoles.filter(
-        (hole: any) =>
-          hole.relativeToPar !== null &&
-          hole.relativeToPar !== undefined &&
-          Number(hole.relativeToPar) <= -1,
-      ).length;
-
-      const bogeysOrWorse = playedHoles.filter(
-        (hole: any) =>
-          hole.relativeToPar !== null &&
-          hole.relativeToPar !== undefined &&
-          Number(hole.relativeToPar) >= 1,
-      ).length;
-
       return {
         slate_id: slateId,
         team_id: Number(lineup.team_id),
@@ -823,102 +696,29 @@ export async function POST(request: Request) {
         games_completed: gamesCompleted,
         games_in_progress: gamesInProgress,
         games_remaining: gamesRemaining,
-
-        _tiebreak: {
-          bestTeamRound,
-          bestIndividualRound,
-          birdiesOrBetter,
-          bogeysOrWorse,
-          draftOrder:
-            draftOrderByTeamId.get(
-              Number(lineup.team_id),
-            ) ?? 999,
-        },
       };
     });
 
-    const compareGolfTeams = (
-      a: (typeof teamResultRows)[number],
-      b: (typeof teamResultRows)[number],
-    ) => {
-      // Lower tournament score wins.
-      if (a.fantasy_points !== b.fantasy_points) {
-        return a.fantasy_points - b.fantasy_points;
-      }
-
-      // 1. Lowest completed team round.
-      if (
-        a._tiebreak.bestTeamRound !==
-        b._tiebreak.bestTeamRound
-      ) {
-        return (
-          a._tiebreak.bestTeamRound -
-          b._tiebreak.bestTeamRound
-        );
-      }
-
-      // 2. Lowest completed individual golfer round.
-      if (
-        a._tiebreak.bestIndividualRound !==
-        b._tiebreak.bestIndividualRound
-      ) {
-        return (
-          a._tiebreak.bestIndividualRound -
-          b._tiebreak.bestIndividualRound
-        );
-      }
-
-      // 3. Most birdies or better.
-      if (
-        a._tiebreak.birdiesOrBetter !==
-        b._tiebreak.birdiesOrBetter
-      ) {
-        return (
-          b._tiebreak.birdiesOrBetter -
-          a._tiebreak.birdiesOrBetter
-        );
-      }
-
-      // 4. Fewest bogeys or worse.
-      if (
-        a._tiebreak.bogeysOrWorse !==
-        b._tiebreak.bogeysOrWorse
-      ) {
-        return (
-          a._tiebreak.bogeysOrWorse -
-          b._tiebreak.bogeysOrWorse
-        );
-      }
-
-      // 5. Earlier draft position guarantees a stable result.
-      if (
-        a._tiebreak.draftOrder !==
-        b._tiebreak.draftOrder
-      ) {
-        return (
-          a._tiebreak.draftOrder -
-          b._tiebreak.draftOrder
-        );
-      }
-
-      return a.team_id - b.team_id;
-    };
-
-    const rankedTeamRows =
-      [...teamResultRows].sort(compareGolfTeams);
-
-    rankedTeamRows.forEach((row, index) => {
-      row.finish_position = index + 1;
-    });
-
-    const persistedTeamRows = rankedTeamRows.map(
-      ({ _tiebreak, ...row }) => row,
+    const rankedTeamRows = [...teamResultRows].sort(
+      (a, b) => a.fantasy_points - b.fantasy_points,
     );
 
-    if (persistedTeamRows.length > 0) {
+    rankedTeamRows.forEach((row, index) => {
+      if (
+        index > 0 &&
+        rankedTeamRows[index - 1].fantasy_points === row.fantasy_points
+      ) {
+        row.finish_position =
+          rankedTeamRows[index - 1].finish_position;
+      } else {
+        row.finish_position = index + 1;
+      }
+    });
+
+    if (rankedTeamRows.length > 0) {
       const { error: teamResultsError } = await supabaseAdmin
         .from("team_slate_results")
-        .upsert(persistedTeamRows, {
+        .upsert(rankedTeamRows, {
           onConflict: "slate_id,team_id",
         });
 
@@ -957,7 +757,7 @@ export async function POST(request: Request) {
       playersUpserted: golfPlayerRows.length,
       eventPlayersUpserted: eventPlayerRows.length,
       playerStatsUpserted: eventPlayerRows.length,
-      teamResultsUpserted: persistedTeamRows.length,
+      teamResultsUpserted: rankedTeamRows.length,
       roundsInserted: roundRows.length,
       holesInserted: holeRows.length,
       courseHolesUpserted,

@@ -258,220 +258,11 @@ function relativeLabel(relative: number | null | undefined) {
   return relative > 0 ? `+${relative}` : String(relative);
 }
 
-function holeResultName(
-  relative: number | null | undefined,
-) {
-  if (relative === null || relative === undefined) {
-    return "Not played";
-  }
-
-  if (relative <= -3) return "Albatross or better";
-  if (relative === -2) return "Eagle";
-  if (relative === -1) return "Birdie";
-  if (relative === 0) return "Par";
-  if (relative === 1) return "Bogey";
-  if (relative === 2) return "Double bogey";
-  return `+${relative}`;
-}
-
 function medalForPosition(position: number) {
   if (position === 1) return "🥇";
   if (position === 2) return "🥈";
   if (position === 3) return "🥉";
   return `${position}.`;
-}
-
-type GolfTieMetrics = {
-  bestTeamRound: number;
-  bestIndividualRound: number;
-  birdiesOrBetter: number;
-  bogeysOrWorse: number;
-  draftOrder: number;
-};
-
-function buildGolfTieMetrics(
-  players: Player[],
-  getRawPlayerStat: (playerId: number) => PlayerStat | null,
-  draftOrder: number | null | undefined,
-): GolfTieMetrics {
-  const stats = players
-    .map((player) => getRawPlayerStat(player.id))
-    .filter(
-      (stat): stat is PlayerStat =>
-        stat !== null,
-    );
-
-  const completedRounds = stats.flatMap(
-    (stat) =>
-      (stat.rounds ?? [])
-        .filter(
-          (round) =>
-            Number(round.holes_completed ?? 0) >= 18 &&
-            round.score_to_par !== null &&
-            round.score_to_par !== undefined,
-        )
-        .map((round) => ({
-          roundNumber: Number(round.round_number),
-          score: Number(round.score_to_par),
-        })),
-  );
-
-  const bestIndividualRound =
-    completedRounds.length > 0
-      ? Math.min(
-          ...completedRounds.map(
-            (round) => round.score,
-          ),
-        )
-      : Number.POSITIVE_INFINITY;
-
-  const teamRoundScores: number[] = [];
-
-  for (const roundNumber of [1, 2, 3, 4]) {
-    const scores = stats
-      .map((stat) =>
-        (stat.rounds ?? []).find(
-          (round) =>
-            Number(round.round_number) === roundNumber &&
-            Number(round.holes_completed ?? 0) >= 18 &&
-            round.score_to_par !== null &&
-            round.score_to_par !== undefined,
-        ),
-      )
-      .filter(Boolean)
-      .map((round) =>
-        Number(round?.score_to_par),
-      );
-
-    if (
-      stats.length > 0 &&
-      scores.length === stats.length
-    ) {
-      teamRoundScores.push(
-        scores.reduce(
-          (sum, score) => sum + score,
-          0,
-        ),
-      );
-    }
-  }
-
-  const holes = stats.flatMap((stat) =>
-    (stat.rounds ?? []).flatMap(
-      (round) => round.holes ?? [],
-    ),
-  );
-
-  return {
-    bestTeamRound:
-      teamRoundScores.length > 0
-        ? Math.min(...teamRoundScores)
-        : Number.POSITIVE_INFINITY,
-
-    bestIndividualRound,
-
-    birdiesOrBetter: holes.filter(
-      (hole) =>
-        hole.relative_to_par !== null &&
-        hole.relative_to_par !== undefined &&
-        Number(hole.relative_to_par) <= -1,
-    ).length,
-
-    bogeysOrWorse: holes.filter(
-      (hole) =>
-        hole.relative_to_par !== null &&
-        hole.relative_to_par !== undefined &&
-        Number(hole.relative_to_par) >= 1,
-    ).length,
-
-    draftOrder:
-      Number.isFinite(Number(draftOrder))
-        ? Number(draftOrder)
-        : 999,
-  };
-}
-
-function compareGolfTieMetrics(
-  a: GolfTieMetrics,
-  b: GolfTieMetrics,
-) {
-  if (a.bestTeamRound !== b.bestTeamRound) {
-    return a.bestTeamRound - b.bestTeamRound;
-  }
-
-  if (
-    a.bestIndividualRound !==
-    b.bestIndividualRound
-  ) {
-    return (
-      a.bestIndividualRound -
-      b.bestIndividualRound
-    );
-  }
-
-  if (
-    a.birdiesOrBetter !==
-    b.birdiesOrBetter
-  ) {
-    return (
-      b.birdiesOrBetter -
-      a.birdiesOrBetter
-    );
-  }
-
-  if (
-    a.bogeysOrWorse !==
-    b.bogeysOrWorse
-  ) {
-    return (
-      a.bogeysOrWorse -
-      b.bogeysOrWorse
-    );
-  }
-
-  return a.draftOrder - b.draftOrder;
-}
-
-function golfTiebreakLabel(
-  winner: GolfTieMetrics,
-  loser: GolfTieMetrics,
-) {
-  if (
-    winner.bestTeamRound !== loser.bestTeamRound &&
-    Number.isFinite(winner.bestTeamRound)
-  ) {
-    return `Tiebreak: team round ${formatGolfScore(
-      winner.bestTeamRound,
-    )}`;
-  }
-
-  if (
-    winner.bestIndividualRound !==
-      loser.bestIndividualRound &&
-    Number.isFinite(
-      winner.bestIndividualRound,
-    )
-  ) {
-    return `Tiebreak: golfer round ${formatGolfScore(
-      winner.bestIndividualRound,
-    )}`;
-  }
-
-  if (
-    winner.birdiesOrBetter !==
-    loser.birdiesOrBetter
-  ) {
-    return `Tiebreak: ${winner.birdiesOrBetter} birdies+`;
-  }
-
-  if (
-    winner.bogeysOrWorse !==
-    loser.bogeysOrWorse
-  ) {
-    return `Tiebreak: ${winner.bogeysOrWorse} bogeys+`;
-  }
-
-  return `Tiebreak: draft position ${winner.draftOrder}`;
 }
 
 export default function GolfScoresDashboard({
@@ -521,11 +312,6 @@ export default function GolfScoresDashboard({
           return {
             team,
             stats: getTeamStats(team.id),
-            tieMetrics: buildGolfTieMetrics(
-              teamPlayers,
-              getRawPlayerStat,
-              team.draft_order,
-            ),
             rosterStatus: {
               completed,
               live,
@@ -534,27 +320,10 @@ export default function GolfScoresDashboard({
             },
           };
         })
-        .sort((a, b) => {
-          const scoreDifference =
-            Number(a.stats.total ?? 0) -
-            Number(b.stats.total ?? 0);
-
-          if (scoreDifference !== 0) {
-            return scoreDifference;
-          }
-
-          const tieDifference =
-            compareGolfTieMetrics(
-              a.tieMetrics,
-              b.tieMetrics,
-            );
-
-          if (tieDifference !== 0) {
-            return tieDifference;
-          }
-
-          return a.team.id - b.team.id;
-        }),
+        .sort(
+          (a, b) =>
+            Number(a.stats.total ?? 0) - Number(b.stats.total ?? 0),
+        ),
     [
       participatingTeams,
       getPlayersForTeam,
@@ -566,9 +335,6 @@ export default function GolfScoresDashboard({
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(
     leaderboard[0]?.team.id ?? null,
   );
-
-  const [selectedHoleKey, setSelectedHoleKey] =
-    useState<string | null>(null);
 
   useEffect(() => {
     if (
@@ -705,44 +471,7 @@ export default function GolfScoresDashboard({
 
         <div className="flex gap-3 overflow-x-auto pb-2">
           {leaderboard.map((row, index) => {
-            const selected =
-              row.team.id === selectedTeam.id;
-
-            const nextTiedTeam =
-              leaderboard
-                .slice(index + 1)
-                .find(
-                  (candidate) =>
-                    Number(
-                      candidate.stats.total ?? 0,
-                    ) ===
-                    Number(row.stats.total ?? 0),
-                ) ?? null;
-
-            const previousTiedTeam =
-              [...leaderboard]
-                .slice(0, index)
-                .reverse()
-                .find(
-                  (candidate) =>
-                    Number(
-                      candidate.stats.total ?? 0,
-                    ) ===
-                    Number(row.stats.total ?? 0),
-                ) ?? null;
-
-            const tiebreakLabel =
-              nextTiedTeam
-                ? golfTiebreakLabel(
-                    row.tieMetrics,
-                    nextTiedTeam.tieMetrics,
-                  )
-                : previousTiedTeam
-                  ? `Lost ${golfTiebreakLabel(
-                      previousTiedTeam.tieMetrics,
-                      row.tieMetrics,
-                    ).toLowerCase()}`
-                  : null;
+            const selected = row.team.id === selectedTeam.id;
 
             return (
               <button
@@ -774,15 +503,6 @@ export default function GolfScoresDashboard({
                 <div className="mt-1 text-xs font-bold uppercase text-slate-500">
                   Score
                 </div>
-
-                {tiebreakLabel ? (
-                  <div
-                    className="mt-2 rounded-lg bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-900"
-                    title={tiebreakLabel}
-                  >
-                    {tiebreakLabel}
-                  </div>
-                ) : null}
 
                 <div className="mt-3 text-xs text-slate-500">
                   {row.rosterStatus.completed} final ·{" "}
@@ -983,15 +703,7 @@ export default function GolfScoresDashboard({
                     ) : null}
                   </div>
 
-                  <div
-                    className={`overflow-x-auto ${
-                      selectedHoleKey?.startsWith(
-                        `${player.id}:${displayRound?.round_number ?? 0}:`,
-                      )
-                        ? "pb-28"
-                        : "pb-1"
-                    }`}
-                  >
+                  <div className="overflow-x-auto pb-1">
                     <div className="grid min-w-[680px] grid-cols-18 gap-1">
                       {Array.from(
                         { length: 18 },
@@ -1033,119 +745,20 @@ export default function GolfScoresDashboard({
                         const hole =
                           holesByNumber.get(holeNumber);
 
-                        const holeKey =
-                          `${player.id}:` +
-                          `${displayRound?.round_number ?? 0}:` +
-                          `${holeNumber}`;
-
-                        const isSelected =
-                          selectedHoleKey === holeKey;
-
-                        const par = holePar(hole);
-
-                        const yardage =
-                          hole?.yards === null ||
-                          hole?.yards === undefined
-                            ? null
-                            : Number(hole.yards);
-
                         return (
                           <div
                             key={`hole-${holeNumber}`}
-                            className="relative"
-                            role="button"
-                            tabIndex={0}
+                            className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black ${relativeClass(
+                              hole?.relative_to_par,
+                            )}`}
                             title={holeTooltip(
                               holeNumber,
                               hole,
                             )}
-                            aria-label={holeTooltip(
-                              holeNumber,
-                              hole,
-                            )}
-                            aria-expanded={isSelected}
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-
-                              setSelectedHoleKey(
-                                isSelected
-                                  ? null
-                                  : holeKey,
-                              );
-                            }}
-                            onKeyDown={(event) => {
-                              if (
-                                event.key !== "Enter" &&
-                                event.key !== " "
-                              ) {
-                                return;
-                              }
-
-                              event.preventDefault();
-                              event.stopPropagation();
-
-                              setSelectedHoleKey(
-                                isSelected
-                                  ? null
-                                  : holeKey,
-                              );
-                            }}
-                            onBlur={() =>
-                              setSelectedHoleKey(
-                                (current) =>
-                                  current === holeKey
-                                    ? null
-                                    : current,
-                              )
-                            }
                           >
-                            <div
-                              className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black ${relativeClass(
-                                hole?.relative_to_par,
-                              )}`}
-                            >
-                              {relativeLabel(
-                                hole?.relative_to_par,
-                              )}
-                            </div>
-
-                            {isSelected ? (
-                              <div
-                                role="tooltip"
-                                className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
-                              >
-                                <div className="text-xs font-black">
-                                  Hole {holeNumber}
-                                </div>
-
-                                <div className="mt-1 text-[11px] text-slate-300">
-                                  {par === null
-                                    ? "Par —"
-                                    : `Par ${par}`}
-
-                                  {yardage !== null
-                                    ? ` · ${yardage} yards`
-                                    : ""}
-                                </div>
-
-                                <div className="mt-1 text-[11px] font-bold text-emerald-300">
-                                  {hole?.strokes === null ||
-                                  hole?.strokes === undefined
-                                    ? "Not played"
-                                    : `${hole.strokes} strokes · ${holeResultName(
-                                        hole.relative_to_par,
-                                      )} (${relativeLabel(
-                                        hole.relative_to_par,
-                                      )})`}
-                                </div>
-
-                                <span
-                                  aria-hidden="true"
-                                  className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-b-8 border-x-transparent border-b-slate-950"
-                                />
-                              </div>
-                            ) : null}
+                            {relativeLabel(
+                              hole?.relative_to_par,
+                            )}
                           </div>
                         );
                       })}

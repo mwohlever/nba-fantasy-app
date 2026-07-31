@@ -286,13 +286,7 @@ function RoundScorecard({
 
       {isExpanded ? (
         <div className="border-t border-slate-200 px-4 pb-4 pt-4">
-          <div
-            className={`overflow-x-auto ${
-              selectedHoleNumber !== null
-                ? "pb-28"
-                : "pb-2"
-            }`}
-          >
+          <div className="overflow-x-auto pb-2">
             <div className="grid min-w-[700px] grid-cols-18 gap-1.5">
               {Array.from({ length: 18 }, (_, index) => index + 1).map(
                 (holeNumber) => (
@@ -382,7 +376,7 @@ function RoundScorecard({
                       {isSelected ? (
                         <div
                           role="tooltip"
-                          className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
+                          className="absolute bottom-full left-1/2 z-30 mb-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
                         >
                           <div className="text-xs font-black">
                             Hole {holeNumber}
@@ -410,7 +404,7 @@ function RoundScorecard({
 
                           <span
                             aria-hidden="true"
-                            className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-b-8 border-x-transparent border-b-slate-950"
+                            className="absolute left-1/2 top-full -translate-x-1/2 border-x-8 border-t-8 border-x-transparent border-t-slate-950"
                           />
                         </div>
                       ) : null}
