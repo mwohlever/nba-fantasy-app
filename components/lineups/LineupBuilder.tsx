@@ -9,6 +9,7 @@ import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
 import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
 import ScoresDashboard from "@/components/lineups/ScoresDashboard";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import LineupControls from "@/components/lineups/LineupControls";
 import { getStatColumns } from "@/lib/statColumns";
 import { useSelectedSport } from "@/components/providers/SportProvider";
@@ -81,6 +82,8 @@ export default function LineupBuilder({
   const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [isGolfSlateMenuOpen, setIsGolfSlateMenuOpen] =
+    useState(false);
 
   const [compactView, setCompactView] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
@@ -1306,6 +1309,238 @@ export default function LineupBuilder({
     setTargetDraftSlot(null);
   }
 
+  const golfScoresControls = (
+    <>
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              void refreshStatsForSelectedSlate(false)
+            }
+            disabled={
+              !selectedSlateIdNumber ||
+              isRefreshingStats
+            }
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-sky-500 bg-sky-950 px-3 py-2.5 text-sm font-black text-sky-200 transition hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span
+              aria-hidden="true"
+              className={
+                isRefreshingStats
+                  ? "animate-spin"
+                  : ""
+              }
+            >
+              ↻
+            </span>
+
+            <span>
+              {isRefreshingStats
+                ? "Refreshing..."
+                : "Refresh Scores"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setIsGolfSlateMenuOpen(true)
+            }
+            className="flex shrink-0 items-center justify-center rounded-xl border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm font-black text-slate-100 transition hover:border-sky-500"
+          >
+            Slates
+            <span
+              aria-hidden="true"
+              className="ml-1"
+            >
+              ▾
+            </span>
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 px-1 text-[11px] text-slate-500">
+          <span className="truncate">
+            {selectedSlateDisplay}
+          </span>
+
+          <span className="shrink-0">
+            {lastUpdatedAt
+              ? `Updated ${new Date(
+                  lastUpdatedAt,
+                ).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}`
+              : "Not refreshed yet"}
+          </span>
+        </div>
+      </div>
+
+      {hasMounted &&
+      isGolfSlateMenuOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[12000] flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center"
+              onMouseDown={(event) => {
+                if (
+                  event.target ===
+                  event.currentTarget
+                ) {
+                  setIsGolfSlateMenuOpen(
+                    false,
+                  );
+                }
+              }}
+            >
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-label="Golf slate and score settings"
+                className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 text-slate-100 shadow-2xl"
+              >
+                <header className="flex items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
+                  <div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-400">
+                      Golf scores
+                    </span>
+
+                    <h3 className="mt-1 text-xl font-black">
+                      Slate & Settings
+                    </h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIsGolfSlateMenuOpen(
+                        false,
+                      )
+                    }
+                    aria-label="Close slate settings"
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                  >
+                    ×
+                  </button>
+                </header>
+
+                <div className="space-y-4 p-5">
+                  <label className="block">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      Season
+                    </span>
+
+                    <select
+                      value={selectedSeason}
+                      onChange={(event) =>
+                        setSelectedSeason(
+                          event.target.value,
+                        )
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white"
+                    >
+                      {seasons.map(
+                        (season) => (
+                          <option
+                            key={season}
+                            value={season}
+                          >
+                            {season}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      Tournament
+                    </span>
+
+                    <select
+                      value={selectedSlateId}
+                      onChange={(event) => {
+                        setSelectedSlateId(
+                          event.target.value,
+                        );
+
+                        setIsGolfSlateMenuOpen(
+                          false,
+                        );
+                      }}
+                      disabled={isSlateLoading}
+                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white disabled:opacity-60"
+                    >
+                      {filteredSlates.map(
+                        (slate) => (
+                          <option
+                            key={slate.id}
+                            value={String(
+                              slate.id,
+                            )}
+                          >
+                            {slate.label ??
+                              slate.date}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+
+                  <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+                    <span>
+                      <strong className="block text-sm">
+                        Auto-refresh
+                      </strong>
+
+                      <span className="mt-0.5 block text-xs text-slate-500">
+                        Refresh while this page is visible
+                      </span>
+                    </span>
+
+                    <input
+                      type="checkbox"
+                      checked={
+                        autoRefreshEnabled
+                      }
+                      onChange={(event) =>
+                        setAutoRefreshEnabled(
+                          event.target.checked,
+                        )
+                      }
+                      className="h-5 w-5"
+                    />
+                  </label>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      Current slate
+                    </span>
+
+                    <strong className="mt-1 block text-base text-white">
+                      {selectedSlateDisplay}
+                    </strong>
+
+                    <span className="mt-1 block text-xs text-slate-500">
+                      {lastUpdatedAt
+                        ? `Last refreshed ${new Date(
+                            lastUpdatedAt,
+                          ).toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}`
+                        : "Scores have not been refreshed during this visit."}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+
   const lineupControls = (
     <LineupControls
       selectedSlateId={selectedSlateId}
@@ -1485,6 +1720,7 @@ export default function LineupBuilder({
         </>
       ) : (
         <ScoresDashboard
+          players={players}
           teams={orderedTeamsForSlate}
           selectedSlate={selectedSlate}
           rosterSlots={rosterSlots}
@@ -1501,7 +1737,12 @@ export default function LineupBuilder({
           }
           liveWinPctMap={liveWinPctMap}
           playerProjections={playerProjections}
-          controls={lineupControls}
+          controls={
+            (selectedSlate?.sport ??
+              selectedSport) === "golf"
+              ? golfScoresControls
+              : lineupControls
+          }
           setProfilePlayer={setProfilePlayer}
         />
       )}

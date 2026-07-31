@@ -43,6 +43,7 @@ type RefreshSummary = {
 } | null;
 
 type Props = {
+  players: Player[];
   teams: OrderedTeam[];
   selectedSlate: Slate | null;
   rosterSlots?: RosterSlotConfig[];
@@ -865,6 +866,7 @@ export default function ScoresDashboard(props: Props) {
   if (sport === "golf") {
     return (
       <GolfScoresDashboard
+        players={props.players}
         teams={props.teams}
         selectedSlate={props.selectedSlate}
         rosterSlots={props.rosterSlots}

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import GolfLeagueView from "@/components/lineups/GolfLeagueView";
+import GolfTournamentView from "@/components/lineups/GolfTournamentView";
 import type {
   OrderedTeam,
   Player,
@@ -27,7 +29,13 @@ type RefreshSummary = {
   teamResultsUpserted?: number;
 } | null;
 
+type GolfScoresView =
+  | "fantasy"
+  | "league"
+  | "tournament";
+
 type Props = {
+  players: Player[];
   teams: OrderedTeam[];
   selectedSlate: Slate | null;
   rosterSlots?: RosterSlotConfig[];
@@ -475,6 +483,7 @@ function golfTiebreakLabel(
 }
 
 export default function GolfScoresDashboard({
+  players: allPlayers,
   teams,
   selectedSlate,
   rosterSlots,
@@ -570,6 +579,9 @@ export default function GolfScoresDashboard({
   const [selectedHoleKey, setSelectedHoleKey] =
     useState<string | null>(null);
 
+  const [activeView, setActiveView] =
+    useState<GolfScoresView>("fantasy");
+
   useEffect(() => {
     if (
       selectedTeamId === null ||
@@ -639,28 +651,28 @@ export default function GolfScoresDashboard({
   return (
     <section className="space-y-6">
       <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-4 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 px-5 py-6 text-white sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start justify-between gap-3 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 px-5 py-5 text-white">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
               Fantasy Golf scoreboard
             </div>
 
-            <h2 className="mt-2 text-3xl font-black">
+            <h2 className="mt-1 text-2xl font-black sm:text-3xl">
               {selectedSlate?.label ?? "Golf Scores"}
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm text-emerald-50/80">
+            <p className="mt-1 hidden max-w-2xl text-sm text-emerald-50/80 sm:block">
               Lower fantasy scores are better. Select a golfer to view the
               complete round-by-round scorecard.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-center backdrop-blur">
-            <span className="block text-xs font-bold uppercase text-emerald-200">
+          <div className="shrink-0 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-center backdrop-blur">
+            <span className="hidden text-[9px] font-bold uppercase text-emerald-200 sm:block">
               Tournament
             </span>
 
-            <strong className="mt-1 block text-xl">
+            <strong className="block text-sm sm:mt-0.5 sm:text-base">
               {selectedSlate?.is_locked || tournamentIsComplete
                 ? "Final"
                 : tournamentHasActivity
@@ -671,7 +683,7 @@ export default function GolfScoresDashboard({
         </div>
 
         {controls ? (
-          <div className="border-t border-slate-200 bg-white p-4">
+          <div className="border-t border-slate-200 bg-white p-3">
             {controls}
           </div>
         ) : null}
@@ -693,7 +705,74 @@ export default function GolfScoresDashboard({
         </details>
       ) : null}
 
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <nav
+        className="rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm"
+        aria-label="Golf score views"
+      >
+        <div className="grid grid-cols-3 gap-1.5">
+          {(
+            [
+              {
+                key: "fantasy",
+                label: "Fantasy",
+                shortDescription: "Teams",
+              },
+              {
+                key: "league",
+                label: "League",
+                shortDescription: "Drafted golfers",
+              },
+              {
+                key: "tournament",
+                label: "Tournament",
+                shortDescription: "Full field",
+              },
+            ] satisfies Array<{
+              key: GolfScoresView;
+              label: string;
+              shortDescription: string;
+            }>
+          ).map((view) => {
+            const isActive =
+              activeView === view.key;
+
+            return (
+              <button
+                key={view.key}
+                type="button"
+                onClick={() => {
+                  setActiveView(view.key);
+                  setSelectedHoleKey(null);
+                }}
+                aria-pressed={isActive}
+                className={`rounded-xl px-2 py-2.5 text-center transition sm:px-4 ${
+                  isActive
+                    ? "bg-emerald-700 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-800"
+                }`}
+              >
+                <span className="block text-sm font-black">
+                  {view.label}
+                </span>
+
+                <span
+                  className={`mt-0.5 hidden text-[10px] font-semibold sm:block ${
+                    isActive
+                      ? "text-emerald-100"
+                      : "text-slate-400"
+                  }`}
+                >
+                  {view.shortDescription}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {activeView === "fantasy" ? (
+        <>
+          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="mb-4">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
             League standings
@@ -1160,7 +1239,24 @@ export default function GolfScoresDashboard({
             );
           })}
         </div>
-      </section>
+          </section>
+        </>
+      ) : activeView === "league" ? (
+        <GolfLeagueView
+          teams={participatingTeams}
+          getPlayersForTeam={getPlayersForTeam}
+          getRawPlayerStat={getRawPlayerStat}
+          setProfilePlayer={setProfilePlayer}
+        />
+      ) : (
+        <GolfTournamentView
+          players={allPlayers}
+          teams={participatingTeams}
+          getPlayersForTeam={getPlayersForTeam}
+          getRawPlayerStat={getRawPlayerStat}
+          setProfilePlayer={setProfilePlayer}
+        />
+      )}
     </section>
   );
 }
