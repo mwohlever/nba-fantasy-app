@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import { useSelectedSport } from "@/components/providers/SportProvider";
 import type { Player,
   TargetDraftSlot,
 } from "@/components/lineups/types";
@@ -52,6 +53,9 @@ export default function SlotDraftModal({
   isAssigningPlayer,
   isSaving,
 }: Props) {
+  const { selectedSport } = useSelectedSport();
+  const isGolf = selectedSport === "golf";
+
   const [searchTerm, setSearchTerm] = useState("");
   const [showAllPlayers, setShowAllPlayers] = useState(false);
 
@@ -93,6 +97,24 @@ export default function SlotDraftModal({
         return true;
       })
       .sort((a, b) => {
+        if (isGolf) {
+          const rankA = a.owgr_rank;
+          const rankB = b.owgr_rank;
+
+          if (rankA == null && rankB == null) {
+            return a.name.localeCompare(b.name);
+          }
+
+          if (rankA == null) return 1;
+          if (rankB == null) return -1;
+
+          if (rankA !== rankB) {
+            return rankA - rankB;
+          }
+
+          return a.name.localeCompare(b.name);
+        }
+
         const avgA =
           playerProjections?.[a.id]?.projection ??
           playerAverageMap.get(a.id);
@@ -120,6 +142,7 @@ export default function SlotDraftModal({
     getOwnerTeamForPlayer,
     searchTerm,
     showAllPlayers,
+    isGolf,
   ]);
 
   if (!targetDraftSlot) return null;
@@ -288,6 +311,12 @@ export default function SlotDraftModal({
                         nflPlayerId={
                           player.nfl_player_id
                         }
+                        espnGolfPlayerId={
+                          player.espn_player_id
+                        }
+                        imageUrl={
+                          player.headshot_url
+                        }
                         playerName={player.name}
                         size="md"
                       />
@@ -298,8 +327,19 @@ export default function SlotDraftModal({
                         </div>
 
                         <div className="mt-1 text-xs">
-                          {player.position_group} • Proj{" "}
-                          {fmt(projection)}
+                          {player.position_group} •{" "}
+                          {isGolf ? (
+                            <>
+                              OWGR{" "}
+                              {player.owgr_rank
+                                ? `#${player.owgr_rank}`
+                                : "—"}
+                            </>
+                          ) : (
+                            <>
+                              Proj {fmt(projection)}
+                            </>
+                          )}
                         </div>
 
                         <div className="slot-draft-player-view-label">

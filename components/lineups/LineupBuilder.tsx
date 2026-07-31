@@ -211,6 +211,12 @@ export default function LineupBuilder({
     }
 
     async function loadDraftingPlayerHistory() {
+      if ((sport ?? selectedSport) === "golf") {
+        setDraftingPlayerHistory([]);
+        setIsDraftingPlayerHistoryLoading(false);
+        return;
+      }
+
       try {
         setIsDraftingPlayerHistoryLoading(true);
 
@@ -239,7 +245,7 @@ export default function LineupBuilder({
     }
 
     void loadDraftingPlayerHistory();
-  }, [draftingPlayer]);
+  }, [draftingPlayer, sport, selectedSport]);
 
   useEffect(() => {
     setPlayerStatsState(playerStats);
@@ -442,6 +448,10 @@ export default function LineupBuilder({
         return true;
       })
       .sort((a, b) => {
+        if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+          return a.name.localeCompare(b.name);
+        }
+
         const avgA = playerAverageMap.get(a.id);
         const avgB = playerAverageMap.get(b.id);
 
@@ -459,6 +469,8 @@ export default function LineupBuilder({
     isAvailabilityLoading,
     availablePlayerIdSet,
     playerAverageMap,
+    selectedSlate?.sport,
+    selectedSport,
   ]);
 
   function getLineupForTeam(teamId: number) {
@@ -544,9 +556,18 @@ export default function LineupBuilder({
       (statTotals.blocks ?? 0) * 2 -
       (statTotals.turnovers ?? 0);
 
+    const playerFantasyTotal = teamPlayers.reduce((sum, player) => {
+      const stat = playerStatsMap.get(player.id);
+      return sum + Number(stat?.fantasy_points ?? 0);
+    }, 0);
+
     const total =
       teamResult?.fantasy_points ??
-      (sport === "nba" ? nbaFallback : 0);
+      (sport === "nba"
+        ? nbaFallback
+        : sport === "golf"
+          ? playerFantasyTotal
+          : 0);
 
     return {
       totalPlayers: teamPlayers.length,
@@ -659,6 +680,10 @@ export default function LineupBuilder({
   function getLiveProjectedTeamTotal(teamId: number) {
     const stats = getTeamStats(teamId);
 
+    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+      return Number(stats.total ?? 0);
+    }
+
     if (selectedSlate?.is_locked) {
       return Number(stats.total ?? 0);
     }
@@ -689,6 +714,10 @@ export default function LineupBuilder({
 
   function computeWinPctMap() {
     const map = new Map<number, number>();
+
+    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+      return map;
+    }
 
     if (selectedSlate?.is_locked) {
       const rows = orderedTeamsForSlate
@@ -733,12 +762,27 @@ export default function LineupBuilder({
   const liveWinPctMap = computeWinPctMap();
 
   function getEffectiveRosterSlots() {
-    return rosterSlots.length > 0
-      ? rosterSlots
-      : [
-          { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
-          { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
-        ];
+    if (rosterSlots.length > 0) {
+      return rosterSlots;
+    }
+
+    const activeSport = selectedSlate?.sport ?? selectedSport;
+
+    if (activeSport === "golf") {
+      return [
+        {
+          sport: "golf",
+          position: "GOLFER",
+          slot_count: 4,
+          display_order: 1,
+        },
+      ];
+    }
+
+    return [
+      { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+      { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+    ];
   }
 
   function getRosterTotalSlots() {
@@ -797,7 +841,11 @@ export default function LineupBuilder({
     const leader =
       rows
         .filter((row) => row.is_participating)
-        .sort((a, b) => b.total - a.total)[0] ?? null;
+        .sort((a, b) =>
+        (selectedSlate?.sport ?? selectedSport) === "golf"
+          ? a.total - b.total
+          : b.total - a.total,
+      )[0] ?? null;
 
     return {
       leader,
@@ -940,7 +988,14 @@ export default function LineupBuilder({
         setSaveMessage("");
       }
 
-      const refreshResponse = await fetch("/api/refresh-stats", {
+      const refreshEndpoint =
+        selectedSlate?.sport === "nfl"
+          ? "/api/refresh-stats-nfl"
+          : selectedSlate?.sport === "golf"
+            ? "/api/refresh-stats-golf"
+            : "/api/refresh-stats";
+
+      const refreshResponse = await fetch(refreshEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slateId: selectedSlateIdNumber }),
@@ -1472,6 +1527,11 @@ export default function LineupBuilder({
         setPlayer={setProfilePlayer}
         playerAverageMap={playerAverageMap}
         playerProjections={playerProjections}
+        golfStat={
+          profilePlayer
+            ? getRawPlayerStat(profilePlayer.id)
+            : null
+        }
       />
 
       <DraftPlayerModal

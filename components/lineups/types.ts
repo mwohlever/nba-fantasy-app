@@ -1,3 +1,22 @@
+export type GolfHoleStat = {
+  hole_number: number;
+  strokes: number | null;
+  relative_to_par: number | null;
+  score_display: string | null;
+};
+
+export type GolfRoundStat = {
+  round_number: number;
+  score_to_par: number | null;
+  score_display: string | null;
+  strokes: number | null;
+  holes_completed: number;
+  tee_time?: string | null;
+  tee_time_raw?: string | null;
+  status: string;
+  holes: GolfHoleStat[];
+};
+
 export type Player = {
   id: number;
   name: string;
@@ -6,6 +25,14 @@ export type Player = {
   is_playing_today?: boolean | null;
   nba_player_id?: number | null;
   nfl_player_id?: number | null;
+  espn_player_id?: string | null;
+  country?: string | null;
+  country_flag_url?: string | null;
+  headshot_url?: string | null;
+  owgr_player_id?: string | null;
+  owgr_rank?: number | null;
+  owgr_points?: number | null;
+  owgr_updated_at?: string | null;
 };
 
 export type RosterSlotConfig = {
@@ -58,18 +85,43 @@ export type SavedLineup = {
 
 export type PlayerStat = {
   player_id: number;
-  points: number | null;
-  rebounds: number | null;
-  assists: number | null;
-  steals: number | null;
-  blocks: number | null;
-  turnovers: number | null;
+
+  points?: number | null;
+  rebounds?: number | null;
+  assists?: number | null;
+  steals?: number | null;
+  blocks?: number | null;
+  turnovers?: number | null;
+
+  passing_yards?: number | null;
+  passing_tds?: number | null;
+  passing_ints?: number | null;
+  rushing_yards?: number | null;
+  rushing_tds?: number | null;
+  receiving_yards?: number | null;
+  receiving_tds?: number | null;
+  receptions?: number | null;
+  fumbles_lost?: number | null;
+
   fantasy_points: number | null;
 
   game_status?: number | null;
   game_status_text?: string | null;
   period?: number | null;
   game_clock?: string | null;
+
+  leaderboard_order?: number | null;
+  official_score_to_par?: number | null;
+  official_score_display?: string | null;
+  penalty_strokes?: number | null;
+  rounds_completed?: number | null;
+  holes_completed?: number | null;
+  current_round?: number | null;
+  last_hole?: number | null;
+  status?: string | null;
+  tee_time?: string | null;
+  tee_time_raw?: string | null;
+  rounds?: GolfRoundStat[];
 };
 
 export type TeamResult = {

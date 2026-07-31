@@ -23,8 +23,16 @@ export const STAT_COLUMNS_BY_SPORT: Record<string, StatColumn[]> = {
     { key: "receptions", label: "REC" },
     { key: "fumbles_lost", label: "FUM" },
   ],
+  golf: [
+    { key: "official_score_to_par", label: "TO PAR" },
+    { key: "current_round", label: "ROUND" },
+    { key: "last_hole", label: "THRU" },
+    { key: "penalty_strokes", label: "PEN" },
+  ],
 };
 
-export function getStatColumns(sport: string | null | undefined): StatColumn[] {
+export function getStatColumns(
+  sport: string | null | undefined,
+): StatColumn[] {
   return STAT_COLUMNS_BY_SPORT[sport ?? "nba"] ?? STAT_COLUMNS_BY_SPORT.nba;
 }

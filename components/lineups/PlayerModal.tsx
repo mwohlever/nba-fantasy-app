@@ -291,6 +291,13 @@ export default function PlayerModal(props: Props) {
   if (!player) return null;
 
   const currentPlayer = player;
+  const isGolf = selectedSport === "golf";
+  const rosterSize =
+    selectedSport === "golf"
+      ? 4
+      : selectedSport === "nfl"
+        ? 6
+        : 5;
 
   const projectionMeta = playerProjections?.[currentPlayer.id];
 
@@ -340,6 +347,8 @@ export default function PlayerModal(props: Props) {
             <PlayerHeadshot
               nbaPlayerId={currentPlayer.nba_player_id}
               nflPlayerId={currentPlayer.nfl_player_id}
+              espnGolfPlayerId={currentPlayer.espn_player_id}
+              imageUrl={currentPlayer.headshot_url}
               playerName={currentPlayer.name}
               size="xl"
               className="player-modal-headshot"
@@ -368,18 +377,38 @@ export default function PlayerModal(props: Props) {
 
         <div className="player-modal-highlight-grid">
           <div className="player-modal-highlight player-modal-highlight--primary">
-            <span>Projection</span>{" "}
-            <strong>
-              {fmt(projectionScore)}
-              {projectionBadges.includes("trophy") ? " 🏆" : ""}
-              {projectionBadges.includes("hot") ? " 🔥" : ""}
-              {projectionBadges.includes("cold") ? " 🧊" : ""}
-            </strong>
-            <small>
-              {projectionConfidence
-                ? `${String(projectionConfidence).toUpperCase()} confidence`
-                : projectionSource}
-            </small>
+            {isGolf ? (
+              <>
+                <span>OWGR</span>
+                <strong>
+                  {currentPlayer.owgr_rank
+                    ? `#${currentPlayer.owgr_rank}`
+                    : "—"}
+                </strong>
+                <small>
+                  {currentPlayer.owgr_updated_at
+                    ? `Updated ${new Date(
+                        currentPlayer.owgr_updated_at,
+                      ).toLocaleDateString()}`
+                    : "Ranking sync ready"}
+                </small>
+              </>
+            ) : (
+              <>
+                <span>Projection</span>{" "}
+                <strong>
+                  {fmt(projectionScore)}
+                  {projectionBadges.includes("trophy") ? " 🏆" : ""}
+                  {projectionBadges.includes("hot") ? " 🔥" : ""}
+                  {projectionBadges.includes("cold") ? " 🧊" : ""}
+                </strong>
+                <small>
+                  {projectionConfidence
+                    ? `${String(projectionConfidence).toUpperCase()} confidence`
+                    : projectionSource}
+                </small>
+              </>
+            )}
           </div>
 
           {isDraftMode ? (
@@ -504,7 +533,7 @@ export default function PlayerModal(props: Props) {
                 </span>
 
                 <em>
-                  {teamStats.totalPlayers}/5
+                  {teamStats.totalPlayers}/{rosterSize}
                   {!isParticipating ? " • Out" : ""}
                 </em>
               </button>
@@ -896,6 +925,53 @@ export default function PlayerModal(props: Props) {
           ) : !profile ? (
             <div className="player-modal-empty">
               Player history could not be loaded.
+            </div>
+          ) : isGolf ? (
+            <div className="space-y-5">
+              <section>
+                <div className="player-modal-section-heading">
+                  <div>
+                    <div className="player-modal-section-kicker">
+                      Golfer details
+                    </div>
+
+                    <h3>Golf Profile</h3>
+                  </div>
+                </div>
+
+                <div className="player-modal-resume">
+                  <div>
+                    <span>OWGR</span>
+                    <strong>
+                      {currentPlayer.owgr_rank
+                        ? `#${currentPlayer.owgr_rank}`
+                        : "—"}
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Country</span>
+                    <strong>{currentPlayer.country ?? "—"}</strong>
+                  </div>
+
+                  <div>
+                    <span>Drafted</span>
+                    <strong>{profile.summary.timesDrafted}</strong>
+                  </div>
+
+                  <div>
+                    <span>Wins</span>
+                    <strong>{profile.summary.wins}</strong>
+                  </div>
+                </div>
+              </section>
+
+              {renderOwnership()}
+
+              <div className="player-modal-empty">
+                Completed Golf tournament history will appear here after Golf
+                slates are finalized.
+              </div>
             </div>
           ) : (
             <div className="space-y-5">

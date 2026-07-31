@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getPlayerProjectionMapForSeason } from "@/lib/playerProjections";
+import { getGolfHomeSummary } from "@/lib/home/golfHomeSummary";
 
 type Team = {
   id: number;
@@ -149,7 +150,15 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sportParam = searchParams.get("sport");
-    const sport = sportParam === "nfl" ? "nfl" : "nba";
+
+    if (sportParam === "golf") {
+      return getGolfHomeSummary();
+    }
+
+    const sport =
+      sportParam === "nfl"
+        ? "nfl"
+        : "nba";
 
     const playersTable = sport === "nfl" ? "players_nfl" : "players";
     const playersSelect =

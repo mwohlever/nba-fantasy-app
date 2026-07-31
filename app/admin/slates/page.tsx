@@ -48,6 +48,8 @@ export default function AdminSlatesPage() {
   const [teams, setTeams] = useState<SlateTeamRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
+    useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -204,6 +206,50 @@ export default function AdminSlatesPage() {
     }
   }
 
+  async function handleSyncGolfRankings() {
+    try {
+      setIsSyncingGolfRankings(true);
+      setMessage("");
+
+      const response = await fetch(
+        "/api/admin/sync-golf-rankings",
+        {
+          method: "POST",
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ||
+            "Failed to sync Golf rankings.",
+        );
+        return;
+      }
+
+      setMessage(
+        `OWGR synced: ${result.updatedGolfers ?? 0} golfers updated, ` +
+          `${result.createdGolfers ?? 0} newly added, ` +
+          `from ${result.rankingsFound ?? 0} rankings. ` +
+          `${result.unmatchedGolfers ?? 0} active golfers were not ranked or matched.`,
+      );
+
+      await loadSlateDetail(
+        Number(selectedSlateId),
+      );
+    } catch (error) {
+      console.error(error);
+
+      setMessage(
+        "Something went wrong while syncing Golf rankings.",
+      );
+    } finally {
+      setIsSyncingGolfRankings(false);
+    }
+  }
+
   async function handleDelete() {
     if (!selectedSlateId) return;
 
@@ -325,7 +371,7 @@ export default function AdminSlatesPage() {
                       selectedSlate.label}
                   </div>
 
-                  {selectedSlate.sport === "golf" ? (
+                  {selectedSport === "golf" ? (
                     <div className="mt-2 space-y-1 text-sm text-slate-600">
                       <div>
                         Golf
@@ -450,16 +496,37 @@ export default function AdminSlatesPage() {
                 <button
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={isSaving}
+                  disabled={isSaving || isSyncingGolfRankings}
                   className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-2.5 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSaving ? "Saving..." : "Save Slate"}
                 </button>
 
+                {selectedSport === "golf" ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleSyncGolfRankings()
+                    }
+                    disabled={
+                      isSaving ||
+                      isSyncingGolfRankings
+                    }
+                    className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-2.5 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSyncingGolfRankings
+                      ? "Syncing OWGR..."
+                      : "Sync OWGR"}
+                  </button>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={() => void handleReseed()}
-                  disabled={isSaving}
+                  disabled={
+                    isSaving ||
+                    isSyncingGolfRankings
+                  }
                   className="rounded-xl border border-sky-300 bg-sky-100 px-4 py-2.5 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Reseed From Previous Slate
@@ -468,7 +535,7 @@ export default function AdminSlatesPage() {
                 <button
                   type="button"
                   onClick={() => void handleDelete()}
-                  disabled={isSaving}
+                  disabled={isSaving || isSyncingGolfRankings}
                   className="rounded-xl border border-red-300 bg-red-100 px-4 py-2.5 text-sm font-medium text-red-900 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Delete Slate

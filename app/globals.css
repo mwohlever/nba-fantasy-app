@@ -7533,3 +7533,142 @@ html.dark .player-modal-details-chevron {
     transition: none;
   }
 }
+
+/* =========================================================
+   GOLF HOME — SPORT-SPECIFIC FINAL OVERRIDES
+   Dedicated classes intentionally beat the championship
+   orange Home rules used by NBA/NFL.
+   ========================================================= */
+
+html .home-current-slate.golf-home-current-slate {
+  background:
+    radial-gradient(
+      circle at 90% 4%,
+      rgb(16 185 129 / 0.12),
+      transparent 22rem
+    ),
+    linear-gradient(
+      145deg,
+      #101d31 0%,
+      #0d192a 55%,
+      #071a19 100%
+    ) !important;
+
+  border-color: rgb(5 150 105 / 0.48) !important;
+}
+
+html .home-winner-card.golf-home-winner-card {
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      rgb(110 231 183 / 0.28),
+      transparent 13rem
+    ),
+    radial-gradient(
+      circle at 10% 100%,
+      rgb(16 185 129 / 0.18),
+      transparent 17rem
+    ),
+    linear-gradient(
+      120deg,
+      #022c22 0%,
+      #065f46 48%,
+      #047857 75%,
+      #059669 100%
+    ) !important;
+
+  border: 2px solid #10b981 !important;
+
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    0 0 0 1px rgb(16 185 129 / 0.14),
+    0 14px 34px rgb(6 78 59 / 0.3) !important;
+}
+
+html
+  .home-winner-card.golf-home-winner-card
+  .home-team-profile-name {
+  color: #ffffff !important;
+}
+
+html
+  .home-winner-card.golf-home-winner-card
+  .home-team-profile-chevron {
+  color: #6ee7b7 !important;
+}
+
+html
+  .home-winner-card.golf-home-winner-card
+  button.border-sky-200 {
+  border-color: rgb(110 231 183 / 0.5) !important;
+  background:
+    linear-gradient(
+      145deg,
+      #064e3b,
+      #022c22
+    ) !important;
+  color: #ecfdf5 !important;
+  box-shadow:
+    0 0 0 1px rgb(52 211 153 / 0.12),
+    0 8px 22px rgb(6 78 59 / 0.28) !important;
+}
+
+@media (max-width: 639px) {
+  html
+    .home-current-slate.golf-home-current-slate {
+    padding: 1rem;
+  }
+
+  html
+    .home-winner-card.golf-home-winner-card {
+    min-height: 0;
+    padding: 0.9rem;
+  }
+
+  .golf-home-current-slate table th,
+  .golf-home-current-slate table td {
+    overflow: hidden;
+  }
+
+  .golf-home-current-slate
+    .home-team-profile-button {
+    max-width: 100%;
+  }
+
+  .golf-home-current-slate
+    .home-team-profile-name {
+    max-width: 6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Compact Golf Home rows on phones. */
+@media (max-width: 639px) {
+  .golf-home-current-slate tbody tr {
+    height: auto !important;
+  }
+
+  .golf-home-current-slate tbody td {
+    min-height: 0 !important;
+    vertical-align: middle;
+  }
+
+  .golf-home-current-slate tbody tr button {
+    min-height: 0;
+  }
+}
+
+
+/* Golf Home tournament leaderboard and final phone spacing. */
+@media (max-width: 639px) {
+  .golf-home-current-slate
+    .golf-tournament-owner {
+    max-width: 8rem;
+  }
+
+  .golf-home-current-slate table {
+    max-width: 100%;
+  }
+}

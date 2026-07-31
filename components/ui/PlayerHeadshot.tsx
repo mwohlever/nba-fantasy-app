@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type PlayerHeadshotProps = {
   nbaPlayerId?: number | null;
   nflPlayerId?: number | null;
+  espnGolfPlayerId?: string | null;
+  imageUrl?: string | null;
   playerName?: string;
   size?: "xs" | "sm" | "md" | "xl";
   className?: string;
@@ -32,27 +34,37 @@ function getInitials(playerName?: string) {
 export default function PlayerHeadshot({
   nbaPlayerId,
   nflPlayerId,
+  espnGolfPlayerId,
+  imageUrl,
   playerName,
   size = "sm",
   className = "",
 }: PlayerHeadshotProps) {
   const [imageFailed, setImageFailed] = useState(false);
 
-  const imageUrl = nbaPlayerId
-    ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaPlayerId}.png`
-    : nflPlayerId
-      ? `https://a.espncdn.com/i/headshots/nfl/players/full/${nflPlayerId}.png`
-      : null;
+  const resolvedImageUrl =
+    imageUrl?.trim() ||
+    (nbaPlayerId
+      ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaPlayerId}.png`
+      : nflPlayerId
+        ? `https://a.espncdn.com/i/headshots/nfl/players/full/${nflPlayerId}.png`
+        : espnGolfPlayerId
+          ? `https://a.espncdn.com/i/headshots/golf/players/full/${espnGolfPlayerId}.png`
+          : null);
 
-  const showImage = imageUrl && !imageFailed;
+  useEffect(() => {
+    setImageFailed(false);
+  }, [resolvedImageUrl]);
+
+  const showImage = Boolean(resolvedImageUrl) && !imageFailed;
 
   return (
     <div
-      className={`overflow-hidden rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center ${sizeClasses[size]} ${className}`}
+      className={`flex items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 ${sizeClasses[size]} ${className}`}
     >
       {showImage ? (
         <img
-          src={imageUrl}
+          src={resolvedImageUrl ?? undefined}
           alt={playerName ?? "Player"}
           className="h-full w-full object-cover"
           loading="lazy"

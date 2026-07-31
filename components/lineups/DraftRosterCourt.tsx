@@ -63,6 +63,9 @@ function DraftRosterSlot({
         {player ? (
           <PlayerHeadshot
             nbaPlayerId={player.nba_player_id}
+            nflPlayerId={player.nfl_player_id}
+            espnGolfPlayerId={player.espn_player_id}
+            imageUrl={player.headshot_url}
             playerName={player.name}
             size="xl"
             className="draft-roster-player-image"

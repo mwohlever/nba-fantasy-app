@@ -94,7 +94,12 @@ export async function GET(request: Request) {
     const seasonParam = searchParams.get("season") ?? "all";
     const isAllTime = seasonParam === "all";
     const sportParam = searchParams.get("sport");
-    const sport = sportParam === "nfl" ? "nfl" : "nba";
+    const sport =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
 
     if (!Number.isFinite(playerId) || playerId <= 0) {
       return NextResponse.json(
@@ -110,6 +115,186 @@ export async function GET(request: Request) {
       (!Number.isFinite(selectedSeason) || selectedSeason === null)
     ) {
       return NextResponse.json({ error: "Invalid season." }, { status: 400 });
+    }
+
+    if (sport === "golf") {
+      const db = supabaseAdmin as any;
+
+      const { data: golfer, error: golferError } = await db
+        .from("golf_players")
+        .select(
+          "id, display_name, country, owgr_rank, owgr_updated_at",
+        )
+        .eq("id", playerId)
+        .maybeSingle();
+
+      if (golferError) {
+        return NextResponse.json(
+          { error: golferError.message },
+          { status: 500 },
+        );
+      }
+
+      if (!golfer) {
+        return NextResponse.json(
+          { error: "Golfer not found." },
+          { status: 404 },
+        );
+      }
+
+      const { data: golfSlates, error: golfSlatesError } = await db
+        .from("slates")
+        .select("id, start_date, date")
+        .eq("sport", "golf");
+
+      if (golfSlatesError) {
+        return NextResponse.json(
+          { error: golfSlatesError.message },
+          { status: 500 },
+        );
+      }
+
+      const filteredGolfSlateIds = (golfSlates ?? [])
+        .filter((slate: any) => {
+          if (isAllTime) return true;
+
+          const date = slate.start_date ?? slate.date ?? "";
+          return Number(String(date).slice(0, 4)) === selectedSeason;
+        })
+        .map((slate: any) => Number(slate.id));
+
+      let matchingLineups: any[] = [];
+
+      if (filteredGolfSlateIds.length > 0) {
+        const { data: lineups, error: lineupsError } = await db
+          .from("lineups")
+          .select("id, team_id, slate_id")
+          .in("slate_id", filteredGolfSlateIds);
+
+        if (lineupsError) {
+          return NextResponse.json(
+            { error: lineupsError.message },
+            { status: 500 },
+          );
+        }
+
+        matchingLineups = lineups ?? [];
+      }
+
+      const lineupIds = matchingLineups.map((lineup: any) =>
+        Number(lineup.id),
+      );
+
+      let golferLineupPlayers: any[] = [];
+
+      if (lineupIds.length > 0) {
+        const { data: lineupPlayers, error: lineupPlayersError } = await db
+          .from("lineup_players")
+          .select("lineup_id, player_id")
+          .eq("player_id", playerId)
+          .in("lineup_id", lineupIds);
+
+        if (lineupPlayersError) {
+          return NextResponse.json(
+            { error: lineupPlayersError.message },
+            { status: 500 },
+          );
+        }
+
+        golferLineupPlayers = lineupPlayers ?? [];
+      }
+
+      const ownedLineupIds = new Set(
+        golferLineupPlayers.map((row: any) => Number(row.lineup_id)),
+      );
+
+      const ownedLineups = matchingLineups.filter((lineup: any) =>
+        ownedLineupIds.has(Number(lineup.id)),
+      );
+
+      const teamIds = [
+        ...new Set(
+          ownedLineups.map((lineup: any) => Number(lineup.team_id)),
+        ),
+      ];
+
+      let teamRows: any[] = [];
+
+      if (teamIds.length > 0) {
+        const { data: teams, error: teamsError } = await db
+          .from("teams")
+          .select("id, name")
+          .in("id", teamIds);
+
+        if (teamsError) {
+          return NextResponse.json(
+            { error: teamsError.message },
+            { status: 500 },
+          );
+        }
+
+        teamRows = teams ?? [];
+      }
+
+      const teamNameById = new Map(
+        teamRows.map((team: any) => [
+          Number(team.id),
+          String(team.name),
+        ]),
+      );
+
+      const draftedByCount = new Map<string, number>();
+
+      ownedLineups.forEach((lineup: any) => {
+        const teamName =
+          teamNameById.get(Number(lineup.team_id)) ?? "Unknown";
+
+        draftedByCount.set(
+          teamName,
+          (draftedByCount.get(teamName) ?? 0) + 1,
+        );
+      });
+
+      const draftedByBreakdown = Array.from(
+        draftedByCount.entries(),
+      )
+        .map(([teamName, count]) => ({ teamName, count }))
+        .sort(
+          (a, b) =>
+            b.count - a.count ||
+            a.teamName.localeCompare(b.teamName),
+        );
+
+      return NextResponse.json({
+        success: true,
+        selectedSeason: isAllTime ? "all" : selectedSeason,
+        player: {
+          id: Number(golfer.id),
+          name: golfer.display_name,
+          position_group: "GOLFER",
+          country: golfer.country ?? null,
+          owgrRank: golfer.owgr_rank ?? null,
+          owgrUpdatedAt: golfer.owgr_updated_at ?? null,
+        },
+        summary: {
+          timesDrafted: ownedLineups.length,
+          wins: 0,
+          runnerUps: 0,
+          winRate: null,
+          draftedMostBy: draftedByBreakdown[0] ?? null,
+          draftedByBreakdown,
+          averageFantasyPoints: null,
+          bestFantasyPoints: null,
+          worstFantasyPoints: null,
+          averageFinish: null,
+          projectionSampleSize: 0,
+          averageProjectionDifference: null,
+          exceededProjectionCount: 0,
+          missedProjectionCount: 0,
+          matchedProjectionCount: 0,
+        },
+        recentHistory: [],
+      });
     }
 
     const playersTable = sport === "nfl" ? "players_nfl" : "players";

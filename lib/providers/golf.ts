@@ -2,10 +2,7 @@ const ESPN_GOLF_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
 
 export type GolfTournamentStatus =
-  | "scheduled"
-  | "in_progress"
-  | "final"
-  | "unknown";
+  "scheduled" | "in_progress" | "final" | "unknown";
 
 export type GolfCompetitorStatus =
   | "scheduled"
@@ -243,11 +240,7 @@ function findRoundTeeTimeRaw(round: EspnRound): string | null {
 
   for (const category of categories) {
     for (const stat of safeArray(category.stats)) {
-      const name = [
-        stat.name,
-        stat.label,
-        stat.abbreviation,
-      ]
+      const name = [stat.name, stat.label, stat.abbreviation]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -292,7 +285,7 @@ function parseTeeTime(raw: string | null): string | null {
 }
 
 function normalizeTournamentStatus(
-  status: EspnStatusType | undefined
+  status: EspnStatusType | undefined,
 ): GolfTournamentStatus {
   const state = status?.state?.toLowerCase();
   const name = status?.name?.toUpperCase();
@@ -312,31 +305,73 @@ function normalizeTournamentStatus(
   return "unknown";
 }
 
+function roundHasActivity(round: GolfRound): boolean {
+  return (
+    round.holesCompleted > 0 || (round.strokes !== null && round.strokes > 0)
+  );
+}
+
 function inferCompetitorStatus(input: {
   tournamentStatus: GolfTournamentStatus;
+  tournamentCurrentRound: number | null;
   rounds: GolfRound[];
 }): GolfCompetitorStatus {
-  const completedRounds = input.rounds.filter(
-    (round) => round.holesCompleted === 18
+  const playedRounds = input.rounds.filter(roundHasActivity);
+
+  const completedRounds = playedRounds.filter(
+    (round) => round.holesCompleted === 18,
   ).length;
 
-  const hasStarted = input.rounds.some(
-    (round) => round.holesCompleted > 0 || round.strokes !== null
+  const hasStarted = playedRounds.length > 0;
+
+  const hasPartialRound = playedRounds.some(
+    (round) => round.holesCompleted > 0 && round.holesCompleted < 18,
   );
+
+  const hasRoundThreeOrLaterActivity = playedRounds.some(
+    (round) => round.roundNumber >= 3,
+  );
+
+  const tournamentHasReachedRoundThree =
+    input.tournamentStatus === "final" ||
+    (input.tournamentCurrentRound ?? 0) >= 3;
 
   if (input.tournamentStatus === "scheduled") {
     return "scheduled";
   }
 
-  if (input.tournamentStatus === "final" && completedRounds >= 4) {
+  if (!hasStarted) {
+    return input.tournamentStatus === "final" ? "did_not_start" : "scheduled";
+  }
+
+  if (completedRounds >= 4 && input.tournamentStatus === "final") {
     return "finished";
   }
 
-  if (hasStarted) {
-    return "active";
+  if (
+    completedRounds === 2 &&
+    !hasRoundThreeOrLaterActivity &&
+    tournamentHasReachedRoundThree
+  ) {
+    return "cut";
   }
 
-  return "scheduled";
+  /*
+   * Do not infer withdrawal solely from missing rounds.
+   *
+   * ESPN's scoreboard payload can report an event as final before all
+   * tournament rounds are represented. That previously classified anyone
+   * with fewer than four rounds as WD and applied missing-round penalties.
+   *
+   * Until ESPN provides an explicit competitor-level WD/DQ status, a golfer
+   * who started and was not identified as cut should be treated as finished
+   * after a genuinely final event.
+   */
+  if (input.tournamentStatus === "final") {
+    return "finished";
+  }
+
+  return "active";
 }
 
 function parseRound(round: EspnRound): GolfRound | null {
@@ -350,39 +385,48 @@ function parseRound(round: EspnRound): GolfRound | null {
     .map((hole): GolfHole | null => {
       const holeNumber = Number(hole.period);
 
-      if (
-        !Number.isInteger(holeNumber) ||
-        holeNumber < 1 ||
-        holeNumber > 18
-      ) {
+      if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
         return null;
       }
 
+      const strokes =
+        typeof hole.value === "number" &&
+        Number.isFinite(hole.value) &&
+        hole.value > 0
+          ? hole.value
+          : null;
+
       return {
         holeNumber,
-        strokes:
-          typeof hole.value === "number" && Number.isFinite(hole.value)
-            ? hole.value
-            : null,
-        relativeToPar: parseRelativeToPar(
-          hole.scoreType?.displayValue
-        ),
-        scoreDisplay: hole.displayValue ?? null,
+        strokes,
+        relativeToPar:
+          strokes === null
+            ? null
+            : parseRelativeToPar(hole.scoreType?.displayValue),
+        scoreDisplay: strokes === null ? null : (hole.displayValue ?? null),
       };
     })
-    .filter((hole): hole is GolfHole => hole !== null)
+    .filter((hole): hole is GolfHole => hole !== null && hole.strokes !== null)
     .sort((a, b) => a.holeNumber - b.holeNumber);
+
+  const rawStrokes =
+    typeof round.value === "number" && Number.isFinite(round.value)
+      ? round.value
+      : null;
+
+  const displayValue = round.displayValue?.trim() ?? null;
+
+  const isPlaceholderRound =
+    holes.length === 0 &&
+    (rawStrokes === 0 || displayValue === "-" || displayValue === "");
 
   const teeTimeRaw = findRoundTeeTimeRaw(round);
 
   return {
     roundNumber,
-    scoreToPar: parseRelativeToPar(round.displayValue),
-    scoreDisplay: round.displayValue ?? null,
-    strokes:
-      typeof round.value === "number" && Number.isFinite(round.value)
-        ? round.value
-        : null,
+    scoreToPar: isPlaceholderRound ? null : parseRelativeToPar(displayValue),
+    scoreDisplay: isPlaceholderRound ? null : displayValue,
+    strokes: isPlaceholderRound ? null : rawStrokes,
     holesCompleted: holes.length,
     teeTime: parseTeeTime(teeTimeRaw),
     teeTimeRaw,
@@ -392,13 +436,12 @@ function parseRound(round: EspnRound): GolfRound | null {
 
 function parseCompetitor(
   competitor: EspnCompetitor,
-  tournamentStatus: GolfTournamentStatus
+  tournamentStatus: GolfTournamentStatus,
+  tournamentCurrentRound: number | null,
 ): GolfCompetitor | null {
   const espnPlayerId = String(competitor.id ?? "").trim();
   const displayName = String(
-    competitor.athlete?.displayName ??
-      competitor.athlete?.fullName ??
-      ""
+    competitor.athlete?.displayName ?? competitor.athlete?.fullName ?? "",
   ).trim();
 
   if (!espnPlayerId || !displayName) {
@@ -410,9 +453,7 @@ function parseCompetitor(
     .filter((round): round is GolfRound => round !== null)
     .sort((a, b) => a.roundNumber - b.roundNumber);
 
-  const roundsWithActivity = rounds.filter(
-    (round) => round.holesCompleted > 0 || round.strokes !== null
-  );
+  const roundsWithActivity = rounds.filter(roundHasActivity);
 
   const currentRound =
     roundsWithActivity.length > 0
@@ -422,11 +463,11 @@ function parseCompetitor(
   const currentRoundRecord =
     currentRound === null
       ? null
-      : rounds.find((round) => round.roundNumber === currentRound) ?? null;
+      : (rounds.find((round) => round.roundNumber === currentRound) ?? null);
 
   const lastHole =
     currentRoundRecord && currentRoundRecord.holes.length > 0
-      ? currentRoundRecord.holes.at(-1)?.holeNumber ?? null
+      ? (currentRoundRecord.holes.at(-1)?.holeNumber ?? null)
       : null;
 
   const teeTimeRaw =
@@ -448,24 +489,22 @@ function parseCompetitor(
     playerUrl: findPlayerUrl(competitor),
 
     leaderboardOrder:
-      typeof competitor.order === "number"
-        ? competitor.order
-        : null,
+      typeof competitor.order === "number" ? competitor.order : null,
     officialScoreToPar: parseRelativeToPar(competitor.score),
     officialScoreDisplay: competitor.score ?? null,
 
-    roundsCompleted: rounds.filter(
-      (round) => round.holesCompleted === 18
-    ).length,
+    roundsCompleted: rounds.filter((round) => round.holesCompleted === 18)
+      .length,
     holesCompleted: rounds.reduce(
       (total, round) => total + round.holesCompleted,
-      0
+      0,
     ),
     currentRound,
     lastHole,
 
     status: inferCompetitorStatus({
       tournamentStatus,
+      tournamentCurrentRound,
       rounds,
     }),
     teeTime,
@@ -488,21 +527,95 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
   const competitionStatus = competition?.status?.type;
   const statusSource = competitionStatus ?? eventStatus;
 
-  const status = normalizeTournamentStatus(statusSource);
+  const reportedStatus = normalizeTournamentStatus(statusSource);
 
-  const competitors = safeArray(competition?.competitors)
-    .map((competitor) => parseCompetitor(competitor, status))
+  const tournamentCurrentRound =
+    typeof competition?.status?.period === "number"
+      ? competition.status.period
+      : null;
+
+  const scheduledEndDate = parseEspnDate(event.endDate);
+  const scheduledEndTime =
+    scheduledEndDate === null
+      ? null
+      : new Date(scheduledEndDate).getTime();
+
+  const eventHasNotEnded =
+    scheduledEndTime !== null &&
+    scheduledEndTime >= Date.now();
+
+  const isPrematureEarlyRoundFinal =
+    reportedStatus === "final" &&
+    tournamentCurrentRound !== null &&
+    tournamentCurrentRound >= 1 &&
+    tournamentCurrentRound < 4 &&
+    eventHasNotEnded;
+
+  const normalizedReportedStatus: GolfTournamentStatus =
+    isPrematureEarlyRoundFinal
+      ? "in_progress"
+      : reportedStatus;
+
+  const preliminaryCompetitors = safeArray(competition?.competitors)
+    .map((competitor) =>
+      parseCompetitor(
+        competitor,
+        normalizedReportedStatus,
+        tournamentCurrentRound,
+      ),
+    )
     .filter(
       (competitor): competitor is GolfCompetitor =>
-        competitor !== null
-    )
-    .sort((a, b) => {
-      const aOrder = a.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
-      const bOrder = b.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+        competitor !== null,
+    );
 
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return a.displayName.localeCompare(b.displayName);
-    });
+  /*
+   * ESPN can briefly return STATUS_FINAL for the event while the current
+   * tournament payload still contains golfers in a partially completed
+   * round. Treating that as a true final incorrectly turns every golfer
+   * with fewer than four rounds into a withdrawal and applies penalties.
+   *
+   * A partial round is stronger evidence that the tournament is still live.
+   */
+  const hasPartialRoundActivity = preliminaryCompetitors.some(
+    (competitor) =>
+      competitor.rounds.some(
+        (round) =>
+          round.holesCompleted > 0 &&
+          round.holesCompleted < 18,
+      ),
+  );
+
+  const status: GolfTournamentStatus =
+    normalizedReportedStatus === "final" && hasPartialRoundActivity
+      ? "in_progress"
+      : normalizedReportedStatus;
+
+  const competitors =
+    status === normalizedReportedStatus
+      ? preliminaryCompetitors
+      : safeArray(competition?.competitors)
+          .map((competitor) =>
+            parseCompetitor(
+              competitor,
+              status,
+              tournamentCurrentRound,
+            ),
+          )
+          .filter(
+            (competitor): competitor is GolfCompetitor =>
+              competitor !== null,
+          );
+
+  competitors.sort((a, b) => {
+    const aOrder =
+      a.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+    const bOrder =
+      b.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.displayName.localeCompare(b.displayName);
+  });
 
   return {
     espnEventId,
@@ -516,17 +629,14 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
       competitionStatus?.description ??
       eventStatus?.description ??
       null,
-    currentRound:
-      typeof competition?.status?.period === "number"
-        ? competition.status.period
-        : null,
+    currentRound: tournamentCurrentRound,
     completed: Boolean(statusSource?.completed),
     competitors,
   };
 }
 
 async function fetchGolfPayload(
-  dates?: string
+  dates?: string,
 ): Promise<EspnGolfScoreboardPayload> {
   const url = dates
     ? `${ESPN_GOLF_SCOREBOARD_URL}?dates=${encodeURIComponent(dates)}`
@@ -542,7 +652,7 @@ async function fetchGolfPayload(
 
   if (!response.ok) {
     throw new Error(
-      `ESPN golf request failed with ${response.status} ${response.statusText}`
+      `ESPN golf request failed with ${response.status} ${response.statusText}`,
     );
   }
 
@@ -556,21 +666,18 @@ async function fetchGolfPayload(
 }
 
 export async function fetchGolfTournaments(
-  dates?: string
+  dates?: string,
 ): Promise<GolfTournament[]> {
   const payload = await fetchGolfPayload(dates);
 
   return safeArray(payload.events)
     .map(parseTournament)
-    .filter(
-      (tournament): tournament is GolfTournament =>
-        tournament !== null
-    );
+    .filter((tournament): tournament is GolfTournament => tournament !== null);
 }
 
 export async function fetchGolfTournamentByEventId(
   espnEventId: string,
-  dates?: string
+  dates?: string,
 ): Promise<GolfTournament | null> {
   const normalizedEventId = espnEventId.trim();
 
@@ -582,14 +689,13 @@ export async function fetchGolfTournamentByEventId(
 
   return (
     tournaments.find(
-      (tournament) =>
-        tournament.espnEventId === normalizedEventId
+      (tournament) => tournament.espnEventId === normalizedEventId,
     ) ?? null
   );
 }
 
 export async function fetchGolfSchedule(
-  dates?: string
+  dates?: string,
 ): Promise<GolfScheduleEvent[]> {
   const payload = await fetchGolfPayload(dates);
   const calendar = safeArray(payload.leagues?.[0]?.calendar);
@@ -610,15 +716,10 @@ export async function fetchGolfSchedule(
         endDate: parseEspnDate(entry.endDate),
       };
     })
-    .filter(
-      (event): event is GolfScheduleEvent =>
-        event !== null
-    );
+    .filter((event): event is GolfScheduleEvent => event !== null);
 
   return Array.from(
-    new Map(
-      schedule.map((event) => [event.espnEventId, event])
-    ).values()
+    new Map(schedule.map((event) => [event.espnEventId, event])).values(),
   ).sort((a, b) => {
     const aDate = a.startDate ?? "";
     const bDate = b.startDate ?? "";

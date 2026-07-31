@@ -14,6 +14,8 @@ function getTodayDateString() {
   return `${year}-${month}-${day}`;
 }
 
+type Sport = "nba" | "nfl" | "golf";
+
 type Slate = {
   id: number;
   date: string;
@@ -22,6 +24,7 @@ type Slate = {
   label?: string;
   is_locked: boolean;
   sport?: string;
+  display_name?: string | null;
 };
 
 type SavedLineup = {
@@ -36,52 +39,95 @@ type SlateTeamConfig = {
   is_participating: boolean;
 };
 
+function resolveSport(value: string | undefined): Sport {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
 export default async function DraftLineupsPage({
   searchParams,
 }: {
   searchParams: Promise<{ sport?: string | string[] }>;
 }) {
   const resolvedSearchParams = await searchParams;
+
   const sportParam = Array.isArray(resolvedSearchParams?.sport)
     ? resolvedSearchParams.sport[0]
     : resolvedSearchParams?.sport;
-  const sport = sportParam === "nfl" ? "nfl" : "nba";
 
+  const sport = resolveSport(sportParam);
   const today = getTodayDateString();
 
-  const playersTable = sport === "nfl" ? "players_nfl" : "players";
+  const playersTable =
+    sport === "nfl"
+      ? "players_nfl"
+      : sport === "golf"
+        ? "golf_players"
+        : "players";
+
   const playersSelect =
     sport === "nfl"
       ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
-      : "id, name, position_group, is_active, is_playing_today, nba_player_id";
-  const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+      : sport === "golf"
+        ? "id, display_name, short_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
+        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+
+  const playerOrderColumn =
+    sport === "golf" ? "display_name" : "name";
 
   const [
     { data: rawPlayers, error: playersError },
     { data: teams, error: teamsError },
     { data: slates, error: slatesError },
     { data: slateTeams, error: slateTeamsError },
-    { data: allPlayerStats, error: allPlayerStatsError },
+    allPlayerStatsResult,
   ] = await Promise.all([
     supabaseAdmin
       .from(playersTable)
       .select(playersSelect)
       .eq("is_active", true)
+      .order(playerOrderColumn, { ascending: true }),
+
+    supabaseAdmin
+      .from("teams")
+      .select("id, name")
       .order("name", { ascending: true }),
-    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+
     supabaseAdmin
       .from("slates")
-      .select("id, date, start_date, end_date, is_locked, sport")
+      .select(
+        "id, date, start_date, end_date, is_locked, sport, display_name",
+      )
       .eq("sport", sport)
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
+
     supabaseAdmin
       .from("slate_teams")
       .select("slate_id, team_id, draft_order, is_participating")
       .order("slate_id", { ascending: true })
       .order("draft_order", { ascending: true }),
-    supabaseAdmin.from(statsTable).select("player_id, fantasy_points"),
+
+    sport === "nba"
+      ? supabaseAdmin
+          .from("player_slate_stats")
+          .select("player_id, fantasy_points")
+      : sport === "nfl"
+        ? supabaseAdmin
+            .from("player_nfl_slate_stats")
+            .select("player_id, fantasy_points")
+        : Promise.resolve({
+            data: [] as Array<{
+              player_id: number;
+              fantasy_points: number | null;
+            }>,
+            error: null,
+          }),
   ]);
+
+  const allPlayerStats = allPlayerStatsResult.data;
+  const allPlayerStatsError = allPlayerStatsResult.error;
 
   if (
     playersError ||
@@ -97,8 +143,10 @@ export default async function DraftLineupsPage({
 
           <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
             <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
+
             <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
               Failed to load page data.
+
               <div className="mt-2 text-sm text-red-600">
                 {playersError?.message ||
                   teamsError?.message ||
@@ -113,77 +161,126 @@ export default async function DraftLineupsPage({
     );
   }
 
-  const normalizedPlayers = (rawPlayers ?? []).map((p: any) =>
-    sport === "nfl"
-      ? {
-          id: p.id,
-          name: p.name,
-          position_group: p.position,
-          is_active: p.is_active,
-          is_playing_today: p.is_playing_this_week,
-          nba_player_id: null,
-          nfl_player_id: p.nfl_player_id,
-        }
-      : {
-          id: p.id,
-          name: p.name,
-          position_group: p.position_group,
-          is_active: p.is_active,
-          is_playing_today: p.is_playing_today,
-          nba_player_id: p.nba_player_id,
-          nfl_player_id: null,
-        }
-  );
-
-  const safeSlates: Slate[] =
-    (slates ?? []).map((slate) => {
-      const startDate = slate.start_date ?? slate.date;
-      const endDate = slate.end_date ?? slate.date;
-
+  const normalizedPlayers = (rawPlayers ?? []).map((player: any) => {
+    if (sport === "nfl") {
       return {
-        id: slate.id,
-        date: slate.date,
-        start_date: startDate,
-        end_date: endDate,
-        label: formatSlateDateLabel({
-          start_date: startDate,
-          end_date: endDate,
-        }),
-        is_locked: slate.is_locked,
-        sport: slate.sport ?? "nba",
+        id: Number(player.id),
+        name: player.name,
+        position_group: player.position,
+        is_active: Boolean(player.is_active),
+        is_playing_today: player.is_playing_this_week,
+        nba_player_id: null,
+        nfl_player_id: player.nfl_player_id,
+        espn_player_id: null,
       };
-    }) ?? [];
+    }
+
+    if (sport === "golf") {
+      return {
+        id: Number(player.id),
+        name: player.display_name,
+        position_group: "GOLFER",
+        is_active: Boolean(player.is_active),
+        is_playing_today: null,
+        nba_player_id: null,
+        nfl_player_id: null,
+        espn_player_id: player.espn_player_id,
+        country: player.country,
+        country_flag_url: player.country_flag_url,
+        headshot_url: player.headshot_url,
+        owgr_player_id: player.owgr_player_id,
+        owgr_rank:
+          player.owgr_rank === null
+            ? null
+            : Number(player.owgr_rank),
+        owgr_points:
+          player.owgr_points === null
+            ? null
+            : Number(player.owgr_points),
+        owgr_updated_at: player.owgr_updated_at,
+      };
+    }
+
+    return {
+      id: Number(player.id),
+      name: player.name,
+      position_group: player.position_group,
+      is_active: Boolean(player.is_active),
+      is_playing_today: player.is_playing_today,
+      nba_player_id: player.nba_player_id,
+      nfl_player_id: null,
+      espn_player_id: null,
+    };
+  });
+
+  const safeSlates: Slate[] = (slates ?? []).map((slate: any) => {
+    const startDate = slate.start_date ?? slate.date;
+    const endDate = slate.end_date ?? slate.date;
+
+    return {
+      id: Number(slate.id),
+      date: slate.date,
+      start_date: startDate,
+      end_date: endDate,
+      label:
+        sport === "golf" && slate.display_name
+          ? String(slate.display_name)
+          : formatSlateDateLabel({
+              start_date: startDate,
+              end_date: endDate,
+            }),
+      is_locked: Boolean(slate.is_locked),
+      sport: slate.sport ?? sport,
+      display_name: slate.display_name ?? null,
+    };
+  });
 
   const safeSlateTeams = (slateTeams ?? []) as SlateTeamConfig[];
 
-  const safeAllPlayerStats = allPlayerStats ?? [];
-  const playerAverageMap = new Map<number, { total: number; count: number }>();
+  const playerAverageAccumulator = new Map<
+    number,
+    { total: number; count: number }
+  >();
 
-  safeAllPlayerStats.forEach((row) => {
-    const playerId = Number(row.player_id);
-    const fantasyPoints = Number(row.fantasy_points ?? 0);
+  if (sport !== "golf") {
+    (allPlayerStats ?? []).forEach((row: any) => {
+      const playerId = Number(row.player_id);
+      const fantasyPoints = Number(row.fantasy_points ?? 0);
 
+      if (!Number.isFinite(playerId)) return;
+      if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
 
-    if (!Number.isFinite(playerId)) return;
-    if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
+      const existing = playerAverageAccumulator.get(playerId) ?? {
+        total: 0,
+        count: 0,
+      };
 
-    const existing = playerAverageMap.get(playerId) ?? { total: 0, count: 0 };
-    playerAverageMap.set(playerId, {
-      total: existing.total + fantasyPoints,
-      count: existing.count + 1,
+      playerAverageAccumulator.set(playerId, {
+        total: existing.total + fantasyPoints,
+        count: existing.count + 1,
+      });
     });
-  });
+  }
 
-  const playerAverages = Array.from(playerAverageMap.entries()).map(
-    ([player_id, stats]) => ({
-      player_id,
-      avg_fantasy_points:
-        stats.count > 0 ? Number((stats.total / stats.count).toFixed(2)) : 0,
-    })
-  );
+  const playerAverages = Array.from(
+    playerAverageAccumulator.entries(),
+  ).map(([player_id, stats]) => ({
+    player_id,
+    avg_fantasy_points:
+      stats.count > 0
+        ? Number((stats.total / stats.count).toFixed(2))
+        : 0,
+  }));
 
   let selectedSlateId =
-    safeSlates.find((slate) => slate.date === today)?.id ?? safeSlates[0]?.id ?? null;
+    safeSlates.find((slate) => {
+      const startDate = slate.start_date ?? slate.date;
+      const endDate = slate.end_date ?? slate.date;
+
+      return startDate <= today && endDate >= today;
+    })?.id ??
+    safeSlates[0]?.id ??
+    null;
 
   if (!selectedSlateId && safeSlates.length === 0) {
     return (
@@ -195,16 +292,18 @@ export default async function DraftLineupsPage({
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
+
                 <p className="mt-2 text-sm text-slate-600">
                   Draft players and build your lineup for the current slate.
                 </p>
               </div>
 
-              <RefreshPlayersButton />
+              {sport !== "golf" ? <RefreshPlayersButton /> : null}
             </div>
 
             <div className="mt-6 rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              No slates exist yet. Create one first.
+              No {sport === "golf" ? "Golf " : ""}slates exist yet. Create one
+              first.
             </div>
           </section>
         </div>
@@ -215,6 +314,7 @@ export default async function DraftLineupsPage({
   let savedLineupsForInitialSlate: SavedLineup[] = [];
   let playerStats: any[] = [];
   let teamResults: any[] = [];
+
   let rosterSlots: Array<{
     sport: string;
     position: string;
@@ -222,48 +322,152 @@ export default async function DraftLineupsPage({
     display_order: number | null;
   }> = [];
 
-  const { data: rosterSlotsData } = await supabaseAdmin
-    .from("roster_slots")
-    .select("sport, position, slot_count, display_order")
-    .eq("sport", sport)
-    .order("display_order", { ascending: true });
+  const { data: rosterSlotsData, error: rosterSlotsError } =
+    await supabaseAdmin
+      .from("roster_slots")
+      .select("sport, position, slot_count, display_order")
+      .eq("sport", sport)
+      .order("display_order", { ascending: true });
+
+  if (rosterSlotsError) {
+    console.error(
+      "Failed to load roster slots:",
+      rosterSlotsError.message,
+    );
+  }
 
   rosterSlots = rosterSlotsData ?? [];
 
   if (selectedSlateId) {
-    const { data: lineupsData } = await supabaseAdmin
-      .from("lineups")
-      .select(
-        `
-        id,
-        team_id,
-        lineup_players (
-          player_id
+    const { data: lineupsData, error: lineupsError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select(
+          `
+          id,
+          team_id,
+          lineup_players (
+            player_id
+          )
+          `,
         )
-        `
-      )
-      .eq("slate_id", selectedSlateId);
+        .eq("slate_id", selectedSlateId);
+
+    if (lineupsError) {
+      console.error("Failed to load initial lineups:", lineupsError.message);
+    }
 
     savedLineupsForInitialSlate =
-      lineupsData?.map((lineup) => ({
-        team_id: lineup.team_id,
+      lineupsData?.map((lineup: any) => ({
+        team_id: Number(lineup.team_id),
         player_ids:
-          lineup.lineup_players?.map((lp: { player_id: number }) => lp.player_id) ?? [],
+          lineup.lineup_players?.map(
+            (lineupPlayer: { player_id: number }) =>
+              Number(lineupPlayer.player_id),
+          ) ?? [],
       })) ?? [];
 
-    const { data: statsData } = await supabaseAdmin
-      .from(statsTable)
-      .select("*")
-      .eq("slate_id", selectedSlateId);
+    if (sport === "golf") {
+      const { data: statsData, error: statsError } =
+        await supabaseAdmin
+          .from("golf_event_players")
+          .select(
+            `
+            player_id,
+            leaderboard_order,
+            official_score_to_par,
+            official_score_display,
+            penalty_strokes,
+            fantasy_score,
+            rounds_completed,
+            holes_completed,
+            current_round,
+            last_hole,
+            status,
+            tee_time,
+            tee_time_raw
+            `,
+          )
+          .eq("slate_id", selectedSlateId);
 
-    const { data: teamResultsData } = await supabaseAdmin
-      .from("team_slate_results")
-      .select("*")
-      .eq("slate_id", selectedSlateId);
+      if (statsError) {
+        console.error(
+          "Failed to load initial Golf stats:",
+          statsError.message,
+        );
+      }
 
-    playerStats = statsData ?? [];
+      playerStats = (statsData ?? []).map((row: any) => ({
+        player_id: Number(row.player_id),
+        leaderboard_order:
+          row.leaderboard_order === null
+            ? null
+            : Number(row.leaderboard_order),
+        official_score_to_par:
+          row.official_score_to_par === null
+            ? null
+            : Number(row.official_score_to_par),
+        official_score_display: row.official_score_display ?? null,
+        penalty_strokes: Number(row.penalty_strokes ?? 0),
+        fantasy_points:
+          row.fantasy_score === null
+            ? null
+            : Number(row.fantasy_score),
+        rounds_completed: Number(row.rounds_completed ?? 0),
+        holes_completed: Number(row.holes_completed ?? 0),
+        current_round:
+          row.current_round === null
+            ? null
+            : Number(row.current_round),
+        last_hole:
+          row.last_hole === null ? null : Number(row.last_hole),
+        status: row.status ?? "scheduled",
+        tee_time: row.tee_time ?? null,
+        tee_time_raw: row.tee_time_raw ?? null,
+      }));
+    } else {
+      const statsTable =
+        sport === "nfl"
+          ? "player_nfl_slate_stats"
+          : "player_slate_stats";
+
+      const { data: statsData, error: statsError } =
+        await supabaseAdmin
+          .from(statsTable)
+          .select("*")
+          .eq("slate_id", selectedSlateId);
+
+      if (statsError) {
+        console.error(
+          "Failed to load initial player stats:",
+          statsError.message,
+        );
+      }
+
+      playerStats = statsData ?? [];
+    }
+
+    const { data: teamResultsData, error: teamResultsError } =
+      await supabaseAdmin
+        .from("team_slate_results")
+        .select("*")
+        .eq("slate_id", selectedSlateId);
+
+    if (teamResultsError) {
+      console.error(
+        "Failed to load initial team results:",
+        teamResultsError.message,
+      );
+    }
+
     teamResults = teamResultsData ?? [];
   }
+
+  const rosterSize =
+    rosterSlots.reduce(
+      (sum, slot) => sum + Number(slot.slot_count ?? 0),
+      0,
+    ) || (sport === "golf" ? 4 : sport === "nfl" ? 6 : 5);
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
@@ -272,16 +476,17 @@ export default async function DraftLineupsPage({
 
         <section className="draft-page-intro">
           <div>
-            <div className="draft-page-intro-kicker">
-              111 Sports
-            </div>
+            <div className="draft-page-intro-kicker">111 Sports</div>
 
             <h1>Draft</h1>
 
-            <p>Build your five-player lineup.</p>
+            <p>
+              Build your {rosterSize}-player{" "}
+              {sport === "golf" ? "Golf " : ""}lineup.
+            </p>
           </div>
 
-          <RefreshPlayersButton />
+          {sport !== "golf" ? <RefreshPlayersButton /> : null}
         </section>
 
         <LineupBuilder

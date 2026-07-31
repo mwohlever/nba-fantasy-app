@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type SlateRecord = {
   id: number;
+  sport?: string | null;
   start_date: string;
   end_date: string;
   nba_team_abbreviations: string[] | null;
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
-      .select("id, start_date, end_date, nba_team_abbreviations")
+      .select("id, sport, start_date, end_date, nba_team_abbreviations")
       .eq("id", slateId)
       .single();
 
@@ -77,6 +78,47 @@ export async function GET(request: NextRequest) {
     }
 
     const safeSlate = slate as SlateRecord;
+
+    if (safeSlate.sport === "golf") {
+      const { data: eventPlayers, error: eventPlayersError } =
+        await supabaseAdmin
+          .from("golf_event_players")
+          .select("player_id")
+          .eq("slate_id", slateId);
+
+      if (eventPlayersError) {
+        return NextResponse.json(
+          {
+            error: `Failed to load Golf players for slate: ${eventPlayersError.message}`,
+          },
+          {
+            status: 500,
+            headers: {
+              "Cache-Control": "no-store, max-age=0",
+            },
+          },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: true,
+          slateId,
+          startDate: safeSlate.start_date,
+          endDate: safeSlate.end_date,
+          source: "golf_event_players",
+          debugTeamAbbreviations: [],
+          availablePlayerIds: (eventPlayers ?? []).map((row) =>
+            Number(row.player_id),
+          ),
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store, max-age=0",
+          },
+        },
+      );
+    }
 
     const normalizedTeamCodes = (safeSlate.nba_team_abbreviations ?? [])
       .map((code) => normalizeTeamCode(code))

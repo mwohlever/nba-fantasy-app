@@ -8,9 +8,12 @@ export type SportConfig = {
 export const SPORTS: SportConfig[] = [
   { key: "nba", label: "NBA", emoji: "🏀", logo: "/logos/nba.png" },
   { key: "nfl", label: "NFL", emoji: "🏈", logo: "/logos/nfl.png" },
+  { key: "golf", label: "Golf", emoji: "⛳", logo: "/logos/golf.png" },
 ];
 
-export function getSportConfig(sportKey: string | null | undefined): SportConfig {
+export function getSportConfig(
+  sportKey: string | null | undefined,
+): SportConfig {
   return SPORTS.find((sport) => sport.key === sportKey) ?? SPORTS[0];
 }
 

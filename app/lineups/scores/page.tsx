@@ -45,16 +45,33 @@ export default async function ScoresLineupsPage({
   const sportParam = Array.isArray(resolvedSearchParams?.sport)
     ? resolvedSearchParams.sport[0]
     : resolvedSearchParams?.sport;
-  const sport = sportParam === "nfl" ? "nfl" : "nba";
+  const sport =
+    sportParam === "nfl"
+      ? "nfl"
+      : sportParam === "golf"
+        ? "golf"
+        : "nba";
 
   const today = getTodayDateString();
 
-  const playersTable = sport === "nfl" ? "players_nfl" : "players";
+  const playersTable =
+    sport === "nfl"
+      ? "players_nfl"
+      : sport === "golf"
+        ? "golf_players"
+        : "players";
+
   const playersSelect =
     sport === "nfl"
       ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
-      : "id, name, position_group, is_active, is_playing_today, nba_player_id";
-  const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+      : sport === "golf"
+        ? "id, display_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
+        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+
+  const statsTable =
+    sport === "nfl"
+      ? "player_nfl_slate_stats"
+      : "player_slate_stats";
 
   const [
     { data: rawPlayers, error: playersError },
@@ -66,11 +83,13 @@ export default async function ScoresLineupsPage({
     supabaseAdmin
       .from(playersTable)
       .select(playersSelect)
-      .order("name", { ascending: true }),
+      .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
     supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
     supabaseAdmin
       .from("slates")
-      .select("id, date, start_date, end_date, is_locked, sport")
+      .select(
+        "id, date, start_date, end_date, is_locked, sport, display_name",
+      )
       .eq("sport", sport)
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
@@ -79,7 +98,13 @@ export default async function ScoresLineupsPage({
       .select("slate_id, team_id, draft_order, is_participating")
       .order("slate_id", { ascending: true })
       .order("draft_order", { ascending: true }),
-    supabaseAdmin.from(statsTable).select("player_id, fantasy_points"),
+    sport === "golf"
+      ? supabaseAdmin
+          .from("golf_event_players")
+          .select("player_id, fantasy_score")
+      : supabaseAdmin
+          .from(statsTable)
+          .select("player_id, fantasy_points"),
   ]);
 
   if (
@@ -112,27 +137,55 @@ export default async function ScoresLineupsPage({
     );
   }
 
-  const normalizedPlayers = (rawPlayers ?? []).map((p: any) =>
-    sport === "nfl"
-      ? {
-          id: p.id,
-          name: p.name,
-          position_group: p.position,
-          is_active: p.is_active,
-          is_playing_today: p.is_playing_this_week,
-          nba_player_id: null,
-          nfl_player_id: p.nfl_player_id,
-        }
-      : {
-          id: p.id,
-          name: p.name,
-          position_group: p.position_group,
-          is_active: p.is_active,
-          is_playing_today: p.is_playing_today,
-          nba_player_id: p.nba_player_id,
-          nfl_player_id: null,
-        }
-  );
+  const normalizedPlayers = (rawPlayers ?? []).map((p: any) => {
+    if (sport === "nfl") {
+      return {
+        id: p.id,
+        name: p.name,
+        position_group: p.position,
+        is_active: p.is_active,
+        is_playing_today: p.is_playing_this_week,
+        nba_player_id: null,
+        nfl_player_id: p.nfl_player_id,
+      };
+    }
+
+    if (sport === "golf") {
+      return {
+        id: p.id,
+        name: p.display_name,
+        position_group: "GOLFER",
+        is_active: p.is_active,
+        is_playing_today: null,
+        nba_player_id: null,
+        nfl_player_id: null,
+        espn_player_id: p.espn_player_id,
+        country: p.country,
+        country_flag_url: p.country_flag_url,
+        headshot_url: p.headshot_url,
+        owgr_player_id: p.owgr_player_id,
+        owgr_rank:
+          p.owgr_rank === null
+            ? null
+            : Number(p.owgr_rank),
+        owgr_points:
+          p.owgr_points === null
+            ? null
+            : Number(p.owgr_points),
+        owgr_updated_at: p.owgr_updated_at,
+      };
+    }
+
+    return {
+      id: p.id,
+      name: p.name,
+      position_group: p.position_group,
+      is_active: p.is_active,
+      is_playing_today: p.is_playing_today,
+      nba_player_id: p.nba_player_id,
+      nfl_player_id: null,
+    };
+  });
 
   const safeSlates: Slate[] =
     (slates ?? []).map((slate) => {
@@ -144,10 +197,13 @@ export default async function ScoresLineupsPage({
         date: slate.date,
         start_date: startDate,
         end_date: endDate,
-        label: formatSlateDateLabel({
-          start_date: startDate,
-          end_date: endDate,
-        }),
+        label:
+          sport === "golf" && (slate as any).display_name
+            ? String((slate as any).display_name)
+            : formatSlateDateLabel({
+                start_date: startDate,
+                end_date: endDate,
+              }),
         is_locked: slate.is_locked,
         sport: slate.sport ?? "nba",
       };
@@ -160,10 +216,14 @@ export default async function ScoresLineupsPage({
 
   safeAllPlayerStats.forEach((row) => {
     const playerId = Number(row.player_id);
-    const fantasyPoints = Number(row.fantasy_points ?? 0);
-
+    const fantasyPoints = Number(
+      sport === "golf"
+        ? (row as any).fantasy_score ?? 0
+        : (row as any).fantasy_points ?? 0,
+    );
 
     if (!Number.isFinite(playerId)) return;
+    if (sport === "golf") return;
     if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
 
     const existing = playerAverageMap.get(playerId) ?? { total: 0, count: 0 };
@@ -187,11 +247,18 @@ export default async function ScoresLineupsPage({
   let hasAnyStatsForLatest = false;
 
   if (latestSlate) {
-    const { data: latestStats } = await supabaseAdmin
-      .from(statsTable)
-      .select("player_id")
-      .eq("slate_id", latestSlate.id)
-      .limit(1);
+    const { data: latestStats } =
+      sport === "golf"
+        ? await supabaseAdmin
+            .from("golf_event_players")
+            .select("player_id")
+            .eq("slate_id", latestSlate.id)
+            .limit(1)
+        : await supabaseAdmin
+            .from(statsTable)
+            .select("player_id")
+            .eq("slate_id", latestSlate.id)
+            .limit(1);
 
     hasAnyStatsForLatest = (latestStats ?? []).length > 0;
   }
@@ -289,17 +356,123 @@ export default async function ScoresLineupsPage({
         };
       }) ?? [];
 
-    const { data: statsData } = await supabaseAdmin
-      .from(statsTable)
-      .select("*")
-      .eq("slate_id", selectedSlateId);
+    const { data: statsData } =
+      sport === "golf"
+        ? await supabaseAdmin
+            .from("golf_event_players")
+            .select(
+              `
+              player_id,
+              leaderboard_order,
+              official_score_to_par,
+              official_score_display,
+              penalty_strokes,
+              fantasy_score,
+              rounds_completed,
+              holes_completed,
+              current_round,
+              last_hole,
+              status,
+              tee_time,
+              tee_time_raw,
+              golf_rounds (
+                round_number,
+                score_to_par,
+                score_display,
+                strokes,
+                holes_completed,
+                tee_time,
+                tee_time_raw,
+                status,
+                golf_holes (
+                  hole_number,
+                  strokes,
+                  relative_to_par,
+                  score_display
+                )
+              )
+            `,
+            )
+            .eq("slate_id", selectedSlateId)
+        : await supabaseAdmin
+            .from(statsTable)
+            .select("*")
+            .eq("slate_id", selectedSlateId);
 
     const { data: teamResultsData } = await supabaseAdmin
       .from("team_slate_results")
       .select("*")
       .eq("slate_id", selectedSlateId);
 
-    playerStats = statsData ?? [];
+    playerStats =
+      sport === "golf"
+        ? (statsData ?? []).map((row: any) => ({
+            player_id: Number(row.player_id),
+            leaderboard_order:
+              row.leaderboard_order === null
+                ? null
+                : Number(row.leaderboard_order),
+            official_score_to_par:
+              row.official_score_to_par === null
+                ? null
+                : Number(row.official_score_to_par),
+            official_score_display: row.official_score_display ?? null,
+            penalty_strokes: Number(row.penalty_strokes ?? 0),
+            fantasy_points:
+              row.fantasy_score === null
+                ? null
+                : Number(row.fantasy_score),
+            rounds_completed: Number(row.rounds_completed ?? 0),
+            holes_completed: Number(row.holes_completed ?? 0),
+            current_round:
+              row.current_round === null
+                ? null
+                : Number(row.current_round),
+            last_hole:
+              row.last_hole === null ? null : Number(row.last_hole),
+            status: row.status ?? "scheduled",
+            tee_time: row.tee_time ?? null,
+            tee_time_raw: row.tee_time_raw ?? null,
+            rounds: (row.golf_rounds ?? [])
+              .map((round: any) => ({
+                round_number: Number(round.round_number),
+                score_to_par:
+                  round.score_to_par === null
+                    ? null
+                    : Number(round.score_to_par),
+                score_display: round.score_display ?? null,
+                strokes:
+                  round.strokes === null ? null : Number(round.strokes),
+                holes_completed: Number(round.holes_completed ?? 0),
+                tee_time: round.tee_time ?? null,
+                tee_time_raw: round.tee_time_raw ?? null,
+                status: round.status ?? "scheduled",
+                holes: (round.golf_holes ?? [])
+                  .map((hole: any) => ({
+                    hole_number: Number(hole.hole_number),
+                    strokes:
+                      hole.strokes === null ? null : Number(hole.strokes),
+                    relative_to_par:
+                      hole.relative_to_par === null
+                        ? null
+                        : Number(hole.relative_to_par),
+                    score_display: hole.score_display ?? null,
+                  }))
+                  .sort(
+                    (
+                      a: { hole_number: number },
+                      b: { hole_number: number },
+                    ) => a.hole_number - b.hole_number,
+                  ),
+              }))
+              .sort(
+                (
+                  a: { round_number: number },
+                  b: { round_number: number },
+                ) => a.round_number - b.round_number,
+              ),
+          }))
+        : statsData ?? [];
     teamResults = teamResultsData ?? [];
   }
 

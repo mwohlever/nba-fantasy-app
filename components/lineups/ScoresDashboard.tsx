@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import GolfScoresDashboard from "@/components/lineups/GolfScoresDashboard";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { getStatColumns } from "@/lib/statColumns";
 import type {
@@ -128,7 +129,7 @@ function medalForPosition(position: number) {
   return `${position}.`;
 }
 
-export default function ScoresDashboard({
+function TraditionalScoresDashboard({
   teams,
   selectedSlate,
   rosterSlots,
@@ -855,4 +856,27 @@ export default function ScoresDashboard({
       </section>
     </section>
   );
+}
+
+
+export default function ScoresDashboard(props: Props) {
+  const sport = props.selectedSlate?.sport ?? "nba";
+
+  if (sport === "golf") {
+    return (
+      <GolfScoresDashboard
+        teams={props.teams}
+        selectedSlate={props.selectedSlate}
+        rosterSlots={props.rosterSlots}
+        lastRefreshSummary={props.lastRefreshSummary}
+        getPlayersForTeam={props.getPlayersForTeam}
+        getTeamStats={props.getTeamStats}
+        getRawPlayerStat={props.getRawPlayerStat}
+        controls={props.controls}
+        setProfilePlayer={props.setProfilePlayer}
+      />
+    );
+  }
+
+  return <TraditionalScoresDashboard {...props} />;
 }

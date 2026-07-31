@@ -1,0 +1,283 @@
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import {
+  fetchEspnGolfWorldRankings,
+  type GolfWorldRanking,
+} from "@/lib/providers/golfRankings";
+
+type GolfPlayerRow = {
+  id: number;
+  display_name: string;
+  espn_player_id: string | null;
+};
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[.'’\-]/g, "")
+    .replace(/\b(jr|sr|ii|iii|iv)\b/gi, "")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function buildRankingMaps(
+  rankings: GolfWorldRanking[],
+) {
+  const byEspnId = new Map<string, GolfWorldRanking>();
+  const byNormalizedName = new Map<
+    string,
+    GolfWorldRanking[]
+  >();
+
+  for (const ranking of rankings) {
+    if (ranking.espnPlayerId) {
+      byEspnId.set(
+        String(ranking.espnPlayerId),
+        ranking,
+      );
+    }
+
+    const normalized = normalizeName(
+      ranking.playerName,
+    );
+
+    const existing =
+      byNormalizedName.get(normalized) ?? [];
+
+    existing.push(ranking);
+    byNormalizedName.set(normalized, existing);
+  }
+
+  return {
+    byEspnId,
+    byNormalizedName,
+  };
+}
+
+export async function POST() {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const rankingResult =
+      await fetchEspnGolfWorldRankings(200);
+
+    const rankings = rankingResult.rankings;
+
+    const { data: golferData, error: golferError } =
+      await supabaseAdmin
+        .from("golf_players")
+        .select(
+          "id, display_name, espn_player_id",
+        )
+        .eq("is_active", true);
+
+    if (golferError) {
+      return NextResponse.json(
+        {
+          error:
+            "Rankings were downloaded, but golfers could not be loaded: " +
+            golferError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const golfers =
+      (golferData ?? []) as GolfPlayerRow[];
+
+    const {
+      byEspnId,
+      byNormalizedName,
+    } = buildRankingMaps(rankings);
+
+    const matchedRankingKeys = new Set<string>();
+    const ambiguousGolfers: Array<{
+      golferId: number;
+      golferName: string;
+      possibleMatches: string[];
+    }> = [];
+
+    const unmatchedGolfers: Array<{
+      golferId: number;
+      golferName: string;
+    }> = [];
+
+    const now = new Date().toISOString();
+
+    const updates: Array<{
+      id: number;
+      owgr_player_id: string | null;
+      owgr_rank: number;
+      owgr_points: number | null;
+      owgr_updated_at: string;
+    }> = [];
+
+    for (const golfer of golfers) {
+      let ranking: GolfWorldRanking | null = null;
+
+      if (golfer.espn_player_id) {
+        ranking =
+          byEspnId.get(
+            String(golfer.espn_player_id),
+          ) ?? null;
+      }
+
+      if (!ranking) {
+        const normalizedName = normalizeName(
+          golfer.display_name,
+        );
+
+        const possibleMatches =
+          byNormalizedName.get(normalizedName) ?? [];
+
+        if (possibleMatches.length === 1) {
+          ranking = possibleMatches[0];
+        } else if (possibleMatches.length > 1) {
+          ambiguousGolfers.push({
+            golferId: golfer.id,
+            golferName: golfer.display_name,
+            possibleMatches:
+              possibleMatches.map(
+                (match) =>
+                  `#${match.rank} ${match.playerName}`,
+              ),
+          });
+
+          continue;
+        }
+      }
+
+      if (!ranking) {
+        unmatchedGolfers.push({
+          golferId: golfer.id,
+          golferName: golfer.display_name,
+        });
+
+        continue;
+      }
+
+      const rankingKey =
+        ranking.espnPlayerId ??
+        `${ranking.rank}:${normalizeName(
+          ranking.playerName,
+        )}`;
+
+      matchedRankingKeys.add(rankingKey);
+
+      updates.push({
+        id: golfer.id,
+        owgr_player_id:
+          ranking.espnPlayerId ?? null,
+        owgr_rank: ranking.rank,
+        owgr_points: ranking.points,
+        owgr_updated_at: now,
+      });
+    }
+
+    /*
+     * Do not clear rankings from unmatched golfers here.
+     *
+     * A temporary ESPN parser/page issue should never erase
+     * previously valid ranking data. Each successful match is
+     * updated independently.
+     */
+    const updateErrors: Array<{
+      golferId: number;
+      error: string;
+    }> = [];
+
+    let updatedCount = 0;
+
+    for (const update of updates) {
+      const { error } = await supabaseAdmin
+        .from("golf_players")
+        .update({
+          owgr_player_id:
+            update.owgr_player_id,
+          owgr_rank: update.owgr_rank,
+          owgr_points: update.owgr_points,
+          owgr_updated_at:
+            update.owgr_updated_at,
+        })
+        .eq("id", update.id);
+
+      if (error) {
+        updateErrors.push({
+          golferId: update.id,
+          error: error.message,
+        });
+      } else {
+        updatedCount += 1;
+      }
+    }
+
+    const unmatchedRankings =
+      rankings.filter((ranking) => {
+        const rankingKey =
+          ranking.espnPlayerId ??
+          `${ranking.rank}:${normalizeName(
+            ranking.playerName,
+          )}`;
+
+        return !matchedRankingKeys.has(rankingKey);
+      });
+
+    return NextResponse.json({
+      success: updateErrors.length === 0,
+      provider: "ESPN",
+      rankingLimit: 200,
+      rankingsFound: rankings.length,
+      activeGolfersChecked: golfers.length,
+      matchedGolfers: updates.length,
+      updatedGolfers: updatedCount,
+      unmatchedGolfers:
+        unmatchedGolfers.length,
+      ambiguousGolfers:
+        ambiguousGolfers.length,
+      unmatchedRankings:
+        unmatchedRankings.length,
+      updatedAt: now,
+      pagesAttempted:
+        rankingResult.pagesAttempted,
+      pageErrors:
+        rankingResult.pageErrors,
+      details: {
+        unmatchedGolfers:
+          unmatchedGolfers.slice(0, 30),
+        ambiguousGolfers:
+          ambiguousGolfers.slice(0, 30),
+        unmatchedRankings:
+          unmatchedRankings
+            .slice(0, 30)
+            .map((ranking) => ({
+              rank: ranking.rank,
+              name: ranking.playerName,
+              espnPlayerId:
+                ranking.espnPlayerId,
+            })),
+        updateErrors:
+          updateErrors.slice(0, 30),
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Golf rankings sync failed:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected Golf rankings sync error.",
+      },
+      { status: 500 },
+    );
+  }
+}
