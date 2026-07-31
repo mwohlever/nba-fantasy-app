@@ -20,6 +20,7 @@ type UpdateSlateBody = {
   is_locked?: boolean;
   teams?: SlateTeamUpdate[];
   nba_team_abbreviations?: string[];
+  cut_penalty_per_round?: number;
 };
 
 type RouteContext = {
@@ -47,10 +48,17 @@ export async function GET(_: NextRequest, context: RouteContext) {
       { data: slate, error: slateError },
       { data: teams, error: teamsError },
       { data: slateTeams, error: slateTeamsError },
+      {
+        data: golfFieldRows,
+        error: golfFieldError,
+        count: golfFieldCount,
+      },
     ] = await Promise.all([
       supabaseAdmin
         .from("slates")
-        .select("id, date, start_date, end_date, is_locked, nba_team_abbreviations")
+        .select(
+          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, nba_team_abbreviations"
+        )
         .eq("id", slateId)
         .single(),
       supabaseAdmin
@@ -61,6 +69,16 @@ export async function GET(_: NextRequest, context: RouteContext) {
         .from("slate_teams")
         .select("slate_id, team_id, draft_order, is_participating")
         .eq("slate_id", slateId),
+      supabaseAdmin
+        .from("golf_event_players")
+        .select("updated_at", {
+          count: "exact",
+        })
+        .eq("slate_id", slateId)
+        .order("updated_at", {
+          ascending: false,
+        })
+        .limit(1),
     ]);
 
     if (slateError || !slate) {
@@ -70,12 +88,13 @@ export async function GET(_: NextRequest, context: RouteContext) {
       );
     }
 
-    if (teamsError || slateTeamsError) {
+    if (teamsError || slateTeamsError || golfFieldError) {
       return NextResponse.json(
         {
           error:
             teamsError?.message ||
             slateTeamsError?.message ||
+            golfFieldError?.message ||
             "Failed to load slate details.",
         },
         { status: 500 }
@@ -100,18 +119,45 @@ export async function GET(_: NextRequest, context: RouteContext) {
           is_participating: config?.is_participating ?? true,
         };
       })
-      .sort((a, b) => a.draft_order - b.draft_order);
+      .sort((a, b) => {
+        if (a.is_participating !== b.is_participating) {
+          return a.is_participating ? -1 : 1;
+        }
+
+        if (a.draft_order !== b.draft_order) {
+          return a.draft_order - b.draft_order;
+        }
+
+        return a.team_name.localeCompare(b.team_name);
+      })
+      .map((team, index) => ({
+        ...team,
+        draft_order: index + 1,
+      }));
 
     return NextResponse.json({
       success: true,
       slate: {
         ...slate,
         label:
-          slate.start_date && slate.end_date && slate.start_date !== slate.end_date
-            ? `${slate.start_date} - ${slate.end_date}`
-            : slate.start_date ?? slate.date,
+          slate.display_name?.trim() ||
+          (
+            slate.start_date &&
+            slate.end_date &&
+            slate.start_date !== slate.end_date
+              ? `${slate.start_date} - ${slate.end_date}`
+              : slate.start_date ?? slate.date
+          ),
       },
       teams: mergedTeams,
+      golfField:
+        slate.sport === "golf"
+          ? {
+              golferCount: golfFieldCount ?? 0,
+              lastRefreshedAt:
+                golfFieldRows?.[0]?.updated_at ?? null,
+            }
+          : null,
     });
   } catch (error) {
     console.error(error);
@@ -140,6 +186,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const teams = body.teams ?? [];
     const isLocked = body.is_locked;
+    const rawCutPenalty = Number(body.cut_penalty_per_round);
     const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
       .map((value) => normalizeNbaTeamCode(value))
       .filter(Boolean);
@@ -151,17 +198,22 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const uniqueOrders = new Set(teams.map((team) => team.draft_order));
-    if (uniqueOrders.size !== teams.length) {
-      return NextResponse.json(
-        { error: "Draft order values must be unique." },
-        { status: 400 }
-      );
-    }
+    const normalizedTeams = [...teams]
+      .sort((a, b) => {
+        if (a.is_participating !== b.is_participating) {
+          return a.is_participating ? -1 : 1;
+        }
+
+        return a.draft_order - b.draft_order;
+      })
+      .map((team, index) => ({
+        ...team,
+        draft_order: index + 1,
+      }));
 
     const { data: existingSlate, error: existingSlateError } = await supabaseAdmin
       .from("slates")
-      .select("id")
+      .select("id, sport")
       .eq("id", slateId)
       .single();
 
@@ -172,12 +224,35 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
+    if (
+      existingSlate.sport === "golf" &&
+      (
+        !Number.isInteger(rawCutPenalty) ||
+        rawCutPenalty < 0 ||
+        rawCutPenalty > 100
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Cut penalty must be a whole number from 0 through 100.",
+        },
+        { status: 400 }
+      );
+    }
+
     const slateUpdatePayload: {
       is_locked?: boolean;
       nba_team_abbreviations?: string[];
+      cut_penalty_per_round?: number;
     } = {
       nba_team_abbreviations: nbaTeamAbbreviations,
     };
+
+    if (existingSlate.sport === "golf") {
+      slateUpdatePayload.cut_penalty_per_round =
+        rawCutPenalty;
+    }
 
     if (typeof isLocked === "boolean") {
       slateUpdatePayload.is_locked = isLocked;
@@ -195,7 +270,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const payload = teams.map((team) => ({
+    const payload = normalizedTeams.map((team) => ({
       slate_id: slateId,
       team_id: team.team_id,
       draft_order: team.draft_order,

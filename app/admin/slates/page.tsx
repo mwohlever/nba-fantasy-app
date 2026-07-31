@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import AppNav from "@/components/AppNav";
 import Link from "next/link";
+import AppNav from "@/components/AppNav";
 import { useSelectedSport } from "@/components/providers/SportProvider";
+
+type SportKey = "nba" | "nfl" | "golf";
 
 type SlateListRow = {
   id: number;
@@ -12,7 +14,7 @@ type SlateListRow = {
   end_date: string | null;
   is_locked: boolean;
   label: string;
-  sport?: "nba" | "nfl" | "golf";
+  sport?: SportKey;
   display_name?: string | null;
   external_event_id?: string | null;
   cut_penalty_per_round?: number | null;
@@ -26,41 +28,112 @@ type SlateTeamRow = {
   is_participating: boolean;
 };
 
+type GolfFieldSummary = {
+  golferCount: number;
+  lastRefreshedAt: string | null;
+};
+
 type SlateDetailResponse = {
   success: boolean;
-  slate: SlateListRow & {
-    nba_team_abbreviations?: string[] | null;
-    sport?: "nba" | "nfl" | "golf";
-    display_name?: string | null;
-    external_event_id?: string | null;
-    cut_penalty_per_round?: number | null;
-  };
+  slate: SlateListRow;
   teams: SlateTeamRow[];
+  golfField?: GolfFieldSummary | null;
 };
+
+type SelectedSlateState = SlateListRow & {
+  nbaTeamsInput: string;
+};
+
+function normalizeTeamOrder(rows: SlateTeamRow[]) {
+  const participating = rows
+    .filter((team) => team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  const inactive = rows
+    .filter((team) => !team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  return [...participating, ...inactive].map((team, index) => ({
+    ...team,
+    draft_order: index + 1,
+  }));
+}
+
+function formatDateRange(
+  startDate: string | null,
+  endDate: string | null,
+) {
+  if (!startDate) return "Dates unavailable";
+  if (!endDate || startDate === endDate) return startDate;
+  return `${startDate} – ${endDate}`;
+}
+
+function formatRefreshTime(value: string | null) {
+  if (!value) return "Not loaded yet";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export default function AdminSlatesPage() {
   const { selectedSport } = useSelectedSport();
+
   const [slates, setSlates] = useState<SlateListRow[]>([]);
-  const [selectedSlateId, setSelectedSlateId] = useState<number | "">("");
-  const [selectedSlate, setSelectedSlate] = useState<
-    (SlateListRow & { nbaTeamsInput?: string }) | null
-  >(null);
+  const [selectedSlateId, setSelectedSlateId] =
+    useState<number | "">("");
+  const [selectedSlate, setSelectedSlate] =
+    useState<SelectedSlateState | null>(null);
   const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+  const [golfField, setGolfField] =
+    useState<GolfFieldSummary | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReseeding, setIsReseeding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+    useState(false);
   const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
     useState(false);
+
   const [message, setMessage] = useState("");
 
+  const isBusy =
+    isSaving ||
+    isReseeding ||
+    isDeleting ||
+    isRefreshingGolfField ||
+    isSyncingGolfRankings;
+
   useEffect(() => {
-    void loadSlates();
     setSelectedSlateId("");
     setSelectedSlate(null);
+    setTeams([]);
+    setGolfField(null);
+    void loadSlates();
   }, [selectedSport]);
 
   useEffect(() => {
     if (!selectedSlateId) return;
-    void loadSlateDetail(selectedSlateId);
+    void loadSlateDetail(Number(selectedSlateId));
   }, [selectedSlateId]);
 
   async function loadSlates() {
@@ -69,8 +142,10 @@ export default function AdminSlatesPage() {
       setMessage("");
 
       const response = await fetch(
-        `/api/admin/slates?sport=${selectedSport}`
+        `/api/admin/slates?sport=${encodeURIComponent(selectedSport)}`,
+        { cache: "no-store" },
       );
+
       const result = await response.json();
 
       if (!response.ok) {
@@ -78,11 +153,25 @@ export default function AdminSlatesPage() {
         return;
       }
 
-      const nextSlates = result.slates ?? [];
+      const nextSlates = (result.slates ?? []) as SlateListRow[];
       setSlates(nextSlates);
 
-      if (nextSlates.length > 0 && !selectedSlateId) {
-        setSelectedSlateId(nextSlates[0].id);
+      if (nextSlates.length > 0) {
+        setSelectedSlateId((current) => {
+          if (
+            current &&
+            nextSlates.some((slate) => slate.id === Number(current))
+          ) {
+            return current;
+          }
+
+          return nextSlates[0].id;
+        });
+      } else {
+        setSelectedSlateId("");
+        setSelectedSlate(null);
+        setTeams([]);
+        setGolfField(null);
       }
     } catch (error) {
       console.error(error);
@@ -96,7 +185,11 @@ export default function AdminSlatesPage() {
     try {
       setMessage("");
 
-      const response = await fetch(`/api/admin/slates/${slateId}`);
+      const response = await fetch(
+        `/api/admin/slates/${slateId}`,
+        { cache: "no-store" },
+      );
+
       const result = (await response.json()) as
         | SlateDetailResponse
         | { error?: string };
@@ -105,104 +198,219 @@ export default function AdminSlatesPage() {
         setMessage(
           "error" in result
             ? result.error || "Failed to load slate."
-            : "Failed to load slate."
+            : "Failed to load slate.",
         );
         return;
       }
 
       const safeResult = result as SlateDetailResponse;
+
       setSelectedSlate({
         ...safeResult.slate,
-        nbaTeamsInput: (safeResult.slate.nba_team_abbreviations ?? []).join(", "),
+        nbaTeamsInput: (
+          safeResult.slate.nba_team_abbreviations ?? []
+        ).join(", "),
       });
-      setTeams(safeResult.teams);
+
+      setTeams(normalizeTeamOrder(safeResult.teams ?? []));
+      setGolfField(safeResult.golfField ?? null);
     } catch (error) {
       console.error(error);
-      setMessage("Something went wrong while loading slate details.");
+      setMessage(
+        "Something went wrong while loading slate details.",
+      );
     }
   }
 
-  function updateTeam(teamId: number, patch: Partial<SlateTeamRow>) {
-    setTeams((prev) =>
-      prev.map((team) =>
-        team.team_id === teamId ? { ...team, ...patch } : team
-      )
+  function toggleParticipation(teamId: number) {
+    setTeams((current) =>
+      normalizeTeamOrder(
+        current.map((team) =>
+          team.team_id === teamId
+            ? {
+                ...team,
+                is_participating: !team.is_participating,
+              }
+            : team,
+        ),
+      ),
     );
+  }
+
+  function moveTeam(
+    teamId: number,
+    direction: "up" | "down",
+  ) {
+    setTeams((current) => {
+      const normalized = normalizeTeamOrder(current);
+      const team = normalized.find(
+        (row) => row.team_id === teamId,
+      );
+
+      if (!team) return normalized;
+
+      const sameSection = normalized.filter(
+        (row) =>
+          row.is_participating === team.is_participating,
+      );
+
+      const currentIndex = sameSection.findIndex(
+        (row) => row.team_id === teamId,
+      );
+
+      const targetIndex =
+        direction === "up"
+          ? currentIndex - 1
+          : currentIndex + 1;
+
+      if (
+        targetIndex < 0 ||
+        targetIndex >= sameSection.length
+      ) {
+        return normalized;
+      }
+
+      const reorderedSection = [...sameSection];
+      const [moved] = reorderedSection.splice(currentIndex, 1);
+      reorderedSection.splice(targetIndex, 0, moved);
+
+      const otherSection = normalized.filter(
+        (row) =>
+          row.is_participating !== team.is_participating,
+      );
+
+      return normalizeTeamOrder(
+        team.is_participating
+          ? [...reorderedSection, ...otherSection]
+          : [...otherSection, ...reorderedSection],
+      );
+    });
   }
 
   async function handleSave() {
     if (!selectedSlateId || !selectedSlate) return;
 
-    try {
-      setIsSaving(true);
-      setMessage("");
+    const normalizedTeams = normalizeTeamOrder(teams);
 
-      const response = await fetch(`/api/admin/slates/${selectedSlateId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          is_locked: selectedSlate.is_locked,
-          nba_team_abbreviations:
-            selectedSlate.nbaTeamsInput
-              ?.split(",")
-              .map((value) => value.trim().toUpperCase())
-              .filter(Boolean) ?? [],
-          teams: teams.map((team) => ({
-            team_id: team.team_id,
-            draft_order: Number(team.draft_order),
-            is_participating: team.is_participating,
-          })),
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setMessage(result.error || "Failed to save slate.");
-        return;
-      }
-
-      setMessage("Slate updated successfully.");
-      await loadSlateDetail(selectedSlateId);
-      await loadSlates();
-    } catch (error) {
-      console.error(error);
-      setMessage("Something went wrong while saving.");
-    } finally {
-      setIsSaving(false);
+    if (
+      selectedSlate.sport === "golf" &&
+      (
+        !Number.isInteger(
+          selectedSlate.cut_penalty_per_round,
+        ) ||
+        Number(selectedSlate.cut_penalty_per_round) < 0 ||
+        Number(selectedSlate.cut_penalty_per_round) > 100
+      )
+    ) {
+      setMessage(
+        "Cut penalty must be a whole number from 0 through 100.",
+      );
+      return;
     }
-  }
-
-  async function handleReseed() {
-    if (!selectedSlateId) return;
 
     try {
       setIsSaving(true);
       setMessage("");
 
       const response = await fetch(
-        `/api/admin/slates/${selectedSlateId}/reseed`,
+        `/api/admin/slates/${selectedSlateId}`,
         {
-          method: "POST",
-        }
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            is_locked: selectedSlate.is_locked,
+            cut_penalty_per_round:
+              selectedSlate.sport === "golf"
+                ? Number(
+                    selectedSlate.cut_penalty_per_round,
+                  )
+                : undefined,
+            nba_team_abbreviations:
+              selectedSlate.nbaTeamsInput
+                .split(",")
+                .map((value) =>
+                  value.trim().toUpperCase(),
+                )
+                .filter(Boolean),
+            teams: normalizedTeams.map(
+              (team, index) => ({
+                team_id: team.team_id,
+                draft_order: index + 1,
+                is_participating:
+                  team.is_participating,
+              }),
+            ),
+          }),
+        },
       );
 
       const result = await response.json();
 
       if (!response.ok) {
-        setMessage(result.error || "Failed to reseed slate.");
+        setMessage(
+          result.error || "Failed to save slate.",
+        );
         return;
       }
 
-      setMessage("Slate reseeded successfully.");
-      await loadSlateDetail(selectedSlateId);
+      setMessage("Slate updated successfully.");
+      await loadSlateDetail(Number(selectedSlateId));
+      await loadSlates();
     } catch (error) {
       console.error(error);
-      setMessage("Something went wrong while reseeding.");
+      setMessage(
+        "Something went wrong while saving the slate.",
+      );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleRefreshGolfField() {
+    if (!selectedSlateId || !selectedSlate) return;
+
+    try {
+      setIsRefreshingGolfField(true);
+      setMessage("");
+
+      const response = await fetch(
+        "/api/refresh-stats-golf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            slateId: Number(selectedSlateId),
+          }),
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ||
+            "Failed to refresh the tournament field.",
+        );
+        return;
+      }
+
+      await loadSlateDetail(Number(selectedSlateId));
+
+      setMessage(
+        "Tournament field, scores, rounds, and hole data refreshed successfully.",
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while refreshing the tournament field.",
+      );
+    } finally {
+      setIsRefreshingGolfField(false);
     }
   }
 
@@ -223,25 +431,18 @@ export default function AdminSlatesPage() {
 
       if (!response.ok) {
         setMessage(
-          result.error ||
-            "Failed to sync Golf rankings.",
+          result.error || "Failed to sync Golf rankings.",
         );
         return;
       }
 
       setMessage(
-        `OWGR synced: ${result.updatedGolfers ?? 0} golfers updated, ` +
-          `${result.createdGolfers ?? 0} newly added, ` +
-          `from ${result.rankingsFound ?? 0} rankings. ` +
-          `${result.unmatchedGolfers ?? 0} active golfers were not ranked or matched.`,
-      );
-
-      await loadSlateDetail(
-        Number(selectedSlateId),
+        `OWGR synced: ${result.updatedGolfers ?? 0} updated, ` +
+          `${result.createdGolfers ?? 0} added, ` +
+          `${result.unmatchedGolfers ?? 0} unmatched.`,
       );
     } catch (error) {
       console.error(error);
-
       setMessage(
         "Something went wrong while syncing Golf rankings.",
       );
@@ -250,92 +451,229 @@ export default function AdminSlatesPage() {
     }
   }
 
-  async function handleDelete() {
+  async function handleReseed() {
     if (!selectedSlateId) return;
 
     const confirmed = window.confirm(
-      "Delete this slate? This will remove lineups, stats, team results, and slate settings."
+      "Replace the current draft order using the previous completed slate?",
     );
 
     if (!confirmed) return;
 
     try {
-      setIsSaving(true);
+      setIsReseeding(true);
       setMessage("");
 
-      const response = await fetch(`/api/admin/slates/${selectedSlateId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}/reseed`,
+        { method: "POST" },
+      );
 
       const result = await response.json();
 
       if (!response.ok) {
-        setMessage(result.error || "Failed to delete slate.");
+        setMessage(
+          result.error || "Failed to reseed the slate.",
+        );
         return;
       }
 
-      setMessage("Slate deleted successfully.");
-      setSelectedSlate(null);
-      setTeams([]);
-      setSelectedSlateId("");
-      await loadSlates();
+      setMessage("Slate reseeded successfully.");
+      await loadSlateDetail(Number(selectedSlateId));
     } catch (error) {
       console.error(error);
-      setMessage("Something went wrong while deleting.");
+      setMessage(
+        "Something went wrong while reseeding.",
+      );
     } finally {
-      setIsSaving(false);
+      setIsReseeding(false);
     }
   }
 
-  const sortedTeams = useMemo(
-    () => [...teams].sort((a, b) => a.draft_order - b.draft_order),
-    [teams]
+  async function handleDelete() {
+    if (!selectedSlateId) return;
+
+    const confirmed = window.confirm(
+      "Delete this slate? This removes its lineups, stats, results, and settings.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}`,
+        { method: "DELETE" },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error || "Failed to delete the slate.",
+        );
+        return;
+      }
+
+      setSelectedSlate(null);
+      setTeams([]);
+      setGolfField(null);
+      setSelectedSlateId("");
+      await loadSlates();
+      setMessage("Slate deleted successfully.");
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while deleting the slate.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  const orderedTeams = useMemo(
+    () => normalizeTeamOrder(teams),
+    [teams],
   );
 
+  const participatingTeams = useMemo(
+    () =>
+      orderedTeams.filter(
+        (team) => team.is_participating,
+      ),
+    [orderedTeams],
+  );
+
+  const inactiveTeams = useMemo(
+    () =>
+      orderedTeams.filter(
+        (team) => !team.is_participating,
+      ),
+    [orderedTeams],
+  );
+
+  function renderTeamRow(
+    team: SlateTeamRow,
+    sectionRows: SlateTeamRow[],
+  ) {
+    const sectionIndex = sectionRows.findIndex(
+      (row) => row.team_id === team.team_id,
+    );
+
+    return (
+      <tr
+        key={team.team_id}
+        className="border-t border-slate-200"
+      >
+        <td className="px-4 py-3 font-medium text-slate-100">
+          <div className="flex items-center gap-3">
+            <span className="w-6 text-sm text-slate-400">
+              {team.draft_order}.
+            </span>
+            {team.team_name}
+          </div>
+        </td>
+
+        <td className="px-4 py-3">
+          <input
+            type="checkbox"
+            checked={team.is_participating}
+            onChange={() =>
+              toggleParticipation(team.team_id)
+            }
+            disabled={isBusy}
+            className="h-4 w-4 rounded border-slate-500"
+          />
+        </td>
+
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                moveTeam(team.team_id, "up")
+              }
+              disabled={isBusy || sectionIndex === 0}
+              className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label={`Move ${team.team_name} up`}
+            >
+              ↑
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                moveTeam(team.team_id, "down")
+              }
+              disabled={
+                isBusy ||
+                sectionIndex === sectionRows.length - 1
+              }
+              className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label={`Move ${team.team_name} down`}
+            >
+              ↓
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100">
       <div className="mx-auto max-w-6xl space-y-6">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 px-6 py-6 shadow-sm">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
                 Slate Manager
               </h1>
-              <p className="mt-2 text-sm text-slate-600">
-                Edit participation, draft order, lock status, team codes,
-                reseed, or delete a slate.
+
+              <p className="mt-2 text-sm text-slate-300">
+                Manage tournament settings, participants,
+                draft order, field data, and slate status.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-end gap-3">
               <Link
                 href="/admin"
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+                className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-sky-400 hover:bg-slate-800"
               >
                 ← Back
               </Link>
 
-              <div className="min-w-[240px]">
+              <div className="min-w-[250px]">
                 <label
                   htmlFor="slate-select"
-                  className="mb-1 block text-xs font-medium text-slate-600"
+                  className="mb-1 block text-xs font-medium text-slate-300"
                 >
                   Select Slate
                 </label>
+
                 <select
                   id="slate-select"
                   value={selectedSlateId}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     setSelectedSlateId(
-                      e.target.value ? Number(e.target.value) : ""
+                      event.target.value
+                        ? Number(event.target.value)
+                        : "",
                     )
                   }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
+                  disabled={isBusy}
+                  className="w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400 disabled:opacity-60"
                 >
                   {slates.map((slate) => (
-                    <option key={slate.id} value={slate.id}>
+                    <option
+                      key={slate.id}
+                      value={slate.id}
+                    >
                       {slate.label}
                       {slate.is_locked ? " (Locked)" : ""}
                     </option>
@@ -347,146 +685,215 @@ export default function AdminSlatesPage() {
         </section>
 
         {message ? (
-          <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-sm">
+          <div className="rounded-2xl border border-sky-700 bg-sky-950/70 px-4 py-3 text-sm text-sky-100">
             {message}
           </div>
         ) : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm">
           {isLoading ? (
-            <div className="text-sm text-slate-600">Loading slates...</div>
+            <div className="text-sm text-slate-300">
+              Loading slates...
+            </div>
           ) : !selectedSlate ? (
-            <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              Select a slate to manage it.
+            <div className="rounded-2xl border border-dashed border-slate-600 px-4 py-8 text-sm text-slate-400">
+              No slate is available for this sport.
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                  <div className="text-xs uppercase tracking-wide text-slate-500">
+                  <div className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-400">
                     Current Slate
                   </div>
-                  <div className="mt-1 text-xl font-semibold text-slate-900">
+
+                  <h2 className="mt-2 text-2xl font-bold text-white">
                     {selectedSlate.display_name?.trim() ||
                       selectedSlate.label}
+                  </h2>
+
+                  <div className="mt-2 text-sm text-slate-300">
+                    {formatDateRange(
+                      selectedSlate.start_date,
+                      selectedSlate.end_date,
+                    )}
                   </div>
 
-                  {selectedSport === "golf" ? (
-                    <div className="mt-2 space-y-1 text-sm text-slate-600">
-                      <div>
-                        Golf
-                        {selectedSlate.start_date &&
-                        selectedSlate.end_date
-                          ? ` • ${selectedSlate.start_date} - ${selectedSlate.end_date}`
-                          : ""}
-                      </div>
-
-                      <div>
-                        Cut penalty:{" "}
-                        {selectedSlate.cut_penalty_per_round ?? 0} per
-                        missed round
-                      </div>
-
-                      {selectedSlate.external_event_id ? (
-                        <div>
-                          ESPN event:{" "}
-                          {selectedSlate.external_event_id}
-                        </div>
-                      ) : null}
+                  {selectedSlate.external_event_id ? (
+                    <div className="mt-1 text-xs text-slate-400">
+                      ESPN event:{" "}
+                      {selectedSlate.external_event_id}
                     </div>
-                  ) : null}
-
-                  {selectedSlate.sport === "nba" ? (
-                    <div className="mt-4 max-w-xl">
-                    <label className="mb-1 block text-xs font-medium text-slate-600">
-                      Team Codes
-                    </label>
-                    <input
-                      type="text"
-                      value={selectedSlate.nbaTeamsInput ?? ""}
-                      onChange={(e) =>
-                        setSelectedSlate((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                nbaTeamsInput: e.target.value,
-                              }
-                            : prev
-                        )
-                      }
-                      placeholder="Team abbreviations, comma separated"
-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-sky-300"
-                    />
-                    <p className="mt-1 text-xs text-slate-500">
-                      This is the fallback/edit field. Once we wire the create
-                      slate flow, this should auto-populate and only need edits
-                      occasionally.
-                    </p>
-                  </div>
                   ) : null}
                 </div>
 
-                <label className="flex items-center gap-3 text-sm text-slate-700">
+                <label className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm text-slate-200">
                   <input
                     type="checkbox"
                     checked={selectedSlate.is_locked}
-                    onChange={(e) =>
-                      setSelectedSlate((prev) =>
-                        prev ? { ...prev, is_locked: e.target.checked } : prev
+                    onChange={(event) =>
+                      setSelectedSlate((current) =>
+                        current
+                          ? {
+                              ...current,
+                              is_locked:
+                                event.target.checked,
+                            }
+                          : current,
                       )
                     }
-                    className="h-4 w-4 rounded border-slate-300"
+                    disabled={isBusy}
+                    className="h-4 w-4 rounded border-slate-500"
                   />
                   Locked
                 </label>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-slate-200">
+              {selectedSlate.sport === "golf" ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-emerald-800 bg-emerald-950/35 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                      Tournament Field
+                    </div>
+
+                    <div className="mt-2 text-2xl font-bold text-white">
+                      {golfField?.golferCount ?? 0}
+                    </div>
+
+                    <div className="mt-1 text-xs text-emerald-200/80">
+                      golfers loaded
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <label
+                      htmlFor="cut-penalty"
+                      className="block text-xs font-semibold uppercase tracking-wide text-slate-300"
+                    >
+                      Cut Penalty
+                    </label>
+
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        id="cut-penalty"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={
+                          selectedSlate.cut_penalty_per_round ??
+                          5
+                        }
+                        onChange={(event) =>
+                          setSelectedSlate((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  cut_penalty_per_round:
+                                    Number(
+                                      event.target.value,
+                                    ),
+                                }
+                              : current,
+                          )
+                        }
+                        disabled={isBusy}
+                        className="w-24 rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-lg font-bold text-white outline-none focus:border-emerald-400"
+                      />
+
+                      <span className="text-sm text-slate-400">
+                        per missed round
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      Last Field Refresh
+                    </div>
+
+                    <div className="mt-2 text-sm font-semibold text-white">
+                      {formatRefreshTime(
+                        golfField?.lastRefreshedAt ?? null,
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedSlate.sport === "nba" ? (
+                <div className="max-w-xl">
+                  <label
+                    htmlFor="nba-team-codes"
+                    className="mb-1 block text-xs font-medium text-slate-300"
+                  >
+                    NBA Team Codes
+                  </label>
+
+                  <input
+                    id="nba-team-codes"
+                    type="text"
+                    value={selectedSlate.nbaTeamsInput}
+                    onChange={(event) =>
+                      setSelectedSlate((current) =>
+                        current
+                          ? {
+                              ...current,
+                              nbaTeamsInput:
+                                event.target.value,
+                            }
+                          : current,
+                      )
+                    }
+                    disabled={isBusy}
+                    placeholder="BOS, CLE, NYK"
+                    className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-sky-400"
+                  />
+                </div>
+              ) : null}
+
+              <div className="overflow-hidden rounded-2xl border border-slate-700">
                 <div className="overflow-x-auto">
                   <table className="min-w-full border-collapse text-sm">
-                    <thead className="bg-slate-100 text-slate-700">
+                    <thead className="bg-slate-800 text-slate-200">
                       <tr className="text-left">
-                        <th className="px-3 py-3">Team</th>
-                        <th className="px-3 py-3">Participating</th>
-                        <th className="px-3 py-3">Draft Order</th>
+                        <th className="px-4 py-3">
+                          Team
+                        </th>
+                        <th className="px-4 py-3">
+                          Participating
+                        </th>
+                        <th className="px-4 py-3">
+                          Draft Order
+                        </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white text-slate-800">
-                      {sortedTeams.map((team) => (
-                        <tr
-                          key={team.team_id}
-                          className="border-t border-slate-100"
-                        >
-                          <td className="px-3 py-3 font-medium">
-                            {team.team_name}
-                          </td>
-                          <td className="px-3 py-3">
-                            <input
-                              type="checkbox"
-                              checked={team.is_participating}
-                              onChange={(e) =>
-                                updateTeam(team.team_id, {
-                                  is_participating: e.target.checked,
-                                })
-                              }
-                              className="h-4 w-4 rounded border-slate-300"
-                            />
-                          </td>
-                          <td className="px-3 py-3">
-                            <input
-                              type="number"
-                              min={1}
-                              value={team.draft_order}
-                              onChange={(e) =>
-                                updateTeam(team.team_id, {
-                                  draft_order: Number(e.target.value),
-                                })
-                              }
-                              className="w-24 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-sky-300"
-                            />
+
+                    <tbody className="bg-slate-900">
+                      {participatingTeams.map((team) =>
+                        renderTeamRow(
+                          team,
+                          participatingTeams,
+                        ),
+                      )}
+
+                      {inactiveTeams.length > 0 ? (
+                        <tr className="border-t border-slate-700 bg-slate-950/60">
+                          <td
+                            colSpan={3}
+                            className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                          >
+                            Not participating
                           </td>
                         </tr>
-                      ))}
+                      ) : null}
+
+                      {inactiveTeams.map((team) =>
+                        renderTeamRow(
+                          team,
+                          inactiveTeams,
+                        ),
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -496,49 +903,69 @@ export default function AdminSlatesPage() {
                 <button
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={isSaving || isSyncingGolfRankings}
-                  className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-2.5 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isBusy}
+                  className="rounded-xl border border-emerald-500 bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? "Saving..." : "Save Slate"}
                 </button>
 
-                {selectedSport === "golf" ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void handleSyncGolfRankings()
-                    }
-                    disabled={
-                      isSaving ||
-                      isSyncingGolfRankings
-                    }
-                    className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-2.5 text-sm font-medium text-emerald-900 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isSyncingGolfRankings
-                      ? "Syncing OWGR..."
-                      : "Sync OWGR"}
-                  </button>
+                {selectedSlate.sport === "golf" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleRefreshGolfField()
+                      }
+                      disabled={
+                        isBusy || selectedSlate.is_locked
+                      }
+                      title={
+                        selectedSlate.is_locked
+                          ? "Unlock and save the slate before refreshing the field."
+                          : "Reload the field, leaderboard, rounds, and holes from ESPN."
+                      }
+                      className="rounded-xl border border-sky-500 bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isRefreshingGolfField
+                        ? "Refreshing Field..."
+                        : "Refresh Tournament Field"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSyncGolfRankings()
+                      }
+                      disabled={isBusy}
+                      className="rounded-xl border border-emerald-500 bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isSyncingGolfRankings
+                        ? "Syncing OWGR..."
+                        : "Sync OWGR"}
+                    </button>
+                  </>
                 ) : null}
 
                 <button
                   type="button"
                   onClick={() => void handleReseed()}
-                  disabled={
-                    isSaving ||
-                    isSyncingGolfRankings
-                  }
-                  className="rounded-xl border border-sky-300 bg-sky-100 px-4 py-2.5 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isBusy}
+                  className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Reseed From Previous Slate
+                  {isReseeding
+                    ? "Reseeding..."
+                    : "Reseed From Previous Slate"}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => void handleDelete()}
-                  disabled={isSaving || isSyncingGolfRankings}
-                  className="rounded-xl border border-red-300 bg-red-100 px-4 py-2.5 text-sm font-medium text-red-900 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isBusy}
+                  className="rounded-xl border border-red-600 bg-red-900 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Delete Slate
+                  {isDeleting
+                    ? "Deleting..."
+                    : "Delete Slate"}
                 </button>
               </div>
             </div>

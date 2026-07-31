@@ -417,9 +417,41 @@ teamSelections: teams
       }
 
       if (sport === "golf") {
+        const slateId = Number(result?.slate?.id);
+
+        if (!Number.isInteger(slateId) || slateId <= 0) {
+          setMessage(
+            "The Golf slate was created, but its slate ID was not returned. Open Manage Slates to refresh the tournament field."
+          );
+          return;
+        }
+
         setMessage(
-          `${selectedGolfTournament?.name ?? "Golf"} slate created successfully. Golfer syncing and drafting are the next setup steps.`
+          `${selectedGolfTournament?.name ?? "Golf"} created. Loading the tournament field...`
         );
+
+        const fieldResponse = await fetch("/api/refresh-stats-golf", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ slateId }),
+          cache: "no-store",
+        });
+
+        const fieldResult = await fieldResponse.json();
+
+        if (!fieldResponse.ok) {
+          setMessage(
+            `The slate was created, but the tournament field could not be loaded: ${
+              fieldResult.error || "Unknown field-sync error."
+            } You can retry from Manage Slates.`
+          );
+          return;
+        }
+
+        router.push(`/lineups/draft?sport=golf&slateId=${slateId}`);
+        router.refresh();
       } else {
         router.push(`/lineups/draft?sport=${sport}`);
         router.refresh();
@@ -753,7 +785,11 @@ checked={!!team.is_participating}
                 disabled={isSaving}
                 className="w-full rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
-                {isSaving ? "Creating..." : "Create Slate"}
+                {isSaving
+                  ? sport === "golf"
+                    ? "Creating & Loading Field..."
+                    : "Creating..."
+                  : "Create Slate"}
               </button>
             </div>
           </form>
