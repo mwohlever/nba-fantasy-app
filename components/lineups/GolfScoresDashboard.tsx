@@ -6,6 +6,9 @@ import TeamAvatar from "@/components/ui/TeamAvatar";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import GolfLeagueView from "@/components/lineups/GolfLeagueView";
 import GolfTournamentView from "@/components/lineups/GolfTournamentView";
+import GolfHoleReplayPanel, {
+  type InlineGolfHoleReplay,
+} from "@/components/lineups/GolfInlineHoleReplayModal";
 import type {
   OrderedTeam,
   Player,
@@ -579,6 +582,13 @@ export default function GolfScoresDashboard({
   const [selectedHoleKey, setSelectedHoleKey] =
     useState<string | null>(null);
 
+  const [
+    inlineHoleReplay,
+    setInlineHoleReplay,
+  ] = useState<InlineGolfHoleReplay | null>(
+    null,
+  );
+
   const [activeView, setActiveView] =
     useState<GolfScoresView>("fantasy");
 
@@ -982,14 +992,18 @@ export default function GolfScoresDashboard({
             );
 
             return (
-              <button
+              <article
                 key={player.id}
-                type="button"
-                onClick={() => setProfilePlayer(player)}
-                className="block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-emerald-300 hover:bg-slate-50"
-                aria-label={`Open ${player.name} full Golf scorecard`}
+                className="block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-emerald-300"
               >
-                <div className="flex w-full items-center justify-between gap-4 px-4 py-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setProfilePlayer(player)
+                  }
+                  className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-slate-50"
+                  aria-label={`Open ${player.name} full Golf scorecard`}
+                >
                   <div className="flex min-w-0 items-center gap-3">
                     <PlayerHeadshot
                       espnGolfPlayerId={player.espn_player_id}
@@ -1032,7 +1046,7 @@ export default function GolfScoresDashboard({
                       {formatGolfScore(stat?.fantasy_points)}
                     </strong>
                   </div>
-                </div>
+                </button>
 
                 {Number(stat?.penalty_strokes ?? 0) > 0 ? (
                   <div className="border-t border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold text-amber-800">
@@ -1062,15 +1076,7 @@ export default function GolfScoresDashboard({
                     ) : null}
                   </div>
 
-                  <div
-                    className={`overflow-x-auto ${
-                      selectedHoleKey?.startsWith(
-                        `${player.id}:${displayRound?.round_number ?? 0}:`,
-                      )
-                        ? "pb-28"
-                        : "pb-1"
-                    }`}
-                  >
+                  <div className="overflow-x-auto pb-1">
                     <div className="grid min-w-[680px] grid-cols-18 gap-1">
                       {Array.from(
                         { length: 18 },
@@ -1147,11 +1153,31 @@ export default function GolfScoresDashboard({
                               event.preventDefault();
                               event.stopPropagation();
 
-                              setSelectedHoleKey(
-                                isSelected
-                                  ? null
-                                  : holeKey,
-                              );
+                              if (isSelected) {
+                                setSelectedHoleKey(null);
+                                setInlineHoleReplay(null);
+                              } else {
+                                setSelectedHoleKey(holeKey);
+
+                                if (
+                                  displayRound &&
+                                  hole?.strokes !== null &&
+                                  hole?.strokes !== undefined
+                                ) {
+                                  setInlineHoleReplay({
+                                    playerId: player.id,
+                                    roundNumber:
+                                      displayRound.round_number,
+                                    holeNumber,
+                                    par,
+                                    yardage,
+                                    result:
+                                      holeResultName(
+                                        hole.relative_to_par,
+                                      ),
+                                  });
+                                }
+                              }
                             }}
                             onKeyDown={(event) => {
                               if (
@@ -1164,11 +1190,31 @@ export default function GolfScoresDashboard({
                               event.preventDefault();
                               event.stopPropagation();
 
-                              setSelectedHoleKey(
-                                isSelected
-                                  ? null
-                                  : holeKey,
-                              );
+                              if (isSelected) {
+                                setSelectedHoleKey(null);
+                                setInlineHoleReplay(null);
+                              } else {
+                                setSelectedHoleKey(holeKey);
+
+                                if (
+                                  displayRound &&
+                                  hole?.strokes !== null &&
+                                  hole?.strokes !== undefined
+                                ) {
+                                  setInlineHoleReplay({
+                                    playerId: player.id,
+                                    roundNumber:
+                                      displayRound.round_number,
+                                    holeNumber,
+                                    par,
+                                    yardage,
+                                    result:
+                                      holeResultName(
+                                        hole.relative_to_par,
+                                      ),
+                                  });
+                                }
+                              }
                             }}
                             onBlur={() =>
                               setSelectedHoleKey(
@@ -1189,53 +1235,41 @@ export default function GolfScoresDashboard({
                               )}
                             </div>
 
-                            {isSelected ? (
-                              <div
-                                role="tooltip"
-                                className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
-                              >
-                                <div className="text-xs font-black">
-                                  Hole {holeNumber}
-                                </div>
-
-                                <div className="mt-1 text-[11px] text-slate-300">
-                                  {par === null
-                                    ? "Par —"
-                                    : `Par ${par}`}
-
-                                  {yardage !== null
-                                    ? ` · ${yardage} yards`
-                                    : ""}
-                                </div>
-
-                                <div className="mt-1 text-[11px] font-bold text-emerald-300">
-                                  {hole?.strokes === null ||
-                                  hole?.strokes === undefined
-                                    ? "Not played"
-                                    : `${hole.strokes} strokes · ${holeResultName(
-                                        hole.relative_to_par,
-                                      )} (${relativeLabel(
-                                        hole.relative_to_par,
-                                      )})`}
-                                </div>
-
-                                <span
-                                  aria-hidden="true"
-                                  className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-b-8 border-x-transparent border-b-slate-950"
-                                />
-                              </div>
-                            ) : null}
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  <div className="mt-3 text-right text-xs font-semibold text-emerald-700">
+                  {inlineHoleReplay &&
+                  selectedHoleKey?.startsWith(
+                    `${player.id}:${displayRound?.round_number ?? 0}:`,
+                  ) ? (
+                    <div className="mt-4">
+                      <GolfHoleReplayPanel
+                        slateId={selectedSlate?.id ?? null}
+                        replay={inlineHoleReplay}
+                        inline
+                        onClose={() => {
+                          setInlineHoleReplay(null);
+                          setSelectedHoleKey(null);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProfilePlayer(player)
+                    }
+                    className="mt-3 block w-full text-right text-xs font-semibold text-emerald-700 transition hover:text-emerald-900"
+                    aria-label={`Open ${player.name} full Golf scorecard`}
+                  >
                     View full scorecard →
-                  </div>
+                  </button>
                 </div>
-              </button>
+              </article>
             );
           })}
         </div>
@@ -1243,6 +1277,7 @@ export default function GolfScoresDashboard({
         </>
       ) : activeView === "league" ? (
         <GolfLeagueView
+          slateId={selectedSlate?.id ?? null}
           teams={participatingTeams}
           getPlayersForTeam={getPlayersForTeam}
           getRawPlayerStat={getRawPlayerStat}
@@ -1257,6 +1292,7 @@ export default function GolfScoresDashboard({
           setProfilePlayer={setProfilePlayer}
         />
       )}
+      
     </section>
   );
 }

@@ -2073,6 +2073,13 @@ function HomePageContent() {
         playerAverageMap={EMPTY_PLAYER_AVERAGE_MAP}
         playerProjections={EMPTY_PLAYER_PROJECTIONS}
         golfStat={selectedGolfPlayerStat}
+        golfSlateId={
+          isGolf
+            ? slateRosterModal?.slateId ??
+              latestSlate?.id ??
+              null
+            : null
+        }
       />
 
       <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />

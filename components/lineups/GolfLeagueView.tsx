@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
+import GolfHoleReplayPanel, {
+  type InlineGolfHoleReplay,
+} from "@/components/lineups/GolfInlineHoleReplayModal";
 import type {
   OrderedTeam,
   Player,
@@ -10,6 +13,7 @@ import type {
 } from "@/components/lineups/types";
 
 type Props = {
+  slateId: number | null;
   teams: OrderedTeam[];
   getPlayersForTeam: (teamId: number) => Player[];
   getRawPlayerStat: (playerId: number) => PlayerStat | null;
@@ -267,6 +271,7 @@ function scorecardContext(row: LeagueGolferRow) {
 }
 
 export default function GolfLeagueView({
+  slateId,
   teams,
   getPlayersForTeam,
   getRawPlayerStat,
@@ -274,6 +279,13 @@ export default function GolfLeagueView({
 }: Props) {
   const [selectedHoleKey, setSelectedHoleKey] =
     useState<string | null>(null);
+
+  const [
+    inlineHoleReplay,
+    setInlineHoleReplay,
+  ] = useState<InlineGolfHoleReplay | null>(
+    null,
+  );
 
   const [sortBy, setSortBy] =
     useState<LeagueSort>("score");
@@ -1065,21 +1077,42 @@ export default function GolfLeagueView({
                               onClick={(event) => {
                                 event.stopPropagation();
 
-                                setSelectedHoleKey(
-                                  isSelected
-                                    ? null
-                                    : holeKey,
-                                );
+                                if (isSelected) {
+                                  setSelectedHoleKey(null);
+                                  setInlineHoleReplay(null);
+                                  return;
+                                }
+
+                                setSelectedHoleKey(holeKey);
+
+                                if (
+                                  row.displayRound &&
+                                  hole?.strokes !== null &&
+                                  hole?.strokes !== undefined
+                                ) {
+                                  setInlineHoleReplay({
+                                    playerId:
+                                      row.player.id,
+                                    roundNumber:
+                                      row.displayRound
+                                        .round_number,
+                                    holeNumber,
+                                    par,
+                                    yardage: yards,
+                                    result:
+                                      resultName(
+                                        hole.relative_to_par,
+                                      ),
+                                  });
+                                }
                               }}
-                              onBlur={() =>
-                                setSelectedHoleKey(
-                                  (current) =>
-                                    current === holeKey
-                                      ? null
-                                      : current,
-                                )
-                              }
                               aria-expanded={isSelected}
+                              aria-label={
+                                hole?.strokes === null ||
+                                hole?.strokes === undefined
+                                  ? `Hole ${holeNumber}, not played`
+                                  : `Open shot replay for Hole ${holeNumber}`
+                              }
                               className={`flex h-8 w-full items-center justify-center rounded-md border text-[10px] font-black ${relativeClass(
                                 hole?.relative_to_par,
                               )}`}
@@ -1088,54 +1121,36 @@ export default function GolfLeagueView({
                                 hole?.relative_to_par,
                               )}
                             </button>
-
-                            {isSelected ? (
-                              <div
-                                role="tooltip"
-                                className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
-                              >
-                                <div className="text-xs font-black">
-                                  Hole {holeNumber}
-                                </div>
-
-                                <div className="mt-1 text-[11px] text-slate-300">
-                                  {par === null
-                                    ? "Par —"
-                                    : `Par ${par}`}
-
-                                  {yards !== null
-                                    ? ` · ${yards} yards`
-                                    : ""}
-                                </div>
-
-                                <div className="mt-1 text-[11px] font-bold text-emerald-300">
-                                  {hole?.strokes === null ||
-                                  hole?.strokes === undefined
-                                    ? "Not played"
-                                    : `${hole.strokes} strokes · ${resultName(
-                                        hole.relative_to_par,
-                                      )} (${relativeLabel(
-                                        hole.relative_to_par,
-                                      )})`}
-                                </div>
-
-                                <span
-                                  aria-hidden="true"
-                                  className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-b-8 border-x-transparent border-b-slate-950"
-                                />
-                              </div>
-                            ) : null}
                           </div>
                         );
                       })}
                     </div>
                   </div>
+                  {inlineHoleReplay &&
+                  selectedHoleKey?.startsWith(
+                    `${row.player.id}:${row.displayRound?.round_number ?? 0}:`,
+                  ) ? (
+                    <div className="px-4 pb-4">
+                      <GolfHoleReplayPanel
+                        slateId={slateId}
+                        replay={inlineHoleReplay}
+                        inline
+                        onClose={() => {
+                          setInlineHoleReplay(null);
+                          setSelectedHoleKey(null);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
                 </div>
               </article>
             </div>
           );
         })}
       </div>
+
+      
     </section>
   );
 }

@@ -83,6 +83,83 @@ function locationLabel(
   return value?.trim() || "Unknown lie";
 }
 
+function resultToneClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle") ||
+    normalized.includes("birdie")
+  ) {
+    return "text-emerald-300";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "text-red-400";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "text-red-300";
+  }
+
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "text-slate-200";
+  }
+
+  return "text-slate-300";
+}
+
+function resultBadgeClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle")
+  ) {
+    return "border-emerald-500 bg-emerald-700 text-white";
+  }
+
+  if (normalized.includes("birdie")) {
+    return "border-emerald-400 bg-emerald-600 text-white";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "border-red-500 bg-red-700 text-white";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "border-red-400 bg-red-600 text-white";
+  }
+
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "border-slate-500 bg-slate-700 text-white";
+  }
+
+  return "border-slate-600 bg-slate-800 text-slate-100";
+}
+
 function shotSummary(
   shot: ReplayShot,
   holeResult: string,
@@ -249,7 +326,11 @@ export default function GolfHoleReplayPanel({
             {result ? (
               <>
                 <span aria-hidden="true">·</span>
-                <strong className="text-emerald-300">
+                <strong
+                  className={resultToneClass(
+                    result,
+                  )}
+                >
                   {result}
                 </strong>
               </>
@@ -308,7 +389,13 @@ export default function GolfHoleReplayPanel({
                     }`}
                   >
                     <div className="flex gap-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-[11px] font-black text-white">
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                          shot.finalStroke
+                            ? resultBadgeClass(result)
+                            : "border-slate-600 bg-slate-800 text-slate-200"
+                        }`}
+                      >
                         {shot.strokeNumber}
                       </span>
 
@@ -330,7 +417,9 @@ export default function GolfHoleReplayPanel({
                               <span
                                 className={`text-sm font-bold ${
                                   shot.finalStroke
-                                    ? "text-emerald-300"
+                                    ? resultToneClass(
+                                        result,
+                                      )
                                     : "text-slate-200"
                                 }`}
                               >
