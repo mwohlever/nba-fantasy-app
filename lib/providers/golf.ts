@@ -332,8 +332,20 @@ function inferCompetitorStatus(input: {
     (round) => round.roundNumber >= 3,
   );
 
+  /*
+   * ESPN includes future-round records and tee times for golfers
+   * who made the cut but have not started the next round yet.
+   *
+   * A golfer with a Round 3 tee time must remain scheduled rather
+   * than being inferred as cut merely because Round 3 has begun.
+   */
+  const hasRoundThreeOrLaterTeeTime = input.rounds.some(
+    (round) =>
+      round.roundNumber >= 3 &&
+      Boolean(round.teeTime || round.teeTimeRaw),
+  );
+
   const tournamentHasReachedRoundThree =
-    input.tournamentStatus === "final" ||
     (input.tournamentCurrentRound ?? 0) >= 3;
 
   if (input.tournamentStatus === "scheduled") {
@@ -353,6 +365,15 @@ function inferCompetitorStatus(input: {
     !hasRoundThreeOrLaterActivity &&
     tournamentHasReachedRoundThree
   ) {
+    /*
+     * Made-cut golfers often have a Round 3 tee time before they
+     * record their first Saturday hole. Keep them upcoming so they
+     * receive no missed-cut penalty and still count as remaining.
+     */
+    if (hasRoundThreeOrLaterTeeTime) {
+      return "scheduled";
+    }
+
     return "cut";
   }
 
@@ -534,22 +555,19 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
       ? competition.status.period
       : null;
 
-  const scheduledEndDate = parseEspnDate(event.endDate);
-  const scheduledEndTime =
-    scheduledEndDate === null
-      ? null
-      : new Date(scheduledEndDate).getTime();
-
-  const eventHasNotEnded =
-    scheduledEndTime !== null &&
-    scheduledEndTime >= Date.now();
-
+  /*
+   * ESPN can mark the current competition/day as final after
+   * an early tournament round. Do not use event.endDate to
+   * decide whether that represents the end of the full event.
+   *
+   * A four-round PGA tournament cannot be truly final while
+   * ESPN still reports the current round as 1, 2, or 3.
+   */
   const isPrematureEarlyRoundFinal =
     reportedStatus === "final" &&
     tournamentCurrentRound !== null &&
     tournamentCurrentRound >= 1 &&
-    tournamentCurrentRound < 4 &&
-    eventHasNotEnded;
+    tournamentCurrentRound < 4;
 
   const normalizedReportedStatus: GolfTournamentStatus =
     isPrematureEarlyRoundFinal
@@ -630,7 +648,7 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
       eventStatus?.description ??
       null,
     currentRound: tournamentCurrentRound,
-    completed: Boolean(statusSource?.completed),
+    completed: status === "final",
     competitors,
   };
 }
