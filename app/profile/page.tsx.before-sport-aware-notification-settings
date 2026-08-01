@@ -464,49 +464,6 @@ function ProfilePageContent() {
   const hasDraftPosition =
     profile?.recentSlates.some((row) => row.draftPosition !== null) ?? false;
 
-  const notificationCopy =
-    selectedSport === "golf"
-      ? {
-          sectionDescription:
-            "Choose which Golf draft, round, and tournament alerts you want to receive.",
-          draftLabel: "Draft Turn",
-          draftDescription:
-            "Notify me when it is my turn to select a golfer.",
-          finishedLabel: "Golfer Round Complete",
-          finishedDescription:
-            "Notify me when one of my drafted golfers completes a round.",
-          finalLabel: "Tournament Final",
-          finalDescription:
-            "Notify me when the tournament standings become final.",
-        }
-      : selectedSport === "nfl"
-        ? {
-            sectionDescription:
-              "Choose which Football draft, player, and slate alerts you want to receive.",
-            draftLabel: "Draft Turn",
-            draftDescription:
-              "Notify me when it is my turn to make an NFL draft pick.",
-            finishedLabel: "Player Game Complete",
-            finishedDescription:
-              "Notify me when one of my drafted NFL players finishes a game.",
-            finalLabel: "Slate Final",
-            finalDescription:
-              "Notify me when the NFL slate standings become final.",
-          }
-        : {
-            sectionDescription:
-              "Choose which Basketball draft, player, and slate alerts you want to receive.",
-            draftLabel: "Draft Turn",
-            draftDescription:
-              "Notify me when it is my turn to make an NBA draft pick.",
-            finishedLabel: "Player Game Complete",
-            finishedDescription:
-              "Notify me when one of my drafted NBA players finishes a game.",
-            finalLabel: "Slate Final",
-            finalDescription:
-              "Notify me when the NBA slate standings become final.",
-          };
-
   return (
     <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -754,7 +711,7 @@ function ProfilePageContent() {
                           </h2>
 
                           <p className="mt-1 text-sm text-slate-600">
-                            {notificationCopy.sectionDescription}
+                            Choose which league alerts you want to receive.
                           </p>
                         </div>
 
@@ -790,8 +747,8 @@ function ProfilePageContent() {
                             />
 
                             <SettingToggle
-                              label={notificationCopy.draftLabel}
-                              description={notificationCopy.draftDescription}
+                              label="Draft Turn"
+                              description="Notify me when it is my turn to make a pick."
                               checked={
                                 notificationPreferences.draftTurnEnabled
                               }
@@ -808,8 +765,8 @@ function ProfilePageContent() {
                             />
 
                             <SettingToggle
-                              label={notificationCopy.finishedLabel}
-                              description={notificationCopy.finishedDescription}
+                              label="Player Finished"
+                              description="Notify me when one of my drafted players finishes."
                               checked={
                                 notificationPreferences.playerFinishedEnabled
                               }
@@ -826,8 +783,8 @@ function ProfilePageContent() {
                             />
 
                             <SettingToggle
-                              label={notificationCopy.finalLabel}
-                              description={notificationCopy.finalDescription}
+                              label="Slate Final"
+                              description="Notify me when the slate standings become final."
                               checked={
                                 notificationPreferences.slateFinalEnabled
                               }

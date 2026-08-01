@@ -6,7 +6,6 @@ import TeamProfileModal from "@/components/TeamProfileModal";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { useEffect, useMemo, useState } from "react";
 import { useSelectedSport } from "@/components/providers/SportProvider";
-import GolfStandingsPage from "@/components/standings/GolfStandingsPage";
 
 type StandingRow = {
   season: number;
@@ -297,10 +296,6 @@ export default function StandingsPage() {
     if (index === 2) return "🥉";
 
     return `${index + 1}.`;
-  }
-
-  if (selectedSport === "golf") {
-    return <GolfStandingsPage />;
   }
 
   return (
