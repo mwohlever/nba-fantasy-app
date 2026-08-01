@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
 import type {
   GolfHoleStat,
   GolfRoundStat,
@@ -12,6 +13,7 @@ import type {
 type Props = {
   player: Player;
   stat: PlayerStat | null;
+  slateId: number | null;
   onClose: () => void;
 };
 
@@ -216,11 +218,15 @@ function RoundScorecard({
   contextLabel,
   isExpanded,
   onToggle,
+  slateId,
+  playerId,
 }: {
   round: GolfRoundStat;
   contextLabel: string;
   isExpanded: boolean;
   onToggle: () => void;
+  slateId: number | null;
+  playerId: number;
 }) {
   const holesByNumber = new Map(
     round.holes.map((hole) => [hole.hole_number, hole]),
@@ -286,13 +292,7 @@ function RoundScorecard({
 
       {isExpanded ? (
         <div className="border-t border-slate-200 px-4 pb-4 pt-4">
-          <div
-            className={`overflow-x-auto ${
-              selectedHoleNumber !== null
-                ? "pb-28"
-                : "pb-2"
-            }`}
-          >
+          <div className="overflow-x-auto pb-2">
             <div className="grid min-w-[700px] grid-cols-18 gap-1.5">
               {Array.from({ length: 18 }, (_, index) => index + 1).map(
                 (holeNumber) => (
@@ -367,59 +367,58 @@ function RoundScorecard({
                               : holeNumber,
                           )
                         }
-                        onBlur={() =>
-                          setSelectedHoleNumber(
-                            (current) =>
-                              current === holeNumber
-                                ? null
-                                : current,
-                          )
-                        }
                       >
                         {holeValue(hole)}
                       </button>
 
-                      {isSelected ? (
-                        <div
-                          role="tooltip"
-                          className="absolute left-1/2 top-full z-30 mt-2 w-44 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-left text-white shadow-xl"
-                        >
-                          <div className="text-xs font-black">
-                            Hole {holeNumber}
-                          </div>
-
-                          <div className="mt-1 text-[11px] text-slate-300">
-                            {par === null
-                              ? "Par —"
-                              : `Par ${par}`}
-
-                            {yardage !== null
-                              ? ` · ${yardage} yards`
-                              : ""}
-                          </div>
-
-                          <div className="mt-1 text-[11px] font-bold text-emerald-300">
-                            {hole.strokes === null
-                              ? "Not played"
-                              : `${hole.strokes} strokes · ${holeResultName(
-                                  hole.relative_to_par,
-                                )} (${holeValue(
-                                  hole,
-                                )})`}
-                          </div>
-
-                          <span
-                            aria-hidden="true"
-                            className="absolute bottom-full left-1/2 -translate-x-1/2 border-x-8 border-b-8 border-x-transparent border-b-slate-950"
-                          />
-                        </div>
-                      ) : null}
                     </div>
                   );
                 },
               )}
             </div>
           </div>
+
+          {selectedHoleNumber !== null ? (() => {
+            const selectedHole =
+              holesByNumber.get(
+                selectedHoleNumber,
+              );
+
+            const selectedPar =
+              holePar(selectedHole);
+
+            const selectedYardage =
+              selectedHole?.yards === null ||
+              selectedHole?.yards === undefined
+                ? null
+                : Number(selectedHole.yards);
+
+            return slateId ? (
+              <GolfHoleReplayPanel
+                slateId={slateId}
+                playerId={playerId}
+                roundNumber={round.round_number}
+                holeNumber={selectedHoleNumber}
+                fallbackPar={selectedPar}
+                fallbackYardage={
+                  selectedYardage
+                }
+                fallbackResult={holeResultName(
+                  selectedHole
+                    ?.relative_to_par,
+                )}
+                onClose={() =>
+                  setSelectedHoleNumber(null)
+                }
+              />
+            ) : (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                Shot tracking is unavailable because
+                this scorecard is not connected to a
+                Golf slate.
+              </div>
+            );
+          })() : null}
         </div>
       ) : null}
     </section>
@@ -429,6 +428,7 @@ function RoundScorecard({
 export default function GolfPlayerModal({
   player,
   stat,
+  slateId,
   onClose,
 }: Props) {
   const rounds = [...(stat?.rounds ?? [])].sort(
@@ -660,6 +660,8 @@ export default function GolfPlayerModal({
                       onToggle={() =>
                         toggleRound(round.round_number)
                       }
+                      slateId={slateId}
+                      playerId={player.id}
                     />
                   );
                 })}

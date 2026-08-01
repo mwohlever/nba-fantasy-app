@@ -1773,6 +1773,11 @@ export default function LineupBuilder({
             ? getRawPlayerStat(profilePlayer.id)
             : null
         }
+        golfSlateId={
+          selectedSlate?.sport === "golf"
+            ? selectedSlate.id
+            : null
+        }
       />
 
       <DraftPlayerModal

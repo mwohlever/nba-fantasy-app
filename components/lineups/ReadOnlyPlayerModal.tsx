@@ -14,6 +14,7 @@ type Props = {
   playerAverageMap: Map<number, number>;
   playerProjections: Record<number, any>;
   golfStat?: PlayerStat | null;
+  golfSlateId?: number | null;
 };
 
 export default function ReadOnlyPlayerModal({
@@ -22,6 +23,7 @@ export default function ReadOnlyPlayerModal({
   playerAverageMap,
   playerProjections,
   golfStat = null,
+  golfSlateId = null,
 }: Props) {
   const { selectedSport } = useSelectedSport();
 
@@ -30,6 +32,7 @@ export default function ReadOnlyPlayerModal({
       <GolfPlayerModal
         player={player}
         stat={golfStat}
+        slateId={golfSlateId}
         onClose={() => setPlayer(null)}
       />
     );
