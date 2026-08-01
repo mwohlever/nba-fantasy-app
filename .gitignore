@@ -40,3 +40,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 imports/
+
+# ----------------------------------------------------
+# Local PGA TOUR / TourCast research
+# ----------------------------------------------------
+*.har
+*.har.gz
+tourcast_*.txt
+tourcast-hole*-assets/
+tourcast-hole*-assets.tar.gz
+golf-shot-tracker-current.txt
+pgatour-shot-test/
