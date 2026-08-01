@@ -98,88 +98,14 @@ function isTerminalGolfStatus(
 }
 
 function formatGolfTeeTime(
-  rawValue: string | null | undefined,
-  parsedValue?: string | null,
+  value: string | null | undefined,
 ) {
-  const raw =
-    rawValue?.trim() ?? "";
+  if (!value) return null;
 
-  /*
-   * ESPN's tee_time_raw is already the tournament's local
-   * display time. Do not reinterpret it as another timezone.
-   *
-   * Examples:
-   *   "1:50 PM"
-   *   "Sat 1:50 PM"
-   */
-  const rawClockMatch = raw.match(
-    /(?:^|\s)(\d{1,2}:\d{2}\s*[AP]M)(?:\s|$)/i,
-  );
-
-  if (rawClockMatch) {
-    return rawClockMatch[1]
-      .replace(/\s+/g, " ")
-      .toUpperCase();
-  }
-
-  /*
-   * PGA TOUR also supplies tournament-local values such as:
-   *
-   *   Sat Aug 01 13:50:00 PDT 2026
-   *
-   * Preserve the displayed local clock rather than converting
-   * the equivalent UTC instant to the user's/server's timezone.
-   */
-  const rawTwentyFourHourMatch = raw.match(
-    /(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?\s+[A-Z]{2,5}(?:\s|$)/i,
-  );
-
-  if (rawTwentyFourHourMatch) {
-    const hour24 = Number(
-      rawTwentyFourHourMatch[1],
-    );
-
-    const minute =
-      rawTwentyFourHourMatch[2];
-
-    if (
-      Number.isInteger(hour24) &&
-      hour24 >= 0 &&
-      hour24 <= 23
-    ) {
-      const period =
-        hour24 >= 12 ? "PM" : "AM";
-
-      const hour12 =
-        hour24 % 12 || 12;
-
-      return `${hour12}:${minute} ${period}`;
-    }
-  }
-
-  if (raw) {
-    const rawDate = new Date(raw);
-
-    if (!Number.isNaN(rawDate.getTime())) {
-      return rawDate.toLocaleTimeString(
-        "en-US",
-        {
-          hour: "numeric",
-          minute: "2-digit",
-        },
-      );
-    }
-  }
-
-  if (!parsedValue) {
-    return null;
-  }
-
-  const parsed =
-    new Date(parsedValue);
+  const parsed = new Date(value);
 
   if (Number.isNaN(parsed.getTime())) {
-    return parsedValue;
+    return value;
   }
 
   return parsed.toLocaleTimeString(
@@ -229,8 +155,8 @@ function formatTournamentPlayerStatus(
 
     const teeTime =
       formatGolfTeeTime(
-        player.tee_time_raw,
-        player.tee_time,
+        player.tee_time ??
+          player.tee_time_raw,
       );
 
     return teeTime

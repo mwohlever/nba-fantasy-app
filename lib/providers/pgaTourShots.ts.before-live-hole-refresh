@@ -445,7 +445,6 @@ const loadRoundShots = unstable_cache(
     tournamentId: string,
     pgaPlayerId: string,
     roundNumber: number,
-    _cacheBust: string | null,
   ) => {
     const operationName =
       "shotDetailsV4Compressed";
@@ -507,7 +506,6 @@ export async function fetchGolfHoleReplay(
     playerName: string;
     roundNumber: number;
     holeNumber: number;
-    cacheBust?: string | null;
   },
 ): Promise<GolfHoleReplay | null> {
   const tournaments = await loadSchedule(
@@ -561,7 +559,6 @@ export async function fetchGolfHoleReplay(
     tournamentId,
     pgaPlayerId,
     input.roundNumber,
-    input.cacheBust ?? null,
   );
 
   const hole = (payload.holes ?? []).find(

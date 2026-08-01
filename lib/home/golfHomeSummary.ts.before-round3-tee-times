@@ -35,8 +35,6 @@ type GolfEventPlayerRow = {
   last_hole: number | null;
   holes_completed: number | null;
   rounds_completed: number | null;
-  tee_time: string | null;
-  tee_time_raw: string | null;
 };
 
 type GolfPlayerRow = {
@@ -97,101 +95,6 @@ function isTerminalGolfStatus(
   ].includes(String(status ?? "").toLowerCase());
 }
 
-function formatGolfTeeTime(
-  rawValue: string | null | undefined,
-  parsedValue?: string | null,
-) {
-  const raw =
-    rawValue?.trim() ?? "";
-
-  /*
-   * ESPN's tee_time_raw is already the tournament's local
-   * display time. Do not reinterpret it as another timezone.
-   *
-   * Examples:
-   *   "1:50 PM"
-   *   "Sat 1:50 PM"
-   */
-  const rawClockMatch = raw.match(
-    /(?:^|\s)(\d{1,2}:\d{2}\s*[AP]M)(?:\s|$)/i,
-  );
-
-  if (rawClockMatch) {
-    return rawClockMatch[1]
-      .replace(/\s+/g, " ")
-      .toUpperCase();
-  }
-
-  /*
-   * PGA TOUR also supplies tournament-local values such as:
-   *
-   *   Sat Aug 01 13:50:00 PDT 2026
-   *
-   * Preserve the displayed local clock rather than converting
-   * the equivalent UTC instant to the user's/server's timezone.
-   */
-  const rawTwentyFourHourMatch = raw.match(
-    /(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?\s+[A-Z]{2,5}(?:\s|$)/i,
-  );
-
-  if (rawTwentyFourHourMatch) {
-    const hour24 = Number(
-      rawTwentyFourHourMatch[1],
-    );
-
-    const minute =
-      rawTwentyFourHourMatch[2];
-
-    if (
-      Number.isInteger(hour24) &&
-      hour24 >= 0 &&
-      hour24 <= 23
-    ) {
-      const period =
-        hour24 >= 12 ? "PM" : "AM";
-
-      const hour12 =
-        hour24 % 12 || 12;
-
-      return `${hour12}:${minute} ${period}`;
-    }
-  }
-
-  if (raw) {
-    const rawDate = new Date(raw);
-
-    if (!Number.isNaN(rawDate.getTime())) {
-      return rawDate.toLocaleTimeString(
-        "en-US",
-        {
-          hour: "numeric",
-          minute: "2-digit",
-        },
-      );
-    }
-  }
-
-  if (!parsedValue) {
-    return null;
-  }
-
-  const parsed =
-    new Date(parsedValue);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return parsedValue;
-  }
-
-  return parsed.toLocaleTimeString(
-    "en-US",
-    {
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: "America/New_York",
-    },
-  );
-}
-
 function formatTournamentPlayerStatus(
   player: GolfEventPlayerRow,
 ) {
@@ -212,31 +115,8 @@ function formatTournamentPlayerStatus(
       ),
   );
 
-  const totalHoles =
-    Number(player.holes_completed ?? 0);
-
   const currentRoundHoles =
-    totalHoles % 18;
-
-  if (status === "scheduled") {
-    const nextRound = Math.min(
-      4,
-      Math.max(
-        Number(player.rounds_completed ?? 0) + 1,
-        Number(player.current_round ?? 1),
-      ),
-    );
-
-    const teeTime =
-      formatGolfTeeTime(
-        player.tee_time_raw,
-        player.tee_time,
-      );
-
-    return teeTime
-      ? `R${nextRound} · Tee ${teeTime}`
-      : `R${nextRound} · Upcoming`;
-  }
+    Number(player.holes_completed ?? 0) % 18;
 
   if (
     status === "finished" ||
@@ -528,7 +408,7 @@ export async function getGolfHomeSummary() {
       supabaseAdmin
         .from("golf_event_players")
         .select(
-          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed, tee_time, tee_time_raw",
+          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed",
         )
         .eq("slate_id", latestSlate.id)
         .order("leaderboard_order", {

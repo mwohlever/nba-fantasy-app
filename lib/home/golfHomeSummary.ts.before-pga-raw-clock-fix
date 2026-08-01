@@ -122,41 +122,6 @@ function formatGolfTeeTime(
       .toUpperCase();
   }
 
-  /*
-   * PGA TOUR also supplies tournament-local values such as:
-   *
-   *   Sat Aug 01 13:50:00 PDT 2026
-   *
-   * Preserve the displayed local clock rather than converting
-   * the equivalent UTC instant to the user's/server's timezone.
-   */
-  const rawTwentyFourHourMatch = raw.match(
-    /(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?\s+[A-Z]{2,5}(?:\s|$)/i,
-  );
-
-  if (rawTwentyFourHourMatch) {
-    const hour24 = Number(
-      rawTwentyFourHourMatch[1],
-    );
-
-    const minute =
-      rawTwentyFourHourMatch[2];
-
-    if (
-      Number.isInteger(hour24) &&
-      hour24 >= 0 &&
-      hour24 <= 23
-    ) {
-      const period =
-        hour24 >= 12 ? "PM" : "AM";
-
-      const hour12 =
-        hour24 % 12 || 12;
-
-      return `${hour12}:${minute} ${period}`;
-    }
-  }
-
   if (raw) {
     const rawDate = new Date(raw);
 

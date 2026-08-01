@@ -179,11 +179,6 @@ export async function GET(
       slate.start_date.slice(0, 4),
     );
 
-    const refreshToken =
-      request.nextUrl.searchParams.get(
-        "refresh",
-      );
-
     const replay =
       await fetchGolfHoleReplay({
         year,
@@ -192,8 +187,6 @@ export async function GET(
           player.display_name,
         roundNumber,
         holeNumber,
-        cacheBust:
-          refreshToken?.trim() || null,
       });
 
     if (!replay) {

@@ -1,0 +1,1502 @@
+===== HOLE REPLAY API =====
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+};
+
+type PlayerRow = {
+  id: number;
+  display_name: string;
+};
+
+function positiveInteger(value: string | null) {
+  if (!value) return null;
+
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "private, no-store, max-age=0",
+  };
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const slateId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+    const playerId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "playerId",
+      ),
+    );
+
+    const roundNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "round",
+      ),
+    );
+
+    const holeNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "hole",
+      ),
+    );
+
+    if (
+      !slateId ||
+      !playerId ||
+      !roundNumber ||
+      roundNumber > 4 ||
+      !holeNumber ||
+      holeNumber > 18
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid slateId, playerId, round, and hole parameters are required.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const [
+      {
+        data: slateData,
+        error: slateError,
+      },
+      {
+        data: playerData,
+        error: playerError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select(
+          "id, sport, display_name, start_date",
+        )
+        .eq("id", slateId)
+        .single(),
+
+      supabaseAdmin
+        .from("golf_players")
+        .select("id, display_name")
+        .eq("id", playerId)
+        .single(),
+    ]);
+
+    if (
+      slateError ||
+      !slateData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf slate was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    if (
+      playerError ||
+      !playerData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf player was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const slate =
+      slateData as SlateRow;
+
+    const player =
+      playerData as PlayerRow;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "Hole replay is only available for Golf slates.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const tournamentName =
+      slate.display_name?.trim();
+
+    if (!tournamentName) {
+      return NextResponse.json(
+        {
+          error:
+            "This Golf slate does not have a tournament name.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const year = Number(
+      slate.start_date.slice(0, 4),
+    );
+
+    const replay =
+      await fetchGolfHoleReplay({
+        year,
+        tournamentName,
+        playerName:
+          player.display_name,
+        roundNumber,
+        holeNumber,
+      });
+
+    if (!replay) {
+      return NextResponse.json(
+        {
+          success: true,
+          available: false,
+          message:
+            "Shot tracking is not available for this hole yet.",
+          replay: null,
+        },
+        {
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        available:
+          replay.shots.length > 0,
+        replay,
+      },
+      {
+        headers: noStoreHeaders(),
+      },
+    );
+  } catch (error) {
+    console.error(
+      "Unable to load Golf hole replay",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load hole replay.",
+      },
+      {
+        status: 502,
+        headers: noStoreHeaders(),
+      },
+    );
+  }
+}
+
+===== PGA TOUR SHOT PROVIDER =====
+import "server-only";
+
+import { gunzipSync } from "node:zlib";
+import { unstable_cache } from "next/cache";
+
+const PGA_GRAPHQL_URL =
+  "https://orchestrator.pgatour.com/graphql";
+
+const PGA_REST_URL =
+  "https://data-api.pgatour.com";
+
+/**
+ * This is the public web-client key currently used by PGATOUR.com.
+ * PGA_TOUR_API_KEY can override it if PGA TOUR rotates the key.
+ */
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_ATTEMPTS = 3;
+
+type JsonObject = Record<string, unknown>;
+
+type PgaScheduleTournament = {
+  tournamentId?: string | null;
+  name?: string | null;
+};
+
+type PgaPlayer = {
+  id?: string | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+type PgaCoordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type RawShotCoordinateGroup = {
+  fromCoords?: Partial<PgaCoordinate> | null;
+  toCoords?: Partial<PgaCoordinate> | null;
+};
+
+type RawStroke = {
+  strokeNumber?: number | null;
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+  context: string,
+): Promise<JsonObject> {
+  let lastError: unknown = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...requestHeaders(),
+          ...(init.headers ?? {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const bodyText = await response.text();
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (
+          retryable &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await sleep(300 * 2 ** (attempt - 1));
+          continue;
+        }
+
+        throw new Error(
+          `${context} failed (${response.status}): ` +
+            bodyText.slice(0, 250),
+        );
+      }
+
+      try {
+        return JSON.parse(bodyText) as JsonObject;
+      } catch {
+        throw new Error(
+          `${context} returned invalid JSON: ` +
+            bodyText.slice(0, 250),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= MAX_ATTEMPTS) {
+        break;
+      }
+
+      await sleep(300 * 2 ** (attempt - 1));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: JsonObject,
+) {
+  const body = await requestJson(
+    PGA_GRAPHQL_URL,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        operationName,
+        query,
+        variables,
+      }),
+    },
+    `PGA TOUR ${operationName}`,
+  );
+
+  const errors = Array.isArray(body.errors)
+    ? body.errors
+    : [];
+
+  if (errors.length > 0) {
+    const message = errors
+      .map((error) => {
+        if (
+          error &&
+          typeof error === "object" &&
+          "message" in error
+        ) {
+          return String(error.message);
+        }
+
+        return String(error);
+      })
+      .join("; ");
+
+    throw new Error(
+      `PGA TOUR GraphQL error: ${message}`,
+    );
+  }
+
+  return (
+    body.data &&
+    typeof body.data === "object"
+      ? body.data
+      : {}
+  ) as JsonObject;
+}
+
+function decompressPayload<T>(
+  payload: unknown,
+): T {
+  if (
+    typeof payload !== "string" ||
+    payload.length === 0
+  ) {
+    throw new Error(
+      "PGA TOUR returned an empty compressed payload.",
+    );
+  }
+
+  const compressed = Buffer.from(
+    payload,
+    "base64",
+  );
+
+  const decompressed = gunzipSync(
+    compressed,
+  ).toString("utf8");
+
+  return JSON.parse(decompressed) as T;
+}
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function chooseBestNameMatch<T>(
+  rows: T[],
+  target: string,
+  getName: (row: T) => string,
+) {
+  const normalizedTarget =
+    normalizeName(target);
+
+  const exact = rows.find(
+    (row) =>
+      normalizeName(getName(row)) ===
+      normalizedTarget,
+  );
+
+  if (exact) return exact;
+
+  const targetTokens = new Set(
+    normalizedTarget.split(" "),
+  );
+
+  return (
+    rows
+      .map((row) => {
+        const normalized =
+          normalizeName(getName(row));
+
+        const tokens =
+          normalized.split(" ");
+
+        const overlap = tokens.filter(
+          (token) => targetTokens.has(token),
+        ).length;
+
+        return {
+          row,
+          score:
+            overlap * 10 -
+            Math.abs(
+              normalized.length -
+                normalizedTarget.length,
+            ),
+        };
+      })
+      .sort(
+        (a, b) => b.score - a.score,
+      )[0]?.row ?? null
+  );
+}
+
+function coordinate(
+  value:
+    | Partial<PgaCoordinate>
+    | null
+    | undefined,
+): PgaCoordinate {
+  function numberOrNull(input: unknown) {
+    const numeric = Number(input);
+
+    return Number.isFinite(numeric)
+      ? numeric
+      : null;
+  }
+
+  return {
+    x: numberOrNull(value?.x),
+    y: numberOrNull(value?.y),
+    tourcastX: numberOrNull(
+      value?.tourcastX,
+    ),
+    tourcastY: numberOrNull(
+      value?.tourcastY,
+    ),
+    tourcastZ: numberOrNull(
+      value?.tourcastZ,
+    ),
+  };
+}
+
+function coordinateSet(
+  value:
+    | RawShotCoordinateGroup
+    | null
+    | undefined,
+): GolfShotCoordinateSet | null {
+  if (
+    !value?.fromCoords ||
+    !value?.toCoords
+  ) {
+    return null;
+  }
+
+  return {
+    from: coordinate(value.fromCoords),
+    to: coordinate(value.toCoords),
+  };
+}
+
+const loadSchedule = unstable_cache(
+  async (year: number) => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/schedule/R/${year}`,
+      {
+        method: "GET",
+      },
+      `PGA TOUR ${year} schedule`,
+    );
+
+    return Array.isArray(body.tournaments)
+      ? (body.tournaments as PgaScheduleTournament[])
+      : [];
+  },
+  ["pga-tour-schedule-v1"],
+  {
+    revalidate: 60 * 60,
+  },
+);
+
+const loadPlayers = unstable_cache(
+  async () => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/player/list/R`,
+      {
+        method: "GET",
+      },
+      "PGA TOUR player directory",
+    );
+
+    return Array.isArray(body.players)
+      ? (body.players as PgaPlayer[])
+      : [];
+  },
+  ["pga-tour-player-directory-v1"],
+  {
+    revalidate: 24 * 60 * 60,
+  },
+);
+
+const loadRoundShots = unstable_cache(
+  async (
+    tournamentId: string,
+    pgaPlayerId: string,
+    roundNumber: number,
+  ) => {
+    const operationName =
+      "shotDetailsV4Compressed";
+
+    const query =
+      "query shotDetailsV4Compressed(" +
+      "$tournamentId: ID!, " +
+      "$playerId: ID!, " +
+      "$round: Int!, " +
+      "$includeRadar: Boolean" +
+      ") { " +
+      "shotDetailsV4Compressed(" +
+      "tournamentId: $tournamentId, " +
+      "playerId: $playerId, " +
+      "round: $round, " +
+      "includeRadar: $includeRadar" +
+      ") { id payload } }";
+
+    const data = await graphqlRequest(
+      operationName,
+      query,
+      {
+        tournamentId,
+        playerId: pgaPlayerId,
+        round: roundNumber,
+        includeRadar: false,
+      },
+    );
+
+    const response =
+      data.shotDetailsV4Compressed;
+
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("payload" in response)
+    ) {
+      return {
+        holes: [],
+      } satisfies RawShotPayload;
+    }
+
+    return decompressPayload<RawShotPayload>(
+      response.payload,
+    );
+  },
+  ["pga-tour-round-shots-v1"],
+  {
+    // Live holes can change, but repeated taps should not
+    // hammer the upstream API.
+    revalidate: 120,
+  },
+);
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+  },
+): Promise<GolfHoleReplay | null> {
+  const tournaments = await loadSchedule(
+    input.year,
+  );
+
+  const tournament = chooseBestNameMatch(
+    tournaments.filter(
+      (row) =>
+        typeof row.tournamentId ===
+          "string" &&
+        typeof row.name === "string",
+    ),
+    input.tournamentName,
+    (row) => row.name ?? "",
+  );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  if (!tournamentId) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const players = await loadPlayers();
+
+  const player = chooseBestNameMatch(
+    players.filter(
+      (row) =>
+        typeof row.id === "string" &&
+        typeof row.displayName === "string",
+    ),
+    input.playerName,
+    (row) => row.displayName ?? "",
+  );
+
+  const pgaPlayerId =
+    player?.id?.trim();
+
+  if (!pgaPlayerId) {
+    throw new Error(
+      `Could not match "${input.playerName}" ` +
+        "to the PGA TOUR player directory.",
+    );
+  }
+
+  const payload = await loadRoundShots(
+    tournamentId,
+    pgaPlayerId,
+    input.roundNumber,
+  );
+
+  const hole = (payload.holes ?? []).find(
+    (row) =>
+      Number(row.holeNumber) ===
+      input.holeNumber,
+  );
+
+  if (!hole) {
+    return null;
+  }
+
+  const shots = (hole.strokes ?? [])
+    .map((shot) => ({
+      strokeNumber: Number(
+        shot.strokeNumber ?? 0,
+      ),
+      playByPlay:
+        shot.playByPlay ?? null,
+      distance:
+        shot.distance ?? null,
+      distanceRemaining:
+        shot.distanceRemaining ?? null,
+      strokeType:
+        shot.strokeType ?? null,
+      fromLocation:
+        shot.fromLocation ?? null,
+      toLocation:
+        shot.toLocation ?? null,
+      fromLocationCode:
+        shot.fromLocationCode ?? null,
+      toLocationCode:
+        shot.toLocationCode ?? null,
+      finalStroke:
+        Boolean(shot.finalStroke),
+      leftToRight: coordinateSet(
+        shot.overview?.leftToRightCoords,
+      ),
+      bottomToTop: coordinateSet(
+        shot.overview?.bottomToTopCoords,
+      ),
+    }))
+    .filter(
+      (shot) => shot.strokeNumber > 0,
+    )
+    .sort(
+      (a, b) =>
+        a.strokeNumber -
+        b.strokeNumber,
+    );
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+    shots,
+  };
+}
+
+===== HOLE REPLAY PANEL =====
+"use client";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type ReplayShot = {
+  strokeNumber: number;
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+  leftToRight: CoordinateSet | null;
+  bottomToTop: CoordinateSet | null;
+};
+
+type Replay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+  shots: ReplayShot[];
+};
+
+type ResponseBody = {
+  success?: boolean;
+  available?: boolean;
+  message?: string;
+  replay?: Replay | null;
+  error?: string;
+};
+
+type Props = {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  fallbackPar: number | null;
+  fallbackYardage: number | null;
+  fallbackResult: string;
+  onClose: () => void;
+};
+
+function titleCase(
+  value: string | null | undefined,
+) {
+  if (!value) return "";
+
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
+}
+
+function locationLabel(
+  value: string | null | undefined,
+) {
+  return value?.trim() || "Unknown lie";
+}
+
+function resultToneClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle") ||
+    normalized.includes("birdie")
+  ) {
+    return "text-emerald-300";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "text-red-400";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "text-red-300";
+  }
+
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "text-slate-200";
+  }
+
+  return "text-slate-300";
+}
+
+function resultBadgeClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle")
+  ) {
+    return "border-emerald-500 bg-emerald-700 text-white";
+  }
+
+  if (normalized.includes("birdie")) {
+    return "border-emerald-400 bg-emerald-600 text-white";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "border-red-500 bg-red-700 text-white";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "border-red-400 bg-red-600 text-white";
+  }
+
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "border-slate-500 bg-slate-700 text-white";
+  }
+
+  return "border-slate-600 bg-slate-800 text-slate-100";
+}
+
+function shotSummary(
+  shot: ReplayShot,
+  holeResult: string,
+) {
+  const pieces: string[] = [];
+
+  if (shot.distance) {
+    pieces.push(shot.distance);
+  }
+
+  if (shot.finalStroke) {
+    pieces.push("In the hole");
+
+    if (holeResult) {
+      pieces.push(holeResult);
+    }
+  } else if (shot.distanceRemaining) {
+    pieces.push(
+      `${shot.distanceRemaining} remaining`,
+    );
+  }
+
+  return pieces.join(" · ");
+}
+
+export default function GolfHoleReplayPanel({
+  slateId,
+  playerId,
+  roundNumber,
+  holeNumber,
+  fallbackPar,
+  fallbackYardage,
+  fallbackResult,
+  onClose,
+}: Props) {
+  const [replay, setReplay] =
+    useState<Replay | null>(null);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function loadReplay() {
+      try {
+        setIsLoading(true);
+        setMessage("");
+        setReplay(null);
+
+        const query =
+          new URLSearchParams({
+            slateId: String(slateId),
+            playerId: String(playerId),
+            round: String(roundNumber),
+            hole: String(holeNumber),
+          });
+
+        const response = await fetch(
+          `/api/golf/hole-replay?${query}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+
+        const result =
+          (await response.json()) as ResponseBody;
+
+        if (!response.ok) {
+          setMessage(
+            result.error ||
+              "Unable to load shot tracking.",
+          );
+          return;
+        }
+
+        if (
+          !result.available ||
+          !result.replay
+        ) {
+          setMessage(
+            result.message ||
+              "Shot tracking is not available for this hole yet.",
+          );
+          return;
+        }
+
+        setReplay(result.replay);
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.error(
+          "Unable to load Golf hole replay",
+          error,
+        );
+
+        setMessage(
+          "Unable to load shot tracking.",
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadReplay();
+
+    return () => controller.abort();
+  }, [
+    slateId,
+    playerId,
+    roundNumber,
+    holeNumber,
+  ]);
+
+  const par =
+    replay?.par ?? fallbackPar;
+
+  const yardage =
+    replay?.yardage ??
+    fallbackYardage;
+
+  const result =
+    titleCase(replay?.holeStatus) ||
+    fallbackResult;
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-xl">
+      <header className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-3">
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-400">
+            Hole replay
+          </div>
+
+          <h4 className="mt-1 text-lg font-black">
+            Hole {holeNumber}
+          </h4>
+
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-400">
+            <span>
+              {par === null
+                ? "Par —"
+                : `Par ${par}`}
+            </span>
+
+            {yardage !== null ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{yardage} yards</span>
+              </>
+            ) : null}
+
+            {result ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <strong
+                  className={resultToneClass(
+                    result,
+                  )}
+                >
+                  {result}
+                </strong>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800"
+          aria-label="Close hole replay"
+        >
+          ×
+        </button>
+      </header>
+
+      {isLoading ? (
+        <div className="px-4 py-7 text-center">
+          <div className="text-sm font-bold text-emerald-300">
+            Loading shot tracking…
+          </div>
+
+          <div className="mt-1 text-xs text-slate-500">
+            Loaded only when you open a hole.
+          </div>
+        </div>
+      ) : message ? (
+        <div className="px-4 py-6 text-center">
+          <div className="text-sm font-bold text-slate-200">
+            Shot tracking unavailable
+          </div>
+
+          <div className="mt-1 text-xs leading-5 text-slate-500">
+            {message}
+          </div>
+        </div>
+      ) : replay ? (
+        <div className="p-3 sm:p-4">
+          <div className="overflow-hidden rounded-xl border border-slate-800">
+            {replay.shots.map(
+              (shot, index) => {
+                const summary =
+                  shotSummary(
+                    shot,
+                    result,
+                  );
+
+                return (
+                  <article
+                    key={shot.strokeNumber}
+                    className={`px-3 py-3 sm:px-4 ${
+                      index > 0
+                        ? "border-t border-slate-800"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                          shot.finalStroke
+                            ? resultBadgeClass(result)
+                            : "border-slate-600 bg-slate-800 text-slate-200"
+                        }`}
+                      >
+                        {shot.strokeNumber}
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <strong className="text-sm text-white">
+                            Shot {shot.strokeNumber}
+                          </strong>
+
+                          {summary ? (
+                            <>
+                              <span
+                                aria-hidden="true"
+                                className="text-slate-600"
+                              >
+                                ·
+                              </span>
+
+                              <span
+                                className={`text-sm font-bold ${
+                                  shot.finalStroke
+                                    ? resultToneClass(
+                                        result,
+                                      )
+                                    : "text-slate-200"
+                                }`}
+                              >
+                                {summary}
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-400">
+                          {locationLabel(
+                            shot.fromLocation,
+                          )}
+
+                          <span
+                            aria-hidden="true"
+                            className="mx-2 text-slate-600"
+                          >
+                            →
+                          </span>
+
+                          {shot.finalStroke
+                            ? "Hole"
+                            : locationLabel(
+                                shot.toLocation,
+                              )}
+                        </div>
+
+                        {shot.playByPlay ? (
+                          <div className="mt-1.5 text-[11px] leading-4 text-slate-600">
+                            {shot.playByPlay}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+                );
+              },
+            )}
+          </div>
+
+          <div className="mt-3 text-center text-[10px] text-slate-600">
+            Shot data provided on demand from PGA TOUR tracking.
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+===== INLINE REPLAY WRAPPER =====
+"use client";
+
+import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
+
+export type InlineGolfHoleReplay = {
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  result: string;
+};
+
+type Props = {
+  slateId: number | null;
+  replay: InlineGolfHoleReplay | null;
+  onClose: () => void;
+  inline?: boolean;
+};
+
+function ReplayUnavailable({
+  onClose,
+  inline,
+}: {
+  onClose: () => void;
+  inline: boolean;
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-700 bg-slate-950 px-5 py-6 text-center text-slate-300 shadow-sm">
+      <div className="text-sm font-bold text-white">
+        Shot tracking unavailable
+      </div>
+
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        This scorecard is not connected to a Golf slate.
+      </p>
+
+      {!inline ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-4 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-bold text-slate-200"
+        >
+          Close
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
+export default function GolfInlineHoleReplayModal({
+  slateId,
+  replay,
+  onClose,
+  inline = false,
+}: Props) {
+  if (!replay) return null;
+
+  const content = slateId ? (
+    <GolfHoleReplayPanel
+      slateId={slateId}
+      playerId={replay.playerId}
+      roundNumber={replay.roundNumber}
+      holeNumber={replay.holeNumber}
+      fallbackPar={replay.par}
+      fallbackYardage={replay.yardage}
+      fallbackResult={replay.result}
+      onClose={onClose}
+    />
+  ) : (
+    <ReplayUnavailable
+      onClose={onClose}
+      inline={inline}
+    />
+  );
+
+  if (inline) {
+    return content;
+  }
+
+  return (
+    <div
+      className="mobile-modal-safe fixed inset-0 z-[12000] flex items-end justify-center bg-slate-950/80 px-2 py-2 backdrop-blur-sm sm:items-center sm:px-4 sm:py-5"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="mobile-modal-panel-safe max-h-[96dvh] w-full max-w-3xl overflow-y-auto rounded-2xl sm:max-h-[92dvh] sm:rounded-3xl">
+        {content}
+      </div>
+    </div>
+  );
+}
+
+===== REPLAY CALL SITES =====
+components/lineups/GolfPlayerModal.tsx:5:import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
+components/lineups/GolfPlayerModal.tsx:397:              <GolfHoleReplayPanel
+components/lineups/GolfPlayerModal.tsx:406:                fallbackResult={holeResultName(
+components/lineups/GolfScoresDashboard.tsx:9:import GolfHoleReplayPanel, {
+components/lineups/GolfScoresDashboard.tsx:11:} from "@/components/lineups/GolfInlineHoleReplayModal";
+components/lineups/GolfScoresDashboard.tsx:586:    inlineHoleReplay,
+components/lineups/GolfScoresDashboard.tsx:1244:                  {inlineHoleReplay &&
+components/lineups/GolfScoresDashboard.tsx:1249:                      <GolfHoleReplayPanel
+components/lineups/GolfScoresDashboard.tsx:1251:                        replay={inlineHoleReplay}
+components/lineups/GolfLeagueView.tsx:6:import GolfHoleReplayPanel, {
+components/lineups/GolfLeagueView.tsx:8:} from "@/components/lineups/GolfInlineHoleReplayModal";
+components/lineups/GolfLeagueView.tsx:284:    inlineHoleReplay,
+components/lineups/GolfLeagueView.tsx:1129:                  {inlineHoleReplay &&
+components/lineups/GolfLeagueView.tsx:1134:                      <GolfHoleReplayPanel
+components/lineups/GolfLeagueView.tsx:1136:                        replay={inlineHoleReplay}
+components/lineups/GolfHoleReplayPanel.tsx:64:  fallbackResult: string;
+components/lineups/GolfHoleReplayPanel.tsx:188:export default function GolfHoleReplayPanel({
+components/lineups/GolfHoleReplayPanel.tsx:195:  fallbackResult,
+components/lineups/GolfHoleReplayPanel.tsx:298:    fallbackResult;
+components/lineups/GolfInlineHoleReplayModal.tsx:3:import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
+components/lineups/GolfInlineHoleReplayModal.tsx:51:export default function GolfInlineHoleReplayModal({
+components/lineups/GolfInlineHoleReplayModal.tsx:60:    <GolfHoleReplayPanel
+components/lineups/GolfInlineHoleReplayModal.tsx:67:      fallbackResult={replay.result}
+
+===== FINAL-STROKE / AVAILABILITY LOGIC =====
+app/api/golf/hole-replay/route.ts:153:            "Hole replay is only available for Golf slates.",
+app/api/golf/hole-replay/route.ts:196:          available: false,
+app/api/golf/hole-replay/route.ts:198:            "Shot tracking is not available for this hole yet.",
+app/api/golf/hole-replay/route.ts:210:        available:
+lib/providers/pgaTourShots.ts:59:  finalStroke?: boolean | null;
+lib/providers/pgaTourShots.ts:94:  finalStroke: boolean;
+lib/providers/pgaTourShots.ts:107:  holeStatus: string | null;
+lib/providers/pgaTourShots.ts:108:  holeScore: string | null;
+lib/providers/pgaTourShots.ts:595:      finalStroke:
+lib/providers/pgaTourShots.ts:596:        Boolean(shot.finalStroke),
+lib/providers/pgaTourShots.ts:631:    holeStatus:
+lib/providers/pgaTourShots.ts:633:    holeScore:
+components/lineups/GolfHoleReplayPanel.tsx:31:  finalStroke: boolean;
+components/lineups/GolfHoleReplayPanel.tsx:44:  holeStatus: string | null;
+components/lineups/GolfHoleReplayPanel.tsx:45:  holeScore: string | null;
+components/lineups/GolfHoleReplayPanel.tsx:51:  available?: boolean;
+components/lineups/GolfHoleReplayPanel.tsx:173:  if (shot.finalStroke) {
+components/lineups/GolfHoleReplayPanel.tsx:174:    pieces.push("In the hole");
+components/lineups/GolfHoleReplayPanel.tsx:245:          !result.available ||
+components/lineups/GolfHoleReplayPanel.tsx:250:              "Shot tracking is not available for this hole yet.",
+components/lineups/GolfHoleReplayPanel.tsx:297:    titleCase(replay?.holeStatus) ||
+components/lineups/GolfHoleReplayPanel.tsx:364:            Shot tracking unavailable
+components/lineups/GolfHoleReplayPanel.tsx:394:                          shot.finalStroke
+components/lineups/GolfHoleReplayPanel.tsx:419:                                  shot.finalStroke
+components/lineups/GolfHoleReplayPanel.tsx:444:                          {shot.finalStroke

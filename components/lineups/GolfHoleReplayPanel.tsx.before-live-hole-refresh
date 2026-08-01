@@ -1,9 +1,7 @@
 "use client";
 
 import {
-  useCallback,
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
@@ -152,7 +150,14 @@ function resultBadgeClass(
     return "border-red-400 bg-red-600 text-white";
   }
 
-  return "border-slate-500 bg-slate-700 text-white";
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "border-slate-500 bg-slate-700 text-white";
+  }
+
+  return "border-slate-600 bg-slate-800 text-slate-100";
 }
 
 function shotSummary(
@@ -199,29 +204,15 @@ export default function GolfHoleReplayPanel({
   const [isLoading, setIsLoading] =
     useState(true);
 
-  const [isRefreshing, setIsRefreshing] =
-    useState(false);
+  useEffect(() => {
+    const controller =
+      new AbortController();
 
-  const [lastUpdatedAt, setLastUpdatedAt] =
-    useState<Date | null>(null);
-
-  const loadReplay = useCallback(
-    async ({
-      forceRefresh = false,
-      signal,
-    }: {
-      forceRefresh?: boolean;
-      signal?: AbortSignal;
-    } = {}) => {
+    async function loadReplay() {
       try {
-        if (forceRefresh) {
-          setIsRefreshing(true);
-        } else {
-          setIsLoading(true);
-          setReplay(null);
-        }
-
+        setIsLoading(true);
         setMessage("");
+        setReplay(null);
 
         const query =
           new URLSearchParams({
@@ -231,18 +222,11 @@ export default function GolfHoleReplayPanel({
             hole: String(holeNumber),
           });
 
-        if (forceRefresh) {
-          query.set(
-            "refresh",
-            String(Date.now()),
-          );
-        }
-
         const response = await fetch(
           `/api/golf/hole-replay?${query}`,
           {
             cache: "no-store",
-            signal,
+            signal: controller.signal,
           },
         );
 
@@ -269,7 +253,6 @@ export default function GolfHoleReplayPanel({
         }
 
         setReplay(result.replay);
-        setLastUpdatedAt(new Date());
       } catch (error) {
         if (
           error instanceof DOMException &&
@@ -287,51 +270,21 @@ export default function GolfHoleReplayPanel({
           "Unable to load shot tracking.",
         );
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
-    },
-    [
-      slateId,
-      playerId,
-      roundNumber,
-      holeNumber,
-    ],
-  );
+    }
 
-  useEffect(() => {
-    const controller =
-      new AbortController();
-
-    void loadReplay({
-      signal: controller.signal,
-    });
+    void loadReplay();
 
     return () => controller.abort();
-  }, [loadReplay]);
-
-  const isHoleComplete = useMemo(
-    () =>
-      Boolean(
-        replay?.shots.some(
-          (shot) => shot.finalStroke,
-        ),
-      ),
-    [replay],
-  );
-
-  const completedResult =
-    isHoleComplete
-      ? titleCase(replay?.holeStatus) ||
-        fallbackResult
-      : "";
-
-  const displayStatus =
-    isHoleComplete
-      ? completedResult || "Complete"
-      : replay?.shots.length
-        ? "In progress"
-        : "";
+  }, [
+    slateId,
+    playerId,
+    roundNumber,
+    holeNumber,
+  ]);
 
   const par =
     replay?.par ?? fallbackPar;
@@ -340,22 +293,16 @@ export default function GolfHoleReplayPanel({
     replay?.yardage ??
     fallbackYardage;
 
+  const result =
+    titleCase(replay?.holeStatus) ||
+    fallbackResult;
+
   return (
     <section className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-xl">
       <header className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-400">
-              Hole replay
-            </div>
-
-            {!isHoleComplete &&
-            replay?.shots.length ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-red-300">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
-                Live
-              </span>
-            ) : null}
+        <div>
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-400">
+            Hole replay
           </div>
 
           <h4 className="mt-1 text-lg font-black">
@@ -376,52 +323,29 @@ export default function GolfHoleReplayPanel({
               </>
             ) : null}
 
-            {displayStatus ? (
+            {result ? (
               <>
                 <span aria-hidden="true">·</span>
-
                 <strong
-                  className={
-                    isHoleComplete
-                      ? resultToneClass(
-                          completedResult,
-                        )
-                      : "text-amber-300"
-                  }
+                  className={resultToneClass(
+                    result,
+                  )}
                 >
-                  {displayStatus}
+                  {result}
                 </strong>
               </>
             ) : null}
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              void loadReplay({
-                forceRefresh: true,
-              })
-            }
-            disabled={isRefreshing}
-            className="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-700 bg-emerald-950 px-3 text-[11px] font-bold text-emerald-200 transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
-            aria-label="Refresh this hole's shot tracking"
-          >
-            {isRefreshing
-              ? "Refreshing…"
-              : "↻ Refresh hole"}
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800"
-            aria-label="Close hole replay"
-          >
-            ×
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800"
+          aria-label="Close hole replay"
+        >
+          ×
+        </button>
       </header>
 
       {isLoading ? (
@@ -434,7 +358,7 @@ export default function GolfHoleReplayPanel({
             Loaded only when you open a hole.
           </div>
         </div>
-      ) : message && !replay ? (
+      ) : message ? (
         <div className="px-4 py-6 text-center">
           <div className="text-sm font-bold text-slate-200">
             Shot tracking unavailable
@@ -443,41 +367,17 @@ export default function GolfHoleReplayPanel({
           <div className="mt-1 text-xs leading-5 text-slate-500">
             {message}
           </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              void loadReplay({
-                forceRefresh: true,
-              })
-            }
-            disabled={isRefreshing}
-            className="mt-4 rounded-xl border border-emerald-700 bg-emerald-950 px-4 py-2 text-xs font-bold text-emerald-200 disabled:opacity-60"
-          >
-            Try again
-          </button>
         </div>
       ) : replay ? (
         <div className="p-3 sm:p-4">
-          {message ? (
-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
-              {message}
-            </div>
-          ) : null}
-
           <div className="overflow-hidden rounded-xl border border-slate-800">
             {replay.shots.map(
               (shot, index) => {
                 const summary =
                   shotSummary(
                     shot,
-                    completedResult,
+                    result,
                   );
-
-                const isCurrentBall =
-                  !isHoleComplete &&
-                  index ===
-                    replay.shots.length - 1;
 
                 return (
                   <article
@@ -486,22 +386,14 @@ export default function GolfHoleReplayPanel({
                       index > 0
                         ? "border-t border-slate-800"
                         : ""
-                    } ${
-                      isCurrentBall
-                        ? "bg-amber-500/5"
-                        : ""
                     }`}
                   >
                     <div className="flex gap-3">
                       <span
                         className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
                           shot.finalStroke
-                            ? resultBadgeClass(
-                                completedResult,
-                              )
-                            : isCurrentBall
-                              ? "border-amber-500 bg-amber-950 text-amber-200"
-                              : "border-slate-600 bg-slate-800 text-slate-200"
+                            ? resultBadgeClass(result)
+                            : "border-slate-600 bg-slate-800 text-slate-200"
                         }`}
                       >
                         {shot.strokeNumber}
@@ -526,7 +418,7 @@ export default function GolfHoleReplayPanel({
                                 className={`text-sm font-bold ${
                                   shot.finalStroke
                                     ? resultToneClass(
-                                        completedResult,
+                                        result,
                                       )
                                     : "text-slate-200"
                                 }`}
@@ -534,12 +426,6 @@ export default function GolfHoleReplayPanel({
                                 {summary}
                               </span>
                             </>
-                          ) : null}
-
-                          {isCurrentBall ? (
-                            <span className="rounded-full border border-amber-700/60 bg-amber-950 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
-                              Current ball
-                            </span>
                           ) : null}
                         </div>
 
@@ -575,24 +461,8 @@ export default function GolfHoleReplayPanel({
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-600">
-            <span>
-              Shot data provided on demand from PGA TOUR tracking.
-            </span>
-
-            {lastUpdatedAt ? (
-              <span>
-                Updated{" "}
-                {lastUpdatedAt.toLocaleTimeString(
-                  [],
-                  {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  },
-                )}
-              </span>
-            ) : null}
+          <div className="mt-3 text-center text-[10px] text-slate-600">
+            Shot data provided on demand from PGA TOUR tracking.
           </div>
         </div>
       ) : null}

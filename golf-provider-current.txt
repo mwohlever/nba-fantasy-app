@@ -1,3 +1,4 @@
+===== PROVIDER =====
 const ESPN_GOLF_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
 
@@ -332,20 +333,8 @@ function inferCompetitorStatus(input: {
     (round) => round.roundNumber >= 3,
   );
 
-  /*
-   * ESPN includes future-round records and tee times for golfers
-   * who made the cut but have not started the next round yet.
-   *
-   * A golfer with a Round 3 tee time must remain scheduled rather
-   * than being inferred as cut merely because Round 3 has begun.
-   */
-  const hasRoundThreeOrLaterTeeTime = input.rounds.some(
-    (round) =>
-      round.roundNumber >= 3 &&
-      Boolean(round.teeTime || round.teeTimeRaw),
-  );
-
   const tournamentHasReachedRoundThree =
+    input.tournamentStatus === "final" ||
     (input.tournamentCurrentRound ?? 0) >= 3;
 
   if (input.tournamentStatus === "scheduled") {
@@ -365,15 +354,6 @@ function inferCompetitorStatus(input: {
     !hasRoundThreeOrLaterActivity &&
     tournamentHasReachedRoundThree
   ) {
-    /*
-     * Made-cut golfers often have a Round 3 tee time before they
-     * record their first Saturday hole. Keep them upcoming so they
-     * receive no missed-cut penalty and still count as remaining.
-     */
-    if (hasRoundThreeOrLaterTeeTime) {
-      return "scheduled";
-    }
-
     return "cut";
   }
 
@@ -491,62 +471,14 @@ function parseCompetitor(
       ? (currentRoundRecord.holes.at(-1)?.holeNumber ?? null)
       : null;
 
-  /*
-   * For golfers who have completed the prior round but have not
-   * started the tournament's current round, ESPN may already include
-   * a future-round record containing their next tee time.
-   *
-   * Prefer that tournament-current-round tee time. Previously we
-   * selected currentRoundRecord first, which returned the golfer's
-   * completed Round 2 tee time while waiting to begin Round 3.
-   */
-  const tournamentRoundRecord =
-    tournamentCurrentRound === null
-      ? null
-      : (
-          rounds.find(
-            (round) =>
-              round.roundNumber ===
-              tournamentCurrentRound,
-          ) ?? null
-        );
-
-  const preferredTeeTimeRound =
-    tournamentRoundRecord?.teeTimeRaw ||
-    tournamentRoundRecord?.teeTime
-      ? tournamentRoundRecord
-      : currentRoundRecord;
-
   const teeTimeRaw =
-    preferredTeeTimeRound?.teeTimeRaw ??
-    rounds
-      .slice()
-      .sort(
-        (a, b) =>
-          b.roundNumber -
-          a.roundNumber,
-      )
-      .find(
-        (round) =>
-          Boolean(round.teeTimeRaw),
-      )
-      ?.teeTimeRaw ??
+    currentRoundRecord?.teeTimeRaw ??
+    rounds.find((round) => round.teeTimeRaw)?.teeTimeRaw ??
     null;
 
   const teeTime =
-    preferredTeeTimeRound?.teeTime ??
-    rounds
-      .slice()
-      .sort(
-        (a, b) =>
-          b.roundNumber -
-          a.roundNumber,
-      )
-      .find(
-        (round) =>
-          Boolean(round.teeTime),
-      )
-      ?.teeTime ??
+    currentRoundRecord?.teeTime ??
+    rounds.find((round) => round.teeTime)?.teeTime ??
     null;
 
   return {
@@ -603,19 +535,22 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
       ? competition.status.period
       : null;
 
-  /*
-   * ESPN can mark the current competition/day as final after
-   * an early tournament round. Do not use event.endDate to
-   * decide whether that represents the end of the full event.
-   *
-   * A four-round PGA tournament cannot be truly final while
-   * ESPN still reports the current round as 1, 2, or 3.
-   */
+  const scheduledEndDate = parseEspnDate(event.endDate);
+  const scheduledEndTime =
+    scheduledEndDate === null
+      ? null
+      : new Date(scheduledEndDate).getTime();
+
+  const eventHasNotEnded =
+    scheduledEndTime !== null &&
+    scheduledEndTime >= Date.now();
+
   const isPrematureEarlyRoundFinal =
     reportedStatus === "final" &&
     tournamentCurrentRound !== null &&
     tournamentCurrentRound >= 1 &&
-    tournamentCurrentRound < 4;
+    tournamentCurrentRound < 4 &&
+    eventHasNotEnded;
 
   const normalizedReportedStatus: GolfTournamentStatus =
     isPrematureEarlyRoundFinal
@@ -696,7 +631,7 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
       eventStatus?.description ??
       null,
     currentRound: tournamentCurrentRound,
-    completed: status === "final",
+    completed: Boolean(statusSource?.completed),
     competitors,
   };
 }
@@ -937,3 +872,27 @@ export async function fetchGolfCoursesByEventId(
     );
 }
 
+
+===== TYPES =====
+lib/providers/golf.ts:7:export type GolfCompetitorStatus =
+lib/providers/golf.ts.before-status-fix:7:export type GolfCompetitorStatus =
+lib/providers/golf.ts.before-final-status-fix:7:export type GolfCompetitorStatus =
+lib/providers/golf.ts.before-course-data:7:export type GolfCompetitorStatus =
+app/api/refresh-stats-golf/route.ts:7:  type GolfCompetitorStatus,
+app/api/refresh-stats-golf/route.ts.before-course-data:6:  type GolfCompetitorStatus,
+app/api/refresh-stats-golf/route.ts.before-golf-tiebreakers:7:  type GolfCompetitorStatus,
+
+===== fetchGolfTournamentByEventId =====
+lib/providers/golf.ts:678:export async function fetchGolfTournamentByEventId(
+lib/providers/golf.ts.before-status-fix:600:export async function fetchGolfTournamentByEventId(
+lib/providers/golf.ts.before-final-status-fix:648:export async function fetchGolfTournamentByEventId(
+lib/providers/golf.ts.before-course-data:678:export async function fetchGolfTournamentByEventId(
+app/api/refresh-stats-golf/route.ts:5:  fetchGolfTournamentByEventId,
+app/api/refresh-stats-golf/route.ts:143:    const tournament = await fetchGolfTournamentByEventId(
+app/api/refresh-stats-golf/route.ts:153:  return fetchGolfTournamentByEventId(eventId);
+app/api/refresh-stats-golf/route.ts.before-course-data:4:  fetchGolfTournamentByEventId,
+app/api/refresh-stats-golf/route.ts.before-course-data:142:    const tournament = await fetchGolfTournamentByEventId(
+app/api/refresh-stats-golf/route.ts.before-course-data:152:  return fetchGolfTournamentByEventId(eventId);
+app/api/refresh-stats-golf/route.ts.before-golf-tiebreakers:5:  fetchGolfTournamentByEventId,
+app/api/refresh-stats-golf/route.ts.before-golf-tiebreakers:143:    const tournament = await fetchGolfTournamentByEventId(
+app/api/refresh-stats-golf/route.ts.before-golf-tiebreakers:153:  return fetchGolfTournamentByEventId(eventId);

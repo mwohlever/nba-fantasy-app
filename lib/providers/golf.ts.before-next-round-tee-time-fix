@@ -491,62 +491,14 @@ function parseCompetitor(
       ? (currentRoundRecord.holes.at(-1)?.holeNumber ?? null)
       : null;
 
-  /*
-   * For golfers who have completed the prior round but have not
-   * started the tournament's current round, ESPN may already include
-   * a future-round record containing their next tee time.
-   *
-   * Prefer that tournament-current-round tee time. Previously we
-   * selected currentRoundRecord first, which returned the golfer's
-   * completed Round 2 tee time while waiting to begin Round 3.
-   */
-  const tournamentRoundRecord =
-    tournamentCurrentRound === null
-      ? null
-      : (
-          rounds.find(
-            (round) =>
-              round.roundNumber ===
-              tournamentCurrentRound,
-          ) ?? null
-        );
-
-  const preferredTeeTimeRound =
-    tournamentRoundRecord?.teeTimeRaw ||
-    tournamentRoundRecord?.teeTime
-      ? tournamentRoundRecord
-      : currentRoundRecord;
-
   const teeTimeRaw =
-    preferredTeeTimeRound?.teeTimeRaw ??
-    rounds
-      .slice()
-      .sort(
-        (a, b) =>
-          b.roundNumber -
-          a.roundNumber,
-      )
-      .find(
-        (round) =>
-          Boolean(round.teeTimeRaw),
-      )
-      ?.teeTimeRaw ??
+    currentRoundRecord?.teeTimeRaw ??
+    rounds.find((round) => round.teeTimeRaw)?.teeTimeRaw ??
     null;
 
   const teeTime =
-    preferredTeeTimeRound?.teeTime ??
-    rounds
-      .slice()
-      .sort(
-        (a, b) =>
-          b.roundNumber -
-          a.roundNumber,
-      )
-      .find(
-        (round) =>
-          Boolean(round.teeTime),
-      )
-      ?.teeTime ??
+    currentRoundRecord?.teeTime ??
+    rounds.find((round) => round.teeTime)?.teeTime ??
     null;
 
   return {
