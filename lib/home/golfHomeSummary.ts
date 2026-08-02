@@ -238,12 +238,25 @@ function formatTournamentPlayerStatus(
       : `R${nextRound} · Upcoming`;
   }
 
-  if (
-    status === "finished" ||
-    currentRoundHoles === 0 &&
-      Number(player.holes_completed ?? 0) > 0
-  ) {
-    return `R${round} · F`;
+  if (status === "round_complete") {
+    const nextRound = round + 1;
+
+    if (nextRound <= 4) {
+      const teeTime = formatGolfTeeTime(
+        player.tee_time_raw,
+        player.tee_time,
+      );
+
+      if (teeTime) {
+        return `R${nextRound} · Tee ${teeTime}`;
+      }
+    }
+
+    return `R${round} complete`;
+  }
+
+  if (status === "finished") {
+    return "Final";
   }
 
   if (currentRoundHoles > 0) {

@@ -113,19 +113,40 @@ function golferStatus(stat: PlayerStat) {
   }
 
   if (status === "round_complete") {
+    const rounds = [...(stat.rounds ?? [])].sort(
+      (a, b) => a.round_number - b.round_number,
+    );
+
+    const upcomingRound = rounds.find(
+      (round) =>
+        Number(round.holes_completed ?? 0) === 0 &&
+        Boolean(round.tee_time || round.tee_time_raw),
+    );
+
+    if (upcomingRound) {
+      const teeTime = formatTeeTime(
+        upcomingRound.tee_time ??
+          upcomingRound.tee_time_raw,
+      );
+
+      return {
+        label: "⏰ Upcoming",
+        detail:
+          `R${upcomingRound.round_number}` +
+          (teeTime ? ` · ${teeTime}` : ""),
+        className:
+          "border-sky-700 bg-sky-950 text-sky-200",
+        order: 1,
+      };
+    }
+
     const completedRound =
-      [...(stat.rounds ?? [])]
+      rounds
         .filter(
           (round) =>
-            Number(
-              round.holes_completed ?? 0,
-            ) === 18,
+            Number(round.holes_completed ?? 0) === 18,
         )
-        .sort(
-          (a, b) =>
-            b.round_number -
-            a.round_number,
-        )[0] ?? null;
+        .at(-1);
 
     return {
       label: "✓ Round complete",
