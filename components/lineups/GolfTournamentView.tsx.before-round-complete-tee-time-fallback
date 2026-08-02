@@ -48,60 +48,8 @@ function formatPosition(
 }
 
 function formatTeeTime(
-  rawValue: string | null | undefined,
-  parsedValue?: string | null,
+  value: string | null | undefined,
 ) {
-  const raw =
-    rawValue?.trim() ?? "";
-
-  /*
-   * Preserve PGA TOUR's tournament-local display time.
-   *
-   * Supported examples:
-   *   "1:30 PM"
-   *   "Sun 1:30 PM"
-   *   "Sun Aug 02 13:30:00 PDT 2026"
-   */
-  const twelveHourMatch = raw.match(
-    /(?:^|\s)(\d{1,2}:\d{2}\s*[AP]M)(?:\s|$)/i,
-  );
-
-  if (twelveHourMatch) {
-    return twelveHourMatch[1]
-      .replace(/\s+/g, " ")
-      .toUpperCase();
-  }
-
-  const twentyFourHourMatch = raw.match(
-    /(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?\s+[A-Z]{2,5}(?:\s|$)/i,
-  );
-
-  if (twentyFourHourMatch) {
-    const hour24 = Number(
-      twentyFourHourMatch[1],
-    );
-
-    const minute =
-      twentyFourHourMatch[2];
-
-    if (
-      Number.isInteger(hour24) &&
-      hour24 >= 0 &&
-      hour24 <= 23
-    ) {
-      const period =
-        hour24 >= 12 ? "PM" : "AM";
-
-      const hour12 =
-        hour24 % 12 || 12;
-
-      return `${hour12}:${minute} ${period}`;
-    }
-  }
-
-  const value =
-    parsedValue ?? rawValue;
-
   if (!value) return null;
 
   const parsed = new Date(value);
@@ -110,13 +58,11 @@ function formatTeeTime(
     return value;
   }
 
-  return parsed.toLocaleTimeString(
-    "en-US",
-    {
-      hour: "numeric",
-      minute: "2-digit",
-    },
-  );
+  return parsed.toLocaleString([], {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 function golferStatus(stat: PlayerStat) {
@@ -168,68 +114,39 @@ function golferStatus(stat: PlayerStat) {
 
   if (status === "round_complete") {
     const rounds = [...(stat.rounds ?? [])].sort(
-      (a, b) =>
-        a.round_number -
-        b.round_number,
+      (a, b) => a.round_number - b.round_number,
     );
 
-    const completedRound =
-      rounds
-        .filter(
-          (round) =>
-            Number(
-              round.holes_completed ?? 0,
-            ) === 18,
-        )
-        .at(-1) ?? null;
+    const upcomingRound = rounds.find(
+      (round) =>
+        Number(round.holes_completed ?? 0) === 0 &&
+        Boolean(round.tee_time || round.tee_time_raw),
+    );
 
-    const upcomingRound =
-      rounds.find(
-        (round) =>
-          Number(
-            round.holes_completed ?? 0,
-          ) === 0 &&
-          Boolean(
-            round.tee_time ||
-              round.tee_time_raw,
-          ),
-      ) ?? null;
-
-    const nextRoundNumber =
-      upcomingRound?.round_number ??
-      Math.min(
-        4,
-        Number(
-          completedRound?.round_number ??
-            stat.rounds_completed ??
-            stat.current_round ??
-            1,
-        ) + 1,
+    if (upcomingRound) {
+      const teeTime = formatTeeTime(
+        upcomingRound.tee_time ??
+          upcomingRound.tee_time_raw,
       );
 
-    const teeTime = upcomingRound
-      ? formatTeeTime(
-          upcomingRound.tee_time_raw,
-          upcomingRound.tee_time,
-        )
-      : formatTeeTime(
-          stat.tee_time_raw,
-          stat.tee_time,
-        );
-
-    if (
-      teeTime &&
-      nextRoundNumber <= 4
-    ) {
       return {
         label: "⏰ Upcoming",
         detail:
-          `R${nextRoundNumber} · Tee ${teeTime}`,
+          `R${upcomingRound.round_number}` +
+          (teeTime ? ` · ${teeTime}` : ""),
         className:
           "border-sky-700 bg-sky-950 text-sky-200",
         order: 1,
       };
     }
+
+    const completedRound =
+      rounds
+        .filter(
+          (round) =>
+            Number(round.holes_completed ?? 0) === 18,
+        )
+        .at(-1);
 
     return {
       label: "✓ Round complete",
