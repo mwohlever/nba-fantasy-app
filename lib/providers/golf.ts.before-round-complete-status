@@ -7,7 +7,6 @@ export type GolfTournamentStatus =
 export type GolfCompetitorStatus =
   | "scheduled"
   | "active"
-  | "round_complete"
   | "finished"
   | "cut"
   | "withdrawn"
@@ -326,17 +325,8 @@ function inferCompetitorStatus(input: {
   const hasStarted = playedRounds.length > 0;
 
   const hasPartialRound = playedRounds.some(
-    (round) =>
-      round.holesCompleted > 0 &&
-      round.holesCompleted < 18,
+    (round) => round.holesCompleted > 0 && round.holesCompleted < 18,
   );
-
-  const allPlayedRoundsComplete =
-    playedRounds.length > 0 &&
-    playedRounds.every(
-      (round) =>
-        round.holesCompleted === 18,
-    );
 
   const hasRoundThreeOrLaterActivity = playedRounds.some(
     (round) => round.roundNumber >= 3,
@@ -400,21 +390,6 @@ function inferCompetitorStatus(input: {
    */
   if (input.tournamentStatus === "final") {
     return "finished";
-  }
-
-  /*
-   * A golfer who completed today's round is not actively
-   * playing merely because the tournament itself continues.
-   *
-   * Keep this distinct from "scheduled": round_complete means
-   * today's round is finished; scheduled means the golfer has
-   * not yet begun the tournament's current round.
-   */
-  if (
-    allPlayedRoundsComplete &&
-    !hasPartialRound
-  ) {
-    return "round_complete";
   }
 
   return "active";

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import {
   fetchGolfCoursesByEventId,
   fetchGolfTournamentByEventId,
@@ -383,61 +382,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const playerIds = Array.from(
-      playerIdByEspnId.values(),
-    );
-
-    const {
-      data: previousEventPlayerData,
-      error: previousEventPlayerError,
-    } = playerIds.length > 0
-      ? await supabaseAdmin
-          .from("golf_event_players")
-          .select(
-            "player_id, rounds_completed, status",
-          )
-          .eq("slate_id", slateId)
-          .in("player_id", playerIds)
-      : {
-          data: [],
-          error: null,
-        };
-
-    if (previousEventPlayerError) {
-      return NextResponse.json(
-        {
-          error:
-            "Golf players were loaded, but their previous progress could not be read: " +
-            previousEventPlayerError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const previousGolfProgressByPlayerId =
-      new Map<
-        number,
-        {
-          roundsCompleted: number;
-          status: string | null;
-        }
-      >(
-        (previousEventPlayerData ?? []).map(
-          (row) => [
-            Number(row.player_id),
-            {
-              roundsCompleted: Number(
-                row.rounds_completed ?? 0,
-              ),
-              status:
-                row.status == null
-                  ? null
-                  : String(row.status),
-            },
-          ],
-        ),
-      );
-
     const eventPlayerRows = competitors.map((competitor) => {
       const penaltyStrokes = calculatePenaltyStrokes({
         status: competitor.status,
@@ -671,7 +615,6 @@ export async function POST(request: Request) {
       {
         scheduled: 0,
         active: 0,
-        round_complete: 0,
         finished: 0,
         cut: 0,
         withdrawn: 0,
@@ -702,162 +645,6 @@ export async function POST(request: Request) {
             lineupsError.message,
         },
         { status: 500 },
-      );
-    }
-
-    let playerFinishedNotifications = {
-      attempted: 0,
-      sent: 0,
-      skipped: 0,
-      failed: 0,
-    };
-
-    try {
-      const newlyCompletedRounds =
-        competitors
-          .map((competitor) => {
-            const playerId =
-              playerIdByEspnId.get(
-                competitor.espnPlayerId,
-              );
-
-            if (playerId === undefined) {
-              return null;
-            }
-
-            const previous =
-              previousGolfProgressByPlayerId.get(
-                playerId,
-              ) ?? {
-                roundsCompleted: 0,
-                status: null,
-              };
-
-            const currentCompleted =
-              Number(
-                competitor.roundsCompleted ?? 0,
-              );
-
-            const completedAnotherRound =
-              currentCompleted >
-              previous.roundsCompleted;
-
-            /*
-             * Repair the currently stored bad transition:
-             *
-             * active after Hole 18
-             *          ↓
-             * round_complete
-             *
-             * This allows the first refresh after this fix to send
-             * the missed Round 3 notification.
-             */
-            const repairedCompletedRound =
-              previous.status === "active" &&
-              competitor.status ===
-                "round_complete" &&
-              currentCompleted > 0;
-
-            if (
-              !completedAnotherRound &&
-              !repairedCompletedRound
-            ) {
-              return null;
-            }
-
-            const completedRound =
-              competitor.rounds.find(
-                (round) =>
-                  Number(
-                    round.roundNumber,
-                  ) === currentCompleted,
-              ) ?? null;
-
-            return {
-              playerId,
-              roundNumber:
-                currentCompleted,
-              roundScore:
-                completedRound?.scoreToPar ??
-                null,
-              fantasyPoints:
-                competitor.officialScoreToPar,
-            };
-          })
-          .filter(
-            (
-              row,
-            ): row is {
-              playerId: number;
-              roundNumber: number;
-              roundScore: number | null;
-              fantasyPoints: number | null;
-            } => row !== null,
-          );
-
-      playerFinishedNotifications =
-        await notifyNewlyFinishedPlayers({
-          slate: {
-            id: slate.id,
-            date: slate.start_date,
-            start_date:
-              slate.start_date,
-            end_date:
-              slate.end_date,
-            sport: "golf",
-            display_name:
-              slate.display_name?.trim() ||
-              tournament.name,
-          },
-          players: competitors.map(
-            (competitor) => ({
-              id:
-                playerIdByEspnId.get(
-                  competitor.espnPlayerId,
-                )!,
-              name:
-                competitor.displayName,
-            }),
-          ),
-          lineups:
-            (lineupsData ?? []).map(
-              (lineup: any) => ({
-                team_id:
-                  Number(lineup.team_id),
-                lineup_players:
-                  lineup.lineup_players ??
-                  [],
-              }),
-            ),
-          previousStatuses:
-            newlyCompletedRounds.map(
-              (row) => ({
-                playerId:
-                  row.playerId,
-                gameStatus: 2,
-              }),
-            ),
-          currentStats:
-            newlyCompletedRounds.map(
-              (row) => ({
-                player_id:
-                  row.playerId,
-                fantasy_points:
-                  row.fantasyPoints,
-                game_status: 3,
-                round_number:
-                  row.roundNumber,
-                round_score:
-                  row.roundScore,
-                event_key_suffix:
-                  `round-${row.roundNumber}`,
-              }),
-            ),
-        });
-    } catch (notificationError) {
-      console.error(
-        "Golf stats saved, but round-complete notifications failed",
-        notificationError,
       );
     }
 
@@ -920,7 +707,6 @@ export async function POST(request: Request) {
       );
 
       const completedStatuses = new Set([
-        "round_complete",
         "finished",
         "cut",
         "withdrawn",
@@ -1172,7 +958,6 @@ export async function POST(request: Request) {
       eventPlayersUpserted: eventPlayerRows.length,
       playerStatsUpserted: eventPlayerRows.length,
       teamResultsUpserted: persistedTeamRows.length,
-      playerFinishedNotifications,
       roundsInserted: roundRows.length,
       holesInserted: holeRows.length,
       courseHolesUpserted,

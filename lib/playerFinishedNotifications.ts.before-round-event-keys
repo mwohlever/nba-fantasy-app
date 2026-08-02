@@ -12,9 +12,7 @@ type SlateInput = {
   start_date: string;
   end_date: string;
   sport?: string;
-  display_name?: string | null;
 };
-
 
 type PlayerInput = {
   id: number;
@@ -35,14 +33,6 @@ type CurrentStatInput = {
   player_id: number;
   fantasy_points: number | null;
   game_status: number | null;
-
-  /*
-   * Golf completes multiple rounds inside one slate. Supplying
-   * a suffix gives each round its own deduplicated event.
-   */
-  event_key_suffix?: string | null;
-  round_number?: number | null;
-  round_score?: number | null;
 };
 
 type AppUserRow = {
@@ -55,28 +45,6 @@ type PreferenceRow = {
   notifications_enabled: boolean;
   player_finished_enabled: boolean;
 };
-
-function formatGolfNotificationScore(
-  value: number | null | undefined,
-) {
-  if (
-    value === null ||
-    value === undefined ||
-    !Number.isFinite(Number(value))
-  ) {
-    return "—";
-  }
-
-  const score = Number(value);
-
-  if (score === 0) {
-    return "E";
-  }
-
-  return score > 0
-    ? `+${score}`
-    : String(score);
-}
 
 export async function notifyNewlyFinishedPlayers(input: {
   slate: SlateInput;
@@ -168,27 +136,10 @@ export async function notifyNewlyFinishedPlayers(input: {
   const template =
     await getNotificationTemplate("player_finished", sport);
 
-  const startDate =
-    input.slate.start_date ??
-    input.slate.date;
-
-  const endDate =
-    input.slate.end_date ??
-    input.slate.date;
-
-  const dateLabel =
-    startDate === endDate
-      ? startDate
-      : `${startDate} - ${endDate}`;
-
-  /*
-   * Golf slates have a meaningful tournament name such as
-   * "Rocket Classic." Prefer that over the raw slate dates.
-   * NBA/NFL and unnamed slates retain the date fallback.
-   */
+  const startDate = input.slate.start_date ?? input.slate.date;
+  const endDate = input.slate.end_date ?? input.slate.date;
   const slateLabel =
-    input.slate.display_name?.trim() ||
-    dateLabel;
+    startDate === endDate ? startDate : `${startDate} - ${endDate}`;
 
   let sent = 0;
   let skipped = 0;
@@ -215,18 +166,8 @@ export async function notifyNewlyFinishedPlayers(input: {
 
     const fantasyPoints = Number(stat.fantasy_points ?? 0).toFixed(1);
 
-    const roundNumber =
-      stat.round_number ?? "";
-
-    const roundScore =
-      formatGolfNotificationScore(
-        stat.round_score,
-      );
-
     const values = {
       playerName,
-      roundNumber,
-      roundScore,
       fantasyPoints,
       teamName,
       slateLabel,
@@ -256,11 +197,7 @@ export async function notifyNewlyFinishedPlayers(input: {
     }
 
     const result = await sendLoggedNotification({
-      eventKey:
-        `player_finished:${input.slate.id}:${stat.player_id}` +
-        (stat.event_key_suffix
-          ? `:${stat.event_key_suffix}`
-          : ""),
+      eventKey: `player_finished:${input.slate.id}:${stat.player_id}`,
       notificationType: "player_finished",
       userId: user?.id ?? null,
       teamId,
@@ -269,11 +206,7 @@ export async function notifyNewlyFinishedPlayers(input: {
       title,
       body,
       url: `/lineups/scores?slateId=${input.slate.id}`,
-      tag:
-        `player-finished-${input.slate.id}-${stat.player_id}` +
-        (stat.event_key_suffix
-          ? `-${stat.event_key_suffix}`
-          : ""),
+      tag: `player-finished-${input.slate.id}-${stat.player_id}`,
       skipReason,
       metadata: {
         playerName,

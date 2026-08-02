@@ -93,7 +93,6 @@ function getPreviewValues(
       "{teamName}": "Josh",
       "{slateLabel}": "Rocket Classic",
       "{roundNumber}": "4",
-      "{roundScore}": "-3",
       "{roundOrdinal}": "4th",
       "{overallPickNumber}": "13",
       "{positionNeed}": "golfer",
@@ -195,29 +194,19 @@ export default function NotificationTemplatesPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const controller = new AbortController();
-
     async function loadTemplates() {
       try {
         setIsLoading(true);
         setMessage("");
-        setTemplates(null);
-        setDefaults(null);
-        setDrafts(emptyDrafts());
 
         const response = await fetch(
           `/api/admin/notification-templates?sport=${sport}`,
           {
             cache: "no-store",
-            signal: controller.signal,
           }
         );
 
         const result = await response.json();
-
-        if (controller.signal.aborted) {
-          return;
-        }
 
         if (!response.ok) {
           setMessage(result.error || "Failed to load notification templates.");
@@ -253,29 +242,14 @@ export default function NotificationTemplatesPage() {
           ) as Record<NotificationTemplateType, EditableTemplate>
         );
       } catch (error) {
-        if (
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
-          return;
-        }
-
         console.error(error);
-        setMessage(
-          "Something went wrong while loading the templates."
-        );
+        setMessage("Something went wrong while loading the templates.");
       } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     }
 
     void loadTemplates();
-
-    return () => {
-      controller.abort();
-    };
   }, [sport]);
 
   const unsavedChanges = useMemo(() => {

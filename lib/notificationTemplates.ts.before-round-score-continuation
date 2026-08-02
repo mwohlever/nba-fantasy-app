@@ -154,14 +154,12 @@ const GOLF_NOTIFICATION_DEFAULTS = {
     notificationType: "player_finished",
     titleTemplate: "{sportEmoji} {playerName} finished!",
     bodyTemplate:
-      "{playerName} completed Round {roundNumber} at {slateLabel} with a score of {roundScore}.",
+      "{playerName} completed their round at {slateLabel}.",
     description:
       "Sent when one of a participant's drafted golfers completes a tournament round.",
     availablePlaceholders: [
       "{sportEmoji}",
       "{playerName}",
-      "{roundNumber}",
-      "{roundScore}",
       "{fantasyPoints}",
       "{teamName}",
       "{slateLabel}",

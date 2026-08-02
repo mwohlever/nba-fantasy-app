@@ -112,33 +112,6 @@ function golferStatus(stat: PlayerStat) {
     };
   }
 
-  if (status === "round_complete") {
-    const completedRound =
-      [...(stat.rounds ?? [])]
-        .filter(
-          (round) =>
-            Number(
-              round.holes_completed ?? 0,
-            ) === 18,
-        )
-        .sort(
-          (a, b) =>
-            b.round_number -
-            a.round_number,
-        )[0] ?? null;
-
-    return {
-      label: "✓ Round complete",
-      detail:
-        completedRound
-          ? `Round ${completedRound.round_number}`
-          : "Round complete",
-      className:
-        "border-slate-600 bg-slate-800 text-slate-200",
-      order: 2,
-    };
-  }
-
   if (status === "finished") {
     return {
       label: "✓ Final",
@@ -354,30 +327,14 @@ export default function GolfTournamentView({
     [players, ownerByPlayerId],
   );
 
-  function isGolferPlayingNow(
-    row: TournamentRow,
-  ) {
-    return (
-      row.stat.status === "active" &&
-      (row.stat.rounds ?? []).some(
-        (round) => {
-          const holes = Number(
-            round.holes_completed ?? 0,
-          );
-
-          return (
-            holes > 0 &&
-            holes < 18
-          );
-        },
-      )
-    );
-  }
-
   const playingNowCount = useMemo(
     () =>
       rows.filter(
-        isGolferPlayingNow,
+        (row) =>
+          row.stat.status === "active" &&
+          Number(
+            row.stat.last_hole ?? 0,
+          ) > 0,
       ).length,
     [rows],
   );
@@ -389,7 +346,11 @@ export default function GolfTournamentView({
 
     return [...rows]
       .filter(
-        isGolferPlayingNow,
+        (row) =>
+          row.stat.status === "active" &&
+          Number(
+            row.stat.last_hole ?? 0,
+          ) > 0,
       )
       .sort((a, b) => {
         const bHole = Number(

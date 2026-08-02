@@ -765,21 +765,10 @@ export async function POST(request: Request) {
               return null;
             }
 
-            const completedRound =
-              competitor.rounds.find(
-                (round) =>
-                  Number(
-                    round.roundNumber,
-                  ) === currentCompleted,
-              ) ?? null;
-
             return {
               playerId,
               roundNumber:
                 currentCompleted,
-              roundScore:
-                completedRound?.scoreToPar ??
-                null,
               fantasyPoints:
                 competitor.officialScoreToPar,
             };
@@ -790,7 +779,6 @@ export async function POST(request: Request) {
             ): row is {
               playerId: number;
               roundNumber: number;
-              roundScore: number | null;
               fantasyPoints: number | null;
             } => row !== null,
           );
@@ -847,8 +835,6 @@ export async function POST(request: Request) {
                 game_status: 3,
                 round_number:
                   row.roundNumber,
-                round_score:
-                  row.roundScore,
                 event_key_suffix:
                   `round-${row.roundNumber}`,
               }),

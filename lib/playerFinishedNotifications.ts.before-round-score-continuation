@@ -42,7 +42,6 @@ type CurrentStatInput = {
    */
   event_key_suffix?: string | null;
   round_number?: number | null;
-  round_score?: number | null;
 };
 
 type AppUserRow = {
@@ -55,28 +54,6 @@ type PreferenceRow = {
   notifications_enabled: boolean;
   player_finished_enabled: boolean;
 };
-
-function formatGolfNotificationScore(
-  value: number | null | undefined,
-) {
-  if (
-    value === null ||
-    value === undefined ||
-    !Number.isFinite(Number(value))
-  ) {
-    return "—";
-  }
-
-  const score = Number(value);
-
-  if (score === 0) {
-    return "E";
-  }
-
-  return score > 0
-    ? `+${score}`
-    : String(score);
-}
 
 export async function notifyNewlyFinishedPlayers(input: {
   slate: SlateInput;
@@ -215,18 +192,8 @@ export async function notifyNewlyFinishedPlayers(input: {
 
     const fantasyPoints = Number(stat.fantasy_points ?? 0).toFixed(1);
 
-    const roundNumber =
-      stat.round_number ?? "";
-
-    const roundScore =
-      formatGolfNotificationScore(
-        stat.round_score,
-      );
-
     const values = {
       playerName,
-      roundNumber,
-      roundScore,
       fantasyPoints,
       teamName,
       slateLabel,
