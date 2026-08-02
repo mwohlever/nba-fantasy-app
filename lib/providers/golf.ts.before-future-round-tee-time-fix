@@ -517,34 +517,14 @@ function parseCompetitor(
       : null;
 
   /*
-   * Only expose a next-round tee time when ESPN provides a genuine
-   * later-round record.
+   * For golfers who have completed the prior round but have not
+   * started the tournament's current round, ESPN may already include
+   * a future-round record containing their next tee time.
    *
-   * After Round 3 completed, ESPN continued reporting the completed
-   * Round 3 tee time while the event status still said Round 3.
-   * The UI then mislabeled that Saturday time as a Round 4 tee time.
+   * Prefer that tournament-current-round tee time. Previously we
+   * selected currentRoundRecord first, which returned the golfer's
+   * completed Round 2 tee time while waiting to begin Round 3.
    */
-  const currentRoundIsComplete =
-    currentRoundRecord?.holesCompleted === 18;
-
-  const futureTeeTimeRound =
-    rounds
-      .filter(
-        (round) =>
-          round.roundNumber >
-            Number(currentRound ?? 0) &&
-          !roundHasActivity(round) &&
-          Boolean(
-            round.teeTimeRaw ||
-              round.teeTime,
-          ),
-      )
-      .sort(
-        (a, b) =>
-          a.roundNumber -
-          b.roundNumber,
-      )[0] ?? null;
-
   const tournamentRoundRecord =
     tournamentCurrentRound === null
       ? null
@@ -556,40 +536,42 @@ function parseCompetitor(
           ) ?? null
         );
 
-  const tournamentRoundIsUpcoming =
-    tournamentRoundRecord !== null &&
-    !roundHasActivity(
-      tournamentRoundRecord,
-    ) &&
-    Boolean(
-      tournamentRoundRecord.teeTimeRaw ||
-        tournamentRoundRecord.teeTime,
-    );
-
   const preferredTeeTimeRound =
-    futureTeeTimeRound ??
-    (
-      !currentRoundIsComplete &&
-      tournamentRoundIsUpcoming
-        ? tournamentRoundRecord
-        : null
-    ) ??
-    (
-      !currentRoundIsComplete &&
-      Boolean(
-        currentRoundRecord?.teeTimeRaw ||
-          currentRoundRecord?.teeTime,
-      )
-        ? currentRoundRecord
-        : null
-    );
+    tournamentRoundRecord?.teeTimeRaw ||
+    tournamentRoundRecord?.teeTime
+      ? tournamentRoundRecord
+      : currentRoundRecord;
 
   const teeTimeRaw =
     preferredTeeTimeRound?.teeTimeRaw ??
+    rounds
+      .slice()
+      .sort(
+        (a, b) =>
+          b.roundNumber -
+          a.roundNumber,
+      )
+      .find(
+        (round) =>
+          Boolean(round.teeTimeRaw),
+      )
+      ?.teeTimeRaw ??
     null;
 
   const teeTime =
     preferredTeeTimeRound?.teeTime ??
+    rounds
+      .slice()
+      .sort(
+        (a, b) =>
+          b.roundNumber -
+          a.roundNumber,
+      )
+      .find(
+        (round) =>
+          Boolean(round.teeTime),
+      )
+      ?.teeTime ??
     null;
 
   return {
