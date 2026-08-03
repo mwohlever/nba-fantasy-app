@@ -458,23 +458,74 @@ export default function GolfTournamentView({
     [players, ownerByPlayerId],
   );
 
+  function getCurrentGolfRound(
+    row: TournamentRow,
+  ) {
+    const rounds =
+      [...(row.stat.rounds ?? [])]
+        .sort(
+          (a, b) =>
+            a.round_number -
+            b.round_number,
+        );
+
+    const statedCurrentRound =
+      Number(
+        row.stat.current_round ?? 0,
+      );
+
+    if (statedCurrentRound > 0) {
+      const matchingRound =
+        rounds.find(
+          (round) =>
+            Number(
+              round.round_number,
+            ) === statedCurrentRound,
+        );
+
+      if (matchingRound) {
+        return matchingRound;
+      }
+    }
+
+    return (
+      rounds
+        .filter(
+          (round) =>
+            Number(
+              round.holes_completed ?? 0,
+            ) > 0 ||
+            round.strokes !== null,
+        )
+        .at(-1) ??
+      null
+    );
+  }
+
   function isGolferPlayingNow(
     row: TournamentRow,
   ) {
-    return (
-      row.stat.status === "active" &&
-      (row.stat.rounds ?? []).some(
-        (round) => {
-          const holes = Number(
-            round.holes_completed ?? 0,
-          );
+    if (
+      row.stat.status !== "active"
+    ) {
+      return false;
+    }
 
-          return (
-            holes > 0 &&
-            holes < 18
-          );
-        },
-      )
+    const currentRound =
+      getCurrentGolfRound(row);
+
+    if (!currentRound) {
+      return false;
+    }
+
+    const holesCompleted =
+      Number(
+        currentRound.holes_completed ?? 0,
+      );
+
+    return (
+      holesCompleted > 0 &&
+      holesCompleted < 18
     );
   }
 
@@ -491,34 +542,13 @@ export default function GolfTournamentView({
       return rows;
     }
 
-    return [...rows]
-      .filter(
-        isGolferPlayingNow,
-      )
-      .sort((a, b) => {
-        const bHole = Number(
-          b.stat.last_hole ?? 0,
-        );
-
-        const aHole = Number(
-          a.stat.last_hole ?? 0,
-        );
-
-        if (bHole !== aHole) {
-          return bHole - aHole;
-        }
-
-        return (
-          Number(
-            a.stat.leaderboard_order ??
-              999,
-          ) -
-          Number(
-            b.stat.leaderboard_order ??
-              999,
-          )
-        );
-      });
+    /*
+     * The main rows array is already sorted by ESPN's official
+     * leaderboard order. Filtering it preserves that correct order.
+     */
+    return rows.filter(
+      isGolferPlayingNow,
+    );
   }, [playingNowOnly, rows]);
 
 

@@ -11,6 +11,7 @@ type SlateInput = {
   start_date: string;
   end_date: string;
   sport?: string;
+  display_name?: string | null;
 };
 
 type TeamResultInput = {
@@ -147,10 +148,17 @@ export async function notifyCompletedSlate(input: {
     teamNameMap.get(winnerTeamId) ?? `Team ${winnerTeamId}`;
   const winningScore = formatScore(winner.fantasy_points);
 
-  const startDate = input.slate.start_date ?? input.slate.date;
-  const endDate = input.slate.end_date ?? input.slate.date;
+  const startDate =
+    input.slate.start_date ?? input.slate.date;
+
+  const endDate =
+    input.slate.end_date ?? input.slate.date;
+
   const slateLabel =
-    startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+    input.slate.display_name?.trim() ||
+    (startDate === endDate
+      ? startDate
+      : `${startDate} - ${endDate}`);
 
   const sport =
     input.slate.sport === "nfl"

@@ -117,11 +117,14 @@ function summarize(rows: any[]) {
 }
 
 function isCompletedResult(result: any) {
-  return (
-    Number(result.games_completed ?? 0) > 0 &&
-    Number(result.games_in_progress ?? 0) === 0 &&
-    Number(result.games_remaining ?? 0) === 0
-  );
+  /*
+   * Golf completion is finalized by locking the slate.
+   *
+   * The games_* counters describe drafted-golfer status and are
+   * not a reliable canonical signal that the tournament itself
+   * has been finalized.
+   */
+  return Boolean(result.isLocked);
 }
 
 function isCutStatus(status: string | null | undefined) {
@@ -552,6 +555,8 @@ export async function getGolfTeamProfile(
       return {
         slateId:
           Number(result.slate_id),
+        isLocked:
+          Boolean(slate?.is_locked),
         slateLabel:
           slate?.display_name?.trim() ||
           formatSlateDateLabel(slate),

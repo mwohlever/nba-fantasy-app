@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 import {
   fetchGolfCoursesByEventId,
   fetchGolfTournamentByEventId,
@@ -1148,6 +1149,127 @@ export async function POST(request: Request) {
       }
     }
 
+    let slateAutoLocked = false;
+
+    let slateCompleteNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    /*
+     * A tournament is settled when ESPN explicitly reports Final,
+     * or when there are no golfers still scheduled, active, or
+     * waiting between rounds and at least one golfer has finished.
+     *
+     * Cut, WD, DQ, and DNS golfers are terminal states.
+     */
+    const tournamentFieldIsSettled =
+      statusCounts.scheduled === 0 &&
+      statusCounts.active === 0 &&
+      statusCounts.round_complete === 0 &&
+      statusCounts.finished > 0;
+
+    const tournamentIsComplete =
+      tournament.completed ||
+      tournament.status === "final" ||
+      tournamentFieldIsSettled;
+
+    if (tournamentIsComplete) {
+      /*
+       * Send notifications before locking. If notification processing
+       * throws unexpectedly, leave the slate open so the next cron run
+       * can retry instead of permanently losing the final alert.
+       *
+       * sendLoggedNotification's event keys prevent duplicate pushes.
+       */
+      try {
+        slateCompleteNotifications =
+          await notifyCompletedSlate({
+            slate: {
+              id: slate.id,
+              date: slate.start_date,
+              start_date:
+                slate.start_date,
+              end_date:
+                slate.end_date,
+              sport: "golf",
+              display_name:
+                slate.display_name?.trim() ||
+                tournament.name,
+            } as any,
+            teamResults:
+              persistedTeamRows.map(
+                (row) => ({
+                  team_id:
+                    Number(row.team_id),
+                  fantasy_points:
+                    Number(
+                      row.fantasy_points ?? 0,
+                    ),
+                  finish_position:
+                    row.finish_position,
+                }),
+              ),
+          });
+      } catch (notificationError) {
+        console.error(
+          "Golf tournament is final, but final notifications failed",
+          notificationError,
+        );
+
+        return NextResponse.json(
+          {
+            error:
+              "Golf results were saved, but final notifications failed. " +
+              "The slate was left open so the next refresh can retry.",
+            slateId,
+          },
+          { status: 500 },
+        );
+      }
+
+      const {
+        error: lockError,
+      } = await supabaseAdmin
+        .from("slates")
+        .update({
+          is_locked: true,
+        })
+        .eq("id", slateId)
+        .eq("is_locked", false);
+
+      if (lockError) {
+        return NextResponse.json(
+          {
+            error:
+              "Golf results and final notifications were saved, " +
+              "but the slate could not be locked: " +
+              lockError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      slateAutoLocked = true;
+
+      console.log(
+        "Golf tournament finalized and slate locked",
+        {
+          slateId,
+          tournament:
+            slate.display_name ??
+            tournament.name,
+          winnerTeamId:
+            persistedTeamRows.find(
+              (row) =>
+                row.finish_position === 1,
+            )?.team_id ?? null,
+        },
+      );
+    }
+
     return NextResponse.json({
       success: true,
       slateId,
@@ -1173,6 +1295,8 @@ export async function POST(request: Request) {
       playerStatsUpserted: eventPlayerRows.length,
       teamResultsUpserted: persistedTeamRows.length,
       playerFinishedNotifications,
+      slateAutoLocked,
+      slateCompleteNotifications,
       roundsInserted: roundRows.length,
       holesInserted: holeRows.length,
       courseHolesUpserted,
