@@ -184,6 +184,10 @@ export async function GET(
     tournament: string;
     ok: boolean;
     status: number;
+    state:
+      | "refreshed"
+      | "waiting_for_field"
+      | "failed";
     result: unknown;
   }> = [];
 
@@ -225,14 +229,56 @@ export async function GET(
         };
       }
 
+      const resultRecord =
+        typeof result === "object" &&
+        result !== null
+          ? result as Record<
+              string,
+              unknown
+            >
+          : null;
+
+      const errorMessage =
+        typeof resultRecord?.error ===
+        "string"
+          ? resultRecord.error
+          : "";
+
+      const waitingForField =
+        response.status === 502 &&
+        errorMessage.includes(
+          "tournament field is not available yet",
+        );
+
       results.push({
         slateId: slate.id,
         tournament:
           slate.display_name ??
           `Slate ${slate.id}`,
-        ok: response.ok,
-        status: response.status,
-        result,
+        ok:
+          response.ok ||
+          waitingForField,
+        status:
+          waitingForField
+            ? 200
+            : response.status,
+        state:
+          waitingForField
+            ? "waiting_for_field"
+            : response.ok
+              ? "refreshed"
+              : "failed",
+        result:
+          waitingForField
+            ? {
+                success: true,
+                status:
+                  "waiting_for_field",
+                message:
+                  "Tournament found, but ESPN has not published the field yet.",
+                upstream: result,
+              }
+            : result,
       });
     } catch (refreshError) {
       results.push({
@@ -242,6 +288,7 @@ export async function GET(
           `Slate ${slate.id}`,
         ok: false,
         status: 500,
+        state: "failed",
         result: {
           error:
             refreshError instanceof Error
@@ -257,6 +304,13 @@ export async function GET(
       (row) => !row.ok,
     );
 
+  const waiting =
+    results.filter(
+      (row) =>
+        row.state ===
+        "waiting_for_field",
+    );
+
   return NextResponse.json(
     {
       success:
@@ -265,8 +319,16 @@ export async function GET(
         new Date().toISOString(),
       slatesFound:
         slates.length,
-      refreshed:
+      processed:
         results.length,
+      refreshed:
+        results.filter(
+          (row) =>
+            row.state ===
+            "refreshed",
+        ).length,
+      waiting:
+        waiting.length,
       failures:
         failures.length,
       results,
