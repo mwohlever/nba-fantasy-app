@@ -28,6 +28,7 @@ type GolfSlateRecord = {
 
 type GolfPlayerIdRow = {
   id: number;
+  display_name?: string;
   espn_player_id: string;
 };
 
@@ -343,28 +344,245 @@ export async function POST(request: Request) {
       updated_at: refreshedAt,
     }));
 
-    const { data: savedPlayersData, error: playersUpsertError } =
-      await supabaseAdmin
-        .from("golf_players")
-        .upsert(golfPlayerRows, {
-          onConflict: "espn_player_id",
-        })
-        .select("id, espn_player_id");
+    function normalizeGolfName(value: string) {
+      return value
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+        .replace(/&/g, "and")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+        .replace(/\s+/g, " ");
+    }
 
-    if (playersUpsertError) {
+    /*
+     * Pre-draft field imports may create temporary `pga:*`
+     * identities before ESPN publishes its competitor feed.
+     *
+     * Reconcile those records by normalized name so existing
+     * drafted player IDs are preserved instead of creating
+     * duplicate ESPN player records.
+     */
+    const {
+      data: existingGolfPlayerData,
+      error: existingGolfPlayerError,
+    } = await supabaseAdmin
+      .from("golf_players")
+      .select(
+        "id, display_name, espn_player_id",
+      );
+
+    if (existingGolfPlayerError) {
       return NextResponse.json(
         {
-          error: `Failed to save Golf players: ` + playersUpsertError.message,
+          error:
+            "The tournament field was available, but existing Golf players could not be loaded: " +
+            existingGolfPlayerError.message,
         },
         { status: 500 },
       );
     }
 
-    const savedPlayers = (savedPlayersData ?? []) as GolfPlayerIdRow[];
+    const existingGolfPlayers =
+      (existingGolfPlayerData ??
+        []) as unknown as GolfPlayerIdRow[];
 
-    const playerIdByEspnId = new Map(
-      savedPlayers.map((player) => [player.espn_player_id, Number(player.id)]),
-    );
+    const existingByEspnId =
+      new Map(
+        existingGolfPlayers.map(
+          (player) => [
+            String(
+              player.espn_player_id,
+            ),
+            player,
+          ],
+        ),
+      );
+
+    const existingByNormalizedName =
+      new Map<
+        string,
+        GolfPlayerIdRow[]
+      >();
+
+    for (
+      const player of existingGolfPlayers
+    ) {
+      const normalizedName =
+        normalizeGolfName(
+          String(
+            player.display_name ?? "",
+          ),
+        );
+
+      if (!normalizedName) {
+        continue;
+      }
+
+      const rows =
+        existingByNormalizedName.get(
+          normalizedName,
+        ) ?? [];
+
+      rows.push(player);
+
+      existingByNormalizedName.set(
+        normalizedName,
+        rows,
+      );
+    }
+
+    const playerIdByEspnId =
+      new Map<string, number>();
+
+    const rowsToUpsert:
+      typeof golfPlayerRows = [];
+
+    for (
+      const competitor of competitors
+    ) {
+      const existingById =
+        existingByEspnId.get(
+          competitor.espnPlayerId,
+        );
+
+      if (existingById) {
+        playerIdByEspnId.set(
+          competitor.espnPlayerId,
+          Number(existingById.id),
+        );
+
+        rowsToUpsert.push(
+          golfPlayerRows.find(
+            (row) =>
+              row.espn_player_id ===
+              competitor.espnPlayerId,
+          )!,
+        );
+
+        continue;
+      }
+
+      const nameMatches =
+        existingByNormalizedName.get(
+          normalizeGolfName(
+            competitor.displayName,
+          ),
+        ) ?? [];
+
+      const syntheticMatch =
+        nameMatches.length === 1 &&
+        String(
+          nameMatches[0]
+            .espn_player_id,
+        ).startsWith("pga:")
+          ? nameMatches[0]
+          : null;
+
+      if (syntheticMatch) {
+        const {
+          error:
+            reconciliationError,
+        } = await supabaseAdmin
+          .from("golf_players")
+          .update({
+            espn_player_id:
+              competitor.espnPlayerId,
+            display_name:
+              competitor.displayName,
+            short_name:
+              competitor.shortName,
+            country:
+              competitor.country,
+            country_flag_url:
+              competitor.countryFlagUrl,
+            player_url:
+              competitor.playerUrl,
+            headshot_url:
+              `https://a.espncdn.com/i/headshots/golf/players/full/` +
+              `${competitor.espnPlayerId}.png`,
+            is_active: true,
+            updated_at:
+              refreshedAt,
+          })
+          .eq(
+            "id",
+            syntheticMatch.id,
+          );
+
+        if (reconciliationError) {
+          return NextResponse.json(
+            {
+              error:
+                `Could not reconcile ${competitor.displayName} ` +
+                `from PGA TOUR to ESPN: ` +
+                reconciliationError.message,
+            },
+            { status: 500 },
+          );
+        }
+
+        playerIdByEspnId.set(
+          competitor.espnPlayerId,
+          Number(
+            syntheticMatch.id,
+          ),
+        );
+
+        continue;
+      }
+
+      rowsToUpsert.push(
+        golfPlayerRows.find(
+          (row) =>
+            row.espn_player_id ===
+            competitor.espnPlayerId,
+        )!,
+      );
+    }
+
+    let savedPlayers: GolfPlayerIdRow[] =
+      [];
+
+    if (rowsToUpsert.length > 0) {
+      const {
+        data: savedPlayersData,
+        error: playersUpsertError,
+      } = await supabaseAdmin
+        .from("golf_players")
+        .upsert(rowsToUpsert, {
+          onConflict:
+            "espn_player_id",
+        })
+        .select(
+          "id, display_name, espn_player_id",
+        );
+
+      if (playersUpsertError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to save Golf players: ` +
+              playersUpsertError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      savedPlayers =
+        (savedPlayersData ??
+          []) as unknown as GolfPlayerIdRow[];
+
+      for (
+        const player of savedPlayers
+      ) {
+        playerIdByEspnId.set(
+          player.espn_player_id,
+          Number(player.id),
+        );
+      }
+    }
 
     const unresolvedCompetitors = competitors.filter(
       (competitor) => !playerIdByEspnId.has(competitor.espnPlayerId),
