@@ -120,7 +120,7 @@ export async function notifyNextDrafter(
 ): Promise<DraftNotificationResult> {
   const { data: slate, error: slateError } = await supabaseAdmin
     .from("slates")
-    .select("id, date, start_date, end_date, sport")
+    .select("id, display_name, date, start_date, end_date, sport")
     .eq("id", slateId)
     .single();
 
@@ -333,8 +333,13 @@ export async function notifyNextDrafter(
 
   const startDate = slate.start_date ?? slate.date;
   const endDate = slate.end_date ?? slate.date;
+
   const slateLabel =
-    startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+    slate.display_name?.trim()
+      ? slate.display_name
+      : startDate === endDate
+        ? startDate
+        : `${startDate} - ${endDate}`;
 
   const templateType: NotificationTemplateType = isFinalPick
     ? "draft_final_pick"
