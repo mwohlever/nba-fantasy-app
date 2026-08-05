@@ -1159,24 +1159,21 @@ export default function GolfScoresDashboard({
                               } else {
                                 setSelectedHoleKey(holeKey);
 
-                                if (
-                                  displayRound &&
-                                  hole?.strokes !== null &&
-                                  hole?.strokes !== undefined
-                                ) {
-                                  setInlineHoleReplay({
-                                    playerId: player.id,
-                                    roundNumber:
-                                      displayRound.round_number,
-                                    holeNumber,
-                                    par,
-                                    yardage,
-                                    result:
-                                      holeResultName(
-                                        hole.relative_to_par,
-                                      ),
-                                  });
-                                }
+                                setInlineHoleReplay({
+                                  playerId: player.id,
+                                  roundNumber:
+                                    displayRound
+                                      ?.round_number ??
+                                    1,
+                                  holeNumber,
+                                  par,
+                                  yardage,
+                                  result:
+                                    holeResultName(
+                                      hole
+                                        ?.relative_to_par,
+                                    ),
+                                });
                               }
                             }}
                             onKeyDown={(event) => {
@@ -1196,37 +1193,29 @@ export default function GolfScoresDashboard({
                               } else {
                                 setSelectedHoleKey(holeKey);
 
-                                if (
-                                  displayRound &&
-                                  hole?.strokes !== null &&
-                                  hole?.strokes !== undefined
-                                ) {
-                                  setInlineHoleReplay({
-                                    playerId: player.id,
-                                    roundNumber:
-                                      displayRound.round_number,
-                                    holeNumber,
-                                    par,
-                                    yardage,
-                                    result:
-                                      holeResultName(
-                                        hole.relative_to_par,
-                                      ),
-                                  });
-                                }
+                                setInlineHoleReplay({
+                                  playerId: player.id,
+                                  roundNumber:
+                                    displayRound
+                                      ?.round_number ??
+                                    1,
+                                  holeNumber,
+                                  par,
+                                  yardage,
+                                  result:
+                                    holeResultName(
+                                      hole
+                                        ?.relative_to_par,
+                                    ),
+                                });
                               }
-                            }}
-                            onBlur={() =>
-                              setSelectedHoleKey(
-                                (current) =>
-                                  current === holeKey
-                                    ? null
-                                    : current,
-                              )
-                            }
-                          >
+                            }}                          >
                             <div
-                              className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black ${relativeClass(
+                              className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black transition ${
+                                isSelected
+                                  ? "relative z-10 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-50"
+                                  : ""
+                              } ${relativeClass(
                                 hole?.relative_to_par,
                               )}`}
                             >

@@ -1006,13 +1006,7 @@ export default function GolfLeagueView({
                   </div>
 
                   <div
-                    className={`overflow-x-auto ${
-                      selectedHoleKey?.startsWith(
-                        `${row.player.id}:${row.displayRound?.round_number ?? 0}:`,
-                      )
-                        ? "pb-28"
-                        : "pb-1"
-                    }`}
+                    className={`overflow-x-auto ${"pb-1"                    }`}
                   >
                     <div className="grid min-w-[680px] grid-cols-18 gap-1">
                       {Array.from(
@@ -1085,35 +1079,35 @@ export default function GolfLeagueView({
 
                                 setSelectedHoleKey(holeKey);
 
-                                if (
-                                  row.displayRound &&
-                                  hole?.strokes !== null &&
-                                  hole?.strokes !== undefined
-                                ) {
-                                  setInlineHoleReplay({
-                                    playerId:
-                                      row.player.id,
-                                    roundNumber:
-                                      row.displayRound
-                                        .round_number,
-                                    holeNumber,
-                                    par,
-                                    yardage: yards,
-                                    result:
-                                      resultName(
-                                        hole.relative_to_par,
-                                      ),
-                                  });
-                                }
+                                setInlineHoleReplay({
+                                  playerId:
+                                    row.player.id,
+                                  roundNumber:
+                                    row.displayRound
+                                      ?.round_number ??
+                                    1,
+                                  holeNumber,
+                                  par,
+                                  yardage: yards,
+                                  result:
+                                    resultName(
+                                      hole
+                                        ?.relative_to_par,
+                                    ),
+                                });
                               }}
                               aria-expanded={isSelected}
                               aria-label={
                                 hole?.strokes === null ||
                                 hole?.strokes === undefined
-                                  ? `Hole ${holeNumber}, not played`
+                                  ? `Open Hole ${holeNumber} layout and details`
                                   : `Open shot replay for Hole ${holeNumber}`
                               }
-                              className={`flex h-8 w-full items-center justify-center rounded-md border text-[10px] font-black ${relativeClass(
+                              className={`flex h-8 w-full items-center justify-center rounded-md border text-[10px] font-black transition ${
+                                isSelected
+                                  ? "relative z-10 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950"
+                                  : ""
+                              } ${relativeClass(
                                 hole?.relative_to_par,
                               )}`}
                             >
