@@ -154,8 +154,32 @@ export async function notifyCompletedSlate(input: {
   const endDate =
     input.slate.end_date ?? input.slate.date;
 
-  const slateLabel =
+  /*
+   * Some completion callers were created before display_name
+   * was added to the slate payload. Look it up as a fallback
+   * so Golf notifications always use the tournament name.
+   */
+  const { data: slateLabelData, error: slateLabelError } =
+    await supabaseAdmin
+      .from("slates")
+      .select("display_name")
+      .eq("id", input.slate.id)
+      .maybeSingle();
+
+  if (slateLabelError) {
+    console.error(
+      "Unable to load the friendly slate label:",
+      slateLabelError,
+    );
+  }
+
+  const friendlySlateName =
     input.slate.display_name?.trim() ||
+    slateLabelData?.display_name?.trim() ||
+    "";
+
+  const slateLabel =
+    friendlySlateName ||
     (startDate === endDate
       ? startDate
       : `${startDate} - ${endDate}`);
