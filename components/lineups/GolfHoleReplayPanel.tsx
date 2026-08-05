@@ -1,5 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
+const GolfHoleMap2D = dynamic(
+  () =>
+    import(
+      "@/components/lineups/GolfHoleMap2D"
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-xs font-semibold text-slate-400">
+        Loading ShotCast…
+      </div>
+    ),
+  },
+);
+
+
 import {
   useCallback,
   useEffect,
@@ -205,6 +222,16 @@ export default function GolfHoleReplayPanel({
   const [lastUpdatedAt, setLastUpdatedAt] =
     useState<Date | null>(null);
 
+  const [
+    selectedStrokeNumber,
+    setSelectedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    isShotCastOpen,
+    setIsShotCastOpen,
+  ] = useState(false);
+
   const loadReplay = useCallback(
     async ({
       forceRefresh = false,
@@ -269,6 +296,10 @@ export default function GolfHoleReplayPanel({
         }
 
         setReplay(result.replay);
+        setSelectedStrokeNumber(
+          result.replay.shots[0]
+            ?.strokeNumber ?? null,
+        );
         setLastUpdatedAt(new Date());
       } catch (error) {
         if (
@@ -465,6 +496,61 @@ export default function GolfHoleReplayPanel({
             </div>
           ) : null}
 
+          {slateId === 161 &&
+          holeNumber === 8 ? (
+            <div className="mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    ShotCast
+                  </div>
+
+                  <div className="mt-0.5 text-[10px] text-slate-500">
+                    Interactive aerial shot replay
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsShotCastOpen(
+                      (current) =>
+                        !current,
+                    )
+                  }
+                  aria-expanded={
+                    isShotCastOpen
+                  }
+                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+                    isShotCastOpen
+                      ? "border-slate-600 bg-slate-950 text-slate-300"
+                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+                  }`}
+                >
+                  {isShotCastOpen
+                    ? "Hide ShotCast"
+                    : "Open ShotCast"}
+                </button>
+              </div>
+
+              {isShotCastOpen ? (
+                <div className="mt-3">
+                  <GolfHoleMap2D
+                    title="Detroit Golf Club · Hole 8"
+                    imageUrl="/tourcast/rocket-classic/hole-8/terrain08-web.jpg"
+                    shots={replay.shots}
+                    selectedStrokeNumber={
+                      selectedStrokeNumber
+                    }
+                    onSelectStroke={
+                      setSelectedStrokeNumber
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="overflow-hidden rounded-xl border border-slate-800">
             {replay.shots.map(
               (shot, index) => {
@@ -479,17 +565,29 @@ export default function GolfHoleReplayPanel({
                   index ===
                     replay.shots.length - 1;
 
+                const isSelectedShot =
+                  shot.strokeNumber ===
+                  selectedStrokeNumber;
+
                 return (
-                  <article
+                  <button
+                    type="button"
                     key={shot.strokeNumber}
-                    className={`px-3 py-3 sm:px-4 ${
+                    onClick={() =>
+                      setSelectedStrokeNumber(
+                        shot.strokeNumber,
+                      )
+                    }
+                    className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
                       index > 0
                         ? "border-t border-slate-800"
                         : ""
                     } ${
-                      isCurrentBall
-                        ? "bg-amber-500/5"
-                        : ""
+                      isSelectedShot
+                        ? "bg-emerald-500/10"
+                        : isCurrentBall
+                          ? "bg-amber-500/5"
+                          : "hover:bg-slate-900/70"
                     }`}
                   >
                     <div className="flex gap-3">
@@ -569,7 +667,7 @@ export default function GolfHoleReplayPanel({
                         ) : null}
                       </div>
                     </div>
-                  </article>
+                  </button>
                 );
               },
             )}
