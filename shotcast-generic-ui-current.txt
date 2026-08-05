@@ -1,0 +1,2886 @@
+============================================================
+GOLF HOLE REPLAY PANEL
+============================================================
+"use client";
+
+import dynamic from "next/dynamic";
+const GolfHoleMap2D = dynamic(
+  () =>
+    import(
+      "@/components/lineups/GolfHoleMap2D"
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-xs font-semibold text-slate-400">
+        Loading ShotCast…
+      </div>
+    ),
+  },
+);
+
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type ReplayShot = {
+  strokeNumber: number;
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+  leftToRight: CoordinateSet | null;
+  bottomToTop: CoordinateSet | null;
+};
+
+type Replay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+  shots: ReplayShot[];
+};
+
+type ResponseBody = {
+  success?: boolean;
+  available?: boolean;
+  message?: string;
+  replay?: Replay | null;
+  error?: string;
+};
+
+type Props = {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  fallbackPar: number | null;
+  fallbackYardage: number | null;
+  fallbackResult: string;
+  onClose: () => void;
+};
+
+function titleCase(
+  value: string | null | undefined,
+) {
+  if (!value) return "";
+
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
+}
+
+function locationLabel(
+  value: string | null | undefined,
+) {
+  return value?.trim() || "Unknown lie";
+}
+
+function resultToneClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle") ||
+    normalized.includes("birdie")
+  ) {
+    return "text-emerald-300";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "text-red-400";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "text-red-300";
+  }
+
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "text-slate-200";
+  }
+
+  return "text-slate-300";
+}
+
+function resultBadgeClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle")
+  ) {
+    return "border-emerald-500 bg-emerald-700 text-white";
+  }
+
+  if (normalized.includes("birdie")) {
+    return "border-emerald-400 bg-emerald-600 text-white";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "border-red-500 bg-red-700 text-white";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "border-red-400 bg-red-600 text-white";
+  }
+
+  return "border-slate-500 bg-slate-700 text-white";
+}
+
+function shotSummary(
+  shot: ReplayShot,
+  holeResult: string,
+) {
+  const pieces: string[] = [];
+
+  if (shot.distance) {
+    pieces.push(shot.distance);
+  }
+
+  if (shot.finalStroke) {
+    pieces.push("In the hole");
+
+    if (holeResult) {
+      pieces.push(holeResult);
+    }
+  } else if (shot.distanceRemaining) {
+    pieces.push(
+      `${shot.distanceRemaining} remaining`,
+    );
+  }
+
+  return pieces.join(" · ");
+}
+
+export default function GolfHoleReplayPanel({
+  slateId,
+  playerId,
+  roundNumber,
+  holeNumber,
+  fallbackPar,
+  fallbackYardage,
+  fallbackResult,
+  onClose,
+}: Props) {
+  const [replay, setReplay] =
+    useState<Replay | null>(null);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const [lastUpdatedAt, setLastUpdatedAt] =
+    useState<Date | null>(null);
+
+  const [
+    selectedStrokeNumber,
+    setSelectedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    isShotCastOpen,
+    setIsShotCastOpen,
+  ] = useState(false);
+
+  const loadReplay = useCallback(
+    async ({
+      forceRefresh = false,
+      signal,
+    }: {
+      forceRefresh?: boolean;
+      signal?: AbortSignal;
+    } = {}) => {
+      try {
+        if (forceRefresh) {
+          setIsRefreshing(true);
+        } else {
+          setIsLoading(true);
+          setReplay(null);
+        }
+
+        setMessage("");
+
+        const query =
+          new URLSearchParams({
+            slateId: String(slateId),
+            playerId: String(playerId),
+            round: String(roundNumber),
+            hole: String(holeNumber),
+          });
+
+        if (forceRefresh) {
+          query.set(
+            "refresh",
+            String(Date.now()),
+          );
+        }
+
+        const response = await fetch(
+          `/api/golf/hole-replay?${query}`,
+          {
+            cache: "no-store",
+            signal,
+          },
+        );
+
+        const result =
+          (await response.json()) as ResponseBody;
+
+        if (!response.ok) {
+          setMessage(
+            result.error ||
+              "Unable to load shot tracking.",
+          );
+          return;
+        }
+
+        if (
+          !result.available ||
+          !result.replay
+        ) {
+          setMessage(
+            result.message ||
+              "Shot tracking is not available for this hole yet.",
+          );
+          return;
+        }
+
+        setReplay(result.replay);
+        setSelectedStrokeNumber(
+          result.replay.shots[0]
+            ?.strokeNumber ?? null,
+        );
+        setLastUpdatedAt(new Date());
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.error(
+          "Unable to load Golf hole replay",
+          error,
+        );
+
+        setMessage(
+          "Unable to load shot tracking.",
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [
+      slateId,
+      playerId,
+      roundNumber,
+      holeNumber,
+    ],
+  );
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    void loadReplay({
+      signal: controller.signal,
+    });
+
+    return () => controller.abort();
+  }, [loadReplay]);
+
+  const isHoleComplete = useMemo(
+    () =>
+      Boolean(
+        replay?.shots.some(
+          (shot) => shot.finalStroke,
+        ),
+      ),
+    [replay],
+  );
+
+  const completedResult =
+    isHoleComplete
+      ? titleCase(replay?.holeStatus) ||
+        fallbackResult
+      : "";
+
+  const displayStatus =
+    isHoleComplete
+      ? completedResult || "Complete"
+      : replay?.shots.length
+        ? "In progress"
+        : "";
+
+  const par =
+    replay?.par ?? fallbackPar;
+
+  const yardage =
+    replay?.yardage ??
+    fallbackYardage;
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-xl">
+      <header className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-400">
+              Hole replay
+            </div>
+
+            {!isHoleComplete &&
+            replay?.shots.length ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-red-300">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+                Live
+              </span>
+            ) : null}
+          </div>
+
+          <h4 className="mt-1 text-lg font-black">
+            Hole {holeNumber}
+          </h4>
+
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-400">
+            <span>
+              {par === null
+                ? "Par —"
+                : `Par ${par}`}
+            </span>
+
+            {yardage !== null ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{yardage} yards</span>
+              </>
+            ) : null}
+
+            {displayStatus ? (
+              <>
+                <span aria-hidden="true">·</span>
+
+                <strong
+                  className={
+                    isHoleComplete
+                      ? resultToneClass(
+                          completedResult,
+                        )
+                      : "text-amber-300"
+                  }
+                >
+                  {displayStatus}
+                </strong>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              void loadReplay({
+                forceRefresh: true,
+              })
+            }
+            disabled={isRefreshing}
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-700 bg-emerald-950 px-3 text-[11px] font-bold text-emerald-200 transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Refresh this hole's shot tracking"
+          >
+            {isRefreshing
+              ? "Refreshing…"
+              : "↻ Refresh hole"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800"
+            aria-label="Close hole replay"
+          >
+            ×
+          </button>
+        </div>
+      </header>
+
+      {isLoading ? (
+        <div className="px-4 py-7 text-center">
+          <div className="text-sm font-bold text-emerald-300">
+            Loading shot tracking…
+          </div>
+
+          <div className="mt-1 text-xs text-slate-500">
+            Loaded only when you open a hole.
+          </div>
+        </div>
+      ) : message && !replay ? (
+        <div className="px-4 py-6 text-center">
+          <div className="text-sm font-bold text-slate-200">
+            Shot tracking unavailable
+          </div>
+
+          <div className="mt-1 text-xs leading-5 text-slate-500">
+            {message}
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              void loadReplay({
+                forceRefresh: true,
+              })
+            }
+            disabled={isRefreshing}
+            className="mt-4 rounded-xl border border-emerald-700 bg-emerald-950 px-4 py-2 text-xs font-bold text-emerald-200 disabled:opacity-60"
+          >
+            Try again
+          </button>
+        </div>
+      ) : replay ? (
+        <div className="p-3 sm:p-4">
+          {message ? (
+            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+              {message}
+            </div>
+          ) : null}
+
+          {slateId === 161 &&
+          holeNumber === 8 ? (
+            <div className="mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    ShotCast
+                  </div>
+
+                  <div className="mt-0.5 text-[10px] text-slate-500">
+                    Interactive aerial shot replay
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsShotCastOpen(
+                      (current) =>
+                        !current,
+                    )
+                  }
+                  aria-expanded={
+                    isShotCastOpen
+                  }
+                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+                    isShotCastOpen
+                      ? "border-slate-600 bg-slate-950 text-slate-300"
+                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+                  }`}
+                >
+                  {isShotCastOpen
+                    ? "Hide ShotCast"
+                    : "Open ShotCast"}
+                </button>
+              </div>
+
+              {isShotCastOpen ? (
+                <div className="mt-3">
+                  <GolfHoleMap2D
+                    title="Detroit Golf Club · Hole 8"
+                    imageUrl="/tourcast/rocket-classic/hole-8/terrain08-web.jpg"
+                    shots={replay.shots}
+                    selectedStrokeNumber={
+                      selectedStrokeNumber
+                    }
+                    onSelectStroke={
+                      setSelectedStrokeNumber
+                    }
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="overflow-hidden rounded-xl border border-slate-800">
+            {replay.shots.map(
+              (shot, index) => {
+                const summary =
+                  shotSummary(
+                    shot,
+                    completedResult,
+                  );
+
+                const isCurrentBall =
+                  !isHoleComplete &&
+                  index ===
+                    replay.shots.length - 1;
+
+                const isSelectedShot =
+                  shot.strokeNumber ===
+                  selectedStrokeNumber;
+
+                return (
+                  <button
+                    type="button"
+                    key={shot.strokeNumber}
+                    onClick={() =>
+                      setSelectedStrokeNumber(
+                        shot.strokeNumber,
+                      )
+                    }
+                    className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+                      index > 0
+                        ? "border-t border-slate-800"
+                        : ""
+                    } ${
+                      isSelectedShot
+                        ? "bg-emerald-500/10"
+                        : isCurrentBall
+                          ? "bg-amber-500/5"
+                          : "hover:bg-slate-900/70"
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                          shot.finalStroke
+                            ? resultBadgeClass(
+                                completedResult,
+                              )
+                            : isCurrentBall
+                              ? "border-amber-500 bg-amber-950 text-amber-200"
+                              : "border-slate-600 bg-slate-800 text-slate-200"
+                        }`}
+                      >
+                        {shot.strokeNumber}
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <strong className="text-sm text-white">
+                            Shot {shot.strokeNumber}
+                          </strong>
+
+                          {summary ? (
+                            <>
+                              <span
+                                aria-hidden="true"
+                                className="text-slate-600"
+                              >
+                                ·
+                              </span>
+
+                              <span
+                                className={`text-sm font-bold ${
+                                  shot.finalStroke
+                                    ? resultToneClass(
+                                        completedResult,
+                                      )
+                                    : "text-slate-200"
+                                }`}
+                              >
+                                {summary}
+                              </span>
+                            </>
+                          ) : null}
+
+                          {isCurrentBall ? (
+                            <span className="rounded-full border border-amber-700/60 bg-amber-950 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                              Current ball
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-400">
+                          {locationLabel(
+                            shot.fromLocation,
+                          )}
+
+                          <span
+                            aria-hidden="true"
+                            className="mx-2 text-slate-600"
+                          >
+                            →
+                          </span>
+
+                          {shot.finalStroke
+                            ? "Hole"
+                            : locationLabel(
+                                shot.toLocation,
+                              )}
+                        </div>
+
+                        {shot.playByPlay ? (
+                          <div className="mt-1.5 text-[11px] leading-4 text-slate-600">
+                            {shot.playByPlay}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-600">
+            <span>
+              Shot data provided on demand from PGA TOUR tracking.
+            </span>
+
+            {lastUpdatedAt ? (
+              <span>
+                Updated{" "}
+                {lastUpdatedAt.toLocaleTimeString(
+                  [],
+                  {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  },
+                )}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+============================================================
+GOLF HOLE MAP
+============================================================
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type MapShot = {
+  strokeNumber: number;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  finalStroke: boolean;
+  bottomToTop: CoordinateSet | null;
+};
+
+type Props = {
+  title: string;
+  imageUrl: string;
+  shots: MapShot[];
+  selectedStrokeNumber: number | null;
+  onSelectStroke: (
+    strokeNumber: number,
+  ) => void;
+};
+
+type PlotPoint = {
+  x: number;
+  y: number;
+};
+
+type PlotShot = {
+  strokeNumber: number;
+  from: PlotPoint;
+  to: PlotPoint;
+  finalStroke: boolean;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+};
+
+type TransformState = {
+  scale: number;
+  x: number;
+  y: number;
+  rotation: number;
+};
+
+type PointerPosition = {
+  x: number;
+  y: number;
+};
+
+type GestureSnapshot = {
+  distance: number;
+  angle: number;
+  midpoint: PointerPosition;
+  transform: TransformState;
+};
+
+type MapCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+};
+
+const VIEWBOX_SIZE = 1000;
+const MIN_SCALE = 1;
+const MAX_SCALE = 5;
+
+/*
+ * Rocket Classic · Detroit Golf Club · Hole 8
+ *
+ * These values map PGA TOUR's normalized TourCast coordinates
+ * onto the terrain08 aerial texture. The final-stroke endpoint
+ * remains dynamic, so different round-by-round pin locations
+ * are plotted automatically.
+ */
+const HOLE_CALIBRATION: MapCalibration = {
+  xScale: 2.488624,
+  xOffset: -0.748272,
+  yScale: 0.974452,
+  yOffset: 0.127478,
+};
+
+const DEFAULT_TRANSFORM: TransformState = {
+  scale: 1,
+  x: 0,
+  y: 0,
+  rotation: 0,
+};
+
+function clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
+) {
+  return Math.min(
+    maximum,
+    Math.max(minimum, value),
+  );
+}
+
+function clampNormalized(
+  value: number,
+) {
+  return clamp(value, 0, 1);
+}
+
+function validPoint(
+  coordinate: Coordinate | null | undefined,
+): coordinate is {
+  x: number;
+  y: number;
+} {
+  return (
+    coordinate?.x !== null &&
+    coordinate?.x !== undefined &&
+    coordinate?.y !== null &&
+    coordinate?.y !== undefined &&
+    Number.isFinite(coordinate.x) &&
+    Number.isFinite(coordinate.y)
+  );
+}
+
+function toPlotPoint(
+  coordinate: {
+    x: number;
+    y: number;
+  },
+): PlotPoint {
+  const calibratedX =
+    clampNormalized(
+      coordinate.x *
+        HOLE_CALIBRATION.xScale +
+        HOLE_CALIBRATION.xOffset,
+    );
+
+  const calibratedY =
+    clampNormalized(
+      coordinate.y *
+        HOLE_CALIBRATION.yScale +
+        HOLE_CALIBRATION.yOffset,
+    );
+
+  return {
+    x: calibratedX * VIEWBOX_SIZE,
+    y: calibratedY * VIEWBOX_SIZE,
+  };
+}
+
+function curveControlPoint(
+  from: PlotPoint,
+  to: PlotPoint,
+): PlotPoint {
+  const midpointX =
+    (from.x + to.x) / 2;
+
+  const midpointY =
+    (from.y + to.y) / 2;
+
+  const distance = Math.hypot(
+    to.x - from.x,
+    to.y - from.y,
+  );
+
+  const curveAmount =
+    Math.min(42, distance * 0.075);
+
+  return {
+    x: midpointX + curveAmount,
+    y: midpointY,
+  };
+}
+
+function curvePath(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  const control =
+    curveControlPoint(from, to);
+
+  return [
+    `M ${from.x} ${from.y}`,
+    `Q ${control.x} ${control.y}`,
+    `${to.x} ${to.y}`,
+  ].join(" ");
+}
+
+function pointOnQuadraticCurve(
+  from: PlotPoint,
+  to: PlotPoint,
+  progress: number,
+): PlotPoint {
+  const control =
+    curveControlPoint(from, to);
+
+  const t = clamp(progress, 0, 1);
+  const inverse = 1 - t;
+
+  return {
+    x:
+      inverse * inverse * from.x +
+      2 * inverse * t * control.x +
+      t * t * to.x,
+    y:
+      inverse * inverse * from.y +
+      2 * inverse * t * control.y +
+      t * t * to.y,
+  };
+}
+
+function approximateCurveLength(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  let length = 0;
+  let previous = from;
+
+  for (
+    let index = 1;
+    index <= 24;
+    index += 1
+  ) {
+    const point =
+      pointOnQuadraticCurve(
+        from,
+        to,
+        index / 24,
+      );
+
+    length += Math.hypot(
+      point.x - previous.x,
+      point.y - previous.y,
+    );
+
+    previous = point;
+  }
+
+  return Math.max(length, 1);
+}
+
+function easeInOutCubic(
+  value: number,
+) {
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 -
+        Math.pow(
+          -2 * value + 2,
+          3,
+        ) /
+          2;
+}
+
+function shotDescription(
+  shot: PlotShot,
+) {
+  return [
+    shot.distance,
+    shot.finalStroke
+      ? "In the hole"
+      : shot.distanceRemaining
+        ? `${shot.distanceRemaining} remaining`
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function pointerDistance(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return Math.hypot(
+    second.x - first.x,
+    second.y - first.y,
+  );
+}
+
+function pointerAngle(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return (
+    Math.atan2(
+      second.y - first.y,
+      second.x - first.x,
+    ) *
+    (180 / Math.PI)
+  );
+}
+
+function pointerMidpoint(
+  first: PointerPosition,
+  second: PointerPosition,
+): PointerPosition {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+}
+
+export default function GolfHoleMap2D({
+  title,
+  imageUrl,
+  shots,
+  selectedStrokeNumber,
+  onSelectStroke,
+}: Props) {
+  const viewportRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const pointersRef =
+    useRef(
+      new Map<number, PointerPosition>(),
+    );
+
+  const dragStartRef =
+    useRef<{
+      pointer: PointerPosition;
+      transform: TransformState;
+    } | null>(null);
+
+  const gestureStartRef =
+    useRef<GestureSnapshot | null>(
+      null,
+    );
+
+  const [transform, setTransform] =
+    useState<TransformState>(
+      DEFAULT_TRANSFORM,
+    );
+
+  const [isInteracting, setIsInteracting] =
+    useState(false);
+
+  const [isPlaying, setIsPlaying] =
+    useState(false);
+
+  const [
+    animatedStrokeNumber,
+    setAnimatedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animationProgress,
+    setAnimationProgress,
+  ] = useState(1);
+
+  const [
+    revealedStrokeCount,
+    setRevealedStrokeCount,
+  ] = useState<number | null>(0);
+
+  const animationFrameRef =
+    useRef<number | null>(null);
+
+  const animationResolveRef =
+    useRef<(() => void) | null>(null);
+
+  const plottedShots = useMemo(
+    () =>
+      shots
+        .map((shot): PlotShot | null => {
+          if (
+            !shot.bottomToTop ||
+            !validPoint(
+              shot.bottomToTop.from,
+            ) ||
+            !validPoint(
+              shot.bottomToTop.to,
+            )
+          ) {
+            return null;
+          }
+
+          return {
+            strokeNumber:
+              shot.strokeNumber,
+            from: toPlotPoint(
+              shot.bottomToTop.from,
+            ),
+            to: toPlotPoint(
+              shot.bottomToTop.to,
+            ),
+            finalStroke:
+              shot.finalStroke,
+            distance: shot.distance,
+            distanceRemaining:
+              shot.distanceRemaining,
+            fromLocation:
+              shot.fromLocation,
+            toLocation:
+              shot.toLocation,
+          };
+        })
+        .filter(
+          (
+            shot,
+          ): shot is PlotShot =>
+            shot !== null,
+        ),
+    [shots],
+  );
+
+  const selectedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    ) ??
+    plottedShots[0] ??
+    null;
+
+  const constrainTransform =
+    useCallback(
+      (
+        next: TransformState,
+      ): TransformState => {
+        const viewport =
+          viewportRef.current;
+
+        const width =
+          viewport?.clientWidth ?? 400;
+
+        const height =
+          viewport?.clientHeight ?? 400;
+
+        const scale =
+          clamp(
+            next.scale,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        const maxX =
+          Math.max(
+            width * 0.85,
+            ((scale - 1) * width) / 2 +
+              width * 0.35,
+          );
+
+        const maxY =
+          Math.max(
+            height * 0.85,
+            ((scale - 1) * height) / 2 +
+              height * 0.35,
+          );
+
+        return {
+          scale,
+          x: clamp(
+            next.x,
+            -maxX,
+            maxX,
+          ),
+          y: clamp(
+            next.y,
+            -maxY,
+            maxY,
+          ),
+          rotation:
+            ((next.rotation + 180) %
+              360) -
+            180,
+        };
+      },
+      [],
+    );
+
+  const updateTransform =
+    useCallback(
+      (
+        updater:
+          | TransformState
+          | ((
+              current: TransformState,
+            ) => TransformState),
+      ) => {
+        setTransform((current) => {
+          const next =
+            typeof updater ===
+            "function"
+              ? updater(current)
+              : updater;
+
+          return constrainTransform(
+            next,
+          );
+        });
+      },
+      [constrainTransform],
+    );
+
+  const cancelShotAnimation =
+    useCallback(() => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+
+        animationFrameRef.current =
+          null;
+      }
+
+      animationResolveRef.current?.();
+      animationResolveRef.current =
+        null;
+
+      setAnimatedStrokeNumber(null);
+      setAnimationProgress(1);
+    }, []);
+
+  const animateShot =
+    useCallback(
+      (
+        shot: PlotShot,
+      ) =>
+        new Promise<void>((resolve) => {
+          cancelShotAnimation();
+
+          const prefersReducedMotion =
+            window.matchMedia(
+              "(prefers-reduced-motion: reduce)",
+            ).matches;
+
+          if (prefersReducedMotion) {
+            setAnimatedStrokeNumber(
+              shot.strokeNumber,
+            );
+            setAnimationProgress(1);
+
+            window.setTimeout(() => {
+              setAnimatedStrokeNumber(
+                null,
+              );
+              resolve();
+            }, 150);
+
+            return;
+          }
+
+          const duration =
+            shot.finalStroke
+              ? 1150
+              : shot.strokeNumber === 1
+                ? 2200
+                : 1550;
+
+          const startedAt =
+            performance.now();
+
+          setAnimatedStrokeNumber(
+            shot.strokeNumber,
+          );
+          setAnimationProgress(0);
+
+          animationResolveRef.current =
+            resolve;
+
+          const tick = (
+            now: number,
+          ) => {
+            const rawProgress =
+              clamp(
+                (now - startedAt) /
+                  duration,
+                0,
+                1,
+              );
+
+            setAnimationProgress(
+              easeInOutCubic(
+                rawProgress,
+              ),
+            );
+
+            if (rawProgress >= 1) {
+              animationFrameRef.current =
+                null;
+
+              animationResolveRef.current =
+                null;
+
+              window.setTimeout(() => {
+                setAnimatedStrokeNumber(
+                  null,
+                );
+                resolve();
+              }, 300);
+
+              return;
+            }
+
+            animationFrameRef.current =
+              window.requestAnimationFrame(
+                tick,
+              );
+          };
+
+          animationFrameRef.current =
+            window.requestAnimationFrame(
+              tick,
+            );
+        }),
+      [cancelShotAnimation],
+    );
+
+  const resetView =
+    useCallback(() => {
+      cancelShotAnimation();
+      setIsPlaying(false);
+      setRevealedStrokeCount(0);
+      setTransform(
+        DEFAULT_TRANSFORM,
+      );
+    }, [cancelShotAnimation]);
+
+  const focusShot =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        if (!shot) {
+          resetView();
+          return;
+        }
+
+        const viewport =
+          viewportRef.current;
+
+        if (!viewport) {
+          return;
+        }
+
+        const width =
+          viewport.clientWidth;
+
+        const height =
+          viewport.clientHeight;
+
+        const targetScale =
+          shot.strokeNumber === 1
+            ? 1.55
+            : shot.finalStroke
+              ? 3.75
+              : 3;
+
+        const targetX =
+          (shot.to.x /
+            VIEWBOX_SIZE) *
+          width;
+
+        const targetY =
+          (shot.to.y /
+            VIEWBOX_SIZE) *
+          height;
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        updateTransform({
+          scale: targetScale,
+          x:
+            (centerX - targetX) *
+            targetScale,
+          y:
+            (centerY - targetY) *
+            targetScale,
+          rotation: 0,
+        });
+      },
+      [
+        resetView,
+        updateTransform,
+      ],
+    );
+
+  function zoomAroundPoint(
+    clientX: number,
+    clientY: number,
+    scaleMultiplier: number,
+  ) {
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+    const localX =
+      clientX - rect.left;
+
+    const localY =
+      clientY - rect.top;
+
+    updateTransform(
+      (current) => {
+        const nextScale =
+          clamp(
+            current.scale *
+              scaleMultiplier,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        const ratio =
+          nextScale /
+          current.scale;
+
+        const centerX =
+          rect.width / 2;
+
+        const centerY =
+          rect.height / 2;
+
+        return {
+          ...current,
+          scale: nextScale,
+          x:
+            localX -
+            centerX -
+            (localX -
+              centerX -
+              current.x) *
+              ratio,
+          y:
+            localY -
+            centerY -
+            (localY -
+              centerY -
+              current.y) *
+              ratio,
+        };
+      },
+    );
+  }
+
+  function handleWheel(
+    event: React.WheelEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      event.deltaY < 0
+        ? 1.12
+        : 0.89,
+    );
+  }
+
+  function handleDoubleClick(
+    event: React.MouseEvent<HTMLDivElement>,
+  ) {
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      transform.scale >= 2.5
+        ? 0.5
+        : 1.75,
+    );
+  }
+
+  function handlePointerDown(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    const target =
+      event.target as Element | null;
+
+    /*
+     * Shot markers control replay selection. Do not let the
+     * pan/zoom layer capture those presses as drag gestures.
+     */
+    if (
+      target?.closest(
+        '[data-shotcast-marker="true"]',
+      )
+    ) {
+      return;
+    }
+
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    viewport.setPointerCapture(
+      event.pointerId,
+    );
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    setIsInteracting(true);
+    setIsPlaying(false);
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 1) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    } else if (
+      pointers.length >= 2
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      gestureStartRef.current = {
+        distance:
+          pointerDistance(
+            first,
+            second,
+          ),
+        angle:
+          pointerAngle(
+            first,
+            second,
+          ),
+        midpoint:
+          pointerMidpoint(
+            first,
+            second,
+          ),
+        transform: {
+          ...transform,
+        },
+      };
+
+      dragStartRef.current =
+        null;
+    }
+  }
+
+  function handlePointerMove(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    if (
+      !pointersRef.current.has(
+        event.pointerId,
+      )
+    ) {
+      return;
+    }
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (
+      pointers.length === 1 &&
+      dragStartRef.current
+    ) {
+      const pointer =
+        pointers[0];
+
+      const start =
+        dragStartRef.current;
+
+      updateTransform({
+        ...start.transform,
+        x:
+          start.transform.x +
+          pointer.x -
+          start.pointer.x,
+        y:
+          start.transform.y +
+          pointer.y -
+          start.pointer.y,
+      });
+
+      return;
+    }
+
+    if (
+      pointers.length >= 2 &&
+      gestureStartRef.current
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      const distance =
+        pointerDistance(
+          first,
+          second,
+        );
+
+      const angle =
+        pointerAngle(
+          first,
+          second,
+        );
+
+      const midpoint =
+        pointerMidpoint(
+          first,
+          second,
+        );
+
+      const start =
+        gestureStartRef.current;
+
+      const distanceRatio =
+        start.distance > 0
+          ? distance /
+            start.distance
+          : 1;
+
+      updateTransform({
+        scale:
+          start.transform.scale *
+          distanceRatio,
+        rotation:
+          start.transform.rotation +
+          angle -
+          start.angle,
+        x:
+          start.transform.x +
+          midpoint.x -
+          start.midpoint.x,
+        y:
+          start.transform.y +
+          midpoint.y -
+          start.midpoint.y,
+      });
+    }
+  }
+
+  function releasePointer(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    pointersRef.current.delete(
+      event.pointerId,
+    );
+
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId,
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId,
+      );
+    }
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 0) {
+      dragStartRef.current =
+        null;
+
+      gestureStartRef.current =
+        null;
+
+      setIsInteracting(false);
+    } else if (
+      pointers.length === 1
+    ) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+      }
+
+      animationResolveRef.current?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function runReplay() {
+      if (
+        plottedShots.length === 0
+      ) {
+        setIsPlaying(false);
+        return;
+      }
+
+      for (
+        const [
+          shotIndex,
+          shot,
+        ] of plottedShots.entries()
+      ) {
+        if (cancelled) {
+          return;
+        }
+
+        onSelectStroke(
+          shot.strokeNumber,
+        );
+
+        focusShot(shot);
+
+        /*
+         * Give the camera enough time to settle before the
+         * ball begins moving.
+         */
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              800,
+            );
+          },
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        await animateShot(shot);
+
+        if (cancelled) {
+          return;
+        }
+
+        /*
+         * Reveal the completed path and numbered landing
+         * marker only after the ball arrives.
+         */
+        setRevealedStrokeCount(
+          shotIndex + 1,
+        );
+
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              500,
+            );
+          },
+        );
+      }
+
+      if (!cancelled) {
+        /*
+         * Exit progressive-reveal mode after the complete
+         * replay so every finished path and landing marker
+         * remains available for inspection.
+         */
+        setRevealedStrokeCount(null);
+        setIsPlaying(false);
+      }
+    }
+
+    void runReplay();
+
+    return () => {
+      cancelled = true;
+      cancelShotAnimation();
+    };
+  }, [
+    animateShot,
+    cancelShotAnimation,
+    focusShot,
+    isPlaying,
+    onSelectStroke,
+    plottedShots,
+  ]);
+
+  function startPlayback() {
+    if (!plottedShots[0]) {
+      return;
+    }
+
+    cancelShotAnimation();
+    setRevealedStrokeCount(0);
+
+    onSelectStroke(
+      plottedShots[0].strokeNumber,
+    );
+
+    setIsPlaying(true);
+  }
+
+  async function selectShot(
+    strokeNumber: number,
+  ) {
+    setIsPlaying(false);
+    setRevealedStrokeCount(null);
+    cancelShotAnimation();
+
+    const shot =
+      plottedShots.find(
+        (candidate) =>
+          candidate.strokeNumber ===
+          strokeNumber,
+      ) ?? null;
+
+    if (!shot) {
+      return;
+    }
+
+    onSelectStroke(
+      strokeNumber,
+    );
+
+    focusShot(shot);
+
+    await new Promise<void>(
+      (resolve) => {
+        window.setTimeout(
+          resolve,
+          500,
+        );
+      },
+    );
+
+    await animateShot(shot);
+  }
+
+  if (plottedShots.length === 0) {
+    return null;
+  }
+
+  const cupPoint =
+    [...plottedShots]
+      .reverse()
+      .find(
+        (shot) =>
+          shot.finalStroke,
+      )?.to ??
+    plottedShots[
+      plottedShots.length - 1
+    ]?.to ??
+    null;
+
+  const animatedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        animatedStrokeNumber,
+    ) ?? null;
+
+  const animatedBallPoint =
+    animatedShot
+      ? pointOnQuadraticCurve(
+          animatedShot.from,
+          animatedShot.to,
+          animationProgress,
+        )
+      : null;
+
+  const inverseScale =
+    1 / transform.scale;
+
+  const markerRadius =
+    25 * inverseScale;
+
+  const markerStroke =
+    Math.max(
+      3,
+      7 * inverseScale,
+    );
+
+  const markerFontSize =
+    Math.max(
+      12,
+      29 * inverseScale,
+    );
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-3 py-2.5">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+            ShotCast replay
+          </div>
+
+          <div className="mt-0.5 text-xs font-bold text-slate-200">
+            {title}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={() =>
+              focusShot(
+                selectedShot,
+              )
+            }
+            className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+          >
+            Focus shot
+          </button>
+
+          <button
+            type="button"
+            onClick={startPlayback}
+            disabled={isPlaying}
+            className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+          >
+            {isPlaying
+              ? "Playing…"
+              : "▶ Play"}
+          </button>
+
+          <button
+            type="button"
+            onClick={resetView}
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-[10px] font-bold text-slate-400"
+          >
+            Reset
+          </button>
+        </div>
+      </header>
+
+      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(260px,430px)_1fr]">
+        <div className="mx-auto w-full max-w-[430px]">
+          <div
+            ref={viewportRef}
+            className={`relative aspect-square overflow-hidden rounded-xl border border-slate-700 bg-slate-950 select-none ${
+              isInteracting
+                ? "cursor-grabbing"
+                : "cursor-grab"
+            }`}
+            style={{
+              touchAction: "none",
+            }}
+            onWheel={handleWheel}
+            onDoubleClick={
+              handleDoubleClick
+            }
+            onPointerDown={
+              handlePointerDown
+            }
+            onPointerMove={
+              handlePointerMove
+            }
+            onPointerUp={
+              releasePointer
+            }
+            onPointerCancel={
+              releasePointer
+            }
+          >
+            <div
+              className="absolute inset-0 will-change-transform"
+              style={{
+                transform: [
+                  `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+                  `scale(${transform.scale})`,
+                  `rotate(${transform.rotation}deg)`,
+                ].join(" "),
+                transformOrigin:
+                  "50% 50%",
+                transition:
+                  isInteracting
+                    ? "none"
+                    : "transform 650ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            >
+              <img
+                src={imageUrl}
+                alt={`${title} aerial hole layout`}
+                draggable={false}
+                className="absolute inset-0 h-full w-full object-fill"
+              />
+
+              <svg
+                viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full"
+                role="img"
+                aria-label={`${title} shot paths`}
+              >
+                <defs>
+                  <filter
+                    id="shot-path-shadow"
+                    x="-40%"
+                    y="-40%"
+                    width="180%"
+                    height="180%"
+                  >
+                    <feDropShadow
+                      dx="0"
+                      dy="2"
+                      stdDeviation={
+                        3 *
+                        inverseScale
+                      }
+                      floodColor="#020617"
+                      floodOpacity="0.95"
+                    />
+                  </filter>
+                </defs>
+
+                {plottedShots.map(
+                  (shot) => {
+                    const isSelected =
+                      shot.strokeNumber ===
+                      selectedShot
+                        ?.strokeNumber;
+
+                    const isAnimating =
+                      shot.strokeNumber ===
+                      animatedStrokeNumber;
+
+                    const shotIndex =
+                      plottedShots.findIndex(
+                        (candidate) =>
+                          candidate.strokeNumber ===
+                          shot.strokeNumber,
+                      );
+
+                    const isRevealMode =
+                      revealedStrokeCount !==
+                      null;
+
+                    const wasRevealed =
+                      !isRevealMode ||
+                      shotIndex <
+                        revealedStrokeCount;
+
+                    const showPath =
+                      wasRevealed ||
+                      isAnimating;
+
+                    const pathLength =
+                      approximateCurveLength(
+                        shot.from,
+                        shot.to,
+                      );
+
+                    const showLandingMarker =
+                      wasRevealed ||
+                      (isAnimating &&
+                        animationProgress >=
+                          0.98);
+
+                    return (
+                      <g
+                        key={`path-${shot.strokeNumber}`}
+                        data-shotcast-marker="true"
+                        className={
+                          showLandingMarker
+                            ? "cursor-pointer"
+                            : "pointer-events-none"
+                        }
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => {
+                          event.stopPropagation();
+
+                          selectShot(
+                            shot.strokeNumber,
+                          );
+                        }}
+                      >
+                        <circle
+                          cx={shot.to.x}
+                          cy={shot.to.y}
+                          r={
+                            markerRadius *
+                            1.85
+                          }
+                          fill="transparent"
+                          stroke="transparent"
+                          pointerEvents="all"
+                        />
+
+                        <path
+                          d={curvePath(
+                            shot.from,
+                            shot.to,
+                          )}
+                          fill="none"
+                          visibility={
+                            showPath
+                              ? "visible"
+                              : "hidden"
+                          }
+                          stroke={
+                            isSelected
+                              ? "#facc15"
+                              : "#f8fafc"
+                          }
+                          strokeWidth={
+                            (isSelected
+                              ? 11
+                              : 7) *
+                            inverseScale
+                          }
+                          strokeLinecap="round"
+                          strokeDasharray={
+                            isAnimating
+                              ? `${pathLength} ${pathLength}`
+                              : isSelected
+                                ? "0"
+                                : `${18 * inverseScale} ${13 * inverseScale}`
+                          }
+                          strokeDashoffset={
+                            isAnimating
+                              ? pathLength *
+                                (1 -
+                                  animationProgress)
+                              : 0
+                          }
+                          opacity={
+                            isSelected
+                              ? 1
+                              : 0.75
+                          }
+                          filter="url(#shot-path-shadow)"
+                        />
+
+                        {showLandingMarker ? (
+                          <>
+                            <circle
+                              cx={shot.to.x}
+                              cy={shot.to.y}
+                              r={
+                                isSelected
+                                  ? markerRadius *
+                                    1.2
+                                  : markerRadius
+                              }
+                              fill={
+                                shot.finalStroke
+                                  ? "#10b981"
+                                  : isSelected
+                                    ? "#facc15"
+                                    : "#0f172a"
+                              }
+                              stroke="#ffffff"
+                              strokeWidth={
+                                markerStroke
+                              }
+                              filter="url(#shot-path-shadow)"
+                            />
+
+                            <text
+                              x={shot.to.x}
+                              y={
+                                shot.to.y +
+                                markerFontSize *
+                                  0.34
+                              }
+                              textAnchor="middle"
+                              fontSize={
+                                markerFontSize
+                              }
+                              fontWeight="900"
+                              fill={
+                                isSelected &&
+                                !shot.finalStroke
+                                  ? "#111827"
+                                  : "#ffffff"
+                              }
+                              className="pointer-events-none select-none"
+                            >
+                              {
+                                shot.strokeNumber
+                              }
+                            </text>
+                          </>
+                        ) : null}
+                      </g>
+                    );
+                  },
+                )}
+
+                {cupPoint ? (
+                  <g className="pointer-events-none">
+                    <line
+                      x1={cupPoint.x}
+                      y1={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      x2={cupPoint.x}
+                      y2={
+                        cupPoint.y -
+                        48 * inverseScale
+                      }
+                      stroke="#f8fafc"
+                      strokeWidth={
+                        5 * inverseScale
+                      }
+                      strokeLinecap="round"
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <path
+                      d={[
+                        `M ${cupPoint.x} ${
+                          cupPoint.y -
+                          48 * inverseScale
+                        }`,
+                        `L ${
+                          cupPoint.x +
+                          35 * inverseScale
+                        } ${
+                          cupPoint.y -
+                          36 * inverseScale
+                        }`,
+                        `L ${cupPoint.x} ${
+                          cupPoint.y -
+                          24 * inverseScale
+                        }`,
+                        "Z",
+                      ].join(" ")}
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        2.5 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <ellipse
+                      cx={cupPoint.x}
+                      cy={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      rx={
+                        10 *
+                        inverseScale
+                      }
+                      ry={
+                        4 *
+                        inverseScale
+                      }
+                      fill="#020617"
+                      opacity="0.85"
+                    />
+                  </g>
+                ) : null}
+
+                {animatedBallPoint ? (
+                  <g className="pointer-events-none">
+                    <circle
+                      cx={
+                        animatedBallPoint.x
+                      }
+                      cy={
+                        animatedBallPoint.y
+                      }
+                      r={
+                        13 *
+                        inverseScale
+                      }
+                      fill="#ffffff"
+                      stroke="#0f172a"
+                      strokeWidth={
+                        4 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <circle
+                      cx={
+                        animatedBallPoint.x -
+                        3 *
+                          inverseScale
+                      }
+                      cy={
+                        animatedBallPoint.y -
+                        3 *
+                          inverseScale
+                      }
+                      r={
+                        2.2 *
+                        inverseScale
+                      }
+                      fill="#94a3b8"
+                    />
+                  </g>
+                ) : null}
+
+                {plottedShots[0] ? (
+                  <g>
+                    <circle
+                      cx={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      cy={
+                        plottedShots[0]
+                          .from.y
+                      }
+                      r={
+                        21 *
+                        inverseScale
+                      }
+                      fill="#0f172a"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        markerStroke
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <text
+                      x={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      y={
+                        plottedShots[0]
+                          .from.y +
+                        markerFontSize *
+                          0.3
+                      }
+                      textAnchor="middle"
+                      fontSize={
+                        markerFontSize *
+                        0.86
+                      }
+                      fontWeight="900"
+                      fill="#ffffff"
+                      className="pointer-events-none select-none"
+                    >
+                      T
+                    </text>
+                  </g>
+                ) : null}
+              </svg>
+            </div>
+
+            <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              Drag · Pinch · Twist · Scroll
+            </div>
+
+            <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              {transform.scale.toFixed(
+                1,
+              )}
+              × ·{" "}
+              {Math.round(
+                transform.rotation,
+              )}
+              °
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          {selectedShot ? (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black ${
+                    selectedShot.finalStroke
+                      ? "border-emerald-400 bg-emerald-700 text-white"
+                      : "border-yellow-400 bg-yellow-300 text-slate-950"
+                  }`}
+                >
+                  {
+                    selectedShot.strokeNumber
+                  }
+                </span>
+
+                <div className="min-w-0">
+                  <div className="text-sm font-black text-white">
+                    Shot{" "}
+                    {
+                      selectedShot.strokeNumber
+                    }
+                  </div>
+
+                  <div className="mt-0.5 text-xs font-bold text-slate-300">
+                    {shotDescription(
+                      selectedShot,
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+                {selectedShot.fromLocation ||
+                  "Unknown lie"}
+
+                <span className="mx-2 text-slate-600">
+                  →
+                </span>
+
+                {selectedShot.finalStroke
+                  ? "Hole"
+                  : selectedShot.toLocation ||
+                    "Unknown lie"}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-3 text-[10px] leading-4 text-slate-500">
+            Press Play to reveal the round shot by shot. Drag or pinch for a closer view, and twist with two fingers to rotate the course.
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+============================================================
+GOLF HOLE REPLAY API
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+};
+
+type PlayerRow = {
+  id: number;
+  display_name: string;
+};
+
+function positiveInteger(value: string | null) {
+  if (!value) return null;
+
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "private, no-store, max-age=0",
+  };
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const slateId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+    const playerId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "playerId",
+      ),
+    );
+
+    const roundNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "round",
+      ),
+    );
+
+    const holeNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "hole",
+      ),
+    );
+
+    if (
+      !slateId ||
+      !playerId ||
+      !roundNumber ||
+      roundNumber > 4 ||
+      !holeNumber ||
+      holeNumber > 18
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid slateId, playerId, round, and hole parameters are required.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const [
+      {
+        data: slateData,
+        error: slateError,
+      },
+      {
+        data: playerData,
+        error: playerError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select(
+          "id, sport, display_name, start_date",
+        )
+        .eq("id", slateId)
+        .single(),
+
+      supabaseAdmin
+        .from("golf_players")
+        .select("id, display_name")
+        .eq("id", playerId)
+        .single(),
+    ]);
+
+    if (
+      slateError ||
+      !slateData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf slate was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    if (
+      playerError ||
+      !playerData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf player was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const slate =
+      slateData as SlateRow;
+
+    const player =
+      playerData as PlayerRow;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "Hole replay is only available for Golf slates.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const tournamentName =
+      slate.display_name?.trim();
+
+    if (!tournamentName) {
+      return NextResponse.json(
+        {
+          error:
+            "This Golf slate does not have a tournament name.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const year = Number(
+      slate.start_date.slice(0, 4),
+    );
+
+    const refreshToken =
+      request.nextUrl.searchParams.get(
+        "refresh",
+      );
+
+    const replay =
+      await fetchGolfHoleReplay({
+        year,
+        tournamentName,
+        playerName:
+          player.display_name,
+        roundNumber,
+        holeNumber,
+        cacheBust:
+          refreshToken?.trim() || null,
+      });
+
+    if (!replay) {
+      return NextResponse.json(
+        {
+          success: true,
+          available: false,
+          message:
+            "Shot tracking is not available for this hole yet.",
+          replay: null,
+        },
+        {
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        available:
+          replay.shots.length > 0,
+        replay,
+      },
+      {
+        headers: noStoreHeaders(),
+      },
+    );
+  } catch (error) {
+    console.error(
+      "Unable to load Golf hole replay",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load hole replay.",
+      },
+      {
+        status: 502,
+        headers: noStoreHeaders(),
+      },
+    );
+  }
+}
+
+============================================================
+GOLF TOURNAMENT VIEW REFERENCES
+============================================================
+
+============================================================
+WYNDHAM MANIFEST HOLE 1 + HOLE 8
+============================================================
+
+HOLE 1
+{
+  "holeNumber": 1,
+  "available": true,
+  "detailsId": "R2026013-752-1",
+  "statsAvailability": "SHOT_DETAILS",
+  "par": 4,
+  "yards": 418,
+  "rank": 0,
+  "scoringAverageDiff": null,
+  "aboutThisHole": "A good starting hole on the outgoing nine of modest difficulty. Theleft bunker will challenge the direct line to the green. A tee shotnear the right edge of the bunker provides an open approach to thegreen.",
+  "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole1.jpg",
+  "localImageUrl": "/shotcast/R2026013/holes/hole-01.jpg",
+  "imageContentType": "image/jpeg",
+  "imageBytes": 535434,
+  "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg",
+  "localAlignedMapUrl": null,
+  "alignedMapBytes": null,
+  "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg failed (404): ",
+  "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg",
+  "localAlignedGreenUrl": null,
+  "alignedGreenBytes": null,
+  "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg failed (404): ",
+  "tourcast": {
+    "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=1&cid=752&gv=no",
+    "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=1&cid=752&gv=no",
+    "urlWeb": "true"
+  },
+  "assets": {
+    "leftToRight": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_full_1",
+      "resolvedUrl": null
+    },
+    "bottomToTop": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_full_1",
+      "resolvedUrl": null
+    },
+    "greenLeftToRight": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_green_1",
+      "resolvedUrl": null
+    },
+    "greenBottomToTop": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_green_1",
+      "resolvedUrl": null
+    }
+  },
+  "legacyAssets": {
+    "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_1.jpg",
+    "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg",
+    "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg",
+    "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_1.jpg"
+  },
+  "pinGreen": {
+    "leftToRight": {
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 0,
+      "tourcastY": 0,
+      "tourcastZ": 0
+    },
+    "bottomToTop": {
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 0,
+      "tourcastY": 0,
+      "tourcastZ": 0
+    }
+  }
+}
+
+HOLE 8
+{
+  "holeNumber": 8,
+  "available": true,
+  "detailsId": "R2026013-752-8",
+  "statsAvailability": "SHOT_DETAILS",
+  "par": 4,
+  "yards": 374,
+  "rank": 0,
+  "scoringAverageDiff": null,
+  "aboutThisHole": "A tee shot that challenges the diagonal creek finds the shortestroute to the hole. However, the player who is near the bunkers onthe right will have the best angle.",
+  "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole8.jpg",
+  "localImageUrl": "/shotcast/R2026013/holes/hole-08.jpg",
+  "imageContentType": "image/jpeg",
+  "imageBytes": 320698,
+  "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg",
+  "localAlignedMapUrl": null,
+  "alignedMapBytes": null,
+  "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg failed (404): ",
+  "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg",
+  "localAlignedGreenUrl": null,
+  "alignedGreenBytes": null,
+  "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg failed (404): ",
+  "tourcast": {
+    "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=8&cid=752&gv=no",
+    "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=8&cid=752&gv=no",
+    "urlWeb": "true"
+  },
+  "assets": {
+    "leftToRight": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_full_8",
+      "resolvedUrl": null
+    },
+    "bottomToTop": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_full_8",
+      "resolvedUrl": null
+    },
+    "greenLeftToRight": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_green_8",
+      "resolvedUrl": null
+    },
+    "greenBottomToTop": {
+      "imageOrg": "pga-tour",
+      "imagePath": "/holes_2026_r_013_752_overhead_green_8",
+      "resolvedUrl": null
+    }
+  },
+  "legacyAssets": {
+    "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_8.jpg",
+    "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg",
+    "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg",
+    "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_8.jpg"
+  },
+  "pinGreen": {
+    "leftToRight": {
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 0,
+      "tourcastY": 0,
+      "tourcastZ": 0
+    },
+    "bottomToTop": {
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 0,
+      "tourcastY": 0,
+      "tourcastZ": 0
+    }
+  }
+}

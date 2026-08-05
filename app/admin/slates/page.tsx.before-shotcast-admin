@@ -33,24 +33,6 @@ type GolfFieldSummary = {
   lastRefreshedAt: string | null;
 };
 
-type ShotCastSummary = {
-  tournamentId: string;
-  generatedAt: string | null;
-  updatedAt: string | null;
-  summary: {
-    holesRequested?: number;
-    holesAvailable?: number;
-    localImages?: number;
-    alignedMaps?: number;
-    alignedGreens?: number;
-    holesFailed?: number;
-  } | null;
-  course: {
-    id?: string;
-    name?: string | null;
-  } | null;
-};
-
 type SlateDetailResponse = {
   success: boolean;
   slate: SlateListRow;
@@ -123,18 +105,6 @@ export default function AdminSlatesPage() {
   const [golfField, setGolfField] =
     useState<GolfFieldSummary | null>(null);
 
-  const [
-    shotCast,
-    setShotCast,
-  ] = useState<ShotCastSummary | null>(
-    null,
-  );
-
-  const [
-    shotCastTournamentId,
-    setShotCastTournamentId,
-  ] = useState("");
-
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isReseeding, setIsReseeding] = useState(false);
@@ -144,11 +114,6 @@ export default function AdminSlatesPage() {
   const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
     useState(false);
 
-  const [
-    isRefreshingShotCast,
-    setIsRefreshingShotCast,
-  ] = useState(false);
-
   const [message, setMessage] = useState("");
 
   const isBusy =
@@ -156,16 +121,13 @@ export default function AdminSlatesPage() {
     isReseeding ||
     isDeleting ||
     isRefreshingGolfField ||
-    isSyncingGolfRankings ||
-    isRefreshingShotCast;
+    isSyncingGolfRankings;
 
   useEffect(() => {
     setSelectedSlateId("");
     setSelectedSlate(null);
     setTeams([]);
     setGolfField(null);
-    setShotCast(null);
-    setShotCastTournamentId("");
     void loadSlates();
   }, [selectedSport]);
 
@@ -252,146 +214,11 @@ export default function AdminSlatesPage() {
 
       setTeams(normalizeTeamOrder(safeResult.teams ?? []));
       setGolfField(safeResult.golfField ?? null);
-
-      if (safeResult.slate.sport === "golf") {
-        void loadShotCastStatus(
-          slateId,
-        );
-      } else {
-        setShotCast(null);
-        setShotCastTournamentId("");
-      }
     } catch (error) {
       console.error(error);
       setMessage(
         "Something went wrong while loading slate details.",
       );
-    }
-  }
-
-  async function loadShotCastStatus(
-    slateId: number,
-  ) {
-    try {
-      const response = await fetch(
-        `/api/admin/golf/shotcast?slateId=${slateId}`,
-        {
-          cache: "no-store",
-        },
-      );
-
-      const result =
-        await response.json();
-
-      if (!response.ok) {
-        setShotCast(null);
-        return;
-      }
-
-      const nextShotCast =
-        result.shotcast as
-          | ShotCastSummary
-          | null;
-
-      setShotCast(nextShotCast);
-
-      if (
-        nextShotCast
-          ?.tournamentId
-      ) {
-        setShotCastTournamentId(
-          nextShotCast
-            .tournamentId,
-        );
-      }
-    } catch (error) {
-      console.error(error);
-      setShotCast(null);
-    }
-  }
-
-  async function handleRefreshShotCast() {
-    if (!selectedSlateId) {
-      return;
-    }
-
-    const tournamentId =
-      shotCastTournamentId
-        .trim()
-        .toUpperCase();
-
-    if (
-      !/^R\d{7}$/.test(
-        tournamentId,
-      )
-    ) {
-      setMessage(
-        "Enter a PGA tournament ID such as R2026013.",
-      );
-
-      return;
-    }
-
-    try {
-      setIsRefreshingShotCast(true);
-      setMessage("");
-
-      const response = await fetch(
-        "/api/admin/golf/shotcast",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            slateId:
-              Number(
-                selectedSlateId,
-              ),
-            tournamentId,
-            round: 1,
-          }),
-          cache: "no-store",
-        },
-      );
-
-      const result =
-        await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          result.error ||
-            "Failed to refresh ShotCast assets.",
-        );
-
-        return;
-      }
-
-      await loadShotCastStatus(
-        Number(selectedSlateId),
-      );
-
-      setMessage(
-        `ShotCast refreshed: ${
-          result.summary
-            ?.localImages ?? 0
-        } photos, ${
-          result.summary
-            ?.alignedMaps ?? 0
-        } aligned maps, ${
-          result.summary
-            ?.alignedGreens ?? 0
-        } aligned greens.`,
-      );
-    } catch (error) {
-      console.error(error);
-
-      setMessage(
-        "Something went wrong while refreshing ShotCast.",
-      );
-    } finally {
-      setIsRefreshingShotCast(false);
     }
   }
 
@@ -923,7 +750,7 @@ export default function AdminSlatesPage() {
               </div>
 
               {selectedSlate.sport === "golf" ? (
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="rounded-2xl border border-emerald-800 bg-emerald-950/35 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
                       Tournament Field
@@ -991,32 +818,6 @@ export default function AdminSlatesPage() {
                       )}
                     </div>
                   </div>
-
-                  <div className="rounded-2xl border border-violet-800 bg-violet-950/35 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
-                      ShotCast Assets
-                    </div>
-
-                    <div className="mt-2 text-sm font-bold text-white">
-                      {shotCast
-                        ? `${
-                            shotCast.summary
-                              ?.localImages ?? 0
-                          } photos · ${
-                            shotCast.summary
-                              ?.alignedMaps ?? 0
-                          } maps`
-                        : "Not imported"}
-                    </div>
-
-                    <div className="mt-1 text-xs text-violet-200/80">
-                      {shotCast
-                        ? formatRefreshTime(
-                            shotCast.updatedAt,
-                          )
-                        : "Enter the PGA ID below"}
-                    </div>
-                  </div>
                 </div>
               ) : null}
 
@@ -1048,61 +849,6 @@ export default function AdminSlatesPage() {
                     placeholder="BOS, CLE, NYK"
                     className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-sky-400"
                   />
-                </div>
-              ) : null}
-
-              {selectedSlate.sport === "golf" ? (
-                <div className="rounded-2xl border border-violet-800 bg-violet-950/25 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
-                    ShotCast Course Importer
-                  </div>
-
-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-                    <div className="flex-1">
-                      <label
-                        htmlFor="shotcast-tournament-id"
-                        className="mb-1 block text-xs font-medium text-slate-300"
-                      >
-                        PGA Tournament ID
-                      </label>
-
-                      <input
-                        id="shotcast-tournament-id"
-                        type="text"
-                        value={
-                          shotCastTournamentId
-                        }
-                        onChange={(event) =>
-                          setShotCastTournamentId(
-                            event.target.value
-                              .toUpperCase(),
-                          )
-                        }
-                        disabled={isBusy}
-                        placeholder="R2026013"
-                        className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm font-bold uppercase text-white outline-none focus:border-violet-400"
-                      />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void handleRefreshShotCast()
-                      }
-                      disabled={isBusy}
-                      className="rounded-xl border border-violet-500 bg-violet-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-600 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isRefreshingShotCast
-                        ? "Refreshing ShotCast..."
-                        : shotCast
-                          ? "Refresh ShotCast"
-                          : "Import ShotCast"}
-                    </button>
-                  </div>
-
-                  <div className="mt-2 text-xs leading-5 text-slate-400">
-                    Refreshes all 18 hole layouts and checks whether PGA has published coordinate-aligned maps.
-                  </div>
                 </div>
               ) : null}
 

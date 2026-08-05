@@ -1,0 +1,2054 @@
+===== DRAFT NOTIFICATION REFERENCES =====
+app/api/lineups/route.ts:734:          "Lineup saved, but the next-drafter notification failed",
+app/api/admin/notification-history/route.ts:324:          slateLabel: row.slate_id
+app/api/player-league-profile/route.ts:58:  slateLabel: string;
+app/api/player-league-profile/route.ts:441:        const slateLabel =
+app/api/player-league-profile/route.ts:466:          slateLabel,
+app/api/team-profile/route.ts:210:          slateLabel: formatSlateDateLabel(slate),
+app/api/team-profile/route.ts:338:                slateLabel: row.slateLabel,
+app/api/team-profile/route.ts:558:              slateLabel: bestPickEver.slateLabel,
+app/api/notification-preferences/route.ts:47:        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+app/api/notification-preferences/route.ts:73:        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+app/api/notification-preferences/route.ts:147:        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+app/admin/notification-templates/page.tsx:94:      "{slateLabel}": "Rocket Classic",
+app/admin/notification-templates/page.tsx:113:    "{slateLabel}": "2026-07-18",
+app/admin/notification-templates/page.tsx:300:      const draft = drafts[notificationType];
+app/admin/notification-history/page.tsx:40:  slateLabel: string | null;
+app/admin/notification-history/page.tsx:61:  if (row.notification_type === "draft_turn") {
+app/admin/notification-history/page.tsx:65:  if (row.notification_type === "draft_final_pick") {
+app/admin/notification-history/page.tsx:192:        row.slateLabel,
+app/admin/notification-history/page.tsx:401:                      {row.slateLabel ?? "—"}
+app/page.tsx:114:  slateLabel: string;
+app/page.tsx:1087:                                  slateLabel:
+app/page.tsx:1173:                                    slateLabel:
+app/page.tsx:1545:                                  slateLabel: latestSlate
+app/page.tsx:1690:                    {slateRosterModal.slateLabel}
+app/page.tsx:1884:                    {slateRosterModal.slateLabel}
+app/profile/page.tsx:88:      slateLabel: string;
+app/profile/page.tsx:92:      slateLabel: string;
+app/profile/page.tsx:97:      slateLabel: string;
+app/profile/page.tsx:129:    slateLabel: string;
+app/profile/page.tsx:793:                              label={notificationCopy.draftLabel}
+app/profile/page.tsx:794:                              description={notificationCopy.draftDescription}
+app/profile/page.tsx:796:                                notificationPreferences.draftTurnEnabled
+lib/draftNotifications.ts:305:    .select("notifications_enabled, draft_turn_enabled")
+lib/draftNotifications.ts:327:      reason: "Draft-turn notifications are disabled for the next drafter.",
+lib/draftNotifications.ts:336:  const slateLabel =
+lib/draftNotifications.ts:363:    slateLabel,
+lib/notificationTemplates.ts:7:    notificationType: "draft_turn",
+lib/notificationTemplates.ts:16:      "{slateLabel}",
+lib/notificationTemplates.ts:24:    notificationType: "draft_final_pick",
+lib/notificationTemplates.ts:25:    titleTemplate: "{sportEmoji} Last pick!",
+lib/notificationTemplates.ts:33:      "{slateLabel}",
+lib/notificationTemplates.ts:53:      "{slateLabel}",
+lib/notificationTemplates.ts:70:      "{slateLabel}",
+lib/notificationTemplates.ts:77:      "You won the {slateLabel} slate with {teamScore} fantasy points!",
+lib/notificationTemplates.ts:87:      "{slateLabel}",
+lib/notificationTemplates.ts:122:    notificationType: "draft_turn",
+lib/notificationTemplates.ts:125:      "{teamName}, it's your turn to make your {roundOrdinal} pick in {slateLabel}.",
+lib/notificationTemplates.ts:131:      "{slateLabel}",
+lib/notificationTemplates.ts:138:    notificationType: "draft_final_pick",
+lib/notificationTemplates.ts:139:    titleTemplate: "{sportEmoji} Last pick!",
+lib/notificationTemplates.ts:141:      "{teamName}, you're on the clock for the final pick of {slateLabel}.",
+lib/notificationTemplates.ts:147:      "{slateLabel}",
+lib/notificationTemplates.ts:157:      "{playerName} completed Round {roundNumber} at {slateLabel} with a score of {roundScore}.",
+lib/notificationTemplates.ts:167:      "{slateLabel}",
+lib/notificationTemplates.ts:174:      "{winnerName} wins {slateLabel} with {winningScore}. You finished {finishOrdinal} with {teamScore}.",
+lib/notificationTemplates.ts:184:      "{slateLabel}",
+lib/notificationTemplates.ts:191:      "You won {slateLabel} with a score of {teamScore}!",
+lib/notificationTemplates.ts:201:      "{slateLabel}",
+lib/playerFinishedNotifications.ts:189:  const slateLabel =
+lib/playerFinishedNotifications.ts:232:      slateLabel,
+lib/playerFinishedNotifications.ts:282:        slateLabel,
+lib/slateCompleteNotifications.ts:157:  const slateLabel =
+lib/slateCompleteNotifications.ts:201:      slateLabel,
+lib/slateCompleteNotifications.ts:245:        slateLabel,
+lib/profile/golfTeamProfile.ts:560:        slateLabel:
+lib/profile/golfTeamProfile.ts:753:          slateLabel:
+components/lineups/PlayerModal.tsx:52:    slateLabel: string;
+components/lineups/PlayerModal.tsx:584:                  key={`${row.slateId ?? row.slateLabel}-${index}`}
+components/lineups/PlayerModal.tsx:592:                    {formatSlateLabel(row.slateLabel)}
+components/TeamProfileModal.tsx:60:      slateLabel: string;
+components/TeamProfileModal.tsx:64:      slateLabel: string;
+components/TeamProfileModal.tsx:69:      slateLabel: string;
+components/TeamProfileModal.tsx:101:    slateLabel: string;
+components/profile/ProfileOverview.tsx:44:      slateLabel: string;
+components/profile/ProfileOverview.tsx:48:      slateLabel: string;
+components/profile/ProfileOverview.tsx:53:      slateLabel: string;
+components/profile/ProfileOverview.tsx:60:    slateLabel: string;
+components/profile/ProfileOverview.tsx:299:            detail={career.bestSlate?.slateLabel}
+components/profile/ProfileOverview.tsx:362:                    {row.slateLabel}
+components/profile/ProfileOverview.tsx:458:            secondary={career.bestPickEver?.slateLabel}
+components/profile/GolfProfileOverview.tsx:28:      slateLabel: string;
+components/profile/GolfProfileOverview.tsx:55:    slateLabel: string;
+components/profile/GolfProfileOverview.tsx:329:                    .slateLabel
+components/profile/GolfProfileOverview.tsx:413:                      {row.slateLabel}
+
+===== NOTIFICATION FILES =====
+lib/draftNotifications.ts
+lib/notifications.ts
+lib/notificationTemplates.ts
+lib/playerFinishedNotifications.ts
+lib/slateCompleteNotifications.ts
+
+===== LINEUPS ROUTE =====
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { notifyNextDrafter } from "@/lib/draftNotifications";
+import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
+
+type Sport = "nba" | "nfl" | "golf";
+
+type SaveLineupBody = {
+  slateId?: number;
+  teamId?: number;
+  playerIds?: number[];
+  notifyNextDrafter?: boolean;
+};
+
+type LineupRow = {
+  id: number;
+  team_id: number;
+  slate_id: number;
+};
+
+type LineupPlayerRow = {
+  lineup_id: number;
+  player_id: number;
+  projected_fantasy_points: number | null;
+};
+
+type SlateRow = {
+  id: number;
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  sport: string | null;
+};
+
+type RosterSlotRow = {
+  position: string;
+  slot_count: number;
+};
+
+type NormalizedPlayer = {
+  id: number;
+  name: string;
+  position: string;
+  isActive: boolean;
+};
+
+function normalizeSport(value: string | null | undefined): Sport {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
+function getSlateSeason(date: string | null | undefined) {
+  const year = date?.slice(0, 4);
+  return year && /^\d{4}$/.test(year) ? year : "2026";
+}
+
+function getDefaultRosterSlots(sport: Sport): RosterSlotRow[] {
+  if (sport === "nfl") {
+    return [
+      { position: "QB", slot_count: 1 },
+      { position: "RB", slot_count: 2 },
+      { position: "WR", slot_count: 2 },
+      { position: "TE", slot_count: 1 },
+    ];
+  }
+
+  if (sport === "golf") {
+    return [{ position: "GOLFER", slot_count: 4 }];
+  }
+
+  return [
+    { position: "G", slot_count: 2 },
+    { position: "F/C", slot_count: 3 },
+  ];
+}
+
+async function loadPlayersForSport(
+  sport: Sport,
+  playerIds: number[],
+): Promise<{
+  players: NormalizedPlayer[];
+  error: string | null;
+}> {
+  if (playerIds.length === 0) {
+    return {
+      players: [],
+      error: null,
+    };
+  }
+
+  if (sport === "nfl") {
+    const { data, error } = await supabaseAdmin
+      .from("players_nfl")
+      .select("id, name, position, is_active")
+      .in("id", playerIds);
+
+    if (error) {
+      return {
+        players: [],
+        error: error.message,
+      };
+    }
+
+    return {
+      players: (data ?? []).map((player: any) => ({
+        id: Number(player.id),
+        name: player.name,
+        position: player.position,
+        isActive: Boolean(player.is_active),
+      })),
+      error: null,
+    };
+  }
+
+  if (sport === "golf") {
+    const { data, error } = await supabaseAdmin
+      .from("golf_players")
+      .select("id, display_name, is_active")
+      .in("id", playerIds);
+
+    if (error) {
+      return {
+        players: [],
+        error: error.message,
+      };
+    }
+
+    return {
+      players: (data ?? []).map((player: any) => ({
+        id: Number(player.id),
+        name: player.display_name,
+        position: "GOLFER",
+        isActive: Boolean(player.is_active),
+      })),
+      error: null,
+    };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("players")
+    .select("id, name, position_group, is_active")
+    .in("id", playerIds);
+
+  if (error) {
+    return {
+      players: [],
+      error: error.message,
+    };
+  }
+
+  return {
+    players: (data ?? []).map((player: any) => ({
+      id: Number(player.id),
+      name: player.name,
+      position: player.position_group,
+      isActive: Boolean(player.is_active),
+    })),
+    error: null,
+  };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const slateIdParam = request.nextUrl.searchParams.get("slateId");
+
+    if (!slateIdParam) {
+      return NextResponse.json(
+        { error: "slateId is required." },
+        { status: 400 },
+      );
+    }
+
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "slateId must be a valid number." },
+        { status: 400 },
+      );
+    }
+
+    const { data: lineups, error: lineupsError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, team_id, slate_id")
+        .eq("slate_id", slateId);
+
+    if (lineupsError) {
+      return NextResponse.json(
+        {
+          error: `Failed to load lineups: ${lineupsError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineups = (lineups ?? []) as LineupRow[];
+
+    if (safeLineups.length === 0) {
+      return NextResponse.json({
+        success: true,
+        lineups: [],
+      });
+    }
+
+    const lineupIds = safeLineups.map((lineup) => lineup.id);
+
+    const { data: lineupPlayers, error: lineupPlayersError } =
+      await supabaseAdmin
+        .from("lineup_players")
+        .select(
+          "lineup_id, player_id, projected_fantasy_points",
+        )
+        .in("lineup_id", lineupIds);
+
+    if (lineupPlayersError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load lineup players: ` +
+            lineupPlayersError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineupPlayers =
+      (lineupPlayers ?? []) as LineupPlayerRow[];
+
+    const grouped = safeLineups.map((lineup) => {
+      const lineupPlayerRows = safeLineupPlayers.filter(
+        (lineupPlayer) =>
+          lineupPlayer.lineup_id === lineup.id,
+      );
+
+      const hasCompleteProjectionSnapshot =
+        lineupPlayerRows.length > 0 &&
+        lineupPlayerRows.every(
+          (lineupPlayer) =>
+            lineupPlayer.projected_fantasy_points !== null &&
+            Number.isFinite(
+              Number(
+                lineupPlayer.projected_fantasy_points,
+              ),
+            ),
+        );
+
+      return {
+        team_id: lineup.team_id,
+        player_ids: lineupPlayerRows.map(
+          (lineupPlayer) => lineupPlayer.player_id,
+        ),
+        pregame_projected_points:
+          hasCompleteProjectionSnapshot
+            ? Number(
+                lineupPlayerRows
+                  .reduce(
+                    (sum, lineupPlayer) =>
+                      sum +
+                      Number(
+                        lineupPlayer.projected_fantasy_points ??
+                          0,
+                      ),
+                    0,
+                  )
+                  .toFixed(1),
+              )
+            : null,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      lineups: grouped,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Unexpected server error while loading lineups.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 },
+      );
+    }
+
+    const body = (await request.json()) as SaveLineupBody;
+
+    const slateId = Number(body.slateId);
+    const teamId = Number(body.teamId);
+    const playerIds = Array.isArray(body.playerIds)
+      ? body.playerIds.map(Number)
+      : [];
+
+    if (
+      !Number.isInteger(slateId) ||
+      slateId <= 0 ||
+      !Number.isInteger(teamId) ||
+      teamId <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "slateId, teamId, and playerIds are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      playerIds.some(
+        (playerId) =>
+          !Number.isInteger(playerId) || playerId <= 0,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Every player ID must be a valid positive integer.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const uniquePlayerIds = [...new Set(playerIds)];
+
+    if (uniquePlayerIds.length !== playerIds.length) {
+      return NextResponse.json(
+        {
+          error:
+            "Duplicate players are not allowed in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: slateData, error: slateError } =
+      await supabaseAdmin
+        .from("slates")
+        .select(
+          "id, date, start_date, end_date, is_locked, sport",
+        )
+        .eq("id", slateId)
+        .single();
+
+    if (slateError || !slateData) {
+      return NextResponse.json(
+        { error: "Selected slate not found." },
+        { status: 404 },
+      );
+    }
+
+    const slate = slateData as unknown as SlateRow;
+    const sport = normalizeSport(slate.sport);
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This slate is locked. Lineups can no longer be edited.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: rosterSlotData, error: rosterSlotError } =
+      await supabaseAdmin
+        .from("roster_slots")
+        .select("position, slot_count")
+        .eq("sport", sport)
+        .order("display_order", { ascending: true });
+
+    if (rosterSlotError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load ${sport.toUpperCase()} roster rules: ` +
+            rosterSlotError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const rosterSlots =
+      (rosterSlotData ?? []).length > 0
+        ? ((rosterSlotData ?? []) as RosterSlotRow[])
+        : getDefaultRosterSlots(sport);
+
+    const totalRosterSlots = rosterSlots.reduce(
+      (sum, slot) => sum + Number(slot.slot_count),
+      0,
+    );
+
+    if (uniquePlayerIds.length > totalRosterSlots) {
+      return NextResponse.json(
+        {
+          error:
+            `A ${sport.toUpperCase()} lineup can include at most ` +
+            `${totalRosterSlots} players.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: team, error: teamError } =
+      await supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq("id", teamId)
+        .single();
+
+    if (teamError || !team) {
+      return NextResponse.json(
+        { error: "Selected team not found." },
+        { status: 404 },
+      );
+    }
+
+    const {
+      players,
+      error: playersError,
+    } = await loadPlayersForSport(
+      sport,
+      uniquePlayerIds,
+    );
+
+    if (
+      playersError ||
+      players.length !== uniquePlayerIds.length
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            playersError
+              ? `Failed to validate selected players: ${playersError}`
+              : "One or more selected players were not found.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const inactivePlayers = players.filter(
+      (player) => !player.isActive,
+    );
+
+    if (inactivePlayers.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Inactive players cannot be used in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (sport === "golf" && uniquePlayerIds.length > 0) {
+      const { data: eventPlayers, error: eventPlayersError } =
+        await supabaseAdmin
+          .from("golf_event_players")
+          .select("player_id")
+          .eq("slate_id", slateId)
+          .in("player_id", uniquePlayerIds);
+
+      if (eventPlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to validate the tournament field: " +
+              eventPlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const tournamentPlayerIds = new Set(
+        (eventPlayers ?? []).map((row) =>
+          Number(row.player_id),
+        ),
+      );
+
+      const unavailablePlayers = players.filter(
+        (player) =>
+          !tournamentPlayerIds.has(player.id),
+      );
+
+      if (unavailablePlayers.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              `${unavailablePlayers[0].name} is not in ` +
+              "this tournament field.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const positionCounts = new Map<string, number>();
+
+    players.forEach((player) => {
+      positionCounts.set(
+        player.position,
+        (positionCounts.get(player.position) ?? 0) + 1,
+      );
+    });
+
+    for (const slot of rosterSlots) {
+      const count =
+        positionCounts.get(slot.position) ?? 0;
+
+      if (count > Number(slot.slot_count)) {
+        return NextResponse.json(
+          {
+            error:
+              `A ${sport.toUpperCase()} lineup can have at most ` +
+              `${slot.slot_count} ${slot.position}.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const allowedPositions = new Set(
+      rosterSlots.map((slot) => slot.position),
+    );
+
+    const invalidPositionPlayer = players.find(
+      (player) =>
+        !allowedPositions.has(player.position),
+    );
+
+    if (invalidPositionPlayer) {
+      return NextResponse.json(
+        {
+          error:
+            `${invalidPositionPlayer.name} does not fit a valid ` +
+            `${sport.toUpperCase()} roster slot.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: existingLineup, error: existingLineupError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, lineup_players(player_id)")
+        .eq("team_id", teamId)
+        .eq("slate_id", slateId)
+        .maybeSingle();
+
+    if (existingLineupError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to check existing lineup: ` +
+            existingLineupError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const previousPlayerIds = existingLineup
+      ? (
+          (
+            existingLineup as {
+              lineup_players?:
+                | { player_id: number }[]
+                | null;
+            }
+          ).lineup_players ?? []
+        ).map((row) => Number(row.player_id))
+      : [];
+
+    const previousPlayerIdSet =
+      new Set(previousPlayerIds);
+
+    const nextPlayerIdSet =
+      new Set(uniquePlayerIds);
+
+    const addedPlayerIds = uniquePlayerIds.filter(
+      (playerId) =>
+        !previousPlayerIdSet.has(playerId),
+    );
+
+    const removedPlayerIds = previousPlayerIds.filter(
+      (playerId) =>
+        !nextPlayerIdSet.has(playerId),
+    );
+
+    const isSingleNewDraftPick =
+      addedPlayerIds.length === 1 &&
+      removedPlayerIds.length === 0 &&
+      uniquePlayerIds.length ===
+        previousPlayerIds.length + 1;
+
+    let lineupId: number;
+
+    if (existingLineup) {
+      lineupId = Number(existingLineup.id);
+    } else {
+      const { data: createdLineup, error: lineupError } =
+        await supabaseAdmin
+          .from("lineups")
+          .insert({
+            team_id: teamId,
+            slate_id: slateId,
+          })
+          .select("id")
+          .single();
+
+      if (lineupError || !createdLineup) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to create lineup: ` +
+              (lineupError?.message ??
+                "Unknown error"),
+          },
+          { status: 500 },
+        );
+      }
+
+      lineupId = Number(createdLineup.id);
+    }
+
+    if (removedPlayerIds.length > 0) {
+      const { error: removePlayersError } =
+        await supabaseAdmin
+          .from("lineup_players")
+          .delete()
+          .eq("lineup_id", lineupId)
+          .in("player_id", removedPlayerIds);
+
+      if (removePlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to remove lineup players: ` +
+              removePlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    if (addedPlayerIds.length > 0) {
+      const season = getSlateSeason(
+        slate.start_date ?? slate.date,
+      );
+
+      const projectionResult =
+        sport === "nba"
+          ? await getPlayerProjectionsForSeason(season)
+          : null;
+
+      const projectedAt = new Date().toISOString();
+
+      const addedRows = addedPlayerIds.map((playerId) => {
+        const projection =
+          projectionResult?.projections[playerId];
+
+        const projectedFantasyPoints =
+          projection?.projection === null ||
+          projection?.projection === undefined
+            ? null
+            : Number(projection.projection);
+
+        return {
+          lineup_id: lineupId,
+          player_id: playerId,
+          projected_fantasy_points:
+            projectedFantasyPoints,
+          projection_confidence:
+            projection?.confidence ?? null,
+          projection_source:
+            projection?.source ??
+            (sport === "nba" ? "none" : sport),
+          projected_at:
+            projectedFantasyPoints !== null
+              ? projectedAt
+              : null,
+        };
+      });
+
+      const { error: insertPlayersError } =
+        await supabaseAdmin
+          .from("lineup_players")
+          .insert(addedRows);
+
+      if (insertPlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to save newly added lineup players: ` +
+              insertPlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    const notificationRequested =
+      currentUser.role === "admin"
+        ? body.notifyNextDrafter === true
+        : true;
+
+    let draftNotification = null;
+
+    if (
+      isSingleNewDraftPick &&
+      notificationRequested
+    ) {
+      try {
+        draftNotification =
+          await notifyNextDrafter(slateId);
+      } catch (notificationError) {
+        console.error(
+          "Lineup saved, but the next-drafter notification failed",
+          notificationError,
+        );
+
+        draftNotification = {
+          sent: 0,
+          failed: 1,
+          skipped: true,
+          reason:
+            "Notification failed after the lineup was saved.",
+        };
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Lineup saved successfully.",
+      lineupId,
+      slateId: slate.id,
+      slateDate: slate.date,
+      sport,
+      teamName: team.name,
+      addedPlayerIds,
+      removedPlayerIds,
+      draftNotification,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Unexpected server error while saving the lineup.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+===== POSSIBLE DRAFT ROUTES =====
+
+------------------------------------------------------------
+FILE: app/api/lineups/route.ts
+------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { notifyNextDrafter } from "@/lib/draftNotifications";
+import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
+
+type Sport = "nba" | "nfl" | "golf";
+
+type SaveLineupBody = {
+  slateId?: number;
+  teamId?: number;
+  playerIds?: number[];
+  notifyNextDrafter?: boolean;
+};
+
+type LineupRow = {
+  id: number;
+  team_id: number;
+  slate_id: number;
+};
+
+type LineupPlayerRow = {
+  lineup_id: number;
+  player_id: number;
+  projected_fantasy_points: number | null;
+};
+
+type SlateRow = {
+  id: number;
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  sport: string | null;
+};
+
+type RosterSlotRow = {
+  position: string;
+  slot_count: number;
+};
+
+type NormalizedPlayer = {
+  id: number;
+  name: string;
+  position: string;
+  isActive: boolean;
+};
+
+function normalizeSport(value: string | null | undefined): Sport {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
+function getSlateSeason(date: string | null | undefined) {
+  const year = date?.slice(0, 4);
+  return year && /^\d{4}$/.test(year) ? year : "2026";
+}
+
+function getDefaultRosterSlots(sport: Sport): RosterSlotRow[] {
+  if (sport === "nfl") {
+    return [
+      { position: "QB", slot_count: 1 },
+      { position: "RB", slot_count: 2 },
+      { position: "WR", slot_count: 2 },
+      { position: "TE", slot_count: 1 },
+    ];
+  }
+
+  if (sport === "golf") {
+    return [{ position: "GOLFER", slot_count: 4 }];
+  }
+
+  return [
+    { position: "G", slot_count: 2 },
+    { position: "F/C", slot_count: 3 },
+  ];
+}
+
+async function loadPlayersForSport(
+  sport: Sport,
+  playerIds: number[],
+): Promise<{
+  players: NormalizedPlayer[];
+  error: string | null;
+}> {
+  if (playerIds.length === 0) {
+    return {
+      players: [],
+      error: null,
+    };
+  }
+
+  if (sport === "nfl") {
+    const { data, error } = await supabaseAdmin
+      .from("players_nfl")
+      .select("id, name, position, is_active")
+      .in("id", playerIds);
+
+    if (error) {
+      return {
+        players: [],
+        error: error.message,
+      };
+    }
+
+    return {
+      players: (data ?? []).map((player: any) => ({
+        id: Number(player.id),
+        name: player.name,
+        position: player.position,
+        isActive: Boolean(player.is_active),
+      })),
+      error: null,
+    };
+  }
+
+  if (sport === "golf") {
+    const { data, error } = await supabaseAdmin
+      .from("golf_players")
+      .select("id, display_name, is_active")
+      .in("id", playerIds);
+
+    if (error) {
+      return {
+        players: [],
+        error: error.message,
+      };
+    }
+
+    return {
+      players: (data ?? []).map((player: any) => ({
+        id: Number(player.id),
+        name: player.display_name,
+        position: "GOLFER",
+        isActive: Boolean(player.is_active),
+      })),
+      error: null,
+    };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("players")
+    .select("id, name, position_group, is_active")
+    .in("id", playerIds);
+
+  if (error) {
+    return {
+      players: [],
+      error: error.message,
+    };
+  }
+
+  return {
+    players: (data ?? []).map((player: any) => ({
+      id: Number(player.id),
+      name: player.name,
+      position: player.position_group,
+      isActive: Boolean(player.is_active),
+    })),
+    error: null,
+  };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const slateIdParam = request.nextUrl.searchParams.get("slateId");
+
+    if (!slateIdParam) {
+      return NextResponse.json(
+        { error: "slateId is required." },
+        { status: 400 },
+      );
+    }
+
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "slateId must be a valid number." },
+        { status: 400 },
+      );
+    }
+
+    const { data: lineups, error: lineupsError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, team_id, slate_id")
+        .eq("slate_id", slateId);
+
+    if (lineupsError) {
+      return NextResponse.json(
+        {
+          error: `Failed to load lineups: ${lineupsError.message}`,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineups = (lineups ?? []) as LineupRow[];
+
+    if (safeLineups.length === 0) {
+      return NextResponse.json({
+        success: true,
+        lineups: [],
+      });
+    }
+
+    const lineupIds = safeLineups.map((lineup) => lineup.id);
+
+    const { data: lineupPlayers, error: lineupPlayersError } =
+      await supabaseAdmin
+        .from("lineup_players")
+        .select(
+          "lineup_id, player_id, projected_fantasy_points",
+        )
+        .in("lineup_id", lineupIds);
+
+    if (lineupPlayersError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load lineup players: ` +
+            lineupPlayersError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const safeLineupPlayers =
+      (lineupPlayers ?? []) as LineupPlayerRow[];
+
+    const grouped = safeLineups.map((lineup) => {
+      const lineupPlayerRows = safeLineupPlayers.filter(
+        (lineupPlayer) =>
+          lineupPlayer.lineup_id === lineup.id,
+      );
+
+      const hasCompleteProjectionSnapshot =
+        lineupPlayerRows.length > 0 &&
+        lineupPlayerRows.every(
+          (lineupPlayer) =>
+            lineupPlayer.projected_fantasy_points !== null &&
+            Number.isFinite(
+              Number(
+                lineupPlayer.projected_fantasy_points,
+              ),
+            ),
+        );
+
+      return {
+        team_id: lineup.team_id,
+        player_ids: lineupPlayerRows.map(
+          (lineupPlayer) => lineupPlayer.player_id,
+        ),
+        pregame_projected_points:
+          hasCompleteProjectionSnapshot
+            ? Number(
+                lineupPlayerRows
+                  .reduce(
+                    (sum, lineupPlayer) =>
+                      sum +
+                      Number(
+                        lineupPlayer.projected_fantasy_points ??
+                          0,
+                      ),
+                    0,
+                  )
+                  .toFixed(1),
+              )
+            : null,
+      };
+    });
+
+    return NextResponse.json({
+      success: true,
+      lineups: grouped,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Unexpected server error while loading lineups.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 },
+      );
+    }
+
+    const body = (await request.json()) as SaveLineupBody;
+
+    const slateId = Number(body.slateId);
+    const teamId = Number(body.teamId);
+    const playerIds = Array.isArray(body.playerIds)
+      ? body.playerIds.map(Number)
+      : [];
+
+    if (
+      !Number.isInteger(slateId) ||
+      slateId <= 0 ||
+      !Number.isInteger(teamId) ||
+      teamId <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "slateId, teamId, and playerIds are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      playerIds.some(
+        (playerId) =>
+          !Number.isInteger(playerId) || playerId <= 0,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Every player ID must be a valid positive integer.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const uniquePlayerIds = [...new Set(playerIds)];
+
+    if (uniquePlayerIds.length !== playerIds.length) {
+      return NextResponse.json(
+        {
+          error:
+            "Duplicate players are not allowed in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: slateData, error: slateError } =
+      await supabaseAdmin
+        .from("slates")
+        .select(
+          "id, date, start_date, end_date, is_locked, sport",
+        )
+        .eq("id", slateId)
+        .single();
+
+    if (slateError || !slateData) {
+      return NextResponse.json(
+        { error: "Selected slate not found." },
+        { status: 404 },
+      );
+    }
+
+    const slate = slateData as unknown as SlateRow;
+    const sport = normalizeSport(slate.sport);
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This slate is locked. Lineups can no longer be edited.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: rosterSlotData, error: rosterSlotError } =
+      await supabaseAdmin
+        .from("roster_slots")
+        .select("position, slot_count")
+        .eq("sport", sport)
+        .order("display_order", { ascending: true });
+
+    if (rosterSlotError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load ${sport.toUpperCase()} roster rules: ` +
+            rosterSlotError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const rosterSlots =
+      (rosterSlotData ?? []).length > 0
+        ? ((rosterSlotData ?? []) as RosterSlotRow[])
+        : getDefaultRosterSlots(sport);
+
+    const totalRosterSlots = rosterSlots.reduce(
+      (sum, slot) => sum + Number(slot.slot_count),
+      0,
+    );
+
+    if (uniquePlayerIds.length > totalRosterSlots) {
+      return NextResponse.json(
+        {
+          error:
+            `A ${sport.toUpperCase()} lineup can include at most ` +
+            `${totalRosterSlots} players.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: team, error: teamError } =
+      await supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq("id", teamId)
+        .single();
+
+    if (teamError || !team) {
+      return NextResponse.json(
+        { error: "Selected team not found." },
+        { status: 404 },
+      );
+    }
+
+    const {
+      players,
+      error: playersError,
+    } = await loadPlayersForSport(
+      sport,
+      uniquePlayerIds,
+    );
+
+    if (
+      playersError ||
+      players.length !== uniquePlayerIds.length
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            playersError
+              ? `Failed to validate selected players: ${playersError}`
+              : "One or more selected players were not found.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const inactivePlayers = players.filter(
+      (player) => !player.isActive,
+    );
+
+    if (inactivePlayers.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Inactive players cannot be used in a lineup.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (sport === "golf" && uniquePlayerIds.length > 0) {
+      const { data: eventPlayers, error: eventPlayersError } =
+        await supabaseAdmin
+          .from("golf_event_players")
+          .select("player_id")
+          .eq("slate_id", slateId)
+          .in("player_id", uniquePlayerIds);
+
+      if (eventPlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to validate the tournament field: " +
+              eventPlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const tournamentPlayerIds = new Set(
+        (eventPlayers ?? []).map((row) =>
+          Number(row.player_id),
+        ),
+      );
+
+      const unavailablePlayers = players.filter(
+        (player) =>
+          !tournamentPlayerIds.has(player.id),
+      );
+
+      if (unavailablePlayers.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              `${unavailablePlayers[0].name} is not in ` +
+              "this tournament field.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const positionCounts = new Map<string, number>();
+
+    players.forEach((player) => {
+      positionCounts.set(
+        player.position,
+        (positionCounts.get(player.position) ?? 0) + 1,
+      );
+    });
+
+    for (const slot of rosterSlots) {
+      const count =
+        positionCounts.get(slot.position) ?? 0;
+
+      if (count > Number(slot.slot_count)) {
+        return NextResponse.json(
+          {
+            error:
+              `A ${sport.toUpperCase()} lineup can have at most ` +
+              `${slot.slot_count} ${slot.position}.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const allowedPositions = new Set(
+      rosterSlots.map((slot) => slot.position),
+    );
+
+    const invalidPositionPlayer = players.find(
+      (player) =>
+        !allowedPositions.has(player.position),
+    );
+
+    if (invalidPositionPlayer) {
+      return NextResponse.json(
+        {
+          error:
+            `${invalidPositionPlayer.name} does not fit a valid ` +
+            `${sport.toUpperCase()} roster slot.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const { data: existingLineup, error: existingLineupError } =
+      await supabaseAdmin
+        .from("lineups")
+        .select("id, lineup_players(player_id)")
+        .eq("team_id", teamId)
+        .eq("slate_id", slateId)
+        .maybeSingle();
+
+    if (existingLineupError) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to check existing lineup: ` +
+            existingLineupError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const previousPlayerIds = existingLineup
+      ? (
+          (
+            existingLineup as {
+              lineup_players?:
+                | { player_id: number }[]
+                | null;
+            }
+          ).lineup_players ?? []
+        ).map((row) => Number(row.player_id))
+      : [];
+
+    const previousPlayerIdSet =
+      new Set(previousPlayerIds);
+
+    const nextPlayerIdSet =
+      new Set(uniquePlayerIds);
+
+    const addedPlayerIds = uniquePlayerIds.filter(
+      (playerId) =>
+        !previousPlayerIdSet.has(playerId),
+    );
+
+    const removedPlayerIds = previousPlayerIds.filter(
+      (playerId) =>
+        !nextPlayerIdSet.has(playerId),
+    );
+
+    const isSingleNewDraftPick =
+      addedPlayerIds.length === 1 &&
+      removedPlayerIds.length === 0 &&
+      uniquePlayerIds.length ===
+        previousPlayerIds.length + 1;
+
+    let lineupId: number;
+
+    if (existingLineup) {
+      lineupId = Number(existingLineup.id);
+    } else {
+      const { data: createdLineup, error: lineupError } =
+        await supabaseAdmin
+          .from("lineups")
+          .insert({
+            team_id: teamId,
+            slate_id: slateId,
+          })
+          .select("id")
+          .single();
+
+      if (lineupError || !createdLineup) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to create lineup: ` +
+              (lineupError?.message ??
+                "Unknown error"),
+          },
+          { status: 500 },
+        );
+      }
+
+      lineupId = Number(createdLineup.id);
+    }
+
+    if (removedPlayerIds.length > 0) {
+      const { error: removePlayersError } =
+        await supabaseAdmin
+          .from("lineup_players")
+          .delete()
+          .eq("lineup_id", lineupId)
+          .in("player_id", removedPlayerIds);
+
+      if (removePlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to remove lineup players: ` +
+              removePlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    if (addedPlayerIds.length > 0) {
+      const season = getSlateSeason(
+        slate.start_date ?? slate.date,
+      );
+
+      const projectionResult =
+        sport === "nba"
+          ? await getPlayerProjectionsForSeason(season)
+          : null;
+
+      const projectedAt = new Date().toISOString();
+
+      const addedRows = addedPlayerIds.map((playerId) => {
+        const projection =
+          projectionResult?.projections[playerId];
+
+        const projectedFantasyPoints =
+          projection?.projection === null ||
+          projection?.projection === undefined
+            ? null
+            : Number(projection.projection);
+
+        return {
+          lineup_id: lineupId,
+          player_id: playerId,
+          projected_fantasy_points:
+            projectedFantasyPoints,
+          projection_confidence:
+            projection?.confidence ?? null,
+          projection_source:
+            projection?.source ??
+            (sport === "nba" ? "none" : sport),
+          projected_at:
+            projectedFantasyPoints !== null
+              ? projectedAt
+              : null,
+        };
+      });
+
+      const { error: insertPlayersError } =
+        await supabaseAdmin
+          .from("lineup_players")
+          .insert(addedRows);
+
+      if (insertPlayersError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to save newly added lineup players: ` +
+              insertPlayersError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    const notificationRequested =
+      currentUser.role === "admin"
+        ? body.notifyNextDrafter === true
+        : true;
+
+    let draftNotification = null;
+
+    if (
+      isSingleNewDraftPick &&
+      notificationRequested
+    ) {
+      try {
+        draftNotification =
+          await notifyNextDrafter(slateId);
+      } catch (notificationError) {
+        console.error(
+          "Lineup saved, but the next-drafter notification failed",
+          notificationError,
+        );
+
+        draftNotification = {
+          sent: 0,
+          failed: 1,
+          skipped: true,
+          reason:
+            "Notification failed after the lineup was saved.",
+        };
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Lineup saved successfully.",
+      lineupId,
+      slateId: slate.id,
+      slateDate: slate.date,
+      sport,
+      teamName: team.name,
+      addedPlayerIds,
+      removedPlayerIds,
+      draftNotification,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        error:
+          "Unexpected server error while saving the lineup.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: lib/draftNotifications.ts
+------------------------------------------------------------
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type { PushResult } from "@/lib/push";
+import { sendLoggedNotification } from "@/lib/notifications";
+import {
+  getNotificationTemplate,
+  renderNotificationTemplate,
+  type NotificationTemplateType,
+} from "@/lib/notificationTemplates";
+import { getSportConfig } from "@/lib/sports";
+
+type SlateTeamRow = {
+  team_id: number;
+  draft_order: number;
+  teams:
+    | {
+        name: string;
+      }
+    | {
+        name: string;
+      }[]
+    | null;
+};
+
+type LineupRow = {
+  team_id: number;
+  lineup_players:
+    | {
+        player_id: number;
+      }[]
+    | null;
+};
+
+type AppUserRow = {
+  id: string;
+  display_name: string;
+};
+
+type NotificationPreferenceRow = {
+  notifications_enabled: boolean;
+  draft_turn_enabled: boolean;
+};
+
+type PlayerPositionRow = {
+  id: number;
+  position: string;
+};
+
+type RosterSlotConfig = {
+  position: string;
+  slot_count: number;
+};
+
+export type DraftNotificationResult = PushResult & {
+  nextTeamId?: number;
+  nextTeamName?: string;
+};
+
+function getRelatedTeamName(row: SlateTeamRow) {
+  if (Array.isArray(row.teams)) {
+    return row.teams[0]?.name ?? `Team ${row.team_id}`;
+  }
+
+  return row.teams?.name ?? `Team ${row.team_id}`;
+}
+
+function getOrdinal(value: number) {
+  const remainder100 = value % 100;
+
+  if (remainder100 >= 11 && remainder100 <= 13) {
+    return `${value}th`;
+  }
+
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
+function getRemainingNeeds(
+  positionCounts: Map<string, number>,
+  rosterSlots: RosterSlotConfig[]
+) {
+  const parts: string[] = [];
+
+  for (const slot of rosterSlots) {
+    const have = positionCounts.get(slot.position) ?? 0;
+    const need = Math.max(0, slot.slot_count - have);
+
+    if (need > 0) {
+      parts.push(`${need} ${slot.position}`);
+    }
+  }
+
+  return parts.length > 0 ? parts.join(" and ") : "roster complete";
+}
+
+function getFinalPositionNeed(
+  positionCounts: Map<string, number>,
+  rosterSlots: RosterSlotConfig[]
+) {
+  for (const slot of rosterSlots) {
+    const have = positionCounts.get(slot.position) ?? 0;
+
+    if (have < slot.slot_count) {
+      return slot.position;
+    }
+  }
+
+  return "any open slot";
+}
+
+export async function notifyNextDrafter(
+  slateId: number
+): Promise<DraftNotificationResult> {
+  const { data: slate, error: slateError } = await supabaseAdmin
+    .from("slates")
+    .select("id, date, start_date, end_date, sport")
+    .eq("id", slateId)
+    .single();
+
+  if (slateError || !slate) {
+    throw new Error(slateError?.message ?? "Slate not found.");
+  }
+
+  const sport =
+    slate.sport === "nfl"
+      ? "nfl"
+      : slate.sport === "golf"
+        ? "golf"
+        : "nba";
+
+  const { data: rosterSlotsData, error: rosterSlotsError } =
+    await supabaseAdmin
+      .from("roster_slots")
+      .select("position, slot_count")
+      .eq("sport", sport)
+      .order("display_order", { ascending: true });
+
+  if (rosterSlotsError) {
+    throw new Error(
+      `Failed to load roster slot configuration: ${rosterSlotsError.message}`
+    );
+  }
+
+  const rosterSlots = (rosterSlotsData ?? []) as RosterSlotConfig[];
+  const totalSlots = rosterSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
+  );
+
+  const { data: slateTeams, error: slateTeamsError } = await supabaseAdmin
+    .from("slate_teams")
+    .select("team_id, draft_order, teams(name)")
+    .eq("slate_id", slateId)
+    .eq("is_participating", true)
+    .order("draft_order", { ascending: true });
+
+  if (slateTeamsError) {
+    throw new Error(
+      `Failed to load the draft order: ${slateTeamsError.message}`
+    );
+  }
+
+  const orderedTeams = ((slateTeams ?? []) as SlateTeamRow[])
+    .map((row) => ({
+      ...row,
+      team_id: Number(row.team_id),
+      draft_order: Number(row.draft_order),
+    }))
+    .sort((a, b) => a.draft_order - b.draft_order);
+
+  if (orderedTeams.length === 0) {
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "No participating teams found.",
+      devices: [],
+    };
+  }
+
+  const { data: lineups, error: lineupsError } = await supabaseAdmin
+    .from("lineups")
+    .select("team_id, lineup_players(player_id)")
+    .eq("slate_id", slateId);
+
+  if (lineupsError) {
+    throw new Error(`Failed to load draft picks: ${lineupsError.message}`);
+  }
+
+  const safeLineups = (lineups ?? []) as LineupRow[];
+
+  const totalDrafted = safeLineups.reduce(
+    (sum, lineup) => sum + Number(lineup.lineup_players?.length ?? 0),
+    0
+  );
+
+  const totalTeams = orderedTeams.length;
+  const maxPicks = totalTeams * totalSlots;
+
+  if (totalDrafted >= maxPicks) {
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "Draft is complete.",
+      devices: [],
+    };
+  }
+
+  const roundIndex = Math.floor(totalDrafted / totalTeams);
+  const roundNumber = roundIndex + 1;
+  const overallPickNumber = totalDrafted + 1;
+  const pickInRound = totalDrafted % totalTeams;
+
+  const nextTeam =
+    roundIndex % 2 === 0
+      ? orderedTeams[pickInRound]
+      : orderedTeams[totalTeams - 1 - pickInRound];
+
+  if (!nextTeam) {
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "Unable to determine the next drafter.",
+      devices: [],
+    };
+  }
+
+  const nextTeamName = getRelatedTeamName(nextTeam);
+
+  const nextTeamLineup =
+    safeLineups.find((lineup) => lineup.team_id === nextTeam.team_id) ?? null;
+
+  const nextTeamPlayerIds =
+    nextTeamLineup?.lineup_players?.map((row) => Number(row.player_id)) ?? [];
+
+  const positionCounts = new Map<string, number>();
+
+  if (nextTeamPlayerIds.length > 0 && sport !== "golf") {
+    const playersTable =
+      sport === "nfl" ? "players_nfl" : "players";
+
+    const positionColumn =
+      sport === "nfl" ? "position" : "position_group";
+
+    const { data: rosterPlayers, error: rosterPlayersError } =
+      await supabaseAdmin
+        .from(playersTable)
+        .select(`id, position:${positionColumn}`)
+        .in("id", nextTeamPlayerIds);
+
+    if (rosterPlayersError) {
+      throw new Error(
+        `Failed to inspect the next team's roster: ${rosterPlayersError.message}`
+      );
+    }
+
+    for (const player of (rosterPlayers ?? []) as PlayerPositionRow[]) {
+      positionCounts.set(
+        player.position,
+        (positionCounts.get(player.position) ?? 0) + 1
+      );
+    }
+  }
+
+  const isFinalPick = nextTeamPlayerIds.length === totalSlots - 1;
+
+  const { data: appUser, error: appUserError } = await supabaseAdmin
+    .from("app_users")
+    .select("id, display_name")
+    .eq("team_id", nextTeam.team_id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (appUserError) {
+    throw new Error(
+      `Failed to find the next drafter: ${appUserError.message}`
+    );
+  }
+
+  const user = appUser as AppUserRow | null;
+
+  if (!user) {
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "The next team does not have an active league account.",
+      devices: [],
+      nextTeamId: nextTeam.team_id,
+      nextTeamName,
+    };
+  }
+
+  const { data: preferences, error: preferencesError } = await supabaseAdmin
+    .from("notification_preferences")
+    .select("notifications_enabled, draft_turn_enabled")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (preferencesError) {
+    throw new Error(
+      `Failed to load notification preferences: ${preferencesError.message}`
+    );
+  }
+
+  const userPreferences =
+    preferences as NotificationPreferenceRow | null;
+
+  if (
+    userPreferences &&
+    (!userPreferences.notifications_enabled ||
+      !userPreferences.draft_turn_enabled)
+  ) {
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "Draft-turn notifications are disabled for the next drafter.",
+      devices: [],
+      nextTeamId: nextTeam.team_id,
+      nextTeamName,
+    };
+  }
+
+  const startDate = slate.start_date ?? slate.date;
+  const endDate = slate.end_date ?? slate.date;
+  const slateLabel =
+    startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+
+  const templateType: NotificationTemplateType = isFinalPick
+    ? "draft_final_pick"
+    : "draft_turn";
+
+  const notificationTemplate =
+    await getNotificationTemplate(templateType, sport);
+
+  const picksRemaining = Math.max(
+    0,
+    totalSlots - nextTeamPlayerIds.length
+  );
+
+  const positionNeed =
+    sport === "golf"
+      ? ""
+      : getFinalPositionNeed(positionCounts, rosterSlots);
+
+  const remainingNeeds =
+    sport === "golf"
+      ? ""
+      : getRemainingNeeds(positionCounts, rosterSlots);
+
+  const templateValues = {
+    teamName: nextTeamName,
+    slateLabel,
+    roundNumber,
+    roundOrdinal: getOrdinal(roundNumber),
+    overallPickNumber,
+    positionNeed,
+    remainingNeeds,
+    sportEmoji: getSportConfig(sport).emoji,
+  };
+
+  const renderedTitle = renderNotificationTemplate(
+    notificationTemplate.titleTemplate,
+    templateValues
+  );
+
+  const renderedBody = renderNotificationTemplate(
+    notificationTemplate.bodyTemplate,
+    templateValues
+  );
+
+  const result = await sendLoggedNotification({
+    notificationType: templateType,
+    userId: user.id,
+    teamId: nextTeam.team_id,
+    slateId,
+    title: renderedTitle,
+    body: renderedBody,
+    url: `/lineups/draft?slateId=${slateId}`,
+    tag: `draft-turn-${slateId}`,
+    metadata: {
+      nextTeamName,
+      roundNumber,
+      roundOrdinal: getOrdinal(roundNumber),
+      overallPickNumber,
+      positionNeed,
+      remainingNeeds,
+      sportEmoji: getSportConfig(sport).emoji,
+      sport,
+    },
+  });
+
+  return {
+    ...result,
+    nextTeamId: nextTeam.team_id,
+    nextTeamName,
+  };
+}

@@ -1,0 +1,3384 @@
+============================================================
+GOLF SLATE ADMIN PAGE
+============================================================
+
+------------------------------------------------------------
+FILE: app/admin/slates/page.tsx
+------------------------------------------------------------
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import AppNav from "@/components/AppNav";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+type SlateListRow = {
+  id: number;
+  date: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  label: string;
+  sport?: SportKey;
+  display_name?: string | null;
+  external_event_id?: string | null;
+  cut_penalty_per_round?: number | null;
+  nba_team_abbreviations?: string[] | null;
+};
+
+type SlateTeamRow = {
+  team_id: number;
+  team_name: string;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+type GolfFieldSummary = {
+  golferCount: number;
+  lastRefreshedAt: string | null;
+};
+
+type SlateDetailResponse = {
+  success: boolean;
+  slate: SlateListRow;
+  teams: SlateTeamRow[];
+  golfField?: GolfFieldSummary | null;
+};
+
+type SelectedSlateState = SlateListRow & {
+  nbaTeamsInput: string;
+};
+
+function normalizeTeamOrder(rows: SlateTeamRow[]) {
+  const participating = rows
+    .filter((team) => team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  const inactive = rows
+    .filter((team) => !team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  return [...participating, ...inactive].map((team, index) => ({
+    ...team,
+    draft_order: index + 1,
+  }));
+}
+
+function formatDateRange(
+  startDate: string | null,
+  endDate: string | null,
+) {
+  if (!startDate) return "Dates unavailable";
+  if (!endDate || startDate === endDate) return startDate;
+  return `${startDate} – ${endDate}`;
+}
+
+function formatRefreshTime(value: string | null) {
+  if (!value) return "Not loaded yet";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export default function AdminSlatesPage() {
+  const { selectedSport } = useSelectedSport();
+
+  const [slates, setSlates] = useState<SlateListRow[]>([]);
+  const [selectedSlateId, setSelectedSlateId] =
+    useState<number | "">("");
+  const [selectedSlate, setSelectedSlate] =
+    useState<SelectedSlateState | null>(null);
+  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+  const [golfField, setGolfField] =
+    useState<GolfFieldSummary | null>(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isReseeding, setIsReseeding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+    useState(false);
+  const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
+    useState(false);
+
+  const [message, setMessage] = useState("");
+
+  const isBusy =
+    isSaving ||
+    isReseeding ||
+    isDeleting ||
+    isRefreshingGolfField ||
+    isSyncingGolfRankings;
+
+  useEffect(() => {
+    setSelectedSlateId("");
+    setSelectedSlate(null);
+    setTeams([]);
+    setGolfField(null);
+    void loadSlates();
+  }, [selectedSport]);
+
+  useEffect(() => {
+    if (!selectedSlateId) return;
+    void loadSlateDetail(Number(selectedSlateId));
+  }, [selectedSlateId]);
+
+  async function loadSlates() {
+    try {
+      setIsLoading(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates?sport=${encodeURIComponent(selectedSport)}`,
+        { cache: "no-store" },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to load slates.");
+        return;
+      }
+
+      const nextSlates = (result.slates ?? []) as SlateListRow[];
+      setSlates(nextSlates);
+
+      if (nextSlates.length > 0) {
+        setSelectedSlateId((current) => {
+          if (
+            current &&
+            nextSlates.some((slate) => slate.id === Number(current))
+          ) {
+            return current;
+          }
+
+          return nextSlates[0].id;
+        });
+      } else {
+        setSelectedSlateId("");
+        setSelectedSlate(null);
+        setTeams([]);
+        setGolfField(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong while loading slates.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadSlateDetail(slateId: number) {
+    try {
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${slateId}`,
+        { cache: "no-store" },
+      );
+
+      const result = (await response.json()) as
+        | SlateDetailResponse
+        | { error?: string };
+
+      if (!response.ok) {
+        setMessage(
+          "error" in result
+            ? result.error || "Failed to load slate."
+            : "Failed to load slate.",
+        );
+        return;
+      }
+
+      const safeResult = result as SlateDetailResponse;
+
+      setSelectedSlate({
+        ...safeResult.slate,
+        nbaTeamsInput: (
+          safeResult.slate.nba_team_abbreviations ?? []
+        ).join(", "),
+      });
+
+      setTeams(normalizeTeamOrder(safeResult.teams ?? []));
+      setGolfField(safeResult.golfField ?? null);
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while loading slate details.",
+      );
+    }
+  }
+
+  function toggleParticipation(teamId: number) {
+    setTeams((current) =>
+      normalizeTeamOrder(
+        current.map((team) =>
+          team.team_id === teamId
+            ? {
+                ...team,
+                is_participating: !team.is_participating,
+              }
+            : team,
+        ),
+      ),
+    );
+  }
+
+  function moveTeam(
+    teamId: number,
+    direction: "up" | "down",
+  ) {
+    setTeams((current) => {
+      const normalized = normalizeTeamOrder(current);
+      const team = normalized.find(
+        (row) => row.team_id === teamId,
+      );
+
+      if (!team) return normalized;
+
+      const sameSection = normalized.filter(
+        (row) =>
+          row.is_participating === team.is_participating,
+      );
+
+      const currentIndex = sameSection.findIndex(
+        (row) => row.team_id === teamId,
+      );
+
+      const targetIndex =
+        direction === "up"
+          ? currentIndex - 1
+          : currentIndex + 1;
+
+      if (
+        targetIndex < 0 ||
+        targetIndex >= sameSection.length
+      ) {
+        return normalized;
+      }
+
+      const reorderedSection = [...sameSection];
+      const [moved] = reorderedSection.splice(currentIndex, 1);
+      reorderedSection.splice(targetIndex, 0, moved);
+
+      const otherSection = normalized.filter(
+        (row) =>
+          row.is_participating !== team.is_participating,
+      );
+
+      return normalizeTeamOrder(
+        team.is_participating
+          ? [...reorderedSection, ...otherSection]
+          : [...otherSection, ...reorderedSection],
+      );
+    });
+  }
+
+  async function handleSave() {
+    if (!selectedSlateId || !selectedSlate) return;
+
+    const normalizedTeams = normalizeTeamOrder(teams);
+
+    if (
+      selectedSlate.sport === "golf" &&
+      (
+        !Number.isInteger(
+          selectedSlate.cut_penalty_per_round,
+        ) ||
+        Number(selectedSlate.cut_penalty_per_round) < 0 ||
+        Number(selectedSlate.cut_penalty_per_round) > 100
+      )
+    ) {
+      setMessage(
+        "Cut penalty must be a whole number from 0 through 100.",
+      );
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            is_locked: selectedSlate.is_locked,
+            cut_penalty_per_round:
+              selectedSlate.sport === "golf"
+                ? Number(
+                    selectedSlate.cut_penalty_per_round,
+                  )
+                : undefined,
+            nba_team_abbreviations:
+              selectedSlate.nbaTeamsInput
+                .split(",")
+                .map((value) =>
+                  value.trim().toUpperCase(),
+                )
+                .filter(Boolean),
+            teams: normalizedTeams.map(
+              (team, index) => ({
+                team_id: team.team_id,
+                draft_order: index + 1,
+                is_participating:
+                  team.is_participating,
+              }),
+            ),
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error || "Failed to save slate.",
+        );
+        return;
+      }
+
+      setMessage("Slate updated successfully.");
+      await loadSlateDetail(Number(selectedSlateId));
+      await loadSlates();
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while saving the slate.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleRefreshGolfField() {
+    if (!selectedSlateId || !selectedSlate) return;
+
+    try {
+      setIsRefreshingGolfField(true);
+      setMessage("");
+
+      const response = await fetch(
+        "/api/refresh-stats-golf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            slateId: Number(selectedSlateId),
+          }),
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ||
+            "Failed to refresh the tournament field.",
+        );
+        return;
+      }
+
+      await loadSlateDetail(Number(selectedSlateId));
+
+      setMessage(
+        "Tournament field, scores, rounds, and hole data refreshed successfully.",
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while refreshing the tournament field.",
+      );
+    } finally {
+      setIsRefreshingGolfField(false);
+    }
+  }
+
+  async function handleSyncGolfRankings() {
+    try {
+      setIsSyncingGolfRankings(true);
+      setMessage("");
+
+      const response = await fetch(
+        "/api/admin/sync-golf-rankings",
+        {
+          method: "POST",
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error || "Failed to sync Golf rankings.",
+        );
+        return;
+      }
+
+      setMessage(
+        `OWGR synced: ${result.updatedGolfers ?? 0} updated, ` +
+          `${result.createdGolfers ?? 0} added, ` +
+          `${result.unmatchedGolfers ?? 0} unmatched.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while syncing Golf rankings.",
+      );
+    } finally {
+      setIsSyncingGolfRankings(false);
+    }
+  }
+
+  async function handleReseed() {
+    if (!selectedSlateId) return;
+
+    const confirmed = window.confirm(
+      "Replace the current draft order using the previous completed slate?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsReseeding(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}/reseed`,
+        { method: "POST" },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error || "Failed to reseed the slate.",
+        );
+        return;
+      }
+
+      setMessage("Slate reseeded successfully.");
+      await loadSlateDetail(Number(selectedSlateId));
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while reseeding.",
+      );
+    } finally {
+      setIsReseeding(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!selectedSlateId) return;
+
+    const confirmed = window.confirm(
+      "Delete this slate? This removes its lineups, stats, results, and settings.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}`,
+        { method: "DELETE" },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error || "Failed to delete the slate.",
+        );
+        return;
+      }
+
+      setSelectedSlate(null);
+      setTeams([]);
+      setGolfField(null);
+      setSelectedSlateId("");
+      await loadSlates();
+      setMessage("Slate deleted successfully.");
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while deleting the slate.",
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  const orderedTeams = useMemo(
+    () => normalizeTeamOrder(teams),
+    [teams],
+  );
+
+  const participatingTeams = useMemo(
+    () =>
+      orderedTeams.filter(
+        (team) => team.is_participating,
+      ),
+    [orderedTeams],
+  );
+
+  const inactiveTeams = useMemo(
+    () =>
+      orderedTeams.filter(
+        (team) => !team.is_participating,
+      ),
+    [orderedTeams],
+  );
+
+  function renderTeamRow(
+    team: SlateTeamRow,
+    sectionRows: SlateTeamRow[],
+  ) {
+    const sectionIndex = sectionRows.findIndex(
+      (row) => row.team_id === team.team_id,
+    );
+
+    return (
+      <tr
+        key={team.team_id}
+        className="border-t border-slate-200"
+      >
+        <td className="px-4 py-3 font-medium text-slate-100">
+          <div className="flex items-center gap-3">
+            <span className="w-6 text-sm text-slate-400">
+              {team.draft_order}.
+            </span>
+            {team.team_name}
+          </div>
+        </td>
+
+        <td className="px-4 py-3">
+          <input
+            type="checkbox"
+            checked={team.is_participating}
+            onChange={() =>
+              toggleParticipation(team.team_id)
+            }
+            disabled={isBusy}
+            className="h-4 w-4 rounded border-slate-500"
+          />
+        </td>
+
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                moveTeam(team.team_id, "up")
+              }
+              disabled={isBusy || sectionIndex === 0}
+              className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label={`Move ${team.team_name} up`}
+            >
+              ↑
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                moveTeam(team.team_id, "down")
+              }
+              disabled={
+                isBusy ||
+                sectionIndex === sectionRows.length - 1
+              }
+              className="rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label={`Move ${team.team_name} down`}
+            >
+              ↓
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <AppNav />
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 px-6 py-6 shadow-sm">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Slate Manager
+              </h1>
+
+              <p className="mt-2 text-sm text-slate-300">
+                Manage tournament settings, participants,
+                draft order, field data, and slate status.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-end gap-3">
+              <Link
+                href="/admin"
+                className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-sky-400 hover:bg-slate-800"
+              >
+                ← Back
+              </Link>
+
+              <div className="min-w-[250px]">
+                <label
+                  htmlFor="slate-select"
+                  className="mb-1 block text-xs font-medium text-slate-300"
+                >
+                  Select Slate
+                </label>
+
+                <select
+                  id="slate-select"
+                  value={selectedSlateId}
+                  onChange={(event) =>
+                    setSelectedSlateId(
+                      event.target.value
+                        ? Number(event.target.value)
+                        : "",
+                    )
+                  }
+                  disabled={isBusy}
+                  className="w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400 disabled:opacity-60"
+                >
+                  {slates.map((slate) => (
+                    <option
+                      key={slate.id}
+                      value={slate.id}
+                    >
+                      {slate.label}
+                      {slate.is_locked ? " (Locked)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {message ? (
+          <div className="rounded-2xl border border-sky-700 bg-sky-950/70 px-4 py-3 text-sm text-sky-100">
+            {message}
+          </div>
+        ) : null}
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm">
+          {isLoading ? (
+            <div className="text-sm text-slate-300">
+              Loading slates...
+            </div>
+          ) : !selectedSlate ? (
+            <div className="rounded-2xl border border-dashed border-slate-600 px-4 py-8 text-sm text-slate-400">
+              No slate is available for this sport.
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.13em] text-slate-400">
+                    Current Slate
+                  </div>
+
+                  <h2 className="mt-2 text-2xl font-bold text-white">
+                    {selectedSlate.display_name?.trim() ||
+                      selectedSlate.label}
+                  </h2>
+
+                  <div className="mt-2 text-sm text-slate-300">
+                    {formatDateRange(
+                      selectedSlate.start_date,
+                      selectedSlate.end_date,
+                    )}
+                  </div>
+
+                  {selectedSlate.external_event_id ? (
+                    <div className="mt-1 text-xs text-slate-400">
+                      ESPN event:{" "}
+                      {selectedSlate.external_event_id}
+                    </div>
+                  ) : null}
+                </div>
+
+                <label className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={selectedSlate.is_locked}
+                    onChange={(event) =>
+                      setSelectedSlate((current) =>
+                        current
+                          ? {
+                              ...current,
+                              is_locked:
+                                event.target.checked,
+                            }
+                          : current,
+                      )
+                    }
+                    disabled={isBusy}
+                    className="h-4 w-4 rounded border-slate-500"
+                  />
+                  Locked
+                </label>
+              </div>
+
+              {selectedSlate.sport === "golf" ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-emerald-800 bg-emerald-950/35 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                      Tournament Field
+                    </div>
+
+                    <div className="mt-2 text-2xl font-bold text-white">
+                      {golfField?.golferCount ?? 0}
+                    </div>
+
+                    <div className="mt-1 text-xs text-emerald-200/80">
+                      golfers loaded
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <label
+                      htmlFor="cut-penalty"
+                      className="block text-xs font-semibold uppercase tracking-wide text-slate-300"
+                    >
+                      Cut Penalty
+                    </label>
+
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        id="cut-penalty"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={
+                          selectedSlate.cut_penalty_per_round ??
+                          5
+                        }
+                        onChange={(event) =>
+                          setSelectedSlate((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  cut_penalty_per_round:
+                                    Number(
+                                      event.target.value,
+                                    ),
+                                }
+                              : current,
+                          )
+                        }
+                        disabled={isBusy}
+                        className="w-24 rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-lg font-bold text-white outline-none focus:border-emerald-400"
+                      />
+
+                      <span className="text-sm text-slate-400">
+                        per missed round
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      Last Field Refresh
+                    </div>
+
+                    <div className="mt-2 text-sm font-semibold text-white">
+                      {formatRefreshTime(
+                        golfField?.lastRefreshedAt ?? null,
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedSlate.sport === "nba" ? (
+                <div className="max-w-xl">
+                  <label
+                    htmlFor="nba-team-codes"
+                    className="mb-1 block text-xs font-medium text-slate-300"
+                  >
+                    NBA Team Codes
+                  </label>
+
+                  <input
+                    id="nba-team-codes"
+                    type="text"
+                    value={selectedSlate.nbaTeamsInput}
+                    onChange={(event) =>
+                      setSelectedSlate((current) =>
+                        current
+                          ? {
+                              ...current,
+                              nbaTeamsInput:
+                                event.target.value,
+                            }
+                          : current,
+                      )
+                    }
+                    disabled={isBusy}
+                    placeholder="BOS, CLE, NYK"
+                    className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-sky-400"
+                  />
+                </div>
+              ) : null}
+
+              <div className="overflow-hidden rounded-2xl border border-slate-700">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse text-sm">
+                    <thead className="bg-slate-800 text-slate-200">
+                      <tr className="text-left">
+                        <th className="px-4 py-3">
+                          Team
+                        </th>
+                        <th className="px-4 py-3">
+                          Participating
+                        </th>
+                        <th className="px-4 py-3">
+                          Draft Order
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody className="bg-slate-900">
+                      {participatingTeams.map((team) =>
+                        renderTeamRow(
+                          team,
+                          participatingTeams,
+                        ),
+                      )}
+
+                      {inactiveTeams.length > 0 ? (
+                        <tr className="border-t border-slate-700 bg-slate-950/60">
+                          <td
+                            colSpan={3}
+                            className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500"
+                          >
+                            Not participating
+                          </td>
+                        </tr>
+                      ) : null}
+
+                      {inactiveTeams.map((team) =>
+                        renderTeamRow(
+                          team,
+                          inactiveTeams,
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={isBusy}
+                  className="rounded-xl border border-emerald-500 bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Save Slate"}
+                </button>
+
+                {selectedSlate.sport === "golf" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleRefreshGolfField()
+                      }
+                      disabled={
+                        isBusy || selectedSlate.is_locked
+                      }
+                      title={
+                        selectedSlate.is_locked
+                          ? "Unlock and save the slate before refreshing the field."
+                          : "Reload the field, leaderboard, rounds, and holes from ESPN."
+                      }
+                      className="rounded-xl border border-sky-500 bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isRefreshingGolfField
+                        ? "Refreshing Field..."
+                        : "Refresh Tournament Field"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSyncGolfRankings()
+                      }
+                      disabled={isBusy}
+                      className="rounded-xl border border-emerald-500 bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isSyncingGolfRankings
+                        ? "Syncing OWGR..."
+                        : "Sync OWGR"}
+                    </button>
+                  </>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => void handleReseed()}
+                  disabled={isBusy}
+                  className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isReseeding
+                    ? "Reseeding..."
+                    : "Reseed From Previous Slate"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  disabled={isBusy}
+                  className="rounded-xl border border-red-600 bg-red-900 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isDeleting
+                    ? "Deleting..."
+                    : "Delete Slate"}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+============================================================
+ADMIN GOLF ROUTES
+============================================================
+
+------------------------------------------------------------
+FILE: app/api/admin/golf/import-field/route.ts
+------------------------------------------------------------
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import {
+  fetchPgaTourField,
+  type PgaTourFieldPlayer,
+} from "@/lib/providers/pgaTourField";
+
+type RequestBody = {
+  slateId?: number | string;
+};
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+  external_event_id: string | null;
+  is_locked: boolean;
+};
+
+type ExistingGolfPlayer = {
+  id: number;
+  display_name: string;
+  espn_player_id: string;
+};
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function parseSlateId(
+  value: unknown,
+) {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function countryFlagUrl(
+  countryCode: string | null,
+) {
+  const normalized =
+    countryCode
+      ?.trim()
+      .toLowerCase();
+
+  if (
+    !normalized ||
+    normalized.length !== 3
+  ) {
+    return null;
+  }
+
+  /*
+   * Existing PGA/ESPN refreshes will replace this later
+   * with their authoritative flag URL.
+   */
+  return null;
+}
+
+async function authorize(
+  request: NextRequest,
+) {
+  const configuredSecret =
+    process.env.GOLF_CRON_SECRET?.trim();
+
+  const supplied =
+    request.headers
+      .get("authorization")
+      ?.replace(/^Bearer\s+/i, "")
+      .trim();
+
+  if (
+    configuredSecret &&
+    supplied === configuredSecret
+  ) {
+    return null;
+  }
+
+  return requireAdminApi();
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  const authError =
+    await authorize(request);
+
+  if (authError) {
+    return authError;
+  }
+
+  try {
+    let body: RequestBody;
+
+    try {
+      body =
+        (await request.json()) as RequestBody;
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            "A valid JSON request body is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const slateId =
+      parseSlateId(body.slateId);
+
+    if (!slateId) {
+      return NextResponse.json(
+        {
+          error:
+            "A valid slateId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: slateData,
+      error: slateError,
+    } = await supabaseAdmin
+      .from("slates")
+      .select(
+        [
+          "id",
+          "sport",
+          "display_name",
+          "start_date",
+          "external_event_id",
+          "is_locked",
+        ].join(","),
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (
+      slateError ||
+      !slateData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            slateError?.message ||
+            "Slate not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const slate =
+      slateData as unknown as SlateRow;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "This endpoint only imports Golf fields.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This slate is locked.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const tournamentName =
+      slate.display_name?.trim();
+
+    const year =
+      slate.start_date?.slice(0, 4);
+
+    if (
+      !tournamentName ||
+      !/^\d{4}$/.test(year)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The slate needs a tournament name and valid start date.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const field =
+      await fetchPgaTourField({
+        year,
+        tournamentName,
+      });
+
+    const {
+      data: existingData,
+      error: existingError,
+    } = await supabaseAdmin
+      .from("golf_players")
+      .select(
+        "id, display_name, espn_player_id",
+      );
+
+    if (existingError) {
+      return NextResponse.json(
+        {
+          error:
+            "The PGA field was downloaded, but existing golfers could not be loaded: " +
+            existingError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const existingPlayers =
+      (existingData ?? []) as unknown as ExistingGolfPlayer[];
+
+    const existingByName =
+      new Map<
+        string,
+        ExistingGolfPlayer[]
+      >();
+
+    for (
+      const player of existingPlayers
+    ) {
+      const key =
+        normalizeName(
+          player.display_name,
+        );
+
+      const matches =
+        existingByName.get(key) ?? [];
+
+      matches.push(player);
+      existingByName.set(
+        key,
+        matches,
+      );
+    }
+
+    const refreshedAt =
+      new Date().toISOString();
+
+    const resolvedPlayerIds =
+      new Map<string, number>();
+
+    const ambiguousPlayers: Array<{
+      pgaPlayerId: string;
+      displayName: string;
+      databaseMatches: number[];
+    }> = [];
+
+    const missingPlayers: PgaTourFieldPlayer[] =
+      [];
+
+    for (
+      const fieldPlayer of field.players
+    ) {
+      const possibleMatches =
+        existingByName.get(
+          normalizeName(
+            fieldPlayer.displayName,
+          ),
+        ) ?? [];
+
+      if (
+        possibleMatches.length === 1
+      ) {
+        resolvedPlayerIds.set(
+          fieldPlayer.pgaPlayerId,
+          Number(
+            possibleMatches[0].id,
+          ),
+        );
+      } else if (
+        possibleMatches.length > 1
+      ) {
+        ambiguousPlayers.push({
+          pgaPlayerId:
+            fieldPlayer.pgaPlayerId,
+          displayName:
+            fieldPlayer.displayName,
+          databaseMatches:
+            possibleMatches.map(
+              (player) =>
+                Number(player.id),
+            ),
+        });
+      } else {
+        missingPlayers.push(
+          fieldPlayer,
+        );
+      }
+    }
+
+    if (
+      ambiguousPlayers.length > 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The field contains golfer names that match multiple database records.",
+          ambiguousPlayers,
+        },
+        { status: 409 },
+      );
+    }
+
+    let createdGolfers = 0;
+
+    if (
+      missingPlayers.length > 0
+    ) {
+      const newRows =
+        missingPlayers.map(
+          (player) => ({
+            /*
+             * ESPN IDs are mandatory in the existing schema.
+             * This stable placeholder is reconciled to the real
+             * ESPN ID by refresh-stats-golf once ESPN publishes
+             * the tournament competitor feed.
+             */
+            espn_player_id:
+              `pga:${player.pgaPlayerId}`,
+            display_name:
+              player.displayName,
+            short_name:
+              player.shortName,
+            country:
+              player.country,
+            country_flag_url:
+              countryFlagUrl(
+                player.countryCode,
+              ),
+            player_url:
+              `https://www.pgatour.com/player/` +
+              `${player.pgaPlayerId}`,
+            headshot_url:
+              player.headshotUrl,
+            owgr_player_id:
+              player.pgaPlayerId,
+            owgr_rank:
+              player.owgrRank,
+            owgr_points:
+              player.rankingPoints,
+            owgr_updated_at:
+              refreshedAt,
+            is_active: true,
+            updated_at:
+              refreshedAt,
+          }),
+        );
+
+      const {
+        data: insertedData,
+        error: insertedError,
+      } = await supabaseAdmin
+        .from("golf_players")
+        .upsert(newRows, {
+          onConflict:
+            "espn_player_id",
+        })
+        .select(
+          "id, espn_player_id",
+        );
+
+      if (insertedError) {
+        return NextResponse.json(
+          {
+            error:
+              "Missing PGA field golfers could not be created: " +
+              insertedError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const inserted =
+        (insertedData ??
+          []) as unknown as Array<{
+          id: number;
+          espn_player_id: string;
+        }>;
+
+      createdGolfers =
+        inserted.length;
+
+      for (
+        const player of inserted
+      ) {
+        const pgaPlayerId =
+          player.espn_player_id.replace(
+            /^pga:/,
+            "",
+          );
+
+        resolvedPlayerIds.set(
+          pgaPlayerId,
+          Number(player.id),
+        );
+      }
+    }
+
+    const unresolved =
+      field.players.filter(
+        (player) =>
+          !resolvedPlayerIds.has(
+            player.pgaPlayerId,
+          ),
+      );
+
+    if (unresolved.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Some PGA field golfers could not be resolved to database IDs.",
+          unresolvedPlayers:
+            unresolved.map(
+              (player) => ({
+                pgaPlayerId:
+                  player.pgaPlayerId,
+                displayName:
+                  player.displayName,
+              }),
+            ),
+        },
+        { status: 500 },
+      );
+    }
+
+    const eventRows =
+      field.players.map(
+        (player, index) => ({
+          slate_id: slateId,
+          player_id:
+            resolvedPlayerIds.get(
+              player.pgaPlayerId,
+            )!,
+          leaderboard_order:
+            index + 1,
+          official_score_to_par:
+            null,
+          official_score_display:
+            null,
+          penalty_strokes: 0,
+          fantasy_score: null,
+          rounds_completed: 0,
+          holes_completed: 0,
+          current_round: null,
+          last_hole: null,
+          status: "scheduled",
+          tee_time: null,
+          tee_time_raw: null,
+          updated_at:
+            refreshedAt,
+        }),
+      );
+
+    const {
+      data: eventData,
+      error: eventError,
+    } = await supabaseAdmin
+      .from("golf_event_players")
+      .upsert(eventRows, {
+        onConflict:
+          "slate_id,player_id",
+      })
+      .select("id");
+
+    if (eventError) {
+      return NextResponse.json(
+        {
+          error:
+            "The golfers were saved, but the slate field could not be populated: " +
+            eventError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      slateId,
+      tournament: {
+        pgaTournamentId:
+          field.tournamentId,
+        name:
+          field.tournamentName,
+        fieldUrl:
+          field.fieldUrl,
+      },
+      fieldPlayersFound:
+        field.players.length,
+      existingGolfersMatched:
+        field.players.length -
+        missingPlayers.length,
+      createdGolfers,
+      eventPlayersUpserted:
+        eventData?.length ??
+        eventRows.length,
+      importedAt:
+        refreshedAt,
+      preview:
+        field.players
+          .slice(0, 10)
+          .map((player) => ({
+            pgaPlayerId:
+              player.pgaPlayerId,
+            displayName:
+              player.displayName,
+            owgrRank:
+              player.owgrRank,
+            qualifier:
+              player.qualifier,
+          })),
+    });
+  } catch (error) {
+    console.error(
+      "PGA TOUR field import failed:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected PGA TOUR field import error.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+============================================================
+ADMIN AUTH EXAMPLES
+============================================================
+
+------------------------------------------------------------
+FILE: app/api/admin/players/route.ts
+------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+export async function GET() {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("players")
+      .select("id, name, position_group, is_active, team_abbreviation, nba_display_name")
+      .order("name", { ascending: true });
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load players: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      players: data ?? [],
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading players." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const body = await request.json();
+    const updates = Array.isArray(body?.updates) ? body.updates : [];
+
+    if (updates.length === 0) {
+      return NextResponse.json(
+        { error: "No player updates were provided." },
+        { status: 400 }
+      );
+    }
+
+    for (const update of updates) {
+      const playerId = Number(update?.id);
+      const position_group = update?.position_group;
+      const is_active = update?.is_active;
+
+      if (!Number.isFinite(playerId)) {
+        return NextResponse.json(
+          { error: "Invalid player id in updates." },
+          { status: 400 }
+        );
+      }
+
+      if (position_group !== "G" && position_group !== "F/C") {
+        return NextResponse.json(
+          { error: `Invalid position_group for player ${playerId}.` },
+          { status: 400 }
+        );
+      }
+
+      if (typeof is_active !== "boolean") {
+        return NextResponse.json(
+          { error: `Invalid is_active for player ${playerId}.` },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await supabaseAdmin
+        .from("players")
+        .update({
+          position_group,
+          is_active,
+        })
+        .eq("id", playerId);
+
+      if (error) {
+        return NextResponse.json(
+          { error: `Failed to update player ${playerId}: ${error.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      updatedCount: updates.length,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while updating players." },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/admin/slates/[slateId]/reseed/route.ts
+------------------------------------------------------------
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+type RouteContext = {
+  params: Promise<{
+    slateId: string;
+  }>;
+};
+
+type SlateTeamRow = {
+  slate_id: number;
+  team_id: number;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+type TeamResultRow = {
+  slate_id: number;
+  team_id: number;
+  finish_position: number | null;
+  fantasy_points: number | null;
+};
+
+export async function POST(_: Request, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const { slateId: slateIdParam } = await context.params;
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "Invalid slate id." },
+        { status: 400 }
+      );
+    }
+
+    const { data: currentSlate, error: currentSlateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, start_date, end_date")
+      .eq("id", slateId)
+      .single();
+
+    if (currentSlateError || !currentSlate) {
+      return NextResponse.json(
+        { error: "Slate not found." },
+        { status: 404 }
+      );
+    }
+
+    const [
+      { data: previousSlates, error: previousSlatesError },
+      { data: slateTeams, error: slateTeamsError },
+      { data: teams, error: teamsError },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select("id, start_date, end_date, is_locked")
+        .lt("start_date", currentSlate.start_date)
+        .eq("is_locked", true)
+        .order("start_date", { ascending: false })
+        .limit(1),
+      supabaseAdmin
+        .from("slate_teams")
+        .select("slate_id, team_id, draft_order, is_participating")
+        .eq("slate_id", slateId),
+      supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .order("name", { ascending: true }),
+    ]);
+
+    if (previousSlatesError || slateTeamsError || teamsError) {
+      return NextResponse.json(
+        {
+          error:
+            previousSlatesError?.message ||
+            slateTeamsError?.message ||
+            teamsError?.message ||
+            "Failed to prepare reseed.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const previousSlate = previousSlates?.[0];
+
+    if (!previousSlate) {
+      return NextResponse.json(
+        { error: "No previous locked slate found to reseed from." },
+        { status: 400 }
+      );
+    }
+
+    const { data: previousResults, error: previousResultsError } = await supabaseAdmin
+      .from("team_slate_results")
+      .select("slate_id, team_id, finish_position, fantasy_points")
+      .eq("slate_id", previousSlate.id);
+
+    if (previousResultsError) {
+      return NextResponse.json(
+        { error: `Failed to load previous slate results: ${previousResultsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const safeSlateTeams = (slateTeams ?? []) as SlateTeamRow[];
+    const safePreviousResults = (previousResults ?? []) as TeamResultRow[];
+
+    const configMap = new Map(
+      safeSlateTeams.map((row) => [row.team_id, row])
+    );
+
+    const previousOrderMap = new Map<number, number>();
+    safePreviousResults
+      .filter((row) => row.finish_position !== null)
+      .sort((a, b) => {
+        const aFinish = a.finish_position ?? 999;
+        const bFinish = b.finish_position ?? 999;
+        if (aFinish !== bFinish) return aFinish - bFinish;
+        return Number(a.fantasy_points ?? 0) - Number(b.fantasy_points ?? 0);
+      })
+      .forEach((row) => {
+        previousOrderMap.set(row.team_id, row.finish_position ?? 999);
+      });
+
+    const merged = (teams ?? []).map((team, index) => {
+      const config = configMap.get(team.id);
+      return {
+        team_id: team.id,
+        draft_order: config?.draft_order ?? index + 1,
+        is_participating: config?.is_participating ?? true,
+      };
+    });
+
+    const participating = merged
+      .filter((row) => row.is_participating)
+      .sort((a, b) => {
+        const aPrev = previousOrderMap.get(a.team_id) ?? 999;
+        const bPrev = previousOrderMap.get(b.team_id) ?? 999;
+        if (aPrev !== bPrev) return bPrev - aPrev;
+        return a.draft_order - b.draft_order;
+      });
+
+    const nonParticipating = merged
+      .filter((row) => !row.is_participating)
+      .sort((a, b) => a.draft_order - b.draft_order);
+
+    const reseeded = [...participating, ...nonParticipating].map((row, index) => ({
+      slate_id: slateId,
+      team_id: row.team_id,
+      draft_order: index + 1,
+      is_participating: row.is_participating,
+    }));
+
+    const { error: upsertError } = await supabaseAdmin
+      .from("slate_teams")
+      .upsert(reseeded, { onConflict: "slate_id,team_id" });
+
+    if (upsertError) {
+      return NextResponse.json(
+        { error: `Failed to reseed slate: ${upsertError.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Slate reseeded from previous results.",
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while reseeding slate." },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/admin/slates/[slateId]/route.ts
+------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+function normalizeNbaTeamCode(value: string | null | undefined) {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (code === "NY") return "NYK";
+  return code;
+}
+
+
+
+type SlateTeamUpdate = {
+  team_id: number;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+type UpdateSlateBody = {
+  is_locked?: boolean;
+  teams?: SlateTeamUpdate[];
+  nba_team_abbreviations?: string[];
+  cut_penalty_per_round?: number;
+};
+
+type RouteContext = {
+  params: Promise<{
+    slateId: string;
+  }>;
+};
+
+export async function GET(_: NextRequest, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const { slateId: slateIdParam } = await context.params;
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "Invalid slate id." },
+        { status: 400 }
+      );
+    }
+
+    const [
+      { data: slate, error: slateError },
+      { data: teams, error: teamsError },
+      { data: slateTeams, error: slateTeamsError },
+      {
+        data: golfFieldRows,
+        error: golfFieldError,
+        count: golfFieldCount,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select(
+          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, nba_team_abbreviations"
+        )
+        .eq("id", slateId)
+        .single(),
+      supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .order("name", { ascending: true }),
+      supabaseAdmin
+        .from("slate_teams")
+        .select("slate_id, team_id, draft_order, is_participating")
+        .eq("slate_id", slateId),
+      supabaseAdmin
+        .from("golf_event_players")
+        .select("updated_at", {
+          count: "exact",
+        })
+        .eq("slate_id", slateId)
+        .order("updated_at", {
+          ascending: false,
+        })
+        .limit(1),
+    ]);
+
+    if (slateError || !slate) {
+      return NextResponse.json(
+        { error: "Slate not found." },
+        { status: 404 }
+      );
+    }
+
+    if (teamsError || slateTeamsError || golfFieldError) {
+      return NextResponse.json(
+        {
+          error:
+            teamsError?.message ||
+            slateTeamsError?.message ||
+            golfFieldError?.message ||
+            "Failed to load slate details.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const safeTeams = teams ?? [];
+    const safeSlateTeams = slateTeams ?? [];
+
+    const configMap = new Map(
+      safeSlateTeams.map((row) => [row.team_id, row])
+    );
+
+    const mergedTeams = safeTeams
+      .map((team, index) => {
+        const config = configMap.get(team.id);
+
+        return {
+          team_id: team.id,
+          team_name: team.name,
+          draft_order: config?.draft_order ?? index + 1,
+          is_participating: config?.is_participating ?? true,
+        };
+      })
+      .sort((a, b) => {
+        if (a.is_participating !== b.is_participating) {
+          return a.is_participating ? -1 : 1;
+        }
+
+        if (a.draft_order !== b.draft_order) {
+          return a.draft_order - b.draft_order;
+        }
+
+        return a.team_name.localeCompare(b.team_name);
+      })
+      .map((team, index) => ({
+        ...team,
+        draft_order: index + 1,
+      }));
+
+    return NextResponse.json({
+      success: true,
+      slate: {
+        ...slate,
+        label:
+          slate.display_name?.trim() ||
+          (
+            slate.start_date &&
+            slate.end_date &&
+            slate.start_date !== slate.end_date
+              ? `${slate.start_date} - ${slate.end_date}`
+              : slate.start_date ?? slate.date
+          ),
+      },
+      teams: mergedTeams,
+      golfField:
+        slate.sport === "golf"
+          ? {
+              golferCount: golfFieldCount ?? 0,
+              lastRefreshedAt:
+                golfFieldRows?.[0]?.updated_at ?? null,
+            }
+          : null,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading slate details." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const { slateId: slateIdParam } = await context.params;
+    const slateId = Number(slateIdParam);
+    const body = (await request.json()) as UpdateSlateBody;
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "Invalid slate id." },
+        { status: 400 }
+      );
+    }
+
+    const teams = body.teams ?? [];
+    const isLocked = body.is_locked;
+    const rawCutPenalty = Number(body.cut_penalty_per_round);
+    const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
+      .map((value) => normalizeNbaTeamCode(value))
+      .filter(Boolean);
+
+    if (!Array.isArray(teams) || teams.length === 0) {
+      return NextResponse.json(
+        { error: "At least one team config is required." },
+        { status: 400 }
+      );
+    }
+
+    const normalizedTeams = [...teams]
+      .sort((a, b) => {
+        if (a.is_participating !== b.is_participating) {
+          return a.is_participating ? -1 : 1;
+        }
+
+        return a.draft_order - b.draft_order;
+      })
+      .map((team, index) => ({
+        ...team,
+        draft_order: index + 1,
+      }));
+
+    const { data: existingSlate, error: existingSlateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, sport")
+      .eq("id", slateId)
+      .single();
+
+    if (existingSlateError || !existingSlate) {
+      return NextResponse.json(
+        { error: "Slate not found." },
+        { status: 404 }
+      );
+    }
+
+    if (
+      existingSlate.sport === "golf" &&
+      (
+        !Number.isInteger(rawCutPenalty) ||
+        rawCutPenalty < 0 ||
+        rawCutPenalty > 100
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Cut penalty must be a whole number from 0 through 100.",
+        },
+        { status: 400 }
+
+------------------------------------------------------------
+FILE: app/api/admin/slates/route.ts
+------------------------------------------------------------
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+type AdminSlateRow = {
+  id: number;
+  date: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  sport: "nba" | "nfl" | "golf";
+  display_name: string | null;
+  external_event_id: string | null;
+  cut_penalty_per_round: number | null;
+  nba_team_abbreviations: string[] | null;
+};
+
+export async function GET(request: Request) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const sportParam = searchParams.get("sport");
+
+    const sport =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
+
+    const { data, error } = await supabaseAdmin
+      .from("slates")
+      .select(
+        [
+          "id",
+          "date",
+          "start_date",
+          "end_date",
+          "is_locked",
+          "sport",
+          "display_name",
+          "external_event_id",
+          "cut_penalty_per_round",
+          "nba_team_abbreviations",
+        ].join(",")
+      )
+      .eq("sport", sport)
+      .order("start_date", { ascending: false })
+      .order("end_date", { ascending: false });
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load slates: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    const safeData = (data ?? []) as unknown as AdminSlateRow[];
+
+    const slates = safeData.map((slate) => ({
+      ...slate,
+      label:
+        slate.display_name?.trim() ||
+        (slate.start_date &&
+        slate.end_date &&
+        slate.start_date !== slate.end_date
+          ? `${slate.start_date} - ${slate.end_date}`
+          : slate.start_date ?? slate.date),
+    }));
+
+    return NextResponse.json({
+      success: true,
+      slates,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading slates." },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/admin/backfill-player-stats/route.ts
+------------------------------------------------------------
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+type BackfillBody = {
+  slateId?: number;
+  all?: boolean;
+};
+
+type SlateRecord = {
+  id: number;
+  date: string;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+};
+
+type PlayerRecord = {
+  id: number;
+  name: string;
+  position_group: "G" | "F/C";
+  is_active: boolean;
+  nba_player_id?: number | null;
+  team_abbreviation?: string | null;
+};
+
+type LineupWithPlayers = {
+  id: number;
+  team_id: number;
+  lineup_players: { player_id: number }[] | null;
+};
+
+type NbaScoreboardGame = {
+  gameId?: string;
+  gameCode?: string;
+  gameStatus?: number;
+  gameStatusText?: string;
+  homeTeam?: {
+    teamId?: number;
+    teamName?: string;
+    teamTricode?: string;
+    score?: number | string;
+  };
+  awayTeam?: {
+    teamId?: number;
+    teamName?: string;
+    teamTricode?: string;
+    score?: number | string;
+  };
+};
+
+type NbaScoreboardPayload = {
+  scoreboard?: {
+    games?: NbaScoreboardGame[];
+  };
+  games?: NbaScoreboardGame[];
+};
+
+type NbaBoxScorePlayer = {
+  personId?: number;
+  firstName?: string;
+  familyName?: string;
+  name?: string;
+  statistics?: {
+    points?: number | string;
+    reboundsTotal?: number | string;
+    assists?: number | string;
+    steals?: number | string;
+    blocks?: number | string;
+    turnovers?: number | string;
+  };
+};
+
+type NbaBoxScorePayload = {
+  game?: {
+    gameId?: string;
+    gameStatus?: number;
+    gameStatusText?: string;
+    homeTeam?: {
+      players?: NbaBoxScorePlayer[];
+    };
+    awayTeam?: {
+      players?: NbaBoxScorePlayer[];
+    };
+  };
+};
+
+type AggregatedPlayerStat = {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+  fantasy_points: number;
+  games_completed: number;
+  games_in_progress: number;
+  games_remaining: number;
+  game_status_text: string | null;
+  source_game_ids: string[];
+};
+
+type SlateBackfillResult = {
+  slateId: number;
+  slateStartDate: string;
+  slateEndDate: string;
+  gamesFound: number;
+  playerStatsUpserted: number;
+  teamResultsUpserted: number;
+  unmatchedLocalPlayers: {
+    id: number;
+    name: string;
+    nba_player_id: number | null;
+    team_abbreviation: string | null;
+  }[];
+  skipped?: boolean;
+  message?: string;
+};
+
+function normalizeName(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\w\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toNumber(value: unknown) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function calculateFantasyPoints(stats: {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+}) {
+  return (
+    stats.points * 1 +
+    stats.rebounds * 1.2 +
+    stats.assists * 1.5 +
+    stats.steals * 2 +
+    stats.blocks * 2 -
+    stats.turnovers * 1
+  );
+}
+
+function getGameBuckets(gameStatus: number | undefined) {
+  if (gameStatus === 3) {
+    return {
+      games_completed: 1,
+      games_in_progress: 0,
+      games_remaining: 0,
+    };
+  }
+
+  if (gameStatus === 2) {
+    return {
+      games_completed: 0,
+      games_in_progress: 1,
+      games_remaining: 0,
+    };
+  }
+
+  return {
+    games_completed: 0,
+    games_in_progress: 0,
+    games_remaining: 1,
+  };
+}
+
+function buildDateRange(startDate: string, endDate: string) {
+  const result: string[] = [];
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    result.push(`${year}-${month}-${day}`);
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+}
+
+async function fetchHistoricalScoreboardForDate(gameDate: string) {
+  const url = `https://stats.nba.com/stats/scoreboardv3?GameDate=${gameDate}&LeagueID=00`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json, text/plain, */*",
+      Origin: "https://www.nba.com",
+      Referer: "https://www.nba.com/",
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
+    },
+  });
+
+  if (!response.ok) {
+    return [];
+  }
+
+  const payload = (await response.json()) as NbaScoreboardPayload;
+  return payload.scoreboard?.games ?? payload.games ?? [];
+}
+
+async function fetchBoxScore(gameId: string) {
+  const url = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return (await response.json()) as NbaBoxScorePayload;
+}
+
+async function backfillSlate(slateId: number): Promise<SlateBackfillResult> {
+  const { data: slate, error: slateError } = await supabaseAdmin
+    .from("slates")
+    .select("id, date, start_date, end_date, is_locked")
+    .eq("id", slateId)
+    .single();
+
+
+------------------------------------------------------------
+FILE: app/api/admin/manual-stat-correction/route.ts
+------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+function calculateFantasyPoints({
+  points,
+  rebounds,
+  assists,
+  steals,
+  blocks,
+  turnovers,
+}: {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+}) {
+  return Number(
+    (
+      points +
+      rebounds * 1.2 +
+      assists * 1.5 +
+      steals * 2 +
+      blocks * 2 -
+      turnovers
+    ).toFixed(1)
+  );
+}
+
+export async function POST(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const body = await request.json();
+
+    const slateId = Number(body.slateId);
+    const playerId = Number(body.playerId);
+
+    const points = Number(body.points ?? 0);
+    const rebounds = Number(body.rebounds ?? 0);
+    const assists = Number(body.assists ?? 0);
+    const steals = Number(body.steals ?? 0);
+    const blocks = Number(body.blocks ?? 0);
+    const turnovers = Number(body.turnovers ?? 0);
+
+    if (!Number.isFinite(slateId) || !Number.isFinite(playerId)) {
+      return NextResponse.json(
+        { error: "Valid slateId and playerId required" },
+        { status: 400 }
+      );
+    }
+
+    const fantasyPoints = calculateFantasyPoints({
+      points,
+      rebounds,
+      assists,
+      steals,
+      blocks,
+      turnovers,
+    });
+
+    // ✅ UPSERT (fixes your issue permanently)
+    const { error: upsertError } = await supabaseAdmin
+      .from("player_slate_stats")
+      .upsert(
+        {
+          slate_id: slateId,
+          player_id: playerId,
+          points,
+          rebounds,
+          assists,
+          steals,
+          blocks,
+          turnovers,
+          fantasy_points: fantasyPoints,
+        },
+        { onConflict: "slate_id,player_id" }
+      );
+
+    if (upsertError) {
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
+    }
+
+    // 🔁 Recalculate team results (same logic you already had)
+    const { data: lineups } = await supabaseAdmin
+      .from("lineups")
+      .select("id, team_id, lineup_players(player_id)")
+      .eq("slate_id", slateId);
+
+    const allPlayerIds = Array.from(
+      new Set(
+        (lineups ?? []).flatMap((l) =>
+          (l.lineup_players ?? []).map((lp: any) => Number(lp.player_id))
+        )
+      )
+    );
+
+    const { data: stats } = await supabaseAdmin
+      .from("player_slate_stats")
+      .select("player_id, fantasy_points")
+      .eq("slate_id", slateId)
+      .in("player_id", allPlayerIds);
+
+    const statMap = new Map<number, number>();
+    (stats ?? []).forEach((s) =>
+      statMap.set(Number(s.player_id), Number(s.fantasy_points ?? 0))
+    );
+
+    const results = (lineups ?? []).map((l) => {
+      const total = (l.lineup_players ?? []).reduce(
+        (sum: number, lp: any) =>
+          sum + Number(statMap.get(Number(lp.player_id)) ?? 0),
+        0
+      );
+
+      return {
+        team_id: l.team_id,
+        fantasy_points: Number(total.toFixed(1)),
+      };
+    });
+
+    const ranked = [...results].sort(
+      (a, b) => b.fantasy_points - a.fantasy_points
+    );
+
+    for (const r of ranked) {
+      const finish =
+        ranked.findIndex((x) => x.fantasy_points === r.fantasy_points) + 1;
+
+      await supabaseAdmin
+        .from("team_slate_results")
+        .upsert(
+          {
+            slate_id: slateId,
+            team_id: r.team_id,
+            fantasy_points: r.fantasy_points,
+            finish_position: finish,
+            games_completed: 5,
+            games_in_progress: 0,
+            games_remaining: 0,
+          },
+          { onConflict: "slate_id,team_id" }
+        );
+    }
+
+    return NextResponse.json({
+      success: true,
+      slateId,
+      playerId,
+      fantasyPoints,
+    });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: "Unexpected server error" },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/admin/correction-data/route.ts
+------------------------------------------------------------
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+function formatSlateLabel(startDate: string, endDate: string) {
+  return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+}
+
+export async function GET() {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const [
+      { data: slates, error: slatesError },
+      { data: teams, error: teamsError },
+      { data: players, error: playersError },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select("id, date, start_date, end_date, is_locked")
+        .order("start_date", { ascending: false })
+        .order("end_date", { ascending: false }),
+      supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+      supabaseAdmin
+        .from("players")
+        .select("id, name, position_group, is_active, team_abbreviation")
+        .order("name", { ascending: true }),
+    ]);
+
+    if (slatesError) return NextResponse.json({ error: slatesError.message }, { status: 500 });
+    if (teamsError) return NextResponse.json({ error: teamsError.message }, { status: 500 });
+    if (playersError) return NextResponse.json({ error: playersError.message }, { status: 500 });
+
+    return NextResponse.json({
+      success: true,
+      slates: (slates ?? []).map((slate) => {
+        const startDate = slate.start_date ?? slate.date;
+        const endDate = slate.end_date ?? slate.date;
+
+        return {
+          ...slate,
+          label: formatSlateLabel(startDate, endDate),
+        };
+      }),
+      teams: teams ?? [],
+      players: players ?? [],
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading correction data." },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/admin/lineup-correction/route.ts
+------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+export async function POST(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const body = await request.json();
+
+    const slateId = Number(body.slateId);
+    const teamId = Number(body.teamId);
+    const action = String(body.action ?? "");
+    const oldPlayerId = body.oldPlayerId ? Number(body.oldPlayerId) : null;
+    const newPlayerId = body.newPlayerId ? Number(body.newPlayerId) : null;
+
+    if (!Number.isFinite(slateId) || !Number.isFinite(teamId)) {
+      return NextResponse.json(
+        { error: "Valid slateId and teamId are required." },
+        { status: 400 }
+      );
+    }
+
+    const { data: lineup, error: lineupError } = await supabaseAdmin
+      .from("lineups")
+      .select("id")
+      .eq("slate_id", slateId)
+      .eq("team_id", teamId)
+      .maybeSingle();
+
+    if (lineupError) {
+      return NextResponse.json({ error: lineupError.message }, { status: 500 });
+    }
+
+    if (!lineup) {
+      return NextResponse.json({ error: "Lineup not found." }, { status: 404 });
+    }
+
+    if (action === "replace") {
+      if (!oldPlayerId || !newPlayerId) {
+        return NextResponse.json(
+          { error: "oldPlayerId and newPlayerId are required for replace." },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await supabaseAdmin
+        .from("lineup_players")
+        .update({ player_id: newPlayerId })
+        .eq("lineup_id", lineup.id)
+        .eq("player_id", oldPlayerId);
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    } else if (action === "add") {
+      if (!newPlayerId) {
+        return NextResponse.json(
+          { error: "newPlayerId is required for add." },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await supabaseAdmin
+        .from("lineup_players")
+        .insert({ lineup_id: lineup.id, player_id: newPlayerId });
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    } else if (action === "remove") {
+      if (!oldPlayerId) {
+        return NextResponse.json(
+          { error: "oldPlayerId is required for remove." },
+          { status: 400 }
+        );
+      }
+
+      const { error } = await supabaseAdmin
+        .from("lineup_players")
+        .delete()
+        .eq("lineup_id", lineup.id)
+        .eq("player_id", oldPlayerId);
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    } else {
+      return NextResponse.json(
+        { error: "Invalid action. Use add, replace, or remove." },
+        { status: 400 }
+      );
+    }
+
+    await fetch(`${request.nextUrl.origin}/api/admin/recompute-slate-results`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slateId }),
+    });
+
+    return NextResponse.json({
+      success: true,
+      slateId,
+      teamId,
+      action,
+      oldPlayerId,
+      newPlayerId,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while correcting lineup." },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+CURRENT SHOTCAST MANIFEST TYPES / LOADERS
+============================================================
+components/lineups/GolfHoleReplayPanel.tsx-64-  holeScore: string | null;
+components/lineups/GolfHoleReplayPanel.tsx-65-  shots: ReplayShot[];
+components/lineups/GolfHoleReplayPanel.tsx-66-};
+components/lineups/GolfHoleReplayPanel.tsx-67-
+components/lineups/GolfHoleReplayPanel.tsx-68-type ResponseBody = {
+components/lineups/GolfHoleReplayPanel.tsx-69-  success?: boolean;
+components/lineups/GolfHoleReplayPanel.tsx-70-  available?: boolean;
+components/lineups/GolfHoleReplayPanel.tsx-71-  message?: string;
+components/lineups/GolfHoleReplayPanel.tsx-72-  replay?: Replay | null;
+components/lineups/GolfHoleReplayPanel.tsx-73-  error?: string;
+components/lineups/GolfHoleReplayPanel.tsx-74-};
+components/lineups/GolfHoleReplayPanel.tsx-75-
+components/lineups/GolfHoleReplayPanel.tsx-76-type ShotCastCalibration = {
+components/lineups/GolfHoleReplayPanel.tsx-77-  xScale: number;
+components/lineups/GolfHoleReplayPanel.tsx-78-  xOffset: number;
+components/lineups/GolfHoleReplayPanel.tsx-79-  yScale: number;
+components/lineups/GolfHoleReplayPanel.tsx-80-  yOffset: number;
+components/lineups/GolfHoleReplayPanel.tsx-81-  verified?: boolean;
+components/lineups/GolfHoleReplayPanel.tsx-82-};
+components/lineups/GolfHoleReplayPanel.tsx-83-
+components/lineups/GolfHoleReplayPanel.tsx:84:type ShotCastManifestHole = {
+components/lineups/GolfHoleReplayPanel.tsx-85-  holeNumber: number;
+components/lineups/GolfHoleReplayPanel.tsx-86-  available: boolean;
+components/lineups/GolfHoleReplayPanel.tsx-87-  par: number | null;
+components/lineups/GolfHoleReplayPanel.tsx-88-  yards: number | null;
+components/lineups/GolfHoleReplayPanel.tsx-89-  aboutThisHole: string | null;
+components/lineups/GolfHoleReplayPanel.tsx-90-  localImageUrl: string | null;
+components/lineups/GolfHoleReplayPanel.tsx-91-  localAlignedMapUrl?: string | null;
+components/lineups/GolfHoleReplayPanel.tsx-92-  calibration?: ShotCastCalibration | null;
+components/lineups/GolfHoleReplayPanel.tsx-93-};
+components/lineups/GolfHoleReplayPanel.tsx-94-
+components/lineups/GolfHoleReplayPanel.tsx:95:type ShotCastManifest = {
+components/lineups/GolfHoleReplayPanel.tsx-96-  tournament: {
+components/lineups/GolfHoleReplayPanel.tsx-97-    id: string;
+components/lineups/GolfHoleReplayPanel.tsx-98-    name: string | null;
+components/lineups/GolfHoleReplayPanel.tsx-99-  };
+components/lineups/GolfHoleReplayPanel.tsx-100-  course: {
+components/lineups/GolfHoleReplayPanel.tsx-101-    id: string;
+components/lineups/GolfHoleReplayPanel.tsx-102-    name: string | null;
+components/lineups/GolfHoleReplayPanel.tsx-103-  };
+components/lineups/GolfHoleReplayPanel.tsx:104:  holes: ShotCastManifestHole[];
+components/lineups/GolfHoleReplayPanel.tsx-105-};
+components/lineups/GolfHoleReplayPanel.tsx-106-
+components/lineups/GolfHoleReplayPanel.tsx-107-type ActiveShotCastConfig = {
+components/lineups/GolfHoleReplayPanel.tsx-108-  title: string;
+components/lineups/GolfHoleReplayPanel.tsx-109-  imageUrl: string;
+components/lineups/GolfHoleReplayPanel.tsx-110-  imageFit: "fill" | "contain";
+components/lineups/GolfHoleReplayPanel.tsx-111-  calibration: ShotCastCalibration;
+components/lineups/GolfHoleReplayPanel.tsx-112-  calibrationVerified: boolean;
+components/lineups/GolfHoleReplayPanel.tsx-113-  aboutThisHole: string | null;
+components/lineups/GolfHoleReplayPanel.tsx-114-};
+components/lineups/GolfHoleReplayPanel.tsx-115-
+components/lineups/GolfHoleReplayPanel.tsx-116-type Props = {
+components/lineups/GolfHoleReplayPanel.tsx-117-  slateId: number;
+components/lineups/GolfHoleReplayPanel.tsx-118-  playerId: number;
+components/lineups/GolfHoleReplayPanel.tsx-119-  roundNumber: number;
+components/lineups/GolfHoleReplayPanel.tsx-120-  holeNumber: number;
+components/lineups/GolfHoleReplayPanel.tsx-121-  fallbackPar: number | null;
+components/lineups/GolfHoleReplayPanel.tsx-122-  fallbackYardage: number | null;
+components/lineups/GolfHoleReplayPanel.tsx-123-  fallbackResult: string;
+components/lineups/GolfHoleReplayPanel.tsx-124-  onClose: () => void;
+components/lineups/GolfHoleReplayPanel.tsx-125-};
+components/lineups/GolfHoleReplayPanel.tsx-126-
+components/lineups/GolfHoleReplayPanel.tsx-127-const IDENTITY_CALIBRATION: ShotCastCalibration = {
+components/lineups/GolfHoleReplayPanel.tsx-128-  xScale: 1,
+components/lineups/GolfHoleReplayPanel.tsx-129-  xOffset: 0,
+components/lineups/GolfHoleReplayPanel.tsx-130-  yScale: 1,
+components/lineups/GolfHoleReplayPanel.tsx-131-  yOffset: 0,
+components/lineups/GolfHoleReplayPanel.tsx-132-  verified: false,
+components/lineups/GolfHoleReplayPanel.tsx-133-};
+components/lineups/GolfHoleReplayPanel.tsx-134-
+components/lineups/GolfHoleReplayPanel.tsx-135-const DETROIT_HOLE_8_CALIBRATION: ShotCastCalibration = {
+components/lineups/GolfHoleReplayPanel.tsx-136-  xScale: 2.488624,
+components/lineups/GolfHoleReplayPanel.tsx-137-  xOffset: -0.748272,
+components/lineups/GolfHoleReplayPanel.tsx-138-  yScale: 0.974452,
+components/lineups/GolfHoleReplayPanel.tsx-139-  yOffset: 0.127478,
+components/lineups/GolfHoleReplayPanel.tsx-140-  verified: true,
+components/lineups/GolfHoleReplayPanel.tsx-141-};
+components/lineups/GolfHoleReplayPanel.tsx-142-
+components/lineups/GolfHoleReplayPanel.tsx-143-function titleCase(
+components/lineups/GolfHoleReplayPanel.tsx-144-  value: string | null | undefined,
+components/lineups/GolfHoleReplayPanel.tsx-145-) {
+components/lineups/GolfHoleReplayPanel.tsx-146-  if (!value) return "";
+components/lineups/GolfHoleReplayPanel.tsx-147-
+components/lineups/GolfHoleReplayPanel.tsx-148-  return value
+components/lineups/GolfHoleReplayPanel.tsx-149-    .toLowerCase()
+components/lineups/GolfHoleReplayPanel.tsx-150-    .replace(/\b\w/g, (letter) =>
+components/lineups/GolfHoleReplayPanel.tsx-151-      letter.toUpperCase(),
+components/lineups/GolfHoleReplayPanel.tsx-152-    );
+components/lineups/GolfHoleReplayPanel.tsx-153-}
+components/lineups/GolfHoleReplayPanel.tsx-154-
+components/lineups/GolfHoleReplayPanel.tsx-155-function locationLabel(
+components/lineups/GolfHoleReplayPanel.tsx-156-  value: string | null | undefined,
+components/lineups/GolfHoleReplayPanel.tsx-157-) {
+components/lineups/GolfHoleReplayPanel.tsx-158-  return value?.trim() || "Unknown lie";
+components/lineups/GolfHoleReplayPanel.tsx-159-}
+components/lineups/GolfHoleReplayPanel.tsx-160-
+components/lineups/GolfHoleReplayPanel.tsx-161-function resultToneClass(
+components/lineups/GolfHoleReplayPanel.tsx-162-  result: string | null | undefined,
+components/lineups/GolfHoleReplayPanel.tsx-163-) {
+components/lineups/GolfHoleReplayPanel.tsx-164-  const normalized =
+components/lineups/GolfHoleReplayPanel.tsx-165-    result?.trim().toLowerCase() ?? "";
+components/lineups/GolfHoleReplayPanel.tsx-166-
+components/lineups/GolfHoleReplayPanel.tsx-167-  if (
+components/lineups/GolfHoleReplayPanel.tsx-168-    normalized.includes("albatross") ||
+components/lineups/GolfHoleReplayPanel.tsx-169-    normalized.includes("eagle") ||
+components/lineups/GolfHoleReplayPanel.tsx-170-    normalized.includes("birdie")
+components/lineups/GolfHoleReplayPanel.tsx-171-  ) {
+components/lineups/GolfHoleReplayPanel.tsx-172-    return "text-emerald-300";
+components/lineups/GolfHoleReplayPanel.tsx-173-  }
+components/lineups/GolfHoleReplayPanel.tsx-174-
+components/lineups/GolfHoleReplayPanel.tsx-175-  if (
+components/lineups/GolfHoleReplayPanel.tsx-176-    normalized.includes("double") ||
+components/lineups/GolfHoleReplayPanel.tsx-177-    normalized.includes("triple") ||
+components/lineups/GolfHoleReplayPanel.tsx-178-    normalized.includes("quad") ||
+components/lineups/GolfHoleReplayPanel.tsx-179-    /^\+\d+/.test(normalized)
+components/lineups/GolfHoleReplayPanel.tsx-180-  ) {
+components/lineups/GolfHoleReplayPanel.tsx-181-    return "text-red-400";
+components/lineups/GolfHoleReplayPanel.tsx-182-  }
+components/lineups/GolfHoleReplayPanel.tsx-183-
+components/lineups/GolfHoleReplayPanel.tsx-184-  if (normalized.includes("bogey")) {
+components/lineups/GolfHoleReplayPanel.tsx-185-    return "text-red-300";
+components/lineups/GolfHoleReplayPanel.tsx-186-  }
+components/lineups/GolfHoleReplayPanel.tsx-187-
+components/lineups/GolfHoleReplayPanel.tsx-188-  if (
+components/lineups/GolfHoleReplayPanel.tsx-189-    normalized === "par" ||
+components/lineups/GolfHoleReplayPanel.tsx-190-    normalized.includes("even")
+components/lineups/GolfHoleReplayPanel.tsx-191-  ) {
+components/lineups/GolfHoleReplayPanel.tsx-192-    return "text-slate-200";
+components/lineups/GolfHoleReplayPanel.tsx-193-  }
+components/lineups/GolfHoleReplayPanel.tsx-194-
+--
+components/lineups/GolfHoleReplayPanel.tsx-273-    useState(true);
+components/lineups/GolfHoleReplayPanel.tsx-274-
+components/lineups/GolfHoleReplayPanel.tsx-275-  const [isRefreshing, setIsRefreshing] =
+components/lineups/GolfHoleReplayPanel.tsx-276-    useState(false);
+components/lineups/GolfHoleReplayPanel.tsx-277-
+components/lineups/GolfHoleReplayPanel.tsx-278-  const [lastUpdatedAt, setLastUpdatedAt] =
+components/lineups/GolfHoleReplayPanel.tsx-279-    useState<Date | null>(null);
+components/lineups/GolfHoleReplayPanel.tsx-280-
+components/lineups/GolfHoleReplayPanel.tsx-281-  const [
+components/lineups/GolfHoleReplayPanel.tsx-282-    selectedStrokeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-283-    setSelectedStrokeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-284-  ] = useState<number | null>(null);
+components/lineups/GolfHoleReplayPanel.tsx-285-
+components/lineups/GolfHoleReplayPanel.tsx-286-  const [
+components/lineups/GolfHoleReplayPanel.tsx-287-    isShotCastOpen,
+components/lineups/GolfHoleReplayPanel.tsx-288-    setIsShotCastOpen,
+components/lineups/GolfHoleReplayPanel.tsx-289-  ] = useState(false);
+components/lineups/GolfHoleReplayPanel.tsx-290-
+components/lineups/GolfHoleReplayPanel.tsx-291-  const [
+components/lineups/GolfHoleReplayPanel.tsx-292-    shotCastManifest,
+components/lineups/GolfHoleReplayPanel.tsx:293:    setShotCastManifest,
+components/lineups/GolfHoleReplayPanel.tsx:294:  ] = useState<ShotCastManifest | null>(
+components/lineups/GolfHoleReplayPanel.tsx-295-    null,
+components/lineups/GolfHoleReplayPanel.tsx-296-  );
+components/lineups/GolfHoleReplayPanel.tsx-297-
+components/lineups/GolfHoleReplayPanel.tsx-298-  const [
+components/lineups/GolfHoleReplayPanel.tsx-299-    isManifestLoading,
+components/lineups/GolfHoleReplayPanel.tsx-300-    setIsManifestLoading,
+components/lineups/GolfHoleReplayPanel.tsx-301-  ] = useState(false);
+components/lineups/GolfHoleReplayPanel.tsx-302-
+components/lineups/GolfHoleReplayPanel.tsx-303-  const loadReplay = useCallback(
+components/lineups/GolfHoleReplayPanel.tsx-304-    async ({
+components/lineups/GolfHoleReplayPanel.tsx-305-      forceRefresh = false,
+components/lineups/GolfHoleReplayPanel.tsx-306-      signal,
+components/lineups/GolfHoleReplayPanel.tsx-307-    }: {
+components/lineups/GolfHoleReplayPanel.tsx-308-      forceRefresh?: boolean;
+components/lineups/GolfHoleReplayPanel.tsx-309-      signal?: AbortSignal;
+components/lineups/GolfHoleReplayPanel.tsx-310-    } = {}) => {
+components/lineups/GolfHoleReplayPanel.tsx-311-      try {
+components/lineups/GolfHoleReplayPanel.tsx-312-        if (forceRefresh) {
+components/lineups/GolfHoleReplayPanel.tsx-313-          setIsRefreshing(true);
+components/lineups/GolfHoleReplayPanel.tsx-314-        } else {
+components/lineups/GolfHoleReplayPanel.tsx-315-          setIsLoading(true);
+components/lineups/GolfHoleReplayPanel.tsx-316-          setReplay(null);
+components/lineups/GolfHoleReplayPanel.tsx-317-        }
+components/lineups/GolfHoleReplayPanel.tsx-318-
+components/lineups/GolfHoleReplayPanel.tsx-319-        setMessage("");
+components/lineups/GolfHoleReplayPanel.tsx-320-
+components/lineups/GolfHoleReplayPanel.tsx-321-        const query =
+components/lineups/GolfHoleReplayPanel.tsx-322-          new URLSearchParams({
+components/lineups/GolfHoleReplayPanel.tsx-323-            slateId: String(slateId),
+components/lineups/GolfHoleReplayPanel.tsx-324-            playerId: String(playerId),
+components/lineups/GolfHoleReplayPanel.tsx-325-            round: String(roundNumber),
+components/lineups/GolfHoleReplayPanel.tsx-326-            hole: String(holeNumber),
+components/lineups/GolfHoleReplayPanel.tsx-327-          });
+components/lineups/GolfHoleReplayPanel.tsx-328-
+components/lineups/GolfHoleReplayPanel.tsx-329-        if (forceRefresh) {
+components/lineups/GolfHoleReplayPanel.tsx-330-          query.set(
+components/lineups/GolfHoleReplayPanel.tsx-331-            "refresh",
+components/lineups/GolfHoleReplayPanel.tsx-332-            String(Date.now()),
+components/lineups/GolfHoleReplayPanel.tsx-333-          );
+components/lineups/GolfHoleReplayPanel.tsx-334-        }
+components/lineups/GolfHoleReplayPanel.tsx-335-
+components/lineups/GolfHoleReplayPanel.tsx-336-        const response = await fetch(
+components/lineups/GolfHoleReplayPanel.tsx-337-          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx-338-          {
+components/lineups/GolfHoleReplayPanel.tsx-339-            cache: "no-store",
+components/lineups/GolfHoleReplayPanel.tsx-340-            signal,
+components/lineups/GolfHoleReplayPanel.tsx-341-          },
+components/lineups/GolfHoleReplayPanel.tsx-342-        );
+components/lineups/GolfHoleReplayPanel.tsx-343-
+components/lineups/GolfHoleReplayPanel.tsx-344-        const result =
+components/lineups/GolfHoleReplayPanel.tsx-345-          (await response.json()) as ResponseBody;
+components/lineups/GolfHoleReplayPanel.tsx-346-
+components/lineups/GolfHoleReplayPanel.tsx-347-        if (!response.ok) {
+components/lineups/GolfHoleReplayPanel.tsx-348-          setMessage(
+components/lineups/GolfHoleReplayPanel.tsx-349-            result.error ||
+components/lineups/GolfHoleReplayPanel.tsx-350-              "Unable to load shot tracking.",
+components/lineups/GolfHoleReplayPanel.tsx-351-          );
+components/lineups/GolfHoleReplayPanel.tsx-352-          return;
+components/lineups/GolfHoleReplayPanel.tsx-353-        }
+components/lineups/GolfHoleReplayPanel.tsx-354-
+components/lineups/GolfHoleReplayPanel.tsx-355-        if (!result.replay) {
+components/lineups/GolfHoleReplayPanel.tsx-356-          setMessage(
+components/lineups/GolfHoleReplayPanel.tsx-357-            result.message ||
+components/lineups/GolfHoleReplayPanel.tsx-358-              "Shot tracking is not available for this hole yet.",
+components/lineups/GolfHoleReplayPanel.tsx-359-          );
+components/lineups/GolfHoleReplayPanel.tsx-360-          return;
+components/lineups/GolfHoleReplayPanel.tsx-361-        }
+components/lineups/GolfHoleReplayPanel.tsx-362-
+components/lineups/GolfHoleReplayPanel.tsx-363-        setReplay(result.replay);
+components/lineups/GolfHoleReplayPanel.tsx-364-
+components/lineups/GolfHoleReplayPanel.tsx-365-        if (!result.available) {
+components/lineups/GolfHoleReplayPanel.tsx-366-          setMessage(
+components/lineups/GolfHoleReplayPanel.tsx-367-            result.message ||
+components/lineups/GolfHoleReplayPanel.tsx-368-              "This hole has not started yet.",
+components/lineups/GolfHoleReplayPanel.tsx-369-          );
+components/lineups/GolfHoleReplayPanel.tsx-370-        }
+components/lineups/GolfHoleReplayPanel.tsx-371-
+components/lineups/GolfHoleReplayPanel.tsx-372-        setSelectedStrokeNumber(
+components/lineups/GolfHoleReplayPanel.tsx-373-          result.replay.shots[0]
+components/lineups/GolfHoleReplayPanel.tsx-374-            ?.strokeNumber ?? null,
+components/lineups/GolfHoleReplayPanel.tsx-375-        );
+components/lineups/GolfHoleReplayPanel.tsx-376-        setLastUpdatedAt(new Date());
+components/lineups/GolfHoleReplayPanel.tsx-377-      } catch (error) {
+components/lineups/GolfHoleReplayPanel.tsx-378-        if (
+components/lineups/GolfHoleReplayPanel.tsx-379-          error instanceof DOMException &&
+components/lineups/GolfHoleReplayPanel.tsx-380-          error.name === "AbortError"
+components/lineups/GolfHoleReplayPanel.tsx-381-        ) {
+components/lineups/GolfHoleReplayPanel.tsx-382-          return;
+components/lineups/GolfHoleReplayPanel.tsx-383-        }
+components/lineups/GolfHoleReplayPanel.tsx-384-
+--
+components/lineups/GolfHoleReplayPanel.tsx-402-      holeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-403-    ],
+components/lineups/GolfHoleReplayPanel.tsx-404-  );
+components/lineups/GolfHoleReplayPanel.tsx-405-
+components/lineups/GolfHoleReplayPanel.tsx-406-  useEffect(() => {
+components/lineups/GolfHoleReplayPanel.tsx-407-    const controller =
+components/lineups/GolfHoleReplayPanel.tsx-408-      new AbortController();
+components/lineups/GolfHoleReplayPanel.tsx-409-
+components/lineups/GolfHoleReplayPanel.tsx-410-    void loadReplay({
+components/lineups/GolfHoleReplayPanel.tsx-411-      signal: controller.signal,
+components/lineups/GolfHoleReplayPanel.tsx-412-    });
+components/lineups/GolfHoleReplayPanel.tsx-413-
+components/lineups/GolfHoleReplayPanel.tsx-414-    return () => controller.abort();
+components/lineups/GolfHoleReplayPanel.tsx-415-  }, [loadReplay]);
+components/lineups/GolfHoleReplayPanel.tsx-416-
+components/lineups/GolfHoleReplayPanel.tsx-417-  useEffect(() => {
+components/lineups/GolfHoleReplayPanel.tsx-418-    const tournamentId =
+components/lineups/GolfHoleReplayPanel.tsx-419-      replay?.tournamentId?.trim() ?? "";
+components/lineups/GolfHoleReplayPanel.tsx-420-
+components/lineups/GolfHoleReplayPanel.tsx-421-    if (!tournamentId) {
+components/lineups/GolfHoleReplayPanel.tsx:422:      setShotCastManifest(null);
+components/lineups/GolfHoleReplayPanel.tsx-423-      return;
+components/lineups/GolfHoleReplayPanel.tsx-424-    }
+components/lineups/GolfHoleReplayPanel.tsx-425-
+components/lineups/GolfHoleReplayPanel.tsx-426-    const controller =
+components/lineups/GolfHoleReplayPanel.tsx-427-      new AbortController();
+components/lineups/GolfHoleReplayPanel.tsx-428-
+components/lineups/GolfHoleReplayPanel.tsx-429-    async function loadManifest() {
+components/lineups/GolfHoleReplayPanel.tsx-430-      try {
+components/lineups/GolfHoleReplayPanel.tsx-431-        setIsManifestLoading(true);
+components/lineups/GolfHoleReplayPanel.tsx-432-
+components/lineups/GolfHoleReplayPanel.tsx-433-        const response = await fetch(
+components/lineups/GolfHoleReplayPanel.tsx-434-          `/shotcast/${encodeURIComponent(
+components/lineups/GolfHoleReplayPanel.tsx-435-            tournamentId,
+components/lineups/GolfHoleReplayPanel.tsx-436-          )}/manifest.json`,
+components/lineups/GolfHoleReplayPanel.tsx-437-          {
+components/lineups/GolfHoleReplayPanel.tsx-438-            cache: "no-store",
+components/lineups/GolfHoleReplayPanel.tsx-439-            signal: controller.signal,
+components/lineups/GolfHoleReplayPanel.tsx-440-          },
+components/lineups/GolfHoleReplayPanel.tsx-441-        );
+components/lineups/GolfHoleReplayPanel.tsx-442-
+components/lineups/GolfHoleReplayPanel.tsx-443-        if (!response.ok) {
+components/lineups/GolfHoleReplayPanel.tsx:444:          setShotCastManifest(null);
+components/lineups/GolfHoleReplayPanel.tsx-445-          return;
+components/lineups/GolfHoleReplayPanel.tsx-446-        }
+components/lineups/GolfHoleReplayPanel.tsx-447-
+components/lineups/GolfHoleReplayPanel.tsx-448-        const manifest =
+components/lineups/GolfHoleReplayPanel.tsx:449:          (await response.json()) as ShotCastManifest;
+components/lineups/GolfHoleReplayPanel.tsx-450-
+components/lineups/GolfHoleReplayPanel.tsx:451:        setShotCastManifest(manifest);
+components/lineups/GolfHoleReplayPanel.tsx-452-      } catch (error) {
+components/lineups/GolfHoleReplayPanel.tsx-453-        if (
+components/lineups/GolfHoleReplayPanel.tsx-454-          error instanceof DOMException &&
+components/lineups/GolfHoleReplayPanel.tsx-455-          error.name === "AbortError"
+components/lineups/GolfHoleReplayPanel.tsx-456-        ) {
+components/lineups/GolfHoleReplayPanel.tsx-457-          return;
+components/lineups/GolfHoleReplayPanel.tsx-458-        }
+components/lineups/GolfHoleReplayPanel.tsx-459-
+components/lineups/GolfHoleReplayPanel.tsx-460-        console.warn(
+components/lineups/GolfHoleReplayPanel.tsx-461-          "Unable to load ShotCast manifest",
+components/lineups/GolfHoleReplayPanel.tsx-462-          error,
+components/lineups/GolfHoleReplayPanel.tsx-463-        );
+components/lineups/GolfHoleReplayPanel.tsx-464-
+components/lineups/GolfHoleReplayPanel.tsx:465:        setShotCastManifest(null);
+components/lineups/GolfHoleReplayPanel.tsx-466-      } finally {
+components/lineups/GolfHoleReplayPanel.tsx-467-        setIsManifestLoading(false);
+components/lineups/GolfHoleReplayPanel.tsx-468-      }
+components/lineups/GolfHoleReplayPanel.tsx-469-    }
+components/lineups/GolfHoleReplayPanel.tsx-470-
+components/lineups/GolfHoleReplayPanel.tsx-471-    void loadManifest();
+components/lineups/GolfHoleReplayPanel.tsx-472-
+components/lineups/GolfHoleReplayPanel.tsx-473-    return () => controller.abort();
+components/lineups/GolfHoleReplayPanel.tsx-474-  }, [replay?.tournamentId]);
+components/lineups/GolfHoleReplayPanel.tsx-475-
+components/lineups/GolfHoleReplayPanel.tsx:476:  const activeShotCastConfig =
+components/lineups/GolfHoleReplayPanel.tsx-477-    useMemo<ActiveShotCastConfig | null>(
+components/lineups/GolfHoleReplayPanel.tsx-478-      () => {
+components/lineups/GolfHoleReplayPanel.tsx-479-        /*
+components/lineups/GolfHoleReplayPanel.tsx-480-         * Preserve the verified Rocket Classic proof of
+components/lineups/GolfHoleReplayPanel.tsx-481-         * concept until that event has its own manifest.
+components/lineups/GolfHoleReplayPanel.tsx-482-         */
+components/lineups/GolfHoleReplayPanel.tsx-483-        if (
+components/lineups/GolfHoleReplayPanel.tsx-484-          slateId === 161 &&
+components/lineups/GolfHoleReplayPanel.tsx-485-          holeNumber === 8
+components/lineups/GolfHoleReplayPanel.tsx-486-        ) {
+components/lineups/GolfHoleReplayPanel.tsx-487-          return {
+components/lineups/GolfHoleReplayPanel.tsx-488-            title:
+components/lineups/GolfHoleReplayPanel.tsx-489-              "Detroit Golf Club · Hole 8",
+components/lineups/GolfHoleReplayPanel.tsx-490-            imageUrl:
+components/lineups/GolfHoleReplayPanel.tsx-491-              "/tourcast/rocket-classic/hole-8/terrain08-web.jpg",
+components/lineups/GolfHoleReplayPanel.tsx-492-            imageFit: "fill",
+components/lineups/GolfHoleReplayPanel.tsx-493-            calibration:
+components/lineups/GolfHoleReplayPanel.tsx-494-              DETROIT_HOLE_8_CALIBRATION,
+components/lineups/GolfHoleReplayPanel.tsx-495-            calibrationVerified: true,
+components/lineups/GolfHoleReplayPanel.tsx-496-            aboutThisHole: null,
+components/lineups/GolfHoleReplayPanel.tsx-497-          };
+components/lineups/GolfHoleReplayPanel.tsx-498-        }
+components/lineups/GolfHoleReplayPanel.tsx-499-
+components/lineups/GolfHoleReplayPanel.tsx-500-        const manifestHole =
+components/lineups/GolfHoleReplayPanel.tsx-501-          shotCastManifest?.holes.find(
+components/lineups/GolfHoleReplayPanel.tsx-502-            (hole) =>
+components/lineups/GolfHoleReplayPanel.tsx-503-              Number(
+components/lineups/GolfHoleReplayPanel.tsx-504-                hole.holeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-505-              ) === holeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-506-          ) ?? null;
+components/lineups/GolfHoleReplayPanel.tsx-507-
+components/lineups/GolfHoleReplayPanel.tsx-508-        const imageUrl =
+components/lineups/GolfHoleReplayPanel.tsx-509-          manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-510-            ?.localAlignedMapUrl ||
+components/lineups/GolfHoleReplayPanel.tsx-511-          manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-512-            ?.localImageUrl ||
+components/lineups/GolfHoleReplayPanel.tsx-513-          null;
+components/lineups/GolfHoleReplayPanel.tsx-514-
+components/lineups/GolfHoleReplayPanel.tsx-515-        if (!imageUrl) {
+components/lineups/GolfHoleReplayPanel.tsx-516-          return null;
+components/lineups/GolfHoleReplayPanel.tsx-517-        }
+components/lineups/GolfHoleReplayPanel.tsx-518-
+components/lineups/GolfHoleReplayPanel.tsx-519-        const calibration =
+components/lineups/GolfHoleReplayPanel.tsx-520-          manifestHole?.calibration &&
+components/lineups/GolfHoleReplayPanel.tsx-521-          Number.isFinite(
+components/lineups/GolfHoleReplayPanel.tsx-522-            manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-523-              .calibration.xScale,
+components/lineups/GolfHoleReplayPanel.tsx-524-          ) &&
+components/lineups/GolfHoleReplayPanel.tsx-525-          Number.isFinite(
+components/lineups/GolfHoleReplayPanel.tsx-526-            manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-527-              .calibration.xOffset,
+components/lineups/GolfHoleReplayPanel.tsx-528-          ) &&
+components/lineups/GolfHoleReplayPanel.tsx-529-          Number.isFinite(
+components/lineups/GolfHoleReplayPanel.tsx-530-            manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-531-              .calibration.yScale,
+components/lineups/GolfHoleReplayPanel.tsx-532-          ) &&
+components/lineups/GolfHoleReplayPanel.tsx-533-          Number.isFinite(
+components/lineups/GolfHoleReplayPanel.tsx-534-            manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-535-              .calibration.yOffset,
+components/lineups/GolfHoleReplayPanel.tsx-536-          )
+components/lineups/GolfHoleReplayPanel.tsx-537-            ? manifestHole.calibration
+components/lineups/GolfHoleReplayPanel.tsx-538-            : IDENTITY_CALIBRATION;
+components/lineups/GolfHoleReplayPanel.tsx-539-
+components/lineups/GolfHoleReplayPanel.tsx-540-        return {
+components/lineups/GolfHoleReplayPanel.tsx-541-          title: `${
+components/lineups/GolfHoleReplayPanel.tsx-542-            shotCastManifest?.course
+components/lineups/GolfHoleReplayPanel.tsx-543-              .name ||
+components/lineups/GolfHoleReplayPanel.tsx-544-            "Golf course"
+components/lineups/GolfHoleReplayPanel.tsx-545-          } · Hole ${holeNumber}`,
+components/lineups/GolfHoleReplayPanel.tsx-546-
+components/lineups/GolfHoleReplayPanel.tsx-547-          imageUrl,
+components/lineups/GolfHoleReplayPanel.tsx-548-
+components/lineups/GolfHoleReplayPanel.tsx-549-          imageFit:
+components/lineups/GolfHoleReplayPanel.tsx-550-            manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-551-              ?.localAlignedMapUrl
+components/lineups/GolfHoleReplayPanel.tsx-552-              ? "fill"
+components/lineups/GolfHoleReplayPanel.tsx-553-              : "contain",
+components/lineups/GolfHoleReplayPanel.tsx-554-
+components/lineups/GolfHoleReplayPanel.tsx-555-          calibration,
+components/lineups/GolfHoleReplayPanel.tsx-556-
+components/lineups/GolfHoleReplayPanel.tsx-557-          calibrationVerified:
+components/lineups/GolfHoleReplayPanel.tsx-558-            calibration.verified ===
+components/lineups/GolfHoleReplayPanel.tsx-559-            true,
+components/lineups/GolfHoleReplayPanel.tsx-560-
+components/lineups/GolfHoleReplayPanel.tsx-561-          aboutThisHole:
+components/lineups/GolfHoleReplayPanel.tsx-562-            manifestHole
+components/lineups/GolfHoleReplayPanel.tsx-563-              ?.aboutThisHole ??
+components/lineups/GolfHoleReplayPanel.tsx-564-            null,
+components/lineups/GolfHoleReplayPanel.tsx-565-        };
+components/lineups/GolfHoleReplayPanel.tsx-566-      },
+--
+components/lineups/GolfHoleReplayPanel.tsx-711-            type="button"
+components/lineups/GolfHoleReplayPanel.tsx-712-            onClick={() =>
+components/lineups/GolfHoleReplayPanel.tsx-713-              void loadReplay({
+components/lineups/GolfHoleReplayPanel.tsx-714-                forceRefresh: true,
+components/lineups/GolfHoleReplayPanel.tsx-715-              })
+components/lineups/GolfHoleReplayPanel.tsx-716-            }
+components/lineups/GolfHoleReplayPanel.tsx-717-            disabled={isRefreshing}
+components/lineups/GolfHoleReplayPanel.tsx-718-            className="mt-4 rounded-xl border border-emerald-700 bg-emerald-950 px-4 py-2 text-xs font-bold text-emerald-200 disabled:opacity-60"
+components/lineups/GolfHoleReplayPanel.tsx-719-          >
+components/lineups/GolfHoleReplayPanel.tsx-720-            Try again
+components/lineups/GolfHoleReplayPanel.tsx-721-          </button>
+components/lineups/GolfHoleReplayPanel.tsx-722-        </div>
+components/lineups/GolfHoleReplayPanel.tsx-723-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx-724-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx-725-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx-726-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx-727-              {message}
+components/lineups/GolfHoleReplayPanel.tsx-728-            </div>
+components/lineups/GolfHoleReplayPanel.tsx-729-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-730-
+components/lineups/GolfHoleReplayPanel.tsx:731:          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx-732-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx-733-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+components/lineups/GolfHoleReplayPanel.tsx-734-                <div>
+components/lineups/GolfHoleReplayPanel.tsx-735-                  <div className="flex flex-wrap items-center gap-2">
+components/lineups/GolfHoleReplayPanel.tsx-736-                    <div className="text-xs font-bold text-slate-200">
+components/lineups/GolfHoleReplayPanel.tsx-737-                      ShotCast
+components/lineups/GolfHoleReplayPanel.tsx-738-                    </div>
+components/lineups/GolfHoleReplayPanel.tsx-739-
+components/lineups/GolfHoleReplayPanel.tsx:740:                    {!activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-741-                      .calibrationVerified ? (
+components/lineups/GolfHoleReplayPanel.tsx-742-                      <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-300">
+components/lineups/GolfHoleReplayPanel.tsx-743-                        Layout preview
+components/lineups/GolfHoleReplayPanel.tsx-744-                      </span>
+components/lineups/GolfHoleReplayPanel.tsx-745-                    ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-746-                  </div>
+components/lineups/GolfHoleReplayPanel.tsx-747-
+components/lineups/GolfHoleReplayPanel.tsx-748-                  <div className="mt-0.5 text-[10px] text-slate-500">
+components/lineups/GolfHoleReplayPanel.tsx:749:                    {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-750-                      .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-751-                      ? "Interactive aerial shot replay"
+components/lineups/GolfHoleReplayPanel.tsx-752-                      : "Interactive hole layout · shot alignment pending"}
+components/lineups/GolfHoleReplayPanel.tsx-753-                  </div>
+components/lineups/GolfHoleReplayPanel.tsx-754-                </div>
+components/lineups/GolfHoleReplayPanel.tsx-755-
+components/lineups/GolfHoleReplayPanel.tsx-756-                <button
+components/lineups/GolfHoleReplayPanel.tsx-757-                  type="button"
+components/lineups/GolfHoleReplayPanel.tsx-758-                  onClick={() =>
+components/lineups/GolfHoleReplayPanel.tsx-759-                    setIsShotCastOpen(
+components/lineups/GolfHoleReplayPanel.tsx-760-                      (current) =>
+components/lineups/GolfHoleReplayPanel.tsx-761-                        !current,
+components/lineups/GolfHoleReplayPanel.tsx-762-                    )
+components/lineups/GolfHoleReplayPanel.tsx-763-                  }
+components/lineups/GolfHoleReplayPanel.tsx-764-                  aria-expanded={
+components/lineups/GolfHoleReplayPanel.tsx-765-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx-766-                  }
+components/lineups/GolfHoleReplayPanel.tsx-767-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx-768-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx-769-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx-770-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx-771-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx-772-                >
+components/lineups/GolfHoleReplayPanel.tsx-773-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx-774-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx-775-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx-776-                </button>
+components/lineups/GolfHoleReplayPanel.tsx-777-              </div>
+components/lineups/GolfHoleReplayPanel.tsx-778-
+components/lineups/GolfHoleReplayPanel.tsx-779-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx-780-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx-781-                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx-782-                    title={
+components/lineups/GolfHoleReplayPanel.tsx:783:                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-784-                        .title
+components/lineups/GolfHoleReplayPanel.tsx-785-                    }
+components/lineups/GolfHoleReplayPanel.tsx-786-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx:787:                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-788-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx-789-                    }
+components/lineups/GolfHoleReplayPanel.tsx-790-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx:791:                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-792-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx-793-                    }
+components/lineups/GolfHoleReplayPanel.tsx-794-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx:795:                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-796-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx-797-                    }
+components/lineups/GolfHoleReplayPanel.tsx-798-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx:799:                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-800-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-801-                    }
+components/lineups/GolfHoleReplayPanel.tsx-802-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx-803-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx-804-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx:805:                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-806-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-807-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx-808-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx-809-                    }
+components/lineups/GolfHoleReplayPanel.tsx-810-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx-811-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx-812-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx-813-                    }
+components/lineups/GolfHoleReplayPanel.tsx-814-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx-815-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx-816-                    }
+components/lineups/GolfHoleReplayPanel.tsx-817-                  />
+components/lineups/GolfHoleReplayPanel.tsx-818-
+components/lineups/GolfHoleReplayPanel.tsx:819:                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-820-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx-821-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+components/lineups/GolfHoleReplayPanel.tsx-822-                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+components/lineups/GolfHoleReplayPanel.tsx-823-                        About this hole
+components/lineups/GolfHoleReplayPanel.tsx-824-                      </div>
+components/lineups/GolfHoleReplayPanel.tsx-825-
+components/lineups/GolfHoleReplayPanel.tsx-826-                      <div className="mt-1 text-xs leading-5 text-slate-400">
+components/lineups/GolfHoleReplayPanel.tsx-827-                        {
+components/lineups/GolfHoleReplayPanel.tsx:828:                          activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-829-                            .aboutThisHole
+components/lineups/GolfHoleReplayPanel.tsx-830-                        }
+components/lineups/GolfHoleReplayPanel.tsx-831-                      </div>
+components/lineups/GolfHoleReplayPanel.tsx-832-                    </div>
+components/lineups/GolfHoleReplayPanel.tsx-833-                  ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-834-                </div>
+components/lineups/GolfHoleReplayPanel.tsx-835-              ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-836-            </div>
+components/lineups/GolfHoleReplayPanel.tsx-837-          ) : isManifestLoading ? (
+components/lineups/GolfHoleReplayPanel.tsx-838-            <div className="mb-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-3 text-xs text-slate-500">
+components/lineups/GolfHoleReplayPanel.tsx-839-              Checking for ShotCast course assets…
+components/lineups/GolfHoleReplayPanel.tsx-840-            </div>
+components/lineups/GolfHoleReplayPanel.tsx-841-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-842-
+components/lineups/GolfHoleReplayPanel.tsx-843-          <div className="overflow-hidden rounded-xl border border-slate-800">
+components/lineups/GolfHoleReplayPanel.tsx-844-            {replay.shots.map(
+components/lineups/GolfHoleReplayPanel.tsx-845-              (shot, index) => {
+components/lineups/GolfHoleReplayPanel.tsx-846-                const summary =
+components/lineups/GolfHoleReplayPanel.tsx-847-                  shotSummary(
+components/lineups/GolfHoleReplayPanel.tsx-848-                    shot,
+components/lineups/GolfHoleReplayPanel.tsx-849-                    completedResult,
+components/lineups/GolfHoleReplayPanel.tsx-850-                  );
+components/lineups/GolfHoleReplayPanel.tsx-851-
+components/lineups/GolfHoleReplayPanel.tsx-852-                const isCurrentBall =
+components/lineups/GolfHoleReplayPanel.tsx-853-                  !isHoleComplete &&
+components/lineups/GolfHoleReplayPanel.tsx-854-                  index ===
+components/lineups/GolfHoleReplayPanel.tsx-855-                    replay.shots.length - 1;
+components/lineups/GolfHoleReplayPanel.tsx-856-
+components/lineups/GolfHoleReplayPanel.tsx-857-                const isSelectedShot =
+components/lineups/GolfHoleReplayPanel.tsx-858-                  shot.strokeNumber ===
+components/lineups/GolfHoleReplayPanel.tsx-859-                  selectedStrokeNumber;
+components/lineups/GolfHoleReplayPanel.tsx-860-
+components/lineups/GolfHoleReplayPanel.tsx-861-                return (
+components/lineups/GolfHoleReplayPanel.tsx-862-                  <button
+components/lineups/GolfHoleReplayPanel.tsx-863-                    type="button"
+components/lineups/GolfHoleReplayPanel.tsx-864-                    key={shot.strokeNumber}
+components/lineups/GolfHoleReplayPanel.tsx-865-                    onClick={() =>
+components/lineups/GolfHoleReplayPanel.tsx-866-                      setSelectedStrokeNumber(
+components/lineups/GolfHoleReplayPanel.tsx-867-                        shot.strokeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-868-                      )
+components/lineups/GolfHoleReplayPanel.tsx-869-                    }
+components/lineups/GolfHoleReplayPanel.tsx-870-                    className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+components/lineups/GolfHoleReplayPanel.tsx-871-                      index > 0
+components/lineups/GolfHoleReplayPanel.tsx-872-                        ? "border-t border-slate-800"
+components/lineups/GolfHoleReplayPanel.tsx-873-                        : ""
+components/lineups/GolfHoleReplayPanel.tsx-874-                    } ${
+components/lineups/GolfHoleReplayPanel.tsx-875-                      isSelectedShot
+components/lineups/GolfHoleReplayPanel.tsx-876-                        ? "bg-emerald-500/10"
+components/lineups/GolfHoleReplayPanel.tsx-877-                        : isCurrentBall
+components/lineups/GolfHoleReplayPanel.tsx-878-                          ? "bg-amber-500/5"
+components/lineups/GolfHoleReplayPanel.tsx-879-                          : "hover:bg-slate-900/70"
+components/lineups/GolfHoleReplayPanel.tsx-880-                    }`}
+components/lineups/GolfHoleReplayPanel.tsx-881-                  >
+components/lineups/GolfHoleReplayPanel.tsx-882-                    <div className="flex gap-3">
+components/lineups/GolfHoleReplayPanel.tsx-883-                      <span
+components/lineups/GolfHoleReplayPanel.tsx-884-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+components/lineups/GolfHoleReplayPanel.tsx-885-                          shot.finalStroke
+components/lineups/GolfHoleReplayPanel.tsx-886-                            ? resultBadgeClass(
+components/lineups/GolfHoleReplayPanel.tsx-887-                                completedResult,
+components/lineups/GolfHoleReplayPanel.tsx-888-                              )
+components/lineups/GolfHoleReplayPanel.tsx-889-                            : isCurrentBall
+components/lineups/GolfHoleReplayPanel.tsx-890-                              ? "border-amber-500 bg-amber-950 text-amber-200"
+components/lineups/GolfHoleReplayPanel.tsx-891-                              : "border-slate-600 bg-slate-800 text-slate-200"
+components/lineups/GolfHoleReplayPanel.tsx-892-                        }`}
+components/lineups/GolfHoleReplayPanel.tsx-893-                      >
+components/lineups/GolfHoleReplayPanel.tsx-894-                        {shot.strokeNumber}
+components/lineups/GolfHoleReplayPanel.tsx-895-                      </span>
+components/lineups/GolfHoleReplayPanel.tsx-896-
+components/lineups/GolfHoleReplayPanel.tsx-897-                      <div className="min-w-0 flex-1">
+components/lineups/GolfHoleReplayPanel.tsx-898-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+components/lineups/GolfHoleReplayPanel.tsx-899-                          <strong className="text-sm text-white">
+components/lineups/GolfHoleReplayPanel.tsx-900-                            Shot {shot.strokeNumber}
+components/lineups/GolfHoleReplayPanel.tsx-901-                          </strong>
+components/lineups/GolfHoleReplayPanel.tsx-902-
+components/lineups/GolfHoleReplayPanel.tsx-903-                          {summary ? (
+components/lineups/GolfHoleReplayPanel.tsx-904-                            <>
+components/lineups/GolfHoleReplayPanel.tsx-905-                              <span
+components/lineups/GolfHoleReplayPanel.tsx-906-                                aria-hidden="true"
+components/lineups/GolfHoleReplayPanel.tsx-907-                                className="text-slate-600"
+components/lineups/GolfHoleReplayPanel.tsx-908-                              >
+components/lineups/GolfHoleReplayPanel.tsx-909-                                ·
+components/lineups/GolfHoleReplayPanel.tsx-910-                              </span>
+components/lineups/GolfHoleReplayPanel.tsx-911-
+components/lineups/GolfHoleReplayPanel.tsx-912-                              <span
+components/lineups/GolfHoleReplayPanel.tsx-913-                                className={`text-sm font-bold ${
+components/lineups/GolfHoleReplayPanel.tsx-914-                                  shot.finalStroke
+components/lineups/GolfHoleReplayPanel.tsx-915-                                    ? resultToneClass(
+components/lineups/GolfHoleReplayPanel.tsx-916-                                        completedResult,
+components/lineups/GolfHoleReplayPanel.tsx-917-                                      )
+components/lineups/GolfHoleReplayPanel.tsx-918-                                    : "text-slate-200"

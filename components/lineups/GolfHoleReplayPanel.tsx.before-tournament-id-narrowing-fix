@@ -416,7 +416,7 @@ export default function GolfHoleReplayPanel({
 
   useEffect(() => {
     const tournamentId =
-      replay?.tournamentId?.trim() ?? "";
+      replay?.tournamentId?.trim();
 
     if (!tournamentId) {
       setShotCastManifest(null);
@@ -430,52 +430,23 @@ export default function GolfHoleReplayPanel({
       try {
         setIsManifestLoading(true);
 
-        const databaseResponse =
-          await fetch(
-            `/api/golf/shotcast-manifest?tournamentId=${encodeURIComponent(
-              tournamentId,
-            )}`,
-            {
-              cache: "no-store",
-              signal:
-                controller.signal,
-            },
-          );
+        const response = await fetch(
+          `/shotcast/${encodeURIComponent(
+            tournamentId,
+          )}/manifest.json`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
 
-        if (databaseResponse.ok) {
-          const manifest =
-            (await databaseResponse.json()) as ShotCastManifest;
-
-          setShotCastManifest(
-            manifest,
-          );
-
-          return;
-        }
-
-        /*
-         * Preserve previously committed static manifests,
-         * including the current Wyndham checkpoint.
-         */
-        const staticResponse =
-          await fetch(
-            `/shotcast/${encodeURIComponent(
-              tournamentId,
-            )}/manifest.json`,
-            {
-              cache: "no-store",
-              signal:
-                controller.signal,
-            },
-          );
-
-        if (!staticResponse.ok) {
+        if (!response.ok) {
           setShotCastManifest(null);
           return;
         }
 
         const manifest =
-          (await staticResponse.json()) as ShotCastManifest;
+          (await response.json()) as ShotCastManifest;
 
         setShotCastManifest(manifest);
       } catch (error) {

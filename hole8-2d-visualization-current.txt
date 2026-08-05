@@ -1,21 +1,390 @@
+===== HOLE 8 ASSET DIMENSIONS =====
+tourcast-hole8-assets/hole08-cutout.png: PNG image data, 783 x 1024, 8-bit colormap, non-interlaced
+tourcast-hole8-assets/terrain08.jpg:     JPEG image data, JFIF standard 1.01, aspect ratio, density 1x1, segment length 16, progressive, precision 8, 4096x4096, components 3
+
+===== HOLE 8 COORDINATE REPORT =====
+TOURCAST HOLE 8 COORDINATE INVESTIGATION
+========================================================================
+
+EVENT:
+R2026524 — Rocket Classic
+
+
+========================================================================
+FILE: courseData.json
+========================================================================
+{
+    "pinsTees": [
+        [
+            [-240.14, 535.58, -52.83, 218.96],
+            [-150.3, 109.01, -270.29, 550.11],
+            [-379.54, -72.02, -86.7, 89.78],
+            [-287.04, 446.97, -404.9, -81.98],
+            [-310.71, 603.01, -258.57, 469.77],
+            [-369.76, 194.71, -339.63, 665.6],
+            [-374.99, 644.72, -403.44, 182.93],
+            [-97.36, 431.93, -313.19, 664.21],
+            [-5.91, 236.23, -96.53, 402.69],
+            [116.45, -192.71, 38.75, 181.63],
+            [232.14, -289.35, 114.52, -95.69],
+            [485.03, -581.43, 232.61, -216.06],
+            [238.75, -337.86, 480.8, -632.24],
+            [-25, -148.72, 320.41, -530.03],
+            [-53.52, -289.2, -86.26, -141.94],
+            [213.17, -488.11, -55.84, -168.58],
+            [-170.38, -263.3, 220.14, -562.82],
+            [3.04, 87.04, -236.48, -270.71]
+        ]
+    ],
+    "cameraTargets": [
+        [-41.19, 201.7, 0.05, -146.58, 384.87, -1.29, -255.84, 556.04, -2.36],
+        [-290.71, 535.02, -2.18, -214.84, 309.81, -2.49, -144.17, 92.26, -2.84],
+        [-77.75, 97.48, -1.57, -250.35, 0.45, -2.99, -394.07, -87.04, -2.45],
+        [-407.56, -98.28, -2.63, -320.72, 217.45, -2.7, -287.08, 473.11, -2.02],
+        [-229.57, 411.81, -1.9, -277.84, 528.4, -2.44, -321.41, 628.24, 0.94],
+        [-340.7, 682.51, 0.37, -348.99, 404.47, -2.21, -375.43, 171.23, -2.36],
+        [-403.13, 158.46, -2.37, -391.23, 427.23, -2.09, -367.41, 666.29, 0.93],
+        [-349.06, 673.99, 0.65, -200.04, 541.47, -1.74, -85.95, 417.83, 0.62],
+        [-104.32, 418.08, 0.37, -52.74, 320.29, -2.35, 7.51, 209.16, -1.41],
+        [38.19, 196.12, -1.77, 72.64, -18.03, -2.64, 134.04, -213.5, -2.42],
+        [102.15, -76.87, -2.57, 177.15, -198.4, -2.39, 250.15, -316.79, -2.29],
+        [223.52, -204.09, -1.98, 363.22, -401.33, -2.27, 496.99, -595.58, -0.6],
+        [486.42, -635.25, -0.08, 357.12, -491.95, -2.11, 229.64, -319.35, -2.24],
+        [327.95, -537.35, -1.75, 154, -344.89, -2.43, -36.42, -136.48, -1.81],
+        [-89.85, -117.84, -2.76, -72.36, -216.12, -3.38, -49.28, -314.02, -2.83],
+        [-69.3, -153.7, -2.25, 83.89, -347.5, -2.59, 226.37, -499.88, -2.32],
+        [230.56, -569.79, -1.93, 20.66, -414.7, -2.75, -189.65, -247.03, -3.07],
+        [-252.23, -302.14, -1.74, -115.31, -91.61, -3.18, 16.03, 110.33, -2.97]
+    ],
+    "holeCenterLines": [
+        [-50.62, 213.75, -0.66, -171.08, 436.11, -1.6, -249.87, 543.7, -0.9],
+        [-288.06, 530.6, -2.18, -206.07, 333.25, -1.95, -144.36, 101.55, -1.65],
+        [-82.12, 91.16, -1.42, -323.86, -34.23, -3.13, -387.03, -85.49, -1.55],
+        [-408.09, -87.32, -2.46, -318.08, 142.24, -2.7, -279.68, 290.92, -2.37, -285.62, 458.81, -1.03],
+        [-232.48, 422.95, -1.94, -320.38, 619.5, 0.04],
+        [-336.26, 670.36, 0.58, -332.21, 357.71, -2.16, -371.5, 180.82, -1.24],
+        [-403.25, 179.27, -1.44, -399.84, 555.3, -1.54, -374.45, 660.14, 1.25],
+        [-345.71, 673.03, 0.53, -162.53, 535.15, -1.4, -88.9, 418.54, 0.83],
+        [-96.03, 407.27, 0.34, 1.62, 223.83, -0.36],
+        [38.74, 185.63, -0.85, 57.37, -82.74, -2.06, 123.96, -203.95, -1.2],
+        [112.55, -91.64, -1.72, 240.44, -300.35, -1.12],
+        [230.66, -210.89, -1.65, 386.39, -429.68, -2.24, 491.9, -590.89, 0.71],
+        [483.48, -636.66, -0.33, 309.34, -450.63, -2.54, 230.52, -327.38, -2.5],
+        [323.03, -532.36, -1.94, 75.55, -254.51, -2.48, -31.35, -141.1, -1.3],
+        [-86.82, -137.82, -1.94, -51.36, -300.55, -0.97],
+        [-58.37, -165.44, -2.35, 66.19, -340.8, -2.86, 221.98, -494.18, -1.3],
+        [223.27, -565.11, -1.47, 7.84, -409.57, -2.77, -180.03, -253.81, -1.5],
+        [-246.69, -291.35, -1.64, -51.15, -31.74, -2.5, 6.65, 99.66, -2.1]
+    ],
+    "lightInfo": [
+        [86.4, 1]
+    ]
+}
+
+========================================================================
+FILE: course.tfw
+========================================================================
+0.0185830963872
+0
+0
+-0.0185830963872
+-649.9902539
+849.9908288
+69956
+91481
+
+
+========================================================================
+FILE: extents.txt
+========================================================================
+2600 2200 197 1300 1700 1
+2600 2200 1300 1700 
+
+========================================================================
+FILE: tee_angles.txt
+========================================================================
+1 27.2
+2 20.0
+3 -64.7
+4 -11.7
+5 22.9
+6 -1.5
+7 -1.1
+8 48.4
+9 28.7
+10 3.6
+11 31.4
+12 35.9
+13 43.9
+14 42.2
+15 13.4
+16 34.8
+17 51.4
+18 -32.2
+
+
+========================================================================
+FILE: terrain08.tfw
+========================================================================
+-0.035484
+-0.035229
+-0.035229
+0.035484
+36.431484
+423.508790
+3325
+9660
+
+
+========================================================================
+DOWNLOADED ASSETS
+========================================================================
+Green08.glb: 150,216 bytes
+course.tfw: 74 bytes
+courseData.json: 3,785 bytes
+extents.txt: 47 bytes
+hole08-cutout.png: 8,590 bytes
+tee_angles.txt: 155 bytes
+terrain08.glb: 602,084 bytes
+terrain08.jpg: 3,474,123 bytes
+terrain08.tfw: 78 bytes
+
+========================================================================
+CAMERON YOUNG HOLE 8 SHOT COORDINATES
+========================================================================
+All records: 68
+Hole 8 records detected: 3
+
+SHOT RECORD 1
+{
+  "hole_number": 8,
+  "yardage": 349,
+  "hole_status": "BIRDIE",
+  "hole_score": "3",
+  "stroke_number": 1,
+  "play_by_play": "339 yds to left bunker, 37 ft 9 in. to hole",
+  "distance": "339 yds",
+  "distance_remaining": "37 ft 9 in.",
+  "stroke_type": "STROKE",
+  "from_location": "Tee Box",
+  "to_location": "Left Bunker",
+  "from_location_code": "OTB",
+  "to_location_code": "ELB",
+  "final_stroke": false,
+  "leftToRightCoords.fromCoords.x": 0.19134666446751825,
+  "leftToRightCoords.fromCoords.y": 0.4843769957250347,
+  "leftToRightCoords.fromCoords.tourcastX": 9648.012,
+  "leftToRightCoords.fromCoords.tourcastY": 12174.365,
+  "leftToRightCoords.fromCoords.tourcastZ": 647.426,
+  "leftToRightCoords.toCoords.x": 0.7417185836778509,
+  "leftToRightCoords.toCoords.y": 0.48391578109624467,
+  "leftToRightCoords.toCoords.tourcastX": 10377.702,
+  "leftToRightCoords.toCoords.tourcastY": 11464.459,
+  "leftToRightCoords.toCoords.tourcastZ": 645.481,
+  "bottomToTopCoords.fromCoords.x": 0.4884563727693534,
+  "bottomToTopCoords.fromCoords.y": 0.7305249836041341,
+  "bottomToTopCoords.fromCoords.tourcastX": 9648.012,
+  "bottomToTopCoords.fromCoords.tourcastY": 12174.365,
+  "bottomToTopCoords.fromCoords.tourcastZ": 647.426,
+  "bottomToTopCoords.toCoords.x": 0.48811240797246463,
+  "bottomToTopCoords.toCoords.y": 0.0909034768656084,
+  "bottomToTopCoords.toCoords.tourcastX": 10377.702,
+  "bottomToTopCoords.toCoords.tourcastY": 11464.459,
+  "bottomToTopCoords.toCoords.tourcastZ": 645.481
+}
+
+SHOT RECORD 2
+{
+  "hole_number": 8,
+  "yardage": 349,
+  "hole_status": "BIRDIE",
+  "hole_score": "3",
+  "stroke_number": 2,
+  "play_by_play": "43 ft 9 in. to left green, 5 ft 7 in. to hole",
+  "distance": "43 ft 9 in.",
+  "distance_remaining": "5 ft 7 in.",
+  "stroke_type": "STROKE",
+  "from_location": "Greenside Bunker",
+  "to_location": "Left Green",
+  "from_location_code": "OGS",
+  "to_location_code": "ELG",
+  "final_stroke": false,
+  "leftToRightCoords.fromCoords.x": 0.7417185836778509,
+  "leftToRightCoords.fromCoords.y": 0.48391578109624467,
+  "leftToRightCoords.fromCoords.tourcastX": 10377.702,
+  "leftToRightCoords.fromCoords.tourcastY": 11464.459,
+  "leftToRightCoords.fromCoords.tourcastZ": 645.481,
+  "leftToRightCoords.toCoords.x": 0.7560027840498578,
+  "leftToRightCoords.toCoords.y": 0.5277096895490115,
+  "leftToRightCoords.toCoords.tourcastX": 10372.457,
+  "leftToRightCoords.toCoords.tourcastY": 11421.195,
+  "leftToRightCoords.toCoords.tourcastZ": 649.455,
+  "bottomToTopCoords.fromCoords.x": 0.48811240797246463,
+  "bottomToTopCoords.fromCoords.y": 0.0909034768656084,
+  "bottomToTopCoords.fromCoords.tourcastX": 10377.702,
+  "bottomToTopCoords.fromCoords.tourcastY": 11464.459,
+  "bottomToTopCoords.fromCoords.tourcastZ": 645.481,
+  "bottomToTopCoords.toCoords.x": 0.5207748039524729,
+  "bottomToTopCoords.toCoords.y": 0.07430291783635756,
+  "bottomToTopCoords.toCoords.tourcastX": 10372.457,
+  "bottomToTopCoords.toCoords.tourcastY": 11421.195,
+  "bottomToTopCoords.toCoords.tourcastZ": 649.455
+}
+
+SHOT RECORD 3
+{
+  "hole_number": 8,
+  "yardage": 349,
+  "hole_status": "BIRDIE",
+  "hole_score": "3",
+  "stroke_number": 3,
+  "play_by_play": "In the hole",
+  "distance": "5 ft 7 in.",
+  "distance_remaining": "",
+  "stroke_type": "STROKE",
+  "from_location": "Green",
+  "to_location": "Green",
+  "from_location_code": "OGR",
+  "to_location_code": "OGR",
+  "final_stroke": true,
+  "leftToRightCoords.fromCoords.x": 0.7560027840498578,
+  "leftToRightCoords.fromCoords.y": 0.5277096895490115,
+  "leftToRightCoords.fromCoords.tourcastX": 10372.457,
+  "leftToRightCoords.fromCoords.tourcastY": 11421.195,
+  "leftToRightCoords.fromCoords.tourcastZ": 649.455,
+  "leftToRightCoords.toCoords.x": 0.7540277885151808,
+  "leftToRightCoords.toCoords.y": 0.5219664738017638,
+  "leftToRightCoords.toCoords.tourcastX": 10373.01,
+  "leftToRightCoords.toCoords.tourcastY": 11427.0,
+  "leftToRightCoords.toCoords.tourcastZ": 649.39,
+  "bottomToTopCoords.fromCoords.x": 0.5207748039524729,
+  "bottomToTopCoords.fromCoords.y": 0.07430291783635756,
+  "bottomToTopCoords.fromCoords.tourcastX": 10372.457,
+  "bottomToTopCoords.fromCoords.tourcastY": 11421.195,
+  "bottomToTopCoords.fromCoords.tourcastZ": 649.455,
+  "bottomToTopCoords.toCoords.x": 0.5164913957408608,
+  "bottomToTopCoords.toCoords.y": 0.07659818317462352,
+  "bottomToTopCoords.toCoords.tourcastX": 10373.01,
+  "bottomToTopCoords.toCoords.tourcastY": 11427.0,
+  "bottomToTopCoords.toCoords.tourcastZ": 649.39
+}
+
+===== EXTENTS =====
+2600 2200 197 1300 1700 1
+2600 2200 1300 1700 
+===== WORLD FILES =====
+--- course.tfw ---
+0.0185830963872
+0
+0
+-0.0185830963872
+-649.9902539
+849.9908288
+69956
+91481
+
+--- terrain08.tfw ---
+-0.035484
+-0.035229
+-0.035229
+0.035484
+36.431484
+423.508790
+3325
+9660
+
+===== COURSE DATA =====
+{
+    "pinsTees": [
+        [
+            [-240.14, 535.58, -52.83, 218.96],
+            [-150.3, 109.01, -270.29, 550.11],
+            [-379.54, -72.02, -86.7, 89.78],
+            [-287.04, 446.97, -404.9, -81.98],
+            [-310.71, 603.01, -258.57, 469.77],
+            [-369.76, 194.71, -339.63, 665.6],
+            [-374.99, 644.72, -403.44, 182.93],
+            [-97.36, 431.93, -313.19, 664.21],
+            [-5.91, 236.23, -96.53, 402.69],
+            [116.45, -192.71, 38.75, 181.63],
+            [232.14, -289.35, 114.52, -95.69],
+            [485.03, -581.43, 232.61, -216.06],
+            [238.75, -337.86, 480.8, -632.24],
+            [-25, -148.72, 320.41, -530.03],
+            [-53.52, -289.2, -86.26, -141.94],
+            [213.17, -488.11, -55.84, -168.58],
+            [-170.38, -263.3, 220.14, -562.82],
+            [3.04, 87.04, -236.48, -270.71]
+        ]
+    ],
+    "cameraTargets": [
+        [-41.19, 201.7, 0.05, -146.58, 384.87, -1.29, -255.84, 556.04, -2.36],
+        [-290.71, 535.02, -2.18, -214.84, 309.81, -2.49, -144.17, 92.26, -2.84],
+        [-77.75, 97.48, -1.57, -250.35, 0.45, -2.99, -394.07, -87.04, -2.45],
+        [-407.56, -98.28, -2.63, -320.72, 217.45, -2.7, -287.08, 473.11, -2.02],
+        [-229.57, 411.81, -1.9, -277.84, 528.4, -2.44, -321.41, 628.24, 0.94],
+        [-340.7, 682.51, 0.37, -348.99, 404.47, -2.21, -375.43, 171.23, -2.36],
+        [-403.13, 158.46, -2.37, -391.23, 427.23, -2.09, -367.41, 666.29, 0.93],
+        [-349.06, 673.99, 0.65, -200.04, 541.47, -1.74, -85.95, 417.83, 0.62],
+        [-104.32, 418.08, 0.37, -52.74, 320.29, -2.35, 7.51, 209.16, -1.41],
+        [38.19, 196.12, -1.77, 72.64, -18.03, -2.64, 134.04, -213.5, -2.42],
+        [102.15, -76.87, -2.57, 177.15, -198.4, -2.39, 250.15, -316.79, -2.29],
+        [223.52, -204.09, -1.98, 363.22, -401.33, -2.27, 496.99, -595.58, -0.6],
+        [486.42, -635.25, -0.08, 357.12, -491.95, -2.11, 229.64, -319.35, -2.24],
+        [327.95, -537.35, -1.75, 154, -344.89, -2.43, -36.42, -136.48, -1.81],
+        [-89.85, -117.84, -2.76, -72.36, -216.12, -3.38, -49.28, -314.02, -2.83],
+        [-69.3, -153.7, -2.25, 83.89, -347.5, -2.59, 226.37, -499.88, -2.32],
+        [230.56, -569.79, -1.93, 20.66, -414.7, -2.75, -189.65, -247.03, -3.07],
+        [-252.23, -302.14, -1.74, -115.31, -91.61, -3.18, 16.03, 110.33, -2.97]
+    ],
+    "holeCenterLines": [
+        [-50.62, 213.75, -0.66, -171.08, 436.11, -1.6, -249.87, 543.7, -0.9],
+        [-288.06, 530.6, -2.18, -206.07, 333.25, -1.95, -144.36, 101.55, -1.65],
+        [-82.12, 91.16, -1.42, -323.86, -34.23, -3.13, -387.03, -85.49, -1.55],
+        [-408.09, -87.32, -2.46, -318.08, 142.24, -2.7, -279.68, 290.92, -2.37, -285.62, 458.81, -1.03],
+        [-232.48, 422.95, -1.94, -320.38, 619.5, 0.04],
+        [-336.26, 670.36, 0.58, -332.21, 357.71, -2.16, -371.5, 180.82, -1.24],
+        [-403.25, 179.27, -1.44, -399.84, 555.3, -1.54, -374.45, 660.14, 1.25],
+        [-345.71, 673.03, 0.53, -162.53, 535.15, -1.4, -88.9, 418.54, 0.83],
+        [-96.03, 407.27, 0.34, 1.62, 223.83, -0.36],
+        [38.74, 185.63, -0.85, 57.37, -82.74, -2.06, 123.96, -203.95, -1.2],
+        [112.55, -91.64, -1.72, 240.44, -300.35, -1.12],
+        [230.66, -210.89, -1.65, 386.39, -429.68, -2.24, 491.9, -590.89, 0.71],
+        [483.48, -636.66, -0.33, 309.34, -450.63, -2.54, 230.52, -327.38, -2.5],
+        [323.03, -532.36, -1.94, 75.55, -254.51, -2.48, -31.35, -141.1, -1.3],
+        [-86.82, -137.82, -1.94, -51.36, -300.55, -0.97],
+        [-58.37, -165.44, -2.35, 66.19, -340.8, -2.86, 221.98, -494.18, -1.3],
+        [223.27, -565.11, -1.47, 7.84, -409.57, -2.77, -180.03, -253.81, -1.5],
+        [-246.69, -291.35, -1.64, -51.15, -31.74, -2.5, 6.65, 99.66, -2.1]
+    ],
+    "lightInfo": [
+        [86.4, 1]
+    ]
+}
+===== TEE ANGLES =====
+1 27.2
+2 20.0
+3 -64.7
+4 -11.7
+5 22.9
+6 -1.5
+7 -1.1
+8 48.4
+9 28.7
+10 3.6
+11 31.4
+12 35.9
+13 43.9
+14 42.2
+15 13.4
+16 34.8
+17 51.4
+18 -32.2
+
+===== CAMERON YOUNG HOLE 8 REPLAY RESPONSE =====
+
+===== CURRENT REPLAY PANEL =====
 "use client";
-
-import dynamic from "next/dynamic";
-const GolfHoleMap2D = dynamic(
-  () =>
-    import(
-      "@/components/lineups/GolfHoleMap2D"
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-xs font-semibold text-slate-400">
-        Loading ShotCast…
-      </div>
-    ),
-  },
-);
-
 
 import {
   useCallback,
@@ -73,46 +442,6 @@ type ResponseBody = {
   error?: string;
 };
 
-type ShotCastCalibration = {
-  xScale: number;
-  xOffset: number;
-  yScale: number;
-  yOffset: number;
-  verified?: boolean;
-};
-
-type ShotCastManifestHole = {
-  holeNumber: number;
-  available: boolean;
-  par: number | null;
-  yards: number | null;
-  aboutThisHole: string | null;
-  localImageUrl: string | null;
-  localAlignedMapUrl?: string | null;
-  calibration?: ShotCastCalibration | null;
-};
-
-type ShotCastManifest = {
-  tournament: {
-    id: string;
-    name: string | null;
-  };
-  course: {
-    id: string;
-    name: string | null;
-  };
-  holes: ShotCastManifestHole[];
-};
-
-type ActiveShotCastConfig = {
-  title: string;
-  imageUrl: string;
-  imageFit: "fill" | "contain";
-  calibration: ShotCastCalibration;
-  calibrationVerified: boolean;
-  aboutThisHole: string | null;
-};
-
 type Props = {
   slateId: number;
   playerId: number;
@@ -122,22 +451,6 @@ type Props = {
   fallbackYardage: number | null;
   fallbackResult: string;
   onClose: () => void;
-};
-
-const IDENTITY_CALIBRATION: ShotCastCalibration = {
-  xScale: 1,
-  xOffset: 0,
-  yScale: 1,
-  yOffset: 0,
-  verified: false,
-};
-
-const DETROIT_HOLE_8_CALIBRATION: ShotCastCalibration = {
-  xScale: 2.488624,
-  xOffset: -0.748272,
-  yScale: 0.974452,
-  yOffset: 0.127478,
-  verified: true,
 };
 
 function titleCase(
@@ -278,28 +591,6 @@ export default function GolfHoleReplayPanel({
   const [lastUpdatedAt, setLastUpdatedAt] =
     useState<Date | null>(null);
 
-  const [
-    selectedStrokeNumber,
-    setSelectedStrokeNumber,
-  ] = useState<number | null>(null);
-
-  const [
-    isShotCastOpen,
-    setIsShotCastOpen,
-  ] = useState(false);
-
-  const [
-    shotCastManifest,
-    setShotCastManifest,
-  ] = useState<ShotCastManifest | null>(
-    null,
-  );
-
-  const [
-    isManifestLoading,
-    setIsManifestLoading,
-  ] = useState(false);
-
   const loadReplay = useCallback(
     async ({
       forceRefresh = false,
@@ -352,7 +643,10 @@ export default function GolfHoleReplayPanel({
           return;
         }
 
-        if (!result.replay) {
+        if (
+          !result.available ||
+          !result.replay
+        ) {
           setMessage(
             result.message ||
               "Shot tracking is not available for this hole yet.",
@@ -361,18 +655,6 @@ export default function GolfHoleReplayPanel({
         }
 
         setReplay(result.replay);
-
-        if (!result.available) {
-          setMessage(
-            result.message ||
-              "This hole has not started yet.",
-          );
-        }
-
-        setSelectedStrokeNumber(
-          result.replay.shots[0]
-            ?.strokeNumber ?? null,
-        );
         setLastUpdatedAt(new Date());
       } catch (error) {
         if (
@@ -414,192 +696,6 @@ export default function GolfHoleReplayPanel({
     return () => controller.abort();
   }, [loadReplay]);
 
-  useEffect(() => {
-    const tournamentId =
-      replay?.tournamentId?.trim() ?? "";
-
-    if (!tournamentId) {
-      setShotCastManifest(null);
-      return;
-    }
-
-    const controller =
-      new AbortController();
-
-    async function loadManifest() {
-      try {
-        setIsManifestLoading(true);
-
-        const databaseResponse =
-          await fetch(
-            `/api/golf/shotcast-manifest?tournamentId=${encodeURIComponent(
-              tournamentId,
-            )}`,
-            {
-              cache: "no-store",
-              signal:
-                controller.signal,
-            },
-          );
-
-        if (databaseResponse.ok) {
-          const manifest =
-            (await databaseResponse.json()) as ShotCastManifest;
-
-          setShotCastManifest(
-            manifest,
-          );
-
-          return;
-        }
-
-        /*
-         * Preserve previously committed static manifests,
-         * including the current Wyndham checkpoint.
-         */
-        const staticResponse =
-          await fetch(
-            `/shotcast/${encodeURIComponent(
-              tournamentId,
-            )}/manifest.json`,
-            {
-              cache: "no-store",
-              signal:
-                controller.signal,
-            },
-          );
-
-        if (!staticResponse.ok) {
-          setShotCastManifest(null);
-          return;
-        }
-
-        const manifest =
-          (await staticResponse.json()) as ShotCastManifest;
-
-        setShotCastManifest(manifest);
-      } catch (error) {
-        if (
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
-          return;
-        }
-
-        console.warn(
-          "Unable to load ShotCast manifest",
-          error,
-        );
-
-        setShotCastManifest(null);
-      } finally {
-        setIsManifestLoading(false);
-      }
-    }
-
-    void loadManifest();
-
-    return () => controller.abort();
-  }, [replay?.tournamentId]);
-
-  const activeShotCastConfig =
-    useMemo<ActiveShotCastConfig | null>(
-      () => {
-        /*
-         * Preserve the verified Rocket Classic proof of
-         * concept until that event has its own manifest.
-         */
-        if (
-          slateId === 161 &&
-          holeNumber === 8
-        ) {
-          return {
-            title:
-              "Detroit Golf Club · Hole 8",
-            imageUrl:
-              "/tourcast/rocket-classic/hole-8/terrain08-web.jpg",
-            imageFit: "fill",
-            calibration:
-              DETROIT_HOLE_8_CALIBRATION,
-            calibrationVerified: true,
-            aboutThisHole: null,
-          };
-        }
-
-        const manifestHole =
-          shotCastManifest?.holes.find(
-            (hole) =>
-              Number(
-                hole.holeNumber,
-              ) === holeNumber,
-          ) ?? null;
-
-        const imageUrl =
-          manifestHole
-            ?.localAlignedMapUrl ||
-          manifestHole
-            ?.localImageUrl ||
-          null;
-
-        if (!imageUrl) {
-          return null;
-        }
-
-        const calibration =
-          manifestHole?.calibration &&
-          Number.isFinite(
-            manifestHole
-              .calibration.xScale,
-          ) &&
-          Number.isFinite(
-            manifestHole
-              .calibration.xOffset,
-          ) &&
-          Number.isFinite(
-            manifestHole
-              .calibration.yScale,
-          ) &&
-          Number.isFinite(
-            manifestHole
-              .calibration.yOffset,
-          )
-            ? manifestHole.calibration
-            : IDENTITY_CALIBRATION;
-
-        return {
-          title: `${
-            shotCastManifest?.course
-              .name ||
-            "Golf course"
-          } · Hole ${holeNumber}`,
-
-          imageUrl,
-
-          imageFit:
-            manifestHole
-              ?.localAlignedMapUrl
-              ? "fill"
-              : "contain",
-
-          calibration,
-
-          calibrationVerified:
-            calibration.verified ===
-            true,
-
-          aboutThisHole:
-            manifestHole
-              ?.aboutThisHole ??
-            null,
-        };
-      },
-      [
-        holeNumber,
-        shotCastManifest,
-        slateId,
-      ],
-    );
-
   const isHoleComplete = useMemo(
     () =>
       Boolean(
@@ -621,9 +717,7 @@ export default function GolfHoleReplayPanel({
       ? completedResult || "Complete"
       : replay?.shots.length
         ? "In progress"
-        : replay
-          ? "Not started"
-          : "";
+        : "";
 
   const par =
     replay?.par ?? fallbackPar;
@@ -757,118 +851,6 @@ export default function GolfHoleReplayPanel({
             </div>
           ) : null}
 
-          {activeShotCastConfig ? (
-            <div className="mb-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-xs font-bold text-slate-200">
-                      ShotCast
-                    </div>
-
-                    {!activeShotCastConfig
-                      .calibrationVerified ? (
-                      <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-300">
-                        Layout preview
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-0.5 text-[10px] text-slate-500">
-                    {activeShotCastConfig
-                      .calibrationVerified
-                      ? "Interactive aerial shot replay"
-                      : "Interactive hole layout · shot alignment pending"}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setIsShotCastOpen(
-                      (current) =>
-                        !current,
-                    )
-                  }
-                  aria-expanded={
-                    isShotCastOpen
-                  }
-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
-                    isShotCastOpen
-                      ? "border-slate-600 bg-slate-950 text-slate-300"
-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
-                  }`}
-                >
-                  {isShotCastOpen
-                    ? "Hide ShotCast"
-                    : "Open ShotCast"}
-                </button>
-              </div>
-
-              {isShotCastOpen ? (
-                <div className="mt-3">
-                  <GolfHoleMap2D
-                    title={
-                      activeShotCastConfig
-                        .title
-                    }
-                    imageUrl={
-                      activeShotCastConfig
-                        .imageUrl
-                    }
-                    imageFit={
-                      activeShotCastConfig
-                        .imageFit
-                    }
-                    calibration={
-                      activeShotCastConfig
-                        .calibration
-                    }
-                    showShotOverlay={
-                      activeShotCastConfig
-                        .calibrationVerified
-                    }
-                    emptyStateLabel={
-                      replay.shots.length === 0
-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
-                        : activeShotCastConfig
-                              .calibrationVerified
-                          ? "No plottable shot coordinates were returned."
-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
-                    }
-                    shots={replay.shots}
-                    selectedStrokeNumber={
-                      selectedStrokeNumber
-                    }
-                    onSelectStroke={
-                      setSelectedStrokeNumber
-                    }
-                  />
-
-                  {activeShotCastConfig
-                    .aboutThisHole ? (
-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
-                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
-                        About this hole
-                      </div>
-
-                      <div className="mt-1 text-xs leading-5 text-slate-400">
-                        {
-                          activeShotCastConfig
-                            .aboutThisHole
-                        }
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          ) : isManifestLoading ? (
-            <div className="mb-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-3 text-xs text-slate-500">
-              Checking for ShotCast course assets…
-            </div>
-          ) : null}
-
           <div className="overflow-hidden rounded-xl border border-slate-800">
             {replay.shots.map(
               (shot, index) => {
@@ -883,29 +865,17 @@ export default function GolfHoleReplayPanel({
                   index ===
                     replay.shots.length - 1;
 
-                const isSelectedShot =
-                  shot.strokeNumber ===
-                  selectedStrokeNumber;
-
                 return (
-                  <button
-                    type="button"
+                  <article
                     key={shot.strokeNumber}
-                    onClick={() =>
-                      setSelectedStrokeNumber(
-                        shot.strokeNumber,
-                      )
-                    }
-                    className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+                    className={`px-3 py-3 sm:px-4 ${
                       index > 0
                         ? "border-t border-slate-800"
                         : ""
                     } ${
-                      isSelectedShot
-                        ? "bg-emerald-500/10"
-                        : isCurrentBall
-                          ? "bg-amber-500/5"
-                          : "hover:bg-slate-900/70"
+                      isCurrentBall
+                        ? "bg-amber-500/5"
+                        : ""
                     }`}
                   >
                     <div className="flex gap-3">
@@ -985,7 +955,7 @@ export default function GolfHoleReplayPanel({
                         ) : null}
                       </div>
                     </div>
-                  </button>
+                  </article>
                 );
               },
             )}

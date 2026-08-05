@@ -1,0 +1,1440 @@
+#!/usr/bin/env node
+
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  resolve,
+} from "node:path";
+
+import {
+  pipeline,
+} from "node:stream/promises";
+
+const PGA_GRAPHQL_URL =
+  "https://orchestrator.pgatour.com/graphql";
+
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+const OUTPUT_ROOT = resolve(
+  process.cwd(),
+  "public",
+  "shotcast",
+);
+
+const REQUEST_TIMEOUT_MS = 25_000;
+const MAX_ATTEMPTS = 3;
+
+function parseArguments(argv) {
+  const positional = [];
+  const options = {
+    round: 1,
+    force: false,
+  };
+
+  for (
+    let index = 0;
+    index < argv.length;
+    index += 1
+  ) {
+    const value = argv[index];
+
+    if (value === "--force") {
+      options.force = true;
+      continue;
+    }
+
+    if (
+      value === "--round" &&
+      argv[index + 1]
+    ) {
+      options.round = Number(
+        argv[index + 1],
+      );
+
+      index += 1;
+      continue;
+    }
+
+    positional.push(value);
+  }
+
+  const tournamentId =
+    positional[0]?.trim() ?? "";
+
+  if (
+    !/^R\d{7}$/i.test(
+      tournamentId,
+    )
+  ) {
+    throw new Error(
+      [
+        "A PGA TOUR tournament ID is required.",
+        "",
+        "Example:",
+        "npm run import-shotcast-course -- R2026013",
+      ].join("\n"),
+    );
+  }
+
+  if (
+    !Number.isInteger(options.round) ||
+    options.round < 1 ||
+    options.round > 4
+  ) {
+    throw new Error(
+      "--round must be an integer from 1 through 4.",
+    );
+  }
+
+  return {
+    tournamentId:
+      tournamentId.toUpperCase(),
+    round: options.round,
+    force: options.force,
+  };
+}
+
+function loadDotEnvFile(
+  filepath,
+) {
+  if (!existsSync(filepath)) {
+    return;
+  }
+
+  const lines = readFileSync(
+    filepath,
+    "utf8",
+  ).split(/\r?\n/);
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (
+      !line ||
+      line.startsWith("#")
+    ) {
+      continue;
+    }
+
+    const equalsAt =
+      line.indexOf("=");
+
+    if (equalsAt < 1) {
+      continue;
+    }
+
+    const key = line
+      .slice(0, equalsAt)
+      .trim();
+
+    let value = line
+      .slice(equalsAt + 1)
+      .trim();
+
+    if (
+      (value.startsWith('"') &&
+        value.endsWith('"')) ||
+      (value.startsWith("'") &&
+        value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (
+      !process.env[key]
+    ) {
+      process.env[key] = value;
+    }
+  }
+}
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type":
+      "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin:
+      "https://www.pgatour.com",
+    Referer:
+      "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolvePromise) => {
+    setTimeout(
+      resolvePromise,
+      milliseconds,
+    );
+  });
+}
+
+async function fetchWithRetry(
+  url,
+  init,
+  context,
+) {
+  let lastError = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller =
+      new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(
+        url,
+        {
+          ...init,
+          signal: controller.signal,
+        },
+      );
+
+      if (
+        response.ok
+      ) {
+        return response;
+      }
+
+      const responseText =
+        await response.text();
+
+      const retryable =
+        response.status === 408 ||
+        response.status === 429 ||
+        response.status >= 500;
+
+      if (
+        retryable &&
+        attempt < MAX_ATTEMPTS
+      ) {
+        await sleep(
+          400 *
+            2 **
+              (attempt - 1),
+        );
+
+        continue;
+      }
+
+      throw new Error(
+        `${context} failed (${response.status}): ` +
+          responseText.slice(
+            0,
+            350,
+          ),
+      );
+    } catch (error) {
+      lastError = error;
+
+      if (
+        attempt >= MAX_ATTEMPTS
+      ) {
+        break;
+      }
+
+      await sleep(
+        400 *
+          2 **
+            (attempt - 1),
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName,
+  query,
+  variables,
+) {
+  const response =
+    await fetchWithRetry(
+      PGA_GRAPHQL_URL,
+      {
+        method: "POST",
+        headers:
+          requestHeaders(),
+        body: JSON.stringify({
+          operationName,
+          query,
+          variables,
+        }),
+      },
+      `PGA TOUR ${operationName}`,
+    );
+
+  const body =
+    await response.json();
+
+  const errors =
+    Array.isArray(body.errors)
+      ? body.errors
+      : [];
+
+  if (
+    errors.length > 0
+  ) {
+    const message = errors
+      .map((error) => {
+        if (
+          error &&
+          typeof error ===
+            "object" &&
+          "message" in error
+        ) {
+          return String(
+            error.message,
+          );
+        }
+
+        return String(error);
+      })
+      .join("; ");
+
+    throw new Error(
+      `PGA TOUR GraphQL error: ${message}`,
+    );
+  }
+
+  return body.data ?? {};
+}
+
+function normalizeUrl(
+  value,
+) {
+  if (
+    typeof value !== "string"
+  ) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed || null;
+}
+
+function numberOrNull(
+  value,
+) {
+  const numeric =
+    Number(value);
+
+  return Number.isFinite(
+    numeric,
+  )
+    ? numeric
+    : null;
+}
+
+function cleanAsset(
+  value,
+) {
+  if (
+    !value ||
+    typeof value !== "object"
+  ) {
+    return null;
+  }
+
+  const imageOrg =
+    typeof value.imageOrg ===
+    "string"
+      ? value.imageOrg.trim()
+      : "";
+
+  const imagePath =
+    typeof value.imagePath ===
+    "string"
+      ? value.imagePath.trim()
+      : "";
+
+  if (
+    !imageOrg &&
+    !imagePath
+  ) {
+    return null;
+  }
+
+  return {
+    imageOrg:
+      imageOrg || null,
+    imagePath:
+      imagePath || null,
+
+    /*
+     * The PGA website treats imageOrg as a logical provider.
+     * We retain the raw values until the delivery resolver is
+     * finalized instead of guessing an invalid direct URL.
+     */
+    resolvedUrl: null,
+  };
+}
+
+function cleanCoordinate(
+  value,
+) {
+  if (
+    !value ||
+    typeof value !== "object"
+  ) {
+    return null;
+  }
+
+  return {
+    x: numberOrNull(value.x),
+    y: numberOrNull(value.y),
+    z: numberOrNull(value.z),
+    tourcastX:
+      numberOrNull(
+        value.tourcastX,
+      ),
+    tourcastY:
+      numberOrNull(
+        value.tourcastY,
+      ),
+    tourcastZ:
+      numberOrNull(
+        value.tourcastZ,
+      ),
+  };
+}
+
+function cleanPinGreen(
+  value,
+) {
+  if (
+    !value ||
+    typeof value !== "object"
+  ) {
+    return null;
+  }
+
+  return {
+    leftToRight:
+      cleanCoordinate(
+        value.leftToRightCoords,
+      ),
+    bottomToTop:
+      cleanCoordinate(
+        value.bottomToTopCoords,
+      ),
+  };
+}
+
+function extensionFromContentType(
+  contentType,
+) {
+  const normalized =
+    contentType
+      ?.split(";")[0]
+      ?.trim()
+      ?.toLowerCase();
+
+  switch (normalized) {
+    case "image/png":
+      return ".png";
+
+    case "image/webp":
+      return ".webp";
+
+    case "image/avif":
+      return ".avif";
+
+    case "image/jpeg":
+    case "image/jpg":
+    default:
+      return ".jpg";
+  }
+}
+
+async function downloadImage(
+  url,
+  destinationWithoutExtension,
+  force,
+) {
+  if (
+    !force
+  ) {
+    for (const extension of [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp",
+      ".avif",
+    ]) {
+      const candidate =
+        destinationWithoutExtension +
+        extension;
+
+      if (
+        existsSync(candidate) &&
+        statSync(candidate).size > 0
+      ) {
+        return {
+          downloaded: false,
+          localPath: candidate,
+          contentType: null,
+          bytes:
+            statSync(candidate).size,
+        };
+      }
+    }
+  }
+
+  const response =
+    await fetchWithRetry(
+      url,
+      {
+        method: "GET",
+        headers: {
+          Accept: "image/*",
+          Referer:
+            "https://www.pgatour.com/",
+          "User-Agent":
+            "111 Sports",
+        },
+        redirect: "follow",
+      },
+      `Hole image ${url}`,
+    );
+
+  const contentType =
+    response.headers.get(
+      "content-type",
+    );
+
+  if (
+    !contentType
+      ?.toLowerCase()
+      ?.startsWith("image/")
+  ) {
+    throw new Error(
+      `Expected an image from ${url}, received ${contentType ?? "unknown content type"}.`,
+    );
+  }
+
+  const extension =
+    extensionFromContentType(
+      contentType,
+    );
+
+  const destination =
+    destinationWithoutExtension +
+    extension;
+
+  const temporary =
+    destination + ".download";
+
+  mkdirSync(
+    dirname(destination),
+    {
+      recursive: true,
+    },
+  );
+
+  rmSync(
+    temporary,
+    {
+      force: true,
+    },
+  );
+
+  await pipeline(
+    response.body,
+    createWriteStream(
+      temporary,
+    ),
+  );
+
+  if (
+    !existsSync(temporary) ||
+    statSync(temporary).size === 0
+  ) {
+    throw new Error(
+      `Downloaded image was empty: ${url}`,
+    );
+  }
+
+  renameSync(
+    temporary,
+    destination,
+  );
+
+  return {
+    downloaded: true,
+    localPath: destination,
+    contentType,
+    bytes:
+      statSync(destination).size,
+  };
+}
+
+function publicPathFromFile(
+  filepath,
+) {
+  const publicRoot =
+    resolve(
+      process.cwd(),
+      "public",
+    );
+
+  const absolute =
+    resolve(filepath);
+
+  if (
+    !absolute.startsWith(
+      publicRoot,
+    )
+  ) {
+    throw new Error(
+      `File is outside public/: ${absolute}`,
+    );
+  }
+
+  return (
+    "/" +
+    absolute
+      .slice(
+        publicRoot.length,
+      )
+      .replaceAll("\\", "/")
+      .replace(/^\/+/, "")
+  );
+}
+
+const LEADERBOARD_QUERY = `
+  query LeaderboardHoleByHole(
+    $tournamentId: ID!,
+    $round: Int!
+  ) {
+    leaderboardHoleByHole(
+      tournamentId: $tournamentId,
+      round: $round
+    ) {
+      tournamentId
+      tournamentName
+      currentRound
+      courses {
+        id
+        courseName
+        courseCode
+        hostCourse
+        scoringLevel
+        enabled
+      }
+      courseHoleHeaders {
+        courseId
+        holeHeaders {
+          holeNumber
+          order
+          displayValue
+          par
+        }
+      }
+    }
+  }
+`;
+
+const HOLE_DETAILS_QUERY = `
+  query HoleDetails(
+    $tournamentId: ID!,
+    $courseId: ID!,
+    $hole: Int!
+  ) {
+    holeDetails(
+      tournamentId: $tournamentId,
+      courseId: $courseId,
+      hole: $hole
+    ) {
+      id
+      tournamentId
+      statsAvailability
+      holeNum
+      courseId
+      holeImage
+      holeImageLandscape
+      tourcastURI
+      tourcastURL
+      tourcastURLWeb
+      holeInfo {
+        holeNum
+        par
+        yards
+        scoringAverageDiff
+        holePickle
+        holePickleBottomToTop
+        holePickleGreenBottomToTop
+        greenPickle
+        aboutThisHole
+        rounds
+        rank
+
+        holePickleLeftToRightAsset {
+          imageOrg
+          imagePath
+        }
+
+        holePickleBottomToTopAsset {
+          imageOrg
+          imagePath
+        }
+
+        holePickleGreenLeftToRightAsset {
+          imageOrg
+          imagePath
+        }
+
+        holePickleGreenBottomToTopAsset {
+          imageOrg
+          imagePath
+        }
+
+        pinGreen {
+          leftToRightCoords {
+            x
+            y
+            z
+            tourcastX
+            tourcastY
+            tourcastZ
+          }
+
+          bottomToTopCoords {
+            x
+            y
+            z
+            tourcastX
+            tourcastY
+            tourcastZ
+          }
+        }
+      }
+    }
+  }
+`;
+
+async function main() {
+  loadDotEnvFile(
+    resolve(
+      process.cwd(),
+      ".env.local",
+    ),
+  );
+
+  const {
+    tournamentId,
+    round,
+    force,
+  } = parseArguments(
+    process.argv.slice(2),
+  );
+
+  console.log();
+  console.log(
+    "========================================",
+  );
+  console.log(
+    "111 SPORTS SHOTCAST COURSE IMPORTER",
+  );
+  console.log(
+    "========================================",
+  );
+  console.log(
+    `Tournament: ${tournamentId}`,
+  );
+  console.log(
+    `Round lookup: ${round}`,
+  );
+  console.log(
+    `Force downloads: ${force ? "yes" : "no"}`,
+  );
+  console.log();
+
+  const leaderboardData =
+    await graphqlRequest(
+      "LeaderboardHoleByHole",
+      LEADERBOARD_QUERY,
+      {
+        tournamentId,
+        round,
+      },
+    );
+
+  const leaderboard =
+    leaderboardData
+      ?.leaderboardHoleByHole;
+
+  if (
+    !leaderboard ||
+    typeof leaderboard !==
+      "object"
+  ) {
+    throw new Error(
+      "PGA TOUR did not return tournament course information.",
+    );
+  }
+
+  const courses =
+    Array.isArray(
+      leaderboard.courses,
+    )
+      ? leaderboard.courses
+      : [];
+
+  const course =
+    courses.find(
+      (row) =>
+        row?.hostCourse ===
+          true &&
+        row?.enabled !== false,
+    ) ??
+    courses.find(
+      (row) =>
+        row?.enabled !== false,
+    ) ??
+    courses[0] ??
+    null;
+
+  const courseId =
+    String(
+      course?.id ?? "",
+    ).trim();
+
+  if (!courseId) {
+    throw new Error(
+      "No enabled course ID was returned.",
+    );
+  }
+
+  const courseName =
+    String(
+      course?.courseName ??
+        "Unknown course",
+    ).trim();
+
+  console.log(
+    `Course: ${courseName}`,
+  );
+  console.log(
+    `Course ID: ${courseId}`,
+  );
+  console.log(
+    `Scoring level: ${course?.scoringLevel ?? "unknown"}`,
+  );
+  console.log();
+
+  const tournamentDirectory =
+    join(
+      OUTPUT_ROOT,
+      tournamentId,
+    );
+
+  const holesDirectory =
+    join(
+      tournamentDirectory,
+      "holes",
+    );
+
+  mkdirSync(
+    holesDirectory,
+    {
+      recursive: true,
+    },
+  );
+
+  const headerRows =
+    (
+      Array.isArray(
+        leaderboard
+          .courseHoleHeaders,
+      )
+        ? leaderboard
+            .courseHoleHeaders
+        : []
+    ).find(
+      (row) =>
+        String(
+          row?.courseId ?? "",
+        ) === courseId,
+    )?.holeHeaders ?? [];
+
+  const headersByHole =
+    new Map(
+      (
+        Array.isArray(
+          headerRows,
+        )
+          ? headerRows
+          : []
+      )
+        .filter(
+          (row) =>
+            Number.isInteger(
+              Number(
+                row?.holeNumber,
+              ),
+            ),
+        )
+        .map((row) => [
+          Number(
+            row.holeNumber,
+          ),
+          row,
+        ]),
+    );
+
+  const holes = [];
+
+  for (
+    let holeNumber = 1;
+    holeNumber <= 18;
+    holeNumber += 1
+  ) {
+    process.stdout.write(
+      `Importing hole ${String(
+        holeNumber,
+      ).padStart(2, "0")}/18... `,
+    );
+
+    try {
+      const holeData =
+        await graphqlRequest(
+          "HoleDetails",
+          HOLE_DETAILS_QUERY,
+          {
+            tournamentId,
+            courseId,
+            hole: holeNumber,
+          },
+        );
+
+      const detail =
+        holeData?.holeDetails ??
+        null;
+
+      if (!detail) {
+        console.log(
+          "no details",
+        );
+
+        holes.push({
+          holeNumber,
+          available: false,
+          error:
+            "No HoleDetails payload returned.",
+        });
+
+        continue;
+      }
+
+      const officialImageUrl =
+        normalizeUrl(
+          detail
+            .holeImageLandscape,
+        ) ??
+        normalizeUrl(
+          detail.holeImage,
+        );
+
+      let downloadedImage =
+        null;
+
+      if (officialImageUrl) {
+        downloadedImage =
+          await downloadImage(
+            officialImageUrl,
+            join(
+              holesDirectory,
+              `hole-${String(
+                holeNumber,
+              ).padStart(2, "0")}`,
+            ),
+            force,
+          );
+      }
+
+      const holeInfo =
+        detail.holeInfo &&
+        typeof detail.holeInfo ===
+          "object"
+          ? detail.holeInfo
+          : {};
+
+      /*
+       * These URLs are already resolved by PGA TOUR and use
+       * the same bottom-to-top orientation as replay data.
+       */
+      const alignedMapUrl =
+        normalizeUrl(
+          holeInfo
+            .holePickleBottomToTop,
+        );
+
+      const alignedGreenUrl =
+        normalizeUrl(
+          holeInfo
+            .holePickleGreenBottomToTop,
+        );
+
+      let downloadedAlignedMap =
+        null;
+
+      let downloadedAlignedGreen =
+        null;
+
+      if (alignedMapUrl) {
+        downloadedAlignedMap =
+          await downloadImage(
+            alignedMapUrl,
+            join(
+              holesDirectory,
+              `hole-${String(
+                holeNumber,
+              ).padStart(2, "0")}-shotcast`,
+            ),
+            force,
+          );
+      }
+
+      if (alignedGreenUrl) {
+        downloadedAlignedGreen =
+          await downloadImage(
+            alignedGreenUrl,
+            join(
+              holesDirectory,
+              `hole-${String(
+                holeNumber,
+              ).padStart(2, "0")}-green`,
+            ),
+            force,
+          );
+      }
+
+      const header =
+        headersByHole.get(
+          holeNumber,
+        ) ?? null;
+
+      holes.push({
+        holeNumber,
+        available: true,
+
+        detailsId:
+          detail.id ?? null,
+
+        statsAvailability:
+          detail.statsAvailability ??
+          null,
+
+        par:
+          numberOrNull(
+            holeInfo.par ??
+              header?.par,
+          ),
+
+        yards:
+          numberOrNull(
+            holeInfo.yards,
+          ),
+
+        rank:
+          numberOrNull(
+            holeInfo.rank,
+          ),
+
+        scoringAverageDiff:
+          numberOrNull(
+            holeInfo
+              .scoringAverageDiff,
+          ),
+
+        aboutThisHole:
+          typeof holeInfo
+            .aboutThisHole ===
+          "string"
+            ? holeInfo
+                .aboutThisHole
+                .trim() || null
+            : null,
+
+        officialImageUrl,
+
+        localImageUrl:
+          downloadedImage
+            ? publicPathFromFile(
+                downloadedImage
+                  .localPath,
+              )
+            : null,
+
+        imageContentType:
+          downloadedImage
+            ?.contentType ??
+          null,
+
+        imageBytes:
+          downloadedImage
+            ?.bytes ??
+          null,
+
+        alignedMapUrl,
+
+        localAlignedMapUrl:
+          downloadedAlignedMap
+            ? publicPathFromFile(
+                downloadedAlignedMap
+                  .localPath,
+              )
+            : null,
+
+        alignedMapBytes:
+          downloadedAlignedMap
+            ?.bytes ??
+          null,
+
+        alignedGreenUrl,
+
+        localAlignedGreenUrl:
+          downloadedAlignedGreen
+            ? publicPathFromFile(
+                downloadedAlignedGreen
+                  .localPath,
+              )
+            : null,
+
+        alignedGreenBytes:
+          downloadedAlignedGreen
+            ?.bytes ??
+          null,
+
+        tourcast: {
+          uri:
+            normalizeUrl(
+              detail.tourcastURI,
+            ),
+
+          url:
+            normalizeUrl(
+              detail.tourcastURL,
+            ),
+
+          urlWeb:
+            normalizeUrl(
+              detail
+                .tourcastURLWeb,
+            ),
+        },
+
+        assets: {
+          leftToRight:
+            cleanAsset(
+              holeInfo
+                .holePickleLeftToRightAsset,
+            ),
+
+          bottomToTop:
+            cleanAsset(
+              holeInfo
+                .holePickleBottomToTopAsset,
+            ),
+
+          greenLeftToRight:
+            cleanAsset(
+              holeInfo
+                .holePickleGreenLeftToRightAsset,
+            ),
+
+          greenBottomToTop:
+            cleanAsset(
+              holeInfo
+                .holePickleGreenBottomToTopAsset,
+            ),
+        },
+
+        legacyAssets: {
+          holePickle:
+            normalizeUrl(
+              holeInfo.holePickle,
+            ),
+
+          holePickleBottomToTop:
+            normalizeUrl(
+              holeInfo
+                .holePickleBottomToTop,
+            ),
+
+          holePickleGreenBottomToTop:
+            normalizeUrl(
+              holeInfo
+                .holePickleGreenBottomToTop,
+            ),
+
+          greenPickle:
+            normalizeUrl(
+              holeInfo.greenPickle,
+            ),
+        },
+
+        pinGreen:
+          cleanPinGreen(
+            holeInfo.pinGreen,
+          ),
+      });
+
+      function downloadStatus(
+        label,
+        result,
+      ) {
+        if (!result) {
+          return `${label}: unavailable`;
+        }
+
+        return (
+          `${label}: ` +
+          (result.downloaded
+            ? "downloaded "
+            : "kept existing ") +
+          `${Math.round(
+            result.bytes / 1024,
+          )} KB`
+        );
+      }
+
+      console.log(
+        [
+          downloadStatus(
+            "photo",
+            downloadedImage,
+          ),
+          downloadStatus(
+            "map",
+            downloadedAlignedMap,
+          ),
+          downloadStatus(
+            "green",
+            downloadedAlignedGreen,
+          ),
+        ].join(" · "),
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      console.log(
+        "failed",
+      );
+
+      console.error(
+        `  ${message}`,
+      );
+
+      holes.push({
+        holeNumber,
+        available: false,
+        error: message,
+      });
+    }
+  }
+
+  const successfulHoles =
+    holes.filter(
+      (hole) =>
+        hole.available,
+    ).length;
+
+  const downloadedImages =
+    holes.filter(
+      (hole) =>
+        hole.available &&
+        hole.localImageUrl,
+    ).length;
+
+  const alignedMaps =
+    holes.filter(
+      (hole) =>
+        hole.available &&
+        hole.localAlignedMapUrl,
+    ).length;
+
+  const alignedGreens =
+    holes.filter(
+      (hole) =>
+        hole.available &&
+        hole.localAlignedGreenUrl,
+    ).length;
+
+  const manifest = {
+    schemaVersion: 1,
+
+    generatedAt:
+      new Date().toISOString(),
+
+    source:
+      "PGA TOUR HoleDetails",
+
+    tournament: {
+      id: tournamentId,
+
+      name:
+        leaderboard
+          .tournamentName ??
+        null,
+
+      currentRound:
+        numberOrNull(
+          leaderboard
+            .currentRound,
+        ),
+
+      requestedRound:
+        round,
+    },
+
+    course: {
+      id: courseId,
+
+      name: courseName,
+
+      code:
+        course?.courseCode ??
+        null,
+
+      hostCourse:
+        course?.hostCourse ===
+        true,
+
+      scoringLevel:
+        course
+          ?.scoringLevel ??
+        null,
+
+      enabled:
+        course?.enabled !==
+        false,
+    },
+
+    summary: {
+      holesRequested: 18,
+      holesAvailable:
+        successfulHoles,
+      localImages:
+        downloadedImages,
+      alignedMaps,
+      alignedGreens,
+      holesFailed:
+        18 -
+        successfulHoles,
+    },
+
+    holes,
+  };
+
+  const manifestPath =
+    join(
+      tournamentDirectory,
+      "manifest.json",
+    );
+
+  writeFileSync(
+    manifestPath,
+    JSON.stringify(
+      manifest,
+      null,
+      2,
+    ) + "\n",
+  );
+
+  console.log();
+  console.log(
+    "========================================",
+  );
+  console.log(
+    "IMPORT COMPLETE",
+  );
+  console.log(
+    "========================================",
+  );
+  console.log(
+    `Tournament: ${manifest.tournament.name ?? tournamentId}`,
+  );
+  console.log(
+    `Course: ${courseName}`,
+  );
+  console.log(
+    `Hole metadata: ${successfulHoles}/18`,
+  );
+  console.log(
+    `Local photos: ${downloadedImages}/18`,
+  );
+  console.log(
+    `Aligned maps: ${alignedMaps}/18`,
+  );
+  console.log(
+    `Aligned greens: ${alignedGreens}/18`,
+  );
+  console.log(
+    `Manifest: ${manifestPath}`,
+  );
+  console.log(
+    `Public URL: /shotcast/${tournamentId}/manifest.json`,
+  );
+}
+
+main().catch((error) => {
+  console.error();
+  console.error(
+    "SHOTCAST IMPORT FAILED",
+  );
+  console.error(
+    error instanceof Error
+      ? error.message
+      : String(error),
+  );
+
+  process.exit(1);
+});

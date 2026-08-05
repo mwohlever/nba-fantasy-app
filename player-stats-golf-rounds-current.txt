@@ -1,0 +1,1155 @@
+============================================================
+PLAYER-STATS TYPES + QUERY
+============================================================
+export const dynamic = "force-dynamic";
+
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control": "no-store, max-age=0",
+  };
+}
+
+type GolfCourseHoleRow = {
+  hole_number: number;
+  par: number;
+  yards: number | null;
+  is_host: boolean;
+};
+
+function mergeGolfRoundHoles(
+  playerHoles: any[],
+  courseHoleByNumber: Map<number, GolfCourseHoleRow>,
+) {
+  const playerHoleByNumber = new Map(
+    (playerHoles ?? []).map((hole: any) => [
+      Number(hole.hole_number),
+      hole,
+    ]),
+  );
+
+  return Array.from(
+    { length: 18 },
+    (_, index) => index + 1,
+  ).map((holeNumber) => {
+    const playerHole =
+      playerHoleByNumber.get(holeNumber);
+
+    const courseHole =
+      courseHoleByNumber.get(holeNumber);
+
+    return {
+      hole_number: holeNumber,
+      par:
+        courseHole?.par === undefined
+          ? null
+          : Number(courseHole.par),
+      yards:
+        courseHole?.yards === null ||
+        courseHole?.yards === undefined
+          ? null
+          : Number(courseHole.yards),
+      strokes:
+        playerHole?.strokes === null ||
+        playerHole?.strokes === undefined
+          ? null
+          : Number(playerHole.strokes),
+      relative_to_par:
+        playerHole?.relative_to_par === null ||
+        playerHole?.relative_to_par === undefined
+          ? null
+          : Number(playerHole.relative_to_par),
+      score_display:
+        playerHole?.score_display ?? null,
+    };
+  });
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const slateIdParam = request.nextUrl.searchParams.get("slateId");
+
+    if (!slateIdParam) {
+      return NextResponse.json(
+        { error: "slateId is required." },
+        { status: 400, headers: noStoreHeaders() },
+      );
+    }
+
+    const slateId = Number(slateIdParam);
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "slateId must be a valid number." },
+        { status: 400, headers: noStoreHeaders() },
+      );
+    }
+
+    const { data: slate, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select("sport")
+      .eq("id", slateId)
+      .maybeSingle();
+
+    if (slateError) {
+      return NextResponse.json(
+        { error: `Failed to load slate: ${slateError.message}` },
+        { status: 500, headers: noStoreHeaders() },
+      );
+    }
+
+    const sport =
+      slate?.sport === "nfl"
+        ? "nfl"
+        : slate?.sport === "golf"
+          ? "golf"
+          : "nba";
+
+    if (sport === "golf") {
+      const { data, error } = await supabaseAdmin
+        .from("golf_event_players")
+        .select(
+          `
+          player_id,
+          leaderboard_order,
+          official_score_to_par,
+          official_score_display,
+          penalty_strokes,
+          fantasy_score,
+          rounds_completed,
+          holes_completed,
+          current_round,
+          last_hole,
+          status,
+          tee_time,
+          tee_time_raw,
+          golf_rounds (
+            round_number,
+            score_to_par,
+            score_display,
+            strokes,
+            holes_completed,
+            tee_time,
+            tee_time_raw,
+            status,
+            golf_holes (
+              hole_number,
+              strokes,
+              relative_to_par,
+              score_display
+            )
+          )
+        `,
+        )
+        .eq("slate_id", slateId)
+        .order("leaderboard_order", {
+          ascending: true,
+          nullsFirst: false,
+        });
+
+      if (error) {
+        return NextResponse.json(
+          { error: `Failed to load Golf stats: ${error.message}` },
+          { status: 500, headers: noStoreHeaders() },
+        );
+      }
+
+      const { data: courseHoleData, error: courseHoleError } =
+        await supabaseAdmin
+          .from("golf_course_holes")
+          .select(
+            "hole_number, par, yards, is_host",
+          )
+          .eq("slate_id", slateId)
+          .order("is_host", {
+            ascending: false,
+          })
+          .order("hole_number", {
+            ascending: true,
+          });
+
+      if (courseHoleError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to load Golf course data: ${courseHoleError.message}`,
+          },
+          {
+            status: 500,
+            headers: noStoreHeaders(),
+          },
+        );
+      }
+
+      const courseHoleByNumber =
+        new Map<number, GolfCourseHoleRow>();
+
+      for (const row of courseHoleData ?? []) {
+        const holeNumber = Number(row.hole_number);
+
+        if (!courseHoleByNumber.has(holeNumber)) {
+          courseHoleByNumber.set(
+            holeNumber,
+            row as GolfCourseHoleRow,
+          );
+        }
+      }
+
+      const playerStats = (data ?? []).map((row: any) => ({
+        player_id: Number(row.player_id),
+        leaderboard_order:
+          row.leaderboard_order === null
+            ? null
+            : Number(row.leaderboard_order),
+        official_score_to_par:
+          row.official_score_to_par === null
+            ? null
+            : Number(row.official_score_to_par),
+        official_score_display: row.official_score_display ?? null,
+        penalty_strokes: Number(row.penalty_strokes ?? 0),
+        fantasy_points:
+          row.fantasy_score === null ? null : Number(row.fantasy_score),
+        rounds_completed: Number(row.rounds_completed ?? 0),
+        holes_completed: Number(row.holes_completed ?? 0),
+        current_round:
+          row.current_round === null ? null : Number(row.current_round),
+        last_hole: row.last_hole === null ? null : Number(row.last_hole),
+        status: row.status ?? "scheduled",
+        tee_time: row.tee_time ?? null,
+        tee_time_raw: row.tee_time_raw ?? null,
+        rounds: (row.golf_rounds ?? [])
+          .map((round: any) => ({
+            round_number: Number(round.round_number),
+            score_to_par:
+              round.score_to_par === null
+                ? null
+                : Number(round.score_to_par),
+            score_display: round.score_display ?? null,
+            strokes:
+              round.strokes === null ? null : Number(round.strokes),
+            holes_completed: Number(round.holes_completed ?? 0),
+            tee_time: round.tee_time ?? null,
+            tee_time_raw: round.tee_time_raw ?? null,
+            status: round.status ?? "scheduled",
+            holes: mergeGolfRoundHoles(
+              round.golf_holes ?? [],
+              courseHoleByNumber,
+            ),
+          }))
+          .sort(
+            (a: { round_number: number }, b: { round_number: number }) =>
+              a.round_number - b.round_number,
+          ),
+      }));
+
+      return NextResponse.json(
+        {
+          success: true,
+          sport,
+          playerStats,
+        },
+        { headers: noStoreHeaders() },
+      );
+    }
+
+    if (sport === "nfl") {
+      const { data, error } = await supabaseAdmin
+        .from("player_nfl_slate_stats")
+        .select(
+          `
+          player_id,
+          passing_yards,
+          passing_tds,
+          passing_ints,
+          rushing_yards,
+          rushing_tds,
+          receiving_yards,
+          receiving_tds,
+          receptions,
+          fumbles_lost,
+          fantasy_points,
+          game_status,
+
+============================================================
+PLAYER-STATS REMAINDER
+============================================================
+          game_status,
+          game_status_text
+        `,
+        )
+        .eq("slate_id", slateId)
+        .order("player_id", { ascending: true });
+
+      if (error) {
+        return NextResponse.json(
+          { error: `Failed to load player stats: ${error.message}` },
+          { status: 500, headers: noStoreHeaders() },
+        );
+      }
+
+      return NextResponse.json(
+        { success: true, sport, playerStats: data ?? [] },
+        { headers: noStoreHeaders() },
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("player_slate_stats")
+      .select(
+        `
+        player_id,
+        points,
+        rebounds,
+        assists,
+        steals,
+        blocks,
+        turnovers,
+        fantasy_points,
+        game_status,
+        game_status_text,
+        period,
+        game_clock
+      `,
+      )
+      .eq("slate_id", slateId)
+      .order("player_id", { ascending: true });
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load player stats: ${error.message}` },
+        { status: 500, headers: noStoreHeaders() },
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, sport, playerStats: data ?? [] },
+      { headers: noStoreHeaders() },
+    );
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Unexpected server error while loading player stats." },
+      { status: 500, headers: noStoreHeaders() },
+    );
+  }
+}
+
+============================================================
+GOLF ROUND WRITES / UPSERTS
+============================================================
+app/api/refresh-stats-golf/route.ts-661-      const penaltyStrokes = calculatePenaltyStrokes({
+app/api/refresh-stats-golf/route.ts-662-        status: competitor.status,
+app/api/refresh-stats-golf/route.ts-663-        roundsCompleted: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts-664-        penaltyPerRound,
+app/api/refresh-stats-golf/route.ts-665-      });
+app/api/refresh-stats-golf/route.ts-666-
+app/api/refresh-stats-golf/route.ts-667-      const fantasyScore =
+app/api/refresh-stats-golf/route.ts-668-        competitor.officialScoreToPar === null
+app/api/refresh-stats-golf/route.ts-669-          ? null
+app/api/refresh-stats-golf/route.ts-670-          : competitor.officialScoreToPar + penaltyStrokes;
+app/api/refresh-stats-golf/route.ts-671-
+app/api/refresh-stats-golf/route.ts-672-      return {
+app/api/refresh-stats-golf/route.ts-673-        slate_id: slateId,
+app/api/refresh-stats-golf/route.ts-674-        player_id: playerIdByEspnId.get(competitor.espnPlayerId)!,
+app/api/refresh-stats-golf/route.ts-675-        leaderboard_order: competitor.leaderboardOrder,
+app/api/refresh-stats-golf/route.ts-676-        official_score_to_par: competitor.officialScoreToPar,
+app/api/refresh-stats-golf/route.ts-677-        official_score_display: competitor.officialScoreDisplay,
+app/api/refresh-stats-golf/route.ts-678-        penalty_strokes: penaltyStrokes,
+app/api/refresh-stats-golf/route.ts-679-        fantasy_score: fantasyScore,
+app/api/refresh-stats-golf/route.ts-680-        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts:681:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts-682-        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts-683-        last_hole: competitor.lastHole,
+app/api/refresh-stats-golf/route.ts-684-        status: competitor.status,
+app/api/refresh-stats-golf/route.ts:685:        tee_time: competitor.teeTime,
+app/api/refresh-stats-golf/route.ts:686:        tee_time_raw: competitor.teeTimeRaw,
+app/api/refresh-stats-golf/route.ts-687-        updated_at: refreshedAt,
+app/api/refresh-stats-golf/route.ts-688-      };
+app/api/refresh-stats-golf/route.ts-689-    });
+app/api/refresh-stats-golf/route.ts-690-
+app/api/refresh-stats-golf/route.ts-691-    const { data: eventPlayersData, error: eventPlayersUpsertError } =
+app/api/refresh-stats-golf/route.ts-692-      await supabaseAdmin
+app/api/refresh-stats-golf/route.ts-693-        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts-694-        .upsert(eventPlayerRows, {
+app/api/refresh-stats-golf/route.ts-695-          onConflict: "slate_id,player_id",
+app/api/refresh-stats-golf/route.ts-696-        })
+app/api/refresh-stats-golf/route.ts-697-        .select("id, player_id");
+app/api/refresh-stats-golf/route.ts-698-
+app/api/refresh-stats-golf/route.ts-699-    if (eventPlayersUpsertError) {
+app/api/refresh-stats-golf/route.ts-700-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-701-        {
+app/api/refresh-stats-golf/route.ts-702-          error:
+app/api/refresh-stats-golf/route.ts-703-            "Golf players were saved, but the tournament field could not be linked to the slate: " +
+app/api/refresh-stats-golf/route.ts-704-            eventPlayersUpsertError.message,
+app/api/refresh-stats-golf/route.ts-705-        },
+app/api/refresh-stats-golf/route.ts-706-        { status: 500 },
+app/api/refresh-stats-golf/route.ts-707-      );
+app/api/refresh-stats-golf/route.ts-708-    }
+app/api/refresh-stats-golf/route.ts-709-
+app/api/refresh-stats-golf/route.ts-710-    const eventPlayers = (eventPlayersData ?? []) as GolfEventPlayerIdRow[];
+app/api/refresh-stats-golf/route.ts-711-
+app/api/refresh-stats-golf/route.ts-712-    const eventPlayerIdByPlayerId = new Map(
+app/api/refresh-stats-golf/route.ts-713-      eventPlayers.map((eventPlayer) => [
+app/api/refresh-stats-golf/route.ts-714-        Number(eventPlayer.player_id),
+app/api/refresh-stats-golf/route.ts-715-        Number(eventPlayer.id),
+app/api/refresh-stats-golf/route.ts-716-      ]),
+app/api/refresh-stats-golf/route.ts-717-    );
+app/api/refresh-stats-golf/route.ts-718-
+app/api/refresh-stats-golf/route.ts-719-    const unresolvedEventPlayers = competitors.filter((competitor) => {
+app/api/refresh-stats-golf/route.ts-720-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId);
+app/api/refresh-stats-golf/route.ts-721-
+app/api/refresh-stats-golf/route.ts-722-      return playerId === undefined || !eventPlayerIdByPlayerId.has(playerId);
+app/api/refresh-stats-golf/route.ts-723-    });
+app/api/refresh-stats-golf/route.ts-724-
+app/api/refresh-stats-golf/route.ts-725-    if (unresolvedEventPlayers.length > 0) {
+app/api/refresh-stats-golf/route.ts-726-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-727-        {
+app/api/refresh-stats-golf/route.ts-728-          error:
+app/api/refresh-stats-golf/route.ts-729-            "Tournament players were linked to the slate, but one or more event-player IDs could not be resolved.",
+app/api/refresh-stats-golf/route.ts-730-          unresolvedPlayers: unresolvedEventPlayers.map(
+app/api/refresh-stats-golf/route.ts-731-            (competitor) => competitor.displayName,
+app/api/refresh-stats-golf/route.ts-732-          ),
+app/api/refresh-stats-golf/route.ts-733-        },
+app/api/refresh-stats-golf/route.ts-734-        { status: 500 },
+app/api/refresh-stats-golf/route.ts-735-      );
+app/api/refresh-stats-golf/route.ts-736-    }
+app/api/refresh-stats-golf/route.ts-737-
+app/api/refresh-stats-golf/route.ts-738-    const eventPlayerIds = eventPlayers.map((eventPlayer) =>
+app/api/refresh-stats-golf/route.ts-739-      Number(eventPlayer.id),
+app/api/refresh-stats-golf/route.ts-740-    );
+app/api/refresh-stats-golf/route.ts-741-
+app/api/refresh-stats-golf/route.ts-742-    const { data: existingRoundsData, error: existingRoundsError } =
+app/api/refresh-stats-golf/route.ts-743-      await supabaseAdmin
+app/api/refresh-stats-golf/route.ts:744:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts-745-        .select("id")
+app/api/refresh-stats-golf/route.ts-746-        .in("event_player_id", eventPlayerIds);
+app/api/refresh-stats-golf/route.ts-747-
+app/api/refresh-stats-golf/route.ts-748-    if (existingRoundsError) {
+app/api/refresh-stats-golf/route.ts-749-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-750-        {
+app/api/refresh-stats-golf/route.ts-751-          error:
+app/api/refresh-stats-golf/route.ts-752-            "Tournament players were saved, but existing Golf rounds could not be read: " +
+app/api/refresh-stats-golf/route.ts-753-            existingRoundsError.message,
+app/api/refresh-stats-golf/route.ts-754-        },
+app/api/refresh-stats-golf/route.ts-755-        { status: 500 },
+app/api/refresh-stats-golf/route.ts-756-      );
+app/api/refresh-stats-golf/route.ts-757-    }
+app/api/refresh-stats-golf/route.ts-758-
+app/api/refresh-stats-golf/route.ts-759-    const existingRoundIds = (existingRoundsData ?? []).map((round) =>
+app/api/refresh-stats-golf/route.ts-760-      Number(round.id),
+app/api/refresh-stats-golf/route.ts-761-    );
+app/api/refresh-stats-golf/route.ts-762-
+app/api/refresh-stats-golf/route.ts-763-    if (existingRoundIds.length > 0) {
+app/api/refresh-stats-golf/route.ts-764-      const { error: holesDeleteError } = await supabaseAdmin
+app/api/refresh-stats-golf/route.ts-765-        .from("golf_holes")
+app/api/refresh-stats-golf/route.ts-766-        .delete()
+app/api/refresh-stats-golf/route.ts-767-        .in("round_id", existingRoundIds);
+app/api/refresh-stats-golf/route.ts-768-
+app/api/refresh-stats-golf/route.ts-769-      if (holesDeleteError) {
+app/api/refresh-stats-golf/route.ts-770-        return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-771-          {
+app/api/refresh-stats-golf/route.ts-772-            error:
+app/api/refresh-stats-golf/route.ts-773-              "Existing Golf holes could not be cleared: " +
+app/api/refresh-stats-golf/route.ts-774-              holesDeleteError.message,
+app/api/refresh-stats-golf/route.ts-775-          },
+app/api/refresh-stats-golf/route.ts-776-          { status: 500 },
+app/api/refresh-stats-golf/route.ts-777-        );
+app/api/refresh-stats-golf/route.ts-778-      }
+app/api/refresh-stats-golf/route.ts-779-    }
+app/api/refresh-stats-golf/route.ts-780-
+app/api/refresh-stats-golf/route.ts-781-    const { error: roundsDeleteError } = await supabaseAdmin
+app/api/refresh-stats-golf/route.ts:782:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts-783-      .delete()
+app/api/refresh-stats-golf/route.ts-784-      .in("event_player_id", eventPlayerIds);
+app/api/refresh-stats-golf/route.ts-785-
+app/api/refresh-stats-golf/route.ts-786-    if (roundsDeleteError) {
+app/api/refresh-stats-golf/route.ts-787-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-788-        {
+app/api/refresh-stats-golf/route.ts-789-          error:
+app/api/refresh-stats-golf/route.ts-790-            "Existing Golf rounds could not be cleared: " +
+app/api/refresh-stats-golf/route.ts-791-            roundsDeleteError.message,
+app/api/refresh-stats-golf/route.ts-792-        },
+app/api/refresh-stats-golf/route.ts-793-        { status: 500 },
+app/api/refresh-stats-golf/route.ts-794-      );
+app/api/refresh-stats-golf/route.ts-795-    }
+app/api/refresh-stats-golf/route.ts-796-
+app/api/refresh-stats-golf/route.ts-797-    const roundRows = competitors.flatMap((competitor) => {
+app/api/refresh-stats-golf/route.ts-798-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+app/api/refresh-stats-golf/route.ts-799-
+app/api/refresh-stats-golf/route.ts-800-      const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+app/api/refresh-stats-golf/route.ts-801-
+app/api/refresh-stats-golf/route.ts-802-      return competitor.rounds.map((round) => ({
+app/api/refresh-stats-golf/route.ts-803-        event_player_id: eventPlayerId,
+app/api/refresh-stats-golf/route.ts-804-        round_number: round.roundNumber,
+app/api/refresh-stats-golf/route.ts-805-        score_to_par: round.scoreToPar,
+app/api/refresh-stats-golf/route.ts-806-        score_display: round.scoreDisplay,
+app/api/refresh-stats-golf/route.ts-807-        strokes: round.strokes,
+app/api/refresh-stats-golf/route.ts:808:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts:809:        tee_time: round.teeTime,
+app/api/refresh-stats-golf/route.ts:810:        tee_time_raw: round.teeTimeRaw,
+app/api/refresh-stats-golf/route.ts-811-        status: getRoundStatus(round, tournament.status),
+app/api/refresh-stats-golf/route.ts-812-        updated_at: refreshedAt,
+app/api/refresh-stats-golf/route.ts-813-      }));
+app/api/refresh-stats-golf/route.ts-814-    });
+app/api/refresh-stats-golf/route.ts-815-
+app/api/refresh-stats-golf/route.ts-816-    let savedRounds: GolfRoundIdRow[] = [];
+app/api/refresh-stats-golf/route.ts-817-
+app/api/refresh-stats-golf/route.ts-818-    for (const batch of chunkRows(roundRows, INSERT_BATCH_SIZE)) {
+app/api/refresh-stats-golf/route.ts-819-      const { data: insertedRoundsData, error: roundsInsertError } =
+app/api/refresh-stats-golf/route.ts-820-        await supabaseAdmin
+app/api/refresh-stats-golf/route.ts:821:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts-822-          .insert(batch)
+app/api/refresh-stats-golf/route.ts-823-          .select("id, event_player_id, round_number");
+app/api/refresh-stats-golf/route.ts-824-
+app/api/refresh-stats-golf/route.ts-825-      if (roundsInsertError) {
+app/api/refresh-stats-golf/route.ts-826-        return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-827-          {
+app/api/refresh-stats-golf/route.ts-828-            error:
+app/api/refresh-stats-golf/route.ts-829-              "Golf rounds could not be saved: " + roundsInsertError.message,
+app/api/refresh-stats-golf/route.ts-830-          },
+app/api/refresh-stats-golf/route.ts-831-          { status: 500 },
+app/api/refresh-stats-golf/route.ts-832-        );
+app/api/refresh-stats-golf/route.ts-833-      }
+app/api/refresh-stats-golf/route.ts-834-
+app/api/refresh-stats-golf/route.ts-835-      savedRounds = savedRounds.concat(
+app/api/refresh-stats-golf/route.ts-836-        (insertedRoundsData ?? []) as GolfRoundIdRow[],
+app/api/refresh-stats-golf/route.ts-837-      );
+app/api/refresh-stats-golf/route.ts-838-    }
+app/api/refresh-stats-golf/route.ts-839-
+app/api/refresh-stats-golf/route.ts-840-    const roundIdByKey = new Map(
+app/api/refresh-stats-golf/route.ts-841-      savedRounds.map((round) => [
+app/api/refresh-stats-golf/route.ts-842-        `${round.event_player_id}:${round.round_number}`,
+app/api/refresh-stats-golf/route.ts-843-        Number(round.id),
+app/api/refresh-stats-golf/route.ts-844-      ]),
+app/api/refresh-stats-golf/route.ts-845-    );
+app/api/refresh-stats-golf/route.ts-846-
+app/api/refresh-stats-golf/route.ts-847-    const holeRows = competitors.flatMap((competitor) => {
+app/api/refresh-stats-golf/route.ts-848-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+app/api/refresh-stats-golf/route.ts-849-
+app/api/refresh-stats-golf/route.ts-850-      const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+app/api/refresh-stats-golf/route.ts-851-
+app/api/refresh-stats-golf/route.ts-852-      return competitor.rounds.flatMap((round) => {
+app/api/refresh-stats-golf/route.ts-853-        const roundId = roundIdByKey.get(
+app/api/refresh-stats-golf/route.ts-854-          `${eventPlayerId}:${round.roundNumber}`,
+app/api/refresh-stats-golf/route.ts-855-        );
+app/api/refresh-stats-golf/route.ts-856-
+app/api/refresh-stats-golf/route.ts-857-        if (roundId === undefined) {
+app/api/refresh-stats-golf/route.ts-858-          return [];
+app/api/refresh-stats-golf/route.ts-859-        }
+app/api/refresh-stats-golf/route.ts-860-
+app/api/refresh-stats-golf/route.ts-861-        return round.holes.map((hole) => ({
+app/api/refresh-stats-golf/route.ts-862-          round_id: roundId,
+app/api/refresh-stats-golf/route.ts-863-          hole_number: hole.holeNumber,
+app/api/refresh-stats-golf/route.ts-864-          strokes: hole.strokes,
+app/api/refresh-stats-golf/route.ts-865-          relative_to_par: hole.relativeToPar,
+app/api/refresh-stats-golf/route.ts-866-          score_display: hole.scoreDisplay,
+--
+lib/home/golfHomeSummary.ts-16-  team_id: number;
+lib/home/golfHomeSummary.ts-17-  fantasy_points: number | null;
+lib/home/golfHomeSummary.ts-18-  finish_position: number | null;
+lib/home/golfHomeSummary.ts-19-  games_completed: number | null;
+lib/home/golfHomeSummary.ts-20-  games_in_progress: number | null;
+lib/home/golfHomeSummary.ts-21-  games_remaining: number | null;
+lib/home/golfHomeSummary.ts-22-};
+lib/home/golfHomeSummary.ts-23-
+lib/home/golfHomeSummary.ts-24-type GolfEventPlayerRow = {
+lib/home/golfHomeSummary.ts-25-  id: number;
+lib/home/golfHomeSummary.ts-26-  slate_id: number;
+lib/home/golfHomeSummary.ts-27-  player_id: number;
+lib/home/golfHomeSummary.ts-28-  leaderboard_order: number | null;
+lib/home/golfHomeSummary.ts-29-  official_score_to_par: number | null;
+lib/home/golfHomeSummary.ts-30-  official_score_display: string | null;
+lib/home/golfHomeSummary.ts-31-  fantasy_score: number | null;
+lib/home/golfHomeSummary.ts-32-  penalty_strokes: number | null;
+lib/home/golfHomeSummary.ts-33-  status: string | null;
+lib/home/golfHomeSummary.ts-34-  current_round: number | null;
+lib/home/golfHomeSummary.ts-35-  last_hole: number | null;
+lib/home/golfHomeSummary.ts:36:  holes_completed: number | null;
+lib/home/golfHomeSummary.ts-37-  rounds_completed: number | null;
+lib/home/golfHomeSummary.ts:38:  tee_time: string | null;
+lib/home/golfHomeSummary.ts:39:  tee_time_raw: string | null;
+lib/home/golfHomeSummary.ts-40-};
+lib/home/golfHomeSummary.ts-41-
+lib/home/golfHomeSummary.ts-42-type GolfPlayerRow = {
+lib/home/golfHomeSummary.ts-43-  id: number;
+lib/home/golfHomeSummary.ts-44-  display_name: string;
+lib/home/golfHomeSummary.ts-45-  short_name: string | null;
+lib/home/golfHomeSummary.ts-46-  espn_player_id: string | null;
+lib/home/golfHomeSummary.ts-47-  headshot_url: string | null;
+lib/home/golfHomeSummary.ts-48-  country: string | null;
+lib/home/golfHomeSummary.ts-49-  owgr_rank: number | null;
+lib/home/golfHomeSummary.ts-50-};
+lib/home/golfHomeSummary.ts-51-
+lib/home/golfHomeSummary.ts-52-type LineupRow = {
+lib/home/golfHomeSummary.ts-53-  id: number;
+lib/home/golfHomeSummary.ts-54-  slate_id: number;
+lib/home/golfHomeSummary.ts-55-  team_id: number;
+lib/home/golfHomeSummary.ts-56-};
+lib/home/golfHomeSummary.ts-57-
+lib/home/golfHomeSummary.ts-58-type LineupPlayerRow = {
+lib/home/golfHomeSummary.ts-59-  lineup_id: number;
+lib/home/golfHomeSummary.ts-60-  player_id: number;
+lib/home/golfHomeSummary.ts-61-};
+lib/home/golfHomeSummary.ts-62-
+lib/home/golfHomeSummary.ts-63-function formatSlateLabel(
+lib/home/golfHomeSummary.ts-64-  startDate: string,
+lib/home/golfHomeSummary.ts-65-  endDate: string,
+lib/home/golfHomeSummary.ts-66-) {
+lib/home/golfHomeSummary.ts-67-  return startDate === endDate
+lib/home/golfHomeSummary.ts-68-    ? startDate
+lib/home/golfHomeSummary.ts-69-    : `${startDate} - ${endDate}`;
+lib/home/golfHomeSummary.ts-70-}
+lib/home/golfHomeSummary.ts-71-
+lib/home/golfHomeSummary.ts-72-function getSeason(date: string) {
+lib/home/golfHomeSummary.ts-73-  return (
+lib/home/golfHomeSummary.ts-74-    Number(date.slice(0, 4)) ||
+lib/home/golfHomeSummary.ts-75-    new Date().getFullYear()
+lib/home/golfHomeSummary.ts-76-  );
+lib/home/golfHomeSummary.ts-77-}
+lib/home/golfHomeSummary.ts-78-
+lib/home/golfHomeSummary.ts-79-function golfScore(
+lib/home/golfHomeSummary.ts-80-  value: number | null | undefined,
+lib/home/golfHomeSummary.ts-81-) {
+lib/home/golfHomeSummary.ts-82-  const score = Number(value ?? 0);
+lib/home/golfHomeSummary.ts-83-
+lib/home/golfHomeSummary.ts-84-  if (score === 0) return "E";
+--
+lib/home/golfHomeSummary.ts-88-function isTerminalGolfStatus(
+lib/home/golfHomeSummary.ts-89-  status: string | null | undefined,
+lib/home/golfHomeSummary.ts-90-) {
+lib/home/golfHomeSummary.ts-91-  return [
+lib/home/golfHomeSummary.ts-92-    "finished",
+lib/home/golfHomeSummary.ts-93-    "cut",
+lib/home/golfHomeSummary.ts-94-    "withdrawn",
+lib/home/golfHomeSummary.ts-95-    "disqualified",
+lib/home/golfHomeSummary.ts-96-    "did_not_start",
+lib/home/golfHomeSummary.ts-97-  ].includes(String(status ?? "").toLowerCase());
+lib/home/golfHomeSummary.ts-98-}
+lib/home/golfHomeSummary.ts-99-
+lib/home/golfHomeSummary.ts-100-function formatGolfTeeTime(
+lib/home/golfHomeSummary.ts-101-  rawValue: string | null | undefined,
+lib/home/golfHomeSummary.ts-102-  parsedValue?: string | null,
+lib/home/golfHomeSummary.ts-103-) {
+lib/home/golfHomeSummary.ts-104-  const raw =
+lib/home/golfHomeSummary.ts-105-    rawValue?.trim() ?? "";
+lib/home/golfHomeSummary.ts-106-
+lib/home/golfHomeSummary.ts-107-  /*
+lib/home/golfHomeSummary.ts:108:   * ESPN's tee_time_raw is already the tournament's local
+lib/home/golfHomeSummary.ts-109-   * display time. Do not reinterpret it as another timezone.
+lib/home/golfHomeSummary.ts-110-   *
+lib/home/golfHomeSummary.ts-111-   * Examples:
+lib/home/golfHomeSummary.ts-112-   *   "1:50 PM"
+lib/home/golfHomeSummary.ts-113-   *   "Sat 1:50 PM"
+lib/home/golfHomeSummary.ts-114-   */
+lib/home/golfHomeSummary.ts-115-  const rawClockMatch = raw.match(
+lib/home/golfHomeSummary.ts-116-    /(?:^|\s)(\d{1,2}:\d{2}\s*[AP]M)(?:\s|$)/i,
+lib/home/golfHomeSummary.ts-117-  );
+lib/home/golfHomeSummary.ts-118-
+lib/home/golfHomeSummary.ts-119-  if (rawClockMatch) {
+lib/home/golfHomeSummary.ts-120-    return rawClockMatch[1]
+lib/home/golfHomeSummary.ts-121-      .replace(/\s+/g, " ")
+lib/home/golfHomeSummary.ts-122-      .toUpperCase();
+lib/home/golfHomeSummary.ts-123-  }
+lib/home/golfHomeSummary.ts-124-
+lib/home/golfHomeSummary.ts-125-  /*
+lib/home/golfHomeSummary.ts-126-   * PGA TOUR also supplies tournament-local values such as:
+lib/home/golfHomeSummary.ts-127-   *
+lib/home/golfHomeSummary.ts-128-   *   Sat Aug 01 13:50:00 PDT 2026
+lib/home/golfHomeSummary.ts-129-   *
+lib/home/golfHomeSummary.ts-130-   * Preserve the displayed local clock rather than converting
+lib/home/golfHomeSummary.ts-131-   * the equivalent UTC instant to the user's/server's timezone.
+lib/home/golfHomeSummary.ts-132-   */
+lib/home/golfHomeSummary.ts-133-  const rawTwentyFourHourMatch = raw.match(
+lib/home/golfHomeSummary.ts-134-    /(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?\s+[A-Z]{2,5}(?:\s|$)/i,
+lib/home/golfHomeSummary.ts-135-  );
+lib/home/golfHomeSummary.ts-136-
+lib/home/golfHomeSummary.ts-137-  if (rawTwentyFourHourMatch) {
+lib/home/golfHomeSummary.ts-138-    const hour24 = Number(
+lib/home/golfHomeSummary.ts-139-      rawTwentyFourHourMatch[1],
+lib/home/golfHomeSummary.ts-140-    );
+lib/home/golfHomeSummary.ts-141-
+lib/home/golfHomeSummary.ts-142-    const minute =
+lib/home/golfHomeSummary.ts-143-      rawTwentyFourHourMatch[2];
+lib/home/golfHomeSummary.ts-144-
+lib/home/golfHomeSummary.ts-145-    if (
+lib/home/golfHomeSummary.ts-146-      Number.isInteger(hour24) &&
+lib/home/golfHomeSummary.ts-147-      hour24 >= 0 &&
+lib/home/golfHomeSummary.ts-148-      hour24 <= 23
+lib/home/golfHomeSummary.ts-149-    ) {
+lib/home/golfHomeSummary.ts-150-      const period =
+lib/home/golfHomeSummary.ts-151-        hour24 >= 12 ? "PM" : "AM";
+lib/home/golfHomeSummary.ts-152-
+lib/home/golfHomeSummary.ts-153-      const hour12 =
+--
+lib/home/golfHomeSummary.ts-196-  player: GolfEventPlayerRow,
+lib/home/golfHomeSummary.ts-197-) {
+lib/home/golfHomeSummary.ts-198-  const status = String(
+lib/home/golfHomeSummary.ts-199-    player.status ?? "",
+lib/home/golfHomeSummary.ts-200-  ).toLowerCase();
+lib/home/golfHomeSummary.ts-201-
+lib/home/golfHomeSummary.ts-202-  if (status === "cut") return "CUT";
+lib/home/golfHomeSummary.ts-203-  if (status === "withdrawn") return "WD";
+lib/home/golfHomeSummary.ts-204-  if (status === "disqualified") return "DQ";
+lib/home/golfHomeSummary.ts-205-  if (status === "did_not_start") return "DNS";
+lib/home/golfHomeSummary.ts-206-
+lib/home/golfHomeSummary.ts-207-  const round = Number(
+lib/home/golfHomeSummary.ts-208-    player.current_round ??
+lib/home/golfHomeSummary.ts-209-      Math.max(
+lib/home/golfHomeSummary.ts-210-        Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts-211-        1,
+lib/home/golfHomeSummary.ts-212-      ),
+lib/home/golfHomeSummary.ts-213-  );
+lib/home/golfHomeSummary.ts-214-
+lib/home/golfHomeSummary.ts-215-  const totalHoles =
+lib/home/golfHomeSummary.ts:216:    Number(player.holes_completed ?? 0);
+lib/home/golfHomeSummary.ts-217-
+lib/home/golfHomeSummary.ts-218-  const currentRoundHoles =
+lib/home/golfHomeSummary.ts-219-    totalHoles % 18;
+lib/home/golfHomeSummary.ts-220-
+lib/home/golfHomeSummary.ts-221-  if (status === "scheduled") {
+lib/home/golfHomeSummary.ts-222-    const nextRound = Math.min(
+lib/home/golfHomeSummary.ts-223-      4,
+lib/home/golfHomeSummary.ts-224-      Math.max(
+lib/home/golfHomeSummary.ts-225-        Number(player.rounds_completed ?? 0) + 1,
+lib/home/golfHomeSummary.ts-226-        Number(player.current_round ?? 1),
+lib/home/golfHomeSummary.ts-227-      ),
+lib/home/golfHomeSummary.ts-228-    );
+lib/home/golfHomeSummary.ts-229-
+lib/home/golfHomeSummary.ts-230-    const teeTime =
+lib/home/golfHomeSummary.ts-231-      formatGolfTeeTime(
+lib/home/golfHomeSummary.ts:232:        player.tee_time_raw,
+lib/home/golfHomeSummary.ts:233:        player.tee_time,
+lib/home/golfHomeSummary.ts-234-      );
+lib/home/golfHomeSummary.ts-235-
+lib/home/golfHomeSummary.ts-236-    return teeTime
+lib/home/golfHomeSummary.ts-237-      ? `R${nextRound} · Tee ${teeTime}`
+lib/home/golfHomeSummary.ts-238-      : `R${nextRound} · Upcoming`;
+lib/home/golfHomeSummary.ts-239-  }
+lib/home/golfHomeSummary.ts-240-
+lib/home/golfHomeSummary.ts-241-  if (status === "round_complete") {
+lib/home/golfHomeSummary.ts-242-    const nextRound = round + 1;
+lib/home/golfHomeSummary.ts-243-
+lib/home/golfHomeSummary.ts-244-    if (nextRound <= 4) {
+lib/home/golfHomeSummary.ts-245-      const teeTime = formatGolfTeeTime(
+lib/home/golfHomeSummary.ts:246:        player.tee_time_raw,
+lib/home/golfHomeSummary.ts:247:        player.tee_time,
+lib/home/golfHomeSummary.ts-248-      );
+lib/home/golfHomeSummary.ts-249-
+lib/home/golfHomeSummary.ts-250-      if (teeTime) {
+lib/home/golfHomeSummary.ts-251-        return `R${nextRound} · Tee ${teeTime}`;
+lib/home/golfHomeSummary.ts-252-      }
+lib/home/golfHomeSummary.ts-253-    }
+lib/home/golfHomeSummary.ts-254-
+lib/home/golfHomeSummary.ts-255-    return `R${round} complete`;
+lib/home/golfHomeSummary.ts-256-  }
+lib/home/golfHomeSummary.ts-257-
+lib/home/golfHomeSummary.ts-258-  if (status === "finished") {
+lib/home/golfHomeSummary.ts-259-    return "Final";
+lib/home/golfHomeSummary.ts-260-  }
+lib/home/golfHomeSummary.ts-261-
+lib/home/golfHomeSummary.ts-262-  if (currentRoundHoles > 0) {
+lib/home/golfHomeSummary.ts-263-    return `R${round} · thru ${currentRoundHoles}`;
+lib/home/golfHomeSummary.ts-264-  }
+lib/home/golfHomeSummary.ts-265-
+lib/home/golfHomeSummary.ts-266-  return `R${round}`;
+lib/home/golfHomeSummary.ts-267-}
+lib/home/golfHomeSummary.ts-268-
+lib/home/golfHomeSummary.ts-269-export async function getGolfHomeSummary() {
+lib/home/golfHomeSummary.ts-270-  const [
+lib/home/golfHomeSummary.ts-271-    { data: slateData, error: slateError },
+lib/home/golfHomeSummary.ts-272-    { data: resultData, error: resultError },
+lib/home/golfHomeSummary.ts-273-    { data: teamData, error: teamError },
+lib/home/golfHomeSummary.ts-274-    { data: teamUserData, error: teamUserError },
+lib/home/golfHomeSummary.ts-275-    { data: slateTeamData, error: slateTeamError },
+lib/home/golfHomeSummary.ts-276-  ] = await Promise.all([
+lib/home/golfHomeSummary.ts-277-    supabaseAdmin
+lib/home/golfHomeSummary.ts-278-      .from("slates")
+lib/home/golfHomeSummary.ts-279-      .select(
+lib/home/golfHomeSummary.ts-280-        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name",
+lib/home/golfHomeSummary.ts-281-      )
+lib/home/golfHomeSummary.ts-282-      .eq("sport", "golf")
+lib/home/golfHomeSummary.ts-283-      .order("start_date", { ascending: false })
+lib/home/golfHomeSummary.ts-284-      .order("end_date", { ascending: false }),
+lib/home/golfHomeSummary.ts-285-
+lib/home/golfHomeSummary.ts-286-    supabaseAdmin
+lib/home/golfHomeSummary.ts-287-      .from("team_slate_results")
+lib/home/golfHomeSummary.ts-288-      .select(
+lib/home/golfHomeSummary.ts-289-        "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining",
+lib/home/golfHomeSummary.ts-290-      ),
+lib/home/golfHomeSummary.ts-291-
+lib/home/golfHomeSummary.ts-292-    supabaseAdmin
+--
+lib/home/golfHomeSummary.ts-524-    [];
+lib/home/golfHomeSummary.ts-525-
+lib/home/golfHomeSummary.ts-526-  if (latestSlate) {
+lib/home/golfHomeSummary.ts-527-    const [
+lib/home/golfHomeSummary.ts-528-      {
+lib/home/golfHomeSummary.ts-529-        data: eventPlayerData,
+lib/home/golfHomeSummary.ts-530-        error: eventPlayerError,
+lib/home/golfHomeSummary.ts-531-      },
+lib/home/golfHomeSummary.ts-532-      {
+lib/home/golfHomeSummary.ts-533-        data: golfPlayerData,
+lib/home/golfHomeSummary.ts-534-        error: golfPlayerError,
+lib/home/golfHomeSummary.ts-535-      },
+lib/home/golfHomeSummary.ts-536-      {
+lib/home/golfHomeSummary.ts-537-        data: lineupData,
+lib/home/golfHomeSummary.ts-538-        error: lineupError,
+lib/home/golfHomeSummary.ts-539-      },
+lib/home/golfHomeSummary.ts-540-    ] = await Promise.all([
+lib/home/golfHomeSummary.ts-541-      supabaseAdmin
+lib/home/golfHomeSummary.ts-542-        .from("golf_event_players")
+lib/home/golfHomeSummary.ts-543-        .select(
+lib/home/golfHomeSummary.ts:544:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed, tee_time, tee_time_raw",
+lib/home/golfHomeSummary.ts-545-        )
+lib/home/golfHomeSummary.ts-546-        .eq("slate_id", latestSlate.id)
+lib/home/golfHomeSummary.ts-547-        .order("leaderboard_order", {
+lib/home/golfHomeSummary.ts-548-          ascending: true,
+lib/home/golfHomeSummary.ts-549-          nullsFirst: false,
+lib/home/golfHomeSummary.ts-550-        }),
+lib/home/golfHomeSummary.ts-551-
+lib/home/golfHomeSummary.ts-552-      supabaseAdmin
+lib/home/golfHomeSummary.ts-553-        .from("golf_players")
+lib/home/golfHomeSummary.ts-554-        .select(
+lib/home/golfHomeSummary.ts-555-          "id, display_name, short_name, espn_player_id, headshot_url, country, owgr_rank",
+lib/home/golfHomeSummary.ts-556-        ),
+lib/home/golfHomeSummary.ts-557-
+lib/home/golfHomeSummary.ts-558-      supabaseAdmin
+lib/home/golfHomeSummary.ts-559-        .from("lineups")
+lib/home/golfHomeSummary.ts-560-        .select("id, slate_id, team_id")
+lib/home/golfHomeSummary.ts-561-        .eq("slate_id", latestSlate.id),
+lib/home/golfHomeSummary.ts-562-    ]);
+lib/home/golfHomeSummary.ts-563-
+lib/home/golfHomeSummary.ts-564-    const detailError =
+lib/home/golfHomeSummary.ts-565-      eventPlayerError ||
+lib/home/golfHomeSummary.ts-566-      golfPlayerError ||
+lib/home/golfHomeSummary.ts-567-      lineupError;
+lib/home/golfHomeSummary.ts-568-
+lib/home/golfHomeSummary.ts-569-    if (detailError) {
+lib/home/golfHomeSummary.ts-570-      return NextResponse.json(
+lib/home/golfHomeSummary.ts-571-        {
+lib/home/golfHomeSummary.ts-572-          error:
+lib/home/golfHomeSummary.ts-573-            detailError.message ||
+lib/home/golfHomeSummary.ts-574-            "Failed to load the Golf tournament leaderboard.",
+lib/home/golfHomeSummary.ts-575-        },
+lib/home/golfHomeSummary.ts-576-        { status: 500 },
+lib/home/golfHomeSummary.ts-577-      );
+lib/home/golfHomeSummary.ts-578-    }
+lib/home/golfHomeSummary.ts-579-
+lib/home/golfHomeSummary.ts-580-    latestEventPlayers =
+lib/home/golfHomeSummary.ts-581-      (eventPlayerData ??
+lib/home/golfHomeSummary.ts-582-        []) as GolfEventPlayerRow[];
+lib/home/golfHomeSummary.ts-583-
+lib/home/golfHomeSummary.ts-584-    latestGolfPlayers =
+lib/home/golfHomeSummary.ts-585-      (golfPlayerData ?? []) as GolfPlayerRow[];
+lib/home/golfHomeSummary.ts-586-
+lib/home/golfHomeSummary.ts-587-    latestLineups =
+lib/home/golfHomeSummary.ts-588-      (lineupData ?? []) as LineupRow[];
+lib/home/golfHomeSummary.ts-589-
+--
+lib/home/golfHomeSummary.ts-706-      return `${playerIds.length}/4 drafted`;
+lib/home/golfHomeSummary.ts-707-    }
+lib/home/golfHomeSummary.ts-708-
+lib/home/golfHomeSummary.ts-709-    const currentRound = Math.max(
+lib/home/golfHomeSummary.ts-710-      1,
+lib/home/golfHomeSummary.ts-711-      ...players.map((player) =>
+lib/home/golfHomeSummary.ts-712-        Number(
+lib/home/golfHomeSummary.ts-713-          player.current_round ??
+lib/home/golfHomeSummary.ts-714-            Math.max(
+lib/home/golfHomeSummary.ts-715-              Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts-716-              1,
+lib/home/golfHomeSummary.ts-717-            ),
+lib/home/golfHomeSummary.ts-718-        ),
+lib/home/golfHomeSummary.ts-719-      ),
+lib/home/golfHomeSummary.ts-720-    );
+lib/home/golfHomeSummary.ts-721-
+lib/home/golfHomeSummary.ts-722-    function currentRoundHoles(
+lib/home/golfHomeSummary.ts-723-      player: GolfEventPlayerRow,
+lib/home/golfHomeSummary.ts-724-    ) {
+lib/home/golfHomeSummary.ts-725-      const totalHoles = Number(
+lib/home/golfHomeSummary.ts:726:        player.holes_completed ?? 0,
+lib/home/golfHomeSummary.ts-727-      );
+lib/home/golfHomeSummary.ts-728-
+lib/home/golfHomeSummary.ts-729-      if (totalHoles <= 0) return 0;
+lib/home/golfHomeSummary.ts-730-
+lib/home/golfHomeSummary.ts-731-      const remainder = totalHoles % 18;
+lib/home/golfHomeSummary.ts-732-
+lib/home/golfHomeSummary.ts-733-      /*
+lib/home/golfHomeSummary.ts-734-       * A multiple of 18 means the current round is complete,
+lib/home/golfHomeSummary.ts-735-       * not that the golfer is starting the next round.
+lib/home/golfHomeSummary.ts-736-       */
+lib/home/golfHomeSummary.ts-737-      return remainder === 0 ? 18 : remainder;
+lib/home/golfHomeSummary.ts-738-    }
+lib/home/golfHomeSummary.ts-739-
+lib/home/golfHomeSummary.ts-740-    const livePlayers = players.filter(
+lib/home/golfHomeSummary.ts-741-      (player) => {
+lib/home/golfHomeSummary.ts-742-        const status = String(
+lib/home/golfHomeSummary.ts-743-          player.status ?? "",
+lib/home/golfHomeSummary.ts-744-        ).toLowerCase();
+lib/home/golfHomeSummary.ts-745-
+lib/home/golfHomeSummary.ts-746-        const holes = currentRoundHoles(player);
+lib/home/golfHomeSummary.ts-747-
+lib/home/golfHomeSummary.ts-748-        return (
+lib/home/golfHomeSummary.ts-749-          status === "active" &&
+lib/home/golfHomeSummary.ts-750-          holes > 0 &&
+lib/home/golfHomeSummary.ts-751-          holes < 18
+lib/home/golfHomeSummary.ts-752-        );
+lib/home/golfHomeSummary.ts-753-      },
+lib/home/golfHomeSummary.ts-754-    );
+lib/home/golfHomeSummary.ts-755-
+lib/home/golfHomeSummary.ts-756-    const completedCurrentRound = players.filter(
+lib/home/golfHomeSummary.ts-757-      (player) => {
+lib/home/golfHomeSummary.ts-758-        const holes = currentRoundHoles(player);
+lib/home/golfHomeSummary.ts-759-
+lib/home/golfHomeSummary.ts-760-        return (
+lib/home/golfHomeSummary.ts-761-          holes === 18 ||
+lib/home/golfHomeSummary.ts-762-          isTerminalGolfStatus(player.status)
+lib/home/golfHomeSummary.ts-763-        );
+lib/home/golfHomeSummary.ts-764-      },
+lib/home/golfHomeSummary.ts-765-    );
+lib/home/golfHomeSummary.ts-766-
+lib/home/golfHomeSummary.ts-767-    if (livePlayers.length > 0) {
+lib/home/golfHomeSummary.ts-768-      return `R${currentRound} · ${livePlayers.length} live`;
+lib/home/golfHomeSummary.ts-769-    }
+lib/home/golfHomeSummary.ts-770-
+lib/home/golfHomeSummary.ts-771-    if (
+--
+lib/home/golfHomeSummary.ts-960-          position:
+lib/home/golfHomeSummary.ts-961-            player.leaderboard_order,
+lib/home/golfHomeSummary.ts-962-          score:
+lib/home/golfHomeSummary.ts-963-            player.official_score_to_par,
+lib/home/golfHomeSummary.ts-964-          scoreDisplay:
+lib/home/golfHomeSummary.ts-965-            player.official_score_display ??
+lib/home/golfHomeSummary.ts-966-            golfScore(
+lib/home/golfHomeSummary.ts-967-              player.official_score_to_par,
+lib/home/golfHomeSummary.ts-968-            ),
+lib/home/golfHomeSummary.ts-969-          status:
+lib/home/golfHomeSummary.ts-970-            player.status,
+lib/home/golfHomeSummary.ts-971-          statusLabel:
+lib/home/golfHomeSummary.ts-972-            formatTournamentPlayerStatus(
+lib/home/golfHomeSummary.ts-973-              player,
+lib/home/golfHomeSummary.ts-974-            ),
+lib/home/golfHomeSummary.ts-975-          currentRound:
+lib/home/golfHomeSummary.ts-976-            player.current_round,
+lib/home/golfHomeSummary.ts-977-          lastHole:
+lib/home/golfHomeSummary.ts-978-            player.last_hole,
+lib/home/golfHomeSummary.ts-979-          holesCompleted:
+lib/home/golfHomeSummary.ts:980:            player.holes_completed,
+lib/home/golfHomeSummary.ts-981-          isDrafted:
+lib/home/golfHomeSummary.ts-982-            draftedBy.length > 0,
+lib/home/golfHomeSummary.ts-983-          draftedBy,
+lib/home/golfHomeSummary.ts-984-        };
+lib/home/golfHomeSummary.ts-985-      });
+lib/home/golfHomeSummary.ts-986-
+lib/home/golfHomeSummary.ts-987-  const tournamentFacts =
+lib/home/golfHomeSummary.ts-988-    tournamentLeaderboard
+lib/home/golfHomeSummary.ts-989-      .slice(0, 25)
+lib/home/golfHomeSummary.ts-990-      .map((player) => ({
+lib/home/golfHomeSummary.ts-991-        label: `#${player.position}`,
+lib/home/golfHomeSummary.ts-992-        value:
+lib/home/golfHomeSummary.ts-993-          `${player.shortName}` +
+lib/home/golfHomeSummary.ts-994-          `${player.isDrafted ? "*" : ""} ` +
+lib/home/golfHomeSummary.ts-995-          `${golfScore(player.score)}`,
+lib/home/golfHomeSummary.ts-996-        detail: player.statusLabel,
+lib/home/golfHomeSummary.ts-997-      }));
+lib/home/golfHomeSummary.ts-998-
+lib/home/golfHomeSummary.ts-999-  const funFacts =
+lib/home/golfHomeSummary.ts-1000-    tournamentFacts.length > 0
+lib/home/golfHomeSummary.ts-1001-      ? tournamentFacts
+lib/home/golfHomeSummary.ts-1002-      : [
+lib/home/golfHomeSummary.ts-1003-          {
+lib/home/golfHomeSummary.ts-1004-            label: "Golf",
+lib/home/golfHomeSummary.ts-1005-            value:
+lib/home/golfHomeSummary.ts-1006-              "Tournament leaderboard will appear after the first refresh.",
+lib/home/golfHomeSummary.ts-1007-          },
+lib/home/golfHomeSummary.ts-1008-        ];
+lib/home/golfHomeSummary.ts-1009-
+lib/home/golfHomeSummary.ts-1010-  function serializeSlate(
+lib/home/golfHomeSummary.ts-1011-    slate:
+lib/home/golfHomeSummary.ts-1012-      | (typeof normalizedSlates)[number]
+lib/home/golfHomeSummary.ts-1013-      | null,
+lib/home/golfHomeSummary.ts-1014-  ) {
+lib/home/golfHomeSummary.ts-1015-    if (!slate) return null;
+lib/home/golfHomeSummary.ts-1016-
+lib/home/golfHomeSummary.ts-1017-    return {
+lib/home/golfHomeSummary.ts-1018-      id: slate.id,
+lib/home/golfHomeSummary.ts-1019-      date: slate.date,
+lib/home/golfHomeSummary.ts-1020-      start_date: slate.start_date,
+lib/home/golfHomeSummary.ts-1021-      end_date: slate.end_date,
+lib/home/golfHomeSummary.ts-1022-      label:
+lib/home/golfHomeSummary.ts-1023-        slate.display_name?.trim() ||
+lib/home/golfHomeSummary.ts-1024-        formatSlateLabel(
+lib/home/golfHomeSummary.ts-1025-          slate.start_date,
+--
+lib/profile/golfTeamProfile.ts-311-    const [
+lib/profile/golfTeamProfile.ts-312-      {
+lib/profile/golfTeamProfile.ts-313-        data: playerData,
+lib/profile/golfTeamProfile.ts-314-        error: playerError,
+lib/profile/golfTeamProfile.ts-315-      },
+lib/profile/golfTeamProfile.ts-316-      {
+lib/profile/golfTeamProfile.ts-317-        data: eventPlayerData,
+lib/profile/golfTeamProfile.ts-318-        error: eventPlayerError,
+lib/profile/golfTeamProfile.ts-319-      },
+lib/profile/golfTeamProfile.ts-320-    ] = await Promise.all([
+lib/profile/golfTeamProfile.ts-321-      supabaseAdmin
+lib/profile/golfTeamProfile.ts-322-        .from("golf_players")
+lib/profile/golfTeamProfile.ts-323-        .select(
+lib/profile/golfTeamProfile.ts-324-          "id, display_name, short_name, espn_player_id, headshot_url, country, owgr_rank",
+lib/profile/golfTeamProfile.ts-325-        )
+lib/profile/golfTeamProfile.ts-326-        .in("id", playerIds),
+lib/profile/golfTeamProfile.ts-327-
+lib/profile/golfTeamProfile.ts-328-      supabaseAdmin
+lib/profile/golfTeamProfile.ts-329-        .from("golf_event_players")
+lib/profile/golfTeamProfile.ts-330-        .select(
+lib/profile/golfTeamProfile.ts:331:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, fantasy_score, penalty_strokes, status, rounds_completed, holes_completed",
+lib/profile/golfTeamProfile.ts-332-        )
+lib/profile/golfTeamProfile.ts-333-        .in("slate_id", slateIds)
+lib/profile/golfTeamProfile.ts-334-        .in("player_id", playerIds),
+lib/profile/golfTeamProfile.ts-335-    ]);
+lib/profile/golfTeamProfile.ts-336-
+lib/profile/golfTeamProfile.ts-337-    if (playerError || eventPlayerError) {
+lib/profile/golfTeamProfile.ts-338-      return NextResponse.json(
+lib/profile/golfTeamProfile.ts-339-        {
+lib/profile/golfTeamProfile.ts-340-          error:
+lib/profile/golfTeamProfile.ts-341-            playerError?.message ||
+lib/profile/golfTeamProfile.ts-342-            eventPlayerError?.message ||
+lib/profile/golfTeamProfile.ts-343-            "Unable to load Golf players.",
+lib/profile/golfTeamProfile.ts-344-        },
+lib/profile/golfTeamProfile.ts-345-        { status: 500 },
+lib/profile/golfTeamProfile.ts-346-      );
+lib/profile/golfTeamProfile.ts-347-    }
+lib/profile/golfTeamProfile.ts-348-
+lib/profile/golfTeamProfile.ts-349-    golfPlayers = playerData ?? [];
+lib/profile/golfTeamProfile.ts-350-    eventPlayers =
+lib/profile/golfTeamProfile.ts-351-      eventPlayerData ?? [];
+lib/profile/golfTeamProfile.ts-352-  }
+lib/profile/golfTeamProfile.ts-353-
+lib/profile/golfTeamProfile.ts-354-  const eventPlayerIds = eventPlayers.map(
+lib/profile/golfTeamProfile.ts-355-    (row) => Number(row.id),
+lib/profile/golfTeamProfile.ts-356-  );
+lib/profile/golfTeamProfile.ts-357-
+lib/profile/golfTeamProfile.ts-358-  let rounds: any[] = [];
+lib/profile/golfTeamProfile.ts-359-  let holes: any[] = [];
+lib/profile/golfTeamProfile.ts-360-
+lib/profile/golfTeamProfile.ts-361-  if (eventPlayerIds.length > 0) {
+lib/profile/golfTeamProfile.ts-362-    const {
+lib/profile/golfTeamProfile.ts-363-      data: roundData,
+lib/profile/golfTeamProfile.ts-364-      error: roundError,
+lib/profile/golfTeamProfile.ts-365-    } = await supabaseAdmin
+lib/profile/golfTeamProfile.ts:366:      .from("golf_rounds")
+lib/profile/golfTeamProfile.ts-367-      .select(
+lib/profile/golfTeamProfile.ts:368:        "id, event_player_id, round_number, score_to_par, strokes, holes_completed, status",
+lib/profile/golfTeamProfile.ts-369-      )
+lib/profile/golfTeamProfile.ts-370-      .in(
+lib/profile/golfTeamProfile.ts-371-        "event_player_id",
+lib/profile/golfTeamProfile.ts-372-        eventPlayerIds,
+lib/profile/golfTeamProfile.ts-373-      );
+lib/profile/golfTeamProfile.ts-374-
+lib/profile/golfTeamProfile.ts-375-    if (roundError) {
+lib/profile/golfTeamProfile.ts-376-      return NextResponse.json(
+lib/profile/golfTeamProfile.ts-377-        { error: roundError.message },
+lib/profile/golfTeamProfile.ts-378-        { status: 500 },
+lib/profile/golfTeamProfile.ts-379-      );
+lib/profile/golfTeamProfile.ts-380-    }
+lib/profile/golfTeamProfile.ts-381-
+lib/profile/golfTeamProfile.ts-382-    rounds = roundData ?? [];
+lib/profile/golfTeamProfile.ts-383-
+lib/profile/golfTeamProfile.ts-384-    const roundIds = rounds.map(
+lib/profile/golfTeamProfile.ts-385-      (round) => Number(round.id),
+lib/profile/golfTeamProfile.ts-386-    );
+lib/profile/golfTeamProfile.ts-387-
+lib/profile/golfTeamProfile.ts-388-    if (roundIds.length > 0) {
+lib/profile/golfTeamProfile.ts-389-      const {
+lib/profile/golfTeamProfile.ts-390-        data: holeData,
+lib/profile/golfTeamProfile.ts-391-        error: holeError,
+lib/profile/golfTeamProfile.ts-392-      } = await supabaseAdmin
+lib/profile/golfTeamProfile.ts-393-        .from("golf_holes")
+lib/profile/golfTeamProfile.ts-394-        .select(
+lib/profile/golfTeamProfile.ts-395-          "round_id, hole_number, strokes, relative_to_par",
+lib/profile/golfTeamProfile.ts-396-        )
+lib/profile/golfTeamProfile.ts-397-        .in("round_id", roundIds);
+lib/profile/golfTeamProfile.ts-398-
+lib/profile/golfTeamProfile.ts-399-      if (holeError) {
+lib/profile/golfTeamProfile.ts-400-        return NextResponse.json(
+lib/profile/golfTeamProfile.ts-401-          { error: holeError.message },
+lib/profile/golfTeamProfile.ts-402-          { status: 500 },
+lib/profile/golfTeamProfile.ts-403-        );
+lib/profile/golfTeamProfile.ts-404-      }
+lib/profile/golfTeamProfile.ts-405-
+lib/profile/golfTeamProfile.ts-406-      holes = holeData ?? [];
+lib/profile/golfTeamProfile.ts-407-    }
+lib/profile/golfTeamProfile.ts-408-  }
+lib/profile/golfTeamProfile.ts-409-
+lib/profile/golfTeamProfile.ts-410-  const playerById = new Map(
+lib/profile/golfTeamProfile.ts-411-    golfPlayers.map((player) => [
+lib/profile/golfTeamProfile.ts-412-      Number(player.id),
+lib/profile/golfTeamProfile.ts-413-      player,
+--
+lib/profile/golfTeamProfile.ts-847-      if (!eventPlayer) return false;
+lib/profile/golfTeamProfile.ts-848-
+lib/profile/golfTeamProfile.ts-849-      const draftedIds =
+lib/profile/golfTeamProfile.ts-850-        playerIdsBySlateId.get(
+lib/profile/golfTeamProfile.ts-851-          Number(
+lib/profile/golfTeamProfile.ts-852-            eventPlayer.slate_id,
+lib/profile/golfTeamProfile.ts-853-          ),
+lib/profile/golfTeamProfile.ts-854-        ) ?? [];
+lib/profile/golfTeamProfile.ts-855-
+lib/profile/golfTeamProfile.ts-856-      return draftedIds.includes(
+lib/profile/golfTeamProfile.ts-857-        Number(
+lib/profile/golfTeamProfile.ts-858-          eventPlayer.player_id,
+lib/profile/golfTeamProfile.ts-859-        ),
+lib/profile/golfTeamProfile.ts-860-      );
+lib/profile/golfTeamProfile.ts-861-    });
+lib/profile/golfTeamProfile.ts-862-
+lib/profile/golfTeamProfile.ts-863-  const completedDraftedRounds =
+lib/profile/golfTeamProfile.ts-864-    draftedRounds.filter(
+lib/profile/golfTeamProfile.ts-865-      (round) =>
+lib/profile/golfTeamProfile.ts-866-        Number(
+lib/profile/golfTeamProfile.ts:867:          round.holes_completed ?? 0,
+lib/profile/golfTeamProfile.ts-868-        ) === 18,
+lib/profile/golfTeamProfile.ts-869-    );
+lib/profile/golfTeamProfile.ts-870-
+lib/profile/golfTeamProfile.ts-871-  const roundsUnderPar =
+lib/profile/golfTeamProfile.ts-872-    completedDraftedRounds.filter(
+lib/profile/golfTeamProfile.ts-873-      (round) =>
+lib/profile/golfTeamProfile.ts-874-        Number(
+lib/profile/golfTeamProfile.ts-875-          round.score_to_par ?? 0,
+lib/profile/golfTeamProfile.ts-876-        ) < 0,
+lib/profile/golfTeamProfile.ts-877-    ).length;
+lib/profile/golfTeamProfile.ts-878-
+lib/profile/golfTeamProfile.ts-879-  const draftedEventPlayers =
+lib/profile/golfTeamProfile.ts-880-    eventPlayers.filter(
+lib/profile/golfTeamProfile.ts-881-      (eventPlayer) => {
+lib/profile/golfTeamProfile.ts-882-        const draftedIds =
+lib/profile/golfTeamProfile.ts-883-          playerIdsBySlateId.get(
+lib/profile/golfTeamProfile.ts-884-            Number(
+lib/profile/golfTeamProfile.ts-885-              eventPlayer.slate_id,
+lib/profile/golfTeamProfile.ts-886-            ),
+lib/profile/golfTeamProfile.ts-887-          ) ?? [];
+lib/profile/golfTeamProfile.ts-888-
+lib/profile/golfTeamProfile.ts-889-        return draftedIds.includes(
+lib/profile/golfTeamProfile.ts-890-          Number(
+lib/profile/golfTeamProfile.ts-891-            eventPlayer.player_id,
+lib/profile/golfTeamProfile.ts-892-          ),
+lib/profile/golfTeamProfile.ts-893-        );
+lib/profile/golfTeamProfile.ts-894-      },
+lib/profile/golfTeamProfile.ts-895-    );
+lib/profile/golfTeamProfile.ts-896-
+lib/profile/golfTeamProfile.ts-897-  const settledGolfers =
+lib/profile/golfTeamProfile.ts-898-    draftedEventPlayers.filter(
+lib/profile/golfTeamProfile.ts-899-      (row) =>
+lib/profile/golfTeamProfile.ts-900-        [
+lib/profile/golfTeamProfile.ts-901-          "finished",
+lib/profile/golfTeamProfile.ts-902-          "cut",
+lib/profile/golfTeamProfile.ts-903-          "withdrawn",
+lib/profile/golfTeamProfile.ts-904-          "disqualified",
+lib/profile/golfTeamProfile.ts-905-          "did_not_start",
+lib/profile/golfTeamProfile.ts-906-        ].includes(
+lib/profile/golfTeamProfile.ts-907-          String(
+lib/profile/golfTeamProfile.ts-908-            row.status ?? "",
+lib/profile/golfTeamProfile.ts-909-          ).toLowerCase(),
+lib/profile/golfTeamProfile.ts-910-        ),
+lib/profile/golfTeamProfile.ts-911-    );
+lib/profile/golfTeamProfile.ts-912-

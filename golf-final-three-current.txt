@@ -1,0 +1,988 @@
+===== COMPLETE NOTIFICATION FILE =====
+import {
+  getNotificationTemplate,
+  renderNotificationTemplate,
+} from "@/lib/notificationTemplates";
+import { sendLoggedNotification } from "@/lib/notifications";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SlateInput = {
+  id: number;
+  date: string;
+  start_date: string;
+  end_date: string;
+  sport?: string;
+};
+
+type TeamResultInput = {
+  team_id: number;
+  fantasy_points: number;
+  finish_position: number | null;
+};
+
+type AppUserRow = {
+  id: string;
+  team_id: number;
+};
+
+type PreferenceRow = {
+  user_id: string;
+  notifications_enabled: boolean;
+  slate_final_enabled: boolean;
+};
+
+function getOrdinal(value: number) {
+  const remainder100 = value % 100;
+
+  if (remainder100 >= 11 && remainder100 <= 13) {
+    return `${value}th`;
+  }
+
+  switch (value % 10) {
+    case 1:
+      return `${value}st`;
+    case 2:
+      return `${value}nd`;
+    case 3:
+      return `${value}rd`;
+    default:
+      return `${value}th`;
+  }
+}
+
+function formatScore(value: number) {
+  return Number(value ?? 0).toFixed(1);
+}
+
+export async function notifyCompletedSlate(input: {
+  slate: SlateInput;
+  teamResults: TeamResultInput[];
+}) {
+  const sortedResults = [...input.teamResults]
+    .filter((row) => row.finish_position !== null)
+    .sort(
+      (a, b) =>
+        Number(a.finish_position ?? 999) -
+        Number(b.finish_position ?? 999)
+    );
+
+  const winner = sortedResults[0] ?? null;
+
+  if (!winner || sortedResults.length === 0) {
+    return {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+  }
+
+  const teamIds = sortedResults.map((row) => Number(row.team_id));
+
+  const [
+    { data: teams, error: teamsError },
+    { data: appUsers, error: usersError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .in("id", teamIds),
+    supabaseAdmin
+      .from("app_users")
+      .select("id, team_id")
+      .in("team_id", teamIds)
+      .eq("is_active", true),
+  ]);
+
+  if (teamsError) {
+    throw new Error(
+      `Failed to load teams for slate notifications: ${teamsError.message}`
+    );
+  }
+
+  if (usersError) {
+    throw new Error(
+      `Failed to load users for slate notifications: ${usersError.message}`
+    );
+  }
+
+  const safeUsers = (appUsers ?? []) as AppUserRow[];
+  const userIds = safeUsers.map((user) => user.id);
+
+  const { data: preferences, error: preferencesError } =
+    userIds.length > 0
+      ? await supabaseAdmin
+          .from("notification_preferences")
+          .select(
+            "user_id, notifications_enabled, slate_final_enabled"
+          )
+          .in("user_id", userIds)
+      : { data: [], error: null };
+
+  if (preferencesError) {
+    throw new Error(
+      `Failed to load slate notification preferences: ${preferencesError.message}`
+    );
+  }
+
+  const teamNameMap = new Map(
+    (teams ?? []).map((team) => [
+      Number(team.id),
+      String(team.name),
+    ])
+  );
+
+  const userByTeamId = new Map(
+    safeUsers.map((user) => [Number(user.team_id), user])
+  );
+
+  const preferenceByUserId = new Map(
+    ((preferences ?? []) as PreferenceRow[]).map((row) => [
+      row.user_id,
+      row,
+    ])
+  );
+
+  const winnerTeamId = Number(winner.team_id);
+  const winnerName =
+    teamNameMap.get(winnerTeamId) ?? `Team ${winnerTeamId}`;
+  const winningScore = formatScore(winner.fantasy_points);
+
+  const startDate = input.slate.start_date ?? input.slate.date;
+  const endDate = input.slate.end_date ?? input.slate.date;
+  const slateLabel =
+    startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+
+  const sport =
+    input.slate.sport === "nfl"
+      ? "nfl"
+      : input.slate.sport === "golf"
+        ? "golf"
+        : "nba";
+
+  const [standardTemplate, winnerTemplate] = await Promise.all([
+    getNotificationTemplate("slate_complete", sport),
+    getNotificationTemplate("slate_complete_winner", sport),
+  ]);
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const resultRow of sortedResults) {
+    const teamId = Number(resultRow.team_id);
+    const teamName = teamNameMap.get(teamId) ?? `Team ${teamId}`;
+    const user = userByTeamId.get(teamId) ?? null;
+    const preference = user
+      ? preferenceByUserId.get(user.id) ?? null
+      : null;
+
+    const finishNumber = Number(resultRow.finish_position ?? 0);
+    const finishOrdinal = getOrdinal(finishNumber);
+    const teamScore = formatScore(resultRow.fantasy_points);
+    const isWinner = teamId === winnerTeamId;
+
+    const template = isWinner ? winnerTemplate : standardTemplate;
+
+    const values = {
+      winnerName,
+      winningScore,
+      teamName,
+      teamScore,
+      finishNumber,
+      finishOrdinal,
+      slateLabel,
+    };
+
+    const title = renderNotificationTemplate(
+      template.titleTemplate,
+      values
+    );
+
+    const body = renderNotificationTemplate(
+      template.bodyTemplate,
+      values
+    );
+
+    let skipReason: string | null = null;
+
+    if (!user) {
+      skipReason =
+        "This team does not have an active league account.";
+    } else if (
+      !preference ||
+      !preference.notifications_enabled ||
+      !preference.slate_final_enabled
+    ) {
+      skipReason = "Slate-complete notifications are disabled.";
+    }
+
+    const notificationResult = await sendLoggedNotification({
+      eventKey: `slate_complete:${input.slate.id}:${teamId}`,
+      notificationType: "slate_complete",
+      userId: user?.id ?? null,
+      teamId,
+      slateId: input.slate.id,
+      title,
+      body,
+      url: `/lineups/scores?slateId=${input.slate.id}`,
+      tag: `slate-complete-${input.slate.id}-${teamId}`,
+      skipReason,
+      metadata: {
+        winnerName,
+        winningScore: Number(winningScore),
+        teamName,
+        teamScore: Number(teamScore),
+        finishNumber,
+        finishOrdinal,
+        slateLabel,
+        isWinner,
+        templateType: isWinner
+          ? "slate_complete_winner"
+          : "slate_complete",
+      },
+    });
+
+    if (notificationResult.sent > 0) {
+      sent += 1;
+    } else if (notificationResult.failed > 0) {
+      failed += 1;
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return {
+    attempted: sortedResults.length,
+    sent,
+    skipped,
+    failed,
+  };
+}
+
+===== PLAYING NOW STATUS =====
+451-  ]);
+452-
+453-  const draftedCount = useMemo(
+454-    () =>
+455-      players.filter((player) =>
+456-        ownerByPlayerId.has(player.id),
+457-      ).length,
+458-    [players, ownerByPlayerId],
+459-  );
+460-
+461:  function getCurrentGolfRound(
+462-    row: TournamentRow,
+463-  ) {
+464-    const rounds =
+465-      [...(row.stat.rounds ?? [])]
+466-        .sort(
+467-          (a, b) =>
+468-            a.round_number -
+469-            b.round_number,
+470-        );
+471-
+472-    const statedCurrentRound =
+473-      Number(
+474-        row.stat.current_round ?? 0,
+475-      );
+476-
+477-    if (statedCurrentRound > 0) {
+478-      const matchingRound =
+479-        rounds.find(
+480-          (round) =>
+481-            Number(
+482-              round.round_number,
+483-            ) === statedCurrentRound,
+484-        );
+485-
+486-      if (matchingRound) {
+487-        return matchingRound;
+488-      }
+489-    }
+490-
+491-    return (
+492-      rounds
+493-        .filter(
+494-          (round) =>
+495-            Number(
+496-              round.holes_completed ?? 0,
+497-            ) > 0 ||
+498-            round.strokes !== null,
+499-        )
+500-        .at(-1) ??
+501-      null
+502-    );
+503-  }
+504-
+505:  function isGolferPlayingNow(
+506-    row: TournamentRow,
+507-  ) {
+508-    if (
+509-      row.stat.status !== "active"
+510-    ) {
+511-      return false;
+512-    }
+513-
+514-    const currentRound =
+515:      getCurrentGolfRound(row);
+516-
+517-    if (!currentRound) {
+518-      return false;
+519-    }
+520-
+521-    const holesCompleted =
+522-      Number(
+523-        currentRound.holes_completed ?? 0,
+524-      );
+525-
+526-    return (
+527-      holesCompleted > 0 &&
+528-      holesCompleted < 18
+529-    );
+530-  }
+531-
+532:  const playingNowCount = useMemo(
+533-    () =>
+534-      rows.filter(
+535:        isGolferPlayingNow,
+536-      ).length,
+537-    [rows],
+538-  );
+539-
+540:  const visibleRows = useMemo(() => {
+541-    if (!playingNowOnly) {
+542-      return rows;
+543-    }
+544-
+545-    /*
+546-     * The main rows array is already sorted by ESPN's official
+547-     * leaderboard order. Filtering it preserves that correct order.
+548-     */
+549-    return rows.filter(
+550:      isGolferPlayingNow,
+551-    );
+552-  }, [playingNowOnly, rows]);
+553-
+554-
+555-  return (
+556-    <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-sm">
+557-      <header className="border-b border-slate-800 bg-gradient-to-r from-emerald-950 to-slate-950 px-5 py-5 text-white">
+558-        <div className="flex flex-wrap items-end justify-between gap-3">
+559-          <div>
+560-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
+561-              Tournament view
+562-            </span>
+563-
+564-            <h3 className="mt-1 text-2xl font-black">
+565-              Official Leaderboard
+566-            </h3>
+567-
+568-            <p className="mt-1 text-sm text-slate-300">
+569-              Full field with fantasy ownership highlighted.
+570-            </p>
+571-          </div>
+572-
+573-          <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">
+574-            {rows.length} golfers
+575-          </div>
+576-        </div>
+577-      </header>
+578-
+579-      <div className="border-b border-slate-800 bg-slate-900 p-3">
+580-        <div className="flex flex-col gap-2 sm:flex-row">
+581-          <label className="min-w-0 flex-1">
+582-            <span className="sr-only">
+583-              Search golfers
+584-            </span>
+585-
+586-            <input
+587-              type="search"
+588-              value={searchTerm}
+589-              onChange={(event) =>
+590-                setSearchTerm(
+591-                  event.target.value,
+592-                )
+593-              }
+594-              placeholder="Search golfers..."
+595-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-emerald-500"
+596-            />
+597-          </label>
+598-
+599-          <button
+600-            type="button"
+601-            onClick={() =>
+602-              setDraftedOnly(
+603-                (current) => !current,
+604-              )
+605-            }
+606-            aria-pressed={draftedOnly}
+607-            className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
+608-              draftedOnly
+609-                ? "border-emerald-500 bg-emerald-900 text-emerald-100"
+610-                : "border-slate-700 bg-slate-950 text-slate-300 hover:border-emerald-700"
+611-            }`}
+612-          >
+613-            {draftedOnly
+614-              ? `✓ Drafted only (${draftedCount})`
+615-              : `Drafted only (${draftedCount})`}
+616-          </button>
+617-
+618-          <button
+619-            type="button"
+620-            onClick={() =>
+621-              setPlayingNowOnly(
+622-                (current) => !current,
+623-              )
+624-            }
+625-            aria-pressed={playingNowOnly}
+626-            className={`rounded-xl border px-3 py-2 text-xs font-bold transition ${
+627-              playingNowOnly
+628-                ? "border-amber-400 bg-amber-400 text-slate-950"
+629-                : "border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-600 hover:text-amber-200"
+630-            }`}
+631-          >
+632-            {playingNowOnly
+633:              ? `✓ Playing now (${playingNowCount})`
+634:              : `Playing now (${playingNowCount})`}
+635-          </button>
+636-
+637-        </div>
+638-      </div>
+639-
+640-      <div className="border-b border-slate-800 bg-slate-950 px-3 py-3">
+641-        <div className="flex items-center justify-between gap-3">
+642-          <div>
+643-            <span className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+644-              Fantasy overlay
+645-            </span>
+646-
+647-            <p className="mt-0.5 text-[11px] text-slate-500">
+648-              Highlight all drafted golfers or isolate one fantasy team.
+649-            </p>
+650-          </div>
+651-
+652-          {selectedOwnerTeamId !== null ? (
+653-            <button
+654-              type="button"
+655-              onClick={() =>
+656-                setSelectedOwnerTeamId(null)
+657-              }
+658-              className="shrink-0 rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] font-bold text-slate-300 transition hover:border-emerald-700 hover:text-white"
+659-            >
+660-              Clear overlay
+661-            </button>
+662-          ) : null}
+663-        </div>
+664-
+665-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+666-          <button
+667-            type="button"
+668-            onClick={() =>
+669-              setSelectedOwnerTeamId(
+670-                selectedOwnerTeamId === "drafted"
+671-                  ? null
+672-                  : "drafted",
+673-              )
+674-            }
+675-            aria-pressed={
+676-              selectedOwnerTeamId === "drafted"
+677-            }
+678-            className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-black transition ${
+679-              selectedOwnerTeamId === "drafted"
+680-                ? "border-emerald-500 bg-emerald-900 text-emerald-100"
+681-                : "border-slate-700 bg-slate-900 text-slate-400 hover:border-emerald-700"
+682-            }`}
+683-          >
+684-            All drafted
+685-
+686-            <span
+687-              className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+688-                selectedOwnerTeamId === "drafted"
+689-                  ? "bg-emerald-700 text-white"
+690-                  : "bg-slate-800 text-slate-500"
+691-              }`}
+692-            >
+693-              {draftedCount}
+694-            </span>
+695-          </button>
+696-
+697-          {fantasyTeams.map((team) => {
+698-            const isSelected =
+699-              selectedOwnerTeamId ===
+700-              team.id;
+701-
+702-            const golferCount =
+703-              getPlayersForTeam(
+704-                team.id,
+705-              ).length;
+706-
+707-            return (
+708-              <button
+709-                key={team.id}
+710-                type="button"
+711-                onClick={() =>
+712-                  setSelectedOwnerTeamId(
+713-                    isSelected
+714-                      ? null
+715-                      : team.id,
+716-                  )
+717-                }
+718-                aria-pressed={isSelected}
+719-                className={`flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-black transition ${
+720-                  isSelected
+721-                    ? "border-emerald-400 bg-emerald-900 text-emerald-100 shadow-sm"
+722-                    : "border-slate-700 bg-slate-900 text-slate-300 hover:border-emerald-700"
+723-                }`}
+724-              >
+725-                <TeamAvatar
+726-                  teamName={team.name}
+727-                  size="xs"
+728-                />
+729-
+730-                <span>{team.name}</span>
+731-
+732-                <span
+733-                  className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+734-                    isSelected
+--
+775-        <div>Owner</div>
+776-        <div className="text-right">
+777-          Score
+778-        </div>
+779-        <div className="text-right">
+780-          Status
+781-        </div>
+782-      </div>
+783-
+784-      <div className="divide-y divide-slate-800">
+785:        {visibleRows.map((row) => {
+786-          const status =
+787-            golferStatus(row.stat);
+788-
+789-          return (
+790-            <button
+791-              key={row.player.id}
+792-              type="button"
+793-              onClick={() =>
+794-                setProfilePlayer(row.player)
+795-              }
+796-              className={`grid w-full grid-cols-[54px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-900 md:grid-cols-[70px_minmax(220px,1fr)_150px_100px_180px] ${
+797-                selectedOwnerTeamId === null ||
+798-                (selectedOwnerTeamId === "drafted"
+799-                  ? Boolean(row.owner)
+800-                  : row.owner?.id === selectedOwnerTeamId)
+801-                  ? "opacity-100"
+802-                  : "opacity-30 grayscale"
+803-              } ${
+804-                (selectedOwnerTeamId === "drafted" &&
+805-                  row.owner) ||
+806-                (typeof selectedOwnerTeamId === "number" &&
+807-                  row.owner?.id === selectedOwnerTeamId)
+808-                  ? "bg-emerald-950/30"
+809-                  : ""
+810-              }`}
+811-              aria-label={`Open ${row.player.name} tournament scorecard`}
+812-            >
+813-              <div className="text-sm font-black text-slate-200">
+814-                {formatPosition(
+815-                  row.stat.leaderboard_order,
+816-                )}
+817-              </div>
+818-
+819-              <div className="flex min-w-0 items-center gap-3">
+820-                <PlayerHeadshot
+821-                  espnGolfPlayerId={
+822-                    row.player.espn_player_id
+823-                  }
+824-                  imageUrl={
+825-                    row.player.headshot_url
+826-                  }
+827-                  playerName={row.player.name}
+828-                  size="sm"
+829-                />
+830-
+831-                <div className="min-w-0">
+832-                  <strong className="block truncate text-sm text-white sm:text-base">
+833-                    {row.player.name}
+834-                  </strong>
+835-
+836-                  <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-slate-500 md:hidden">
+837-                    <span>{status.detail}</span>
+838-
+839-                    {row.owner ? (
+840-                      <span className="text-emerald-300">
+841-                        {row.owner.name}
+842-                      </span>
+843-                    ) : null}
+844-                  </div>
+845-                </div>
+846-              </div>
+847-
+848-              <div className="hidden md:block">
+849-                {row.owner ? (
+850-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-800 bg-emerald-950 px-2 py-1 text-xs font-bold text-emerald-200">
+851-                    <TeamAvatar
+852-                      teamName={
+853-                        row.owner.name
+854-                      }
+855-                      size="xs"
+856-                    />
+857-                    {row.owner.name}
+858-                  </span>
+859-                ) : (
+860-                  <span className="text-xs text-slate-600">
+861-                    —
+862-                  </span>
+863-                )}
+864-              </div>
+865-
+866-              <div className="text-right">
+867-                <strong className="block text-xl font-black text-white">
+868-                  {formatGolfScore(
+869-                    row.stat.official_score_to_par ??
+870-                      row.stat.fantasy_points,
+871-                  )}
+872-                </strong>
+873-
+874-                {row.owner ? (
+875-                  <span className="mt-0.5 block text-[9px] font-black uppercase text-emerald-400 md:hidden">
+876-                    Drafted
+877-                  </span>
+878-                ) : null}
+879-              </div>
+880-
+881-              <div className="hidden text-right md:block">
+882-                <span
+883-                  className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase ${status.className}`}
+884-                >
+885-                  {status.label}
+886-                </span>
+887-
+888-                <div className="mt-1 text-xs text-slate-500">
+889-                  {status.detail}
+890-                </div>
+891-              </div>
+892-            </button>
+893-          );
+894-        })}
+895-
+896:        {visibleRows.length === 0 ? (
+897-          <div className="px-5 py-12 text-center text-sm text-slate-500">
+898-            No golfers match the current filters.
+899-          </div>
+900-        ) : null}
+901-      </div>
+902-    </section>
+903-  );
+904-}
+
+===== CRON ROUTE STATUS =====
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  POST as refreshGolfStats,
+} from "@/app/api/refresh-stats-golf/route";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+type GolfSlateRow = {
+  id: number;
+  start_date: string;
+  end_date: string;
+  display_name: string | null;
+  external_event_id: string | null;
+};
+
+function isAuthorized(
+  request: Request,
+) {
+  const configuredSecret =
+    process.env.GOLF_CRON_SECRET?.trim();
+
+  if (!configuredSecret) {
+    console.error(
+      "GOLF_CRON_SECRET is not configured.",
+    );
+
+    return false;
+  }
+
+  const authorization =
+    request.headers.get(
+      "authorization",
+    );
+
+  return (
+    authorization ===
+    `Bearer ${configuredSecret}`
+  );
+}
+
+function dateOnly(
+  value: Date,
+) {
+  return value
+    .toISOString()
+    .slice(0, 10);
+}
+
+export async function GET(
+  request: Request,
+) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json(
+      {
+        error: "Unauthorized.",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  const today = new Date();
+
+  const earliestDate =
+    new Date(today);
+
+  earliestDate.setUTCDate(
+    earliestDate.getUTCDate() - 2,
+  );
+
+  const latestDate =
+    new Date(today);
+
+  latestDate.setUTCDate(
+    latestDate.getUTCDate() + 8,
+  );
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("slates")
+    .select(
+      [
+        "id",
+        "start_date",
+        "end_date",
+        "display_name",
+        "external_event_id",
+      ].join(","),
+    )
+    .eq("sport", "golf")
+    .eq("is_locked", false)
+    .not(
+      "external_event_id",
+      "is",
+      null,
+    )
+    .lte(
+      "start_date",
+      dateOnly(latestDate),
+    )
+    .gte(
+      "end_date",
+      dateOnly(earliestDate),
+    )
+    .order(
+      "start_date",
+      {
+        ascending: true,
+      },
+    );
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load active Golf slates: " +
+          error.message,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+
+  const rawSlateRows: unknown[] =
+    Array.isArray(data)
+      ? (data as unknown[])
+      : [];
+
+  const slates: GolfSlateRow[] =
+    rawSlateRows
+      .filter(
+        (row) =>
+          typeof row === "object" &&
+          row !== null,
+      )
+      .map((row) => {
+        const record =
+          row as Record<
+            string,
+            unknown
+          >;
+
+        return {
+          id: Number(record.id),
+          start_date:
+            String(
+              record.start_date ?? "",
+            ),
+          end_date:
+            String(
+              record.end_date ?? "",
+            ),
+          display_name:
+            record.display_name == null
+              ? null
+              : String(
+                  record.display_name,
+                ),
+          external_event_id:
+            record.external_event_id == null
+              ? null
+              : String(
+                  record.external_event_id,
+                ),
+        };
+      })
+      .filter(
+        (row) =>
+          Number.isInteger(row.id) &&
+          row.id > 0 &&
+          Boolean(row.start_date) &&
+          Boolean(row.end_date),
+      );
+
+  const results: Array<{
+    slateId: number;
+    tournament: string;
+    ok: boolean;
+    status: number;
+    result: unknown;
+  }> = [];
+
+  /*
+   * Process sequentially to avoid several large ESPN/Supabase
+   * refreshes competing for the same serverless resources.
+   */
+  for (const slate of slates) {
+    const refreshRequest =
+      new Request(
+        "http://internal/api/refresh-stats-golf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            slateId: slate.id,
+          }),
+        },
+      );
+
+    try {
+      const response =
+        await refreshGolfStats(
+          refreshRequest,
+        );
+
+      let result: unknown;
+
+      try {
+        result =
+          await response.json();
+      } catch {
+        result = {
+          error:
+            "Refresh returned an unreadable response.",
+        };
+      }
+
+      results.push({
+        slateId: slate.id,
+        tournament:
+          slate.display_name ??
+          `Slate ${slate.id}`,
+        ok: response.ok,
+        status: response.status,
+        result,
+      });
+    } catch (refreshError) {
+      results.push({
+        slateId: slate.id,
+        tournament:
+          slate.display_name ??
+          `Slate ${slate.id}`,
+        ok: false,
+        status: 500,
+        result: {
+          error:
+            refreshError instanceof Error
+              ? refreshError.message
+              : "Unexpected Golf refresh error.",
+        },
+      });
+    }
+  }
+
+  const failures =
+    results.filter(
+      (row) => !row.ok,
+    );
+
+  return NextResponse.json(
+
+===== WORKFLOW STATUS =====
+name: Refresh live golf
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-live-golf
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Refresh active Golf slates
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          GOLF_CRON_SECRET: ${{ secrets.GOLF_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${APP_URL:-}" ]; then
+            echo "APP_URL repository secret is missing."
+            exit 1
+          fi
+
+          if [ -z "${GOLF_CRON_SECRET:-}" ]; then
+            echo "GOLF_CRON_SECRET repository secret is missing."
+            exit 1
+          fi
+
+          BASE_URL="${APP_URL%/}"
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-delay 10 \
+            --max-time 180 \
+            -H "Authorization: Bearer ${GOLF_CRON_SECRET}" \
+            "${BASE_URL}/api/cron/refresh-golf"

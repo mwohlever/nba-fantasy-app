@@ -1,0 +1,606 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+type CameraView =
+  | "angled"
+  | "top";
+
+type Props = {
+  title: string;
+  terrainUrl: string;
+  greenUrl: string;
+  fallbackImageUrl: string;
+};
+
+type BabylonRuntime = typeof import(
+  "@babylonjs/core"
+);
+
+type LoadedScene = {
+  babylon: BabylonRuntime;
+  scene: import("@babylonjs/core").Scene;
+  camera: import("@babylonjs/core").ArcRotateCamera;
+  defaultTarget: import("@babylonjs/core").Vector3;
+  defaultRadius: number;
+};
+
+function disposeLoadedScene(
+  loaded: LoadedScene | null,
+) {
+  if (!loaded) return;
+
+  loaded.scene.dispose();
+}
+
+export default function GolfHoleMap({
+  title,
+  terrainUrl,
+  greenUrl,
+  fallbackImageUrl,
+}: Props) {
+  const canvasRef =
+    useRef<HTMLCanvasElement | null>(
+      null,
+    );
+
+  const engineRef =
+    useRef<
+      import("@babylonjs/core").Engine | null
+    >(null);
+
+  const loadedSceneRef =
+    useRef<LoadedScene | null>(
+      null,
+    );
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [loadError, setLoadError] =
+    useState("");
+
+  const [cameraView, setCameraView] =
+    useState<CameraView>("angled");
+
+  const applyCameraView =
+    useCallback(
+      (
+        view: CameraView,
+        animated = true,
+      ) => {
+        const loaded =
+          loadedSceneRef.current;
+
+        if (!loaded) return;
+
+        const {
+          camera,
+          defaultTarget,
+          defaultRadius,
+        } = loaded;
+
+        camera.setTarget(
+          defaultTarget.clone(),
+        );
+
+        if (view === "top") {
+          camera.alpha =
+            -Math.PI / 2;
+
+          camera.beta =
+            0.08;
+
+          camera.radius =
+            defaultRadius * 1.04;
+        } else {
+          camera.alpha =
+            -Math.PI / 2;
+
+          camera.beta =
+            Math.PI / 3.05;
+
+          camera.radius =
+            defaultRadius;
+        }
+
+        if (!animated) {
+          camera.rebuildAnglesAndRadius();
+        }
+      },
+      [],
+    );
+
+  const resetCamera =
+    useCallback(() => {
+      setCameraView("angled");
+
+      applyCameraView(
+        "angled",
+        false,
+      );
+    }, [applyCameraView]);
+
+  useEffect(() => {
+    const canvas =
+      canvasRef.current;
+
+    if (!canvas) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function initialize() {
+      try {
+        setIsLoading(true);
+        setLoadError("");
+
+        const BABYLON =
+          await import(
+            "@babylonjs/core"
+          );
+
+        await import(
+          "@babylonjs/loaders/glTF"
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        const engine =
+          new BABYLON.Engine(
+            canvas,
+            true,
+            {
+              preserveDrawingBuffer:
+                false,
+              stencil: true,
+              antialias: true,
+              adaptToDeviceRatio: true,
+            },
+          );
+
+        engineRef.current =
+          engine;
+
+        const scene =
+          new BABYLON.Scene(
+            engine,
+          );
+
+        scene.clearColor =
+          new BABYLON.Color4(
+            0.02,
+            0.04,
+            0.07,
+            1,
+          );
+
+        scene.ambientColor =
+          new BABYLON.Color3(
+            0.55,
+            0.55,
+            0.55,
+          );
+
+        const camera =
+          new BABYLON.ArcRotateCamera(
+            "tourcast-camera",
+            -Math.PI / 2,
+            Math.PI / 3,
+            500,
+            BABYLON.Vector3.Zero(),
+            scene,
+          );
+
+        camera.lowerRadiusLimit =
+          1;
+
+        camera.upperRadiusLimit =
+          100000;
+
+        camera.wheelDeltaPercentage =
+          0.012;
+
+        camera.pinchDeltaPercentage =
+          0.008;
+
+        camera.panningSensibility =
+          90;
+
+        camera.angularSensibilityX =
+          1100;
+
+        camera.angularSensibilityY =
+          1100;
+
+        camera.attachControl(
+          canvas,
+          true,
+        );
+
+        const hemisphericLight =
+          new BABYLON.HemisphericLight(
+            "tourcast-sky-light",
+            new BABYLON.Vector3(
+              0.3,
+              1,
+              0.2,
+            ),
+            scene,
+          );
+
+        hemisphericLight.intensity =
+          1.35;
+
+        const directionalLight =
+          new BABYLON.DirectionalLight(
+            "tourcast-sun",
+            new BABYLON.Vector3(
+              -0.35,
+              -1,
+              -0.25,
+            ),
+            scene,
+          );
+
+        directionalLight.intensity =
+          1.15;
+
+        const assetBase =
+          terrainUrl.slice(
+            0,
+            terrainUrl.lastIndexOf(
+              "/",
+            ) + 1,
+          );
+
+        const terrainFile =
+          terrainUrl.slice(
+            terrainUrl.lastIndexOf(
+              "/",
+            ) + 1,
+          );
+
+        const greenFile =
+          greenUrl.slice(
+            greenUrl.lastIndexOf(
+              "/",
+            ) + 1,
+          );
+
+        const terrainResult =
+          await BABYLON.SceneLoader.ImportMeshAsync(
+            "",
+            assetBase,
+            terrainFile,
+            scene,
+          );
+
+        const greenResult =
+          await BABYLON.SceneLoader.ImportMeshAsync(
+            "",
+            assetBase,
+            greenFile,
+            scene,
+          );
+
+        if (cancelled) {
+          scene.dispose();
+          engine.dispose();
+          return;
+        }
+
+        const renderableMeshes = [
+          ...terrainResult.meshes,
+          ...greenResult.meshes,
+        ].filter(
+          (mesh) =>
+            mesh.getTotalVertices() >
+            0,
+        );
+
+        if (
+          renderableMeshes.length ===
+          0
+        ) {
+          throw new Error(
+            "The Hole 8 models loaded but contained no renderable meshes.",
+          );
+        }
+
+        let minimum =
+          new BABYLON.Vector3(
+            Number.POSITIVE_INFINITY,
+            Number.POSITIVE_INFINITY,
+            Number.POSITIVE_INFINITY,
+          );
+
+        let maximum =
+          new BABYLON.Vector3(
+            Number.NEGATIVE_INFINITY,
+            Number.NEGATIVE_INFINITY,
+            Number.NEGATIVE_INFINITY,
+          );
+
+        renderableMeshes.forEach(
+          (mesh) => {
+            mesh.computeWorldMatrix(
+              true,
+            );
+
+            mesh.refreshBoundingInfo({});
+
+            const bounds =
+              mesh.getBoundingInfo()
+                .boundingBox;
+
+            minimum =
+              BABYLON.Vector3.Minimize(
+                minimum,
+                bounds.minimumWorld,
+              );
+
+            maximum =
+              BABYLON.Vector3.Maximize(
+                maximum,
+                bounds.maximumWorld,
+              );
+          },
+        );
+
+        const center =
+          minimum
+            .add(maximum)
+            .scale(0.5);
+
+        const dimensions =
+          maximum.subtract(minimum);
+
+        const largestDimension =
+          Math.max(
+            dimensions.x,
+            dimensions.y,
+            dimensions.z,
+            1,
+          );
+
+        const defaultRadius =
+          largestDimension * 1.18;
+
+        camera.minZ =
+          Math.max(
+            largestDimension /
+              10000,
+            0.01,
+          );
+
+        camera.maxZ =
+          Math.max(
+            largestDimension * 20,
+            10000,
+          );
+
+        loadedSceneRef.current =
+          {
+            babylon: BABYLON,
+            scene,
+            camera,
+            defaultTarget:
+              center.clone(),
+            defaultRadius,
+          };
+
+        applyCameraView(
+          "angled",
+          false,
+        );
+
+        scene.executeWhenReady(
+          () => {
+            if (cancelled) {
+              return;
+            }
+
+            setIsLoading(false);
+
+            engine.runRenderLoop(
+              () => {
+                scene.render();
+              },
+            );
+          },
+        );
+
+        const resize =
+          () => {
+            engine.resize();
+          };
+
+        window.addEventListener(
+          "resize",
+          resize,
+        );
+
+        const observer =
+          new ResizeObserver(
+            () => {
+              engine.resize();
+            },
+          );
+
+        observer.observe(canvas);
+
+        return () => {
+          window.removeEventListener(
+            "resize",
+            resize,
+          );
+
+          observer.disconnect();
+        };
+      } catch (error) {
+        console.error(
+          "Unable to render TourCast hole model",
+          error,
+        );
+
+        if (!cancelled) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Unable to render the hole model.",
+          );
+
+          setIsLoading(false);
+        }
+      }
+    }
+
+    let removeListeners:
+      | (() => void)
+      | undefined;
+
+    void initialize().then(
+      (cleanup) => {
+        removeListeners =
+          cleanup;
+      },
+    );
+
+    return () => {
+      cancelled = true;
+
+      removeListeners?.();
+
+      disposeLoadedScene(
+        loadedSceneRef.current,
+      );
+
+      loadedSceneRef.current =
+        null;
+
+      engineRef.current?.dispose();
+
+      engineRef.current =
+        null;
+    };
+  }, [
+    applyCameraView,
+    greenUrl,
+    terrainUrl,
+  ]);
+
+  function selectView(
+    view: CameraView,
+  ) {
+    setCameraView(view);
+    applyCameraView(view);
+  }
+
+  return (
+    <section className="mb-3 overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-3 py-2">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+            Real course model
+          </div>
+
+          <div className="mt-0.5 text-xs font-bold text-slate-200">
+            {title}
+          </div>
+        </div>
+
+        {!loadError ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() =>
+                selectView(
+                  "angled",
+                )
+              }
+              className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition ${
+                cameraView ===
+                "angled"
+                  ? "border-emerald-500 bg-emerald-950 text-emerald-200"
+                  : "border-slate-700 bg-slate-950 text-slate-400"
+              }`}
+            >
+              Angled
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                selectView("top")
+              }
+              className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-bold transition ${
+                cameraView === "top"
+                  ? "border-emerald-500 bg-emerald-950 text-emerald-200"
+                  : "border-slate-700 bg-slate-950 text-slate-400"
+              }`}
+            >
+              Top
+            </button>
+
+            <button
+              type="button"
+              onClick={resetCamera}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-400 transition hover:text-white"
+            >
+              Reset
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="relative aspect-[16/10] min-h-[220px] max-h-[360px] bg-slate-950">
+        {!loadError ? (
+          <canvas
+            ref={canvasRef}
+            aria-label={`${title} interactive 3D terrain`}
+            className="block h-full w-full touch-none outline-none"
+          />
+        ) : (
+          <img
+            src={fallbackImageUrl}
+            alt={`${title} overhead course cutout`}
+            className="h-full w-full object-contain"
+          />
+        )}
+
+        {isLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/85">
+            <div className="text-center">
+              <div className="text-sm font-bold text-emerald-300">
+                Loading real hole terrain…
+              </div>
+
+              <div className="mt-1 text-[11px] text-slate-500">
+                Loaded only while this hole is open.
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {loadError ? (
+          <div className="absolute inset-x-3 bottom-3 rounded-xl border border-amber-700/60 bg-slate-950/90 px-3 py-2 text-[10px] leading-4 text-amber-200">
+            The interactive model could not load, so the real overhead cutout is shown instead.
+          </div>
+        ) : (
+          <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/75 px-2 py-1 text-[9px] font-medium text-slate-400 backdrop-blur">
+            Drag to rotate · Pinch or scroll to zoom
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
