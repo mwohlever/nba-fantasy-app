@@ -431,9 +431,47 @@ export default function GolfPlayerModal({
   slateId,
   onClose,
 }: Props) {
-  const rounds = [...(stat?.rounds ?? [])].sort(
-    (a, b) => a.round_number - b.round_number,
+  const persistedRounds = [
+    ...(stat?.rounds ?? []),
+  ].sort(
+    (a, b) =>
+      a.round_number -
+      b.round_number,
   );
+
+  const scheduledFallbackRound: GolfRoundStat = {
+    round_number: Math.min(
+      4,
+      Math.max(
+        1,
+        Number(
+          stat?.current_round ??
+            Number(
+              stat?.rounds_completed ??
+                0,
+            ) +
+              1,
+        ),
+      ),
+    ),
+    score_to_par: null,
+    score_display: null,
+    strokes: null,
+    holes_completed: 0,
+    tee_time:
+      stat?.tee_time ?? null,
+    tee_time_raw:
+      stat?.tee_time_raw ?? null,
+    status: "scheduled",
+    holes: [],
+  };
+
+  const rounds =
+    persistedRounds.length > 0
+      ? persistedRounds
+      : stat?.status === "scheduled"
+        ? [scheduledFallbackRound]
+        : [];
 
   const activelyPlayingRound =
     rounds
@@ -453,15 +491,29 @@ export default function GolfPlayerModal({
       )
       .at(-1) ?? null;
 
-  const primaryRound =
-    activelyPlayingRound ?? mostRecentPlayedRound;
+  const upcomingRound =
+    rounds.find(
+      (round) =>
+        round.status ===
+          "scheduled" ||
+        (
+          round.holes_completed ===
+            0 &&
+          round.strokes === null
+        ),
+    ) ?? null;
 
-  const visibleRounds = rounds.filter(
-    (round) =>
-      round.holes_completed > 0 ||
-      round.strokes !== null ||
-      Boolean(round.tee_time || round.tee_time_raw),
-  );
+  const primaryRound =
+    activelyPlayingRound ??
+    mostRecentPlayedRound ??
+    upcomingRound;
+
+  /*
+   * Every returned round is meaningful. In particular, a
+   * scheduled round must remain visible even when PGA has not
+   * published a tee time yet.
+   */
+  const visibleRounds = rounds;
 
   const [expandedRoundNumbers, setExpandedRoundNumbers] =
     useState<number[]>(() =>

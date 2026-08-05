@@ -36,6 +36,10 @@ type Props = {
   onSelectStroke: (
     strokeNumber: number,
   ) => void;
+  calibration: MapCalibration;
+  showShotOverlay?: boolean;
+  imageFit?: "fill" | "contain";
+  emptyStateLabel?: string;
 };
 
 type PlotPoint = {
@@ -73,7 +77,7 @@ type GestureSnapshot = {
   transform: TransformState;
 };
 
-type MapCalibration = {
+export type MapCalibration = {
   xScale: number;
   xOffset: number;
   yScale: number;
@@ -85,19 +89,9 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 
 /*
- * Rocket Classic · Detroit Golf Club · Hole 8
- *
- * These values map PGA TOUR's normalized TourCast coordinates
- * onto the terrain08 aerial texture. The final-stroke endpoint
- * remains dynamic, so different round-by-round pin locations
- * are plotted automatically.
+ * Calibration is supplied by the tournament/hole configuration.
+ * The map engine itself is no longer tied to one course.
  */
-const HOLE_CALIBRATION: MapCalibration = {
-  xScale: 2.488624,
-  xOffset: -0.748272,
-  yScale: 0.974452,
-  yOffset: 0.127478,
-};
 
 const DEFAULT_TRANSFORM: TransformState = {
   scale: 1,
@@ -144,19 +138,20 @@ function toPlotPoint(
     x: number;
     y: number;
   },
+  calibration: MapCalibration,
 ): PlotPoint {
   const calibratedX =
     clampNormalized(
       coordinate.x *
-        HOLE_CALIBRATION.xScale +
-        HOLE_CALIBRATION.xOffset,
+        calibration.xScale +
+        calibration.xOffset,
     );
 
   const calibratedY =
     clampNormalized(
       coordinate.y *
-        HOLE_CALIBRATION.yScale +
-        HOLE_CALIBRATION.yOffset,
+        calibration.yScale +
+        calibration.yOffset,
     );
 
   return {
@@ -323,6 +318,10 @@ export default function GolfHoleMap2D({
   shots,
   selectedStrokeNumber,
   onSelectStroke,
+  calibration,
+  showShotOverlay = true,
+  imageFit = "fill",
+  emptyStateLabel = "No shot data is available yet.",
 }: Props) {
   const viewportRef =
     useRef<HTMLDivElement | null>(
@@ -378,8 +377,12 @@ export default function GolfHoleMap2D({
     useRef<(() => void) | null>(null);
 
   const plottedShots = useMemo(
-    () =>
-      shots
+    () => {
+      if (!showShotOverlay) {
+        return [];
+      }
+
+      return shots
         .map((shot): PlotShot | null => {
           if (
             !shot.bottomToTop ||
@@ -398,9 +401,11 @@ export default function GolfHoleMap2D({
               shot.strokeNumber,
             from: toPlotPoint(
               shot.bottomToTop.from,
+              calibration,
             ),
             to: toPlotPoint(
               shot.bottomToTop.to,
+              calibration,
             ),
             finalStroke:
               shot.finalStroke,
@@ -418,8 +423,13 @@ export default function GolfHoleMap2D({
             shot,
           ): shot is PlotShot =>
             shot !== null,
-        ),
-    [shots],
+        );
+    },
+    [
+      calibration,
+      shots,
+      showShotOverlay,
+    ],
   );
 
   const selectedShot =
@@ -1183,10 +1193,6 @@ export default function GolfHoleMap2D({
     await animateShot(shot);
   }
 
-  if (plottedShots.length === 0) {
-    return null;
-  }
-
   const cupPoint =
     [...plottedShots]
       .reverse()
@@ -1247,28 +1253,32 @@ export default function GolfHoleMap2D({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-1.5">
-          <button
-            type="button"
-            onClick={() =>
-              focusShot(
-                selectedShot,
-              )
-            }
-            className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
-          >
-            Focus shot
-          </button>
+          {plottedShots.length > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  focusShot(
+                    selectedShot,
+                  )
+                }
+                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+              >
+                Focus shot
+              </button>
 
-          <button
-            type="button"
-            onClick={startPlayback}
-            disabled={isPlaying}
-            className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
-          >
-            {isPlaying
-              ? "Playing…"
-              : "▶ Play"}
-          </button>
+              <button
+                type="button"
+                onClick={startPlayback}
+                disabled={isPlaying}
+                className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+              >
+                {isPlaying
+                  ? "Playing…"
+                  : "▶ Play"}
+              </button>
+            </>
+          ) : null}
 
           <button
             type="button"
@@ -1329,7 +1339,11 @@ export default function GolfHoleMap2D({
                 src={imageUrl}
                 alt={`${title} aerial hole layout`}
                 draggable={false}
-                className="absolute inset-0 h-full w-full object-fill"
+                className={`absolute inset-0 h-full w-full ${
+                  imageFit === "contain"
+                    ? "object-contain"
+                    : "object-fill"
+                }`}
               />
 
               <svg
@@ -1760,10 +1774,22 @@ export default function GolfHoleMap2D({
                     "Unknown lie"}
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="text-sm font-black text-slate-200">
+                Hole layout
+              </div>
+
+              <div className="mt-1 text-xs leading-5 text-slate-500">
+                {emptyStateLabel}
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 text-[10px] leading-4 text-slate-500">
-            Press Play to reveal the round shot by shot. Drag or pinch for a closer view, and twist with two fingers to rotate the course.
+            {plottedShots.length > 0
+              ? "Press Play to reveal the round shot by shot. Drag or pinch for a closer view, and twist with two fingers to rotate the course."
+              : "Drag or pinch for a closer view, and twist with two fingers to rotate the course."}
           </div>
         </div>
       </div>

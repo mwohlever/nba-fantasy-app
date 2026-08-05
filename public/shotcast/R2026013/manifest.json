@@ -1,0 +1,1361 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-05T17:22:20.436Z",
+  "source": "PGA TOUR HoleDetails",
+  "tournament": {
+    "id": "R2026013",
+    "name": "Wyndham Championship",
+    "currentRound": 1,
+    "requestedRound": 1
+  },
+  "course": {
+    "id": "752",
+    "name": "Sedgefield Country Club",
+    "code": "SF",
+    "hostCourse": true,
+    "scoringLevel": "TOURCAST",
+    "enabled": true
+  },
+  "summary": {
+    "holesRequested": 18,
+    "holesAvailable": 18,
+    "localImages": 18,
+    "alignedMaps": 0,
+    "alignedGreens": 0,
+    "holesFailed": 0
+  },
+  "holes": [
+    {
+      "holeNumber": 1,
+      "available": true,
+      "detailsId": "R2026013-752-1",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 418,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A good starting hole on the outgoing nine of modest difficulty. Theleft bunker will challenge the direct line to the green. A tee shotnear the right edge of the bunker provides an open approach to thegreen.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole1.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-01.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 535434,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=1&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=1&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_1",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_1",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_1",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_1",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_1.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_1.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_1.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_1.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 2,
+      "available": true,
+      "detailsId": "R2026013-752-2",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 442,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "Three prominent bunkers on the right suggest a left to right teeshot. The player who skirts these bunkers will be rewarded with ashorter approach and better angle in the left to right slopinggreen.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole2.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-02.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 504226,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_2.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_2.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_2.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_2.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_2.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_2.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=2&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=2&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_2",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_2",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_2",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_2",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_2.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_2.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_2.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_2.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 3,
+      "available": true,
+      "detailsId": "R2026013-752-3",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 3,
+      "yards": 174,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "An uphill par 3 to a large green bordered by 3 restored bunkers inthe steep right hand slope. Hole locations placed near the edgewill require an accurate and confident stroke.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole3.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-03.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 456703,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_3.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_3.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_3.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_3.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_3.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_3.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=3&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=3&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_3",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_3",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_3",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_3",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_3.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_3.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_3.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_3.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 4,
+      "available": true,
+      "detailsId": "R2026013-752-4",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 428,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "Additional length will require a semi blind tee shot to a left toright sloping fairway. The ideal drive is hard up the left sidenear the bunker. This low profile green is accessible with anaerial or low running ground stroke.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole4.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-04.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 336350,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_4.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_4.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_4.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_4.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_4.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_4.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=4&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=4&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_4",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_4",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_4",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_4",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_4.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_4.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_4.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_4.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 5,
+      "available": true,
+      "detailsId": "R2026013-752-5",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 5,
+      "yards": 529,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A new back tee restores the uphill and somewhat blind tee shot tothe saddled fairway. Two new bunkers provide an interesting andstraight lay-up to the plateau green.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole5.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-05.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 456663,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_5.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_5.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_5.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_5.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_5.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_5.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=5&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=5&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_5",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_5",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_5",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_5",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_5.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_5.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_5.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_5.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 6,
+      "available": true,
+      "detailsId": "R2026013-752-6",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 423,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "The most challenging hole on the course requires a tee shot left ofcenter and near the creek - the difficult uphill approach to alarge undulating green in a natural amphitheater setting.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole6.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-06.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 480862,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_6.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_6.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_6.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_6.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_6.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_6.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=6&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=6&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_6",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_6",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_6",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_6",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_6.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_6.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_6.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_6.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 7,
+      "available": true,
+      "detailsId": "R2026013-752-7",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 3,
+      "yards": 223,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A long downhill tee shot to a bunkerless \"punchbowl\" green mustavoid the creek crossing in front and on both sides.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole7.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-07.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 336823,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_7.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_7.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_7.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_7.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_7.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_7.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=7&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=7&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_7",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_7",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_7",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_7",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_7.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_7.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_7.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_7.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 8,
+      "available": true,
+      "detailsId": "R2026013-752-8",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 374,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A tee shot that challenges the diagonal creek finds the shortestroute to the hole. However, the player who is near the bunkers onthe right will have the best angle.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole8.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-08.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 320698,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=8&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=8&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_8",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_8",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_8",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_8",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_8.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_8.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_8.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_8.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 9,
+      "available": true,
+      "detailsId": "R2026013-752-9",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 416,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A long uphill tee shot near the right edge is preferred. Tee shotsleft of center will require a strategic stroke over the restoredcross bunker short of the scalloped green.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole9.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-09.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 335593,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_9.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_9.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_9.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_9.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_9.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_9.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=9&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=9&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_9",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_9",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_9",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_9",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_9.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_9.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_9.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_9.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 10,
+      "available": true,
+      "detailsId": "R2026013-752-10",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 440,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A demanding start to the incoming nine playing downhill from thetee and uphill to the back to front sloping green. You must avoidthe left fairway bunker.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole10.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-10.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 605182,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_10.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_10.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_10.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_10.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_10.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_10.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=10&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=10&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_10",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_10",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_10",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_10",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_10.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_10.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_10.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_10.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 11,
+      "available": true,
+      "detailsId": "R2026013-752-11",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 486,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "This long par 4 requires a strong tee shot near the right edge ofthe fairway. A steep shoulder with mounds along the left edge ofthe green will challenge approaches from the left side.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole11.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-11.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 418263,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_11.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_11.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_11.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_11.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_11.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_11.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=11&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=11&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_11",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_11",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_11",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_11",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_11.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_11.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_11.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_11.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 12,
+      "available": true,
+      "detailsId": "R2026013-752-12",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 3,
+      "yards": 235,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "This long par 3 requires a well struck long iron or wood to a largetow tier green guarded on the front right and left by deep bunkers.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole12.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-12.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 376031,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_12.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_12.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_12.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_12.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_12.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_12.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=12&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=12&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_12",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_12",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_12",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_12",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_12.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_12.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_12.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_12.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 13,
+      "available": true,
+      "detailsId": "R2026013-752-13",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 405,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "An uphill par 4 that requires a strong drawing tee shot. The idealapproach is right of center to avoid the deep carry bunker shortleft of this undulating green.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole13.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-13.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 329003,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_13.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_13.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_13.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_13.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_13.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_13.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=13&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=13&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_13",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_13",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_13",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_13",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_13.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_13.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_13.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_13.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 14,
+      "available": true,
+      "detailsId": "R2026013-752-14",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 505,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A wide fairway awaits this long par 4. Two center line bunkerscreate a deceptive approach shot to the skyline green. A restoredpot bunker challenges the approach shot from the right side.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole14.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-14.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 309088,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_14.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_14.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_14.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_14.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_14.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_14.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=14&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=14&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_14",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_14",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_14",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_14",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_14.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_14.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_14.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_14.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 15,
+      "available": true,
+      "detailsId": "R2026013-752-15",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 5,
+      "yards": 545,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "The downhill tee shot must avoid a small creek on the left and alarge fairway bunker on the right. Going for the green in two willrequire a long carry over water and deep greenside bunkering to asevere back to front sloping green.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole15.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-15.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 408887,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_15.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_15.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_15.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_15.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_15.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_15.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=15&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=15&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_15",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_15",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_15",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_15",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_15.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_15.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_15.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_15.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 16,
+      "available": true,
+      "detailsId": "R2026013-752-16",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 3,
+      "yards": 175,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A great short par 3 playing downhill over a hazard to a raised fillpad green. Well defined internal contours on this green willchallenge every class of player.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole16.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-16.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 346028,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_16.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_16.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_16.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_16.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_16.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_16.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=16&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=16&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_16",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_16",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_16",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_16",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_16.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_16.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_16.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_16.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 17,
+      "available": true,
+      "detailsId": "R2026013-752-17",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 406,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "A left to right tee shot to this saddle fairway is preferred. Anuneven stance should be expected adding interest and strategy whenapproaching this narrow green.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole17.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-17.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 343074,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_17.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_17.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_17.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_17.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_17.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_17.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=17&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=17&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_17",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_17",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_17",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_17",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_17.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_17.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_17.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_17.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    },
+    {
+      "holeNumber": 18,
+      "available": true,
+      "detailsId": "R2026013-752-18",
+      "statsAvailability": "SHOT_DETAILS",
+      "par": 4,
+      "yards": 507,
+      "rank": 0,
+      "scoringAverageDiff": null,
+      "aboutThisHole": "Added length restores this to a solid par 4 hole. The long uphillapproach from a downhill lie will require accuracy to avoid thefour bunkers protecting the approach and sides of the large green.",
+      "officialImageUrl": "https://res.cloudinary.com/pgatour-prod/c_crop/d_placeholders:tournamentBackgroundSolid.png/pgatour/courses/r013/752/holes/hole18.jpg",
+      "localImageUrl": "/shotcast/R2026013/holes/hole-18.jpg",
+      "imageContentType": "image/jpeg",
+      "imageBytes": 1312393,
+      "alignedMapUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_18.jpg",
+      "localAlignedMapUrl": null,
+      "alignedMapBytes": null,
+      "alignedMapError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_18.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_18.jpg failed (404): ",
+      "alignedGreenUrl": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_18.jpg",
+      "localAlignedGreenUrl": null,
+      "alignedGreenBytes": null,
+      "alignedGreenError": "Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_18.jpg failed after 3 attempts: Hole image https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_18.jpg failed (404): ",
+      "tourcast": {
+        "uri": "/tourcast.html?id=R2026013#/hole-view?round=&hole=18&cid=752&gv=no",
+        "url": "https://tourcast.pgatour.com/tourcast.html?id=R2026013&webview=true#/hole-view?round=&hole=18&cid=752&gv=no",
+        "urlWeb": "true"
+      },
+      "assets": {
+        "leftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_18",
+          "resolvedUrl": null
+        },
+        "bottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_full_18",
+          "resolvedUrl": null
+        },
+        "greenLeftToRight": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_18",
+          "resolvedUrl": null
+        },
+        "greenBottomToTop": {
+          "imageOrg": "pga-tour",
+          "imagePath": "/holes_2026_r_013_752_overhead_green_18",
+          "resolvedUrl": null
+        }
+      },
+      "legacyAssets": {
+        "holePickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_18.jpg",
+        "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_18.jpg",
+        "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_18.jpg",
+        "greenPickle": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_18.jpg"
+      },
+      "pinGreen": {
+        "leftToRight": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        },
+        "bottomToTop": {
+          "x": -1,
+          "y": -1,
+          "z": -1,
+          "tourcastX": 0,
+          "tourcastY": 0,
+          "tourcastZ": 0
+        }
+      }
+    }
+  ]
+}

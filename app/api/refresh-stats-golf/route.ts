@@ -799,6 +799,43 @@ export async function POST(request: Request) {
 
       const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
 
+      /*
+       * Before play begins, PGA may return the golfer in the
+       * tournament field without returning any round objects.
+       *
+       * Preserve a scheduled round so the scorecard can show
+       * all 18 holes and open the pre-round ShotCast layouts.
+       * No golf_holes rows are created until real scoring data
+       * arrives.
+       */
+      if (competitor.rounds.length === 0) {
+        const scheduledRoundNumber = Math.min(
+          4,
+          Math.max(
+            1,
+            Number(
+              competitor.currentRound ??
+                competitor.roundsCompleted + 1,
+            ),
+          ),
+        );
+
+        return [
+          {
+            event_player_id: eventPlayerId,
+            round_number: scheduledRoundNumber,
+            score_to_par: null,
+            score_display: null,
+            strokes: null,
+            holes_completed: 0,
+            tee_time: competitor.teeTime,
+            tee_time_raw: competitor.teeTimeRaw,
+            status: "scheduled" as const,
+            updated_at: refreshedAt,
+          },
+        ];
+      }
+
       return competitor.rounds.map((round) => ({
         event_player_id: eventPlayerId,
         round_number: round.roundNumber,
