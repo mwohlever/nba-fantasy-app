@@ -165,10 +165,10 @@ function toPlotPoint(
   };
 }
 
-function curvePath(
+function curveControlPoint(
   from: PlotPoint,
   to: PlotPoint,
-) {
+): PlotPoint {
   const midpointX =
     (from.x + to.x) / 2;
 
@@ -183,11 +183,90 @@ function curvePath(
   const curveAmount =
     Math.min(42, distance * 0.075);
 
+  return {
+    x: midpointX + curveAmount,
+    y: midpointY,
+  };
+}
+
+function curvePath(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  const control =
+    curveControlPoint(from, to);
+
   return [
     `M ${from.x} ${from.y}`,
-    `Q ${midpointX + curveAmount} ${midpointY}`,
+    `Q ${control.x} ${control.y}`,
     `${to.x} ${to.y}`,
   ].join(" ");
+}
+
+function pointOnQuadraticCurve(
+  from: PlotPoint,
+  to: PlotPoint,
+  progress: number,
+): PlotPoint {
+  const control =
+    curveControlPoint(from, to);
+
+  const t = clamp(progress, 0, 1);
+  const inverse = 1 - t;
+
+  return {
+    x:
+      inverse * inverse * from.x +
+      2 * inverse * t * control.x +
+      t * t * to.x,
+    y:
+      inverse * inverse * from.y +
+      2 * inverse * t * control.y +
+      t * t * to.y,
+  };
+}
+
+function approximateCurveLength(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  let length = 0;
+  let previous = from;
+
+  for (
+    let index = 1;
+    index <= 24;
+    index += 1
+  ) {
+    const point =
+      pointOnQuadraticCurve(
+        from,
+        to,
+        index / 24,
+      );
+
+    length += Math.hypot(
+      point.x - previous.x,
+      point.y - previous.y,
+    );
+
+    previous = point;
+  }
+
+  return Math.max(length, 1);
+}
+
+function easeInOutCubic(
+  value: number,
+) {
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 -
+        Math.pow(
+          -2 * value + 2,
+          3,
+        ) /
+          2;
 }
 
 function shotDescription(
@@ -276,6 +355,27 @@ export default function GolfHoleMap2D({
 
   const [isPlaying, setIsPlaying] =
     useState(false);
+
+  const [
+    animatedStrokeNumber,
+    setAnimatedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animationProgress,
+    setAnimationProgress,
+  ] = useState(1);
+
+  const [
+    revealedStrokeCount,
+    setRevealedStrokeCount,
+  ] = useState<number | null>(0);
+
+  const animationFrameRef =
+    useRef<number | null>(null);
+
+  const animationResolveRef =
+    useRef<(() => void) | null>(null);
 
   const plottedShots = useMemo(
     () =>
@@ -411,13 +511,132 @@ export default function GolfHoleMap2D({
       [constrainTransform],
     );
 
+  const cancelShotAnimation =
+    useCallback(() => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+
+        animationFrameRef.current =
+          null;
+      }
+
+      animationResolveRef.current?.();
+      animationResolveRef.current =
+        null;
+
+      setAnimatedStrokeNumber(null);
+      setAnimationProgress(1);
+    }, []);
+
+  const animateShot =
+    useCallback(
+      (
+        shot: PlotShot,
+      ) =>
+        new Promise<void>((resolve) => {
+          cancelShotAnimation();
+
+          const prefersReducedMotion =
+            window.matchMedia(
+              "(prefers-reduced-motion: reduce)",
+            ).matches;
+
+          if (prefersReducedMotion) {
+            setAnimatedStrokeNumber(
+              shot.strokeNumber,
+            );
+            setAnimationProgress(1);
+
+            window.setTimeout(() => {
+              setAnimatedStrokeNumber(
+                null,
+              );
+              resolve();
+            }, 150);
+
+            return;
+          }
+
+          const duration =
+            shot.finalStroke
+              ? 1150
+              : shot.strokeNumber === 1
+                ? 2200
+                : 1550;
+
+          const startedAt =
+            performance.now();
+
+          setAnimatedStrokeNumber(
+            shot.strokeNumber,
+          );
+          setAnimationProgress(0);
+
+          animationResolveRef.current =
+            resolve;
+
+          const tick = (
+            now: number,
+          ) => {
+            const rawProgress =
+              clamp(
+                (now - startedAt) /
+                  duration,
+                0,
+                1,
+              );
+
+            setAnimationProgress(
+              easeInOutCubic(
+                rawProgress,
+              ),
+            );
+
+            if (rawProgress >= 1) {
+              animationFrameRef.current =
+                null;
+
+              animationResolveRef.current =
+                null;
+
+              window.setTimeout(() => {
+                setAnimatedStrokeNumber(
+                  null,
+                );
+                resolve();
+              }, 300);
+
+              return;
+            }
+
+            animationFrameRef.current =
+              window.requestAnimationFrame(
+                tick,
+              );
+          };
+
+          animationFrameRef.current =
+            window.requestAnimationFrame(
+              tick,
+            );
+        }),
+      [cancelShotAnimation],
+    );
+
   const resetView =
     useCallback(() => {
+      cancelShotAnimation();
       setIsPlaying(false);
+      setRevealedStrokeCount(0);
       setTransform(
         DEFAULT_TRANSFORM,
       );
-    }, []);
+    }, [cancelShotAnimation]);
 
   const focusShot =
     useCallback(
@@ -801,66 +1020,116 @@ export default function GolfHoleMap2D({
   }
 
   useEffect(() => {
+    return () => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+      }
+
+      animationResolveRef.current?.();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isPlaying) {
       return;
     }
 
-    if (
-      plottedShots.length === 0
-    ) {
-      setIsPlaying(false);
-      return;
-    }
+    let cancelled = false;
 
-    const currentIndex =
-      plottedShots.findIndex(
-        (shot) =>
-          shot.strokeNumber ===
-          selectedStrokeNumber,
-      );
+    async function runReplay() {
+      if (
+        plottedShots.length === 0
+      ) {
+        setIsPlaying(false);
+        return;
+      }
 
-    const activeIndex =
-      currentIndex < 0
-        ? 0
-        : currentIndex;
+      for (
+        const [
+          shotIndex,
+          shot,
+        ] of plottedShots.entries()
+      ) {
+        if (cancelled) {
+          return;
+        }
 
-    const currentShot =
-      plottedShots[activeIndex];
-
-    focusShot(currentShot);
-
-    if (
-      activeIndex >=
-      plottedShots.length - 1
-    ) {
-      const timeout =
-        window.setTimeout(() => {
-          setIsPlaying(false);
-        }, 1700);
-
-      return () =>
-        window.clearTimeout(
-          timeout,
-        );
-    }
-
-    const timeout =
-      window.setTimeout(() => {
         onSelectStroke(
-          plottedShots[
-            activeIndex + 1
-          ].strokeNumber,
+          shot.strokeNumber,
         );
-      }, 1900);
 
-    return () =>
-      window.clearTimeout(timeout);
+        focusShot(shot);
+
+        /*
+         * Give the camera enough time to settle before the
+         * ball begins moving.
+         */
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              800,
+            );
+          },
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        await animateShot(shot);
+
+        if (cancelled) {
+          return;
+        }
+
+        /*
+         * Reveal the completed path and numbered landing
+         * marker only after the ball arrives.
+         */
+        setRevealedStrokeCount(
+          shotIndex + 1,
+        );
+
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              500,
+            );
+          },
+        );
+      }
+
+      if (!cancelled) {
+        /*
+         * Exit progressive-reveal mode after the complete
+         * replay so every finished path and landing marker
+         * remains available for inspection.
+         */
+        setRevealedStrokeCount(null);
+        setIsPlaying(false);
+      }
+    }
+
+    void runReplay();
+
+    return () => {
+      cancelled = true;
+      cancelShotAnimation();
+    };
   }, [
+    animateShot,
+    cancelShotAnimation,
     focusShot,
     isPlaying,
     onSelectStroke,
     plottedShots,
-    selectedStrokeNumber,
   ]);
 
   function startPlayback() {
@@ -868,38 +1137,83 @@ export default function GolfHoleMap2D({
       return;
     }
 
+    cancelShotAnimation();
+    setRevealedStrokeCount(0);
+
     onSelectStroke(
       plottedShots[0].strokeNumber,
-    );
-
-    focusShot(
-      plottedShots[0],
     );
 
     setIsPlaying(true);
   }
 
-  function selectShot(
+  async function selectShot(
     strokeNumber: number,
   ) {
     setIsPlaying(false);
+    setRevealedStrokeCount(null);
+    cancelShotAnimation();
+
+    const shot =
+      plottedShots.find(
+        (candidate) =>
+          candidate.strokeNumber ===
+          strokeNumber,
+      ) ?? null;
+
+    if (!shot) {
+      return;
+    }
 
     onSelectStroke(
       strokeNumber,
     );
 
-    focusShot(
-      plottedShots.find(
-        (shot) =>
-          shot.strokeNumber ===
-          strokeNumber,
-      ) ?? null,
+    focusShot(shot);
+
+    await new Promise<void>(
+      (resolve) => {
+        window.setTimeout(
+          resolve,
+          500,
+        );
+      },
     );
+
+    await animateShot(shot);
   }
 
   if (plottedShots.length === 0) {
     return null;
   }
+
+  const cupPoint =
+    [...plottedShots]
+      .reverse()
+      .find(
+        (shot) =>
+          shot.finalStroke,
+      )?.to ??
+    plottedShots[
+      plottedShots.length - 1
+    ]?.to ??
+    null;
+
+  const animatedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        animatedStrokeNumber,
+    ) ?? null;
+
+  const animatedBallPoint =
+    animatedShot
+      ? pointOnQuadraticCurve(
+          animatedShot.from,
+          animatedShot.to,
+          animationProgress,
+        )
+      : null;
 
   const inverseScale =
     1 / transform.scale;
@@ -1053,11 +1367,51 @@ export default function GolfHoleMap2D({
                       selectedShot
                         ?.strokeNumber;
 
+                    const isAnimating =
+                      shot.strokeNumber ===
+                      animatedStrokeNumber;
+
+                    const shotIndex =
+                      plottedShots.findIndex(
+                        (candidate) =>
+                          candidate.strokeNumber ===
+                          shot.strokeNumber,
+                      );
+
+                    const isRevealMode =
+                      revealedStrokeCount !==
+                      null;
+
+                    const wasRevealed =
+                      !isRevealMode ||
+                      shotIndex <
+                        revealedStrokeCount;
+
+                    const showPath =
+                      wasRevealed ||
+                      isAnimating;
+
+                    const pathLength =
+                      approximateCurveLength(
+                        shot.from,
+                        shot.to,
+                      );
+
+                    const showLandingMarker =
+                      wasRevealed ||
+                      (isAnimating &&
+                        animationProgress >=
+                          0.98);
+
                     return (
                       <g
                         key={`path-${shot.strokeNumber}`}
                         data-shotcast-marker="true"
-                        className="cursor-pointer"
+                        className={
+                          showLandingMarker
+                            ? "cursor-pointer"
+                            : "pointer-events-none"
+                        }
                         onPointerDown={(event) => {
                           event.stopPropagation();
                         }}
@@ -1087,6 +1441,11 @@ export default function GolfHoleMap2D({
                             shot.to,
                           )}
                           fill="none"
+                          visibility={
+                            showPath
+                              ? "visible"
+                              : "hidden"
+                          }
                           stroke={
                             isSelected
                               ? "#facc15"
@@ -1100,9 +1459,18 @@ export default function GolfHoleMap2D({
                           }
                           strokeLinecap="round"
                           strokeDasharray={
-                            isSelected
-                              ? "0"
-                              : `${18 * inverseScale} ${13 * inverseScale}`
+                            isAnimating
+                              ? `${pathLength} ${pathLength}`
+                              : isSelected
+                                ? "0"
+                                : `${18 * inverseScale} ${13 * inverseScale}`
+                          }
+                          strokeDashoffset={
+                            isAnimating
+                              ? pathLength *
+                                (1 -
+                                  animationProgress)
+                              : 0
                           }
                           opacity={
                             isSelected
@@ -1112,57 +1480,172 @@ export default function GolfHoleMap2D({
                           filter="url(#shot-path-shadow)"
                         />
 
-                        <circle
-                          cx={shot.to.x}
-                          cy={shot.to.y}
-                          r={
-                            isSelected
-                              ? markerRadius *
-                                1.2
-                              : markerRadius
-                          }
-                          fill={
-                            shot.finalStroke
-                              ? "#10b981"
-                              : isSelected
-                                ? "#facc15"
-                                : "#0f172a"
-                          }
-                          stroke="#ffffff"
-                          strokeWidth={
-                            markerStroke
-                          }
-                          filter="url(#shot-path-shadow)"
-                        />
+                        {showLandingMarker ? (
+                          <>
+                            <circle
+                              cx={shot.to.x}
+                              cy={shot.to.y}
+                              r={
+                                isSelected
+                                  ? markerRadius *
+                                    1.2
+                                  : markerRadius
+                              }
+                              fill={
+                                shot.finalStroke
+                                  ? "#10b981"
+                                  : isSelected
+                                    ? "#facc15"
+                                    : "#0f172a"
+                              }
+                              stroke="#ffffff"
+                              strokeWidth={
+                                markerStroke
+                              }
+                              filter="url(#shot-path-shadow)"
+                            />
 
-                        <text
-                          x={shot.to.x}
-                          y={
-                            shot.to.y +
-                            markerFontSize *
-                              0.34
-                          }
-                          textAnchor="middle"
-                          fontSize={
-                            markerFontSize
-                          }
-                          fontWeight="900"
-                          fill={
-                            isSelected &&
-                            !shot.finalStroke
-                              ? "#111827"
-                              : "#ffffff"
-                          }
-                          className="pointer-events-none select-none"
-                        >
-                          {
-                            shot.strokeNumber
-                          }
-                        </text>
+                            <text
+                              x={shot.to.x}
+                              y={
+                                shot.to.y +
+                                markerFontSize *
+                                  0.34
+                              }
+                              textAnchor="middle"
+                              fontSize={
+                                markerFontSize
+                              }
+                              fontWeight="900"
+                              fill={
+                                isSelected &&
+                                !shot.finalStroke
+                                  ? "#111827"
+                                  : "#ffffff"
+                              }
+                              className="pointer-events-none select-none"
+                            >
+                              {
+                                shot.strokeNumber
+                              }
+                            </text>
+                          </>
+                        ) : null}
                       </g>
                     );
                   },
                 )}
+
+                {cupPoint ? (
+                  <g className="pointer-events-none">
+                    <line
+                      x1={cupPoint.x}
+                      y1={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      x2={cupPoint.x}
+                      y2={
+                        cupPoint.y -
+                        48 * inverseScale
+                      }
+                      stroke="#f8fafc"
+                      strokeWidth={
+                        5 * inverseScale
+                      }
+                      strokeLinecap="round"
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <path
+                      d={[
+                        `M ${cupPoint.x} ${
+                          cupPoint.y -
+                          48 * inverseScale
+                        }`,
+                        `L ${
+                          cupPoint.x +
+                          35 * inverseScale
+                        } ${
+                          cupPoint.y -
+                          36 * inverseScale
+                        }`,
+                        `L ${cupPoint.x} ${
+                          cupPoint.y -
+                          24 * inverseScale
+                        }`,
+                        "Z",
+                      ].join(" ")}
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        2.5 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <ellipse
+                      cx={cupPoint.x}
+                      cy={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      rx={
+                        10 *
+                        inverseScale
+                      }
+                      ry={
+                        4 *
+                        inverseScale
+                      }
+                      fill="#020617"
+                      opacity="0.85"
+                    />
+                  </g>
+                ) : null}
+
+                {animatedBallPoint ? (
+                  <g className="pointer-events-none">
+                    <circle
+                      cx={
+                        animatedBallPoint.x
+                      }
+                      cy={
+                        animatedBallPoint.y
+                      }
+                      r={
+                        13 *
+                        inverseScale
+                      }
+                      fill="#ffffff"
+                      stroke="#0f172a"
+                      strokeWidth={
+                        4 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <circle
+                      cx={
+                        animatedBallPoint.x -
+                        3 *
+                          inverseScale
+                      }
+                      cy={
+                        animatedBallPoint.y -
+                        3 *
+                          inverseScale
+                      }
+                      r={
+                        2.2 *
+                        inverseScale
+                      }
+                      fill="#94a3b8"
+                    />
+                  </g>
+                ) : null}
 
                 {plottedShots[0] ? (
                   <g>
@@ -1280,7 +1763,7 @@ export default function GolfHoleMap2D({
           ) : null}
 
           <div className="mt-3 text-[10px] leading-4 text-slate-500">
-            Drag or pinch for a closer view. Twist with two fingers to rotate the course.
+            Press Play to reveal the round shot by shot. Drag or pinch for a closer view, and twist with two fingers to rotate the course.
           </div>
         </div>
       </div>
