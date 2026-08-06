@@ -26,10 +26,7 @@ async function readJsonSafely(
 
     return typeof value === "object" &&
       value !== null
-      ? value as Record<
-          string,
-          unknown
-        >
+      ? (value as Record<string, unknown>)
       : {};
   } catch {
     return {};
@@ -50,7 +47,7 @@ export async function refreshGolfFromBrowser(
 
   /*
    * First ask our own API which ESPN event/year belongs
-   * to this slate. The UI therefore only needs the slate ID.
+   * to this slate.
    */
   const configResponse = await fetch(
     `/api/golf/refresh-config?slateId=${encodeURIComponent(
@@ -63,9 +60,7 @@ export async function refreshGolfFromBrowser(
   );
 
   const configResult =
-    await readJsonSafely(
-      configResponse,
-    );
+    await readJsonSafely(configResponse);
 
   if (!configResponse.ok) {
     throw new Error(
@@ -77,7 +72,7 @@ export async function refreshGolfFromBrowser(
   }
 
   const config =
-    configResult as unknown as GolfRefreshConfig;
+    configResult as GolfRefreshConfig;
 
   if (
     !config.eventId ||
@@ -89,9 +84,7 @@ export async function refreshGolfFromBrowser(
   }
 
   /*
-   * ESPN permits cross-origin browser requests but blocks
-   * Vercel and GitHub datacenter traffic. Fetch the official
-   * scoreboard directly from the user's device.
+   * Browser fetch avoids ESPN blocking cloud providers.
    */
   const espnUrl =
     "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard" +
@@ -115,15 +108,67 @@ export async function refreshGolfFromBrowser(
     );
   }
 
-  const scoreboardPayload: unknown =
+  const rawScoreboard: any =
     await espnResponse.json();
+
+  /*
+   * Vercel rejects very large request bodies.
+   * Keep ONLY the tournament we're refreshing and the
+   * fields our importer actually uses.
+   */
+  const scoreboardPayload = {
+    season: rawScoreboard.season,
+    leagues: rawScoreboard.leagues,
+    events: (rawScoreboard.events ?? [])
+      .filter(
+        (event: any) =>
+          String(event?.id) ===
+          String(config.eventId),
+      )
+      .map((event: any) => ({
+        id: event.id,
+        uid: event.uid,
+        date: event.date,
+        endDate: event.endDate,
+        name: event.name,
+        shortName: event.shortName,
+        season: event.season,
+        status: event.status,
+        links: event.links,
+        competitions:
+          (event.competitions ?? []).map(
+            (competition: any) => ({
+              id: competition.id,
+              uid: competition.uid,
+              date: competition.date,
+              status:
+                competition.status,
+              broadcasts:
+                competition.broadcasts,
+              competitors:
+                competition.competitors,
+            }),
+          ),
+      })),
+  };
+
+  console.log(
+    "Golf payload:",
+    Math.round(
+      JSON.stringify(
+        scoreboardPayload,
+      ).length / 1024,
+    ),
+    "KB",
+  );
 
   const ingestionResponse =
     await fetch(
       "/api/refresh-stats-golf",
       {
         method: "POST",
-        credentials: "same-origin",
+        credentials:
+          "same-origin",
         cache: "no-store",
         headers: {
           "Content-Type":
