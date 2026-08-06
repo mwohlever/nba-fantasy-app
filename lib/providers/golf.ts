@@ -1,6 +1,200 @@
 const ESPN_GOLF_SCOREBOARD_URL =
   "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
 
+const ESPN_GOLF_COURSE_URL =
+  "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard";
+
+type EspnGolfRequest =
+  | {
+      kind: "scoreboard";
+      dates?: string;
+    }
+  | {
+      kind: "course";
+      eventId: string;
+    };
+
+function getEspnGolfProxyBaseUrl():
+  | string
+  | null {
+  const explicitBaseUrl =
+    process.env
+      .GOLF_ESPN_PROXY_BASE_URL
+      ?.trim();
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl.replace(
+      /\/$/,
+      "",
+    );
+  }
+
+  const vercelUrl =
+    process.env.VERCEL_URL?.trim();
+
+  if (vercelUrl) {
+    return `https://${vercelUrl}`;
+  }
+
+  return null;
+}
+
+async function fetchEspnGolfJson<T>(
+  request: EspnGolfRequest,
+): Promise<T> {
+  const useEdgeProxy =
+    process.env.VERCEL === "1";
+
+  let requestUrl: URL;
+  let requestLabel: string;
+
+  if (useEdgeProxy) {
+    const proxyBaseUrl =
+      getEspnGolfProxyBaseUrl();
+
+    const proxySecret =
+      process.env
+        .GOLF_CRON_SECRET
+        ?.trim();
+
+    if (
+      !proxyBaseUrl ||
+      !proxySecret
+    ) {
+      throw new Error(
+        "The ESPN Golf Edge proxy is not configured. " +
+          "VERCEL_URL and GOLF_CRON_SECRET are required.",
+      );
+    }
+
+    requestUrl = new URL(
+      "/api/espn-golf-proxy",
+      proxyBaseUrl,
+    );
+
+    requestUrl.searchParams.set(
+      "kind",
+      request.kind,
+    );
+
+    if (
+      request.kind ===
+        "scoreboard" &&
+      request.dates
+    ) {
+      requestUrl.searchParams.set(
+        "dates",
+        request.dates,
+      );
+    }
+
+    if (
+      request.kind === "course"
+    ) {
+      requestUrl.searchParams.set(
+        "eventId",
+        request.eventId,
+      );
+    }
+
+    requestLabel =
+      "ESPN Golf Edge proxy";
+
+    const response = await fetch(
+      requestUrl,
+      {
+        cache: "no-store",
+        headers: {
+          Accept:
+            "application/json",
+          Authorization:
+            `Bearer ${proxySecret}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody =
+        await response
+          .text()
+          .catch(() => "");
+
+      throw new Error(
+        `${requestLabel} failed with ` +
+          `${response.status} ` +
+          `${response.statusText}` +
+          (
+            errorBody
+              ? `: ${errorBody.slice(0, 300)}`
+              : ""
+          ),
+      );
+    }
+
+    return (
+      await response.json()
+    ) as T;
+  }
+
+  if (
+    request.kind === "scoreboard"
+  ) {
+    requestUrl = new URL(
+      ESPN_GOLF_SCOREBOARD_URL,
+    );
+
+    if (request.dates) {
+      requestUrl.searchParams.set(
+        "dates",
+        request.dates,
+      );
+    }
+
+    requestLabel =
+      "ESPN golf request";
+  } else {
+    requestUrl = new URL(
+      ESPN_GOLF_COURSE_URL,
+    );
+
+    requestUrl.searchParams.set(
+      "event",
+      request.eventId,
+    );
+
+    requestLabel =
+      "ESPN Golf course request";
+  }
+
+  const response = await fetch(
+    requestUrl,
+    {
+      cache: "no-store",
+      headers: {
+        Accept:
+          "application/json",
+        "User-Agent":
+          request.kind ===
+          "scoreboard"
+            ? "111-sports-golf-provider/1.0"
+            : "111-sports-golf-course-provider/1.0",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `${requestLabel} failed with ` +
+        `${response.status} ` +
+        `${response.statusText}`,
+    );
+  }
+
+  return (
+    await response.json()
+  ) as T;
+}
+
 export type GolfTournamentStatus =
   "scheduled" | "in_progress" | "final" | "unknown";
 
@@ -747,28 +941,16 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
 async function fetchGolfPayload(
   dates?: string,
 ): Promise<EspnGolfScoreboardPayload> {
-  const url = dates
-    ? `${ESPN_GOLF_SCOREBOARD_URL}?dates=${encodeURIComponent(dates)}`
-    : ESPN_GOLF_SCOREBOARD_URL;
-
-  const response = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "111-sports-golf-provider/1.0",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `ESPN golf request failed with ${response.status} ${response.statusText}`,
-    );
-  }
-
-  const payload: unknown = await response.json();
+  const payload: unknown =
+    await fetchEspnGolfJson<unknown>({
+      kind: "scoreboard",
+      dates,
+    });
 
   if (!isRecord(payload)) {
-    throw new Error("ESPN golf returned an invalid payload.");
+    throw new Error(
+      "ESPN golf returned an invalid payload.",
+    );
   }
 
   return payload as EspnGolfScoreboardPayload;
@@ -891,25 +1073,14 @@ export async function fetchGolfCoursesByEventId(
     return [];
   }
 
-  const url =
-    "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard" +
-    `?event=${encodeURIComponent(normalizedEventId)}`;
-
-  const response = await fetch(url, {
-    cache: "no-store",
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "111-sports-golf-course-provider/1.0",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(
-      `ESPN Golf course request failed with ${response.status} ${response.statusText}`,
+  const payload =
+    await fetchEspnGolfJson<EspnLeaderboardPayload>(
+      {
+        kind: "course",
+        eventId:
+          normalizedEventId,
+      },
     );
-  }
-
-  const payload = (await response.json()) as EspnLeaderboardPayload;
   const courses = payload.events?.[0]?.courses ?? [];
 
   return courses
