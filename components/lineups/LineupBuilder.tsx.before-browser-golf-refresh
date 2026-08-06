@@ -1,7 +1,5 @@
 "use client";
 
-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
-
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
@@ -993,79 +991,35 @@ export default function LineupBuilder({
         setSaveMessage("");
       }
 
-      let refreshResult:
-        Record<string, unknown>;
-
-      if (
-        selectedSlate?.sport ===
-        "golf"
-      ) {
-        refreshResult =
-          await refreshGolfFromBrowser(
-            selectedSlateIdNumber,
-          );
-      } else {
-        const refreshEndpoint =
-          selectedSlate?.sport ===
-          "nfl"
-            ? "/api/refresh-stats-nfl"
+      const refreshEndpoint =
+        selectedSlate?.sport === "nfl"
+          ? "/api/refresh-stats-nfl"
+          : selectedSlate?.sport === "golf"
+            ? "/api/refresh-stats-golf"
             : "/api/refresh-stats";
 
-        const refreshResponse =
-          await fetch(
-            refreshEndpoint,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-              body: JSON.stringify({
-                slateId:
-                  selectedSlateIdNumber,
-              }),
-              cache: "no-store",
-            },
-          );
+      const refreshResponse = await fetch(refreshEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slateId: selectedSlateIdNumber }),
+        cache: "no-store",
+      });
 
-        refreshResult =
-          await refreshResponse.json();
+      const refreshResult = await refreshResponse.json();
 
-        if (!refreshResponse.ok) {
-          const errorMessage =
-            String(
-              refreshResult.error ??
-                "Failed to refresh stats.",
-            );
-
-          if (!isSilent) {
-            alert(errorMessage);
-          } else {
-            console.error(
-              errorMessage,
-            );
-          }
-
-          return;
+      if (!refreshResponse.ok) {
+        if (!isSilent) {
+          alert(refreshResult.error || "Failed to refresh stats.");
+        } else {
+          console.error(refreshResult.error || "Failed to refresh stats.");
         }
+        return;
       }
 
       setLastRefreshSummary({
-        gamesFound:
-          typeof refreshResult.gamesFound ===
-          "number"
-            ? refreshResult.gamesFound
-            : undefined,
-        playerStatsUpserted:
-          typeof refreshResult.playerStatsUpserted ===
-          "number"
-            ? refreshResult.playerStatsUpserted
-            : undefined,
-        teamResultsUpserted:
-          typeof refreshResult.teamResultsUpserted ===
-          "number"
-            ? refreshResult.teamResultsUpserted
-            : undefined,
+        gamesFound: refreshResult.gamesFound,
+        playerStatsUpserted: refreshResult.playerStatsUpserted,
+        teamResultsUpserted: refreshResult.teamResultsUpserted,
       });
 
       const [statsResponse, resultsResponse] = await Promise.all([

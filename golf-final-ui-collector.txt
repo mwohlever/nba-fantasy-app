@@ -1,0 +1,633 @@
+============================================================
+GolfLeagueView tee time formatter
+============================================================
+type LeagueGroup = "none" | "team";
+
+type LeagueStatusFilter =
+  | "all"
+  | "playing"
+  | "upcoming"
+  | "round_complete"
+  | "finished";
+
+type LeagueRoundView =
+  | "current"
+  | "1"
+  | "2"
+  | "3"
+  | "4";
+
+function formatGolfScore(value: number | null | undefined) {
+  if (value === null || value === undefined) return "—";
+
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) return "—";
+  if (numeric === 0) return "E";
+
+  return numeric > 0 ? `+${numeric}` : String(numeric);
+}
+
+function formatPosition(value: number | null | undefined) {
+  if (!value) return "—";
+  return `T${value}`;
+}
+
+function formatTeeTime(value: string | null | undefined) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString([], {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function relativeLabel(relative: number | null | undefined) {
+  if (relative === null || relative === undefined) return "—";
+  if (relative === 0) return "E";
+
+  return relative > 0
+    ? `+${relative}`
+    : String(relative);
+}
+
+function relativeClass(relative: number | null | undefined) {
+  if (relative === null || relative === undefined) {
+    return "border-slate-700 bg-slate-950 text-slate-500";
+  }
+
+  if (relative <= -2) {
+    return "border-emerald-500 bg-emerald-600 text-white";
+  }
+
+  if (relative === -1) {
+    return "border-emerald-500 bg-emerald-950 text-emerald-200";
+  }
+
+  if (relative === 0) {
+    return "border-slate-600 bg-slate-800 text-slate-100";
+  }
+
+  if (relative === 1) {
+    return "border-red-700 bg-red-950 text-red-200";
+  }
+
+  return "border-red-500 bg-red-700 text-white";
+}
+
+function holePar(
+  hole:
+    | {
+        par?: number | null;
+        strokes: number | null;
+        relative_to_par: number | null;
+      }
+    | null
+    | undefined,
+) {
+
+============================================================
+GolfTournamentView tee time formatter
+============================================================
+type TournamentRow = {
+  player: Player;
+  stat: PlayerStat;
+  owner: OrderedTeam | null;
+};
+
+function formatGolfScore(
+  value: number | null | undefined,
+) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) return "—";
+  if (numeric === 0) return "E";
+
+  return numeric > 0
+    ? `+${numeric}`
+    : String(numeric);
+}
+
+function formatPosition(
+  value: number | null | undefined,
+) {
+  if (!value) return "—";
+  return `T${value}`;
+}
+
+function formatTeeTime(
+  rawValue: string | null | undefined,
+  parsedValue?: string | null,
+) {
+  const raw =
+    rawValue?.trim() ?? "";
+
+  /*
+   * Preserve PGA TOUR's tournament-local display time.
+   *
+   * Supported examples:
+   *   "1:30 PM"
+   *   "Sun 1:30 PM"
+   *   "Sun Aug 02 13:30:00 PDT 2026"
+   */
+  const twelveHourMatch = raw.match(
+    /(?:^|\s)(\d{1,2}:\d{2}\s*[AP]M)(?:\s|$)/i,
+  );
+
+  if (twelveHourMatch) {
+    return twelveHourMatch[1]
+      .replace(/\s+/g, " ")
+      .toUpperCase();
+  }
+
+  const twentyFourHourMatch = raw.match(
+    /(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?\s+[A-Z]{2,5}(?:\s|$)/i,
+  );
+
+  if (twentyFourHourMatch) {
+    const hour24 = Number(
+      twentyFourHourMatch[1],
+    );
+
+    const minute =
+      twentyFourHourMatch[2];
+
+    if (
+      Number.isInteger(hour24) &&
+      hour24 >= 0 &&
+      hour24 <= 23
+    ) {
+      const period =
+        hour24 >= 12 ? "PM" : "AM";
+
+      const hour12 =
+        hour24 % 12 || 12;
+
+      return `${hour12}:${minute} ${period}`;
+    }
+  }
+
+  const value =
+    parsedValue ?? rawValue;
+
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+
+============================================================
+GolfHoleReplayPanel image selection
+============================================================
+    void loadManifest();
+
+    return () => controller.abort();
+  }, [replay?.tournamentId]);
+
+  const activeShotCastConfig =
+    useMemo<ActiveShotCastConfig | null>(
+      () => {
+        /*
+         * Preserve the verified Rocket Classic proof of
+         * concept until that event has its own manifest.
+         */
+        if (
+          slateId === 161 &&
+          holeNumber === 8
+        ) {
+          return {
+            title:
+              "Detroit Golf Club · Hole 8",
+            imageUrl:
+              "/tourcast/rocket-classic/hole-8/terrain08-web.jpg",
+            imageFit: "fill",
+            calibration:
+              DETROIT_HOLE_8_CALIBRATION,
+            calibrationVerified: true,
+            aboutThisHole: null,
+          };
+        }
+
+        const manifestHole =
+          shotCastManifest?.holes.find(
+            (hole) =>
+              Number(
+                hole.holeNumber,
+              ) === holeNumber,
+          ) ?? null;
+
+        const imageUrl =
+          manifestHole
+            ?.localAlignedMapUrl ||
+          manifestHole
+            ?.localImageUrl ||
+          null;
+
+        if (!imageUrl) {
+          return null;
+        }
+
+        const calibration =
+          manifestHole?.calibration &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xOffset,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yOffset,
+          )
+            ? manifestHole.calibration
+            : IDENTITY_CALIBRATION;
+
+        return {
+          title: `${
+            shotCastManifest?.course
+              .name ||
+            "Golf course"
+          } · Hole ${holeNumber}`,
+
+          imageUrl,
+
+          imageFit:
+            manifestHole
+              ?.localAlignedMapUrl
+
+============================================================
+HoleReplayPanel props/types
+============================================================
+"use client";
+
+import dynamic from "next/dynamic";
+const GolfHoleMap2D = dynamic(
+  () =>
+    import(
+      "@/components/lineups/GolfHoleMap2D"
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-xs font-semibold text-slate-400">
+        Loading ShotCast…
+      </div>
+    ),
+  },
+);
+
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type ReplayShot = {
+  strokeNumber: number;
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+  leftToRight: CoordinateSet | null;
+  bottomToTop: CoordinateSet | null;
+};
+
+type Replay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+  shots: ReplayShot[];
+};
+
+type ResponseBody = {
+  success?: boolean;
+  available?: boolean;
+  message?: string;
+  replay?: Replay | null;
+  error?: string;
+};
+
+type ShotCastCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+  verified?: boolean;
+};
+
+type ShotCastManifestHole = {
+  holeNumber: number;
+  available: boolean;
+  par: number | null;
+  yards: number | null;
+  aboutThisHole: string | null;
+  localImageUrl: string | null;
+  localAlignedMapUrl?: string | null;
+  calibration?: ShotCastCalibration | null;
+};
+
+type ShotCastManifest = {
+  tournament: {
+    id: string;
+    name: string | null;
+  };
+  course: {
+    id: string;
+    name: string | null;
+  };
+  holes: ShotCastManifestHole[];
+};
+
+type ActiveShotCastConfig = {
+  title: string;
+  imageUrl: string;
+  imageFit: "fill" | "contain";
+  calibration: ShotCastCalibration;
+  calibrationVerified: boolean;
+  aboutThisHole: string | null;
+};
+
+type Props = {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  fallbackPar: number | null;
+  fallbackYardage: number | null;
+  fallbackResult: string;
+  onClose: () => void;
+};
+
+const IDENTITY_CALIBRATION: ShotCastCalibration = {
+  xScale: 1,
+  xOffset: 0,
+  yScale: 1,
+
+============================================================
+ShotCast importer asset mapping
+============================================================
+          holeNumber,
+        );
+
+      const officialImageUrl =
+        normalizeUrl(
+          detail.holeImageLandscape,
+        ) ??
+        normalizeUrl(
+          detail.holeImage,
+        );
+
+      const alignedMapUrl =
+        normalizeUrl(
+          holeInfo
+            .holePickleBottomToTop,
+        );
+
+      const alignedGreenUrl =
+        normalizeUrl(
+          holeInfo
+            .holePickleGreenBottomToTop,
+        );
+
+      const [
+        alignedMapAvailable,
+        alignedGreenAvailable,
+      ] = await Promise.all([
+        imageIsAvailable(
+          alignedMapUrl,
+        ),
+        imageIsAvailable(
+          alignedGreenUrl,
+        ),
+      ]);
+
+      return {
+        holeNumber,
+        available: true,
+
+        detailsId:
+          detail.id ?? null,
+
+        statsAvailability:
+          detail.statsAvailability ??
+          null,
+
+        par: numberOrNull(
+          holeInfo.par ??
+            header?.par,
+        ),
+
+        yards:
+          numberOrNull(
+            holeInfo.yards,
+          ),
+
+        rank:
+          numberOrNull(
+            holeInfo.rank,
+          ),
+
+        scoringAverageDiff:
+          numberOrNull(
+            holeInfo
+              .scoringAverageDiff,
+          ),
+
+        aboutThisHole:
+          typeof holeInfo
+            .aboutThisHole ===
+          "string"
+            ? holeInfo
+                .aboutThisHole
+                .trim() || null
+            : null,
+
+        officialImageUrl,
+
+        /*
+         * The browser may use the official PGA URL directly.
+         * No Vercel filesystem write is required.
+         */
+        localImageUrl:
+          officialImageUrl,
+
+        alignedMapUrl,
+
+        localAlignedMapUrl:
+          alignedMapAvailable
+            ? alignedMapUrl
+            : null,
+
+        alignedMapError:
+          alignedMapUrl &&
+          !alignedMapAvailable
+            ? "Asset is not currently published."
+            : null,
+
+        alignedGreenUrl,
+
+        localAlignedGreenUrl:
+          alignedGreenAvailable
+            ? alignedGreenUrl
+            : null,
+
+        alignedGreenError:
+          alignedGreenUrl &&
+          !alignedGreenAvailable
+            ? "Asset is not currently published."
+            : null,
+
+        tourcast: {
+          uri:
+            normalizeUrl(
+              detail.tourcastURI,
+            ),
+          url:
+            normalizeUrl(
+              detail.tourcastURL,
+            ),
+          urlWeb:
+            normalizeUrl(
+              detail.tourcastURLWeb,
+            ),
+        },
+
+        assets: {
+          leftToRight:
+            cleanAsset(
+              holeInfo
+                .holePickleLeftToRightAsset,
+            ),
+          bottomToTop:
+            cleanAsset(
+              holeInfo
+                .holePickleBottomToTopAsset,
+            ),
+          greenLeftToRight:
+            cleanAsset(
+              holeInfo
+                .holePickleGreenLeftToRightAsset,
+            ),
+          greenBottomToTop:
+            cleanAsset(
+              holeInfo
+                .holePickleGreenBottomToTopAsset,
+            ),
+        },
+
+        legacyAssets: {
+          holePickle:
+            normalizeUrl(
+              holeInfo.holePickle,
+            ),
+          holePickleBottomToTop:
+            alignedMapUrl,
+          holePickleGreenBottomToTop:
+            alignedGreenUrl,
+          greenPickle:
+            normalizeUrl(
+              holeInfo.greenPickle,
+            ),
+        },
+
+        pinGreen:
+          cleanPinGreen(
+            holeInfo.pinGreen,
+          ),
+
+        calibration: null,
+      };
+    }),
+  );
+
+  const holesAvailable =
+    holes.filter(
+      (hole) => hole.available,
+    ).length;
+
+  const photos =
+    holes.filter(
+      (hole: any) =>
+        hole.available &&
+        hole.localImageUrl,
+    ).length;
+
+  const alignedMaps =
+    holes.filter(
+      (hole: any) =>
+        hole.available &&
+        hole.localAlignedMapUrl,
+    ).length;
+
+  const alignedGreens =
+    holes.filter(
+      (hole: any) =>
+        hole.available &&
+        hole.localAlignedGreenUrl,
+    ).length;
+
+  return {
+    schemaVersion: 2,
+
+    generatedAt:
+      new Date().toISOString(),
+
+    source:
+      "PGA TOUR HoleDetails",
+
+    tournament: {
+      id:
+        normalizedTournamentId,
+      name:
+        leaderboard
+          .tournamentName ??
+        null,
+      currentRound:
+        numberOrNull(
+          leaderboard
+            .currentRound,
+        ),

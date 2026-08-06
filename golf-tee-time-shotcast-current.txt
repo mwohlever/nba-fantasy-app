@@ -1,0 +1,2643 @@
+============================================================
+TEE-TIME PARSING IN PROVIDER
+============================================================
+311-    $ref?: string;
+312-  };
+313-};
+314-
+315-type EspnGolfScoreboardPayload = {
+316-  season?: {
+317-    year?: number;
+318-    type?: number;
+319-  };
+320-  leagues?: Array<{
+321-    calendar?: EspnCalendarEntry[];
+322-  }>;
+323-  events?: EspnEvent[];
+324-};
+325-
+326-export type GolfScheduleEvent = {
+327-  espnEventId: string;
+328-  name: string;
+329-  startDate: string | null;
+330-  endDate: string | null;
+331-};
+332-
+333-export type GolfHole = {
+334-  holeNumber: number;
+335-  strokes: number | null;
+336-  relativeToPar: number | null;
+337-  scoreDisplay: string | null;
+338-};
+339-
+340-export type GolfRound = {
+341-  roundNumber: number;
+342-  scoreToPar: number | null;
+343-  scoreDisplay: string | null;
+344-  strokes: number | null;
+345-  holesCompleted: number;
+346:  teeTime: string | null;
+347:  teeTimeRaw: string | null;
+348-  holes: GolfHole[];
+349-};
+350-
+351-export type GolfCompetitor = {
+352-  espnPlayerId: string;
+353-  displayName: string;
+354-  shortName: string | null;
+355-  country: string | null;
+356-  countryFlagUrl: string | null;
+357-  playerUrl: string | null;
+358-
+359-  leaderboardOrder: number | null;
+360-  officialScoreToPar: number | null;
+361-  officialScoreDisplay: string | null;
+362-
+363-  roundsCompleted: number;
+364-  holesCompleted: number;
+365-  currentRound: number | null;
+366-  lastHole: number | null;
+367-
+368-  status: GolfCompetitorStatus;
+369:  teeTime: string | null;
+370:  teeTimeRaw: string | null;
+371-
+372-  rounds: GolfRound[];
+373-};
+374-
+375-export type GolfTournament = {
+376-  espnEventId: string;
+377-  name: string;
+378-  startDate: string | null;
+379-  endDate: string | null;
+380-  status: GolfTournamentStatus;
+381-  statusDescription: string | null;
+382-  currentRound: number | null;
+383-  completed: boolean;
+384-  competitors: GolfCompetitor[];
+385-};
+386-
+387-function safeArray<T>(value: T[] | null | undefined): T[] {
+388-  return Array.isArray(value) ? value : [];
+389-}
+390-
+391-function isRecord(value: unknown): value is UnknownRecord {
+392-  return typeof value === "object" && value !== null;
+393-}
+394-
+395-function parseRelativeToPar(value: unknown): number | null {
+396-  if (typeof value === "number" && Number.isFinite(value)) {
+397-    return value;
+398-  }
+399-
+400-  if (typeof value !== "string") {
+401-    return null;
+402-  }
+403-
+404-  const normalized = value.trim().toUpperCase();
+405-
+406-  if (!normalized) return null;
+407-  if (normalized === "E") return 0;
+408-
+409-  const parsed = Number(normalized.replace("+", ""));
+410-  return Number.isFinite(parsed) ? parsed : null;
+411-}
+412-
+413:function parseEspnDate(value: string | null | undefined): string | null {
+414-  if (!value) return null;
+415-
+416:  const parsed = new Date(value);
+417-  if (Number.isNaN(parsed.getTime())) return null;
+418-
+419:  return parsed.toISOString();
+420-}
+421-
+422-function findPlayerUrl(competitor: EspnCompetitor): string | null {
+423-  const links = safeArray(competitor.athlete?.links);
+424-
+425-  const preferred =
+426-    links.find((link) => link.rel?.includes("playercard")) ??
+427-    links.find((link) => link.rel?.includes("overview")) ??
+428-    links[0];
+429-
+430-  return preferred?.href ?? null;
+431-}
+432-
+433-function findRoundTeeTimeRaw(round: EspnRound): string | null {
+434-  const categories = safeArray(round.statistics?.categories);
+435-
+436-  for (const category of categories) {
+437-    for (const stat of safeArray(category.stats)) {
+438-      const name = [stat.name, stat.label, stat.abbreviation]
+439-        .filter(Boolean)
+440-        .join(" ")
+441-        .toLowerCase();
+442-
+443-      if (
+444-        name.includes("tee") &&
+445-        typeof stat.displayValue === "string" &&
+446-        stat.displayValue.trim()
+447-      ) {
+448-        return stat.displayValue.trim();
+449-      }
+450-    }
+451-  }
+452-
+453-  // The current ESPN golf payload includes an unnamed tee-time value as the
+454-  // final round statistic. Preserve the raw value, but keep this fallback
+455-  // isolated here so the rest of the app never depends on the array position.
+456-  for (const category of categories) {
+457-    const stats = safeArray(category.stats);
+458-    const finalStat = stats.at(-1);
+459-
+460-    if (
+461-      finalStat &&
+462-      finalStat.value === undefined &&
+463-      typeof finalStat.displayValue === "string" &&
+464-      finalStat.displayValue.trim()
+465-    ) {
+466-      return finalStat.displayValue.trim();
+467-    }
+468-  }
+469-
+470-  return null;
+471-}
+472-
+473:function parseTeeTime(raw: string | null): string | null {
+474-  if (!raw) return null;
+475-
+476:  const parsed = new Date(raw);
+477-  if (Number.isNaN(parsed.getTime())) return null;
+478-
+479:  return parsed.toISOString();
+480-}
+481-
+482-function normalizeTournamentStatus(
+483-  status: EspnStatusType | undefined,
+484-): GolfTournamentStatus {
+485-  const state = status?.state?.toLowerCase();
+486-  const name = status?.name?.toUpperCase();
+487-
+488-  if (status?.completed || state === "post" || name === "STATUS_FINAL") {
+489-    return "final";
+490-  }
+491-
+492-  if (state === "in" || name === "STATUS_IN_PROGRESS") {
+493-    return "in_progress";
+494-  }
+495-
+496-  if (state === "pre" || name === "STATUS_SCHEDULED") {
+497-    return "scheduled";
+498-  }
+499-
+500-  return "unknown";
+501-}
+502-
+503-function roundHasActivity(round: GolfRound): boolean {
+504-  return (
+505-    round.holesCompleted > 0 || (round.strokes !== null && round.strokes > 0)
+506-  );
+507-}
+508-
+509-function inferCompetitorStatus(input: {
+510-  tournamentStatus: GolfTournamentStatus;
+511-  tournamentCurrentRound: number | null;
+512-  rounds: GolfRound[];
+513-}): GolfCompetitorStatus {
+514-  const playedRounds = input.rounds.filter(roundHasActivity);
+515-
+516-  const completedRounds = playedRounds.filter(
+517-    (round) => round.holesCompleted === 18,
+518-  ).length;
+519-
+520-  const hasStarted = playedRounds.length > 0;
+521-
+522-  const hasPartialRound = playedRounds.some(
+523-    (round) =>
+524-      round.holesCompleted > 0 &&
+525-      round.holesCompleted < 18,
+526-  );
+527-
+528-  const allPlayedRoundsComplete =
+529-    playedRounds.length > 0 &&
+530-    playedRounds.every(
+531-      (round) =>
+532-        round.holesCompleted === 18,
+533-    );
+534-
+535-  const hasRoundThreeOrLaterActivity = playedRounds.some(
+536-    (round) => round.roundNumber >= 3,
+537-  );
+538-
+539-  /*
+540-   * ESPN includes future-round records and tee times for golfers
+541-   * who made the cut but have not started the next round yet.
+542-   *
+543-   * A golfer with a Round 3 tee time must remain scheduled rather
+544-   * than being inferred as cut merely because Round 3 has begun.
+545-   */
+546-  const hasRoundThreeOrLaterTeeTime = input.rounds.some(
+547-    (round) =>
+548-      round.roundNumber >= 3 &&
+549:      Boolean(round.teeTime || round.teeTimeRaw),
+550-  );
+551-
+552-  const tournamentHasReachedRoundThree =
+553-    (input.tournamentCurrentRound ?? 0) >= 3;
+554-
+555-  if (input.tournamentStatus === "scheduled") {
+556-    return "scheduled";
+557-  }
+558-
+559-  if (!hasStarted) {
+560-    return input.tournamentStatus === "final" ? "did_not_start" : "scheduled";
+561-  }
+562-
+563-  if (completedRounds >= 4 && input.tournamentStatus === "final") {
+564-    return "finished";
+565-  }
+566-
+567-  if (
+568-    completedRounds === 2 &&
+569-    !hasRoundThreeOrLaterActivity &&
+570-    tournamentHasReachedRoundThree
+571-  ) {
+572-    /*
+573-     * Made-cut golfers often have a Round 3 tee time before they
+574-     * record their first Saturday hole. Keep them upcoming so they
+575-     * receive no missed-cut penalty and still count as remaining.
+576-     */
+577-    if (hasRoundThreeOrLaterTeeTime) {
+578-      return "scheduled";
+579-    }
+580-
+581-    return "cut";
+582-  }
+583-
+584-  /*
+585-   * Do not infer withdrawal solely from missing rounds.
+586-   *
+587-   * ESPN's scoreboard payload can report an event as final before all
+588-   * tournament rounds are represented. That previously classified anyone
+589-   * with fewer than four rounds as WD and applied missing-round penalties.
+590-   *
+591-   * Until ESPN provides an explicit competitor-level WD/DQ status, a golfer
+592-   * who started and was not identified as cut should be treated as finished
+593-   * after a genuinely final event.
+594-   */
+595-  if (input.tournamentStatus === "final") {
+596-    return "finished";
+597-  }
+598-
+599-  /*
+600-   * A golfer who completed today's round is not actively
+601-   * playing merely because the tournament itself continues.
+602-   *
+603-   * Keep this distinct from "scheduled": round_complete means
+604-   * today's round is finished; scheduled means the golfer has
+605-   * not yet begun the tournament's current round.
+606-   */
+607-  if (
+608-    allPlayedRoundsComplete &&
+609-    !hasPartialRound
+610-  ) {
+611-    return "round_complete";
+612-  }
+613-
+614-  return "active";
+615-}
+616-
+617-function parseRound(round: EspnRound): GolfRound | null {
+618-  const roundNumber = Number(round.period);
+619-
+620-  if (!Number.isInteger(roundNumber) || roundNumber < 1) {
+621-    return null;
+622-  }
+623-
+624-  const holes = safeArray(round.linescores)
+625-    .map((hole): GolfHole | null => {
+626-      const holeNumber = Number(hole.period);
+627-
+628-      if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
+629-        return null;
+630-      }
+631-
+632-      const strokes =
+633-        typeof hole.value === "number" &&
+634-        Number.isFinite(hole.value) &&
+635-        hole.value > 0
+636-          ? hole.value
+637-          : null;
+638-
+639-      return {
+640-        holeNumber,
+641-        strokes,
+642-        relativeToPar:
+643-          strokes === null
+644-            ? null
+645-            : parseRelativeToPar(hole.scoreType?.displayValue),
+646-        scoreDisplay: strokes === null ? null : (hole.displayValue ?? null),
+647-      };
+648-    })
+649-    .filter((hole): hole is GolfHole => hole !== null && hole.strokes !== null)
+650-    .sort((a, b) => a.holeNumber - b.holeNumber);
+651-
+652-  const rawStrokes =
+653-    typeof round.value === "number" && Number.isFinite(round.value)
+654-      ? round.value
+655-      : null;
+656-
+657-  const displayValue = round.displayValue?.trim() ?? null;
+658-
+659-  const isPlaceholderRound =
+660-    holes.length === 0 &&
+661-    (rawStrokes === 0 || displayValue === "-" || displayValue === "");
+662-
+663:  const teeTimeRaw = findRoundTeeTimeRaw(round);
+664-
+665-  return {
+666-    roundNumber,
+667-    scoreToPar: isPlaceholderRound ? null : parseRelativeToPar(displayValue),
+668-    scoreDisplay: isPlaceholderRound ? null : displayValue,
+669-    strokes: isPlaceholderRound ? null : rawStrokes,
+670-    holesCompleted: holes.length,
+671:    teeTime: parseTeeTime(teeTimeRaw),
+672:    teeTimeRaw,
+673-    holes,
+674-  };
+675-}
+676-
+677-function parseCompetitor(
+678-  competitor: EspnCompetitor,
+679-  tournamentStatus: GolfTournamentStatus,
+680-  tournamentCurrentRound: number | null,
+681-): GolfCompetitor | null {
+682-  const espnPlayerId = String(competitor.id ?? "").trim();
+683-  const displayName = String(
+684-    competitor.athlete?.displayName ?? competitor.athlete?.fullName ?? "",
+685-  ).trim();
+686-
+687-  if (!espnPlayerId || !displayName) {
+688-    return null;
+689-  }
+690-
+691-  const rounds = safeArray(competitor.linescores)
+692-    .map(parseRound)
+693-    .filter((round): round is GolfRound => round !== null)
+694-    .sort((a, b) => a.roundNumber - b.roundNumber);
+695-
+696-  const roundsWithActivity = rounds.filter(roundHasActivity);
+697-
+698-  const currentRound =
+699-    roundsWithActivity.length > 0
+700-      ? Math.max(...roundsWithActivity.map((round) => round.roundNumber))
+701-      : null;
+702-
+703-  const currentRoundRecord =
+704-    currentRound === null
+705-      ? null
+706-      : (rounds.find((round) => round.roundNumber === currentRound) ?? null);
+707-
+708-  const lastHole =
+709-    currentRoundRecord && currentRoundRecord.holes.length > 0
+710-      ? (currentRoundRecord.holes.at(-1)?.holeNumber ?? null)
+711-      : null;
+712-
+713-  /*
+714-   * Only expose a next-round tee time when ESPN provides a genuine
+715-   * later-round record.
+716-   *
+717-   * After Round 3 completed, ESPN continued reporting the completed
+718-   * Round 3 tee time while the event status still said Round 3.
+719-   * The UI then mislabeled that Saturday time as a Round 4 tee time.
+720-   */
+721-  const currentRoundIsComplete =
+722-    currentRoundRecord?.holesCompleted === 18;
+723-
+724-  const futureTeeTimeRound =
+725-    rounds
+726-      .filter(
+727-        (round) =>
+728-          round.roundNumber >
+729-            Number(currentRound ?? 0) &&
+730-          !roundHasActivity(round) &&
+731-          Boolean(
+732:            round.teeTimeRaw ||
+733-              round.teeTime,
+734-          ),
+735-      )
+736-      .sort(
+737-        (a, b) =>
+738-          a.roundNumber -
+739-          b.roundNumber,
+740-      )[0] ?? null;
+741-
+742-  const tournamentRoundRecord =
+743-    tournamentCurrentRound === null
+744-      ? null
+745-      : (
+746-          rounds.find(
+747-            (round) =>
+748-              round.roundNumber ===
+749-              tournamentCurrentRound,
+750-          ) ?? null
+751-        );
+752-
+753-  const tournamentRoundIsUpcoming =
+754-    tournamentRoundRecord !== null &&
+755-    !roundHasActivity(
+756-      tournamentRoundRecord,
+757-    ) &&
+758-    Boolean(
+759:      tournamentRoundRecord.teeTimeRaw ||
+760-        tournamentRoundRecord.teeTime,
+761-    );
+762-
+763-  const preferredTeeTimeRound =
+764-    futureTeeTimeRound ??
+765-    (
+766-      !currentRoundIsComplete &&
+767-      tournamentRoundIsUpcoming
+768-        ? tournamentRoundRecord
+769-        : null
+770-    ) ??
+771-    (
+772-      !currentRoundIsComplete &&
+773-      Boolean(
+774:        currentRoundRecord?.teeTimeRaw ||
+775-          currentRoundRecord?.teeTime,
+776-      )
+777-        ? currentRoundRecord
+778-        : null
+779-    );
+780-
+781:  const teeTimeRaw =
+782:    preferredTeeTimeRound?.teeTimeRaw ??
+783-    null;
+784-
+785-  const teeTime =
+786-    preferredTeeTimeRound?.teeTime ??
+787-    null;
+788-
+789-  return {
+790-    espnPlayerId,
+791-    displayName,
+792-    shortName: competitor.athlete?.shortName ?? null,
+793-    country: competitor.athlete?.flag?.alt ?? null,
+794-    countryFlagUrl: competitor.athlete?.flag?.href ?? null,
+795-    playerUrl: findPlayerUrl(competitor),
+796-
+797-    leaderboardOrder:
+798-      typeof competitor.order === "number" ? competitor.order : null,
+799-    officialScoreToPar: parseRelativeToPar(competitor.score),
+800-    officialScoreDisplay: competitor.score ?? null,
+801-
+802-    roundsCompleted: rounds.filter((round) => round.holesCompleted === 18)
+803-      .length,
+804-    holesCompleted: rounds.reduce(
+805-      (total, round) => total + round.holesCompleted,
+806-      0,
+807-    ),
+808-    currentRound,
+809-    lastHole,
+810-
+811-    status: inferCompetitorStatus({
+812-      tournamentStatus,
+813-      tournamentCurrentRound,
+814-      rounds,
+815-    }),
+816-    teeTime,
+817:    teeTimeRaw,
+818-
+819-    rounds,
+820-  };
+821-}
+822-
+823-function parseTournament(event: EspnEvent): GolfTournament | null {
+824-  const espnEventId = String(event.id ?? "").trim();
+825-  const name = String(event.name ?? event.shortName ?? "").trim();
+826-
+827-  if (!espnEventId || !name) {
+828-    return null;
+829-  }
+830-
+831-  const competition = event.competitions?.[0];
+832-  const eventStatus = event.status?.type;
+833-  const competitionStatus = competition?.status?.type;
+834-  const statusSource = competitionStatus ?? eventStatus;
+835-
+836-  const reportedStatus = normalizeTournamentStatus(statusSource);
+837-
+838-  const tournamentCurrentRound =
+839-    typeof competition?.status?.period === "number"
+840-      ? competition.status.period
+841-      : null;
+842-
+843-  /*
+844-   * ESPN can mark the current competition/day as final after
+845-   * an early tournament round. Do not use event.endDate to
+846-   * decide whether that represents the end of the full event.
+847-   *
+848-   * A four-round PGA tournament cannot be truly final while
+849-   * ESPN still reports the current round as 1, 2, or 3.
+850-   */
+851-  const isPrematureEarlyRoundFinal =
+852-    reportedStatus === "final" &&
+853-    tournamentCurrentRound !== null &&
+854-    tournamentCurrentRound >= 1 &&
+855-    tournamentCurrentRound < 4;
+856-
+857-  const normalizedReportedStatus: GolfTournamentStatus =
+858-    isPrematureEarlyRoundFinal
+859-      ? "in_progress"
+860-      : reportedStatus;
+861-
+862-  const preliminaryCompetitors = safeArray(competition?.competitors)
+863-    .map((competitor) =>
+864-      parseCompetitor(
+865-        competitor,
+866-        normalizedReportedStatus,
+867-        tournamentCurrentRound,
+868-      ),
+869-    )
+870-    .filter(
+871-      (competitor): competitor is GolfCompetitor =>
+872-        competitor !== null,
+873-    );
+874-
+875-  /*
+876-   * ESPN can briefly return STATUS_FINAL for the event while the current
+877-   * tournament payload still contains golfers in a partially completed
+878-   * round. Treating that as a true final incorrectly turns every golfer
+879-   * with fewer than four rounds into a withdrawal and applies penalties.
+880-   *
+881-   * A partial round is stronger evidence that the tournament is still live.
+882-   */
+883-  const hasPartialRoundActivity = preliminaryCompetitors.some(
+884-    (competitor) =>
+885-      competitor.rounds.some(
+886-        (round) =>
+887-          round.holesCompleted > 0 &&
+888-          round.holesCompleted < 18,
+889-      ),
+890-  );
+891-
+892-  const status: GolfTournamentStatus =
+893-    normalizedReportedStatus === "final" && hasPartialRoundActivity
+894-      ? "in_progress"
+895-      : normalizedReportedStatus;
+896-
+897-  const competitors =
+898-    status === normalizedReportedStatus
+899-      ? preliminaryCompetitors
+900-      : safeArray(competition?.competitors)
+901-          .map((competitor) =>
+902-            parseCompetitor(
+903-              competitor,
+904-              status,
+905-              tournamentCurrentRound,
+906-            ),
+907-          )
+908-          .filter(
+909-            (competitor): competitor is GolfCompetitor =>
+910-              competitor !== null,
+911-          );
+912-
+913-  competitors.sort((a, b) => {
+914-    const aOrder =
+915-      a.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+916-    const bOrder =
+917-      b.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+918-
+919-    if (aOrder !== bOrder) return aOrder - bOrder;
+920-    return a.displayName.localeCompare(b.displayName);
+921-  });
+922-
+923-  return {
+924-    espnEventId,
+925-    name,
+926:    startDate: parseEspnDate(event.date),
+927:    endDate: parseEspnDate(event.endDate),
+928-    status,
+929-    statusDescription:
+930-      competitionStatus?.detail ??
+931-      competitionStatus?.shortDetail ??
+932-      competitionStatus?.description ??
+933-      eventStatus?.description ??
+934-      null,
+935-    currentRound: tournamentCurrentRound,
+936-    completed: status === "final",
+937-    competitors,
+938-  };
+939-}
+940-
+941-async function fetchGolfPayload(
+942-  dates?: string,
+943-): Promise<EspnGolfScoreboardPayload> {
+944-  const payload: unknown =
+945-    await fetchEspnGolfJson<unknown>({
+946-      kind: "scoreboard",
+947-      dates,
+948-    });
+949-
+950-  if (!isRecord(payload)) {
+951-    throw new Error(
+952-      "ESPN golf returned an invalid payload.",
+953-    );
+954-  }
+955-
+956-  return payload as EspnGolfScoreboardPayload;
+957-}
+958-
+959-export function parseGolfTournamentsFromPayload(
+960-  payload: unknown,
+961-): GolfTournament[] {
+962-  if (!isRecord(payload)) {
+963-    throw new Error(
+964-      "ESPN golf returned an invalid payload.",
+965-    );
+966-  }
+967-
+968-  const scoreboard =
+969-    payload as EspnGolfScoreboardPayload;
+970-
+971-  return safeArray(
+972-    scoreboard.events,
+973-  )
+974-    .map(parseTournament)
+975-    .filter(
+976-      (
+977-        tournament,
+978-      ): tournament is GolfTournament =>
+979-        tournament !== null,
+980-    );
+981-}
+982-
+983-export function parseGolfTournamentByEventIdFromPayload(
+984-  payload: unknown,
+985-  espnEventId: string,
+986-): GolfTournament | null {
+987-  const normalizedEventId =
+988-    espnEventId.trim();
+989-
+990-  if (!normalizedEventId) {
+991-    return null;
+992-  }
+993-
+994-  return (
+995-    parseGolfTournamentsFromPayload(
+996-      payload,
+997-    ).find(
+998-      (tournament) =>
+999-        tournament.espnEventId ===
+1000-        normalizedEventId,
+1001-    ) ?? null
+1002-  );
+1003-}
+1004-
+1005-export async function fetchGolfTournaments(
+1006-  dates?: string,
+1007-): Promise<GolfTournament[]> {
+1008-  const payload =
+1009-    await fetchGolfPayload(dates);
+1010-
+1011-  return parseGolfTournamentsFromPayload(
+1012-    payload,
+1013-  );
+1014-}
+1015-
+1016-export async function fetchGolfTournamentByEventId(
+1017-  espnEventId: string,
+1018-  dates?: string,
+1019-): Promise<GolfTournament | null> {
+1020-  const normalizedEventId = espnEventId.trim();
+1021-
+1022-  if (!normalizedEventId) {
+1023-    return null;
+1024-  }
+1025-
+1026-  const tournaments = await fetchGolfTournaments(dates);
+1027-
+1028-  return (
+1029-    tournaments.find(
+1030-      (tournament) => tournament.espnEventId === normalizedEventId,
+1031-    ) ?? null
+1032-  );
+1033-}
+1034-
+1035-export async function fetchGolfSchedule(
+1036-  dates?: string,
+1037-): Promise<GolfScheduleEvent[]> {
+1038-  const payload = await fetchGolfPayload(dates);
+1039-  const calendar = safeArray(payload.leagues?.[0]?.calendar);
+1040-
+1041-  const schedule = calendar
+1042-    .map((entry): GolfScheduleEvent | null => {
+1043-      const espnEventId = String(entry.id ?? "").trim();
+1044-      const name = String(entry.label ?? "").trim();
+1045-
+1046-      if (!espnEventId || !name) {
+1047-        return null;
+1048-      }
+1049-
+1050-      return {
+1051-        espnEventId,
+1052-        name,
+1053:        startDate: parseEspnDate(entry.startDate),
+1054:        endDate: parseEspnDate(entry.endDate),
+1055-      };
+1056-    })
+1057-    .filter((event): event is GolfScheduleEvent => event !== null);
+1058-
+1059-  return Array.from(
+1060-    new Map(schedule.map((event) => [event.espnEventId, event])).values(),
+1061-  ).sort((a, b) => {
+1062-    const aDate = a.startDate ?? "";
+1063-    const bDate = b.startDate ?? "";
+1064-
+1065-    return aDate.localeCompare(bDate);
+1066-  });
+1067-}
+1068-
+1069-export type GolfCourseHole = {
+1070-  holeNumber: number;
+1071-  par: number;
+1072-  yards: number | null;
+1073-};
+1074-
+1075-export type GolfCourse = {
+1076-  espnCourseId: string;
+1077-  name: string | null;
+1078-  totalYards: number | null;
+1079-  totalPar: number | null;
+1080-  parIn: number | null;
+1081-  parOut: number | null;
+1082-  isHost: boolean;
+1083-  holes: GolfCourseHole[];
+1084-};
+1085-
+1086-type EspnLeaderboardCourseHole = {
+1087-  number?: number;
+1088-  shotsToPar?: number;
+1089-  totalYards?: number;
+1090-};
+1091-
+1092-type EspnLeaderboardCourse = {
+1093-  id?: string;
+1094-  name?: string;
+1095-  totalYards?: number;
+1096-  shotsToPar?: number;
+1097-  parIn?: number;
+1098-  parOut?: number;
+1099-  host?: boolean;
+1100-  holes?: EspnLeaderboardCourseHole[];
+1101-};
+1102-
+1103-type EspnLeaderboardPayload = {
+1104-  events?: Array<{
+1105-    courses?: EspnLeaderboardCourse[];
+1106-  }>;
+1107-};
+1108-
+1109-function nullableFiniteNumber(value: unknown): number | null {
+1110-  const numeric = Number(value);
+1111-  return Number.isFinite(numeric) ? numeric : null;
+1112-}
+1113-
+1114-export async function fetchGolfCoursesByEventId(
+1115-  espnEventId: string,
+1116-): Promise<GolfCourse[]> {
+1117-  const normalizedEventId = espnEventId.trim();
+1118-
+1119-  if (!normalizedEventId) {
+1120-    return [];
+1121-  }
+1122-
+1123-  const payload =
+1124-    await fetchEspnGolfJson<EspnLeaderboardPayload>(
+1125-      {
+1126-        kind: "course",
+1127-        eventId:
+1128-          normalizedEventId,
+1129-      },
+1130-    );
+1131-  const courses = payload.events?.[0]?.courses ?? [];
+1132-
+1133-  return courses
+1134-    .map((course): GolfCourse | null => {
+1135-      const espnCourseId = String(course.id ?? "").trim();
+1136-
+1137-      if (!espnCourseId) {
+1138-        return null;
+1139-      }
+1140-
+1141-      const holes = (course.holes ?? [])
+1142-        .map((hole): GolfCourseHole | null => {
+1143-          const holeNumber = Number(hole.number);
+1144-          const par = Number(hole.shotsToPar);
+
+============================================================
+TEE-TIME UI FORMATTERS
+============================================================
+app/lineups/draft/page.tsx-367-          ) ?? [],
+app/lineups/draft/page.tsx-368-      })) ?? [];
+app/lineups/draft/page.tsx-369-
+app/lineups/draft/page.tsx-370-    if (sport === "golf") {
+app/lineups/draft/page.tsx-371-      const { data: statsData, error: statsError } =
+app/lineups/draft/page.tsx-372-        await supabaseAdmin
+app/lineups/draft/page.tsx-373-          .from("golf_event_players")
+app/lineups/draft/page.tsx-374-          .select(
+app/lineups/draft/page.tsx-375-            `
+app/lineups/draft/page.tsx-376-            player_id,
+app/lineups/draft/page.tsx-377-            leaderboard_order,
+app/lineups/draft/page.tsx-378-            official_score_to_par,
+app/lineups/draft/page.tsx-379-            official_score_display,
+app/lineups/draft/page.tsx-380-            penalty_strokes,
+app/lineups/draft/page.tsx-381-            fantasy_score,
+app/lineups/draft/page.tsx-382-            rounds_completed,
+app/lineups/draft/page.tsx-383-            holes_completed,
+app/lineups/draft/page.tsx-384-            current_round,
+app/lineups/draft/page.tsx-385-            last_hole,
+app/lineups/draft/page.tsx-386-            status,
+app/lineups/draft/page.tsx:387:            tee_time,
+app/lineups/draft/page.tsx:388:            tee_time_raw
+app/lineups/draft/page.tsx-389-            `,
+app/lineups/draft/page.tsx-390-          )
+app/lineups/draft/page.tsx-391-          .eq("slate_id", selectedSlateId);
+app/lineups/draft/page.tsx-392-
+app/lineups/draft/page.tsx-393-      if (statsError) {
+app/lineups/draft/page.tsx-394-        console.error(
+app/lineups/draft/page.tsx-395-          "Failed to load initial Golf stats:",
+app/lineups/draft/page.tsx-396-          statsError.message,
+app/lineups/draft/page.tsx-397-        );
+app/lineups/draft/page.tsx-398-      }
+app/lineups/draft/page.tsx-399-
+app/lineups/draft/page.tsx-400-      playerStats = (statsData ?? []).map((row: any) => ({
+app/lineups/draft/page.tsx-401-        player_id: Number(row.player_id),
+app/lineups/draft/page.tsx-402-        leaderboard_order:
+app/lineups/draft/page.tsx-403-          row.leaderboard_order === null
+app/lineups/draft/page.tsx-404-            ? null
+app/lineups/draft/page.tsx-405-            : Number(row.leaderboard_order),
+app/lineups/draft/page.tsx-406-        official_score_to_par:
+app/lineups/draft/page.tsx-407-          row.official_score_to_par === null
+app/lineups/draft/page.tsx-408-            ? null
+app/lineups/draft/page.tsx-409-            : Number(row.official_score_to_par),
+app/lineups/draft/page.tsx-410-        official_score_display: row.official_score_display ?? null,
+app/lineups/draft/page.tsx-411-        penalty_strokes: Number(row.penalty_strokes ?? 0),
+app/lineups/draft/page.tsx-412-        fantasy_points:
+app/lineups/draft/page.tsx-413-          row.fantasy_score === null
+app/lineups/draft/page.tsx-414-            ? null
+app/lineups/draft/page.tsx-415-            : Number(row.fantasy_score),
+app/lineups/draft/page.tsx-416-        rounds_completed: Number(row.rounds_completed ?? 0),
+app/lineups/draft/page.tsx-417-        holes_completed: Number(row.holes_completed ?? 0),
+app/lineups/draft/page.tsx-418-        current_round:
+app/lineups/draft/page.tsx-419-          row.current_round === null
+app/lineups/draft/page.tsx-420-            ? null
+app/lineups/draft/page.tsx-421-            : Number(row.current_round),
+app/lineups/draft/page.tsx-422-        last_hole:
+app/lineups/draft/page.tsx-423-          row.last_hole === null ? null : Number(row.last_hole),
+app/lineups/draft/page.tsx-424-        status: row.status ?? "scheduled",
+app/lineups/draft/page.tsx:425:        tee_time: row.tee_time ?? null,
+app/lineups/draft/page.tsx:426:        tee_time_raw: row.tee_time_raw ?? null,
+app/lineups/draft/page.tsx-427-      }));
+app/lineups/draft/page.tsx-428-    } else {
+app/lineups/draft/page.tsx-429-      const statsTable =
+app/lineups/draft/page.tsx-430-        sport === "nfl"
+app/lineups/draft/page.tsx-431-          ? "player_nfl_slate_stats"
+app/lineups/draft/page.tsx-432-          : "player_slate_stats";
+app/lineups/draft/page.tsx-433-
+app/lineups/draft/page.tsx-434-      const { data: statsData, error: statsError } =
+app/lineups/draft/page.tsx-435-        await supabaseAdmin
+app/lineups/draft/page.tsx-436-          .from(statsTable)
+app/lineups/draft/page.tsx-437-          .select("*")
+app/lineups/draft/page.tsx-438-          .eq("slate_id", selectedSlateId);
+app/lineups/draft/page.tsx-439-
+app/lineups/draft/page.tsx-440-      if (statsError) {
+app/lineups/draft/page.tsx-441-        console.error(
+app/lineups/draft/page.tsx-442-          "Failed to load initial player stats:",
+app/lineups/draft/page.tsx-443-          statsError.message,
+app/lineups/draft/page.tsx-444-        );
+app/lineups/draft/page.tsx-445-      }
+app/lineups/draft/page.tsx-446-
+app/lineups/draft/page.tsx-447-      playerStats = statsData ?? [];
+app/lineups/draft/page.tsx-448-    }
+app/lineups/draft/page.tsx-449-
+app/lineups/draft/page.tsx-450-    const { data: teamResultsData, error: teamResultsError } =
+app/lineups/draft/page.tsx-451-      await supabaseAdmin
+app/lineups/draft/page.tsx-452-        .from("team_slate_results")
+app/lineups/draft/page.tsx-453-        .select("*")
+app/lineups/draft/page.tsx-454-        .eq("slate_id", selectedSlateId);
+app/lineups/draft/page.tsx-455-
+app/lineups/draft/page.tsx-456-    if (teamResultsError) {
+app/lineups/draft/page.tsx-457-      console.error(
+app/lineups/draft/page.tsx-458-        "Failed to load initial team results:",
+app/lineups/draft/page.tsx-459-        teamResultsError.message,
+app/lineups/draft/page.tsx-460-      );
+app/lineups/draft/page.tsx-461-    }
+app/lineups/draft/page.tsx-462-
+app/lineups/draft/page.tsx-463-    teamResults = teamResultsData ?? [];
+app/lineups/draft/page.tsx-464-  }
+app/lineups/draft/page.tsx-465-
+app/lineups/draft/page.tsx-466-  const rosterSize =
+app/lineups/draft/page.tsx-467-    rosterSlots.reduce(
+app/lineups/draft/page.tsx-468-      (sum, slot) => sum + Number(slot.slot_count ?? 0),
+app/lineups/draft/page.tsx-469-      0,
+app/lineups/draft/page.tsx-470-    ) || (sport === "golf" ? 4 : sport === "nfl" ? 6 : 5);
+app/lineups/draft/page.tsx-471-
+--
+app/lineups/scores/page.tsx-356-        };
+app/lineups/scores/page.tsx-357-      }) ?? [];
+app/lineups/scores/page.tsx-358-
+app/lineups/scores/page.tsx-359-    const { data: statsData } =
+app/lineups/scores/page.tsx-360-      sport === "golf"
+app/lineups/scores/page.tsx-361-        ? await supabaseAdmin
+app/lineups/scores/page.tsx-362-            .from("golf_event_players")
+app/lineups/scores/page.tsx-363-            .select(
+app/lineups/scores/page.tsx-364-              `
+app/lineups/scores/page.tsx-365-              player_id,
+app/lineups/scores/page.tsx-366-              leaderboard_order,
+app/lineups/scores/page.tsx-367-              official_score_to_par,
+app/lineups/scores/page.tsx-368-              official_score_display,
+app/lineups/scores/page.tsx-369-              penalty_strokes,
+app/lineups/scores/page.tsx-370-              fantasy_score,
+app/lineups/scores/page.tsx-371-              rounds_completed,
+app/lineups/scores/page.tsx-372-              holes_completed,
+app/lineups/scores/page.tsx-373-              current_round,
+app/lineups/scores/page.tsx-374-              last_hole,
+app/lineups/scores/page.tsx-375-              status,
+app/lineups/scores/page.tsx:376:              tee_time,
+app/lineups/scores/page.tsx:377:              tee_time_raw,
+app/lineups/scores/page.tsx-378-              golf_rounds (
+app/lineups/scores/page.tsx-379-                round_number,
+app/lineups/scores/page.tsx-380-                score_to_par,
+app/lineups/scores/page.tsx-381-                score_display,
+app/lineups/scores/page.tsx-382-                strokes,
+app/lineups/scores/page.tsx-383-                holes_completed,
+app/lineups/scores/page.tsx:384:                tee_time,
+app/lineups/scores/page.tsx:385:                tee_time_raw,
+app/lineups/scores/page.tsx-386-                status,
+app/lineups/scores/page.tsx-387-                golf_holes (
+app/lineups/scores/page.tsx-388-                  hole_number,
+app/lineups/scores/page.tsx-389-                  strokes,
+app/lineups/scores/page.tsx-390-                  relative_to_par,
+app/lineups/scores/page.tsx-391-                  score_display
+app/lineups/scores/page.tsx-392-                )
+app/lineups/scores/page.tsx-393-              )
+app/lineups/scores/page.tsx-394-            `,
+app/lineups/scores/page.tsx-395-            )
+app/lineups/scores/page.tsx-396-            .eq("slate_id", selectedSlateId)
+app/lineups/scores/page.tsx-397-        : await supabaseAdmin
+app/lineups/scores/page.tsx-398-            .from(statsTable)
+app/lineups/scores/page.tsx-399-            .select("*")
+app/lineups/scores/page.tsx-400-            .eq("slate_id", selectedSlateId);
+app/lineups/scores/page.tsx-401-
+app/lineups/scores/page.tsx-402-    const { data: teamResultsData } = await supabaseAdmin
+app/lineups/scores/page.tsx-403-      .from("team_slate_results")
+app/lineups/scores/page.tsx-404-      .select("*")
+app/lineups/scores/page.tsx-405-      .eq("slate_id", selectedSlateId);
+app/lineups/scores/page.tsx-406-
+app/lineups/scores/page.tsx-407-    playerStats =
+app/lineups/scores/page.tsx-408-      sport === "golf"
+app/lineups/scores/page.tsx-409-        ? (statsData ?? []).map((row: any) => ({
+app/lineups/scores/page.tsx-410-            player_id: Number(row.player_id),
+app/lineups/scores/page.tsx-411-            leaderboard_order:
+app/lineups/scores/page.tsx-412-              row.leaderboard_order === null
+app/lineups/scores/page.tsx-413-                ? null
+app/lineups/scores/page.tsx-414-                : Number(row.leaderboard_order),
+app/lineups/scores/page.tsx-415-            official_score_to_par:
+app/lineups/scores/page.tsx-416-              row.official_score_to_par === null
+app/lineups/scores/page.tsx-417-                ? null
+app/lineups/scores/page.tsx-418-                : Number(row.official_score_to_par),
+app/lineups/scores/page.tsx-419-            official_score_display: row.official_score_display ?? null,
+app/lineups/scores/page.tsx-420-            penalty_strokes: Number(row.penalty_strokes ?? 0),
+app/lineups/scores/page.tsx-421-            fantasy_points:
+app/lineups/scores/page.tsx-422-              row.fantasy_score === null
+app/lineups/scores/page.tsx-423-                ? null
+app/lineups/scores/page.tsx-424-                : Number(row.fantasy_score),
+app/lineups/scores/page.tsx-425-            rounds_completed: Number(row.rounds_completed ?? 0),
+app/lineups/scores/page.tsx-426-            holes_completed: Number(row.holes_completed ?? 0),
+app/lineups/scores/page.tsx-427-            current_round:
+app/lineups/scores/page.tsx-428-              row.current_round === null
+app/lineups/scores/page.tsx-429-                ? null
+app/lineups/scores/page.tsx-430-                : Number(row.current_round),
+app/lineups/scores/page.tsx-431-            last_hole:
+app/lineups/scores/page.tsx-432-              row.last_hole === null ? null : Number(row.last_hole),
+app/lineups/scores/page.tsx-433-            status: row.status ?? "scheduled",
+app/lineups/scores/page.tsx:434:            tee_time: row.tee_time ?? null,
+app/lineups/scores/page.tsx:435:            tee_time_raw: row.tee_time_raw ?? null,
+app/lineups/scores/page.tsx-436-            rounds: (row.golf_rounds ?? [])
+app/lineups/scores/page.tsx-437-              .map((round: any) => ({
+app/lineups/scores/page.tsx-438-                round_number: Number(round.round_number),
+app/lineups/scores/page.tsx-439-                score_to_par:
+app/lineups/scores/page.tsx-440-                  round.score_to_par === null
+app/lineups/scores/page.tsx-441-                    ? null
+app/lineups/scores/page.tsx-442-                    : Number(round.score_to_par),
+app/lineups/scores/page.tsx-443-                score_display: round.score_display ?? null,
+app/lineups/scores/page.tsx-444-                strokes:
+app/lineups/scores/page.tsx-445-                  round.strokes === null ? null : Number(round.strokes),
+app/lineups/scores/page.tsx-446-                holes_completed: Number(round.holes_completed ?? 0),
+app/lineups/scores/page.tsx:447:                tee_time: round.tee_time ?? null,
+app/lineups/scores/page.tsx:448:                tee_time_raw: round.tee_time_raw ?? null,
+app/lineups/scores/page.tsx-449-                status: round.status ?? "scheduled",
+app/lineups/scores/page.tsx-450-                holes: (round.golf_holes ?? [])
+app/lineups/scores/page.tsx-451-                  .map((hole: any) => ({
+app/lineups/scores/page.tsx-452-                    hole_number: Number(hole.hole_number),
+app/lineups/scores/page.tsx-453-                    strokes:
+app/lineups/scores/page.tsx-454-                      hole.strokes === null ? null : Number(hole.strokes),
+app/lineups/scores/page.tsx-455-                    relative_to_par:
+app/lineups/scores/page.tsx-456-                      hole.relative_to_par === null
+app/lineups/scores/page.tsx-457-                        ? null
+app/lineups/scores/page.tsx-458-                        : Number(hole.relative_to_par),
+app/lineups/scores/page.tsx-459-                    score_display: hole.score_display ?? null,
+app/lineups/scores/page.tsx-460-                  }))
+app/lineups/scores/page.tsx-461-                  .sort(
+app/lineups/scores/page.tsx-462-                    (
+app/lineups/scores/page.tsx-463-                      a: { hole_number: number },
+app/lineups/scores/page.tsx-464-                      b: { hole_number: number },
+app/lineups/scores/page.tsx-465-                    ) => a.hole_number - b.hole_number,
+app/lineups/scores/page.tsx-466-                  ),
+app/lineups/scores/page.tsx-467-              }))
+app/lineups/scores/page.tsx-468-              .sort(
+app/lineups/scores/page.tsx-469-                (
+app/lineups/scores/page.tsx-470-                  a: { round_number: number },
+app/lineups/scores/page.tsx-471-                  b: { round_number: number },
+app/lineups/scores/page.tsx-472-                ) => a.round_number - b.round_number,
+app/lineups/scores/page.tsx-473-              ),
+app/lineups/scores/page.tsx-474-          }))
+app/lineups/scores/page.tsx-475-        : statsData ?? [];
+app/lineups/scores/page.tsx-476-    teamResults = teamResultsData ?? [];
+app/lineups/scores/page.tsx-477-  }
+app/lineups/scores/page.tsx-478-
+app/lineups/scores/page.tsx-479-  return (
+app/lineups/scores/page.tsx-480-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/lineups/scores/page.tsx-481-      <div className="mx-auto max-w-[1600px] space-y-6">
+app/lineups/scores/page.tsx-482-        <AppNav />
+app/lineups/scores/page.tsx-483-
+app/lineups/scores/page.tsx-484-        <LineupBuilder
+app/lineups/scores/page.tsx-485-          players={normalizedPlayers}
+app/lineups/scores/page.tsx-486-          teams={teams ?? []}
+app/lineups/scores/page.tsx-487-          slates={safeSlates}
+app/lineups/scores/page.tsx-488-          slateTeamConfigs={safeSlateTeams}
+app/lineups/scores/page.tsx-489-          playerAverages={playerAverages}
+app/lineups/scores/page.tsx-490-          initialSelectedSlateId={selectedSlateId}
+app/lineups/scores/page.tsx-491-          savedLineupsForInitialSlate={savedLineupsForInitialSlate}
+app/lineups/scores/page.tsx-492-          playerStats={playerStats}
+app/lineups/scores/page.tsx-493-          teamResults={teamResults}
+--
+app/api/player-stats/route.ts-103-        : slate?.sport === "golf"
+app/api/player-stats/route.ts-104-          ? "golf"
+app/api/player-stats/route.ts-105-          : "nba";
+app/api/player-stats/route.ts-106-
+app/api/player-stats/route.ts-107-    if (sport === "golf") {
+app/api/player-stats/route.ts-108-      const { data, error } = await supabaseAdmin
+app/api/player-stats/route.ts-109-        .from("golf_event_players")
+app/api/player-stats/route.ts-110-        .select(
+app/api/player-stats/route.ts-111-          `
+app/api/player-stats/route.ts-112-          player_id,
+app/api/player-stats/route.ts-113-          leaderboard_order,
+app/api/player-stats/route.ts-114-          official_score_to_par,
+app/api/player-stats/route.ts-115-          official_score_display,
+app/api/player-stats/route.ts-116-          penalty_strokes,
+app/api/player-stats/route.ts-117-          fantasy_score,
+app/api/player-stats/route.ts-118-          rounds_completed,
+app/api/player-stats/route.ts-119-          holes_completed,
+app/api/player-stats/route.ts-120-          current_round,
+app/api/player-stats/route.ts-121-          last_hole,
+app/api/player-stats/route.ts-122-          status,
+app/api/player-stats/route.ts:123:          tee_time,
+app/api/player-stats/route.ts:124:          tee_time_raw,
+app/api/player-stats/route.ts-125-          golf_rounds (
+app/api/player-stats/route.ts-126-            round_number,
+app/api/player-stats/route.ts-127-            score_to_par,
+app/api/player-stats/route.ts-128-            score_display,
+app/api/player-stats/route.ts-129-            strokes,
+app/api/player-stats/route.ts-130-            holes_completed,
+app/api/player-stats/route.ts:131:            tee_time,
+app/api/player-stats/route.ts:132:            tee_time_raw,
+app/api/player-stats/route.ts-133-            status,
+app/api/player-stats/route.ts-134-            golf_holes (
+app/api/player-stats/route.ts-135-              hole_number,
+app/api/player-stats/route.ts-136-              strokes,
+app/api/player-stats/route.ts-137-              relative_to_par,
+app/api/player-stats/route.ts-138-              score_display
+app/api/player-stats/route.ts-139-            )
+app/api/player-stats/route.ts-140-          )
+app/api/player-stats/route.ts-141-        `,
+app/api/player-stats/route.ts-142-        )
+app/api/player-stats/route.ts-143-        .eq("slate_id", slateId)
+app/api/player-stats/route.ts-144-        .order("leaderboard_order", {
+app/api/player-stats/route.ts-145-          ascending: true,
+app/api/player-stats/route.ts-146-          nullsFirst: false,
+app/api/player-stats/route.ts-147-        });
+app/api/player-stats/route.ts-148-
+app/api/player-stats/route.ts-149-      if (error) {
+app/api/player-stats/route.ts-150-        return NextResponse.json(
+app/api/player-stats/route.ts-151-          { error: `Failed to load Golf stats: ${error.message}` },
+app/api/player-stats/route.ts-152-          { status: 500, headers: noStoreHeaders() },
+app/api/player-stats/route.ts-153-        );
+app/api/player-stats/route.ts-154-      }
+app/api/player-stats/route.ts-155-
+app/api/player-stats/route.ts-156-      const { data: courseHoleData, error: courseHoleError } =
+app/api/player-stats/route.ts-157-        await supabaseAdmin
+app/api/player-stats/route.ts-158-          .from("golf_course_holes")
+app/api/player-stats/route.ts-159-          .select(
+app/api/player-stats/route.ts-160-            "hole_number, par, yards, is_host",
+app/api/player-stats/route.ts-161-          )
+app/api/player-stats/route.ts-162-          .eq("slate_id", slateId)
+app/api/player-stats/route.ts-163-          .order("is_host", {
+app/api/player-stats/route.ts-164-            ascending: false,
+app/api/player-stats/route.ts-165-          })
+app/api/player-stats/route.ts-166-          .order("hole_number", {
+app/api/player-stats/route.ts-167-            ascending: true,
+app/api/player-stats/route.ts-168-          });
+app/api/player-stats/route.ts-169-
+app/api/player-stats/route.ts-170-      if (courseHoleError) {
+app/api/player-stats/route.ts-171-        return NextResponse.json(
+app/api/player-stats/route.ts-172-          {
+app/api/player-stats/route.ts-173-            error:
+app/api/player-stats/route.ts-174-              `Failed to load Golf course data: ${courseHoleError.message}`,
+app/api/player-stats/route.ts-175-          },
+app/api/player-stats/route.ts-176-          {
+app/api/player-stats/route.ts-177-            status: 500,
+--
+app/api/player-stats/route.ts-197-      const playerStats = (data ?? []).map((row: any) => ({
+app/api/player-stats/route.ts-198-        player_id: Number(row.player_id),
+app/api/player-stats/route.ts-199-        leaderboard_order:
+app/api/player-stats/route.ts-200-          row.leaderboard_order === null
+app/api/player-stats/route.ts-201-            ? null
+app/api/player-stats/route.ts-202-            : Number(row.leaderboard_order),
+app/api/player-stats/route.ts-203-        official_score_to_par:
+app/api/player-stats/route.ts-204-          row.official_score_to_par === null
+app/api/player-stats/route.ts-205-            ? null
+app/api/player-stats/route.ts-206-            : Number(row.official_score_to_par),
+app/api/player-stats/route.ts-207-        official_score_display: row.official_score_display ?? null,
+app/api/player-stats/route.ts-208-        penalty_strokes: Number(row.penalty_strokes ?? 0),
+app/api/player-stats/route.ts-209-        fantasy_points:
+app/api/player-stats/route.ts-210-          row.fantasy_score === null ? null : Number(row.fantasy_score),
+app/api/player-stats/route.ts-211-        rounds_completed: Number(row.rounds_completed ?? 0),
+app/api/player-stats/route.ts-212-        holes_completed: Number(row.holes_completed ?? 0),
+app/api/player-stats/route.ts-213-        current_round:
+app/api/player-stats/route.ts-214-          row.current_round === null ? null : Number(row.current_round),
+app/api/player-stats/route.ts-215-        last_hole: row.last_hole === null ? null : Number(row.last_hole),
+app/api/player-stats/route.ts-216-        status: row.status ?? "scheduled",
+app/api/player-stats/route.ts:217:        tee_time: row.tee_time ?? null,
+app/api/player-stats/route.ts:218:        tee_time_raw: row.tee_time_raw ?? null,
+app/api/player-stats/route.ts-219-        rounds: (row.golf_rounds ?? [])
+app/api/player-stats/route.ts-220-          .map((round: any) => ({
+app/api/player-stats/route.ts-221-            round_number: Number(round.round_number),
+app/api/player-stats/route.ts-222-            score_to_par:
+app/api/player-stats/route.ts-223-              round.score_to_par === null
+app/api/player-stats/route.ts-224-                ? null
+app/api/player-stats/route.ts-225-                : Number(round.score_to_par),
+app/api/player-stats/route.ts-226-            score_display: round.score_display ?? null,
+app/api/player-stats/route.ts-227-            strokes:
+app/api/player-stats/route.ts-228-              round.strokes === null ? null : Number(round.strokes),
+app/api/player-stats/route.ts-229-            holes_completed: Number(round.holes_completed ?? 0),
+app/api/player-stats/route.ts:230:            tee_time: round.tee_time ?? null,
+app/api/player-stats/route.ts:231:            tee_time_raw: round.tee_time_raw ?? null,
+app/api/player-stats/route.ts-232-            status: round.status ?? "scheduled",
+app/api/player-stats/route.ts-233-            holes: mergeGolfRoundHoles(
+app/api/player-stats/route.ts-234-              round.golf_holes ?? [],
+app/api/player-stats/route.ts-235-              courseHoleByNumber,
+app/api/player-stats/route.ts-236-            ),
+app/api/player-stats/route.ts-237-          }))
+app/api/player-stats/route.ts-238-          .sort(
+app/api/player-stats/route.ts-239-            (a: { round_number: number }, b: { round_number: number }) =>
+app/api/player-stats/route.ts-240-              a.round_number - b.round_number,
+app/api/player-stats/route.ts-241-          ),
+app/api/player-stats/route.ts-242-      }));
+app/api/player-stats/route.ts-243-
+app/api/player-stats/route.ts-244-      return NextResponse.json(
+app/api/player-stats/route.ts-245-        {
+app/api/player-stats/route.ts-246-          success: true,
+app/api/player-stats/route.ts-247-          sport,
+app/api/player-stats/route.ts-248-          playerStats,
+app/api/player-stats/route.ts-249-        },
+app/api/player-stats/route.ts-250-        { headers: noStoreHeaders() },
+app/api/player-stats/route.ts-251-      );
+app/api/player-stats/route.ts-252-    }
+app/api/player-stats/route.ts-253-
+app/api/player-stats/route.ts-254-    if (sport === "nfl") {
+app/api/player-stats/route.ts-255-      const { data, error } = await supabaseAdmin
+app/api/player-stats/route.ts-256-        .from("player_nfl_slate_stats")
+app/api/player-stats/route.ts-257-        .select(
+app/api/player-stats/route.ts-258-          `
+app/api/player-stats/route.ts-259-          player_id,
+app/api/player-stats/route.ts-260-          passing_yards,
+app/api/player-stats/route.ts-261-          passing_tds,
+app/api/player-stats/route.ts-262-          passing_ints,
+app/api/player-stats/route.ts-263-          rushing_yards,
+app/api/player-stats/route.ts-264-          rushing_tds,
+app/api/player-stats/route.ts-265-          receiving_yards,
+app/api/player-stats/route.ts-266-          receiving_tds,
+app/api/player-stats/route.ts-267-          receptions,
+app/api/player-stats/route.ts-268-          fumbles_lost,
+app/api/player-stats/route.ts-269-          fantasy_points,
+app/api/player-stats/route.ts-270-          game_status,
+app/api/player-stats/route.ts-271-          game_status_text
+app/api/player-stats/route.ts-272-        `,
+app/api/player-stats/route.ts-273-        )
+app/api/player-stats/route.ts-274-        .eq("slate_id", slateId)
+app/api/player-stats/route.ts-275-        .order("player_id", { ascending: true });
+app/api/player-stats/route.ts-276-
+--
+app/api/admin/golf/import-field/route.ts-456-      field.players.map(
+app/api/admin/golf/import-field/route.ts-457-        (player, index) => ({
+app/api/admin/golf/import-field/route.ts-458-          slate_id: slateId,
+app/api/admin/golf/import-field/route.ts-459-          player_id:
+app/api/admin/golf/import-field/route.ts-460-            resolvedPlayerIds.get(
+app/api/admin/golf/import-field/route.ts-461-              player.pgaPlayerId,
+app/api/admin/golf/import-field/route.ts-462-            )!,
+app/api/admin/golf/import-field/route.ts-463-          leaderboard_order:
+app/api/admin/golf/import-field/route.ts-464-            index + 1,
+app/api/admin/golf/import-field/route.ts-465-          official_score_to_par:
+app/api/admin/golf/import-field/route.ts-466-            null,
+app/api/admin/golf/import-field/route.ts-467-          official_score_display:
+app/api/admin/golf/import-field/route.ts-468-            null,
+app/api/admin/golf/import-field/route.ts-469-          penalty_strokes: 0,
+app/api/admin/golf/import-field/route.ts-470-          fantasy_score: null,
+app/api/admin/golf/import-field/route.ts-471-          rounds_completed: 0,
+app/api/admin/golf/import-field/route.ts-472-          holes_completed: 0,
+app/api/admin/golf/import-field/route.ts-473-          current_round: null,
+app/api/admin/golf/import-field/route.ts-474-          last_hole: null,
+app/api/admin/golf/import-field/route.ts-475-          status: "scheduled",
+app/api/admin/golf/import-field/route.ts:476:          tee_time: null,
+app/api/admin/golf/import-field/route.ts:477:          tee_time_raw: null,
+app/api/admin/golf/import-field/route.ts-478-          updated_at:
+app/api/admin/golf/import-field/route.ts-479-            refreshedAt,
+app/api/admin/golf/import-field/route.ts-480-        }),
+app/api/admin/golf/import-field/route.ts-481-      );
+app/api/admin/golf/import-field/route.ts-482-
+app/api/admin/golf/import-field/route.ts-483-    const {
+app/api/admin/golf/import-field/route.ts-484-      data: eventData,
+app/api/admin/golf/import-field/route.ts-485-      error: eventError,
+app/api/admin/golf/import-field/route.ts-486-    } = await supabaseAdmin
+app/api/admin/golf/import-field/route.ts-487-      .from("golf_event_players")
+app/api/admin/golf/import-field/route.ts-488-      .upsert(eventRows, {
+app/api/admin/golf/import-field/route.ts-489-        onConflict:
+app/api/admin/golf/import-field/route.ts-490-          "slate_id,player_id",
+app/api/admin/golf/import-field/route.ts-491-      })
+app/api/admin/golf/import-field/route.ts-492-      .select("id");
+app/api/admin/golf/import-field/route.ts-493-
+app/api/admin/golf/import-field/route.ts-494-    if (eventError) {
+app/api/admin/golf/import-field/route.ts-495-      return NextResponse.json(
+app/api/admin/golf/import-field/route.ts-496-        {
+app/api/admin/golf/import-field/route.ts-497-          error:
+app/api/admin/golf/import-field/route.ts-498-            "The golfers were saved, but the slate field could not be populated: " +
+app/api/admin/golf/import-field/route.ts-499-            eventError.message,
+app/api/admin/golf/import-field/route.ts-500-        },
+app/api/admin/golf/import-field/route.ts-501-        { status: 500 },
+app/api/admin/golf/import-field/route.ts-502-      );
+app/api/admin/golf/import-field/route.ts-503-    }
+app/api/admin/golf/import-field/route.ts-504-
+app/api/admin/golf/import-field/route.ts-505-    return NextResponse.json({
+app/api/admin/golf/import-field/route.ts-506-      success: true,
+app/api/admin/golf/import-field/route.ts-507-      slateId,
+app/api/admin/golf/import-field/route.ts-508-      tournament: {
+app/api/admin/golf/import-field/route.ts-509-        pgaTournamentId:
+app/api/admin/golf/import-field/route.ts-510-          field.tournamentId,
+app/api/admin/golf/import-field/route.ts-511-        name:
+app/api/admin/golf/import-field/route.ts-512-          field.tournamentName,
+app/api/admin/golf/import-field/route.ts-513-        fieldUrl:
+app/api/admin/golf/import-field/route.ts-514-          field.fieldUrl,
+app/api/admin/golf/import-field/route.ts-515-      },
+app/api/admin/golf/import-field/route.ts-516-      fieldPlayersFound:
+app/api/admin/golf/import-field/route.ts-517-        field.players.length,
+app/api/admin/golf/import-field/route.ts-518-      existingGolfersMatched:
+app/api/admin/golf/import-field/route.ts-519-        field.players.length -
+app/api/admin/golf/import-field/route.ts-520-        missingPlayers.length,
+app/api/admin/golf/import-field/route.ts-521-      createdGolfers,
+app/api/admin/golf/import-field/route.ts-522-      eventPlayersUpserted:
+--
+app/api/refresh-stats-golf/route.ts-736-      });
+app/api/refresh-stats-golf/route.ts-737-
+app/api/refresh-stats-golf/route.ts-738-      const fantasyScore =
+app/api/refresh-stats-golf/route.ts-739-        competitor.officialScoreToPar === null
+app/api/refresh-stats-golf/route.ts-740-          ? null
+app/api/refresh-stats-golf/route.ts-741-          : competitor.officialScoreToPar + penaltyStrokes;
+app/api/refresh-stats-golf/route.ts-742-
+app/api/refresh-stats-golf/route.ts-743-      return {
+app/api/refresh-stats-golf/route.ts-744-        slate_id: slateId,
+app/api/refresh-stats-golf/route.ts-745-        player_id: playerIdByEspnId.get(competitor.espnPlayerId)!,
+app/api/refresh-stats-golf/route.ts-746-        leaderboard_order: competitor.leaderboardOrder,
+app/api/refresh-stats-golf/route.ts-747-        official_score_to_par: competitor.officialScoreToPar,
+app/api/refresh-stats-golf/route.ts-748-        official_score_display: competitor.officialScoreDisplay,
+app/api/refresh-stats-golf/route.ts-749-        penalty_strokes: penaltyStrokes,
+app/api/refresh-stats-golf/route.ts-750-        fantasy_score: fantasyScore,
+app/api/refresh-stats-golf/route.ts-751-        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts-752-        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts-753-        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts-754-        last_hole: competitor.lastHole,
+app/api/refresh-stats-golf/route.ts-755-        status: competitor.status,
+app/api/refresh-stats-golf/route.ts:756:        tee_time: competitor.teeTime,
+app/api/refresh-stats-golf/route.ts:757:        tee_time_raw: competitor.teeTimeRaw,
+app/api/refresh-stats-golf/route.ts-758-        updated_at: refreshedAt,
+app/api/refresh-stats-golf/route.ts-759-      };
+app/api/refresh-stats-golf/route.ts-760-    });
+app/api/refresh-stats-golf/route.ts-761-
+app/api/refresh-stats-golf/route.ts-762-    const { data: eventPlayersData, error: eventPlayersUpsertError } =
+app/api/refresh-stats-golf/route.ts-763-      await supabaseAdmin
+app/api/refresh-stats-golf/route.ts-764-        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts-765-        .upsert(eventPlayerRows, {
+app/api/refresh-stats-golf/route.ts-766-          onConflict: "slate_id,player_id",
+app/api/refresh-stats-golf/route.ts-767-        })
+app/api/refresh-stats-golf/route.ts-768-        .select("id, player_id");
+app/api/refresh-stats-golf/route.ts-769-
+app/api/refresh-stats-golf/route.ts-770-    if (eventPlayersUpsertError) {
+app/api/refresh-stats-golf/route.ts-771-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-772-        {
+app/api/refresh-stats-golf/route.ts-773-          error:
+app/api/refresh-stats-golf/route.ts-774-            "Golf players were saved, but the tournament field could not be linked to the slate: " +
+app/api/refresh-stats-golf/route.ts-775-            eventPlayersUpsertError.message,
+app/api/refresh-stats-golf/route.ts-776-        },
+app/api/refresh-stats-golf/route.ts-777-        { status: 500 },
+app/api/refresh-stats-golf/route.ts-778-      );
+app/api/refresh-stats-golf/route.ts-779-    }
+app/api/refresh-stats-golf/route.ts-780-
+app/api/refresh-stats-golf/route.ts-781-    const eventPlayers = (eventPlayersData ?? []) as GolfEventPlayerIdRow[];
+app/api/refresh-stats-golf/route.ts-782-
+app/api/refresh-stats-golf/route.ts-783-    const eventPlayerIdByPlayerId = new Map(
+app/api/refresh-stats-golf/route.ts-784-      eventPlayers.map((eventPlayer) => [
+app/api/refresh-stats-golf/route.ts-785-        Number(eventPlayer.player_id),
+app/api/refresh-stats-golf/route.ts-786-        Number(eventPlayer.id),
+app/api/refresh-stats-golf/route.ts-787-      ]),
+app/api/refresh-stats-golf/route.ts-788-    );
+app/api/refresh-stats-golf/route.ts-789-
+app/api/refresh-stats-golf/route.ts-790-    const unresolvedEventPlayers = competitors.filter((competitor) => {
+app/api/refresh-stats-golf/route.ts-791-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId);
+app/api/refresh-stats-golf/route.ts-792-
+app/api/refresh-stats-golf/route.ts-793-      return playerId === undefined || !eventPlayerIdByPlayerId.has(playerId);
+app/api/refresh-stats-golf/route.ts-794-    });
+app/api/refresh-stats-golf/route.ts-795-
+app/api/refresh-stats-golf/route.ts-796-    if (unresolvedEventPlayers.length > 0) {
+app/api/refresh-stats-golf/route.ts-797-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-798-        {
+app/api/refresh-stats-golf/route.ts-799-          error:
+app/api/refresh-stats-golf/route.ts-800-            "Tournament players were linked to the slate, but one or more event-player IDs could not be resolved.",
+app/api/refresh-stats-golf/route.ts-801-          unresolvedPlayers: unresolvedEventPlayers.map(
+app/api/refresh-stats-golf/route.ts-802-            (competitor) => competitor.displayName,
+--
+app/api/refresh-stats-golf/route.ts-882-      if (competitor.rounds.length === 0) {
+app/api/refresh-stats-golf/route.ts-883-        const scheduledRoundNumber = Math.min(
+app/api/refresh-stats-golf/route.ts-884-          4,
+app/api/refresh-stats-golf/route.ts-885-          Math.max(
+app/api/refresh-stats-golf/route.ts-886-            1,
+app/api/refresh-stats-golf/route.ts-887-            Number(
+app/api/refresh-stats-golf/route.ts-888-              competitor.currentRound ??
+app/api/refresh-stats-golf/route.ts-889-                competitor.roundsCompleted + 1,
+app/api/refresh-stats-golf/route.ts-890-            ),
+app/api/refresh-stats-golf/route.ts-891-          ),
+app/api/refresh-stats-golf/route.ts-892-        );
+app/api/refresh-stats-golf/route.ts-893-
+app/api/refresh-stats-golf/route.ts-894-        return [
+app/api/refresh-stats-golf/route.ts-895-          {
+app/api/refresh-stats-golf/route.ts-896-            event_player_id: eventPlayerId,
+app/api/refresh-stats-golf/route.ts-897-            round_number: scheduledRoundNumber,
+app/api/refresh-stats-golf/route.ts-898-            score_to_par: null,
+app/api/refresh-stats-golf/route.ts-899-            score_display: null,
+app/api/refresh-stats-golf/route.ts-900-            strokes: null,
+app/api/refresh-stats-golf/route.ts-901-            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts:902:            tee_time: competitor.teeTime,
+app/api/refresh-stats-golf/route.ts:903:            tee_time_raw: competitor.teeTimeRaw,
+app/api/refresh-stats-golf/route.ts-904-            status: "scheduled" as const,
+app/api/refresh-stats-golf/route.ts-905-            updated_at: refreshedAt,
+app/api/refresh-stats-golf/route.ts-906-          },
+app/api/refresh-stats-golf/route.ts-907-        ];
+app/api/refresh-stats-golf/route.ts-908-      }
+app/api/refresh-stats-golf/route.ts-909-
+app/api/refresh-stats-golf/route.ts-910-      return competitor.rounds.map((round) => ({
+app/api/refresh-stats-golf/route.ts-911-        event_player_id: eventPlayerId,
+app/api/refresh-stats-golf/route.ts-912-        round_number: round.roundNumber,
+app/api/refresh-stats-golf/route.ts-913-        score_to_par: round.scoreToPar,
+app/api/refresh-stats-golf/route.ts-914-        score_display: round.scoreDisplay,
+app/api/refresh-stats-golf/route.ts-915-        strokes: round.strokes,
+app/api/refresh-stats-golf/route.ts-916-        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts:917:        tee_time: round.teeTime,
+app/api/refresh-stats-golf/route.ts:918:        tee_time_raw: round.teeTimeRaw,
+app/api/refresh-stats-golf/route.ts-919-        status: getRoundStatus(round, tournament.status),
+app/api/refresh-stats-golf/route.ts-920-        updated_at: refreshedAt,
+app/api/refresh-stats-golf/route.ts-921-      }));
+app/api/refresh-stats-golf/route.ts-922-    });
+app/api/refresh-stats-golf/route.ts-923-
+app/api/refresh-stats-golf/route.ts-924-    let savedRounds: GolfRoundIdRow[] = [];
+app/api/refresh-stats-golf/route.ts-925-
+app/api/refresh-stats-golf/route.ts-926-    for (const batch of chunkRows(roundRows, INSERT_BATCH_SIZE)) {
+app/api/refresh-stats-golf/route.ts-927-      const { data: insertedRoundsData, error: roundsInsertError } =
+app/api/refresh-stats-golf/route.ts-928-        await supabaseAdmin
+app/api/refresh-stats-golf/route.ts-929-          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts-930-          .insert(batch)
+app/api/refresh-stats-golf/route.ts-931-          .select("id, event_player_id, round_number");
+app/api/refresh-stats-golf/route.ts-932-
+app/api/refresh-stats-golf/route.ts-933-      if (roundsInsertError) {
+app/api/refresh-stats-golf/route.ts-934-        return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-935-          {
+app/api/refresh-stats-golf/route.ts-936-            error:
+app/api/refresh-stats-golf/route.ts-937-              "Golf rounds could not be saved: " + roundsInsertError.message,
+app/api/refresh-stats-golf/route.ts-938-          },
+app/api/refresh-stats-golf/route.ts-939-          { status: 500 },
+app/api/refresh-stats-golf/route.ts-940-        );
+app/api/refresh-stats-golf/route.ts-941-      }
+app/api/refresh-stats-golf/route.ts-942-
+app/api/refresh-stats-golf/route.ts-943-      savedRounds = savedRounds.concat(
+app/api/refresh-stats-golf/route.ts-944-        (insertedRoundsData ?? []) as GolfRoundIdRow[],
+app/api/refresh-stats-golf/route.ts-945-      );
+app/api/refresh-stats-golf/route.ts-946-    }
+app/api/refresh-stats-golf/route.ts-947-
+app/api/refresh-stats-golf/route.ts-948-    const roundIdByKey = new Map(
+app/api/refresh-stats-golf/route.ts-949-      savedRounds.map((round) => [
+app/api/refresh-stats-golf/route.ts-950-        `${round.event_player_id}:${round.round_number}`,
+app/api/refresh-stats-golf/route.ts-951-        Number(round.id),
+app/api/refresh-stats-golf/route.ts-952-      ]),
+app/api/refresh-stats-golf/route.ts-953-    );
+app/api/refresh-stats-golf/route.ts-954-
+app/api/refresh-stats-golf/route.ts-955-    const holeRows = competitors.flatMap((competitor) => {
+app/api/refresh-stats-golf/route.ts-956-      const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+app/api/refresh-stats-golf/route.ts-957-
+app/api/refresh-stats-golf/route.ts-958-      const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+app/api/refresh-stats-golf/route.ts-959-
+app/api/refresh-stats-golf/route.ts-960-      return competitor.rounds.flatMap((round) => {
+app/api/refresh-stats-golf/route.ts-961-        const roundId = roundIdByKey.get(
+app/api/refresh-stats-golf/route.ts-962-          `${eventPlayerId}:${round.roundNumber}`,
+app/api/refresh-stats-golf/route.ts-963-        );
+--
+app/admin/slates/page.tsx-88-}
+app/admin/slates/page.tsx-89-
+app/admin/slates/page.tsx-90-function formatDateRange(
+app/admin/slates/page.tsx-91-  startDate: string | null,
+app/admin/slates/page.tsx-92-  endDate: string | null,
+app/admin/slates/page.tsx-93-) {
+app/admin/slates/page.tsx-94-  if (!startDate) return "Dates unavailable";
+app/admin/slates/page.tsx-95-  if (!endDate || startDate === endDate) return startDate;
+app/admin/slates/page.tsx-96-  return `${startDate} – ${endDate}`;
+app/admin/slates/page.tsx-97-}
+app/admin/slates/page.tsx-98-
+app/admin/slates/page.tsx-99-function formatRefreshTime(value: string | null) {
+app/admin/slates/page.tsx-100-  if (!value) return "Not loaded yet";
+app/admin/slates/page.tsx-101-
+app/admin/slates/page.tsx-102-  const date = new Date(value);
+app/admin/slates/page.tsx-103-
+app/admin/slates/page.tsx-104-  if (Number.isNaN(date.getTime())) {
+app/admin/slates/page.tsx-105-    return "Unavailable";
+app/admin/slates/page.tsx-106-  }
+app/admin/slates/page.tsx-107-
+app/admin/slates/page.tsx:108:  return date.toLocaleString([], {
+app/admin/slates/page.tsx-109-    month: "short",
+app/admin/slates/page.tsx-110-    day: "numeric",
+app/admin/slates/page.tsx-111-    hour: "numeric",
+app/admin/slates/page.tsx-112-    minute: "2-digit",
+app/admin/slates/page.tsx-113-  });
+app/admin/slates/page.tsx-114-}
+app/admin/slates/page.tsx-115-
+app/admin/slates/page.tsx-116-export default function AdminSlatesPage() {
+app/admin/slates/page.tsx-117-  const { selectedSport } = useSelectedSport();
+app/admin/slates/page.tsx-118-
+app/admin/slates/page.tsx-119-  const [slates, setSlates] = useState<SlateListRow[]>([]);
+app/admin/slates/page.tsx-120-  const [selectedSlateId, setSelectedSlateId] =
+app/admin/slates/page.tsx-121-    useState<number | "">("");
+app/admin/slates/page.tsx-122-  const [selectedSlate, setSelectedSlate] =
+app/admin/slates/page.tsx-123-    useState<SelectedSlateState | null>(null);
+app/admin/slates/page.tsx-124-  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+app/admin/slates/page.tsx-125-  const [golfField, setGolfField] =
+app/admin/slates/page.tsx-126-    useState<GolfFieldSummary | null>(null);
+app/admin/slates/page.tsx-127-
+app/admin/slates/page.tsx-128-  const [
+app/admin/slates/page.tsx-129-    shotCast,
+app/admin/slates/page.tsx-130-    setShotCast,
+app/admin/slates/page.tsx-131-  ] = useState<ShotCastSummary | null>(
+app/admin/slates/page.tsx-132-    null,
+app/admin/slates/page.tsx-133-  );
+app/admin/slates/page.tsx-134-
+app/admin/slates/page.tsx-135-  const [
+app/admin/slates/page.tsx-136-    shotCastTournamentId,
+app/admin/slates/page.tsx-137-    setShotCastTournamentId,
+app/admin/slates/page.tsx-138-  ] = useState("");
+app/admin/slates/page.tsx-139-
+app/admin/slates/page.tsx-140-  const [isLoading, setIsLoading] = useState(true);
+app/admin/slates/page.tsx-141-  const [isSaving, setIsSaving] = useState(false);
+app/admin/slates/page.tsx-142-  const [isReseeding, setIsReseeding] = useState(false);
+app/admin/slates/page.tsx-143-  const [isDeleting, setIsDeleting] = useState(false);
+app/admin/slates/page.tsx-144-  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx-145-    useState(false);
+app/admin/slates/page.tsx-146-  const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
+app/admin/slates/page.tsx-147-    useState(false);
+app/admin/slates/page.tsx-148-
+app/admin/slates/page.tsx-149-  const [
+app/admin/slates/page.tsx-150-    isRefreshingShotCast,
+app/admin/slates/page.tsx-151-    setIsRefreshingShotCast,
+app/admin/slates/page.tsx-152-  ] = useState(false);
+app/admin/slates/page.tsx-153-
+--
+app/admin/notification-history/page.tsx-351-                            ] ??
+app/admin/notification-history/page.tsx-352-                            STATUS_STYLES.pending
+app/admin/notification-history/page.tsx-353-                          }`}
+app/admin/notification-history/page.tsx-354-                        >
+app/admin/notification-history/page.tsx-355-                          {row.status}
+app/admin/notification-history/page.tsx-356-                        </span>
+app/admin/notification-history/page.tsx-357-                      </div>
+app/admin/notification-history/page.tsx-358-
+app/admin/notification-history/page.tsx-359-                      <h2 className="mt-3 text-lg font-semibold text-white">
+app/admin/notification-history/page.tsx-360-                        {row.title}
+app/admin/notification-history/page.tsx-361-                      </h2>
+app/admin/notification-history/page.tsx-362-
+grep: write error: Broken pipe
+
+============================================================
+SHOTCAST MANIFEST ROUTE
+============================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+export const dynamic =
+  "force-dynamic";
+
+export async function GET(
+  request: NextRequest,
+) {
+  const tournamentId =
+    request.nextUrl.searchParams
+      .get("tournamentId")
+      ?.trim()
+      .toUpperCase() ?? "";
+
+  if (
+    !/^R\d{7}$/.test(
+      tournamentId,
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid tournamentId is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("shotcast_manifests")
+    .select("manifest")
+    .eq(
+      "tournament_id",
+      tournamentId,
+    )
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 },
+    );
+  }
+
+  if (!data?.manifest) {
+    return NextResponse.json(
+      {
+        error:
+          "ShotCast manifest not found.",
+      },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    data.manifest,
+    {
+      headers: {
+        "Cache-Control":
+          "no-store, max-age=0",
+      },
+    },
+  );
+}
+
+============================================================
+SHOTCAST ADMIN ROUTE
+============================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  importShotCastManifest,
+} from "@/lib/shotcast/importShotCastManifest";
+
+import {
+  requireAdminApi,
+} from "@/lib/requireAdminApi";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+function parseSlateId(value: unknown) {
+  const slateId = Number(value);
+
+  return Number.isInteger(slateId) &&
+    slateId > 0
+    ? slateId
+    : null;
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  const authError =
+    await requireAdminApi();
+
+  if (authError) {
+    return authError;
+  }
+
+  const slateId =
+    parseSlateId(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+  if (!slateId) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid slateId is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("shotcast_manifests")
+    .select(
+      "tournament_id, manifest, generated_at, updated_at",
+    )
+    .eq("slate_id", slateId)
+    .order(
+      "updated_at",
+      {
+        ascending: false,
+      },
+    )
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    shotcast: data
+      ? {
+          tournamentId:
+            data.tournament_id,
+          generatedAt:
+            data.generated_at,
+          updatedAt:
+            data.updated_at,
+          summary:
+            (data.manifest as any)
+              ?.summary ?? null,
+          course:
+            (data.manifest as any)
+              ?.course ?? null,
+        }
+      : null,
+  });
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  const authError =
+    await requireAdminApi();
+
+  if (authError) {
+    return authError;
+  }
+
+  try {
+    const body = await request.json();
+
+    const slateId =
+      parseSlateId(body?.slateId);
+
+    const tournamentId =
+      String(
+        body?.tournamentId ?? "",
+      )
+        .trim()
+        .toUpperCase();
+
+    const round =
+      Number(body?.round ?? 1);
+
+    if (!slateId) {
+      return NextResponse.json(
+        {
+          error:
+            "A valid slateId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      !/^R\d{7}$/.test(
+        tournamentId,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Enter a PGA tournament ID such as R2026013.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: slate,
+      error: slateError,
+    } = await supabaseAdmin
+      .from("slates")
+      .select(
+        "id, sport, display_name",
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (
+      slateError ||
+      !slate
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            slateError?.message ||
+            "Slate not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "ShotCast is only available for Golf slates.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const manifest =
+      await importShotCastManifest({
+        tournamentId,
+        round,
+      });
+
+    const timestamp =
+      new Date().toISOString();
+
+    const {
+      error: upsertError,
+    } = await supabaseAdmin
+      .from("shotcast_manifests")
+      .upsert(
+        {
+          tournament_id:
+            tournamentId,
+          slate_id: slateId,
+          manifest,
+          generated_at:
+            manifest.generatedAt,
+          updated_at: timestamp,
+        },
+        {
+          onConflict:
+            "tournament_id",
+        },
+      );
+
+    if (upsertError) {
+      return NextResponse.json(
+        {
+          error:
+            "ShotCast was imported but could not be saved: " +
+            upsertError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      tournamentId,
+      course:
+        manifest.course,
+      summary:
+        manifest.summary,
+      generatedAt:
+        manifest.generatedAt,
+    });
+  } catch (error) {
+    console.error(
+      "Admin ShotCast refresh failed:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected ShotCast import error.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+============================================================
+SHOTCAST REPLAY COMPONENT REFERENCES
+============================================================
+components/lineups/GolfHoleReplayPanel.tsx-751-        </div>
+components/lineups/GolfHoleReplayPanel.tsx-752-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx-753-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx-754-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx-755-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx-756-              {message}
+components/lineups/GolfHoleReplayPanel.tsx-757-            </div>
+components/lineups/GolfHoleReplayPanel.tsx-758-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-759-
+components/lineups/GolfHoleReplayPanel.tsx-760-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx-761-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx-762-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+components/lineups/GolfHoleReplayPanel.tsx-763-                <div>
+components/lineups/GolfHoleReplayPanel.tsx-764-                  <div className="flex flex-wrap items-center gap-2">
+components/lineups/GolfHoleReplayPanel.tsx-765-                    <div className="text-xs font-bold text-slate-200">
+components/lineups/GolfHoleReplayPanel.tsx-766-                      ShotCast
+components/lineups/GolfHoleReplayPanel.tsx-767-                    </div>
+components/lineups/GolfHoleReplayPanel.tsx-768-
+components/lineups/GolfHoleReplayPanel.tsx-769-                    {!activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-770-                      .calibrationVerified ? (
+components/lineups/GolfHoleReplayPanel.tsx-771-                      <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-300">
+components/lineups/GolfHoleReplayPanel.tsx-772-                        Layout preview
+components/lineups/GolfHoleReplayPanel.tsx-773-                      </span>
+components/lineups/GolfHoleReplayPanel.tsx-774-                    ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-775-                  </div>
+components/lineups/GolfHoleReplayPanel.tsx-776-
+components/lineups/GolfHoleReplayPanel.tsx-777-                  <div className="mt-0.5 text-[10px] text-slate-500">
+components/lineups/GolfHoleReplayPanel.tsx-778-                    {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-779-                      .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-780-                      ? "Interactive aerial shot replay"
+components/lineups/GolfHoleReplayPanel.tsx:781:                      : "Interactive hole layout · shot alignment pending"}
+components/lineups/GolfHoleReplayPanel.tsx-782-                  </div>
+components/lineups/GolfHoleReplayPanel.tsx-783-                </div>
+components/lineups/GolfHoleReplayPanel.tsx-784-
+components/lineups/GolfHoleReplayPanel.tsx-785-                <button
+components/lineups/GolfHoleReplayPanel.tsx-786-                  type="button"
+components/lineups/GolfHoleReplayPanel.tsx-787-                  onClick={() =>
+components/lineups/GolfHoleReplayPanel.tsx-788-                    setIsShotCastOpen(
+components/lineups/GolfHoleReplayPanel.tsx-789-                      (current) =>
+components/lineups/GolfHoleReplayPanel.tsx-790-                        !current,
+components/lineups/GolfHoleReplayPanel.tsx-791-                    )
+components/lineups/GolfHoleReplayPanel.tsx-792-                  }
+components/lineups/GolfHoleReplayPanel.tsx-793-                  aria-expanded={
+components/lineups/GolfHoleReplayPanel.tsx-794-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx-795-                  }
+components/lineups/GolfHoleReplayPanel.tsx-796-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx-797-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx-798-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx-799-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx-800-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx-801-                >
+components/lineups/GolfHoleReplayPanel.tsx-802-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx-803-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx-804-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx-805-                </button>
+components/lineups/GolfHoleReplayPanel.tsx-806-              </div>
+components/lineups/GolfHoleReplayPanel.tsx-807-
+components/lineups/GolfHoleReplayPanel.tsx-808-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx-809-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx-810-                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx-811-                    title={
+components/lineups/GolfHoleReplayPanel.tsx-812-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-813-                        .title
+components/lineups/GolfHoleReplayPanel.tsx-814-                    }
+components/lineups/GolfHoleReplayPanel.tsx-815-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx-816-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-817-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx-818-                    }
+components/lineups/GolfHoleReplayPanel.tsx-819-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx-820-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-821-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx-822-                    }
+components/lineups/GolfHoleReplayPanel.tsx-823-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx-824-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-825-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx-826-                    }
+components/lineups/GolfHoleReplayPanel.tsx-827-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx-828-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-829-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-830-                    }
+components/lineups/GolfHoleReplayPanel.tsx-831-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx-832-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx-833-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx-834-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-835-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-836-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx-837-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx-838-                    }
+components/lineups/GolfHoleReplayPanel.tsx-839-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx-840-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx-841-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx-842-                    }
+components/lineups/GolfHoleReplayPanel.tsx-843-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx-844-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx-845-                    }
+components/lineups/GolfHoleReplayPanel.tsx-846-                  />
+--
+components/lineups/GolfHoleMap2D.tsx-1217-      ? pointOnQuadraticCurve(
+components/lineups/GolfHoleMap2D.tsx-1218-          animatedShot.from,
+components/lineups/GolfHoleMap2D.tsx-1219-          animatedShot.to,
+components/lineups/GolfHoleMap2D.tsx-1220-          animationProgress,
+components/lineups/GolfHoleMap2D.tsx-1221-        )
+components/lineups/GolfHoleMap2D.tsx-1222-      : null;
+components/lineups/GolfHoleMap2D.tsx-1223-
+components/lineups/GolfHoleMap2D.tsx-1224-  const inverseScale =
+components/lineups/GolfHoleMap2D.tsx-1225-    1 / transform.scale;
+components/lineups/GolfHoleMap2D.tsx-1226-
+components/lineups/GolfHoleMap2D.tsx-1227-  const markerRadius =
+components/lineups/GolfHoleMap2D.tsx-1228-    25 * inverseScale;
+components/lineups/GolfHoleMap2D.tsx-1229-
+components/lineups/GolfHoleMap2D.tsx-1230-  const markerStroke =
+components/lineups/GolfHoleMap2D.tsx-1231-    Math.max(
+components/lineups/GolfHoleMap2D.tsx-1232-      3,
+components/lineups/GolfHoleMap2D.tsx-1233-      7 * inverseScale,
+components/lineups/GolfHoleMap2D.tsx-1234-    );
+components/lineups/GolfHoleMap2D.tsx-1235-
+components/lineups/GolfHoleMap2D.tsx-1236-  const markerFontSize =
+components/lineups/GolfHoleMap2D.tsx-1237-    Math.max(
+components/lineups/GolfHoleMap2D.tsx-1238-      12,
+components/lineups/GolfHoleMap2D.tsx-1239-      29 * inverseScale,
+components/lineups/GolfHoleMap2D.tsx-1240-    );
+components/lineups/GolfHoleMap2D.tsx-1241-
+components/lineups/GolfHoleMap2D.tsx-1242-  return (
+components/lineups/GolfHoleMap2D.tsx-1243-    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+components/lineups/GolfHoleMap2D.tsx-1244-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-3 py-2.5">
+components/lineups/GolfHoleMap2D.tsx-1245-        <div>
+components/lineups/GolfHoleMap2D.tsx-1246-          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+components/lineups/GolfHoleMap2D.tsx:1247:            ShotCast replay
+components/lineups/GolfHoleMap2D.tsx-1248-          </div>
+components/lineups/GolfHoleMap2D.tsx-1249-
+components/lineups/GolfHoleMap2D.tsx-1250-          <div className="mt-0.5 text-xs font-bold text-slate-200">
+components/lineups/GolfHoleMap2D.tsx-1251-            {title}
+components/lineups/GolfHoleMap2D.tsx-1252-          </div>
+components/lineups/GolfHoleMap2D.tsx-1253-        </div>
+components/lineups/GolfHoleMap2D.tsx-1254-
+components/lineups/GolfHoleMap2D.tsx-1255-        <div className="flex flex-wrap items-center justify-end gap-1.5">
+components/lineups/GolfHoleMap2D.tsx-1256-          {plottedShots.length > 0 ? (
+components/lineups/GolfHoleMap2D.tsx-1257-            <>
+components/lineups/GolfHoleMap2D.tsx-1258-              <button
+components/lineups/GolfHoleMap2D.tsx-1259-                type="button"
+components/lineups/GolfHoleMap2D.tsx-1260-                onClick={() =>
+components/lineups/GolfHoleMap2D.tsx-1261-                  focusShot(
+components/lineups/GolfHoleMap2D.tsx-1262-                    selectedShot,
+components/lineups/GolfHoleMap2D.tsx-1263-                  )
+components/lineups/GolfHoleMap2D.tsx-1264-                }
+components/lineups/GolfHoleMap2D.tsx-1265-                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+components/lineups/GolfHoleMap2D.tsx-1266-              >
+components/lineups/GolfHoleMap2D.tsx-1267-                Focus shot
+components/lineups/GolfHoleMap2D.tsx-1268-              </button>
+components/lineups/GolfHoleMap2D.tsx-1269-
+components/lineups/GolfHoleMap2D.tsx-1270-              <button
+components/lineups/GolfHoleMap2D.tsx-1271-                type="button"
+components/lineups/GolfHoleMap2D.tsx-1272-                onClick={startPlayback}
+components/lineups/GolfHoleMap2D.tsx-1273-                disabled={isPlaying}
+components/lineups/GolfHoleMap2D.tsx-1274-                className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+components/lineups/GolfHoleMap2D.tsx-1275-              >
+components/lineups/GolfHoleMap2D.tsx-1276-                {isPlaying
+components/lineups/GolfHoleMap2D.tsx-1277-                  ? "Playing…"
+components/lineups/GolfHoleMap2D.tsx-1278-                  : "▶ Play"}
+components/lineups/GolfHoleMap2D.tsx-1279-              </button>
+components/lineups/GolfHoleMap2D.tsx-1280-            </>
+components/lineups/GolfHoleMap2D.tsx-1281-          ) : null}
+components/lineups/GolfHoleMap2D.tsx-1282-
+components/lineups/GolfHoleMap2D.tsx-1283-          <button
+components/lineups/GolfHoleMap2D.tsx-1284-            type="button"
+components/lineups/GolfHoleMap2D.tsx-1285-            onClick={resetView}
+components/lineups/GolfHoleMap2D.tsx-1286-            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-[10px] font-bold text-slate-400"
+components/lineups/GolfHoleMap2D.tsx-1287-          >
+components/lineups/GolfHoleMap2D.tsx-1288-            Reset
+components/lineups/GolfHoleMap2D.tsx-1289-          </button>
+components/lineups/GolfHoleMap2D.tsx-1290-        </div>
+components/lineups/GolfHoleMap2D.tsx-1291-      </header>
+components/lineups/GolfHoleMap2D.tsx-1292-
+components/lineups/GolfHoleMap2D.tsx-1293-      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(260px,430px)_1fr]">
+components/lineups/GolfHoleMap2D.tsx-1294-        <div className="mx-auto w-full max-w-[430px]">
+components/lineups/GolfHoleMap2D.tsx-1295-          <div
+components/lineups/GolfHoleMap2D.tsx-1296-            ref={viewportRef}
+components/lineups/GolfHoleMap2D.tsx-1297-            className={`relative aspect-square overflow-hidden rounded-xl border border-slate-700 bg-slate-950 select-none ${
+components/lineups/GolfHoleMap2D.tsx-1298-              isInteracting
+components/lineups/GolfHoleMap2D.tsx-1299-                ? "cursor-grabbing"
+components/lineups/GolfHoleMap2D.tsx-1300-                : "cursor-grab"
+components/lineups/GolfHoleMap2D.tsx-1301-            }`}
+components/lineups/GolfHoleMap2D.tsx-1302-            style={{
+components/lineups/GolfHoleMap2D.tsx-1303-              touchAction: "none",
+components/lineups/GolfHoleMap2D.tsx-1304-            }}
+components/lineups/GolfHoleMap2D.tsx-1305-            onWheel={handleWheel}
+components/lineups/GolfHoleMap2D.tsx-1306-            onDoubleClick={
+components/lineups/GolfHoleMap2D.tsx-1307-              handleDoubleClick
+components/lineups/GolfHoleMap2D.tsx-1308-            }
+components/lineups/GolfHoleMap2D.tsx-1309-            onPointerDown={
+components/lineups/GolfHoleMap2D.tsx-1310-              handlePointerDown
+components/lineups/GolfHoleMap2D.tsx-1311-            }
+components/lineups/GolfHoleMap2D.tsx-1312-            onPointerMove={
+--
+app/admin/slates/page.tsx-16-  end_date: string | null;
+app/admin/slates/page.tsx-17-  is_locked: boolean;
+app/admin/slates/page.tsx-18-  label: string;
+app/admin/slates/page.tsx-19-  sport?: SportKey;
+app/admin/slates/page.tsx-20-  display_name?: string | null;
+app/admin/slates/page.tsx-21-  external_event_id?: string | null;
+app/admin/slates/page.tsx-22-  cut_penalty_per_round?: number | null;
+app/admin/slates/page.tsx-23-  nba_team_abbreviations?: string[] | null;
+app/admin/slates/page.tsx-24-};
+app/admin/slates/page.tsx-25-
+app/admin/slates/page.tsx-26-type SlateTeamRow = {
+app/admin/slates/page.tsx-27-  team_id: number;
+app/admin/slates/page.tsx-28-  team_name: string;
+app/admin/slates/page.tsx-29-  draft_order: number;
+app/admin/slates/page.tsx-30-  is_participating: boolean;
+app/admin/slates/page.tsx-31-};
+app/admin/slates/page.tsx-32-
+app/admin/slates/page.tsx-33-type GolfFieldSummary = {
+app/admin/slates/page.tsx-34-  golferCount: number;
+app/admin/slates/page.tsx-35-  lastRefreshedAt: string | null;
+app/admin/slates/page.tsx-36-};
+app/admin/slates/page.tsx-37-
+app/admin/slates/page.tsx-38-type ShotCastSummary = {
+app/admin/slates/page.tsx-39-  tournamentId: string;
+app/admin/slates/page.tsx-40-  generatedAt: string | null;
+app/admin/slates/page.tsx-41-  updatedAt: string | null;
+app/admin/slates/page.tsx-42-  summary: {
+app/admin/slates/page.tsx-43-    holesRequested?: number;
+app/admin/slates/page.tsx-44-    holesAvailable?: number;
+app/admin/slates/page.tsx-45-    localImages?: number;
+app/admin/slates/page.tsx:46:    alignedMaps?: number;
+app/admin/slates/page.tsx-47-    alignedGreens?: number;
+app/admin/slates/page.tsx-48-    holesFailed?: number;
+app/admin/slates/page.tsx-49-  } | null;
+app/admin/slates/page.tsx-50-  course: {
+app/admin/slates/page.tsx-51-    id?: string;
+app/admin/slates/page.tsx-52-    name?: string | null;
+app/admin/slates/page.tsx-53-  } | null;
+app/admin/slates/page.tsx-54-};
+app/admin/slates/page.tsx-55-
+app/admin/slates/page.tsx-56-type SlateDetailResponse = {
+app/admin/slates/page.tsx-57-  success: boolean;
+app/admin/slates/page.tsx-58-  slate: SlateListRow;
+app/admin/slates/page.tsx-59-  teams: SlateTeamRow[];
+app/admin/slates/page.tsx-60-  golfField?: GolfFieldSummary | null;
+app/admin/slates/page.tsx-61-};
+app/admin/slates/page.tsx-62-
+app/admin/slates/page.tsx-63-type SelectedSlateState = SlateListRow & {
+app/admin/slates/page.tsx-64-  nbaTeamsInput: string;
+app/admin/slates/page.tsx-65-};
+app/admin/slates/page.tsx-66-
+app/admin/slates/page.tsx-67-function normalizeTeamOrder(rows: SlateTeamRow[]) {
+app/admin/slates/page.tsx-68-  const participating = rows
+app/admin/slates/page.tsx-69-    .filter((team) => team.is_participating)
+app/admin/slates/page.tsx-70-    .sort(
+app/admin/slates/page.tsx-71-      (a, b) =>
+app/admin/slates/page.tsx-72-        a.draft_order - b.draft_order ||
+app/admin/slates/page.tsx-73-        a.team_name.localeCompare(b.team_name),
+app/admin/slates/page.tsx-74-    );
+app/admin/slates/page.tsx-75-
+app/admin/slates/page.tsx-76-  const inactive = rows
+app/admin/slates/page.tsx-77-    .filter((team) => !team.is_participating)
+app/admin/slates/page.tsx-78-    .sort(
+app/admin/slates/page.tsx-79-      (a, b) =>
+app/admin/slates/page.tsx-80-        a.draft_order - b.draft_order ||
+app/admin/slates/page.tsx-81-        a.team_name.localeCompare(b.team_name),
+app/admin/slates/page.tsx-82-    );
+app/admin/slates/page.tsx-83-
+app/admin/slates/page.tsx-84-  return [...participating, ...inactive].map((team, index) => ({
+app/admin/slates/page.tsx-85-    ...team,
+app/admin/slates/page.tsx-86-    draft_order: index + 1,
+app/admin/slates/page.tsx-87-  }));
+app/admin/slates/page.tsx-88-}
+app/admin/slates/page.tsx-89-
+app/admin/slates/page.tsx-90-function formatDateRange(
+app/admin/slates/page.tsx-91-  startDate: string | null,
+app/admin/slates/page.tsx-92-  endDate: string | null,
+app/admin/slates/page.tsx-93-) {
+app/admin/slates/page.tsx-94-  if (!startDate) return "Dates unavailable";
+app/admin/slates/page.tsx-95-  if (!endDate || startDate === endDate) return startDate;
+app/admin/slates/page.tsx-96-  return `${startDate} – ${endDate}`;
+app/admin/slates/page.tsx-97-}
+app/admin/slates/page.tsx-98-
+app/admin/slates/page.tsx-99-function formatRefreshTime(value: string | null) {
+app/admin/slates/page.tsx-100-  if (!value) return "Not loaded yet";
+app/admin/slates/page.tsx-101-
+app/admin/slates/page.tsx-102-  const date = new Date(value);
+app/admin/slates/page.tsx-103-
+app/admin/slates/page.tsx-104-  if (Number.isNaN(date.getTime())) {
+app/admin/slates/page.tsx-105-    return "Unavailable";
+app/admin/slates/page.tsx-106-  }
+app/admin/slates/page.tsx-107-
+app/admin/slates/page.tsx-108-  return date.toLocaleString([], {
+app/admin/slates/page.tsx-109-    month: "short",
+app/admin/slates/page.tsx-110-    day: "numeric",
+app/admin/slates/page.tsx-111-    hour: "numeric",
+--
+app/admin/slates/page.tsx-353-              ),
+app/admin/slates/page.tsx-354-            tournamentId,
+app/admin/slates/page.tsx-355-            round: 1,
+app/admin/slates/page.tsx-356-          }),
+app/admin/slates/page.tsx-357-          cache: "no-store",
+app/admin/slates/page.tsx-358-        },
+app/admin/slates/page.tsx-359-      );
+app/admin/slates/page.tsx-360-
+app/admin/slates/page.tsx-361-      const result =
+app/admin/slates/page.tsx-362-        await response.json();
+app/admin/slates/page.tsx-363-
+app/admin/slates/page.tsx-364-      if (!response.ok) {
+app/admin/slates/page.tsx-365-        setMessage(
+app/admin/slates/page.tsx-366-          result.error ||
+app/admin/slates/page.tsx-367-            "Failed to refresh ShotCast assets.",
+app/admin/slates/page.tsx-368-        );
+app/admin/slates/page.tsx-369-
+app/admin/slates/page.tsx-370-        return;
+app/admin/slates/page.tsx-371-      }
+app/admin/slates/page.tsx-372-
+app/admin/slates/page.tsx-373-      await loadShotCastStatus(
+app/admin/slates/page.tsx-374-        Number(selectedSlateId),
+app/admin/slates/page.tsx-375-      );
+app/admin/slates/page.tsx-376-
+app/admin/slates/page.tsx-377-      setMessage(
+app/admin/slates/page.tsx-378-        `ShotCast refreshed: ${
+app/admin/slates/page.tsx-379-          result.summary
+app/admin/slates/page.tsx-380-            ?.localImages ?? 0
+app/admin/slates/page.tsx-381-        } photos, ${
+app/admin/slates/page.tsx-382-          result.summary
+app/admin/slates/page.tsx:383:            ?.alignedMaps ?? 0
+app/admin/slates/page.tsx-384-        } aligned maps, ${
+app/admin/slates/page.tsx-385-          result.summary
+app/admin/slates/page.tsx-386-            ?.alignedGreens ?? 0
+app/admin/slates/page.tsx-387-        } aligned greens.`,
+app/admin/slates/page.tsx-388-      );
+app/admin/slates/page.tsx-389-    } catch (error) {
+app/admin/slates/page.tsx-390-      console.error(error);
+app/admin/slates/page.tsx-391-
+app/admin/slates/page.tsx-392-      setMessage(
+app/admin/slates/page.tsx-393-        "Something went wrong while refreshing ShotCast.",
+app/admin/slates/page.tsx-394-      );
+app/admin/slates/page.tsx-395-    } finally {
+app/admin/slates/page.tsx-396-      setIsRefreshingShotCast(false);
+app/admin/slates/page.tsx-397-    }
+app/admin/slates/page.tsx-398-  }
+app/admin/slates/page.tsx-399-
+app/admin/slates/page.tsx-400-  function toggleParticipation(teamId: number) {
+app/admin/slates/page.tsx-401-    setTeams((current) =>
+app/admin/slates/page.tsx-402-      normalizeTeamOrder(
+app/admin/slates/page.tsx-403-        current.map((team) =>
+app/admin/slates/page.tsx-404-          team.team_id === teamId
+app/admin/slates/page.tsx-405-            ? {
+app/admin/slates/page.tsx-406-                ...team,
+app/admin/slates/page.tsx-407-                is_participating: !team.is_participating,
+app/admin/slates/page.tsx-408-              }
+app/admin/slates/page.tsx-409-            : team,
+app/admin/slates/page.tsx-410-        ),
+app/admin/slates/page.tsx-411-      ),
+app/admin/slates/page.tsx-412-    );
+app/admin/slates/page.tsx-413-  }
+app/admin/slates/page.tsx-414-
+app/admin/slates/page.tsx-415-  function moveTeam(
+app/admin/slates/page.tsx-416-    teamId: number,
+app/admin/slates/page.tsx-417-    direction: "up" | "down",
+app/admin/slates/page.tsx-418-  ) {
+app/admin/slates/page.tsx-419-    setTeams((current) => {
+app/admin/slates/page.tsx-420-      const normalized = normalizeTeamOrder(current);
+app/admin/slates/page.tsx-421-      const team = normalized.find(
+app/admin/slates/page.tsx-422-        (row) => row.team_id === teamId,
+app/admin/slates/page.tsx-423-      );
+app/admin/slates/page.tsx-424-
+app/admin/slates/page.tsx-425-      if (!team) return normalized;
+app/admin/slates/page.tsx-426-
+app/admin/slates/page.tsx-427-      const sameSection = normalized.filter(
+app/admin/slates/page.tsx-428-        (row) =>
+app/admin/slates/page.tsx-429-          row.is_participating === team.is_participating,
+app/admin/slates/page.tsx-430-      );
+app/admin/slates/page.tsx-431-
+app/admin/slates/page.tsx-432-      const currentIndex = sameSection.findIndex(
+app/admin/slates/page.tsx-433-        (row) => row.team_id === teamId,
+app/admin/slates/page.tsx-434-      );
+app/admin/slates/page.tsx-435-
+app/admin/slates/page.tsx-436-      const targetIndex =
+app/admin/slates/page.tsx-437-        direction === "up"
+app/admin/slates/page.tsx-438-          ? currentIndex - 1
+app/admin/slates/page.tsx-439-          : currentIndex + 1;
+app/admin/slates/page.tsx-440-
+app/admin/slates/page.tsx-441-      if (
+app/admin/slates/page.tsx-442-        targetIndex < 0 ||
+app/admin/slates/page.tsx-443-        targetIndex >= sameSection.length
+app/admin/slates/page.tsx-444-      ) {
+app/admin/slates/page.tsx-445-        return normalized;
+app/admin/slates/page.tsx-446-      }
+app/admin/slates/page.tsx-447-
+app/admin/slates/page.tsx-448-      const reorderedSection = [...sameSection];
+--
+app/admin/slates/page.tsx-959-                      <span className="text-sm text-slate-400">
+app/admin/slates/page.tsx-960-                        per missed round
+app/admin/slates/page.tsx-961-                      </span>
+app/admin/slates/page.tsx-962-                    </div>
+app/admin/slates/page.tsx-963-                  </div>
+app/admin/slates/page.tsx-964-
+app/admin/slates/page.tsx-965-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+app/admin/slates/page.tsx-966-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+app/admin/slates/page.tsx-967-                      Last Field Refresh
+app/admin/slates/page.tsx-968-                    </div>
+app/admin/slates/page.tsx-969-
+app/admin/slates/page.tsx-970-                    <div className="mt-2 text-sm font-semibold text-white">
+app/admin/slates/page.tsx-971-                      {formatRefreshTime(
+app/admin/slates/page.tsx-972-                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx-973-                      )}
+app/admin/slates/page.tsx-974-                    </div>
+app/admin/slates/page.tsx-975-                  </div>
+app/admin/slates/page.tsx-976-
+app/admin/slates/page.tsx-977-                  <div className="rounded-2xl border border-violet-800 bg-violet-950/35 p-4">
+app/admin/slates/page.tsx-978-                    <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+app/admin/slates/page.tsx-979-                      ShotCast Assets
+app/admin/slates/page.tsx-980-                    </div>
+app/admin/slates/page.tsx-981-
+app/admin/slates/page.tsx-982-                    <div className="mt-2 text-sm font-bold text-white">
+app/admin/slates/page.tsx-983-                      {shotCast
+app/admin/slates/page.tsx-984-                        ? `${
+app/admin/slates/page.tsx-985-                            shotCast.summary
+app/admin/slates/page.tsx-986-                              ?.localImages ?? 0
+app/admin/slates/page.tsx-987-                          } photos · ${
+app/admin/slates/page.tsx-988-                            shotCast.summary
+app/admin/slates/page.tsx:989:                              ?.alignedMaps ?? 0
+app/admin/slates/page.tsx-990-                          } maps`
+app/admin/slates/page.tsx-991-                        : "Not imported"}
+app/admin/slates/page.tsx-992-                    </div>
+app/admin/slates/page.tsx-993-
+app/admin/slates/page.tsx-994-                    <div className="mt-1 text-xs text-violet-200/80">
+app/admin/slates/page.tsx-995-                      {shotCast
+app/admin/slates/page.tsx-996-                        ? formatRefreshTime(
+app/admin/slates/page.tsx-997-                            shotCast.updatedAt,
+app/admin/slates/page.tsx-998-                          )
+app/admin/slates/page.tsx-999-                        : "Enter the PGA ID below"}
+app/admin/slates/page.tsx-1000-                    </div>
+app/admin/slates/page.tsx-1001-                  </div>
+app/admin/slates/page.tsx-1002-                </div>
+app/admin/slates/page.tsx-1003-              ) : null}
+app/admin/slates/page.tsx-1004-
+app/admin/slates/page.tsx-1005-              {selectedSlate.sport === "nba" ? (
+app/admin/slates/page.tsx-1006-                <div className="max-w-xl">
+app/admin/slates/page.tsx-1007-                  <label
+app/admin/slates/page.tsx-1008-                    htmlFor="nba-team-codes"
+app/admin/slates/page.tsx-1009-                    className="mb-1 block text-xs font-medium text-slate-300"
+app/admin/slates/page.tsx-1010-                  >
+app/admin/slates/page.tsx-1011-                    NBA Team Codes
+app/admin/slates/page.tsx-1012-                  </label>
+app/admin/slates/page.tsx-1013-
+app/admin/slates/page.tsx-1014-                  <input
+app/admin/slates/page.tsx-1015-                    id="nba-team-codes"
+app/admin/slates/page.tsx-1016-                    type="text"
+app/admin/slates/page.tsx-1017-                    value={selectedSlate.nbaTeamsInput}
+app/admin/slates/page.tsx-1018-                    onChange={(event) =>
+app/admin/slates/page.tsx-1019-                      setSelectedSlate((current) =>
+app/admin/slates/page.tsx-1020-                        current
+app/admin/slates/page.tsx-1021-                          ? {
+app/admin/slates/page.tsx-1022-                              ...current,
+app/admin/slates/page.tsx-1023-                              nbaTeamsInput:
+app/admin/slates/page.tsx-1024-                                event.target.value,
+app/admin/slates/page.tsx-1025-                            }
+app/admin/slates/page.tsx-1026-                          : current,
+app/admin/slates/page.tsx-1027-                      )
+app/admin/slates/page.tsx-1028-                    }
+app/admin/slates/page.tsx-1029-                    disabled={isBusy}
+app/admin/slates/page.tsx-1030-                    placeholder="BOS, CLE, NYK"
+app/admin/slates/page.tsx-1031-                    className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-sky-400"
+app/admin/slates/page.tsx-1032-                  />
+app/admin/slates/page.tsx-1033-                </div>
+app/admin/slates/page.tsx-1034-              ) : null}
+app/admin/slates/page.tsx-1035-
+app/admin/slates/page.tsx-1036-              {selectedSlate.sport === "golf" ? (
+app/admin/slates/page.tsx-1037-                <div className="rounded-2xl border border-violet-800 bg-violet-950/25 p-4">
+app/admin/slates/page.tsx-1038-                  <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+app/admin/slates/page.tsx-1039-                    ShotCast Course Importer
+app/admin/slates/page.tsx-1040-                  </div>
+app/admin/slates/page.tsx-1041-
+app/admin/slates/page.tsx-1042-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+app/admin/slates/page.tsx-1043-                    <div className="flex-1">
+app/admin/slates/page.tsx-1044-                      <label
+app/admin/slates/page.tsx-1045-                        htmlFor="shotcast-tournament-id"
+app/admin/slates/page.tsx-1046-                        className="mb-1 block text-xs font-medium text-slate-300"
+app/admin/slates/page.tsx-1047-                      >
+app/admin/slates/page.tsx-1048-                        PGA Tournament ID
+app/admin/slates/page.tsx-1049-                      </label>
+app/admin/slates/page.tsx-1050-
+app/admin/slates/page.tsx-1051-                      <input
+app/admin/slates/page.tsx-1052-                        id="shotcast-tournament-id"
+app/admin/slates/page.tsx-1053-                        type="text"
+app/admin/slates/page.tsx-1054-                        value={
+--
+lib/shotcast/importShotCastManifest.ts-481-      if (!detail) {
+lib/shotcast/importShotCastManifest.ts-482-        return {
+lib/shotcast/importShotCastManifest.ts-483-          holeNumber,
+lib/shotcast/importShotCastManifest.ts-484-          available: false,
+lib/shotcast/importShotCastManifest.ts-485-          error:
+lib/shotcast/importShotCastManifest.ts-486-            error ||
+lib/shotcast/importShotCastManifest.ts-487-            "No HoleDetails payload returned.",
+lib/shotcast/importShotCastManifest.ts-488-        };
+lib/shotcast/importShotCastManifest.ts-489-      }
+lib/shotcast/importShotCastManifest.ts-490-
+lib/shotcast/importShotCastManifest.ts-491-      const holeInfo =
+lib/shotcast/importShotCastManifest.ts-492-        detail.holeInfo &&
+lib/shotcast/importShotCastManifest.ts-493-        typeof detail.holeInfo ===
+lib/shotcast/importShotCastManifest.ts-494-          "object"
+lib/shotcast/importShotCastManifest.ts-495-          ? detail.holeInfo
+lib/shotcast/importShotCastManifest.ts-496-          : {};
+lib/shotcast/importShotCastManifest.ts-497-
+lib/shotcast/importShotCastManifest.ts-498-      const header =
+lib/shotcast/importShotCastManifest.ts-499-        headersByHole.get(
+lib/shotcast/importShotCastManifest.ts-500-          holeNumber,
+lib/shotcast/importShotCastManifest.ts-501-        );
+lib/shotcast/importShotCastManifest.ts-502-
+lib/shotcast/importShotCastManifest.ts-503-      const officialImageUrl =
+lib/shotcast/importShotCastManifest.ts-504-        normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-505-          detail.holeImageLandscape,
+lib/shotcast/importShotCastManifest.ts-506-        ) ??
+lib/shotcast/importShotCastManifest.ts-507-        normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-508-          detail.holeImage,
+lib/shotcast/importShotCastManifest.ts-509-        );
+lib/shotcast/importShotCastManifest.ts-510-
+lib/shotcast/importShotCastManifest.ts:511:      const alignedMapUrl =
+lib/shotcast/importShotCastManifest.ts-512-        normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-513-          holeInfo
+lib/shotcast/importShotCastManifest.ts-514-            .holePickleBottomToTop,
+lib/shotcast/importShotCastManifest.ts-515-        );
+lib/shotcast/importShotCastManifest.ts-516-
+lib/shotcast/importShotCastManifest.ts-517-      const alignedGreenUrl =
+lib/shotcast/importShotCastManifest.ts-518-        normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-519-          holeInfo
+lib/shotcast/importShotCastManifest.ts-520-            .holePickleGreenBottomToTop,
+lib/shotcast/importShotCastManifest.ts-521-        );
+lib/shotcast/importShotCastManifest.ts-522-
+lib/shotcast/importShotCastManifest.ts-523-      const [
+lib/shotcast/importShotCastManifest.ts:524:        alignedMapAvailable,
+lib/shotcast/importShotCastManifest.ts-525-        alignedGreenAvailable,
+lib/shotcast/importShotCastManifest.ts-526-      ] = await Promise.all([
+lib/shotcast/importShotCastManifest.ts-527-        imageIsAvailable(
+lib/shotcast/importShotCastManifest.ts:528:          alignedMapUrl,
+lib/shotcast/importShotCastManifest.ts-529-        ),
+lib/shotcast/importShotCastManifest.ts-530-        imageIsAvailable(
+lib/shotcast/importShotCastManifest.ts-531-          alignedGreenUrl,
+lib/shotcast/importShotCastManifest.ts-532-        ),
+lib/shotcast/importShotCastManifest.ts-533-      ]);
+lib/shotcast/importShotCastManifest.ts-534-
+lib/shotcast/importShotCastManifest.ts-535-      return {
+lib/shotcast/importShotCastManifest.ts-536-        holeNumber,
+lib/shotcast/importShotCastManifest.ts-537-        available: true,
+lib/shotcast/importShotCastManifest.ts-538-
+lib/shotcast/importShotCastManifest.ts-539-        detailsId:
+lib/shotcast/importShotCastManifest.ts-540-          detail.id ?? null,
+lib/shotcast/importShotCastManifest.ts-541-
+lib/shotcast/importShotCastManifest.ts-542-        statsAvailability:
+lib/shotcast/importShotCastManifest.ts-543-          detail.statsAvailability ??
+lib/shotcast/importShotCastManifest.ts-544-          null,
+lib/shotcast/importShotCastManifest.ts-545-
+lib/shotcast/importShotCastManifest.ts-546-        par: numberOrNull(
+lib/shotcast/importShotCastManifest.ts-547-          holeInfo.par ??
+lib/shotcast/importShotCastManifest.ts-548-            header?.par,
+lib/shotcast/importShotCastManifest.ts-549-        ),
+lib/shotcast/importShotCastManifest.ts-550-
+lib/shotcast/importShotCastManifest.ts-551-        yards:
+lib/shotcast/importShotCastManifest.ts-552-          numberOrNull(
+lib/shotcast/importShotCastManifest.ts-553-            holeInfo.yards,
+lib/shotcast/importShotCastManifest.ts-554-          ),
+lib/shotcast/importShotCastManifest.ts-555-
+lib/shotcast/importShotCastManifest.ts-556-        rank:
+lib/shotcast/importShotCastManifest.ts-557-          numberOrNull(
+lib/shotcast/importShotCastManifest.ts-558-            holeInfo.rank,
+lib/shotcast/importShotCastManifest.ts-559-          ),
+lib/shotcast/importShotCastManifest.ts-560-
+lib/shotcast/importShotCastManifest.ts-561-        scoringAverageDiff:
+lib/shotcast/importShotCastManifest.ts-562-          numberOrNull(
+lib/shotcast/importShotCastManifest.ts-563-            holeInfo
+lib/shotcast/importShotCastManifest.ts-564-              .scoringAverageDiff,
+lib/shotcast/importShotCastManifest.ts-565-          ),
+lib/shotcast/importShotCastManifest.ts-566-
+lib/shotcast/importShotCastManifest.ts-567-        aboutThisHole:
+lib/shotcast/importShotCastManifest.ts-568-          typeof holeInfo
+lib/shotcast/importShotCastManifest.ts-569-            .aboutThisHole ===
+lib/shotcast/importShotCastManifest.ts-570-          "string"
+lib/shotcast/importShotCastManifest.ts-571-            ? holeInfo
+lib/shotcast/importShotCastManifest.ts-572-                .aboutThisHole
+lib/shotcast/importShotCastManifest.ts-573-                .trim() || null
+lib/shotcast/importShotCastManifest.ts-574-            : null,
+lib/shotcast/importShotCastManifest.ts-575-
+lib/shotcast/importShotCastManifest.ts-576-        officialImageUrl,
+lib/shotcast/importShotCastManifest.ts-577-
+lib/shotcast/importShotCastManifest.ts-578-        /*
+lib/shotcast/importShotCastManifest.ts-579-         * The browser may use the official PGA URL directly.
+lib/shotcast/importShotCastManifest.ts-580-         * No Vercel filesystem write is required.
+lib/shotcast/importShotCastManifest.ts-581-         */
+lib/shotcast/importShotCastManifest.ts-582-        localImageUrl:
+lib/shotcast/importShotCastManifest.ts-583-          officialImageUrl,
+lib/shotcast/importShotCastManifest.ts-584-
+lib/shotcast/importShotCastManifest.ts:585:        alignedMapUrl,
+lib/shotcast/importShotCastManifest.ts-586-
+lib/shotcast/importShotCastManifest.ts-587-        localAlignedMapUrl:
+lib/shotcast/importShotCastManifest.ts:588:          alignedMapAvailable
+lib/shotcast/importShotCastManifest.ts:589:            ? alignedMapUrl
+lib/shotcast/importShotCastManifest.ts-590-            : null,
+lib/shotcast/importShotCastManifest.ts-591-
+lib/shotcast/importShotCastManifest.ts:592:        alignedMapError:
+lib/shotcast/importShotCastManifest.ts:593:          alignedMapUrl &&
+lib/shotcast/importShotCastManifest.ts:594:          !alignedMapAvailable
+lib/shotcast/importShotCastManifest.ts-595-            ? "Asset is not currently published."
+lib/shotcast/importShotCastManifest.ts-596-            : null,
+lib/shotcast/importShotCastManifest.ts-597-
+lib/shotcast/importShotCastManifest.ts-598-        alignedGreenUrl,
+lib/shotcast/importShotCastManifest.ts-599-
+lib/shotcast/importShotCastManifest.ts-600-        localAlignedGreenUrl:
+lib/shotcast/importShotCastManifest.ts-601-          alignedGreenAvailable
+lib/shotcast/importShotCastManifest.ts-602-            ? alignedGreenUrl
+lib/shotcast/importShotCastManifest.ts-603-            : null,
+lib/shotcast/importShotCastManifest.ts-604-
+lib/shotcast/importShotCastManifest.ts-605-        alignedGreenError:
+lib/shotcast/importShotCastManifest.ts-606-          alignedGreenUrl &&
+lib/shotcast/importShotCastManifest.ts-607-          !alignedGreenAvailable
+lib/shotcast/importShotCastManifest.ts-608-            ? "Asset is not currently published."
+lib/shotcast/importShotCastManifest.ts-609-            : null,
+lib/shotcast/importShotCastManifest.ts-610-
+lib/shotcast/importShotCastManifest.ts-611-        tourcast: {
+lib/shotcast/importShotCastManifest.ts-612-          uri:
+lib/shotcast/importShotCastManifest.ts-613-            normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-614-              detail.tourcastURI,
+lib/shotcast/importShotCastManifest.ts-615-            ),
+lib/shotcast/importShotCastManifest.ts-616-          url:
+lib/shotcast/importShotCastManifest.ts-617-            normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-618-              detail.tourcastURL,
+lib/shotcast/importShotCastManifest.ts-619-            ),
+lib/shotcast/importShotCastManifest.ts-620-          urlWeb:
+lib/shotcast/importShotCastManifest.ts-621-            normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-622-              detail.tourcastURLWeb,
+lib/shotcast/importShotCastManifest.ts-623-            ),
+lib/shotcast/importShotCastManifest.ts-624-        },
+lib/shotcast/importShotCastManifest.ts-625-
+lib/shotcast/importShotCastManifest.ts-626-        assets: {
+lib/shotcast/importShotCastManifest.ts-627-          leftToRight:
+lib/shotcast/importShotCastManifest.ts-628-            cleanAsset(
+lib/shotcast/importShotCastManifest.ts-629-              holeInfo
+lib/shotcast/importShotCastManifest.ts-630-                .holePickleLeftToRightAsset,
+lib/shotcast/importShotCastManifest.ts-631-            ),
+lib/shotcast/importShotCastManifest.ts-632-          bottomToTop:
+lib/shotcast/importShotCastManifest.ts-633-            cleanAsset(
+lib/shotcast/importShotCastManifest.ts-634-              holeInfo
+lib/shotcast/importShotCastManifest.ts-635-                .holePickleBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts-636-            ),
+lib/shotcast/importShotCastManifest.ts-637-          greenLeftToRight:
+lib/shotcast/importShotCastManifest.ts-638-            cleanAsset(
+lib/shotcast/importShotCastManifest.ts-639-              holeInfo
+lib/shotcast/importShotCastManifest.ts-640-                .holePickleGreenLeftToRightAsset,
+lib/shotcast/importShotCastManifest.ts-641-            ),
+lib/shotcast/importShotCastManifest.ts-642-          greenBottomToTop:
+lib/shotcast/importShotCastManifest.ts-643-            cleanAsset(
+lib/shotcast/importShotCastManifest.ts-644-              holeInfo
+lib/shotcast/importShotCastManifest.ts-645-                .holePickleGreenBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts-646-            ),
+lib/shotcast/importShotCastManifest.ts-647-        },
+lib/shotcast/importShotCastManifest.ts-648-
+lib/shotcast/importShotCastManifest.ts-649-        legacyAssets: {
+lib/shotcast/importShotCastManifest.ts-650-          holePickle:
+lib/shotcast/importShotCastManifest.ts-651-            normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-652-              holeInfo.holePickle,
+lib/shotcast/importShotCastManifest.ts-653-            ),
+lib/shotcast/importShotCastManifest.ts-654-          holePickleBottomToTop:
+lib/shotcast/importShotCastManifest.ts:655:            alignedMapUrl,
+lib/shotcast/importShotCastManifest.ts-656-          holePickleGreenBottomToTop:
+lib/shotcast/importShotCastManifest.ts-657-            alignedGreenUrl,
+lib/shotcast/importShotCastManifest.ts-658-          greenPickle:
+lib/shotcast/importShotCastManifest.ts-659-            normalizeUrl(
+lib/shotcast/importShotCastManifest.ts-660-              holeInfo.greenPickle,
+lib/shotcast/importShotCastManifest.ts-661-            ),
+lib/shotcast/importShotCastManifest.ts-662-        },
+lib/shotcast/importShotCastManifest.ts-663-
+lib/shotcast/importShotCastManifest.ts-664-        pinGreen:
+lib/shotcast/importShotCastManifest.ts-665-          cleanPinGreen(
+lib/shotcast/importShotCastManifest.ts-666-            holeInfo.pinGreen,
+lib/shotcast/importShotCastManifest.ts-667-          ),
+lib/shotcast/importShotCastManifest.ts-668-
+lib/shotcast/importShotCastManifest.ts-669-        calibration: null,
+lib/shotcast/importShotCastManifest.ts-670-      };
+lib/shotcast/importShotCastManifest.ts-671-    }),
+lib/shotcast/importShotCastManifest.ts-672-  );
+lib/shotcast/importShotCastManifest.ts-673-
+lib/shotcast/importShotCastManifest.ts-674-  const holesAvailable =
+lib/shotcast/importShotCastManifest.ts-675-    holes.filter(
+lib/shotcast/importShotCastManifest.ts-676-      (hole) => hole.available,
+lib/shotcast/importShotCastManifest.ts-677-    ).length;
+lib/shotcast/importShotCastManifest.ts-678-
+lib/shotcast/importShotCastManifest.ts-679-  const photos =
+lib/shotcast/importShotCastManifest.ts-680-    holes.filter(
+lib/shotcast/importShotCastManifest.ts-681-      (hole: any) =>
+lib/shotcast/importShotCastManifest.ts-682-        hole.available &&
+lib/shotcast/importShotCastManifest.ts-683-        hole.localImageUrl,
+lib/shotcast/importShotCastManifest.ts-684-    ).length;
+lib/shotcast/importShotCastManifest.ts-685-
+lib/shotcast/importShotCastManifest.ts:686:  const alignedMaps =
+lib/shotcast/importShotCastManifest.ts-687-    holes.filter(
+lib/shotcast/importShotCastManifest.ts-688-      (hole: any) =>
+lib/shotcast/importShotCastManifest.ts-689-        hole.available &&
+lib/shotcast/importShotCastManifest.ts-690-        hole.localAlignedMapUrl,
+lib/shotcast/importShotCastManifest.ts-691-    ).length;
+lib/shotcast/importShotCastManifest.ts-692-
+lib/shotcast/importShotCastManifest.ts-693-  const alignedGreens =
+lib/shotcast/importShotCastManifest.ts-694-    holes.filter(
+lib/shotcast/importShotCastManifest.ts-695-      (hole: any) =>
+lib/shotcast/importShotCastManifest.ts-696-        hole.available &&
+lib/shotcast/importShotCastManifest.ts-697-        hole.localAlignedGreenUrl,
+lib/shotcast/importShotCastManifest.ts-698-    ).length;
+lib/shotcast/importShotCastManifest.ts-699-
+lib/shotcast/importShotCastManifest.ts-700-  return {
+lib/shotcast/importShotCastManifest.ts-701-    schemaVersion: 2,
+lib/shotcast/importShotCastManifest.ts-702-
+lib/shotcast/importShotCastManifest.ts-703-    generatedAt:
+lib/shotcast/importShotCastManifest.ts-704-      new Date().toISOString(),
+lib/shotcast/importShotCastManifest.ts-705-
+lib/shotcast/importShotCastManifest.ts-706-    source:
+lib/shotcast/importShotCastManifest.ts-707-      "PGA TOUR HoleDetails",
+lib/shotcast/importShotCastManifest.ts-708-
+lib/shotcast/importShotCastManifest.ts-709-    tournament: {
+lib/shotcast/importShotCastManifest.ts-710-      id:
+lib/shotcast/importShotCastManifest.ts-711-        normalizedTournamentId,
+lib/shotcast/importShotCastManifest.ts-712-      name:
+lib/shotcast/importShotCastManifest.ts-713-        leaderboard
+lib/shotcast/importShotCastManifest.ts-714-          .tournamentName ??
+lib/shotcast/importShotCastManifest.ts-715-        null,
+lib/shotcast/importShotCastManifest.ts-716-      currentRound:
+lib/shotcast/importShotCastManifest.ts-717-        numberOrNull(
+lib/shotcast/importShotCastManifest.ts-718-          leaderboard
+lib/shotcast/importShotCastManifest.ts-719-            .currentRound,
+lib/shotcast/importShotCastManifest.ts-720-        ),
+lib/shotcast/importShotCastManifest.ts-721-      requestedRound: round,
+lib/shotcast/importShotCastManifest.ts-722-    },
+lib/shotcast/importShotCastManifest.ts-723-
+lib/shotcast/importShotCastManifest.ts-724-    course: {
+lib/shotcast/importShotCastManifest.ts-725-      id: courseId,
+lib/shotcast/importShotCastManifest.ts-726-      name:
+lib/shotcast/importShotCastManifest.ts-727-        String(
+lib/shotcast/importShotCastManifest.ts-728-          course?.courseName ??
+lib/shotcast/importShotCastManifest.ts-729-            "Unknown course",
+lib/shotcast/importShotCastManifest.ts-730-        ),
+lib/shotcast/importShotCastManifest.ts-731-      code:
+lib/shotcast/importShotCastManifest.ts-732-        course?.courseCode ??
+lib/shotcast/importShotCastManifest.ts-733-        null,
+lib/shotcast/importShotCastManifest.ts-734-      hostCourse:
+lib/shotcast/importShotCastManifest.ts-735-        course?.hostCourse === true,
+lib/shotcast/importShotCastManifest.ts-736-      scoringLevel:
+lib/shotcast/importShotCastManifest.ts-737-        course?.scoringLevel ??
+lib/shotcast/importShotCastManifest.ts-738-        null,
+lib/shotcast/importShotCastManifest.ts-739-      enabled:
+lib/shotcast/importShotCastManifest.ts-740-        course?.enabled !== false,
+lib/shotcast/importShotCastManifest.ts-741-    },
+lib/shotcast/importShotCastManifest.ts-742-
+lib/shotcast/importShotCastManifest.ts-743-    summary: {
+lib/shotcast/importShotCastManifest.ts-744-      holesRequested: 18,
+lib/shotcast/importShotCastManifest.ts-745-      holesAvailable,
+lib/shotcast/importShotCastManifest.ts-746-      localImages: photos,
+lib/shotcast/importShotCastManifest.ts:747:      alignedMaps,
+lib/shotcast/importShotCastManifest.ts-748-      alignedGreens,
+lib/shotcast/importShotCastManifest.ts-749-      holesFailed:
+lib/shotcast/importShotCastManifest.ts-750-        18 - holesAvailable,
+lib/shotcast/importShotCastManifest.ts-751-    },
+lib/shotcast/importShotCastManifest.ts-752-
+lib/shotcast/importShotCastManifest.ts-753-    holes,
+lib/shotcast/importShotCastManifest.ts-754-  };
+lib/shotcast/importShotCastManifest.ts-755-}
+
+============================================================
+SHOTCAST DATABASE / TYPE REFERENCES
+============================================================

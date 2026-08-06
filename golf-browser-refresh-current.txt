@@ -1,0 +1,1635 @@
+============================================================
+CURRENT REFRESH ROUTE — TOP + AUTH/PAYLOAD SECTION
+============================================================
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
+import {
+  fetchGolfCoursesByEventId,
+  fetchGolfTournamentByEventId,
+  parseGolfTournamentByEventIdFromPayload,
+  type GolfCompetitor,
+  type GolfCompetitorStatus,
+  type GolfRound,
+  type GolfTournament,
+} from "@/lib/providers/golf";
+
+type RefreshBody = {
+  slateId?: number | string;
+  scoreboardPayload?: unknown;
+};
+
+type GolfSlateRecord = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  external_event_id: string | null;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+  cut_penalty_per_round: number | null;
+};
+
+type GolfPlayerIdRow = {
+  id: number;
+  display_name?: string;
+  espn_player_id: string;
+};
+
+type GolfEventPlayerIdRow = {
+  id: number;
+  player_id: number;
+};
+
+type GolfRoundIdRow = {
+  id: number;
+  event_player_id: number;
+  round_number: number;
+};
+
+type DatabaseError = {
+  message: string;
+};
+
+const EXPECTED_TOURNAMENT_ROUNDS = 4;
+const INSERT_BATCH_SIZE = 750;
+
+function parseSlateId(value: unknown): number | null {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function getTournamentYear(startDate: string): string | null {
+  const year = startDate.slice(0, 4);
+  return /^\d{4}$/.test(year) ? year : null;
+}
+
+function deduplicateCompetitors(
+  competitors: GolfCompetitor[],
+): GolfCompetitor[] {
+  return Array.from(
+    new Map(
+      competitors.map((competitor) => [competitor.espnPlayerId, competitor]),
+    ).values(),
+  );
+}
+
+function chunkRows<T>(rows: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < rows.length; index += size) {
+    chunks.push(rows.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+function getRoundStatus(
+  round: GolfRound,
+  tournamentStatus: GolfTournament["status"],
+): "scheduled" | "active" | "finished" | "not_played" {
+  if (round.holesCompleted === 18) {
+    return "finished";
+  }
+
+  if (round.holesCompleted > 0) {
+    return "active";
+  }
+
+  if (round.strokes !== null && round.strokes > 0) {
+    return "active";
+  }
+
+  return tournamentStatus === "scheduled" ? "scheduled" : "not_played";
+}
+
+function calculatePenaltyStrokes(input: {
+  status: GolfCompetitorStatus;
+  roundsCompleted: number;
+  penaltyPerRound: number;
+}): number {
+  if (input.penaltyPerRound <= 0) {
+    return 0;
+  }
+
+  const receivesMissingRoundPenalty = [
+    "cut",
+    "withdrawn",
+    "disqualified",
+  ].includes(input.status);
+
+  if (!receivesMissingRoundPenalty) {
+    return 0;
+  }
+
+  const missedRounds = Math.max(
+    0,
+    EXPECTED_TOURNAMENT_ROUNDS - input.roundsCompleted,
+  );
+
+  return missedRounds * input.penaltyPerRound;
+}
+
+async function fetchTournamentForSlate(
+  slate: GolfSlateRecord,
+  scoreboardPayload?: unknown,
+): Promise<GolfTournament | null> {
+  const eventId =
+    slate.external_event_id?.trim();
+
+  if (!eventId) {
+    return null;
+  }
+
+  if (
+    scoreboardPayload !==
+    undefined
+  ) {
+    return parseGolfTournamentByEventIdFromPayload(
+      scoreboardPayload,
+      eventId,
+    );
+  }
+
+  const tournamentYear =
+    getTournamentYear(
+      slate.start_date,
+    );
+
+  if (tournamentYear) {
+    const tournament =
+      await fetchGolfTournamentByEventId(
+        eventId,
+        tournamentYear,
+      );
+
+    if (tournament) {
+      return tournament;
+    }
+  }
+
+  return fetchGolfTournamentByEventId(
+    eventId,
+  );
+}
+
+async function insertInBatches(
+  table: string,
+  rows: Record<string, unknown>[],
+): Promise<DatabaseError | null> {
+  for (const batch of chunkRows(rows, INSERT_BATCH_SIZE)) {
+    const { error } = await supabaseAdmin.from(table).insert(batch);
+
+    if (error) {
+      return {
+        message: error.message,
+      };
+    }
+  }
+
+  return null;
+}
+
+export async function POST(request: Request) {
+  try {
+    let body: RefreshBody;
+
+    try {
+      body = (await request.json()) as RefreshBody;
+    } catch {
+      return NextResponse.json(
+        {
+          error: "A valid JSON request body is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const slateId =
+      parseSlateId(body.slateId);
+
+    const isPayloadIngestion =
+      body.scoreboardPayload !==
+      undefined;
+
+    if (isPayloadIngestion) {
+      const expectedSecret =
+        process.env
+          .GOLF_CRON_SECRET
+          ?.trim();
+
+      const authorization =
+        request.headers.get(
+          "authorization",
+        );
+
+      if (
+        !expectedSecret ||
+        authorization !==
+          `Bearer ${expectedSecret}`
+      ) {
+        return NextResponse.json(
+          {
+            error: "Unauthorized.",
+          },
+          {
+            status: 401,
+          },
+        );
+      }
+    }
+
+    if (!slateId) {
+      return NextResponse.json(
+        { error: "A valid slateId is required." },
+        { status: 400 },
+      );
+    }
+
+    const { data: slateData, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select(
+        [
+          "id",
+          "sport",
+          "display_name",
+          "external_event_id",
+          "start_date",
+          "end_date",
+          "is_locked",
+          "cut_penalty_per_round",
+        ].join(","),
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (slateError || !slateData) {
+      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
+    }
+
+    const slate = slateData as unknown as GolfSlateRecord;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error: "This slate is not a Golf slate.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error: "This slate is locked and cannot be refreshed.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!slate.external_event_id?.trim()) {
+      return NextResponse.json(
+        {
+          error: "This Golf slate does not have an ESPN external event ID.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const tournament =
+      await fetchTournamentForSlate(
+        slate,
+        body.scoreboardPayload,
+      );
+
+    if (!tournament) {
+      return NextResponse.json(
+        {
+          error: `ESPN tournament ${slate.external_event_id} was not found.`,
+        },
+        { status: 404 },
+      );
+    }
+
+    const competitors = deduplicateCompetitors(tournament.competitors);
+
+    if (competitors.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "ESPN returned the tournament, but the tournament field is not available yet.",
+          tournament: {
+            eventId: tournament.espnEventId,
+            name: tournament.name,
+            status: tournament.status,
+          },
+        },
+        { status: 502 },
+      );
+    }
+
+    const refreshedAt = new Date().toISOString();
+
+    let courseHolesUpserted = 0;
+
+    try {
+      const courses =
+        isPayloadIngestion
+          ? []
+          : await fetchGolfCoursesByEventId(
+        slate.external_event_id ?? "",
+      );
+
+      const courseRows = courses.flatMap((course) =>
+        course.holes.map((hole) => ({
+          slate_id: slateId,
+          course_id: course.espnCourseId,
+          course_name: course.name,
+          is_host: course.isHost,
+          hole_number: hole.holeNumber,
+          par: hole.par,
+          yards: hole.yards,
+          updated_at: refreshedAt,
+        })),
+      );
+
+      if (courseRows.length > 0) {
+        const { error: courseDeleteError } =
+
+============================================================
+CURRENT GOLF PROVIDER — TRANSPORT + PARSER
+============================================================
+const ESPN_GOLF_SCOREBOARD_URL =
+  "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard";
+
+const ESPN_GOLF_COURSE_URL =
+  "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard";
+
+type EspnGolfRequest =
+  | {
+      kind: "scoreboard";
+      dates?: string;
+    }
+  | {
+      kind: "course";
+      eventId: string;
+    };
+
+function getEspnGolfProxyBaseUrl():
+  | string
+  | null {
+  const explicitBaseUrl =
+    process.env
+      .GOLF_ESPN_PROXY_BASE_URL
+      ?.trim();
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl.replace(
+      /\/$/,
+      "",
+    );
+  }
+
+  const vercelUrl =
+    process.env.VERCEL_URL?.trim();
+
+  if (vercelUrl) {
+    return `https://${vercelUrl}`;
+  }
+
+  return null;
+}
+
+async function fetchEspnGolfJson<T>(
+  request: EspnGolfRequest,
+): Promise<T> {
+  const useEdgeProxy =
+    process.env.VERCEL === "1";
+
+  let requestUrl: URL;
+  let requestLabel: string;
+
+  if (useEdgeProxy) {
+    const proxyBaseUrl =
+      getEspnGolfProxyBaseUrl();
+
+    const proxySecret =
+      process.env
+        .GOLF_CRON_SECRET
+        ?.trim();
+
+    if (
+      !proxyBaseUrl ||
+      !proxySecret
+    ) {
+      throw new Error(
+        "The ESPN Golf Edge proxy is not configured. " +
+          "VERCEL_URL and GOLF_CRON_SECRET are required.",
+      );
+    }
+
+    requestUrl = new URL(
+      "/api/espn-golf-proxy",
+      proxyBaseUrl,
+    );
+
+    requestUrl.searchParams.set(
+      "kind",
+      request.kind,
+    );
+
+    if (
+      request.kind ===
+        "scoreboard" &&
+      request.dates
+    ) {
+      requestUrl.searchParams.set(
+        "dates",
+        request.dates,
+      );
+    }
+
+    if (
+      request.kind === "course"
+    ) {
+      requestUrl.searchParams.set(
+        "eventId",
+        request.eventId,
+      );
+    }
+
+    requestLabel =
+      "ESPN Golf Edge proxy";
+
+    const response = await fetch(
+      requestUrl,
+      {
+        cache: "no-store",
+        headers: {
+          Accept:
+            "application/json",
+          Authorization:
+            `Bearer ${proxySecret}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody =
+        await response
+          .text()
+          .catch(() => "");
+
+      throw new Error(
+        `${requestLabel} failed with ` +
+          `${response.status} ` +
+          `${response.statusText}` +
+          (
+            errorBody
+              ? `: ${errorBody.slice(0, 300)}`
+              : ""
+          ),
+      );
+    }
+
+    return (
+      await response.json()
+    ) as T;
+  }
+
+  if (
+    request.kind === "scoreboard"
+  ) {
+    requestUrl = new URL(
+      ESPN_GOLF_SCOREBOARD_URL,
+    );
+
+    if (request.dates) {
+      requestUrl.searchParams.set(
+        "dates",
+        request.dates,
+      );
+    }
+
+    requestLabel =
+      "ESPN golf request";
+  } else {
+    requestUrl = new URL(
+      ESPN_GOLF_COURSE_URL,
+    );
+
+    requestUrl.searchParams.set(
+      "event",
+      request.eventId,
+    );
+
+    requestLabel =
+      "ESPN Golf course request";
+  }
+
+  const response = await fetch(
+    requestUrl,
+    {
+      cache: "no-store",
+      headers: {
+        Accept:
+          "application/json",
+        "User-Agent":
+          request.kind ===
+          "scoreboard"
+            ? "111-sports-golf-provider/1.0"
+            : "111-sports-golf-course-provider/1.0",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `${requestLabel} failed with ` +
+        `${response.status} ` +
+        `${response.statusText}`,
+    );
+  }
+
+  return (
+    await response.json()
+  ) as T;
+}
+
+export type GolfTournamentStatus =
+  "scheduled" | "in_progress" | "final" | "unknown";
+
+export type GolfCompetitorStatus =
+  | "scheduled"
+  | "active"
+  | "round_complete"
+  | "finished"
+  | "cut"
+  | "withdrawn"
+  | "disqualified"
+  | "did_not_start";
+
+type UnknownRecord = Record<string, unknown>;
+
+type EspnStatusType = {
+  name?: string;
+  state?: string;
+  completed?: boolean;
+  description?: string;
+  detail?: string;
+  shortDetail?: string;
+};
+
+type EspnHole = {
+  value?: number;
+  displayValue?: string;
+  period?: number;
+  scoreType?: {
+    displayValue?: string;
+  };
+};
+
+type EspnStatistic = {
+  value?: number;
+  displayValue?: string;
+  name?: string;
+  label?: string;
+  abbreviation?: string;
+};
+
+type EspnStatistics = {
+  categories?: Array<{
+    name?: string;
+    displayName?: string;
+    stats?: EspnStatistic[];
+  }>;
+};
+
+type EspnRound = {
+  value?: number;
+  displayValue?: string;
+  period?: number;
+  linescores?: EspnHole[];
+  statistics?: EspnStatistics;
+};
+
+type EspnCompetitor = {
+  id?: string;
+  uid?: string;
+  order?: number;
+  score?: string;
+  athlete?: {
+  };
+}
+
+function parseTournament(event: EspnEvent): GolfTournament | null {
+  const espnEventId = String(event.id ?? "").trim();
+  const name = String(event.name ?? event.shortName ?? "").trim();
+
+  if (!espnEventId || !name) {
+    return null;
+  }
+
+  const competition = event.competitions?.[0];
+  const eventStatus = event.status?.type;
+  const competitionStatus = competition?.status?.type;
+  const statusSource = competitionStatus ?? eventStatus;
+
+  const reportedStatus = normalizeTournamentStatus(statusSource);
+
+  const tournamentCurrentRound =
+    typeof competition?.status?.period === "number"
+      ? competition.status.period
+      : null;
+
+  /*
+   * ESPN can mark the current competition/day as final after
+   * an early tournament round. Do not use event.endDate to
+   * decide whether that represents the end of the full event.
+   *
+   * A four-round PGA tournament cannot be truly final while
+   * ESPN still reports the current round as 1, 2, or 3.
+   */
+  const isPrematureEarlyRoundFinal =
+    reportedStatus === "final" &&
+    tournamentCurrentRound !== null &&
+    tournamentCurrentRound >= 1 &&
+    tournamentCurrentRound < 4;
+
+  const normalizedReportedStatus: GolfTournamentStatus =
+    isPrematureEarlyRoundFinal
+      ? "in_progress"
+      : reportedStatus;
+
+  const preliminaryCompetitors = safeArray(competition?.competitors)
+    .map((competitor) =>
+      parseCompetitor(
+        competitor,
+        normalizedReportedStatus,
+        tournamentCurrentRound,
+      ),
+    )
+    .filter(
+      (competitor): competitor is GolfCompetitor =>
+        competitor !== null,
+    );
+
+  /*
+   * ESPN can briefly return STATUS_FINAL for the event while the current
+   * tournament payload still contains golfers in a partially completed
+   * round. Treating that as a true final incorrectly turns every golfer
+   * with fewer than four rounds into a withdrawal and applies penalties.
+   *
+   * A partial round is stronger evidence that the tournament is still live.
+   */
+  const hasPartialRoundActivity = preliminaryCompetitors.some(
+    (competitor) =>
+      competitor.rounds.some(
+        (round) =>
+          round.holesCompleted > 0 &&
+          round.holesCompleted < 18,
+      ),
+  );
+
+  const status: GolfTournamentStatus =
+    normalizedReportedStatus === "final" && hasPartialRoundActivity
+      ? "in_progress"
+      : normalizedReportedStatus;
+
+  const competitors =
+    status === normalizedReportedStatus
+      ? preliminaryCompetitors
+      : safeArray(competition?.competitors)
+          .map((competitor) =>
+            parseCompetitor(
+              competitor,
+              status,
+              tournamentCurrentRound,
+            ),
+          )
+          .filter(
+            (competitor): competitor is GolfCompetitor =>
+              competitor !== null,
+          );
+
+  competitors.sort((a, b) => {
+    const aOrder =
+      a.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+    const bOrder =
+      b.leaderboardOrder ?? Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.displayName.localeCompare(b.displayName);
+  });
+
+  return {
+    espnEventId,
+    name,
+    startDate: parseEspnDate(event.date),
+    endDate: parseEspnDate(event.endDate),
+    status,
+    statusDescription:
+      competitionStatus?.detail ??
+      competitionStatus?.shortDetail ??
+      competitionStatus?.description ??
+      eventStatus?.description ??
+      null,
+    currentRound: tournamentCurrentRound,
+    completed: status === "final",
+    competitors,
+  };
+}
+
+async function fetchGolfPayload(
+  dates?: string,
+): Promise<EspnGolfScoreboardPayload> {
+  const payload: unknown =
+    await fetchEspnGolfJson<unknown>({
+      kind: "scoreboard",
+      dates,
+    });
+
+  if (!isRecord(payload)) {
+    throw new Error(
+      "ESPN golf returned an invalid payload.",
+    );
+  }
+
+  return payload as EspnGolfScoreboardPayload;
+}
+
+export function parseGolfTournamentsFromPayload(
+  payload: unknown,
+): GolfTournament[] {
+  if (!isRecord(payload)) {
+    throw new Error(
+      "ESPN golf returned an invalid payload.",
+    );
+  }
+
+  const scoreboard =
+    payload as EspnGolfScoreboardPayload;
+
+  return safeArray(
+    scoreboard.events,
+  )
+    .map(parseTournament)
+    .filter(
+      (
+        tournament,
+      ): tournament is GolfTournament =>
+        tournament !== null,
+    );
+}
+
+export function parseGolfTournamentByEventIdFromPayload(
+  payload: unknown,
+  espnEventId: string,
+): GolfTournament | null {
+  const normalizedEventId =
+    espnEventId.trim();
+
+  if (!normalizedEventId) {
+    return null;
+  }
+
+  return (
+    parseGolfTournamentsFromPayload(
+      payload,
+    ).find(
+      (tournament) =>
+        tournament.espnEventId ===
+        normalizedEventId,
+    ) ?? null
+  );
+}
+
+export async function fetchGolfTournaments(
+  dates?: string,
+): Promise<GolfTournament[]> {
+  const payload =
+    await fetchGolfPayload(dates);
+
+  return parseGolfTournamentsFromPayload(
+    payload,
+  );
+}
+
+export async function fetchGolfTournamentByEventId(
+  espnEventId: string,
+  dates?: string,
+): Promise<GolfTournament | null> {
+  const normalizedEventId = espnEventId.trim();
+
+  if (!normalizedEventId) {
+    return null;
+  }
+
+  const tournaments = await fetchGolfTournaments(dates);
+
+  return (
+    tournaments.find(
+      (tournament) => tournament.espnEventId === normalizedEventId,
+    ) ?? null
+  );
+}
+
+export async function fetchGolfSchedule(
+  dates?: string,
+): Promise<GolfScheduleEvent[]> {
+  const payload = await fetchGolfPayload(dates);
+  const calendar = safeArray(payload.leagues?.[0]?.calendar);
+
+  const schedule = calendar
+    .map((entry): GolfScheduleEvent | null => {
+      const espnEventId = String(entry.id ?? "").trim();
+      const name = String(entry.label ?? "").trim();
+
+      if (!espnEventId || !name) {
+        return null;
+      }
+
+      return {
+        espnEventId,
+        name,
+        startDate: parseEspnDate(entry.startDate),
+        endDate: parseEspnDate(entry.endDate),
+      };
+    })
+    .filter((event): event is GolfScheduleEvent => event !== null);
+
+  return Array.from(
+    new Map(schedule.map((event) => [event.espnEventId, event])).values(),
+  ).sort((a, b) => {
+    const aDate = a.startDate ?? "";
+    const bDate = b.startDate ?? "";
+
+    return aDate.localeCompare(bDate);
+  });
+}
+
+export type GolfCourseHole = {
+  holeNumber: number;
+  par: number;
+  yards: number | null;
+};
+
+export type GolfCourse = {
+  espnCourseId: string;
+  name: string | null;
+  totalYards: number | null;
+  totalPar: number | null;
+  parIn: number | null;
+  parOut: number | null;
+  isHost: boolean;
+  holes: GolfCourseHole[];
+};
+
+type EspnLeaderboardCourseHole = {
+  number?: number;
+  shotsToPar?: number;
+  totalYards?: number;
+};
+
+type EspnLeaderboardCourse = {
+  id?: string;
+  name?: string;
+  totalYards?: number;
+  shotsToPar?: number;
+  parIn?: number;
+  parOut?: number;
+  host?: boolean;
+  holes?: EspnLeaderboardCourseHole[];
+};
+
+type EspnLeaderboardPayload = {
+  events?: Array<{
+    courses?: EspnLeaderboardCourse[];
+  }>;
+};
+
+function nullableFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+export async function fetchGolfCoursesByEventId(
+  espnEventId: string,
+): Promise<GolfCourse[]> {
+  const normalizedEventId = espnEventId.trim();
+
+  if (!normalizedEventId) {
+    return [];
+
+============================================================
+REQUIRE ADMIN API
+============================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+
+export async function requireAdminApi() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Login required." },
+      { status: 401 }
+    );
+  }
+
+  if (user.role !== "admin") {
+    return NextResponse.json(
+      { error: "Admin access required." },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
+
+============================================================
+HOME REFRESH FUNCTION
+============================================================
+407-      row.gameStatusText,
+408-    );
+409-
+410-    if (remainingMinutes === 0) return current;
+411-
+412-    if (remainingMinutes === null) return baseline;
+413-
+414-    return current + baseline * (remainingMinutes / 48);
+415-  }
+416-
+417-  function getPlayerStatusLabel(row: any) {
+418-    const text = row.gameStatusText;
+419-
+420-    if (!text) return "Pregame";
+421-
+422-    if (/final/i.test(text)) return "Final";
+423-
+424-    return text;
+425-  }
+426-  const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
+427-  const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
+428-  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+429-    null,
+430-  );
+431-
+432:  async function refreshSlateStatsById(slateId: number) {
+433-    try {
+434-      setIsRefreshingHomeStats(true);
+435-      setMessage("");
+436-
+437-      const refreshEndpoint =
+438-        sport === "golf"
+439-          ? "/api/refresh-stats-golf"
+440-          : sport === "nfl"
+441-            ? "/api/refresh-stats-nfl"
+442-            : "/api/refresh-stats";
+443-
+444-      const response = await fetch(refreshEndpoint, {
+445-        method: "POST",
+446-        headers: {
+447-          "Content-Type": "application/json",
+448-        },
+449-        body: JSON.stringify({ slateId }),
+450-      });
+451-
+452-      const result = await response.json();
+453-
+454-      if (!response.ok) {
+455-        setMessage(result.error || "Failed to refresh stats.");
+456-        return;
+457-      }
+458-
+459-      await loadHomeSummary();
+460-    } catch (err) {
+461-      console.error("Failed to refresh stats", err);
+462-      setMessage("Failed to refresh stats.");
+463-    } finally {
+464-      setIsRefreshingHomeStats(false);
+465-    }
+466-  }
+467-
+468-  async function handleRefreshStats() {
+469-    if (!latestSlate?.id) {
+470-      setMessage("No active slate found to refresh.");
+471-      return;
+472-    }
+473-
+474-    await refreshSlateStatsById(latestSlate.id);
+475-  }
+476-
+477-  async function loadHomeSummary() {
+478-    try {
+479-      setIsLoading(true);
+480-      setMessage("");
+481-
+482-      const response = await fetch(
+483-        `/api/home-summary?sport=${sport}`,
+484-        { cache: "no-store" }
+485-      );
+486-
+487-      const result = await response.json();
+488-
+489-      if (!response.ok) {
+490-        setMessage(result.error || "Failed to load home summary.");
+491-        return;
+492-      }
+493-
+494-      setData(result);
+495-
+496-      if (
+497-        sport === "golf" &&
+498-        result.latestSlate?.id
+499-      ) {
+500-        try {
+501-          const statsResponse = await fetch(
+502-            `/api/player-stats?slateId=${result.latestSlate.id}`,
+503-            { cache: "no-store" },
+504-          );
+505-
+506-          const statsResult =
+507-            await statsResponse.json();
+508-
+509-          if (statsResponse.ok) {
+510-            setGolfPlayerStats(
+511-              statsResult.playerStats ?? [],
+512-            );
+513-          } else {
+514-            console.error(
+515-              statsResult.error ||
+516-                "Failed to load Golf player stats.",
+517-            );
+518-            setGolfPlayerStats([]);
+519-          }
+520-        } catch (statsError) {
+521-          console.error(
+522-            "Failed to load Golf player stats",
+523-            statsError,
+524-          );
+525-          setGolfPlayerStats([]);
+526-        }
+527-      } else {
+
+============================================================
+LINEUP BUILDER REFRESH FUNCTION
+============================================================
+956-
+957-      const availabilityResult = await availabilityResponse.json();
+958-
+959-      if (loadId !== latestSlateLoadRef.current) return;
+960-
+961-      if (!availabilityResponse.ok) {
+962-        console.error(
+963-          availabilityResult.error || "Failed to load slate availability."
+964-        );
+965-        setAvailablePlayerIdsForSlate([]);
+966-        return;
+967-      }
+968-
+969-      setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+970-    } catch (error) {
+971-      if (loadId !== latestSlateLoadRef.current) return;
+972-      console.error(error);
+973-      setAvailablePlayerIdsForSlate([]);
+974-    } finally {
+975-      if (loadId === latestSlateLoadRef.current) {
+976-        setIsAvailabilityLoading(false);
+977-      }
+978-    }
+979-  }
+980-
+981:  async function refreshStatsForSelectedSlate(isSilent = false) {
+982-    if (!selectedSlateIdNumber) {
+983-      if (!isSilent) alert("No slate selected.");
+984-      return;
+985-    }
+986-
+987-    try {
+988-      setIsRefreshingStats(true);
+989-      if (!isSilent) {
+990-        setMessage("");
+991-        setSaveMessage("");
+992-      }
+993-
+994-      const refreshEndpoint =
+995-        selectedSlate?.sport === "nfl"
+996-          ? "/api/refresh-stats-nfl"
+997-          : selectedSlate?.sport === "golf"
+998-            ? "/api/refresh-stats-golf"
+999-            : "/api/refresh-stats";
+1000-
+1001-      const refreshResponse = await fetch(refreshEndpoint, {
+1002-        method: "POST",
+1003-        headers: { "Content-Type": "application/json" },
+1004-        body: JSON.stringify({ slateId: selectedSlateIdNumber }),
+1005-        cache: "no-store",
+1006-      });
+1007-
+1008-      const refreshResult = await refreshResponse.json();
+1009-
+1010-      if (!refreshResponse.ok) {
+1011-        if (!isSilent) {
+1012-          alert(refreshResult.error || "Failed to refresh stats.");
+1013-        } else {
+1014-          console.error(refreshResult.error || "Failed to refresh stats.");
+1015-        }
+1016-        return;
+1017-      }
+1018-
+1019-      setLastRefreshSummary({
+1020-        gamesFound: refreshResult.gamesFound,
+1021-        playerStatsUpserted: refreshResult.playerStatsUpserted,
+1022-        teamResultsUpserted: refreshResult.teamResultsUpserted,
+1023-      });
+1024-
+1025-      const [statsResponse, resultsResponse] = await Promise.all([
+1026-        fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, {
+1027-          cache: "no-store",
+1028-        }),
+1029-        fetch(`/api/team-results?slateId=${selectedSlateIdNumber}`, {
+1030-          cache: "no-store",
+1031-        }),
+1032-      ]);
+1033-
+1034-      const statsResult = await statsResponse.json();
+1035-      const resultsResult = await resultsResponse.json();
+1036-
+1037-      setPlayerStatsState(statsResult.playerStats ?? []);
+1038-      setTeamResultsState(resultsResult.teamResults ?? []);
+1039-      setLastUpdatedAt(new Date().toISOString());
+1040-
+1041-      if (!isSilent) {
+1042-        setSaveMessage("Stats refreshed successfully.");
+1043-      }
+1044-
+1045-      fetch(`/api/slate-availability?slateId=${selectedSlateIdNumber}`, {
+1046-        cache: "no-store",
+1047-      })
+1048-        .then((res) => res.json())
+1049-        .then((availabilityResult) => {
+1050-          setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+1051-        })
+1052-        .catch((error) => {
+1053-          console.error(error);
+1054-        });
+1055-    } catch (error) {
+1056-      console.error(error);
+1057-      if (!isSilent) alert("Something went wrong while refreshing stats.");
+1058-    } finally {
+1059-      setIsRefreshingStats(false);
+1060-    }
+1061-  }
+1062-
+1063-  async function persistLineupForTeam(
+1064-    teamId: number,
+1065-    playerList: Player[],
+1066-    successMessage?: string,
+1067-    options?: {
+1068-      allowEmpty?: boolean;
+1069-      notifyNextDrafter?: boolean;
+1070-    }
+1071-  ) {
+1072-    setSaveMessage("");
+1073-    setMessage("");
+1074-
+1075-    if (!selectedSlateIdNumber) {
+1076-      setSaveMessage("Please choose a slate before saving.");
+1077-      return false;
+1078-    }
+1079-    if (!participatingTeamIds.has(teamId)) {
+1080-      setSaveMessage("That team is not participating in this slate.");
+1081-      return false;
+1082-    }
+1083-    if (selectedSlate?.is_locked) {
+1084-      setSaveMessage("This slate is locked.");
+1085-      return false;
+1086-    }
+1087-    if (!options?.allowEmpty && playerList.length === 0) {
+1088-      setSaveMessage("Select at least 1 player before saving.");
+1089-      return false;
+1090-    }
+1091-
+1092-    const totalSlots = getRosterTotalSlots();
+1093-    const slots = getEffectiveRosterSlots();
+1094-    const listCounts = countPlayersByPosition(playerList);
+1095-
+1096-    if (playerList.length > totalSlots) {
+1097-      setSaveMessage(`A lineup can have at most ${totalSlots} players.`);
+1098-      return false;
+1099-    }
+1100-
+1101-    const overLimitSlot = slots.find(
+1102-      (slot) => (listCounts.get(slot.position) ?? 0) > slot.slot_count
+1103-    );
+1104-
+1105-    if (overLimitSlot) {
+1106-      const limitDescription = slots
+
+============================================================
+ADMIN GOLF REFRESH FUNCTION
+============================================================
+524-      if (!response.ok) {
+525-        setMessage(
+526-          result.error || "Failed to save slate.",
+527-        );
+528-        return;
+529-      }
+530-
+531-      setMessage("Slate updated successfully.");
+532-      await loadSlateDetail(Number(selectedSlateId));
+533-      await loadSlates();
+534-    } catch (error) {
+535-      console.error(error);
+536-      setMessage(
+537-        "Something went wrong while saving the slate.",
+538-      );
+539-    } finally {
+540-      setIsSaving(false);
+541-    }
+542-  }
+543-
+544:  async function handleRefreshGolfField() {
+545-    if (!selectedSlateId || !selectedSlate) return;
+546-
+547-    try {
+548-      setIsRefreshingGolfField(true);
+549-      setMessage("");
+550-
+551-      const response = await fetch(
+552-        "/api/refresh-stats-golf",
+553-        {
+554-          method: "POST",
+555-          headers: {
+556-            "Content-Type": "application/json",
+557-          },
+558-          body: JSON.stringify({
+559-            slateId: Number(selectedSlateId),
+560-          }),
+561-          cache: "no-store",
+562-        },
+563-      );
+564-
+565-      const result = await response.json();
+566-
+567-      if (!response.ok) {
+568-        setMessage(
+569-          result.error ||
+570-            "Failed to refresh the tournament field.",
+571-        );
+572-        return;
+573-      }
+574-
+575-      await loadSlateDetail(Number(selectedSlateId));
+576-
+577-      setMessage(
+578-        "Tournament field, scores, rounds, and hole data refreshed successfully.",
+579-      );
+580-    } catch (error) {
+581-      console.error(error);
+582-      setMessage(
+583-        "Something went wrong while refreshing the tournament field.",
+584-      );
+585-    } finally {
+586-      setIsRefreshingGolfField(false);
+587-    }
+588-  }
+589-
+590-  async function handleSyncGolfRankings() {
+591-    try {
+592-      setIsSyncingGolfRankings(true);
+593-      setMessage("");
+594-
+595-      const response = await fetch(
+596-        "/api/admin/sync-golf-rankings",
+597-        {
+598-          method: "POST",
+599-          cache: "no-store",
+600-        },
+601-      );
+602-
+603-      const result = await response.json();
+604-
+605-      if (!response.ok) {
+606-        setMessage(
+607-          result.error || "Failed to sync Golf rankings.",
+608-        );
+609-        return;
+610-      }
+611-
+612-      setMessage(
+613-        `OWGR synced: ${result.updatedGolfers ?? 0} updated, ` +
+614-          `${result.createdGolfers ?? 0} added, ` +
+615-          `${result.unmatchedGolfers ?? 0} unmatched.`,
+616-      );
+617-    } catch (error) {
+618-      console.error(error);
+619-      setMessage(
+620-        "Something went wrong while syncing Golf rankings.",
+621-      );
+622-    } finally {
+623-      setIsSyncingGolfRankings(false);
+624-    }
+625-  }
+626-
+627-  async function handleReseed() {
+628-    if (!selectedSlateId) return;
+629-
+
+============================================================
+NEW SLATE GOLF REFRESH SECTION
+============================================================
+405-    team_id: team.id,
+406-    draft_order: index + 1,
+407-    is_participating: true,
+408-  })),
+409-        }),
+410-      });
+411-
+412-      const result = await response.json();
+413-
+414-      if (!response.ok) {
+415-        setMessage(result.error || "Failed to create slate.");
+416-        return;
+417-      }
+418-
+419-      if (sport === "golf") {
+420-        const slateId = Number(result?.slate?.id);
+421-
+422-        if (!Number.isInteger(slateId) || slateId <= 0) {
+423-          setMessage(
+424-            "The Golf slate was created, but its slate ID was not returned. Open Manage Slates to refresh the tournament field."
+425-          );
+426-          return;
+427-        }
+428-
+429-        setMessage(
+430:          `${selectedGolfTournament?.name ?? "Golf"} created. Loading the tournament field...`
+431-        );
+432-
+433-        const fieldResponse = await fetch("/api/refresh-stats-golf", {
+434-          method: "POST",
+435-          headers: {
+436-            "Content-Type": "application/json",
+437-          },
+438-          body: JSON.stringify({ slateId }),
+439-          cache: "no-store",
+440-        });
+441-
+442-        const fieldResult = await fieldResponse.json();
+443-
+444-        if (!fieldResponse.ok) {
+445-          setMessage(
+446-            `The slate was created, but the tournament field could not be loaded: ${
+447-              fieldResult.error || "Unknown field-sync error."
+448-            } You can retry from Manage Slates.`
+449-          );
+450-          return;
+451-        }
+452-
+453-        router.push(`/lineups/draft?sport=golf&slateId=${slateId}`);
+454-        router.refresh();
+455-      } else {
+456-        router.push(`/lineups/draft?sport=${sport}`);
+457-        router.refresh();
+458-      }
+459-    } catch (error) {
+460-      console.error(error);
+461-      setMessage("Something went wrong while creating the slate.");
+462-    } finally {
+463-      setIsSaving(false);
+464-    }
+465-  }
+466-
+467-  return (
+468-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+469-      <div className="mx-auto max-w-4xl space-y-6">
+470-        <AppNav />
+471-
+472-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
+473-          <h1 className="text-3xl font-bold tracking-tight">Create New Slate</h1>
+474-          <p className="mt-2 text-sm text-slate-600">
+475-            Participating teams are ordered from the inverse of the previous slate standings,
+476-            and you can manually adjust the order below.
+477-          </p>
+478-          {previousSlateLabel ? (
+479-            <p className="mt-2 text-sm text-sky-700">
+480-              Previous slate used for default order: {previousSlateLabel}
+481-            </p>
+482-          ) : null}
+483-        </section>
+484-
+485-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+486-          <form onSubmit={handleSubmit} className="space-y-6">
+487-            <div>
+488-              <label className="mb-2 block text-sm font-medium text-slate-700">
+489-                Sport
+490-              </label>
+491-
+492-              <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+493-                {(["nba", "nfl", "golf"] as const).map((option) => (
+494-                  <button
+495-                    key={option}
+496-                    type="button"
+497-                    onClick={() => {
+498-                      setSport(option);
+499-                      setMessage("");
+500-                    }}
+501-                    className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+502-                      sport === option
+503-                        ? "bg-sky-600 text-white"
+504-                        : "text-slate-600 hover:text-slate-900"
+505-                    }`}
+
+============================================================
+CURRENT FAILED WORKFLOW
+============================================================
+name: Refresh live golf
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+  workflow_dispatch:
+    inputs:
+      slate_id:
+        description: "Optional slate ID"
+        required: false
+        type: string
+
+concurrency:
+  group: refresh-live-golf
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Fetch ESPN and ingest Golf scores
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          GOLF_CRON_SECRET: ${{ secrets.GOLF_CRON_SECRET }}
+          REQUESTED_SLATE_ID: ${{ inputs.slate_id }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${APP_URL:-}" ]; then
+            echo "APP_URL repository secret is missing."
+            exit 1
+          fi
+
+          if [ -z "${GOLF_CRON_SECRET:-}" ]; then
+            echo "GOLF_CRON_SECRET repository secret is missing."
+            exit 1
+          fi
+
+          BASE_URL="${APP_URL%/}"
+
+          echo "Loading active Golf slate manifest..."
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-delay 5 \
+            --max-time 60 \
+            -H "Authorization: Bearer ${GOLF_CRON_SECRET}" \
+            "${BASE_URL}/api/cron/golf-refresh-manifest" \
+            > manifest.json
+
+          jq . manifest.json
+
+          SLATE_COUNT="$(
+            jq '.slates | length' \
+              manifest.json
+          )"
+
+          echo "Active slates found: ${SLATE_COUNT}"
+
+          if [ "${SLATE_COUNT}" -eq 0 ]; then
+            echo "No active Golf slates."
+            exit 0
+          fi
+
+          jq -c '.slates[]' \
+            manifest.json \
+            | while read -r SLATE
+          do
+            SLATE_ID="$(
+              jq -r '.slateId' \
+                <<<"${SLATE}"
+            )"
+
+            EVENT_ID="$(
+              jq -r '.eventId' \
+                <<<"${SLATE}"
+            )"
+
+            YEAR="$(
+              jq -r '.year' \
+                <<<"${SLATE}"
+            )"
+
+            TOURNAMENT="$(
+              jq -r '.tournament' \
+                <<<"${SLATE}"
+            )"
+
+            if \
+              [ -n "${REQUESTED_SLATE_ID:-}" ] && \
+              [ "${SLATE_ID}" != "${REQUESTED_SLATE_ID}" ]
+            then
+              continue
+            fi
+
+            echo
+            echo "========================================"
+            echo "Refreshing ${TOURNAMENT}"
+            echo "Slate: ${SLATE_ID}"
+            echo "Event: ${EVENT_ID}"
+            echo "Year: ${YEAR}"
+            echo "========================================"
+
+            ESPN_URL="https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${YEAR}&event=${EVENT_ID}"
+
+            echo "Fetching event-specific ESPN scoreboard..."
+
+            ESPN_STATUS="$(
+              curl \
+                --silent \
+                --show-error \
+                --retry 3 \
+                --retry-delay 5 \
+                --max-time 90 \
+                --output scoreboard.json \
+                --write-out "%{http_code}" \
+                -H "Accept: application/json, text/plain, */*" \
+                -H "Origin: https://www.espn.com" \
+                -H "Referer: https://www.espn.com/golf/leaderboard" \
+                -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/140 Safari/537.36" \
+                "${ESPN_URL}"
+            )"
+
+            echo "ESPN HTTP status: ${ESPN_STATUS}"
+
+            if [ "${ESPN_STATUS}" -lt 200 ] || [ "${ESPN_STATUS}" -ge 300 ]; then
+              echo "ESPN request failed. Response body:"
+              cat scoreboard.json
+              exit 1
+            fi
+
+            if ! jq -e '.events | type == "array"' scoreboard.json >/dev/null; then
+              echo "ESPN returned an unexpected payload:"
+              head -c 3000 scoreboard.json
+              echo
+              exit 1
+            fi
+
+            echo "ESPN events returned: $(jq '.events | length' scoreboard.json)"
+
+            jq \
+              --argjson slateId "${SLATE_ID}" \
+              --slurpfile scoreboard scoreboard.json \
+              '{
+                slateId: $slateId,
+                scoreboardPayload: $scoreboard[0]
+              }' \
+              /dev/null \
+              > ingestion.json
+
+            curl \
+              --fail-with-body \
+              --silent \
+              --show-error \
+              --retry 2 \
+              --retry-delay 5 \
+              --max-time 180 \
+              -X POST \
+              -H "Authorization: Bearer ${GOLF_CRON_SECRET}" \
+              -H "Content-Type: application/json" \
+              --data-binary @ingestion.json \
+              "${BASE_URL}/api/refresh-stats-golf" \
+              > result.json
+
+            jq . result.json
+
+            SUCCESS="$(
+              jq -r '.success // false' \
+                result.json
+            )"
+
+            if [ "${SUCCESS}" != "true" ]; then
+              echo "Golf ingestion did not report success."
+              exit 1
+            fi
+          done

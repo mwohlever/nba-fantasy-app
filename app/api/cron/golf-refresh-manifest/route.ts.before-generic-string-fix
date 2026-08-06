@@ -113,70 +113,29 @@ export async function GET(
     );
   }
 
-  const rawSlateRows: unknown[] =
-    Array.isArray(data)
-      ? (data as unknown[])
-      : [];
-
   const slates =
-    rawSlateRows
-      .filter(
-        (
-          row,
-        ): row is Record<
-          string,
-          unknown
-        > =>
-          typeof row === "object" &&
-          row !== null,
-      )
-      .map((row) => {
-        const slate: GolfSlateRow = {
-          id: Number(row.id),
-          display_name:
-            row.display_name == null
-              ? null
-              : String(
-                  row.display_name,
-                ),
-          external_event_id:
-            row.external_event_id == null
-              ? null
-              : String(
-                  row.external_event_id,
-                ),
-          start_date:
-            String(
-              row.start_date ?? "",
-            ),
-          end_date:
-            String(
-              row.end_date ?? "",
-            ),
-        };
-
-        return {
-          slateId:
-            Number(slate.id),
-          tournament:
-            slate.display_name ??
-            `Slate ${slate.id}`,
-          eventId:
-            String(
-              slate.external_event_id ??
-                "",
-            ),
-          year:
-            String(
-              slate.start_date ??
-                "",
-            ).slice(0, 4),
-          startDate:
-            slate.start_date,
-          endDate:
-            slate.end_date,
-        };
-      })
+    ((data ?? []) as GolfSlateRow[])
+      .map((slate) => ({
+        slateId:
+          Number(slate.id),
+        tournament:
+          slate.display_name ??
+          `Slate ${slate.id}`,
+        eventId:
+          String(
+            slate.external_event_id ??
+              "",
+          ),
+        year:
+          String(
+            slate.start_date ??
+              "",
+          ).slice(0, 4),
+        startDate:
+          slate.start_date,
+        endDate:
+          slate.end_date,
+      }))
       .filter(
         (slate) =>
           Number.isInteger(

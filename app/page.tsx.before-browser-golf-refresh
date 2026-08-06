@@ -1,7 +1,5 @@
 "use client";
 
-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
-
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -436,41 +434,26 @@ function HomePageContent() {
       setIsRefreshingHomeStats(true);
       setMessage("");
 
-      if (sport === "golf") {
-        await refreshGolfFromBrowser(
-          slateId,
-        );
-      } else {
-        const refreshEndpoint =
-          sport === "nfl"
+      const refreshEndpoint =
+        sport === "golf"
+          ? "/api/refresh-stats-golf"
+          : sport === "nfl"
             ? "/api/refresh-stats-nfl"
             : "/api/refresh-stats";
 
-        const response =
-          await fetch(
-            refreshEndpoint,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-              body: JSON.stringify({
-                slateId,
-              }),
-            },
-          );
+      const response = await fetch(refreshEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ slateId }),
+      });
 
-        const result =
-          await response.json();
+      const result = await response.json();
 
-        if (!response.ok) {
-          setMessage(
-            result.error ||
-              "Failed to refresh stats.",
-          );
-          return;
-        }
+      if (!response.ok) {
+        setMessage(result.error || "Failed to refresh stats.");
+        return;
       }
 
       await loadHomeSummary();

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
@@ -227,25 +226,14 @@ export async function POST(request: Request) {
           "authorization",
         );
 
-      const hasCronAuthorization =
-        Boolean(
-          expectedSecret &&
-          authorization ===
-            `Bearer ${expectedSecret}`,
-        );
-
-      const currentUser =
-        hasCronAuthorization
-          ? null
-          : await getCurrentUser();
-
       if (
-        !hasCronAuthorization &&
-        !currentUser
+        !expectedSecret ||
+        authorization !==
+          `Bearer ${expectedSecret}`
       ) {
         return NextResponse.json(
           {
-            error: "Login required.",
+            error: "Unauthorized.",
           },
           {
             status: 401,

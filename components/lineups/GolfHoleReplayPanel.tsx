@@ -88,6 +88,7 @@ type ShotCastManifestHole = {
   yards: number | null;
   aboutThisHole: string | null;
   localImageUrl: string | null;
+  alignedMapUrl?: string | null;
   localAlignedMapUrl?: string | null;
   calibration?: ShotCastCalibration | null;
 };

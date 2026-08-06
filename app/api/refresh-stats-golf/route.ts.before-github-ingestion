@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 import {
   fetchGolfCoursesByEventId,
   fetchGolfTournamentByEventId,
-  parseGolfTournamentByEventIdFromPayload,
   type GolfCompetitor,
   type GolfCompetitorStatus,
   type GolfRound,
@@ -15,7 +13,6 @@ import {
 
 type RefreshBody = {
   slateId?: number | string;
-  scoreboardPayload?: unknown;
 };
 
 type GolfSlateRecord = {
@@ -136,45 +133,27 @@ function calculatePenaltyStrokes(input: {
 
 async function fetchTournamentForSlate(
   slate: GolfSlateRecord,
-  scoreboardPayload?: unknown,
 ): Promise<GolfTournament | null> {
-  const eventId =
-    slate.external_event_id?.trim();
+  const eventId = slate.external_event_id?.trim();
 
   if (!eventId) {
     return null;
   }
 
-  if (
-    scoreboardPayload !==
-    undefined
-  ) {
-    return parseGolfTournamentByEventIdFromPayload(
-      scoreboardPayload,
-      eventId,
-    );
-  }
-
-  const tournamentYear =
-    getTournamentYear(
-      slate.start_date,
-    );
+  const tournamentYear = getTournamentYear(slate.start_date);
 
   if (tournamentYear) {
-    const tournament =
-      await fetchGolfTournamentByEventId(
-        eventId,
-        tournamentYear,
-      );
+    const tournament = await fetchGolfTournamentByEventId(
+      eventId,
+      tournamentYear,
+    );
 
     if (tournament) {
       return tournament;
     }
   }
 
-  return fetchGolfTournamentByEventId(
-    eventId,
-  );
+  return fetchGolfTournamentByEventId(eventId);
 }
 
 async function insertInBatches(
@@ -209,50 +188,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const slateId =
-      parseSlateId(body.slateId);
-
-    const isPayloadIngestion =
-      body.scoreboardPayload !==
-      undefined;
-
-    if (isPayloadIngestion) {
-      const expectedSecret =
-        process.env
-          .GOLF_CRON_SECRET
-          ?.trim();
-
-      const authorization =
-        request.headers.get(
-          "authorization",
-        );
-
-      const hasCronAuthorization =
-        Boolean(
-          expectedSecret &&
-          authorization ===
-            `Bearer ${expectedSecret}`,
-        );
-
-      const currentUser =
-        hasCronAuthorization
-          ? null
-          : await getCurrentUser();
-
-      if (
-        !hasCronAuthorization &&
-        !currentUser
-      ) {
-        return NextResponse.json(
-          {
-            error: "Login required.",
-          },
-          {
-            status: 401,
-          },
-        );
-      }
-    }
+    const slateId = parseSlateId(body.slateId);
 
     if (!slateId) {
       return NextResponse.json(
@@ -311,11 +247,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const tournament =
-      await fetchTournamentForSlate(
-        slate,
-        body.scoreboardPayload,
-      );
+    const tournament = await fetchTournamentForSlate(slate);
 
     if (!tournament) {
       return NextResponse.json(
@@ -348,10 +280,7 @@ export async function POST(request: Request) {
     let courseHolesUpserted = 0;
 
     try {
-      const courses =
-        isPayloadIngestion
-          ? []
-          : await fetchGolfCoursesByEventId(
+      const courses = await fetchGolfCoursesByEventId(
         slate.external_event_id ?? "",
       );
 

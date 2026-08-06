@@ -1,0 +1,46 @@
+name: Refresh live golf
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-live-golf
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Refresh active Golf slates
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          GOLF_CRON_SECRET: ${{ secrets.GOLF_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${APP_URL:-}" ]; then
+            echo "APP_URL repository secret is missing."
+            exit 1
+          fi
+
+          if [ -z "${GOLF_CRON_SECRET:-}" ]; then
+            echo "GOLF_CRON_SECRET repository secret is missing."
+            exit 1
+          fi
+
+          BASE_URL="${APP_URL%/}"
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --retry 2 \
+            --retry-delay 10 \
+            --max-time 180 \
+            -H "Authorization: Bearer ${GOLF_CRON_SECRET}" \
+            "${BASE_URL}/api/cron/refresh-golf"

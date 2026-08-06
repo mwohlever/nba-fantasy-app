@@ -1,7 +1,5 @@
 "use client";
 
-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AppNav from "@/components/AppNav";
@@ -550,9 +548,29 @@ export default function AdminSlatesPage() {
       setIsRefreshingGolfField(true);
       setMessage("");
 
-      await refreshGolfFromBrowser(
-        Number(selectedSlateId),
+      const response = await fetch(
+        "/api/refresh-stats-golf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            slateId: Number(selectedSlateId),
+          }),
+          cache: "no-store",
+        },
       );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ||
+            "Failed to refresh the tournament field.",
+        );
+        return;
+      }
 
       await loadSlateDetail(Number(selectedSlateId));
 

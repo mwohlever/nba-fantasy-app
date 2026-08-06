@@ -1,7 +1,5 @@
 "use client";
 
-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
-
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 
 import AppNav from "@/components/AppNav";
@@ -432,16 +430,21 @@ teamSelections: teams
           `${selectedGolfTournament?.name ?? "Golf"} created. Loading the tournament field...`
         );
 
-        try {
-          await refreshGolfFromBrowser(
-            slateId,
-          );
-        } catch (refreshError) {
+        const fieldResponse = await fetch("/api/refresh-stats-golf", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ slateId }),
+          cache: "no-store",
+        });
+
+        const fieldResult = await fieldResponse.json();
+
+        if (!fieldResponse.ok) {
           setMessage(
             `The slate was created, but the tournament field could not be loaded: ${
-              refreshError instanceof Error
-                ? refreshError.message
-                : "Unknown field-sync error."
+              fieldResult.error || "Unknown field-sync error."
             } You can retry from Manage Slates.`
           );
           return;

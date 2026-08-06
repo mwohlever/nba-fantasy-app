@@ -1,0 +1,300 @@
+============================================================
+FANTASY HOLE + INLINE REPLAY
+============================================================
+
+                        const isSelected =
+                          selectedHoleKey === holeKey;
+
+                        const par = holePar(hole);
+
+                        const yardage =
+                          hole?.yards === null ||
+                          hole?.yards === undefined
+                            ? null
+                            : Number(hole.yards);
+
+                        return (
+                          <div
+                            key={`hole-${holeNumber}`}
+                            className="relative"
+                            role="button"
+                            tabIndex={0}
+                            title={holeTooltip(
+                              holeNumber,
+                              hole,
+                            )}
+                            aria-label={holeTooltip(
+                              holeNumber,
+                              hole,
+                            )}
+                            aria-expanded={isSelected}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+
+                              if (isSelected) {
+                                setSelectedHoleKey(null);
+                                setInlineHoleReplay(null);
+                              } else {
+                                setSelectedHoleKey(holeKey);
+
+                                setInlineHoleReplay({
+                                  playerId: player.id,
+                                  roundNumber:
+                                    displayRound
+                                      ?.round_number ??
+                                    1,
+                                  holeNumber,
+                                  par,
+                                  yardage,
+                                  result:
+                                    holeResultName(
+                                      hole
+                                        ?.relative_to_par,
+                                    ),
+                                });
+                              }
+                            }}
+                            onKeyDown={(event) => {
+                              if (
+                                event.key !== "Enter" &&
+                                event.key !== " "
+                              ) {
+                                return;
+                              }
+
+                              event.preventDefault();
+                              event.stopPropagation();
+
+                              if (isSelected) {
+                                setSelectedHoleKey(null);
+                                setInlineHoleReplay(null);
+                              } else {
+                                setSelectedHoleKey(holeKey);
+
+                                setInlineHoleReplay({
+                                  playerId: player.id,
+                                  roundNumber:
+                                    displayRound
+                                      ?.round_number ??
+                                    1,
+                                  holeNumber,
+                                  par,
+                                  yardage,
+                                  result:
+                                    holeResultName(
+                                      hole
+                                        ?.relative_to_par,
+                                    ),
+                                });
+                              }
+                            }}
+                            onBlur={() =>
+                              setSelectedHoleKey(
+                                (current) =>
+                                  current === holeKey
+                                    ? null
+                                    : current,
+                              )
+                            }
+                          >
+                            <div
+                              className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black transition ${
+                                isSelected
+                                  ? "relative z-10 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-50"
+                                  : ""
+                              } ${relativeClass(
+                                hole?.relative_to_par,
+                              )}`}
+                            >
+                              {relativeLabel(
+                                hole?.relative_to_par,
+                              )}
+                            </div>
+
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {inlineHoleReplay &&
+                  selectedHoleKey?.startsWith(
+                    `${player.id}:${displayRound?.round_number ?? 0}:`,
+                  ) ? (
+                    <div className="mt-4">
+                      <GolfHoleReplayPanel
+                        slateId={selectedSlate?.id ?? null}
+                        replay={inlineHoleReplay}
+                        inline
+                        onClose={() => {
+                          setInlineHoleReplay(null);
+                          setSelectedHoleKey(null);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProfilePlayer(player)
+                    }
+                    className="mt-3 block w-full text-right text-xs font-semibold text-emerald-700 transition hover:text-emerald-900"
+                    aria-label={`Open ${player.name} full Golf scorecard`}
+                  >
+                    View full scorecard →
+                  </button>
+                </div>
+              </article>
+
+============================================================
+LEAGUE GOLFER CARD + INLINE REPLAY
+============================================================
+                      selectedHoleKey?.startsWith(
+                        `${row.player.id}:${row.displayRound?.round_number ?? 0}:`,
+                      )
+                        ? "pb-28"
+                        : "pb-1"
+                    }`}
+                  >
+                    <div className="grid min-w-[680px] grid-cols-18 gap-1">
+                      {Array.from(
+                        { length: 18 },
+                        (_, index) => index + 1,
+                      ).map((holeNumber) => (
+                        <div
+                          key={`number-${holeNumber}`}
+                          className="text-center text-[8px] font-bold text-slate-600"
+                        >
+                          {holeNumber}
+                        </div>
+                      ))}
+
+                      {Array.from(
+                        { length: 18 },
+                        (_, index) => index + 1,
+                      ).map((holeNumber) => {
+                        const hole =
+                          holesByNumber.get(holeNumber);
+
+                        return (
+                          <div
+                            key={`par-${holeNumber}`}
+                            className="text-center text-[8px] font-bold text-slate-500"
+                          >
+                            {holePar(hole) ?? "—"}
+                          </div>
+                        );
+                      })}
+
+                      {Array.from(
+                        { length: 18 },
+                        (_, index) => index + 1,
+                      ).map((holeNumber) => {
+                        const hole =
+                          holesByNumber.get(holeNumber);
+
+                        const holeKey =
+                          `${row.player.id}:` +
+                          `${row.displayRound?.round_number ?? 0}:` +
+                          `${holeNumber}`;
+
+                        const isSelected =
+                          selectedHoleKey === holeKey;
+
+                        const par = holePar(hole);
+
+                        const yards =
+                          hole?.yards === null ||
+                          hole?.yards === undefined
+                            ? null
+                            : Number(hole.yards);
+
+                        return (
+                          <div
+                            key={`score-${holeNumber}`}
+                            className="relative"
+                          >
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+
+                                if (isSelected) {
+                                  setSelectedHoleKey(null);
+                                  setInlineHoleReplay(null);
+                                  return;
+                                }
+
+                                setSelectedHoleKey(holeKey);
+
+                                setInlineHoleReplay({
+                                  playerId:
+                                    row.player.id,
+                                  roundNumber:
+                                    row.displayRound
+                                      ?.round_number ??
+                                    1,
+                                  holeNumber,
+                                  par,
+                                  yardage: yards,
+                                  result:
+                                    resultName(
+                                      hole
+                                        ?.relative_to_par,
+                                    ),
+                                });
+                              }}
+                              aria-expanded={isSelected}
+                              aria-label={
+                                hole?.strokes === null ||
+                                hole?.strokes === undefined
+                                  ? `Open Hole ${holeNumber} layout and details`
+                                  : `Open shot replay for Hole ${holeNumber}`
+                              }
+                              className={`flex h-8 w-full items-center justify-center rounded-md border text-[10px] font-black transition ${
+                                isSelected
+                                  ? "relative z-10 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950"
+                                  : ""
+                              } ${relativeClass(
+                                hole?.relative_to_par,
+                              )}`}
+                            >
+                              {relativeLabel(
+                                hole?.relative_to_par,
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {inlineHoleReplay &&
+                  selectedHoleKey?.startsWith(
+                    `${row.player.id}:${row.displayRound?.round_number ?? 0}:`,
+                  ) ? (
+                    <div className="px-4 pb-4">
+                      <GolfHoleReplayPanel
+                        slateId={slateId}
+                        replay={inlineHoleReplay}
+                        inline
+                        onClose={() => {
+                          setInlineHoleReplay(null);
+                          setSelectedHoleKey(null);
+                        }}
+                      />
+                    </div>
+                  ) : null}
+
+                </div>
+              </article>
+            </div>
+          );
+        })}
+      </div>
+
+      
+    </section>
+  );
+}

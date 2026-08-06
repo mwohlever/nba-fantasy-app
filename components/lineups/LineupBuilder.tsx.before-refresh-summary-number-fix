@@ -1051,21 +1051,9 @@ export default function LineupBuilder({
       }
 
       setLastRefreshSummary({
-        gamesFound:
-          typeof refreshResult.gamesFound ===
-          "number"
-            ? refreshResult.gamesFound
-            : undefined,
-        playerStatsUpserted:
-          typeof refreshResult.playerStatsUpserted ===
-          "number"
-            ? refreshResult.playerStatsUpserted
-            : undefined,
-        teamResultsUpserted:
-          typeof refreshResult.teamResultsUpserted ===
-          "number"
-            ? refreshResult.teamResultsUpserted
-            : undefined,
+        gamesFound: refreshResult.gamesFound,
+        playerStatsUpserted: refreshResult.playerStatsUpserted,
+        teamResultsUpserted: refreshResult.teamResultsUpserted,
       });
 
       const [statsResponse, resultsResponse] = await Promise.all([
