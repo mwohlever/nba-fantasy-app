@@ -5,6 +5,7 @@ import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 import {
   fetchGolfCoursesByEventId,
   fetchGolfTournamentByEventId,
+  parseGolfTournamentByEventIdFromPayload,
   type GolfCompetitor,
   type GolfCompetitorStatus,
   type GolfRound,
@@ -13,6 +14,7 @@ import {
 
 type RefreshBody = {
   slateId?: number | string;
+  scoreboardPayload?: unknown;
 };
 
 type GolfSlateRecord = {
@@ -133,27 +135,45 @@ function calculatePenaltyStrokes(input: {
 
 async function fetchTournamentForSlate(
   slate: GolfSlateRecord,
+  scoreboardPayload?: unknown,
 ): Promise<GolfTournament | null> {
-  const eventId = slate.external_event_id?.trim();
+  const eventId =
+    slate.external_event_id?.trim();
 
   if (!eventId) {
     return null;
   }
 
-  const tournamentYear = getTournamentYear(slate.start_date);
+  if (
+    scoreboardPayload !==
+    undefined
+  ) {
+    return parseGolfTournamentByEventIdFromPayload(
+      scoreboardPayload,
+      eventId,
+    );
+  }
+
+  const tournamentYear =
+    getTournamentYear(
+      slate.start_date,
+    );
 
   if (tournamentYear) {
-    const tournament = await fetchGolfTournamentByEventId(
-      eventId,
-      tournamentYear,
-    );
+    const tournament =
+      await fetchGolfTournamentByEventId(
+        eventId,
+        tournamentYear,
+      );
 
     if (tournament) {
       return tournament;
     }
   }
 
-  return fetchGolfTournamentByEventId(eventId);
+  return fetchGolfTournamentByEventId(
+    eventId,
+  );
 }
 
 async function insertInBatches(
@@ -188,7 +208,39 @@ export async function POST(request: Request) {
       );
     }
 
-    const slateId = parseSlateId(body.slateId);
+    const slateId =
+      parseSlateId(body.slateId);
+
+    const isPayloadIngestion =
+      body.scoreboardPayload !==
+      undefined;
+
+    if (isPayloadIngestion) {
+      const expectedSecret =
+        process.env
+          .GOLF_CRON_SECRET
+          ?.trim();
+
+      const authorization =
+        request.headers.get(
+          "authorization",
+        );
+
+      if (
+        !expectedSecret ||
+        authorization !==
+          `Bearer ${expectedSecret}`
+      ) {
+        return NextResponse.json(
+          {
+            error: "Unauthorized.",
+          },
+          {
+            status: 401,
+          },
+        );
+      }
+    }
 
     if (!slateId) {
       return NextResponse.json(
@@ -247,7 +299,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const tournament = await fetchTournamentForSlate(slate);
+    const tournament =
+      await fetchTournamentForSlate(
+        slate,
+        body.scoreboardPayload,
+      );
 
     if (!tournament) {
       return NextResponse.json(
@@ -280,7 +336,10 @@ export async function POST(request: Request) {
     let courseHolesUpserted = 0;
 
     try {
-      const courses = await fetchGolfCoursesByEventId(
+      const courses =
+        isPayloadIngestion
+          ? []
+          : await fetchGolfCoursesByEventId(
         slate.external_event_id ?? "",
       );
 

@@ -5,6 +5,11 @@ on:
     - cron: "*/5 * * * *"
 
   workflow_dispatch:
+    inputs:
+      slate_id:
+        description: "Optional slate ID"
+        required: false
+        type: string
 
 concurrency:
   group: refresh-live-golf
@@ -13,13 +18,14 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 5
 
     steps:
-      - name: Refresh active Golf slates
+      - name: Fetch ESPN and ingest Golf scores
         env:
           APP_URL: ${{ secrets.APP_URL }}
           GOLF_CRON_SECRET: ${{ secrets.GOLF_CRON_SECRET }}
+          REQUESTED_SLATE_ID: ${{ inputs.slate_id }}
         run: |
           set -euo pipefail
 
@@ -35,12 +41,119 @@ jobs:
 
           BASE_URL="${APP_URL%/}"
 
+          echo "Loading active Golf slate manifest..."
+
           curl \
             --fail-with-body \
             --silent \
             --show-error \
             --retry 2 \
-            --retry-delay 10 \
-            --max-time 180 \
+            --retry-delay 5 \
+            --max-time 60 \
             -H "Authorization: Bearer ${GOLF_CRON_SECRET}" \
-            "${BASE_URL}/api/cron/refresh-golf"
+            "${BASE_URL}/api/cron/golf-refresh-manifest" \
+            > manifest.json
+
+          jq . manifest.json
+
+          SLATE_COUNT="$(
+            jq '.slates | length' \
+              manifest.json
+          )"
+
+          echo "Active slates found: ${SLATE_COUNT}"
+
+          if [ "${SLATE_COUNT}" -eq 0 ]; then
+            echo "No active Golf slates."
+            exit 0
+          fi
+
+          jq -c '.slates[]' \
+            manifest.json \
+            | while read -r SLATE
+          do
+            SLATE_ID="$(
+              jq -r '.slateId' \
+                <<<"${SLATE}"
+            )"
+
+            EVENT_ID="$(
+              jq -r '.eventId' \
+                <<<"${SLATE}"
+            )"
+
+            YEAR="$(
+              jq -r '.year' \
+                <<<"${SLATE}"
+            )"
+
+            TOURNAMENT="$(
+              jq -r '.tournament' \
+                <<<"${SLATE}"
+            )"
+
+            if \
+              [ -n "${REQUESTED_SLATE_ID:-}" ] && \
+              [ "${SLATE_ID}" != "${REQUESTED_SLATE_ID}" ]
+            then
+              continue
+            fi
+
+            echo
+            echo "========================================"
+            echo "Refreshing ${TOURNAMENT}"
+            echo "Slate: ${SLATE_ID}"
+            echo "Event: ${EVENT_ID}"
+            echo "Year: ${YEAR}"
+            echo "========================================"
+
+            ESPN_URL="https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard?dates=${YEAR}"
+
+            curl \
+              --fail-with-body \
+              --silent \
+              --show-error \
+              --retry 3 \
+              --retry-delay 5 \
+              --max-time 90 \
+              -H "Accept: application/json" \
+              -H "User-Agent: 111-sports-github-refresh/1.0" \
+              "${ESPN_URL}" \
+              > scoreboard.json
+
+            jq \
+              --argjson slateId "${SLATE_ID}" \
+              --slurpfile scoreboard scoreboard.json \
+              '{
+                slateId: $slateId,
+                scoreboardPayload: $scoreboard[0]
+              }' \
+              /dev/null \
+              > ingestion.json
+
+            curl \
+              --fail-with-body \
+              --silent \
+              --show-error \
+              --retry 2 \
+              --retry-delay 5 \
+              --max-time 180 \
+              -X POST \
+              -H "Authorization: Bearer ${GOLF_CRON_SECRET}" \
+              -H "Content-Type: application/json" \
+              --data-binary @ingestion.json \
+              "${BASE_URL}/api/refresh-stats-golf" \
+              > result.json
+
+            jq . result.json
+
+            SUCCESS="$(
+              jq -r '.success // false' \
+                result.json
+            )"
+
+            if [ "${SUCCESS}" != "true" ]; then
+              echo "Golf ingestion did not report success."
+              exit 1
+            fi
+          done

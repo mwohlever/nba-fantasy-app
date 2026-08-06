@@ -956,14 +956,61 @@ async function fetchGolfPayload(
   return payload as EspnGolfScoreboardPayload;
 }
 
+export function parseGolfTournamentsFromPayload(
+  payload: unknown,
+): GolfTournament[] {
+  if (!isRecord(payload)) {
+    throw new Error(
+      "ESPN golf returned an invalid payload.",
+    );
+  }
+
+  const scoreboard =
+    payload as EspnGolfScoreboardPayload;
+
+  return safeArray(
+    scoreboard.events,
+  )
+    .map(parseTournament)
+    .filter(
+      (
+        tournament,
+      ): tournament is GolfTournament =>
+        tournament !== null,
+    );
+}
+
+export function parseGolfTournamentByEventIdFromPayload(
+  payload: unknown,
+  espnEventId: string,
+): GolfTournament | null {
+  const normalizedEventId =
+    espnEventId.trim();
+
+  if (!normalizedEventId) {
+    return null;
+  }
+
+  return (
+    parseGolfTournamentsFromPayload(
+      payload,
+    ).find(
+      (tournament) =>
+        tournament.espnEventId ===
+        normalizedEventId,
+    ) ?? null
+  );
+}
+
 export async function fetchGolfTournaments(
   dates?: string,
 ): Promise<GolfTournament[]> {
-  const payload = await fetchGolfPayload(dates);
+  const payload =
+    await fetchGolfPayload(dates);
 
-  return safeArray(payload.events)
-    .map(parseTournament)
-    .filter((tournament): tournament is GolfTournament => tournament !== null);
+  return parseGolfTournamentsFromPayload(
+    payload,
+  );
 }
 
 export async function fetchGolfTournamentByEventId(
