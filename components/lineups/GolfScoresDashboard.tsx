@@ -6,6 +6,7 @@ import TeamAvatar from "@/components/ui/TeamAvatar";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import GolfLeagueView from "@/components/lineups/GolfLeagueView";
 import GolfTournamentView from "@/components/lineups/GolfTournamentView";
+import { getGolfStatusMeta } from "@/lib/golf/status";
 import GolfHoleReplayPanel, {
   type InlineGolfHoleReplay,
 } from "@/components/lineups/GolfInlineHoleReplayModal";
@@ -65,111 +66,30 @@ function formatLeaderboardPosition(value: number | null | undefined) {
   return `T${value}`;
 }
 
-function formatGolfTeeTime(
-  value: string | null | undefined,
-) {
-  if (!value) return null;
-
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleString([], {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 function statusMeta(
   stat: PlayerStat | null,
-  playingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
-  upcomingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
-  mostRecentRound: NonNullable<PlayerStat["rounds"]>[number] | null,
+  _playingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
+  _upcomingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
+  _mostRecentRound: NonNullable<PlayerStat["rounds"]>[number] | null,
 ) {
-  const status = stat?.status ?? "scheduled";
+  const meta =
+    getGolfStatusMeta(stat);
 
-  if (playingRound) {
-    return {
-      label: "🟢 Playing",
-      detail:
-        `R${playingRound.round_number} · ` +
-        `Thru ${playingRound.holes_completed}`,
-      className: "bg-emerald-100 text-emerald-800",
-    };
-  }
-
-  if (status === "finished") {
-    return {
-      label: "Final",
-      detail: "Tournament complete",
-      className: "bg-slate-200 text-slate-700",
-    };
-  }
-
-  if (status === "cut") {
-    return {
-      label: "CUT",
-      detail: "Missed cut",
-      className: "bg-red-100 text-red-800",
-    };
-  }
-
-  if (status === "withdrawn") {
-    return {
-      label: "WD",
-      detail: "Withdrawn",
-      className: "bg-amber-100 text-amber-800",
-    };
-  }
-
-  if (status === "disqualified") {
-    return {
-      label: "DQ",
-      detail: "Disqualified",
-      className: "bg-red-100 text-red-800",
-    };
-  }
-
-  if (upcomingRound) {
-    return {
-      label: "⏰ Upcoming",
-      detail:
-        `Round ${upcomingRound.round_number}` +
-        `${
-          formatGolfTeeTime(
-            upcomingRound.tee_time ??
-              upcomingRound.tee_time_raw,
-          )
-            ? ` · ${formatGolfTeeTime(
-                upcomingRound.tee_time ??
-                  upcomingRound.tee_time_raw,
-              )}`
-            : ""
-        }`,
-      className: "bg-sky-100 text-sky-800",
-    };
-  }
-
-  if (mostRecentRound?.holes_completed === 18) {
-    return {
-      label: "✓ Round complete",
-      detail: `Round ${mostRecentRound.round_number} complete`,
-      className: "bg-slate-200 text-slate-700",
-    };
-  }
+  const className =
+    meta.state === "playing"
+      ? "bg-emerald-100 text-emerald-800"
+      : meta.state === "upcoming"
+        ? "bg-sky-100 text-sky-800"
+        : meta.state === "cut" ||
+            meta.state === "disqualified"
+          ? "bg-red-100 text-red-800"
+          : meta.state === "withdrawn"
+            ? "bg-amber-100 text-amber-800"
+            : "bg-slate-200 text-slate-700";
 
   return {
-    label: "⏰ Upcoming",
-    detail:
-      formatGolfTeeTime(
-        stat?.tee_time ?? stat?.tee_time_raw,
-      ) ?? "Not started",
-    className: "bg-sky-100 text-sky-800",
+    ...meta,
+    className,
   };
 }
 

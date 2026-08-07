@@ -20,6 +20,7 @@ import type {
 } from "@/components/lineups/types";
 import { getStatColumns, type StatColumn } from "@/lib/statColumns";
 import { useSelectedSport } from "@/components/providers/SportProvider";
+import type { GolfCutLine } from "@/lib/golf/cutLine";
 
 type LatestSlate = {
   id: number;
@@ -104,6 +105,7 @@ type HomeSummaryResponse = {
   nextSlate: LatestSlate | null;
   latestSlateRows: LatestSlateRow[];
   tournamentLeaderboard?: GolfTournamentLeaderboardRow[];
+  projectedCut?: GolfCutLine | null;
   seasonSnapshot: SeasonSnapshotRow[];
   funFacts: FunFact[];
   latestSeason: number;
@@ -271,6 +273,26 @@ function formatGolfRosterStatus(
 
   const normalizedStatus =
     row.status?.trim().toLowerCase() ?? "";
+
+  /*
+   * Trust the persisted provider status before interpreting a stale
+   * display label. This prevents a scheduled golfer from being shown
+   * as "Round 1 complete".
+   */
+  if (
+    normalizedStatus === "scheduled"
+  ) {
+    return rawLabel &&
+      /tee|upcoming|scheduled|not started/i.test(
+        rawLabel,
+      )
+      ? rawLabel
+      : "⏰ Upcoming";
+  }
+
+  if (normalizedStatus === "did_not_start") {
+    return "DNS";
+  }
 
   if (normalizedStatus === "cut") {
     return "✂ Cut";
@@ -630,6 +652,9 @@ function HomePageContent() {
   const tournamentLeaderboard =
     data?.tournamentLeaderboard ?? [];
 
+  const projectedCut =
+    data?.projectedCut ?? null;
+
   const seasonSnapshot = data?.seasonSnapshot ?? [];
   const funFacts = data?.funFacts ?? [];
   const latestSeason = data?.latestSeason ?? new Date().getFullYear();
@@ -696,7 +721,7 @@ function HomePageContent() {
       : null;
 
   const leaderLabel =
-    hasCompletedGames && !hasRemainingGames ? "Winner" : "Leader";
+    isFinalSlate ? "Winner" : "Leader";
 
   const nextSlate = data?.nextSlate ?? null;
 
@@ -1255,6 +1280,43 @@ function HomePageContent() {
                           )}
                         </span>
                       </div>
+
+                      {projectedCut ? (
+                        <div className="border-b border-amber-500/30 bg-amber-950/30 px-4 py-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-amber-300">
+                                {projectedCut.official
+                                  ? "Cut line"
+                                  : "Projected cut"}
+                              </span>
+
+                              <div className="mt-1 flex items-baseline gap-2">
+                                <strong className="text-2xl font-black text-white">
+                                  {projectedCut.display}
+                                </strong>
+
+                                <span className="text-xs font-semibold text-amber-200/80">
+                                  {projectedCut.ruleLabel}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right text-[11px] leading-5 text-slate-300">
+                              <div>
+                                <strong className="text-white">
+                                  {projectedCut.inside}
+                                </strong>{" "}
+                                currently inside
+                              </div>
+                              <div>
+                                {projectedCut.tiedAtCut} tied at{" "}
+                                {projectedCut.display}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
 
                       {tournamentLeaderboard.length ===
                       0 ? (

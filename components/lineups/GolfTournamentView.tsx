@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import { getGolfStatusMeta } from "@/lib/golf/status";
+import { calculateGolfCutLine } from "@/lib/golf/cutLine";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import type {
   OrderedTeam,
@@ -47,273 +49,27 @@ function formatPosition(
   return `T${value}`;
 }
 
-function formatTeeTime(
-  rawValue: string | null | undefined,
-  parsedValue?: string | null,
+function tournamentStatus(
+  stat: PlayerStat,
 ) {
-  const raw =
-    rawValue?.trim() ?? "";
+  const meta =
+    getGolfStatusMeta(stat);
 
-  /*
-   * Preserve PGA TOUR's tournament-local display time.
-   *
-   * Supported examples:
-   *   "1:30 PM"
-   *   "Sun 1:30 PM"
-   *   "Sun Aug 02 13:30:00 PDT 2026"
-   */
-  const twelveHourMatch = raw.match(
-    /(?:^|\s)(\d{1,2}:\d{2}\s*[AP]M)(?:\s|$)/i,
-  );
-
-  if (twelveHourMatch) {
-    return twelveHourMatch[1]
-      .replace(/\s+/g, " ")
-      .toUpperCase();
-  }
-
-  const twentyFourHourMatch = raw.match(
-    /(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?\s+[A-Z]{2,5}(?:\s|$)/i,
-  );
-
-  if (twentyFourHourMatch) {
-    const hour24 = Number(
-      twentyFourHourMatch[1],
-    );
-
-    const minute =
-      twentyFourHourMatch[2];
-
-    if (
-      Number.isInteger(hour24) &&
-      hour24 >= 0 &&
-      hour24 <= 23
-    ) {
-      const period =
-        hour24 >= 12 ? "PM" : "AM";
-
-      const hour12 =
-        hour24 % 12 || 12;
-
-      return `${hour12}:${minute} ${period}`;
-    }
-  }
-
-  const value =
-    parsedValue ?? rawValue;
-
-  if (!value) return null;
-
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return parsed.toLocaleTimeString(
-    "en-US",
-    {
-      hour: "numeric",
-      minute: "2-digit",
-    },
-  );
-}
-
-function golferStatus(stat: PlayerStat) {
-  const status = stat.status ?? "scheduled";
-
-  if (status === "active") {
-    return {
-      label: "🟢 Playing",
-      detail:
-        stat.last_hole !== null &&
-        stat.last_hole !== undefined
-          ? `R${stat.current_round ?? "—"} · Thru ${stat.last_hole}`
-          : `Round ${stat.current_round ?? "—"}`,
-      className:
-        "border-emerald-700 bg-emerald-950 text-emerald-200",
-      order: 0,
-    };
-  }
-
-  if (status === "cut") {
-    return {
-      label: "✂ Cut",
-      detail: "Missed cut",
-      className:
-        "border-red-800 bg-red-950 text-red-200",
-      order: 4,
-    };
-  }
-
-  if (status === "withdrawn") {
-    return {
-      label: "⚠ WD",
-      detail: "Withdrawn",
-      className:
-        "border-amber-700 bg-amber-950 text-amber-200",
-      order: 5,
-    };
-  }
-
-  if (status === "disqualified") {
-    return {
-      label: "⛔ DQ",
-      detail: "Disqualified",
-      className:
-        "border-red-800 bg-red-950 text-red-200",
-      order: 6,
-    };
-  }
-
-  if (status === "round_complete") {
-    const rounds = [...(stat.rounds ?? [])].sort(
-      (a, b) =>
-        a.round_number -
-        b.round_number,
-    );
-
-    const completedRound =
-      rounds
-        .filter(
-          (round) =>
-            Number(
-              round.holes_completed ?? 0,
-            ) === 18,
-        )
-        .at(-1) ?? null;
-
-    const upcomingRound =
-      rounds.find(
-        (round) =>
-          Number(
-            round.holes_completed ?? 0,
-          ) === 0 &&
-          Boolean(
-            round.tee_time ||
-              round.tee_time_raw,
-          ),
-      ) ?? null;
-
-    const nextRoundNumber =
-      upcomingRound?.round_number ??
-      Math.min(
-        4,
-        Number(
-          completedRound?.round_number ??
-            stat.rounds_completed ??
-            stat.current_round ??
-            1,
-        ) + 1,
-      );
-
-    const teeTime = upcomingRound
-      ? formatTeeTime(
-          upcomingRound.tee_time_raw,
-          upcomingRound.tee_time,
-        )
-      : formatTeeTime(
-          stat.tee_time_raw,
-          stat.tee_time,
-        );
-
-    if (
-      teeTime &&
-      nextRoundNumber <= 4
-    ) {
-      return {
-        label: "⏰ Upcoming",
-        detail:
-          `R${nextRoundNumber} · Tee ${teeTime}`,
-        className:
-          "border-sky-700 bg-sky-950 text-sky-200",
-        order: 1,
-      };
-    }
-
-    return {
-      label: "✓ Round complete",
-      detail:
-        completedRound
-          ? `Round ${completedRound.round_number}`
-          : "Round complete",
-      className:
-        "border-slate-600 bg-slate-800 text-slate-200",
-      order: 2,
-    };
-  }
-
-  if (status === "finished") {
-    return {
-      label: "✓ Final",
-      detail: "Tournament complete",
-      className:
-        "border-slate-600 bg-slate-800 text-slate-200",
-      order: 3,
-    };
-  }
-
-  const rounds = [...(stat.rounds ?? [])].sort(
-    (a, b) => a.round_number - b.round_number,
-  );
-
-  const upcomingRound =
-    rounds.find(
-      (round) =>
-        round.holes_completed === 0 &&
-        round.strokes === null &&
-        Boolean(
-          round.tee_time ||
-            round.tee_time_raw,
-        ),
-    ) ?? null;
-
-  if (upcomingRound) {
-    const teeTime = formatTeeTime(
-      upcomingRound.tee_time ??
-        upcomingRound.tee_time_raw,
-    );
-
-    return {
-      label: "⏰ Upcoming",
-      detail:
-        `R${upcomingRound.round_number}` +
-        (teeTime ? ` · ${teeTime}` : ""),
-      className:
-        "border-sky-700 bg-sky-950 text-sky-200",
-      order: 1,
-    };
-  }
-
-  const mostRecentRound =
-    rounds
-      .filter(
-        (round) =>
-          round.holes_completed > 0 ||
-          round.strokes !== null,
-      )
-      .at(-1) ?? null;
-
-  if (mostRecentRound?.holes_completed === 18) {
-    return {
-      label: "✓ Round complete",
-      detail: `Round ${mostRecentRound.round_number}`,
-      className:
-        "border-slate-600 bg-slate-800 text-slate-200",
-      order: 2,
-    };
-  }
+  const className =
+    meta.state === "playing"
+      ? "border-emerald-700 bg-emerald-950 text-emerald-200"
+      : meta.state === "upcoming"
+        ? "border-sky-700 bg-sky-950 text-sky-200"
+        : meta.state === "cut" ||
+            meta.state === "disqualified"
+          ? "border-red-800 bg-red-950 text-red-200"
+          : meta.state === "withdrawn"
+            ? "border-amber-700 bg-amber-950 text-amber-200"
+            : "border-slate-600 bg-slate-800 text-slate-200";
 
   return {
-    label: "⏰ Upcoming",
-    detail:
-      formatTeeTime(
-        stat.tee_time ??
-          stat.tee_time_raw,
-      ) ?? "Not started",
-    className:
-      "border-sky-700 bg-sky-950 text-sky-200",
-    order: 1,
+    ...meta,
+    className,
   };
 }
 
@@ -429,10 +185,10 @@ export default function GolfTournamentView({
         }
 
         const aStatus =
-          golferStatus(a.stat).order;
+          tournamentStatus(a.stat).order;
 
         const bStatus =
-          golferStatus(b.stat).order;
+          tournamentStatus(b.stat).order;
 
         if (aStatus !== bStatus) {
           return aStatus - bStatus;
@@ -449,6 +205,39 @@ export default function GolfTournamentView({
     searchTerm,
     draftedOnly,
   ]);
+
+  const cutLine = useMemo(
+    () =>
+      calculateGolfCutLine(
+        players.flatMap((player) => {
+          const stat =
+            getRawPlayerStat(
+              player.id,
+            );
+
+          if (!stat) {
+            return [];
+          }
+
+          return [
+            {
+              score:
+                stat.official_score_to_par ??
+                stat.fantasy_points,
+              status: stat.status,
+              position:
+                stat.leaderboard_order,
+              holesCompleted:
+                stat.holes_completed,
+            },
+          ];
+        }),
+      ),
+    [
+      players,
+      getRawPlayerStat,
+    ],
+  );
 
   const draftedCount = useMemo(
     () =>
@@ -543,13 +332,64 @@ export default function GolfTournamentView({
     }
 
     /*
-     * The main rows array is already sorted by ESPN's official
-     * leaderboard order. Filtering it preserves that correct order.
+     * The main rows array is already sorted by the provider's
+     * leaderboard order. Filtering preserves that display order.
      */
     return rows.filter(
       isGolferPlayingNow,
     );
   }, [playingNowOnly, rows]);
+
+  /*
+   * The projected cut is score-based, while the provider's displayed
+   * leaderboard order can temporarily contain golfers with no usable
+   * score (for example, an upcoming/stale row mixed among leaders).
+   *
+   * Never use simple adjacent rows to locate the cut divider.
+   * Instead find the first DISPLAYED golfer who:
+   *
+   *   1. has a real score, and
+   *   2. is worse than the cut score.
+   *
+   * Unscored golfers therefore cannot accidentally pull the cut line
+   * toward the top of the leaderboard.
+   */
+  const firstOutsideCutPlayerId =
+    useMemo(() => {
+      if (!cutLine) {
+        return null;
+      }
+
+      const outsideRow =
+        visibleRows.find((row) => {
+          const rawScore =
+            row.stat.official_score_to_par ??
+            row.stat.fantasy_points;
+
+          if (
+            rawScore === null ||
+            rawScore === undefined
+          ) {
+            return false;
+          }
+
+          const score =
+            Number(rawScore);
+
+          return (
+            Number.isFinite(score) &&
+            score > cutLine.score
+          );
+        });
+
+      return (
+        outsideRow?.player.id ??
+        null
+      );
+    }, [
+      cutLine,
+      visibleRows,
+    ]);
 
 
   return (
@@ -575,6 +415,53 @@ export default function GolfTournamentView({
           </div>
         </div>
       </header>
+
+      {cutLine ? (
+        <div className="border-b border-amber-500/30 bg-amber-950/30 px-4 py-3 text-white">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">
+                {cutLine.official
+                  ? "Cut line"
+                  : "Projected cut"}
+              </span>
+
+              <div className="mt-1 flex items-baseline gap-2">
+                <strong className="text-3xl font-black">
+                  {cutLine.display}
+                </strong>
+
+                <span className="text-xs font-semibold text-amber-200/80">
+                  {cutLine.ruleLabel}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-5 text-right text-[11px] text-slate-300 sm:grid-cols-3">
+              <div>
+                <strong className="block text-base text-white">
+                  {cutLine.inside}
+                </strong>
+                inside
+              </div>
+
+              <div>
+                <strong className="block text-base text-white">
+                  {cutLine.tiedAtCut}
+                </strong>
+                tied
+              </div>
+
+              <div className="hidden sm:block">
+                <strong className="block text-base text-white">
+                  {cutLine.outside}
+                </strong>
+                outside
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="border-b border-slate-800 bg-slate-900 p-3">
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -784,9 +671,30 @@ export default function GolfTournamentView({
       <div className="divide-y divide-slate-800">
         {visibleRows.map((row) => {
           const status =
-            golferStatus(row.stat);
+            tournamentStatus(row.stat);
+
+          const showCutDivider =
+            Boolean(cutLine) &&
+            row.player.id ===
+              firstOutsideCutPlayerId;
 
           return (
+            <Fragment key={row.player.id}>
+              {showCutDivider ? (
+                <div className="flex items-center gap-3 border-y border-amber-500/50 bg-amber-950/40 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-amber-300">
+                  <span className="h-px flex-1 bg-amber-500/40" />
+
+                  <span>
+                    {cutLine?.official
+                      ? "Cut line"
+                      : "Projected cut"}{" "}
+                    {cutLine?.display}
+                  </span>
+
+                  <span className="h-px flex-1 bg-amber-500/40" />
+                </div>
+              ) : null}
+
             <button
               key={row.player.id}
               type="button"
@@ -890,6 +798,7 @@ export default function GolfTournamentView({
                 </div>
               </div>
             </button>
+            </Fragment>
           );
         })}
 
