@@ -431,23 +431,34 @@ export default function GolfScoresDashboard({
             (player) => getRawPlayerStat(player.id)?.status ?? "scheduled",
           );
 
-          const terminalStatuses = new Set([
+          /*
+           * These counters describe each golfer's CURRENT round state,
+           * not whether the entire tournament is final.
+           *
+           * A golfer who has completed Round 2 should therefore count
+           * as complete while waiting for the next tournament round.
+           * True terminal states also count as complete here.
+           */
+          const completedStatuses = new Set([
+            "round_complete",
             "finished",
             "cut",
             "withdrawn",
             "disqualified",
+            "did_not_start",
           ]);
 
-          const completed = playerStatuses.filter((status) =>
-            terminalStatuses.has(status),
+          const completed = playerStatuses.filter(
+            (status) =>
+              completedStatuses.has(status),
           ).length;
 
           const live = playerStatuses.filter(
             (status) => status === "active",
           ).length;
 
-          const upcoming = playerStatuses.filter((status) =>
-            ["scheduled", "did_not_start"].includes(status),
+          const upcoming = playerStatuses.filter(
+            (status) => status === "scheduled",
           ).length;
 
           return {
@@ -570,6 +581,7 @@ export default function GolfScoresDashboard({
     "cut",
     "withdrawn",
     "disqualified",
+    "did_not_start",
   ]);
 
   const tournamentIsComplete =
@@ -794,7 +806,7 @@ export default function GolfScoresDashboard({
                 ) : null}
 
                 <div className="mt-3 text-xs text-slate-500">
-                  {row.rosterStatus.completed} final ·{" "}
+                  {row.rosterStatus.completed} complete ·{" "}
                   {row.rosterStatus.live} live ·{" "}
                   {row.rosterStatus.upcoming} upcoming ·{" "}
                   {row.rosterStatus.filled}/{totalSlots} filled

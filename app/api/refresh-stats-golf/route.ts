@@ -107,6 +107,295 @@ function getRoundStatus(
   return tournamentStatus === "scheduled" ? "scheduled" : "not_played";
 }
 
+function normalizeGolfCompetitorState(
+  competitor: GolfCompetitor,
+  tournament: GolfTournament,
+): GolfCompetitor {
+  const rounds =
+    [...competitor.rounds].sort(
+      (a, b) =>
+        Number(a.roundNumber) -
+        Number(b.roundNumber),
+    );
+
+  const completedRounds =
+    rounds.filter(
+      (round) =>
+        Number(
+          round.holesCompleted ?? 0,
+        ) >= 18,
+    );
+
+  const activeRound =
+    rounds
+      .filter((round) => {
+        const holes =
+          Number(
+            round.holesCompleted ?? 0,
+          );
+
+        return (
+          (holes > 0 && holes < 18) ||
+          (
+            holes < 18 &&
+            round.strokes !== null &&
+            Number(round.strokes) > 0
+          )
+        );
+      })
+      .at(-1) ?? null;
+
+  const playedRounds =
+    rounds.filter(
+      (round) =>
+        Number(
+          round.holesCompleted ?? 0,
+        ) > 0 ||
+        (
+          round.strokes !== null &&
+          Number(round.strokes) > 0
+        ),
+    );
+
+  const latestPlayedRound =
+    playedRounds.at(-1) ?? null;
+
+  const latestCompletedRound =
+    completedRounds.at(-1) ?? null;
+
+  const completedRoundNumber =
+    latestCompletedRound
+      ? Number(
+          latestCompletedRound.roundNumber,
+        )
+      : 0;
+
+  const derivedRoundsCompleted =
+    Math.max(
+      Number(
+        competitor.roundsCompleted ?? 0,
+      ),
+      completedRoundNumber,
+    );
+
+  const holesFromRounds =
+    rounds.reduce(
+      (sum, round) =>
+        sum +
+        Math.max(
+          0,
+          Math.min(
+            18,
+            Number(
+              round.holesCompleted ?? 0,
+            ),
+          ),
+        ),
+      0,
+    );
+
+  const derivedHolesCompleted =
+    Math.max(
+      Number(
+        competitor.holesCompleted ?? 0,
+      ),
+      holesFromRounds,
+    );
+
+  const tournamentRoundRaw =
+    Number(
+      tournament.currentRound ?? 0,
+    );
+
+  const tournamentRound =
+    Number.isFinite(
+      tournamentRoundRaw,
+    ) &&
+    tournamentRoundRaw > 0
+      ? Math.min(
+          EXPECTED_TOURNAMENT_ROUNDS,
+          Math.max(
+            1,
+            tournamentRoundRaw,
+          ),
+        )
+      : null;
+
+  const providerRoundRaw =
+    Number(
+      competitor.currentRound ?? 0,
+    );
+
+  const providerRound =
+    Number.isFinite(
+      providerRoundRaw,
+    ) &&
+    providerRoundRaw > 0
+      ? Math.min(
+          EXPECTED_TOURNAMENT_ROUNDS,
+          Math.max(
+            1,
+            providerRoundRaw,
+          ),
+        )
+      : null;
+
+  const latestPlayedRoundNumber =
+    latestPlayedRound
+      ? Number(
+          latestPlayedRound.roundNumber,
+        )
+      : null;
+
+  const noScoringActivity =
+    playedRounds.length === 0 &&
+    derivedRoundsCompleted === 0 &&
+    derivedHolesCompleted === 0;
+
+  const tournamentHasStarted =
+    tournament.status !== "scheduled";
+
+  const terminalStatuses =
+    new Set<GolfCompetitorStatus>([
+      "finished",
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  let normalizedStatus:
+    GolfCompetitorStatus =
+      competitor.status;
+
+  /*
+   * Provider status is authoritative for true terminal states.
+   * Otherwise the actual round data wins.
+   */
+  if (
+    !terminalStatuses.has(
+      competitor.status,
+    )
+  ) {
+    if (activeRound) {
+      normalizedStatus = "active";
+    } else if (noScoringActivity) {
+      normalizedStatus = "scheduled";
+    } else if (
+      tournament.status === "final" &&
+      derivedRoundsCompleted >=
+        EXPECTED_TOURNAMENT_ROUNDS
+    ) {
+      normalizedStatus = "finished";
+    } else if (
+      tournamentRound !== null &&
+      tournamentRound >
+        derivedRoundsCompleted &&
+      derivedRoundsCompleted > 0
+    ) {
+      /*
+       * The tournament has advanced to the next round, but this
+       * golfer has not started it yet. Treat that as upcoming rather
+       * than preserving a stale R1/R2 round_complete state.
+       */
+      normalizedStatus = "scheduled";
+    } else if (
+      latestCompletedRound
+    ) {
+      normalizedStatus =
+        "round_complete";
+    }
+  }
+
+  let normalizedCurrentRound:
+    number | null =
+      providerRound;
+
+  if (activeRound) {
+    normalizedCurrentRound =
+      Number(
+        activeRound.roundNumber,
+      );
+  } else if (
+    normalizedStatus === "scheduled"
+  ) {
+    normalizedCurrentRound =
+      tournamentHasStarted &&
+      tournamentRound !== null
+        ? Math.max(
+            tournamentRound,
+            Math.min(
+              EXPECTED_TOURNAMENT_ROUNDS,
+              derivedRoundsCompleted + 1,
+            ),
+          )
+        : providerRound ??
+          Math.min(
+            EXPECTED_TOURNAMENT_ROUNDS,
+            Math.max(
+              1,
+              derivedRoundsCompleted + 1,
+            ),
+          );
+  } else if (
+    latestPlayedRoundNumber !== null
+  ) {
+    normalizedCurrentRound =
+      latestPlayedRoundNumber;
+  }
+
+  /*
+   * An unplayed golfer cannot legitimately own a live tournament
+   * score or leaderboard position. ESPN/PGA occasionally leaves
+   * placeholder field order / even-par values attached to such a
+   * golfer after the tournament begins.
+   */
+  const clearUnplayedLeaderboardData =
+    tournamentHasStarted &&
+    noScoringActivity &&
+    !terminalStatuses.has(
+      competitor.status,
+    );
+
+  return {
+    ...competitor,
+
+    rounds,
+
+    roundsCompleted:
+      derivedRoundsCompleted,
+
+    holesCompleted:
+      derivedHolesCompleted,
+
+    currentRound:
+      normalizedCurrentRound,
+
+    status:
+      normalizedStatus,
+
+    lastHole:
+      noScoringActivity
+        ? null
+        : competitor.lastHole,
+
+    leaderboardOrder:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.leaderboardOrder,
+
+    officialScoreToPar:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.officialScoreToPar,
+
+    officialScoreDisplay:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.officialScoreDisplay,
+  };
+}
+
 function calculatePenaltyStrokes(input: {
   status: GolfCompetitorStatus;
   roundsCompleted: number;
@@ -326,7 +615,57 @@ export async function POST(request: Request) {
       );
     }
 
-    const competitors = deduplicateCompetitors(tournament.competitors);
+    const rawCompetitors =
+      deduplicateCompetitors(
+        tournament.competitors,
+      );
+
+    const competitors =
+      rawCompetitors.map(
+        (competitor) =>
+          normalizeGolfCompetitorState(
+            competitor,
+            tournament,
+          ),
+      );
+
+    const normalizationCorrections =
+      competitors.filter(
+        (competitor, index) => {
+          const raw =
+            rawCompetitors[index];
+
+          return (
+            competitor.status !==
+              raw.status ||
+            competitor.currentRound !==
+              raw.currentRound ||
+            competitor.roundsCompleted !==
+              raw.roundsCompleted ||
+            competitor.holesCompleted !==
+              raw.holesCompleted ||
+            competitor.leaderboardOrder !==
+              raw.leaderboardOrder ||
+            competitor.officialScoreToPar !==
+              raw.officialScoreToPar
+          );
+        },
+      ).length;
+
+    if (
+      normalizationCorrections > 0
+    ) {
+      console.log(
+        "Normalized inconsistent Golf competitor state",
+        {
+          slateId,
+          tournament:
+            tournament.name,
+          corrections:
+            normalizationCorrections,
+        },
+      );
+    }
 
     if (competitors.length === 0) {
       return NextResponse.json(
@@ -728,36 +1067,291 @@ export async function POST(request: Request) {
         ),
       );
 
-    const eventPlayerRows = competitors.map((competitor) => {
-      const penaltyStrokes = calculatePenaltyStrokes({
-        status: competitor.status,
-        roundsCompleted: competitor.roundsCompleted,
-        penaltyPerRound,
-      });
+    /*
+     * Reconcile the pre-imported PGA field against ESPN's authoritative
+     * live competitor list.
+     *
+     * The PGA field importer intentionally seeds the slate before ESPN
+     * publishes live scoring. A late withdrawal can therefore remain in
+     * golf_event_players forever if ESPN simply REMOVES that golfer from
+     * the live field rather than returning an explicit WD competitor.
+     *
+     * Only reconcile after the tournament has started, and only golfers
+     * with absolutely no tournament activity. This protects us from
+     * accidentally changing an active/previously-played golfer if ESPN
+     * has a temporary feed issue.
+     */
+    const currentLivePlayerIds =
+      new Set(
+        Array.from(
+          playerIdByEspnId.values(),
+        ).map(Number),
+      );
 
-      const fantasyScore =
-        competitor.officialScoreToPar === null
-          ? null
-          : competitor.officialScoreToPar + penaltyStrokes;
+    const {
+      data: existingSlateEventData,
+      error: existingSlateEventError,
+    } =
+      await supabaseAdmin
+        .from("golf_event_players")
+        .select(
+          "id, player_id, leaderboard_order, official_score_to_par, official_score_display, penalty_strokes, fantasy_score, rounds_completed, holes_completed, current_round, last_hole, status, tee_time, tee_time_raw",
+        )
+        .eq("slate_id", slateId);
 
-      return {
-        slate_id: slateId,
-        player_id: playerIdByEspnId.get(competitor.espnPlayerId)!,
-        leaderboard_order: competitor.leaderboardOrder,
-        official_score_to_par: competitor.officialScoreToPar,
-        official_score_display: competitor.officialScoreDisplay,
-        penalty_strokes: penaltyStrokes,
-        fantasy_score: fantasyScore,
-        rounds_completed: competitor.roundsCompleted,
-        holes_completed: competitor.holesCompleted,
-        current_round: competitor.currentRound,
-        last_hole: competitor.lastHole,
-        status: competitor.status,
-        tee_time: competitor.teeTime,
-        tee_time_raw: competitor.teeTimeRaw,
-        updated_at: refreshedAt,
-      };
-    });
+    if (existingSlateEventError) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf live-field reconciliation could not load the existing tournament field: " +
+            existingSlateEventError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const existingSlateRows =
+      existingSlateEventData ?? [];
+
+    const existingSlatePlayerIds =
+      existingSlateRows.map(
+        (row) => Number(row.player_id),
+      );
+
+    const {
+      data: existingSlateGolfPlayerData,
+      error: existingSlateGolfPlayerError,
+    } =
+      existingSlatePlayerIds.length > 0
+        ? await supabaseAdmin
+            .from("golf_players")
+            .select(
+              "id, display_name, espn_player_id",
+            )
+            .in(
+              "id",
+              existingSlatePlayerIds,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (existingSlateGolfPlayerError) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf live-field reconciliation could not resolve existing golfers: " +
+            existingSlateGolfPlayerError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const existingGolferById =
+      new Map(
+        (existingSlateGolfPlayerData ?? []).map(
+          (player) => [
+            Number(player.id),
+            {
+              displayName:
+                String(
+                  player.display_name ??
+                    "Unknown golfer",
+                ),
+              espnPlayerId:
+                String(
+                  player.espn_player_id ??
+                    "",
+                ),
+            },
+          ],
+        ),
+      );
+
+    const alreadyTerminalStatuses =
+      new Set([
+        "finished",
+        "cut",
+        "withdrawn",
+        "disqualified",
+        "did_not_start",
+      ]);
+
+    const tournamentHasStarted =
+      tournament.status !== "scheduled";
+
+    const removedBeforeStartRows =
+      tournamentHasStarted
+        ? existingSlateRows.filter(
+            (row) => {
+              const playerId =
+                Number(row.player_id);
+
+              const holesCompleted =
+                Number(
+                  row.holes_completed ?? 0,
+                );
+
+              const roundsCompleted =
+                Number(
+                  row.rounds_completed ?? 0,
+                );
+
+              const status =
+                String(
+                  row.status ?? "scheduled",
+                ).toLowerCase();
+
+              return (
+                !currentLivePlayerIds.has(
+                  playerId,
+                ) &&
+                holesCompleted === 0 &&
+                roundsCompleted === 0 &&
+                !alreadyTerminalStatuses.has(
+                  status,
+                )
+              );
+            },
+          )
+        : [];
+
+    const removedBeforeStartPlayerIds =
+      new Set(
+        removedBeforeStartRows.map(
+          (row) =>
+            Number(row.player_id),
+        ),
+      );
+
+    if (
+      removedBeforeStartRows.length > 0
+    ) {
+      console.log(
+        "Golf live-field reconciliation found pre-start removals",
+        {
+          slateId,
+          tournament:
+            tournament.name,
+          golfers:
+            removedBeforeStartRows.map(
+              (row) => ({
+                playerId:
+                  Number(row.player_id),
+                name:
+                  existingGolferById.get(
+                    Number(
+                      row.player_id,
+                    ),
+                  )?.displayName ??
+                  "Unknown golfer",
+                priorStatus:
+                  row.status,
+              }),
+            ),
+        },
+      );
+    }
+
+    const liveEventPlayerRows =
+      competitors.map(
+        (competitor) => {
+          const penaltyStrokes =
+            calculatePenaltyStrokes({
+              status:
+                competitor.status,
+              roundsCompleted:
+                competitor.roundsCompleted,
+              penaltyPerRound,
+            });
+
+          const fantasyScore =
+            competitor.officialScoreToPar ===
+            null
+              ? penaltyStrokes > 0
+                ? penaltyStrokes
+                : null
+              : competitor.officialScoreToPar +
+                penaltyStrokes;
+
+          return {
+            slate_id: slateId,
+            player_id:
+              playerIdByEspnId.get(
+                competitor.espnPlayerId,
+              )!,
+            leaderboard_order:
+              competitor.leaderboardOrder,
+            official_score_to_par:
+              competitor.officialScoreToPar,
+            official_score_display:
+              competitor.officialScoreDisplay,
+            penalty_strokes:
+              penaltyStrokes,
+            fantasy_score:
+              fantasyScore,
+            rounds_completed:
+              competitor.roundsCompleted,
+            holes_completed:
+              competitor.holesCompleted,
+            current_round:
+              competitor.currentRound,
+            last_hole:
+              competitor.lastHole,
+            status:
+              competitor.status,
+            tee_time:
+              competitor.teeTime,
+            tee_time_raw:
+              competitor.teeTimeRaw,
+            updated_at:
+              refreshedAt,
+          };
+        },
+      );
+
+    const removedBeforeStartEventRows =
+      removedBeforeStartRows.map(
+        (row) => {
+          const penaltyStrokes =
+            calculatePenaltyStrokes({
+              status: "withdrawn",
+              roundsCompleted: 0,
+              penaltyPerRound,
+            });
+
+          return {
+            slate_id: slateId,
+            player_id:
+              Number(row.player_id),
+            leaderboard_order: null,
+            official_score_to_par: null,
+            official_score_display: null,
+            penalty_strokes:
+              penaltyStrokes,
+            fantasy_score:
+              penaltyStrokes > 0
+                ? penaltyStrokes
+                : null,
+            rounds_completed: 0,
+            holes_completed: 0,
+            current_round: null,
+            last_hole: null,
+            status:
+              "withdrawn" as const,
+            tee_time: null,
+            tee_time_raw: null,
+            updated_at:
+              refreshedAt,
+          };
+        },
+      );
+
+    const eventPlayerRows = [
+      ...liveEventPlayerRows,
+      ...removedBeforeStartEventRows,
+    ];
 
     const { data: eventPlayersData, error: eventPlayersUpsertError } =
       await supabaseAdmin
@@ -907,18 +1501,88 @@ export async function POST(request: Request) {
         ];
       }
 
-      return competitor.rounds.map((round) => ({
-        event_player_id: eventPlayerId,
-        round_number: round.roundNumber,
-        score_to_par: round.scoreToPar,
-        score_display: round.scoreDisplay,
-        strokes: round.strokes,
-        holes_completed: round.holesCompleted,
-        tee_time: round.teeTime,
-        tee_time_raw: round.teeTimeRaw,
-        status: getRoundStatus(round, tournament.status),
-        updated_at: refreshedAt,
-      }));
+      const persistedRounds =
+        competitor.rounds.map(
+          (round) => ({
+            event_player_id:
+              eventPlayerId,
+            round_number:
+              round.roundNumber,
+            score_to_par:
+              round.scoreToPar,
+            score_display:
+              round.scoreDisplay,
+            strokes:
+              round.strokes,
+            holes_completed:
+              round.holesCompleted,
+            tee_time:
+              round.teeTime,
+            tee_time_raw:
+              round.teeTimeRaw,
+            status:
+              getRoundStatus(
+                round,
+                tournament.status,
+              ),
+            updated_at:
+              refreshedAt,
+          }),
+        );
+
+      const highestProviderRound =
+        competitor.rounds.reduce(
+          (highest, round) =>
+            Math.max(
+              highest,
+              Number(
+                round.roundNumber,
+              ),
+            ),
+          0,
+        );
+
+      const upcomingRoundNumber =
+        Number(
+          competitor.currentRound ?? 0,
+        );
+
+      const shouldAddUpcomingRound =
+        competitor.status ===
+          "scheduled" &&
+        upcomingRoundNumber > 0 &&
+        upcomingRoundNumber <=
+          EXPECTED_TOURNAMENT_ROUNDS &&
+        upcomingRoundNumber >
+          highestProviderRound;
+
+      if (
+        !shouldAddUpcomingRound
+      ) {
+        return persistedRounds;
+      }
+
+      return [
+        ...persistedRounds,
+        {
+          event_player_id:
+            eventPlayerId,
+          round_number:
+            upcomingRoundNumber,
+          score_to_par: null,
+          score_display: null,
+          strokes: null,
+          holes_completed: 0,
+          tee_time:
+            competitor.teeTime,
+          tee_time_raw:
+            competitor.teeTimeRaw,
+          status:
+            "scheduled" as const,
+          updated_at:
+            refreshedAt,
+        },
+      ];
     });
 
     let savedRounds: GolfRoundIdRow[] = [];
@@ -1001,7 +1665,8 @@ export async function POST(request: Request) {
         round_complete: 0,
         finished: 0,
         cut: 0,
-        withdrawn: 0,
+        withdrawn:
+          removedBeforeStartRows.length,
         disqualified: 0,
         did_not_start: 0,
       },
@@ -1615,6 +2280,23 @@ export async function POST(request: Request) {
         cutPenaltyPerRound: penaltyPerRound,
       },
       statusCounts,
+      normalizationCorrections,
+      fieldReconciliation: {
+        removedBeforeStart:
+          removedBeforeStartRows.length,
+        playerIds:
+          Array.from(
+            removedBeforeStartPlayerIds,
+          ),
+        golfers:
+          removedBeforeStartRows.map(
+            (row) =>
+              existingGolferById.get(
+                Number(row.player_id),
+              )?.displayName ??
+              "Unknown golfer",
+          ),
+      },
       gamesFound: 1,
       playersUpserted: golfPlayerRows.length,
       eventPlayersUpserted: eventPlayerRows.length,
