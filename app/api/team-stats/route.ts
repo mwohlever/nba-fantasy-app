@@ -31,6 +31,30 @@ export async function GET(req: NextRequest) {
 
     const isAllTime = season === "all";
     const statColumns = getStatColumns(sport);
+
+    /*
+     * Golf does not use player_slate_stats.
+     *
+     * Golf team/profile statistics are sourced from:
+     *   golf_event_players
+     *   golf_rounds
+     *   golf_holes
+     *
+     * Those statistics are already provided by the dedicated Golf
+     * standings/profile APIs. Returning an empty shared-stat payload
+     * prevents this NBA/NFL compatibility endpoint from querying
+     * nonexistent Golf columns.
+     */
+    if (sport === "golf") {
+      return NextResponse.json({
+        success: true,
+        sport,
+        season,
+        statColumns: [],
+        teams: [],
+      });
+    }
+
     const playersTable = sport === "nfl" ? "players_nfl" : "players";
     const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
 

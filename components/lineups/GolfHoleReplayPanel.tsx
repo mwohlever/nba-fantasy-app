@@ -65,11 +65,22 @@ type Replay = {
   shots: ReplayShot[];
 };
 
+type ReconciledHole = {
+  hole_number: number;
+  strokes: number;
+  relative_to_par: number;
+  score_display: string;
+  holes_completed: number;
+  round_score_to_par: number;
+  round_strokes: number;
+};
+
 type ResponseBody = {
   success?: boolean;
   available?: boolean;
   message?: string;
   replay?: Replay | null;
+  reconciledHole?: ReconciledHole | null;
   error?: string;
 };
 
@@ -123,6 +134,9 @@ type Props = {
   fallbackYardage: number | null;
   fallbackResult: string;
   onClose: () => void;
+  onReconciled?: (
+    hole: ReconciledHole,
+  ) => void;
 };
 
 const IDENTITY_CALIBRATION: ShotCastCalibration = {
@@ -263,6 +277,7 @@ export default function GolfHoleReplayPanel({
   fallbackYardage,
   fallbackResult,
   onClose,
+  onReconciled,
 }: Props) {
   const [replay, setReplay] =
     useState<Replay | null>(null);
@@ -363,6 +378,15 @@ export default function GolfHoleReplayPanel({
 
         setReplay(result.replay);
 
+        if (
+          result.reconciledHole &&
+          onReconciled
+        ) {
+          onReconciled(
+            result.reconciledHole,
+          );
+        }
+
         if (!result.available) {
           setMessage(
             result.message ||
@@ -401,6 +425,7 @@ export default function GolfHoleReplayPanel({
       playerId,
       roundNumber,
       holeNumber,
+      onReconciled,
     ],
   );
 

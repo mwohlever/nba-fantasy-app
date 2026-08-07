@@ -35,6 +35,397 @@ function noStoreHeaders() {
   };
 }
 
+function relativeScoreDisplay(
+  relativeToPar: number,
+) {
+  if (relativeToPar === 0) {
+    return "E";
+  }
+
+  return relativeToPar > 0
+    ? `+${relativeToPar}`
+    : String(relativeToPar);
+}
+
+async function reconcileCompletedReplayHole(input: {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  replay: {
+    par: number | null;
+    shots: Array<{
+      strokeNumber: number;
+      finalStroke: boolean;
+    }>;
+  };
+}) {
+  /*
+   * Only persist a hole when PGA explicitly identifies a final
+   * stroke. A live/current-ball hole must never be promoted to
+   * a completed scorecard result.
+   */
+  const finalShot =
+    input.replay.shots.find(
+      (shot) => shot.finalStroke,
+    ) ?? null;
+
+  if (!finalShot) {
+    return null;
+  }
+
+  const strokes = Math.max(
+    ...input.replay.shots.map(
+      (shot) => Number(shot.strokeNumber ?? 0),
+    ),
+  );
+
+  if (
+    !Number.isFinite(strokes) ||
+    strokes <= 0 ||
+    input.replay.par === null ||
+    !Number.isFinite(Number(input.replay.par))
+  ) {
+    return null;
+  }
+
+  const par = Number(input.replay.par);
+  const relativeToPar =
+    strokes - par;
+
+  const {
+    data: eventPlayer,
+    error: eventPlayerError,
+  } = await supabaseAdmin
+    .from("golf_event_players")
+    .select(
+      "id, status, rounds_completed",
+    )
+    .eq("slate_id", input.slateId)
+    .eq("player_id", input.playerId)
+    .maybeSingle();
+
+  if (
+    eventPlayerError ||
+    !eventPlayer
+  ) {
+    if (eventPlayerError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve event player",
+        eventPlayerError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const {
+    data: round,
+    error: roundError,
+  } = await supabaseAdmin
+    .from("golf_rounds")
+    .select("id")
+    .eq(
+      "event_player_id",
+      Number(eventPlayer.id),
+    )
+    .eq(
+      "round_number",
+      input.roundNumber,
+    )
+    .maybeSingle();
+
+  if (
+    roundError ||
+    !round
+  ) {
+    if (roundError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve Golf round",
+        roundError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const roundId =
+    Number(round.id);
+
+  const {
+    data: existingHole,
+    error: existingHoleError,
+  } = await supabaseAdmin
+    .from("golf_holes")
+    .select("round_id, hole_number")
+    .eq("round_id", roundId)
+    .eq(
+      "hole_number",
+      input.holeNumber,
+    )
+    .maybeSingle();
+
+  if (existingHoleError) {
+    console.warn(
+      "ShotCast reconciliation could not inspect existing hole",
+      existingHoleError.message,
+    );
+
+    return null;
+  }
+
+  const holeRow = {
+    round_id: roundId,
+    hole_number:
+      input.holeNumber,
+    strokes,
+    relative_to_par:
+      relativeToPar,
+    score_display:
+      relativeScoreDisplay(
+        relativeToPar,
+      ),
+    updated_at:
+      new Date().toISOString(),
+  };
+
+  /*
+   * Use one idempotent write for both the initial insert and later
+   * refreshes. Hole Replay can issue overlapping requests while a
+   * hole is live; upsert prevents two completed-hole requests from
+   * racing into the golf_holes unique constraint.
+   */
+  const holeMutation =
+    await supabaseAdmin
+      .from("golf_holes")
+      .upsert(
+        holeRow,
+        {
+          onConflict:
+            "round_id,hole_number",
+        },
+      );
+
+  if (holeMutation.error) {
+    console.warn(
+      "ShotCast reconciliation could not persist completed hole",
+      holeMutation.error.message,
+    );
+
+    return null;
+  }
+
+  /*
+   * Recalculate the round from every persisted completed hole.
+   * This lets the scorecard immediately advance from ESPN's
+   * stale "Thru 7" to PGA's authoritative Hole 8 result.
+   */
+  const {
+    data: roundHoles,
+    error: roundHolesError,
+  } = await supabaseAdmin
+    .from("golf_holes")
+    .select(
+      "hole_number, strokes, relative_to_par",
+    )
+    .eq("round_id", roundId);
+
+  if (roundHolesError) {
+    console.warn(
+      "ShotCast reconciliation could not recalculate round",
+      roundHolesError.message,
+    );
+
+    return null;
+  }
+
+  const completedHoles =
+    (roundHoles ?? []).filter(
+      (hole) =>
+        hole.strokes !== null &&
+        hole.strokes !== undefined,
+    );
+
+  const holesCompleted =
+    completedHoles.length;
+
+  const roundStrokes =
+    completedHoles.reduce(
+      (sum, hole) =>
+        sum +
+        Number(
+          hole.strokes ?? 0,
+        ),
+      0,
+    );
+
+  const roundToPar =
+    completedHoles.reduce(
+      (sum, hole) =>
+        sum +
+        Number(
+          hole.relative_to_par ?? 0,
+        ),
+      0,
+    );
+
+  const roundFinished =
+    holesCompleted >= 18;
+
+  const {
+    error: roundUpdateError,
+  } = await supabaseAdmin
+    .from("golf_rounds")
+    .update({
+      strokes:
+        holesCompleted > 0
+          ? roundStrokes
+          : null,
+      score_to_par:
+        holesCompleted > 0
+          ? roundToPar
+          : null,
+      score_display:
+        holesCompleted > 0
+          ? relativeScoreDisplay(
+              roundToPar,
+            )
+          : null,
+      holes_completed:
+        holesCompleted,
+      status:
+        roundFinished
+          ? "finished"
+          : "active",
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq("id", roundId);
+
+  if (roundUpdateError) {
+    console.warn(
+      "ShotCast reconciliation could not update Golf round",
+      roundUpdateError.message,
+    );
+  }
+
+  const terminalStatuses =
+    new Set([
+      "finished",
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  if (
+    !terminalStatuses.has(
+      String(
+        eventPlayer.status ?? "",
+      ).toLowerCase(),
+    )
+  ) {
+    const {
+      data: allRounds,
+      error: allRoundsError,
+    } = await supabaseAdmin
+      .from("golf_rounds")
+      .select(
+        "round_number, holes_completed",
+      )
+      .eq(
+        "event_player_id",
+        Number(eventPlayer.id),
+      );
+
+    if (!allRoundsError) {
+      const totalHoles =
+        (allRounds ?? []).reduce(
+          (sum, row) =>
+            sum +
+            Number(
+              row.holes_completed ?? 0,
+            ),
+          0,
+        );
+
+      const roundsCompleted =
+        (allRounds ?? []).filter(
+          (row) =>
+            Number(
+              row.holes_completed ?? 0,
+            ) >= 18,
+        ).length;
+
+      await supabaseAdmin
+        .from("golf_event_players")
+        .update({
+          holes_completed:
+            totalHoles,
+          rounds_completed:
+            Math.max(
+              roundsCompleted,
+              Number(
+                eventPlayer.rounds_completed ??
+                  0,
+              ),
+            ),
+          current_round:
+            input.roundNumber,
+          last_hole:
+            input.holeNumber,
+          status:
+            roundFinished
+              ? "round_complete"
+              : "active",
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "id",
+          Number(
+            eventPlayer.id,
+          ),
+        );
+    }
+  }
+
+  console.log(
+    "ShotCast completed-hole reconciliation",
+    {
+      slateId:
+        input.slateId,
+      playerId:
+        input.playerId,
+      round:
+        input.roundNumber,
+      hole:
+        input.holeNumber,
+      strokes,
+      relativeToPar,
+      holesCompleted,
+    },
+  );
+
+  return {
+    hole_number:
+      input.holeNumber,
+    strokes,
+    relative_to_par:
+      relativeToPar,
+    score_display:
+      relativeScoreDisplay(
+        relativeToPar,
+      ),
+    holes_completed:
+      holesCompleted,
+    round_score_to_par:
+      roundToPar,
+    round_strokes:
+      roundStrokes,
+  };
+}
+
 export async function GET(
   request: NextRequest,
 ) {
@@ -211,12 +602,22 @@ export async function GET(
       );
     }
 
+    const reconciledHole =
+      await reconcileCompletedReplayHole({
+        slateId,
+        playerId,
+        roundNumber,
+        holeNumber,
+        replay,
+      });
+
     return NextResponse.json(
       {
         success: true,
         available:
           replay.shots.length > 0,
         replay,
+        reconciledHole,
       },
       {
         headers: noStoreHeaders(),

@@ -228,18 +228,75 @@ function RoundScorecard({
   slateId: number | null;
   playerId: number;
 }) {
+  const [reconciledHoleMap, setReconciledHoleMap] =
+    useState<Record<number, GolfHoleStat>>({});
+
   const holesByNumber = new Map(
-    round.holes.map((hole) => [hole.hole_number, hole]),
+    round.holes.map((hole) => [
+      hole.hole_number,
+      reconciledHoleMap[
+        hole.hole_number
+      ] ?? hole,
+    ]),
   );
+
+  Object.values(
+    reconciledHoleMap,
+  ).forEach((hole) => {
+    holesByNumber.set(
+      hole.hole_number,
+      hole,
+    );
+  });
+
+  const playedHoles =
+    Array.from(
+      holesByNumber.values(),
+    ).filter(
+      (hole) =>
+        hole.strokes !== null &&
+        hole.strokes !== undefined,
+    );
+
+  const displayHolesCompleted =
+    Math.max(
+      round.holes_completed,
+      playedHoles.length,
+    );
+
+  const displayRoundScore =
+    playedHoles.length > 0
+      ? playedHoles.reduce(
+          (sum, hole) =>
+            sum +
+            Number(
+              hole.relative_to_par ??
+                0,
+            ),
+          0,
+        )
+      : round.score_to_par;
+
+  const displayRoundStrokes =
+    playedHoles.length > 0
+      ? playedHoles.reduce(
+          (sum, hole) =>
+            sum +
+            Number(
+              hole.strokes ?? 0,
+            ),
+          0,
+        )
+      : round.strokes;
 
   const [selectedHoleNumber, setSelectedHoleNumber] =
     useState<number | null>(null);
 
   const roundProgress =
-    round.holes_completed >= 18
+    displayHolesCompleted >= 18
       ? "Complete"
-      : round.holes_completed > 0
-        ? `Thru ${round.holes_completed}`
+      : displayHolesCompleted > 0
+        ? `Thru ${displayHolesCompleted}`
         : formatGolfTeeTime(
             round.tee_time ?? round.tee_time_raw,
           ) ?? "Not started";
@@ -271,11 +328,11 @@ function RoundScorecard({
         <div className="flex shrink-0 items-center gap-3">
           <div className="text-right">
             <strong className="block text-xl font-black text-slate-950">
-              {formatToPar(round.score_to_par)}
+              {formatToPar(displayRoundScore)}
             </strong>
 
             <span className="block text-[10px] font-bold uppercase text-slate-500">
-              {round.strokes ?? "—"} strokes
+              {displayRoundStrokes ?? "—"} strokes
             </span>
           </div>
 
@@ -410,6 +467,35 @@ function RoundScorecard({
                 onClose={() =>
                   setSelectedHoleNumber(null)
                 }
+                onReconciled={(hole) => {
+                  setReconciledHoleMap(
+                    (current) => ({
+                      ...current,
+                      [hole.hole_number]: {
+                        ...(
+                          holesByNumber.get(
+                            hole.hole_number,
+                          ) ?? {
+                            hole_number:
+                              hole.hole_number,
+                            par:
+                              selectedPar,
+                            yards:
+                              selectedYardage,
+                          }
+                        ),
+                        hole_number:
+                          hole.hole_number,
+                        strokes:
+                          hole.strokes,
+                        relative_to_par:
+                          hole.relative_to_par,
+                        score_display:
+                          hole.score_display,
+                      },
+                    }),
+                  );
+                }}
               />
             ) : (
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
