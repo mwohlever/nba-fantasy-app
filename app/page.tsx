@@ -109,6 +109,7 @@ type HomeSummaryResponse = {
   seasonSnapshot: SeasonSnapshotRow[];
   funFacts: FunFact[];
   latestSeason: number;
+  latestGolfTournamentIsFinal?: boolean;
 };
 
 type SlateRosterModalState = {
@@ -698,8 +699,19 @@ function HomePageContent() {
     activeSlateStartTime.getTime() <= Date.now();
 
   const isFinalSlate =
-    latestSlate?.is_locked === true ||
-    (!hasLiveGames && hasCompletedGames && !hasRemainingGames);
+    isGolf
+      ? (
+          latestSlate?.is_locked === true ||
+          data?.latestGolfTournamentIsFinal === true
+        )
+      : (
+          latestSlate?.is_locked === true ||
+          (
+            !hasLiveGames &&
+            hasCompletedGames &&
+            !hasRemainingGames
+          )
+        );
 
   const scoreColumnLabel =
     isGolf
@@ -714,11 +726,18 @@ function HomePageContent() {
       ? "Proj. Final"
       : "Pregame Proj.";
 
-  const slateBadge = hasLiveGames
-    ? "LIVE"
-    : hasCompletedGames && !hasRemainingGames
-      ? "FINAL"
-      : null;
+  const slateBadge =
+    isGolf
+      ? isFinalSlate
+        ? "FINAL"
+        : hasSlateStarted
+          ? "LIVE"
+          : null
+      : hasLiveGames
+        ? "LIVE"
+        : hasCompletedGames && !hasRemainingGames
+          ? "FINAL"
+          : null;
 
   const leaderLabel =
     isFinalSlate ? "Winner" : "Leader";
@@ -777,13 +796,20 @@ function HomePageContent() {
   const tipoffLabel =
     shouldShowTipoff && nextSlate ? `Next slate ${nextSlate.label}` : null;
 
-  const slateStatusLabel = hasLiveGames
-    ? "Live"
-    : hasCompletedGames && !hasRemainingGames
-      ? "Final"
-      : latestSlate?.is_locked
-        ? "Locked"
-        : "Open";
+  const slateStatusLabel =
+    isGolf
+      ? isFinalSlate
+        ? "Final"
+        : hasSlateStarted
+          ? "Live"
+          : "Open"
+      : hasLiveGames
+        ? "Live"
+        : hasCompletedGames && !hasRemainingGames
+          ? "Final"
+          : latestSlate?.is_locked
+            ? "Locked"
+            : "Open";
 
   const slateDateLabel = latestSlate
     ? formatSlateDateLabel({
