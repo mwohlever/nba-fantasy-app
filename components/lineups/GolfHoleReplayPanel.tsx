@@ -21,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -304,6 +305,22 @@ export default function GolfHoleReplayPanel({
     setIsShotCastOpen,
   ] = useState(false);
 
+  /*
+   * Keep the latest reconciliation callback without making the replay
+   * fetch depend on the callback's identity.
+   *
+   * GolfPlayerModal passes onReconciled inline, so its function identity
+   * changes whenever the scorecard rerenders. If loadReplay depends on it,
+   * the loading effect restarts and creates a request loop.
+   */
+  const onReconciledRef =
+    useRef(onReconciled);
+
+  useEffect(() => {
+    onReconciledRef.current =
+      onReconciled;
+  }, [onReconciled]);
+
   const [
     shotCastManifest,
     setShotCastManifest,
@@ -380,9 +397,9 @@ export default function GolfHoleReplayPanel({
 
         if (
           result.reconciledHole &&
-          onReconciled
+          onReconciledRef.current
         ) {
-          onReconciled(
+          onReconciledRef.current(
             result.reconciledHole,
           );
         }
@@ -425,7 +442,6 @@ export default function GolfHoleReplayPanel({
       playerId,
       roundNumber,
       holeNumber,
-      onReconciled,
     ],
   );
 

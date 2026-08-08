@@ -5,6 +5,8 @@ export type GolfCutLineInput = {
   status?: string | null;
   position?: number | null;
   holesCompleted?: number | null;
+  roundsCompleted?: number | null;
+  currentRound?: number | null;
 };
 
 export type GolfCutLine = {
@@ -135,12 +137,103 @@ export function calculateGolfCutLine(
       Number(row.score) > cutScore,
   ).length;
 
-  const official = rows.some(
-    (row) =>
-      String(
-        row.status ?? "",
-      ).toLowerCase() === "cut",
-  );
+  const cutAlreadyReported =
+    rows.some(
+      (row) =>
+        String(
+          row.status ?? "",
+        ).toLowerCase() === "cut",
+    );
+
+  /*
+   * The cut becomes official when Round 2 is settled for every
+   * scored golfer still relevant to the leaderboard.
+   *
+   * Do not depend on the provider already saying "cut": some feeds
+   * leave everybody as round_complete between R2 and R3.
+   */
+  const roundTwoTerminalStatuses =
+    new Set([
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  function hasSettledRoundTwo(
+    row: (typeof scored)[number],
+  ) {
+    if (
+      roundTwoTerminalStatuses.has(
+        row.normalizedStatus,
+      )
+    ) {
+      return true;
+    }
+
+    if (
+      Number(
+        row.roundsCompleted ?? 0,
+      ) >= 2
+    ) {
+      return true;
+    }
+
+    if (
+      Number(
+        row.holesCompleted ?? 0,
+      ) >= 36
+    ) {
+      return true;
+    }
+
+    /*
+     * ESPN can report completion state before its aggregate
+     * roundsCompleted / holesCompleted counters catch up.
+     *
+     * Either of these proves Round 2 is settled:
+     *
+     *   currentRound = 2 + round_complete
+     *   currentRound >= 3
+     *
+     * The second case matters once the tournament has advanced to
+     * Saturday: our normalizer can correctly mark a made-cut golfer
+     * as scheduled for Round 3 even while ESPN's aggregate counters
+     * still lag behind.
+     */
+    const currentRound =
+      Number(
+        row.currentRound ?? 0,
+      );
+
+    if (currentRound >= 3) {
+      return true;
+    }
+
+    return (
+      row.normalizedStatus ===
+        "round_complete" &&
+      currentRound >= 2
+    );
+  }
+
+  const hasCompletedRoundTwo =
+    scored.some(
+      hasSettledRoundTwo,
+    );
+
+  const roundTwoIsSettled =
+    scored.length > 0 &&
+    scored.every(
+      hasSettledRoundTwo,
+    );
+
+  const official =
+    cutAlreadyReported ||
+    (
+      hasCompletedRoundTwo &&
+      roundTwoIsSettled
+    );
 
   return {
     score: cutScore,

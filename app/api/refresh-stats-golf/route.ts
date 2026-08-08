@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { calculateGolfCutLine } from "@/lib/golf/cutLine";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 import {
@@ -620,7 +621,7 @@ export async function POST(request: Request) {
         tournament.competitors,
       );
 
-    const competitors =
+    const normalizedCompetitors =
       rawCompetitors.map(
         (competitor) =>
           normalizeGolfCompetitorState(
@@ -628,6 +629,189 @@ export async function POST(request: Request) {
             tournament,
           ),
       );
+
+    /*
+     * The cut is a 36-hole decision.
+     *
+     * Once Round 3 begins, officialScoreToPar includes Saturday scoring,
+     * so it must NOT be used to decide who made the Friday cut.
+     *
+     * Derive each golfer's cut score from R1 + R2 only and keep that
+     * eligibility stable for the rest of the tournament.
+     */
+    function getThirtySixHoleScore(
+      competitor: GolfCompetitor,
+    ): number | null {
+      const firstTwoRounds =
+        competitor.rounds
+          .filter(
+            (round) =>
+              Number(round.roundNumber) === 1 ||
+              Number(round.roundNumber) === 2,
+          )
+          .sort(
+            (a, b) =>
+              Number(a.roundNumber) -
+              Number(b.roundNumber),
+          );
+
+      if (firstTwoRounds.length < 2) {
+        return null;
+      }
+
+      const roundOne =
+        firstTwoRounds.find(
+          (round) =>
+            Number(round.roundNumber) === 1,
+        );
+
+      const roundTwo =
+        firstTwoRounds.find(
+          (round) =>
+            Number(round.roundNumber) === 2,
+        );
+
+      if (
+        roundOne?.scoreToPar === null ||
+        roundOne?.scoreToPar === undefined ||
+        roundTwo?.scoreToPar === null ||
+        roundTwo?.scoreToPar === undefined
+      ) {
+        return null;
+      }
+
+      const score =
+        Number(roundOne.scoreToPar) +
+        Number(roundTwo.scoreToPar);
+
+      return Number.isFinite(score)
+        ? score
+        : null;
+    }
+
+    const officialCut =
+      calculateGolfCutLine(
+        normalizedCompetitors.map(
+          (competitor) => ({
+            score:
+              getThirtySixHoleScore(
+                competitor,
+              ) ??
+              (
+                Number(
+                  competitor.currentRound ?? 0,
+                ) <= 2
+                  ? competitor.officialScoreToPar
+                  : null
+              ),
+            status:
+              competitor.status,
+            position:
+              competitor.leaderboardOrder,
+            holesCompleted:
+              competitor.holesCompleted,
+            roundsCompleted:
+              competitor.roundsCompleted,
+            currentRound:
+              competitor.currentRound,
+          }),
+        ),
+      );
+
+    const protectedTerminalStatuses =
+      new Set<GolfCompetitorStatus>([
+        "finished",
+        "withdrawn",
+        "disqualified",
+        "did_not_start",
+      ]);
+
+    const competitors =
+      officialCut?.official
+        ? normalizedCompetitors.map(
+            (competitor) => {
+              const cutScore =
+                getThirtySixHoleScore(
+                  competitor,
+                );
+
+              /*
+               * Before Round 3 begins, the cumulative tournament score is
+               * still equivalent to the 36-hole score, so retain the
+               * fallback for Friday cut processing.
+               */
+              const score =
+                cutScore ??
+                (
+                  Number(
+                    competitor.currentRound ?? 0,
+                  ) <= 2
+                    ? competitor.officialScoreToPar
+                    : null
+                );
+
+              if (
+                score === null ||
+                score === undefined ||
+                !Number.isFinite(
+                  Number(score),
+                ) ||
+                protectedTerminalStatuses.has(
+                  competitor.status,
+                )
+              ) {
+                return competitor;
+              }
+
+              /*
+               * The golfer made the official 36-hole cut.
+               *
+               * An earlier Round-3 refresh may have incorrectly changed
+               * this golfer to CUT after Saturday scoring moved the live
+               * leaderboard. Recover that stale state here.
+               */
+              if (
+                Number(score) <=
+                officialCut.score
+              ) {
+                if (
+                  competitor.status ===
+                    "cut" &&
+                  Number(
+                    tournament.currentRound ?? 0,
+                  ) >= 3
+                ) {
+                  return {
+                    ...competitor,
+                    status:
+                      "scheduled" as GolfCompetitorStatus,
+                    currentRound:
+                      Math.max(
+                        3,
+                        Number(
+                          tournament.currentRound ??
+                            3,
+                        ),
+                      ),
+                  };
+                }
+
+                return competitor;
+              }
+
+              /*
+               * This golfer missed the Friday cut. Keep the cut state
+               * anchored to Round 2 even after the tournament advances.
+               */
+              return {
+                ...competitor,
+                status:
+                  "cut" as GolfCompetitorStatus,
+                currentRound: 2,
+              };
+            },
+          )
+        : normalizedCompetitors;
 
     const normalizationCorrections =
       competitors.filter(

@@ -41,6 +41,12 @@ type GolfEventPlayerRow = {
   tee_time_raw: string | null;
 };
 
+type GolfCutRoundRow = {
+  event_player_id: number;
+  round_number: number;
+  score_to_par: number | null;
+};
+
 type GolfPlayerRow = {
   id: number;
   display_name: string;
@@ -261,22 +267,24 @@ export async function getGolfHomeSummary() {
     );
   }
 
+  /*
+   * Golf cannot use the generic team_slate_results game counters to decide
+   * whether a tournament is final.
+   *
+   * Those counters describe the current scoring state and can legitimately
+   * reach 0 remaining between rounds. For example, after every drafted golfer
+   * finishes Round 2, games_remaining can be 0 even though Rounds 3 and 4
+   * have not been played yet.
+   *
+   * Final Golf state is resolved later from golf_event_players, where we have
+   * the actual tournament-round state.
+   */
   function isCompleteSlate(slateId: number) {
-    const rows = rowsForSlate(slateId);
-
-    return (
-      rows.length > 0 &&
-      rows.some(
-        (row) =>
-          Number(row.games_completed ?? 0) > 0,
-      ) &&
-      rows.every(
-        (row) =>
-          Number(row.games_in_progress ?? 0) ===
-            0 &&
-          Number(row.games_remaining ?? 0) === 0,
-      )
+    const slate = normalizedSlates.find(
+      (row) => row.id === slateId,
     );
+
+    return slate?.is_locked === true;
   }
 
   const now = Date.now();
@@ -350,6 +358,9 @@ export async function getGolfHomeSummary() {
   let latestEventPlayers: GolfEventPlayerRow[] =
     [];
 
+  let latestGolfCutRounds: GolfCutRoundRow[] =
+    [];
+
   let latestGolfPlayers: GolfPlayerRow[] = [];
   let latestLineups: LineupRow[] = [];
   let latestLineupPlayers: LineupPlayerRow[] =
@@ -412,6 +423,45 @@ export async function getGolfHomeSummary() {
     latestEventPlayers =
       (eventPlayerData ??
         []) as GolfEventPlayerRow[];
+
+    const latestEventPlayerIds =
+      latestEventPlayers.map(
+        (player) => player.id,
+      );
+
+    if (latestEventPlayerIds.length > 0) {
+      const {
+        data: cutRoundData,
+        error: cutRoundError,
+      } = await supabaseAdmin
+        .from("golf_rounds")
+        .select(
+          "event_player_id, round_number, score_to_par",
+        )
+        .in(
+          "event_player_id",
+          latestEventPlayerIds,
+        )
+        .in(
+          "round_number",
+          [1, 2],
+        );
+
+      if (cutRoundError) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to load Golf cut-round scores: " +
+              cutRoundError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      latestGolfCutRounds =
+        (cutRoundData ??
+          []) as GolfCutRoundRow[];
+    }
 
     latestGolfPlayers =
       (golfPlayerData ?? []) as GolfPlayerRow[];
@@ -554,69 +604,146 @@ export async function getGolfHomeSummary() {
     function currentRoundHoles(
       player: GolfEventPlayerRow,
     ) {
-      const totalHoles = Number(
-        player.holes_completed ?? 0,
+      const totalHoles = Math.max(
+        0,
+        Number(
+          player.holes_completed ?? 0,
+        ),
       );
 
-      if (totalHoles <= 0) return 0;
+      const roundsCompleted = Math.max(
+        0,
+        Number(
+          player.rounds_completed ?? 0,
+        ),
+      );
 
-      const remainder = totalHoles % 18;
+      const playerCurrentRound = Math.max(
+        1,
+        Number(
+          player.current_round ??
+            roundsCompleted + 1,
+        ),
+      );
+
+      const status = String(
+        player.status ?? "",
+      ).toLowerCase();
 
       /*
-       * A multiple of 18 means the current round is complete,
-       * not that the golfer is starting the next round.
+       * golf_event_players.holes_completed is cumulative for the
+       * tournament. Once a golfer advances to the next round,
+       * 36 holes means:
+       *
+       *   R1 complete
+       *   R2 complete
+       *   R3 = 0 holes
+       *
+       * It must NOT be interpreted as "R3 complete".
        */
-      return remainder === 0 ? 18 : remainder;
+      if (
+        playerCurrentRound >
+        roundsCompleted
+      ) {
+        return Math.min(
+          18,
+          Math.max(
+            0,
+            totalHoles -
+              roundsCompleted * 18,
+          ),
+        );
+      }
+
+      /*
+       * A golfer explicitly sitting in round_complete for the round
+       * they just finished should still display that round as complete.
+       */
+      if (
+        status === "round_complete" &&
+        roundsCompleted >=
+          playerCurrentRound
+      ) {
+        return 18;
+      }
+
+      return Math.min(
+        18,
+        Math.max(
+          0,
+          totalHoles -
+            Math.max(
+              0,
+              playerCurrentRound - 1,
+            ) *
+              18,
+        ),
+      );
     }
 
-    const livePlayers = players.filter(
-      (player) => {
-        const status = String(
-          player.status ?? "",
-        ).toLowerCase();
-
-        const holes = currentRoundHoles(player);
-
-        return (
-          status === "active" &&
-          holes > 0 &&
-          holes < 18
-        );
-      },
+    /*
+     * Current-round progress should only consider golfers who are still
+     * eligible to play this round.
+     *
+     * CUT / WD / DQ golfers are finished with the tournament, but they
+     * should not count as having completed the current round and should
+     * not remain in the progress denominator.
+     */
+    const eligiblePlayers = players.filter(
+      (player) =>
+        !isTerminalGolfStatus(
+          player.status,
+        ),
     );
 
-    const completedCurrentRound = players.filter(
-      (player) => {
-        const holes = currentRoundHoles(player);
-
-        return (
-          holes === 18 ||
-          isTerminalGolfStatus(player.status)
-        );
-      },
-    );
-
-    if (livePlayers.length > 0) {
-      return `R${currentRound} · ${livePlayers.length} live`;
+    if (eligiblePlayers.length === 0) {
+      return `R${currentRound} complete`;
     }
+
+    const livePlayers =
+      eligiblePlayers.filter(
+        (player) => {
+          const status = String(
+            player.status ?? "",
+          ).toLowerCase();
+
+          const holes =
+            currentRoundHoles(player);
+
+          return (
+            status === "active" &&
+            holes > 0 &&
+            holes < 18
+          );
+        },
+      );
+
+    const completedCurrentRound =
+      eligiblePlayers.filter(
+        (player) =>
+          currentRoundHoles(player) ===
+          18,
+      );
 
     if (
       completedCurrentRound.length ===
-      players.length
+      eligiblePlayers.length
     ) {
       return `R${currentRound} complete`;
     }
 
-    const startedCount = players.filter(
-      (player) =>
-        currentRoundHoles(player) > 0,
-    ).length;
+    const progressLabel =
+      `${completedCurrentRound.length}/${eligiblePlayers.length} complete`;
 
-    if (startedCount > 0) {
-      return `R${currentRound} · ${startedCount}/4 finished`;
+    if (livePlayers.length > 0) {
+      return (
+        `R${currentRound} · ` +
+        `${livePlayers.length} live · ` +
+        progressLabel
+      );
     }
 
-    return `R${currentRound} · waiting`;
+    return `R${currentRound} · ${progressLabel}`;
   }
 
   const latestRows = latestSlate
@@ -659,17 +786,67 @@ export async function getGolfHomeSummary() {
         }))
     : [];
 
+  /*
+   * Determine whether the selected Golf tournament is genuinely over.
+   *
+   * A normal golfer must have reached the end of Round 4.
+   * CUT / WD / DQ golfers are terminal and do not prevent the tournament
+   * from completing.
+   *
+   * This deliberately does NOT treat "everyone finished the current round"
+   * as tournament completion.
+   */
+  const latestGolfTournamentIsFinal =
+    latestSlate !== null &&
+    latestEventPlayers.length > 0 &&
+    latestEventPlayers.every((player) => {
+      if (isTerminalGolfStatus(player.status)) {
+        return true;
+      }
+
+      const roundsCompleted = Number(
+        player.rounds_completed ?? 0,
+      );
+
+      const holesCompleted = Number(
+        player.holes_completed ?? 0,
+      );
+
+      const currentRound = Number(
+        player.current_round ?? 0,
+      );
+
+      return (
+        roundsCompleted >= 4 ||
+        holesCompleted >= 72 ||
+        (
+          currentRound >= 4 &&
+          holesCompleted > 0 &&
+          holesCompleted % 18 === 0
+        )
+      );
+    });
+
   const latestSeason = latestSlate
     ? getSeason(latestSlate.start_date)
     : new Date().getFullYear();
 
   const lockedSlateIds = new Set(
     normalizedSlates
-      .filter(
-        (slate) =>
-          slate.is_locked ||
-          isCompleteSlate(slate.id),
-      )
+      .filter((slate) => {
+        if (slate.is_locked) {
+          return true;
+        }
+
+        if (
+          latestSlate &&
+          slate.id === latestSlate.id
+        ) {
+          return latestGolfTournamentIsFinal;
+        }
+
+        return isCompleteSlate(slate.id);
+      })
       .map((slate) => slate.id),
   );
 
@@ -810,24 +987,89 @@ export async function getGolfHomeSummary() {
             player.last_hole,
           holesCompleted:
             player.holes_completed,
+          roundsCompleted:
+            player.rounds_completed,
           isDrafted:
             draftedBy.length > 0,
           draftedBy,
         };
       });
 
+  const cutRoundScoresByEventPlayerId =
+    new Map<
+      number,
+      Map<number, number>
+    >();
+
+  latestGolfCutRounds.forEach((round) => {
+    if (
+      round.score_to_par === null ||
+      round.score_to_par === undefined
+    ) {
+      return;
+    }
+
+    const eventPlayerScores =
+      cutRoundScoresByEventPlayerId.get(
+        round.event_player_id,
+      ) ?? new Map<number, number>();
+
+    eventPlayerScores.set(
+      Number(round.round_number),
+      Number(round.score_to_par),
+    );
+
+    cutRoundScoresByEventPlayerId.set(
+      round.event_player_id,
+      eventPlayerScores,
+    );
+  });
+
   const projectedCut =
     calculateGolfCutLine(
       latestEventPlayers.map(
-        (player) => ({
-          score:
-            player.official_score_to_par,
-          status: player.status,
-          position:
-            player.leaderboard_order,
-          holesCompleted:
-            player.holes_completed,
-        }),
+        (player) => {
+          const roundScores =
+            cutRoundScoresByEventPlayerId.get(
+              player.id,
+            );
+
+          const roundOne =
+            roundScores?.get(1);
+
+          const roundTwo =
+            roundScores?.get(2);
+
+          const hasThirtySixHoleScore =
+            roundOne !== undefined &&
+            roundTwo !== undefined;
+
+          const thirtySixHoleScore =
+            hasThirtySixHoleScore
+              ? Number(roundOne) +
+                Number(roundTwo)
+              : null;
+
+          return {
+            /*
+             * R1/R2 remains dynamic while Friday is in progress.
+             * After R2, this value is frozen even while the golfer's
+             * live tournament score changes on Saturday/Sunday.
+             */
+            score:
+              thirtySixHoleScore ??
+              player.official_score_to_par,
+            status: player.status,
+            position:
+              player.leaderboard_order,
+            holesCompleted:
+              player.holes_completed,
+            roundsCompleted:
+              player.rounds_completed,
+            currentRound:
+              player.current_round,
+          };
+        },
       ),
     );
 
@@ -884,6 +1126,7 @@ export async function getGolfHomeSummary() {
     success: true,
     latestSlate:
       serializeSlate(latestSlate),
+    latestGolfTournamentIsFinal,
     nextSlate: serializeSlate(nextSlate),
     latestSlateRows: latestRows,
     tournamentLeaderboard,

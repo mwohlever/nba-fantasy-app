@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import { getGolfStatusMeta } from "@/lib/golf/status";
 import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+import { buildGolfLeaderboardRanks } from "@/lib/golf/leaderboard";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import type {
   OrderedTeam,
@@ -123,6 +124,42 @@ export default function GolfTournamentView({
     return map;
   }, [teams, getPlayersForTeam]);
 
+  const leaderboardRanks =
+    useMemo(
+      () =>
+        buildGolfLeaderboardRanks(
+          players.flatMap(
+            (player) => {
+              const stat =
+                getRawPlayerStat(
+                  player.id,
+                );
+
+              if (!stat) {
+                return [];
+              }
+
+              return [
+                {
+                  id: player.id,
+                  score:
+                    stat.official_score_to_par ??
+                    stat.fantasy_points,
+                  fallbackOrder:
+                    stat.leaderboard_order,
+                  status:
+                    stat.status,
+                },
+              ];
+            },
+          ),
+        ),
+      [
+        players,
+        getRawPlayerStat,
+      ],
+    );
+
   const rows = useMemo<TournamentRow[]>(() => {
     const normalizedSearch =
       searchTerm.trim().toLowerCase();
@@ -169,12 +206,18 @@ export default function GolfTournamentView({
       })
       .sort((a, b) => {
         const aPosition =
+          leaderboardRanks.get(
+            a.player.id,
+          )?.position ??
           Number(
             a.stat.leaderboard_order ??
               9999,
           );
 
         const bPosition =
+          leaderboardRanks.get(
+            b.player.id,
+          )?.position ??
           Number(
             b.stat.leaderboard_order ??
               9999,
@@ -182,6 +225,22 @@ export default function GolfTournamentView({
 
         if (aPosition !== bPosition) {
           return aPosition - bPosition;
+        }
+
+        const scoreDifference =
+          Number(
+            a.stat.official_score_to_par ??
+              a.stat.fantasy_points ??
+              Number.MAX_SAFE_INTEGER,
+          ) -
+          Number(
+            b.stat.official_score_to_par ??
+              b.stat.fantasy_points ??
+              Number.MAX_SAFE_INTEGER,
+          );
+
+        if (scoreDifference !== 0) {
+          return scoreDifference;
         }
 
         const aStatus =
@@ -204,6 +263,7 @@ export default function GolfTournamentView({
     ownerByPlayerId,
     searchTerm,
     draftedOnly,
+    leaderboardRanks,
   ]);
 
   const cutLine = useMemo(
@@ -219,9 +279,51 @@ export default function GolfTournamentView({
             return [];
           }
 
+          const roundOne =
+            (stat.rounds ?? []).find(
+              (round) =>
+                Number(
+                  round.round_number,
+                ) === 1,
+            );
+
+          const roundTwo =
+            (stat.rounds ?? []).find(
+              (round) =>
+                Number(
+                  round.round_number,
+                ) === 2,
+            );
+
+          const hasThirtySixHoleScore =
+            roundOne?.score_to_par !==
+              null &&
+            roundOne?.score_to_par !==
+              undefined &&
+            roundTwo?.score_to_par !==
+              null &&
+            roundTwo?.score_to_par !==
+              undefined;
+
+          const thirtySixHoleScore =
+            hasThirtySixHoleScore
+              ? Number(
+                  roundOne.score_to_par,
+                ) +
+                Number(
+                  roundTwo.score_to_par,
+                )
+              : null;
+
           return [
             {
+              /*
+               * During R1/R2 this behaves like the live cumulative score.
+               * Once R3 begins, R1 + R2 remains frozen and therefore so
+               * does the official cut line.
+               */
               score:
+                thirtySixHoleScore ??
                 stat.official_score_to_par ??
                 stat.fantasy_points,
               status: stat.status,
@@ -229,6 +331,10 @@ export default function GolfTournamentView({
                 stat.leaderboard_order,
               holesCompleted:
                 stat.holes_completed,
+              roundsCompleted:
+                stat.rounds_completed,
+              currentRound:
+                stat.current_round,
             },
           ];
         }),
@@ -449,7 +555,7 @@ export default function GolfTournamentView({
                 <strong className="block text-base text-white">
                   {cutLine.tiedAtCut}
                 </strong>
-                tied
+                at cut score
               </div>
 
               <div className="hidden sm:block">
@@ -719,9 +825,12 @@ export default function GolfTournamentView({
               aria-label={`Open ${row.player.name} tournament scorecard`}
             >
               <div className="text-sm font-black text-slate-200">
-                {formatPosition(
-                  row.stat.leaderboard_order,
-                )}
+                {leaderboardRanks.get(
+                  row.player.id,
+                )?.display ??
+                  formatPosition(
+                    row.stat.leaderboard_order,
+                  )}
               </div>
 
               <div className="flex min-w-0 items-center gap-3">
