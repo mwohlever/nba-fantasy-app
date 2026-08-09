@@ -118,182 +118,1044 @@ export async function GET(request: Request) {
     }
 
     if (sport === "golf") {
-      const db = supabaseAdmin as any;
+      const db =
+        supabaseAdmin as any;
 
-      const { data: golfer, error: golferError } = await db
+      const {
+        data: golfer,
+        error: golferError,
+      } = await db
         .from("golf_players")
         .select(
-          "id, display_name, country, owgr_rank, owgr_updated_at",
+          "id, display_name, country, owgr_rank, owgr_updated_at, espn_player_id, headshot_url",
         )
-        .eq("id", playerId)
+        .eq(
+          "id",
+          playerId,
+        )
         .maybeSingle();
 
       if (golferError) {
         return NextResponse.json(
-          { error: golferError.message },
+          {
+            error:
+              golferError.message,
+          },
           { status: 500 },
         );
       }
 
       if (!golfer) {
         return NextResponse.json(
-          { error: "Golfer not found." },
+          {
+            error:
+              "Golfer not found.",
+          },
           { status: 404 },
         );
       }
 
-      const { data: golfSlates, error: golfSlatesError } = await db
+      const {
+        data: golfSlates,
+        error:
+          golfSlatesError,
+      } = await db
         .from("slates")
-        .select("id, start_date, date")
-        .eq("sport", "golf");
+        .select(
+          "id, start_date, date, end_date, display_name, is_locked",
+        )
+        .eq(
+          "sport",
+          "golf",
+        );
 
-      if (golfSlatesError) {
+      if (
+        golfSlatesError
+      ) {
         return NextResponse.json(
-          { error: golfSlatesError.message },
+          {
+            error:
+              golfSlatesError.message,
+          },
           { status: 500 },
         );
       }
 
-      const filteredGolfSlateIds = (golfSlates ?? [])
-        .filter((slate: any) => {
-          if (isAllTime) return true;
+      const filteredGolfSlates =
+        (
+          golfSlates ??
+          []
+        ).filter(
+          (slate: any) => {
+            if (
+              isAllTime
+            ) {
+              return true;
+            }
 
-          const date = slate.start_date ?? slate.date ?? "";
-          return Number(String(date).slice(0, 4)) === selectedSeason;
-        })
-        .map((slate: any) => Number(slate.id));
+            const date =
+              slate.start_date ??
+              slate.date ??
+              "";
 
-      let matchingLineups: any[] = [];
+            return (
+              Number(
+                String(
+                  date,
+                ).slice(
+                  0,
+                  4,
+                ),
+              ) ===
+              selectedSeason
+            );
+          },
+        );
 
-      if (filteredGolfSlateIds.length > 0) {
-        const { data: lineups, error: lineupsError } = await db
+      const filteredGolfSlateIds =
+        filteredGolfSlates.map(
+          (slate: any) =>
+            Number(
+              slate.id,
+            ),
+        );
+
+      const slateById =
+        new Map<
+          number,
+          {
+            id: number;
+            start_date: string | null;
+            date: string | null;
+            end_date: string | null;
+            display_name: string | null;
+            is_locked: boolean | null;
+          }
+        >(
+          filteredGolfSlates.map(
+            (slate: any) => [
+              Number(
+                slate.id,
+              ),
+              {
+                id:
+                  Number(
+                    slate.id,
+                  ),
+                start_date:
+                  slate.start_date ??
+                  null,
+                date:
+                  slate.date ??
+                  null,
+                end_date:
+                  slate.end_date ??
+                  null,
+                display_name:
+                  slate.display_name ??
+                  null,
+                is_locked:
+                  slate.is_locked ??
+                  null,
+              },
+            ],
+          ),
+        );
+
+      let matchingLineups:
+        any[] = [];
+
+      if (
+        filteredGolfSlateIds.length >
+        0
+      ) {
+        const {
+          data: lineups,
+          error: lineupsError,
+        } = await db
           .from("lineups")
-          .select("id, team_id, slate_id")
-          .in("slate_id", filteredGolfSlateIds);
+          .select(
+            "id, team_id, slate_id",
+          )
+          .in(
+            "slate_id",
+            filteredGolfSlateIds,
+          );
 
-        if (lineupsError) {
+        if (
+          lineupsError
+        ) {
           return NextResponse.json(
-            { error: lineupsError.message },
+            {
+              error:
+                lineupsError.message,
+            },
             { status: 500 },
           );
         }
 
-        matchingLineups = lineups ?? [];
+        matchingLineups =
+          lineups ??
+          [];
       }
 
-      const lineupIds = matchingLineups.map((lineup: any) =>
-        Number(lineup.id),
-      );
+      const lineupIds =
+        matchingLineups.map(
+          (lineup: any) =>
+            Number(
+              lineup.id,
+            ),
+        );
 
-      let golferLineupPlayers: any[] = [];
+      let golferLineupPlayers:
+        any[] = [];
 
-      if (lineupIds.length > 0) {
-        const { data: lineupPlayers, error: lineupPlayersError } = await db
-          .from("lineup_players")
-          .select("lineup_id, player_id")
-          .eq("player_id", playerId)
-          .in("lineup_id", lineupIds);
+      if (
+        lineupIds.length >
+        0
+      ) {
+        const {
+          data:
+            lineupPlayers,
+          error:
+            lineupPlayersError,
+        } = await db
+          .from(
+            "lineup_players",
+          )
+          .select(
+            "lineup_id, player_id",
+          )
+          .eq(
+            "player_id",
+            playerId,
+          )
+          .in(
+            "lineup_id",
+            lineupIds,
+          );
 
-        if (lineupPlayersError) {
+        if (
+          lineupPlayersError
+        ) {
           return NextResponse.json(
-            { error: lineupPlayersError.message },
+            {
+              error:
+                lineupPlayersError.message,
+            },
             { status: 500 },
           );
         }
 
-        golferLineupPlayers = lineupPlayers ?? [];
+        golferLineupPlayers =
+          lineupPlayers ??
+          [];
       }
 
-      const ownedLineupIds = new Set(
-        golferLineupPlayers.map((row: any) => Number(row.lineup_id)),
-      );
+      const ownedLineupIds =
+        new Set(
+          golferLineupPlayers.map(
+            (row: any) =>
+              Number(
+                row.lineup_id,
+              ),
+          ),
+        );
 
-      const ownedLineups = matchingLineups.filter((lineup: any) =>
-        ownedLineupIds.has(Number(lineup.id)),
-      );
+      const ownedLineups =
+        matchingLineups.filter(
+          (lineup: any) =>
+            ownedLineupIds.has(
+              Number(
+                lineup.id,
+              ),
+            ),
+        );
 
       const teamIds = [
         ...new Set(
-          ownedLineups.map((lineup: any) => Number(lineup.team_id)),
+          ownedLineups.map(
+            (lineup: any) =>
+              Number(
+                lineup.team_id,
+              ),
+          ),
         ),
       ];
 
-      let teamRows: any[] = [];
+      let teamRows:
+        any[] = [];
 
-      if (teamIds.length > 0) {
-        const { data: teams, error: teamsError } = await db
+      if (
+        teamIds.length >
+        0
+      ) {
+        const {
+          data: teams,
+          error: teamsError,
+        } = await db
           .from("teams")
-          .select("id, name")
-          .in("id", teamIds);
+          .select(
+            "id, name",
+          )
+          .in(
+            "id",
+            teamIds,
+          );
 
-        if (teamsError) {
+        if (
+          teamsError
+        ) {
           return NextResponse.json(
-            { error: teamsError.message },
+            {
+              error:
+                teamsError.message,
+            },
             { status: 500 },
           );
         }
 
-        teamRows = teams ?? [];
+        teamRows =
+          teams ??
+          [];
       }
 
-      const teamNameById = new Map(
-        teamRows.map((team: any) => [
-          Number(team.id),
-          String(team.name),
-        ]),
+      const teamNameById =
+        new Map(
+          teamRows.map(
+            (team: any) => [
+              Number(
+                team.id,
+              ),
+              String(
+                team.name,
+              ),
+            ],
+          ),
+        );
+
+      const ownedSlateIds = [
+        ...new Set(
+          ownedLineups.map(
+            (lineup: any) =>
+              Number(
+                lineup.slate_id,
+              ),
+          ),
+        ),
+      ];
+
+      let results:
+        any[] = [];
+
+      let eventPlayers:
+        any[] = [];
+
+      if (
+        ownedSlateIds.length >
+        0
+      ) {
+        const [
+          resultResponse,
+          eventResponse,
+        ] = await Promise.all([
+          db
+            .from(
+              "team_slate_results",
+            )
+            .select(
+              "slate_id, team_id, fantasy_points, finish_position",
+            )
+            .in(
+              "slate_id",
+              ownedSlateIds,
+            ),
+
+          db
+            .from(
+              "golf_event_players",
+            )
+            .select(
+              `
+              id,
+              slate_id,
+              player_id,
+              leaderboard_order,
+              official_score_to_par,
+              fantasy_score,
+              penalty_strokes,
+              status,
+              rounds_completed,
+              holes_completed,
+              current_round,
+              golf_rounds (
+                id,
+                round_number,
+                score_to_par,
+                strokes,
+                holes_completed,
+                status,
+                golf_holes (
+                  hole_number,
+                  strokes,
+                  relative_to_par
+                )
+              )
+            `,
+            )
+            .eq(
+              "player_id",
+              playerId,
+            )
+            .in(
+              "slate_id",
+              ownedSlateIds,
+            ),
+        ]);
+
+        const dataError =
+          resultResponse.error ??
+          eventResponse.error;
+
+        if (
+          dataError
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                dataError.message,
+            },
+            { status: 500 },
+          );
+        }
+
+        results =
+          resultResponse.data ??
+          [];
+
+        eventPlayers =
+          eventResponse.data ??
+          [];
+      }
+
+      const resultBySlateTeam =
+        new Map<string, any>();
+
+      results.forEach(
+        (result: any) => {
+          resultBySlateTeam.set(
+            `${Number(
+              result.slate_id,
+            )}:${Number(
+              result.team_id,
+            )}`,
+            result,
+          );
+        },
       );
 
-      const draftedByCount = new Map<string, number>();
+      const eventPlayerBySlateId =
+        new Map<number, any>();
 
-      ownedLineups.forEach((lineup: any) => {
-        const teamName =
-          teamNameById.get(Number(lineup.team_id)) ?? "Unknown";
+      eventPlayers.forEach(
+        (eventPlayer: any) => {
+          eventPlayerBySlateId.set(
+            Number(
+              eventPlayer.slate_id,
+            ),
+            eventPlayer,
+          );
+        },
+      );
 
-        draftedByCount.set(
-          teamName,
-          (draftedByCount.get(teamName) ?? 0) + 1,
+      const draftedByCount =
+        new Map<
+          string,
+          number
+        >();
+
+      const history =
+        ownedLineups.map(
+          (lineup: any) => {
+            const slateId =
+              Number(
+                lineup.slate_id,
+              );
+
+            const teamId =
+              Number(
+                lineup.team_id,
+              );
+
+            const slate =
+              slateById.get(
+                slateId,
+              );
+
+            const teamName =
+              teamNameById.get(
+                teamId,
+              ) ??
+              "Unknown";
+
+            draftedByCount.set(
+              teamName,
+              (
+                draftedByCount.get(
+                  teamName,
+                ) ??
+                0
+              ) +
+                1,
+            );
+
+            const result =
+              resultBySlateTeam.get(
+                `${slateId}:${teamId}`,
+              );
+
+            const eventPlayer =
+              eventPlayerBySlateId.get(
+                slateId,
+              );
+
+            let birdies =
+              0;
+            let eagles =
+              0;
+            let albatrosses =
+              0;
+            let holesInOne =
+              0;
+            let pars =
+              0;
+            let bogeys =
+              0;
+            let doubleBogeysOrWorse =
+              0;
+            let roundsUnderPar =
+              0;
+            let completedRounds =
+              0;
+
+            for (
+              const round
+              of eventPlayer?.golf_rounds ??
+              []
+            ) {
+              const score =
+                numberOrNull(
+                  round.score_to_par,
+                );
+
+              const holesCompleted =
+                Number(
+                  round.holes_completed ??
+                    0,
+                );
+
+              if (
+                holesCompleted >=
+                18
+              ) {
+                completedRounds +=
+                  1;
+
+                if (
+                  score !== null &&
+                  score < 0
+                ) {
+                  roundsUnderPar +=
+                    1;
+                }
+              }
+
+              for (
+                const hole
+                of round.golf_holes ??
+                []
+              ) {
+                const relative =
+                  numberOrNull(
+                    hole.relative_to_par,
+                  );
+
+                const strokes =
+                  numberOrNull(
+                    hole.strokes,
+                  );
+
+                if (
+                  strokes === 1
+                ) {
+                  holesInOne +=
+                    1;
+                }
+
+                if (
+                  relative ===
+                  null
+                ) {
+                  continue;
+                }
+
+                if (
+                  relative <= -3
+                ) {
+                  albatrosses +=
+                    1;
+                } else if (
+                  relative === -2
+                ) {
+                  eagles +=
+                    1;
+                } else if (
+                  relative === -1
+                ) {
+                  birdies +=
+                    1;
+                } else if (
+                  relative === 0
+                ) {
+                  pars +=
+                    1;
+                } else if (
+                  relative === 1
+                ) {
+                  bogeys +=
+                    1;
+                } else if (
+                  relative >= 2
+                ) {
+                  doubleBogeysOrWorse +=
+                    1;
+                }
+              }
+            }
+
+            const status =
+              String(
+                eventPlayer?.status ??
+                  "",
+              ).toLowerCase();
+
+            const reachedCutDecision =
+              Number(
+                eventPlayer?.rounds_completed ??
+                  0,
+              ) >=
+                2 ||
+              Number(
+                eventPlayer?.holes_completed ??
+                  0,
+              ) >=
+                36 ||
+              [
+                "cut",
+                "finished",
+              ].includes(
+                status,
+              );
+
+            const madeCut =
+              reachedCutDecision
+                ? ![
+                    "cut",
+                    "withdrawn",
+                    "disqualified",
+                    "did_not_start",
+                  ].includes(
+                    status,
+                  )
+                : null;
+
+            const startDate =
+              slate?.start_date ??
+              slate?.date ??
+              "";
+
+            const endDate =
+              slate?.end_date ??
+              slate?.date ??
+              "";
+
+            const slateLabel =
+              slate?.display_name?.trim() ||
+              (
+                startDate &&
+                endDate &&
+                startDate !==
+                  endDate
+                  ? `${startDate} - ${endDate}`
+                  : startDate ||
+                    "Unknown Tournament"
+              );
+
+            return {
+              slateId,
+              slateLabel,
+              teamName,
+
+              finishPosition:
+                slate?.is_locked
+                  ? numberOrNull(
+                      result?.finish_position,
+                    )
+                  : null,
+
+              fantasyPoints:
+                numberOrNull(
+                  eventPlayer?.official_score_to_par,
+                ),
+
+              golferScore:
+                numberOrNull(
+                  eventPlayer?.official_score_to_par,
+                ),
+
+              status:
+                eventPlayer?.status ??
+                null,
+
+              madeCut,
+
+              stats: {
+                birdies,
+                eagles,
+                albatrosses,
+                holesInOne,
+                pars,
+                bogeys,
+                doubleBogeysOrWorse,
+                roundsUnderPar,
+                completedRounds,
+              },
+
+              projectedFantasyPoints:
+                null,
+              projectionDifference:
+                null,
+              projectionConfidence:
+                null,
+              projectionSource:
+                null,
+              projectedAt:
+                null,
+
+              slateStartDate:
+                startDate,
+            };
+          },
         );
-      });
 
-      const draftedByBreakdown = Array.from(
-        draftedByCount.entries(),
-      )
-        .map(([teamName, count]) => ({ teamName, count }))
-        .sort(
-          (a, b) =>
-            b.count - a.count ||
-            a.teamName.localeCompare(b.teamName),
+      const draftedByBreakdown =
+        Array.from(
+          draftedByCount.entries(),
+        )
+          .map(
+            (
+              [
+                teamName,
+                count,
+              ],
+            ) => ({
+              teamName,
+              count,
+            }),
+          )
+          .sort(
+            (a, b) =>
+              b.count -
+                a.count ||
+              a.teamName.localeCompare(
+                b.teamName,
+              ),
+          );
+
+      const completedHistory =
+        history.filter(
+          (row: any) =>
+            row.golferScore !==
+            null,
         );
+
+      const finishedHistory =
+        history.filter(
+          (row: any) =>
+            row.finishPosition !==
+            null,
+        );
+
+      const scores =
+        completedHistory.map(
+          (row: any) =>
+            Number(
+              row.golferScore,
+            ),
+        );
+
+      const finishes =
+        finishedHistory.map(
+          (row: any) =>
+            Number(
+              row.finishPosition,
+            ),
+        );
+
+      const wins =
+        finishes.filter(
+          (finish) =>
+            finish === 1,
+        ).length;
+
+      const runnerUps =
+        finishes.filter(
+          (finish) =>
+            finish === 2,
+        ).length;
+
+      const podiums =
+        finishes.filter(
+          (finish) =>
+            finish >= 1 &&
+            finish <= 3,
+        ).length;
+
+      const cutRows =
+        history.filter(
+          (row: any) =>
+            row.madeCut !==
+            null,
+        );
+
+      const cutsMade =
+        cutRows.filter(
+          (row: any) =>
+            row.madeCut ===
+            true,
+        ).length;
+
+      const aggregateStats =
+        history.reduce(
+          (
+            totals: any,
+            row: any,
+          ) => {
+            for (
+              const key
+              of [
+                "birdies",
+                "eagles",
+                "albatrosses",
+                "holesInOne",
+                "pars",
+                "bogeys",
+                "doubleBogeysOrWorse",
+                "roundsUnderPar",
+                "completedRounds",
+              ]
+            ) {
+              totals[key] +=
+                Number(
+                  row.stats?.[
+                    key
+                  ] ??
+                    0,
+                );
+            }
+
+            return totals;
+          },
+          {
+            birdies: 0,
+            eagles: 0,
+            albatrosses: 0,
+            holesInOne: 0,
+            pars: 0,
+            bogeys: 0,
+            doubleBogeysOrWorse:
+              0,
+            roundsUnderPar:
+              0,
+            completedRounds:
+              0,
+          },
+        );
+
+      const recentHistory =
+        [...history]
+          .sort(
+            (a: any, b: any) =>
+              String(
+                b.slateStartDate ??
+                  "",
+              ).localeCompare(
+                String(
+                  a.slateStartDate ??
+                    "",
+                ),
+              ),
+          )
+          .slice(
+            0,
+            12,
+          )
+          .map(
+            ({
+              slateStartDate:
+                _slateStartDate,
+              ...row
+            }: any) =>
+              row,
+          );
 
       return NextResponse.json({
         success: true,
-        selectedSeason: isAllTime ? "all" : selectedSeason,
+
+        selectedSeason:
+          isAllTime
+            ? "all"
+            : selectedSeason,
+
         player: {
-          id: Number(golfer.id),
-          name: golfer.display_name,
-          position_group: "GOLFER",
-          country: golfer.country ?? null,
-          owgrRank: golfer.owgr_rank ?? null,
-          owgrUpdatedAt: golfer.owgr_updated_at ?? null,
+          id:
+            Number(
+              golfer.id,
+            ),
+          name:
+            golfer.display_name,
+          position_group:
+            "GOLFER",
+          country:
+            golfer.country ??
+            null,
+          owgrRank:
+            golfer.owgr_rank ??
+            null,
+          owgrUpdatedAt:
+            golfer.owgr_updated_at ??
+            null,
+          espnGolfPlayerId:
+            golfer.espn_player_id ??
+            null,
+          headshotUrl:
+            golfer.headshot_url ??
+            null,
         },
+
         summary: {
-          timesDrafted: ownedLineups.length,
-          wins: 0,
-          runnerUps: 0,
-          winRate: null,
-          draftedMostBy: draftedByBreakdown[0] ?? null,
+          timesDrafted:
+            ownedLineups.length,
+
+          wins,
+          runnerUps,
+          podiums,
+
+          winRate:
+            finishedHistory.length >
+            0
+              ? round(
+                  (
+                    wins /
+                    finishedHistory.length
+                  ) *
+                    100,
+                )
+              : null,
+
+          draftedMostBy:
+            draftedByBreakdown[
+              0
+            ] ??
+            null,
+
           draftedByBreakdown,
-          averageFantasyPoints: null,
-          bestFantasyPoints: null,
-          worstFantasyPoints: null,
-          averageFinish: null,
-          projectionSampleSize: 0,
-          averageProjectionDifference: null,
-          exceededProjectionCount: 0,
-          missedProjectionCount: 0,
-          matchedProjectionCount: 0,
+
+          averageFantasyPoints:
+            scores.length >
+            0
+              ? round(
+                  scores.reduce(
+                    (
+                      sum,
+                      score,
+                    ) =>
+                      sum +
+                      score,
+                    0,
+                  ) /
+                    scores.length,
+                )
+              : null,
+
+          bestFantasyPoints:
+            scores.length >
+            0
+              ? round(
+                  Math.min(
+                    ...scores,
+                  ),
+                )
+              : null,
+
+          worstFantasyPoints:
+            scores.length >
+            0
+              ? round(
+                  Math.max(
+                    ...scores,
+                  ),
+                )
+              : null,
+
+          averageFinish:
+            finishes.length >
+            0
+              ? round(
+                  finishes.reduce(
+                    (
+                      sum,
+                      finish,
+                    ) =>
+                      sum +
+                      finish,
+                    0,
+                  ) /
+                    finishes.length,
+                )
+              : null,
+
+          cutsMade,
+          cutOpportunities:
+            cutRows.length,
+
+          cutsMadePct:
+            cutRows.length >
+            0
+              ? round(
+                  (
+                    cutsMade /
+                    cutRows.length
+                  ) *
+                    100,
+                )
+              : null,
+
+          ...aggregateStats,
+
+          projectionSampleSize:
+            0,
+          averageProjectionDifference:
+            null,
+          exceededProjectionCount:
+            0,
+          missedProjectionCount:
+            0,
+          matchedProjectionCount:
+            0,
         },
-        recentHistory: [],
+
+        recentHistory,
       });
     }
 
