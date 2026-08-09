@@ -14,6 +14,10 @@ import {
   type GolfTournament,
 } from "@/lib/providers/golf";
 
+import {
+  fetchPgaTourTeeTimes,
+} from "@/lib/providers/pgaTourTeeTimes";
+
 type RefreshBody = {
   slateId?: number | string;
   scoreboardPayload?: unknown;
@@ -1745,6 +1749,138 @@ export async function POST(request: Request) {
       );
     }
 
+    /*
+     * ESPN remains the primary tee-time provider.
+     *
+     * Once Round 3 is complete, ESPN may create R4 rows without
+     * publishing Sunday's tee times. When that happens, fill only
+     * the missing future-round tee times from the official PGA TOUR
+     * tournament tee-times page.
+     */
+    const tournamentRound =
+      Number(
+        tournament.currentRound ?? 0,
+      );
+
+    const needsFutureTeeFallback =
+      tournamentRound >= 3 &&
+      competitors.some(
+        (competitor) => {
+          const futureRound =
+            competitor.rounds.find(
+              (round) =>
+                Number(
+                  round.roundNumber,
+                ) ===
+                Math.min(
+                  4,
+                  tournamentRound + 1,
+                ),
+            );
+
+          return (
+            futureRound &&
+            !futureRound.teeTime &&
+            !futureRound.teeTimeRaw
+          );
+        },
+      );
+
+    const pgaTeeTimesByName =
+      new Map<string, string>();
+
+    if (
+      needsFutureTeeFallback
+    ) {
+      try {
+        /*
+         * Current PGA TOUR tournament URLs use IDs such as:
+         *
+         *   R2026013
+         *
+         * The ESPN event is still the primary tournament identity;
+         * this URL is used only as a fallback source for missing
+         * published tee times.
+         *
+         * Wyndham 2026 is R2026013. Future tournaments can use the
+         * same mechanism once their PGA TOUR ID is available.
+         */
+        const pgaTournamentId =
+          tournament.name ===
+            "Wyndham Championship"
+            ? "R2026013"
+            : null;
+
+        if (pgaTournamentId) {
+          const year =
+            tournament.startDate
+              ? new Date(
+                  tournament.startDate,
+                ).getUTCFullYear()
+              : new Date().getUTCFullYear();
+
+          const slug =
+            tournament.name
+              .toLowerCase()
+              .replace(
+                /[^a-z0-9]+/g,
+                "-",
+              )
+              .replace(
+                /^-|-$/g,
+                "",
+              );
+
+          const tournamentUrl =
+            `https://www.pgatour.com/tournaments/${year}/${slug}/${pgaTournamentId}/tee-times`;
+
+          const pgaTeeTimes =
+            await fetchPgaTourTeeTimes(
+              {
+                tournamentUrl,
+              },
+              competitors.map(
+                (competitor) =>
+                  competitor.displayName,
+              ),
+            );
+
+          for (
+            const row
+            of pgaTeeTimes
+          ) {
+            pgaTeeTimesByName.set(
+              row.playerName
+                .toLowerCase()
+                .trim(),
+              row.teeTimeRaw,
+            );
+          }
+
+          console.log(
+            "PGA TOUR future-round tee-time fallback",
+            {
+              tournament:
+                tournament.name,
+              pgaTournamentId,
+              matched:
+                pgaTeeTimesByName.size,
+            },
+          );
+        }
+      } catch (error) {
+        /*
+         * Tee-time fallback must never break score refresh.
+         * If PGA TOUR is temporarily unavailable, ESPN data still
+         * refreshes normally and future tee times simply remain blank.
+         */
+        console.warn(
+          "PGA TOUR tee-time fallback failed",
+          error,
+        );
+      }
+    }
+
     const roundRows = competitors.flatMap((competitor) => {
       const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
 
@@ -1860,9 +1996,21 @@ export async function POST(request: Request) {
           strokes: null,
           holes_completed: 0,
           tee_time:
-            competitor.teeTime,
+            competitor.teeTime ??
+            pgaTeeTimesByName.get(
+              competitor.displayName
+                .toLowerCase()
+                .trim(),
+            ) ??
+            null,
           tee_time_raw:
-            competitor.teeTimeRaw,
+            competitor.teeTimeRaw ??
+            pgaTeeTimesByName.get(
+              competitor.displayName
+                .toLowerCase()
+                .trim(),
+            ) ??
+            null,
           status:
             "scheduled" as const,
           updated_at:

@@ -652,11 +652,93 @@ export default function GolfHoleReplayPanel({
     [replay],
   );
 
-  const completedResult =
-    isHoleComplete
-      ? titleCase(replay?.holeStatus) ||
-        fallbackResult
-      : "";
+  /*
+   * PGA's holeStatus can occasionally collapse exceptional
+   * scores into a broader label (for example, reporting a
+   * 2 on a par 5 as "Eagle").
+   *
+   * Once the hole is complete we have enough authoritative
+   * information to derive the result ourselves from strokes
+   * and par. Prefer that calculation over the provider label.
+   */
+  const completedResult = useMemo(() => {
+    if (!isHoleComplete) {
+      return "";
+    }
+
+    const completedStrokes =
+      replay?.shots.length
+        ? Math.max(
+            ...replay.shots.map(
+              (shot) =>
+                Number(
+                  shot.strokeNumber ?? 0,
+                ),
+            ),
+          )
+        : null;
+
+    const holePar =
+      replay?.par ?? fallbackPar;
+
+    if (
+      completedStrokes !== null &&
+      Number.isFinite(completedStrokes) &&
+      completedStrokes > 0 &&
+      holePar !== null &&
+      holePar !== undefined &&
+      Number.isFinite(Number(holePar))
+    ) {
+      const relative =
+        completedStrokes -
+        Number(holePar);
+
+      if (relative <= -4) {
+        return "Condor";
+      }
+
+      if (relative === -3) {
+        return "Albatross";
+      }
+
+      if (relative === -2) {
+        return "Eagle";
+      }
+
+      if (relative === -1) {
+        return "Birdie";
+      }
+
+      if (relative === 0) {
+        return "Par";
+      }
+
+      if (relative === 1) {
+        return "Bogey";
+      }
+
+      if (relative === 2) {
+        return "Double Bogey";
+      }
+
+      if (relative === 3) {
+        return "Triple Bogey";
+      }
+
+      return `+${relative}`;
+    }
+
+    return (
+      fallbackResult ||
+      titleCase(replay?.holeStatus) ||
+      "Complete"
+    );
+  }, [
+    fallbackPar,
+    fallbackResult,
+    isHoleComplete,
+    replay,
+  ]);
 
   const displayStatus =
     isHoleComplete

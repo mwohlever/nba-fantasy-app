@@ -353,6 +353,22 @@ export default function GolfTournamentView({
     [players, ownerByPlayerId],
   );
 
+  /*
+   * Once Round 3 begins the cut is historical and locked.
+   * Keep displaying the official cut score/rule, but stop
+   * showing live population counts because Saturday scoring
+   * makes "inside / at cut / outside" misleading.
+   */
+  const hideCutPopulationCounts =
+    players.some((player) => {
+      const stat =
+        getRawPlayerStat(player.id);
+
+      return Number(
+        stat?.current_round ?? 0,
+      ) >= 3;
+    });
+
   function getCurrentGolfRound(
     row: TournamentRow,
   ) {
@@ -543,28 +559,30 @@ export default function GolfTournamentView({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-x-5 text-right text-[11px] text-slate-300 sm:grid-cols-3">
-              <div>
-                <strong className="block text-base text-white">
-                  {cutLine.inside}
-                </strong>
-                inside
-              </div>
+            {!hideCutPopulationCounts ? (
+              <div className="grid grid-cols-2 gap-x-5 text-right text-[11px] text-slate-300 sm:grid-cols-3">
+                <div>
+                  <strong className="block text-base text-white">
+                    {cutLine.inside}
+                  </strong>
+                  inside
+                </div>
 
-              <div>
-                <strong className="block text-base text-white">
-                  {cutLine.tiedAtCut}
-                </strong>
-                at cut score
-              </div>
+                <div>
+                  <strong className="block text-base text-white">
+                    {cutLine.tiedAtCut}
+                  </strong>
+                  at cut score
+                </div>
 
-              <div className="hidden sm:block">
-                <strong className="block text-base text-white">
-                  {cutLine.outside}
-                </strong>
-                outside
+                <div className="hidden sm:block">
+                  <strong className="block text-base text-white">
+                    {cutLine.outside}
+                  </strong>
+                  outside
+                </div>
               </div>
-            </div>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -33,6 +33,9 @@ export type TrophyMilestones = {
 
   closestWinningMargin: number | null;
   largestWinningMargin: number | null;
+
+  golfAlbatrosses?: number;
+  golfHolesInOne?: number;
 };
 
 export type MilestoneThresholds = {
@@ -232,6 +235,20 @@ export default function TrophyCase({
 
   const careerBest = Number(career.bestScore ?? 0);
 
+  function formatStrokeMargin(
+    value: number,
+  ) {
+    const numeric = Number(value);
+
+    const display = Number.isInteger(numeric)
+      ? String(numeric)
+      : formatNumber(numeric);
+
+    return `${display} stroke${
+      Math.abs(numeric) === 1 ? "" : "s"
+    }`;
+  }
+
   const scoreBadges: BadgeDefinition[] = [
     {
       id: "score-175",
@@ -337,17 +354,31 @@ export default function TrophyCase({
       id: "photo-finish",
       emoji: "📸",
       name: "Photo Finish",
-      description: `Win a completed slate by fewer than ${thresholds.photoFinishMargin} points.`,
+      description: isGolf
+        ? `Win a completed tournament by ${formatStrokeMargin(
+            thresholds.photoFinishMargin
+          )} or less.`
+        : `Win a completed slate by fewer than ${thresholds.photoFinishMargin} points.`,
       rarity: "epic",
       unlocked: milestones.photoFinishWins > 0,
       count: milestones.photoFinishWins,
       detail:
         milestones.closestWinningMargin !== null
-          ? `Closest win: ${formatNumber(
-              milestones.closestWinningMargin
-            )} points`
+          ? isGolf
+            ? `Closest win: ${formatStrokeMargin(
+                milestones.closestWinningMargin
+              )}`
+            : `Closest win: ${formatNumber(
+                milestones.closestWinningMargin
+              )} points`
           : undefined,
-      progress: `Win by fewer than ${formatNumber(thresholds.photoFinishMargin)} points`,
+      progress: isGolf
+        ? `Win by ${formatStrokeMargin(
+            thresholds.photoFinishMargin
+          )} or less`
+        : `Win by fewer than ${formatNumber(
+            thresholds.photoFinishMargin
+          )} points`,
     },
     {
       id: "statement-win",
@@ -367,8 +398,179 @@ export default function TrophyCase({
     },
   ];
 
-  const allBadges = [...scoreBadges, ...achievementBadges];
-  const unlockedCount = allBadges.filter((badge) => badge.unlocked).length;
+  const golfScoreBadges: BadgeDefinition[] =
+    isGolf
+      ? [
+          {
+            id: "golf-score-30",
+            emoji: "🏌️",
+            name: "30 Under Club",
+            description:
+              "Finish a completed tournament at -30 or better as a team.",
+            rarity: "common",
+            unlocked:
+              milestones.score175 > 0,
+            count:
+              milestones.score175,
+            detail: `${
+              milestones.score175
+            } qualifying tournament${
+              milestones.score175 === 1
+                ? ""
+                : "s"
+            }`,
+            progress: `Career best: ${formatNumber(
+              career.bestScore
+            )}`,
+          },
+          {
+            id: "golf-score-45",
+            emoji: "🔥",
+            name: "45 Under Club",
+            description:
+              "Finish a completed tournament at -45 or better as a team.",
+            rarity: "rare",
+            unlocked:
+              milestones.score200 > 0,
+            count:
+              milestones.score200,
+            detail: `${
+              milestones.score200
+            } qualifying tournament${
+              milestones.score200 === 1
+                ? ""
+                : "s"
+            }`,
+            progress: `Career best: ${formatNumber(
+              career.bestScore
+            )}`,
+          },
+          {
+            id: "golf-score-60",
+            emoji: "🚀",
+            name: "60 Under Club",
+            description:
+              "Finish a completed tournament at -60 or better as a team.",
+            rarity: "epic",
+            unlocked:
+              milestones.score225 > 0,
+            count:
+              milestones.score225,
+            detail: `${
+              milestones.score225
+            } qualifying tournament${
+              milestones.score225 === 1
+                ? ""
+                : "s"
+            }`,
+            progress: `Career best: ${formatNumber(
+              career.bestScore
+            )}`,
+          },
+          {
+            id: "golf-score-75",
+            emoji: "👑",
+            name: "75 Under Club",
+            description:
+              "Finish a completed tournament at -75 or better as a team.",
+            rarity: "legendary",
+            unlocked:
+              milestones.score250 > 0,
+            count:
+              milestones.score250,
+            detail: `${
+              milestones.score250
+            } qualifying tournament${
+              milestones.score250 === 1
+                ? ""
+                : "s"
+            }`,
+            progress: `Career best: ${formatNumber(
+              career.bestScore
+            )}`,
+          },
+        ]
+      : [];
+
+  const golfBadges: BadgeDefinition[] =
+    isGolf
+      ? [
+          {
+            id: "golf-albatross",
+            emoji: "🦅",
+            name: "Albatross",
+            description:
+              "Have one of your drafted golfers make an albatross — three under par on a single hole.",
+            rarity: "legendary",
+            unlocked:
+              Number(
+                milestones.golfAlbatrosses ?? 0,
+              ) > 0,
+            count:
+              milestones.golfAlbatrosses ?? 0,
+            detail: `${
+              milestones.golfAlbatrosses ?? 0
+            } career albatross${
+              Number(
+                milestones.golfAlbatrosses ?? 0,
+              ) === 1
+                ? ""
+                : "es"
+            }`,
+            progress:
+              Number(
+                milestones.golfAlbatrosses ?? 0,
+              ) > 0
+                ? "Legendary shot recorded"
+                : "Waiting for the impossible",
+          },
+          {
+            id: "golf-hole-in-one",
+            emoji: "⛳",
+            name: "Hole in One",
+            description:
+              "Have one of your drafted golfers make an ace.",
+            rarity: "legendary",
+            unlocked:
+              Number(
+                milestones.golfHolesInOne ?? 0,
+              ) > 0,
+            count:
+              milestones.golfHolesInOne ?? 0,
+            detail: `${
+              milestones.golfHolesInOne ?? 0
+            } career ace${
+              Number(
+                milestones.golfHolesInOne ?? 0,
+              ) === 1
+                ? ""
+                : "s"
+            }`,
+            progress:
+              Number(
+                milestones.golfHolesInOne ?? 0,
+              ) > 0
+                ? "Ace recorded"
+                : "Waiting for an ace",
+          },
+        ]
+      : [];
+
+  const allBadges = isGolf
+    ? [
+        ...golfScoreBadges,
+        ...golfBadges,
+        ...achievementBadges,
+      ]
+    : [
+        ...scoreBadges,
+        ...achievementBadges,
+      ];
+
+  const unlockedCount =
+    allBadges.filter(
+      (badge) => badge.unlocked,
+    ).length;
 
   return (
     <div className="space-y-5">

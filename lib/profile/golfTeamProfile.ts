@@ -257,6 +257,41 @@ export async function getGolfTeamProfile(
     (slate) => Number(slate.id),
   );
 
+  /*
+   * Load every team's result for Golf slates so Golf-specific
+   * winning-margin milestones can compare the winner to the runner-up.
+   *
+   * Lower scores are better in Golf.
+   */
+  const {
+    data: allGolfResultData,
+    error: allGolfResultError,
+  } = slateIds.length > 0
+    ? await supabaseAdmin
+        .from("team_slate_results")
+        .select(
+          "slate_id, team_id, fantasy_points, finish_position",
+        )
+        .in("slate_id", slateIds)
+    : {
+        data: [],
+        error: null,
+      };
+
+  if (allGolfResultError) {
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load Golf winning margins: " +
+          allGolfResultError.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  const allGolfResults =
+    allGolfResultData ?? [];
+
   const golfLineups = safeLineups.filter(
     (lineup) =>
       slateById.has(
@@ -781,6 +816,8 @@ export async function getGolfTeamProfile(
 
   let birdies = 0;
   let eagles = 0;
+  let albatrosses = 0;
+  let holesInOne = 0;
   let pars = 0;
   let bogeys = 0;
   let doubleBogeys = 0;
@@ -822,7 +859,17 @@ export async function getGolfTeamProfile(
       hole.relative_to_par ?? 0,
     );
 
-    if (relative <= -2) {
+    const strokes = Number(
+      hole.strokes ?? 0,
+    );
+
+    if (strokes === 1) {
+      holesInOne += 1;
+    }
+
+    if (relative <= -3) {
+      albatrosses += 1;
+    } else if (relative === -2) {
       eagles += 1;
     } else if (relative === -1) {
       birdies += 1;
@@ -966,6 +1013,8 @@ export async function getGolfTeamProfile(
     cutsMadePct,
     birdies,
     eagles,
+    albatrosses,
+    holesInOne,
     pars,
     bogeys,
     doubleBogeys,
@@ -977,13 +1026,75 @@ export async function getGolfTeamProfile(
   // These keep the shared TrophyCase contract intact.
   // Golf-specific milestones will replace them in the next pass.
   const milestoneThresholds = {
-    score175: -25,
-    score200: -40,
-    score225: -55,
-    score250: -70,
+    /*
+     * Shared contract names retained for TrophyCase compatibility,
+     * but Golf uses under-par team-score milestones.
+     */
+    score175: -30,
+    score200: -45,
+    score225: -60,
+    score250: -75,
     photoFinishMargin: 1,
     statementWinMargin: 10,
   };
+
+  const golfWinningMargins =
+    completedRows
+      .filter(
+        (row) =>
+          Number(row.finishPosition) === 1,
+      )
+      .map((row) => {
+        const runnerUp =
+          allGolfResults.find(
+            (result) =>
+              Number(result.slate_id) ===
+                Number(row.slateId) &&
+              Number(
+                result.finish_position,
+              ) === 2,
+          );
+
+        if (
+          !runnerUp ||
+          runnerUp.fantasy_points === null ||
+          runnerUp.fantasy_points ===
+            undefined
+        ) {
+          return null;
+        }
+
+        /*
+         * Golf is lower-is-better:
+         *
+         * winner -45
+         * runner-up -44
+         * winning margin = 1
+         */
+        const margin =
+          Number(
+            runnerUp.fantasy_points,
+          ) -
+          Number(row.score);
+
+        return Number.isFinite(margin) &&
+          margin >= 0
+          ? round(margin)
+          : null;
+      })
+      .filter(
+        (
+          margin,
+        ): margin is number =>
+          margin !== null,
+      );
+
+  const golfPhotoFinishMargins =
+    golfWinningMargins.filter(
+      (margin) =>
+        margin <=
+        milestoneThresholds.photoFinishMargin,
+    );
 
   const milestones = {
     score175:
@@ -1013,10 +1124,32 @@ export async function getGolfTeamProfile(
     backToBackWins: 0,
     threePeats: 0,
     longestPodiumStreak: 0,
-    photoFinishWins: 0,
-    statementWins: 0,
-    closestWinningMargin: null,
-    largestWinningMargin: null,
+    photoFinishWins:
+      golfPhotoFinishMargins.length,
+    statementWins:
+      golfWinningMargins.filter(
+        (margin) =>
+          margin >=
+          milestoneThresholds.statementWinMargin,
+      ).length,
+    closestWinningMargin:
+      golfWinningMargins.length > 0
+        ? round(
+            Math.min(
+              ...golfWinningMargins,
+            ),
+          )
+        : null,
+    largestWinningMargin:
+      golfWinningMargins.length > 0
+        ? round(
+            Math.max(
+              ...golfWinningMargins,
+            ),
+          )
+        : null,
+    golfAlbatrosses: albatrosses,
+    golfHolesInOne: holesInOne,
   };
 
   return NextResponse.json({
