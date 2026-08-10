@@ -54,6 +54,46 @@ type PlayerHistoryRow = {
   pars?: number;
   bogeys?: number;
   double_bogeys_or_worse?: number;
+
+  /*
+   * Real-world professional season statistics.
+   * These are populated in Season Stats mode and
+   * intentionally remain separate from 111 History.
+   */
+  position_group?: string | null;
+  team_abbreviation?: string | null;
+
+  season_games_played?: number | null;
+  season_fantasy_points?: number | null;
+  season_points?: number | null;
+  season_rebounds?: number | null;
+  season_assists?: number | null;
+  season_steals?: number | null;
+  season_blocks?: number | null;
+  season_turnovers?: number | null;
+
+  /*
+   * NFL professional-season research stats.
+   * Per-game values are used for ranking/comparison
+   * so missed games do not distort player quality.
+   */
+  nfl_games_played?: number | null;
+
+  nfl_fantasy_points_per_game?: number | null;
+
+  nfl_passing_yards_per_game?: number | null;
+  nfl_passing_tds_per_game?: number | null;
+  nfl_passing_ints_per_game?: number | null;
+
+  nfl_rushing_yards_per_game?: number | null;
+  nfl_rushing_tds_per_game?: number | null;
+
+  nfl_receiving_targets_per_game?: number | null;
+  nfl_receptions_per_game?: number | null;
+  nfl_receiving_yards_per_game?: number | null;
+  nfl_receiving_tds_per_game?: number | null;
+
+  nfl_fumbles_lost_per_game?: number | null;
 };
 
 type SortKey =
@@ -71,11 +111,32 @@ type SortKey =
   | "eagles"
   | "albatrosses"
   | "holes_in_one"
-  | "rounds_under_par";
+  | "rounds_under_par"
+  | "season_fantasy_points"
+  | "season_points"
+  | "season_rebounds"
+  | "season_assists"
+  | "season_steals"
+  | "season_blocks"
+  | "season_turnovers"
+  | "nfl_fp"
+  | "nfl_pass_yd"
+  | "nfl_pass_td"
+  | "nfl_int"
+  | "nfl_rush_yd"
+  | "nfl_rush_td"
+  | "nfl_targets"
+  | "nfl_receptions"
+  | "nfl_rec_yd"
+  | "nfl_rec_td";
 
 type SortDirection =
   | "asc"
   | "desc";
+
+type HistoryMode =
+  | "league"
+  | "season";
 
 type ApiResponse = {
   success: boolean;
@@ -1069,20 +1130,51 @@ function GolfPlayerHistoryModal({
   );
 }
 
-function GolfCompareModal({
+function PlayerCompareModal({
   rows,
+  sport,
+  historyMode,
   onClose,
 }: {
   rows:
     PlayerHistoryRow[];
+  sport:
+    "nba" | "nfl" | "golf";
+  historyMode:
+    HistoryMode;
   onClose: () => void;
 }) {
   if (
-    rows.length <
-    2
+    rows.length < 2
   ) {
     return null;
   }
+
+  const isGolf =
+    sport === "golf";
+
+  const isNbaSeason =
+    sport ===
+      "nba" &&
+    historyMode ===
+      "season";
+
+  const isNflSeason =
+    sport ===
+      "nfl" &&
+    historyMode ===
+      "season";
+
+  const nflCompareHasQuarterback =
+    isNflSeason &&
+    rows.some(
+      (row) =>
+        String(
+          row.position_group ??
+            "",
+        ).toUpperCase() ===
+        "QB",
+    );
 
   type CompareMetric = {
     label: string;
@@ -1103,225 +1195,613 @@ function GolfCompareModal({
   };
 
   const metrics:
-    CompareMetric[] = [
-      {
-        label:
-          "Avg Score",
-        value:
-          (row) =>
-            row.avg_score,
-        display:
-          (row) =>
-            golfScore(
-              row.avg_score,
-            ),
-        better:
-          "low",
-      },
-      {
-        label:
-          "Best Score",
-        value:
-          (row) =>
-            row.high_score,
-        display:
-          (row) =>
-            golfScore(
-              row.high_score,
-            ),
-        better:
-          "low",
-      },
-      {
-        label:
-          "Times Drafted",
-        value:
-          (row) =>
-            row.times_drafted,
-        display:
-          (row) =>
-            String(
-              row.times_drafted,
-            ),
-        better:
-          "high",
-      },
-      {
-        label:
-          "Wins",
-        value:
-          (row) =>
-            row.winning_lineups,
-        display:
-          (row) =>
-            String(
-              row.winning_lineups,
-            ),
-        better:
-          "high",
-      },
-      {
-        label:
-          "Podiums",
-        value:
-          (row) =>
-            row.podium_lineups ??
-            0,
-        display:
-          (row) =>
-            String(
-              row.podium_lineups ??
-                0,
-            ),
-        better:
-          "high",
-      },
-      {
-        label:
-          "Avg Finish",
-        value:
-          (row) =>
-            row.avg_finish,
-        display:
-          (row) =>
-            row.avg_finish ===
-            null
-              ? "—"
-              : fmt(
-                  row.avg_finish,
+    CompareMetric[] =
+    isNflSeason
+      ? [
+          {
+            label:
+              "FP/G",
+            value:
+              (row) =>
+                row.nfl_fantasy_points_per_game ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.nfl_fantasy_points_per_game,
+                  2,
+                ),
+            better:
+              "high",
+          },
+          ...(nflCompareHasQuarterback
+            ? [
+                {
+                  label:
+                    "Pass Yds/G",
+                  value:
+                    (row: PlayerHistoryRow) =>
+                      row.nfl_passing_yards_per_game ??
+                      null,
+                  display:
+                    (row: PlayerHistoryRow) =>
+                      fmt(
+                        row.nfl_passing_yards_per_game,
+                        1,
+                      ),
+                  better:
+                    "high" as const,
+                },
+                {
+                  label:
+                    "Pass TD/G",
+                  value:
+                    (row: PlayerHistoryRow) =>
+                      row.nfl_passing_tds_per_game ??
+                      null,
+                  display:
+                    (row: PlayerHistoryRow) =>
+                      fmt(
+                        row.nfl_passing_tds_per_game,
+                        2,
+                      ),
+                  better:
+                    "high" as const,
+                },
+                {
+                  label:
+                    "INT/G",
+                  value:
+                    (row: PlayerHistoryRow) =>
+                      row.nfl_passing_ints_per_game ??
+                      null,
+                  display:
+                    (row: PlayerHistoryRow) =>
+                      fmt(
+                        row.nfl_passing_ints_per_game,
+                        2,
+                      ),
+                  better:
+                    "low" as const,
+                },
+              ]
+            : []),
+          {
+            label:
+              "Rush Yds/G",
+            value:
+              (row) =>
+                row.nfl_rushing_yards_per_game ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.nfl_rushing_yards_per_game,
                   1,
                 ),
-        better:
-          "low",
-      },
-      {
-        label:
-          "Cuts",
-        value:
-          (row) =>
-            row.cuts_made_pct ??
-            null,
-        display:
-          (row) =>
-            row.cut_opportunities
-              ? `${row.cuts_made ?? 0}/${row.cut_opportunities} · ${fmt(
-                  row.cuts_made_pct,
-                  0,
-                )}%`
-              : "—",
-        better:
-          "high",
-      },
-      {
-        label:
-          "Rounds Under Par",
-        value:
-          (row) =>
-            row.rounds_under_par ??
-            0,
-        display:
-          (row) =>
-            `${row.rounds_under_par ?? 0}/${row.completed_rounds ?? 0}`,
-        better:
-          "high",
-      },
-      {
-        label:
-          "Birdies",
-        value:
-          (row) =>
-            row.birdies ??
-            0,
-        display:
-          (row) =>
-            String(
-              row.birdies ??
+            better:
+              "high",
+          },
+          {
+            label:
+              "Rush TD/G",
+            value:
+              (row) =>
+                row.nfl_rushing_tds_per_game ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.nfl_rushing_tds_per_game,
+                  2,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Targets/G",
+            value:
+              (row) =>
+                row.nfl_receiving_targets_per_game ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.nfl_receiving_targets_per_game,
+                  2,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "REC/G",
+            value:
+              (row) =>
+                row.nfl_receptions_per_game ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.nfl_receptions_per_game,
+                  2,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Rec Yds/G",
+            value:
+              (row) =>
+                row.nfl_receiving_yards_per_game ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.nfl_receiving_yards_per_game,
+                  1,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Rec TD/G",
+            value:
+              (row) =>
+                row.nfl_receiving_tds_per_game ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.nfl_receiving_tds_per_game,
+                  2,
+                ),
+            better:
+              "high",
+          },
+        ]
+      : isNbaSeason
+      ? [
+          {
+            label:
+              "Fantasy Pts",
+            value:
+              (row) =>
+                row.season_fantasy_points ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.season_fantasy_points,
+                  1,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Points",
+            value:
+              (row) =>
+                row.season_points ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.season_points,
+                  1,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Rebounds",
+            value:
+              (row) =>
+                row.season_rebounds ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.season_rebounds,
+                  1,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Assists",
+            value:
+              (row) =>
+                row.season_assists ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.season_assists,
+                  1,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Steals",
+            value:
+              (row) =>
+                row.season_steals ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.season_steals,
+                  1,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Blocks",
+            value:
+              (row) =>
+                row.season_blocks ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.season_blocks,
+                  1,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Turnovers",
+            value:
+              (row) =>
+                row.season_turnovers ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.season_turnovers,
+                  1,
+                ),
+            better:
+              "low",
+          },
+        ]
+      : isGolf
+      ? [
+          {
+            label:
+              "Avg Score",
+            value:
+              (row) =>
+                row.avg_score,
+            display:
+              (row) =>
+                golfScore(
+                  row.avg_score,
+                ),
+            better:
+              "low",
+          },
+          {
+            label:
+              "Best Score",
+            value:
+              (row) =>
+                row.high_score,
+            display:
+              (row) =>
+                golfScore(
+                  row.high_score,
+                ),
+            better:
+              "low",
+          },
+          {
+            label:
+              "Times Drafted",
+            value:
+              (row) =>
+                row.times_drafted,
+            display:
+              (row) =>
+                String(
+                  row.times_drafted,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Wins",
+            value:
+              (row) =>
+                row.winning_lineups,
+            display:
+              (row) =>
+                String(
+                  row.winning_lineups,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Podiums",
+            value:
+              (row) =>
+                row.podium_lineups ??
                 0,
-            ),
-        better:
-          "high",
-      },
-      {
-        label:
-          "Eagles",
-        value:
-          (row) =>
-            row.eagles ??
-            0,
-        display:
-          (row) =>
-            String(
-              row.eagles ??
+            display:
+              (row) =>
+                String(
+                  row.podium_lineups ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Avg Finish",
+            value:
+              (row) =>
+                row.avg_finish,
+            display:
+              (row) =>
+                row.avg_finish ===
+                null
+                  ? "—"
+                  : fmt(
+                      row.avg_finish,
+                      1,
+                    ),
+            better:
+              "low",
+          },
+          {
+            label:
+              "Cuts",
+            value:
+              (row) =>
+                row.cuts_made_pct ??
+                null,
+            display:
+              (row) =>
+                row.cut_opportunities
+                  ? `${row.cuts_made ?? 0}/${row.cut_opportunities} · ${fmt(
+                      row.cuts_made_pct,
+                      0,
+                    )}%`
+                  : "—",
+            better:
+              "high",
+          },
+          {
+            label:
+              "Rounds Under Par",
+            value:
+              (row) =>
+                row.rounds_under_par ??
                 0,
-            ),
-        better:
-          "high",
-      },
-      {
-        label:
-          "Albatrosses",
-        value:
-          (row) =>
-            row.albatrosses ??
-            0,
-        display:
-          (row) =>
-            String(
-              row.albatrosses ??
+            display:
+              (row) =>
+                `${row.rounds_under_par ?? 0}/${row.completed_rounds ?? 0}`,
+            better:
+              "high",
+          },
+          {
+            label:
+              "Birdies",
+            value:
+              (row) =>
+                row.birdies ??
                 0,
-            ),
-        better:
-          "high",
-      },
-      {
-        label:
-          "Aces",
-        value:
-          (row) =>
-            row.holes_in_one ??
-            0,
-        display:
-          (row) =>
-            String(
-              row.holes_in_one ??
+            display:
+              (row) =>
+                String(
+                  row.birdies ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Eagles",
+            value:
+              (row) =>
+                row.eagles ??
                 0,
-            ),
-        better:
-          "high",
-      },
-      {
-        label:
-          "Bogeys",
-        value:
-          (row) =>
-            row.bogeys ??
-            0,
-        display:
-          (row) =>
-            String(
-              row.bogeys ??
+            display:
+              (row) =>
+                String(
+                  row.eagles ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Albatrosses",
+            value:
+              (row) =>
+                row.albatrosses ??
                 0,
-            ),
-        better:
-          "low",
-      },
-      {
-        label:
-          "Double+",
-        value:
-          (row) =>
-            row.double_bogeys_or_worse ??
-            0,
-        display:
-          (row) =>
-            String(
-              row.double_bogeys_or_worse ??
+            display:
+              (row) =>
+                String(
+                  row.albatrosses ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Aces",
+            value:
+              (row) =>
+                row.holes_in_one ??
                 0,
-            ),
-        better:
-          "low",
-      },
-    ];
+            display:
+              (row) =>
+                String(
+                  row.holes_in_one ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Bogeys",
+            value:
+              (row) =>
+                row.bogeys ??
+                0,
+            display:
+              (row) =>
+                String(
+                  row.bogeys ??
+                    0,
+                ),
+            better:
+              "low",
+          },
+          {
+            label:
+              "Double+",
+            value:
+              (row) =>
+                row.double_bogeys_or_worse ??
+                0,
+            display:
+              (row) =>
+                String(
+                  row.double_bogeys_or_worse ??
+                    0,
+                ),
+            better:
+              "low",
+          },
+        ]
+      : [
+          {
+            label:
+              "Avg Score",
+            value:
+              (row) =>
+                row.avg_score,
+            display:
+              (row) =>
+                row.avg_score.toFixed(
+                  2,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "High Score",
+            value:
+              (row) =>
+                row.high_score,
+            display:
+              (row) =>
+                row.high_score.toFixed(
+                  2,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Low Score",
+            value:
+              (row) =>
+                row.low_score,
+            display:
+              (row) =>
+                row.low_score.toFixed(
+                  2,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Times Drafted",
+            value:
+              (row) =>
+                row.times_drafted,
+            display:
+              (row) =>
+                String(
+                  row.times_drafted,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Wins",
+            value:
+              (row) =>
+                row.winning_lineups,
+            display:
+              (row) =>
+                String(
+                  row.winning_lineups,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Runner-Ups",
+            value:
+              (row) =>
+                row.runner_up_lineups,
+            display:
+              (row) =>
+                String(
+                  row.runner_up_lineups,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Avg Finish",
+            value:
+              (row) =>
+                row.avg_finish,
+            display:
+              (row) =>
+                row.avg_finish ===
+                null
+                  ? "—"
+                  : fmt(
+                      row.avg_finish,
+                      2,
+                    ),
+            better:
+              "low",
+          },
+        ];
 
   function isBest(
     metric:
@@ -1403,16 +1883,31 @@ function GolfCompareModal({
         }
       }
     >
-      <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-[28px] bg-slate-50 shadow-2xl sm:max-w-5xl sm:rounded-[28px]">
-        <div className="sticky top-0 z-20 border-b border-emerald-800/50 bg-slate-950/95 px-4 py-4 text-white backdrop-blur sm:px-6">
+      <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-[28px] bg-slate-950 shadow-2xl sm:max-w-5xl sm:rounded-[28px]">
+        <div
+          className={`sticky top-0 z-20 border-b bg-slate-950/95 px-4 py-4 text-white backdrop-blur sm:px-6 ${
+            isGolf
+              ? "border-emerald-800/50"
+              : "border-sky-800/50"
+          }`}
+        >
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+              <div
+                className={`text-xs font-black uppercase tracking-[0.2em] ${
+                  isGolf
+                    ? "text-emerald-300"
+                    : "text-sky-300"
+                }`}
+              >
                 Head-to-Head
               </div>
 
               <h2 className="mt-1 text-xl font-black text-white">
-                Compare Golfers
+                Compare{" "}
+                {isGolf
+                  ? "Golfers"
+                  : "Players"}
               </h2>
             </div>
 
@@ -1450,25 +1945,44 @@ function GolfCompareModal({
                   key={
                     row.player_id
                   }
-                  className="min-w-0 rounded-2xl border border-emerald-200 bg-gradient-to-b from-emerald-950 to-slate-950 px-2 py-3 text-center text-white sm:p-4"
+                  className={`min-w-0 rounded-2xl border bg-gradient-to-b px-2 py-3 text-center text-white sm:p-4 ${
+                    isGolf
+                      ? "border-emerald-400/80 from-emerald-950 to-slate-950"
+                      : "border-sky-400/80 from-sky-950 to-slate-950"
+                  }`}
                 >
-                  <div className="mx-auto h-12 w-12 overflow-hidden rounded-full bg-white/10 sm:h-16 sm:w-16">
-                    {row.headshot_url ||
-                    row.espn_golf_player_id ? (
-                      <img
-                        src={
-                          row.headshot_url ??
-                          `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-white/10 sm:h-16 sm:w-16">
+                    {isGolf ? (
+                      row.headshot_url ||
+                      row.espn_golf_player_id ? (
+                        <img
+                          src={
+                            row.headshot_url ??
+                            `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                          }
+                          alt={
+                            row.player_name
+                          }
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span>
+                          ⛳
+                        </span>
+                      )
+                    ) : (
+                      <PlayerHeadshot
+                        nbaPlayerId={
+                          row.nba_player_id
                         }
-                        alt={
+                        nflPlayerId={
+                          row.nfl_player_id
+                        }
+                        playerName={
                           row.player_name
                         }
-                        className="h-full w-full object-cover"
+                        size="md"
                       />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center">
-                        ⛳
-                      </div>
                     )}
                   </div>
 
@@ -1478,17 +1992,35 @@ function GolfCompareModal({
                     }
                   </div>
 
-                  <div className="mt-1 text-[10px] text-emerald-200 sm:text-xs">
-                    {row.owgr_rank
-                      ? `OWGR #${row.owgr_rank}`
-                      : "OWGR —"}
+                  <div
+                    className={`mt-1 text-[10px] sm:text-xs ${
+                      isGolf
+                        ? "text-emerald-200"
+                        : "text-sky-200"
+                    }`}
+                  >
+                    {isGolf
+                      ? row.owgr_rank
+                        ? `OWGR #${row.owgr_rank}`
+                        : "OWGR —"
+                      : isNbaSeason
+                        ? [
+                            row.team_abbreviation,
+                            row.position_group,
+                          ]
+                            .filter(
+                              Boolean,
+                            )
+                            .join(" · ") ||
+                          "NBA"
+                        : `Drafted ${row.times_drafted}x`}
                   </div>
                 </div>
               ),
             )}
           </div>
 
-          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-700 bg-slate-900">
             {metrics.map(
               (
                 metric,
@@ -1501,7 +2033,7 @@ function GolfCompareModal({
                   className={`grid items-stretch ${
                     metricIndex >
                     0
-                      ? "border-t border-slate-100"
+                      ? "border-t border-slate-700"
                       : ""
                   }`}
                   style={{
@@ -1509,7 +2041,7 @@ function GolfCompareModal({
                       `110px repeat(${rows.length}, minmax(0, 1fr))`,
                   }}
                 >
-                  <div className="flex items-center px-3 py-3 text-[11px] font-bold uppercase tracking-wide text-slate-500 sm:px-4 sm:text-xs">
+                  <div className="flex items-center bg-slate-900 px-3 py-3 text-[11px] font-bold uppercase tracking-wide text-slate-400 sm:px-4 sm:text-xs">
                     {
                       metric.label
                     }
@@ -1528,10 +2060,12 @@ function GolfCompareModal({
                       return (
                         <div
                           key={`${metric.label}-${row.player_id}`}
-                          className={`flex items-center justify-center border-l border-slate-100 px-1 py-3 text-center text-sm font-black sm:px-3 sm:text-base ${
+                          className={`flex items-center justify-center border-l border-slate-700 px-1 py-3 text-center text-sm font-black sm:px-3 sm:text-base ${
                             best
-                              ? "bg-emerald-50 text-emerald-800"
-                              : "text-slate-900"
+                              ? isGolf
+                                ? "bg-emerald-950/90 text-emerald-300"
+                                : "bg-sky-950/90 text-sky-300"
+                              : "bg-slate-900 text-white"
                           }`}
                         >
                           <span>
@@ -1543,7 +2077,13 @@ function GolfCompareModal({
                           </span>
 
                           {best ? (
-                            <span className="ml-1 text-[10px] text-emerald-600">
+                            <span
+                              className={`ml-1 text-[10px] ${
+                                isGolf
+                                  ? "text-emerald-300"
+                                  : "text-sky-300"
+                              }`}
+                            >
                               ✓
                             </span>
                           ) : null}
@@ -1556,8 +2096,12 @@ function GolfCompareModal({
             )}
           </div>
 
-          <div className="mt-3 text-center text-xs text-slate-500">
-            Highlighted values are best among the selected golfers.
+          <div className="mt-3 text-center text-xs text-slate-400">
+            Highlighted values are best among the selected{" "}
+            {isGolf
+              ? "golfers"
+              : "players"}
+            .
           </div>
         </div>
       </div>
@@ -1602,6 +2146,14 @@ export default function PlayerHistoryPage() {
     useState<
       number | "all"
     >(2026);
+
+  const [
+    historyMode,
+    setHistoryMode,
+  ] =
+    useState<HistoryMode>(
+      "league",
+    );
 
   const [
     searchTerm,
@@ -1693,6 +2245,7 @@ export default function PlayerHistoryPage() {
     isHydrated,
     selectedSport,
     season,
+    historyMode,
   ]);
 
   useEffect(() => {
@@ -1792,9 +2345,15 @@ export default function PlayerHistoryPage() {
 
       setMessage("");
 
+      const endpoint =
+        historyMode ===
+        "season"
+          ? `/api/player-season-stats?season=${season}&sport=${selectedSport}`
+          : `/api/player-history?season=${season}&sport=${selectedSport}`;
+
       const response =
         await fetch(
-          `/api/player-history?season=${season}&sport=${selectedSport}`,
+          endpoint,
           {
             cache:
               "no-store",
@@ -1802,34 +2361,325 @@ export default function PlayerHistoryPage() {
         );
 
       const result =
-        (
-          await response.json()
-        ) as
-          | ApiResponse
-          | {
-              error?: string;
-            };
+        await response.json();
 
       if (
         !response.ok
       ) {
         setMessage(
-          "error" in
-            result &&
-            result.error
-            ? result.error
-            : "Failed to load player history.",
+          result?.error ??
+            (
+              historyMode ===
+              "season"
+                ? "Failed to load season stats."
+                : "Failed to load player history."
+            ),
         );
+
+        setRows([]);
 
         return;
       }
 
-      const safeResult =
-        result as ApiResponse;
+      const rawRows =
+        historyMode ===
+        "season"
+          ? (
+              result.playerStats ??
+              result.playerSeasonStats ??
+              result.players ??
+              []
+            )
+          : (
+              result.playerHistory ??
+              []
+            );
+
+      const nextRows:
+        PlayerHistoryRow[] =
+        historyMode ===
+          "season" &&
+        selectedSport ===
+          "nba"
+          ? (
+              Array.isArray(
+                rawRows,
+              )
+                ? rawRows
+                : []
+            ).map(
+              (
+                row:
+                  any,
+              ) => {
+                const fantasyPoints =
+                  Number(
+                    row.fantasy_points ??
+                      0,
+                  );
+
+                return {
+                  player_id:
+                    Number(
+                      row.player_id,
+                    ),
+
+                  player_name:
+                    String(
+                      row.player_name ??
+                        "Unknown Player",
+                    ),
+
+                  nba_player_id:
+                    row.nba_player_id ===
+                      null ||
+                    row.nba_player_id ===
+                      undefined
+                      ? null
+                      : Number(
+                          row.nba_player_id,
+                        ),
+
+                  nfl_player_id:
+                    null,
+
+                  times_drafted:
+                    0,
+
+                  avg_score:
+                    fantasyPoints,
+
+                  high_score:
+                    fantasyPoints,
+
+                  low_score:
+                    fantasyPoints,
+
+                  winning_lineups:
+                    0,
+
+                  runner_up_lineups:
+                    0,
+
+                  avg_finish:
+                    null,
+
+                  position_group:
+                    row.position_group ??
+                    null,
+
+                  team_abbreviation:
+                    row.team_abbreviation ??
+                    null,
+
+                  season_games_played:
+                    row.games_played ??
+                    null,
+
+                  season_fantasy_points:
+                    Number(
+                      row.fantasy_points ??
+                        0,
+                    ),
+
+                  season_points:
+                    Number(
+                      row.points ??
+                        0,
+                    ),
+
+                  season_rebounds:
+                    Number(
+                      row.rebounds ??
+                        0,
+                    ),
+
+                  season_assists:
+                    Number(
+                      row.assists ??
+                        0,
+                    ),
+
+                  season_steals:
+                    Number(
+                      row.steals ??
+                        0,
+                    ),
+
+                  season_blocks:
+                    Number(
+                      row.blocks ??
+                        0,
+                    ),
+
+                  season_turnovers:
+                    Number(
+                      row.turnovers ??
+                        0,
+                    ),
+                };
+              },
+            )
+          : historyMode ===
+                "season" &&
+              selectedSport ===
+                "nfl"
+            ? (
+                Array.isArray(
+                  rawRows,
+                )
+                  ? rawRows
+                  : []
+              ).map(
+                (
+                  row:
+                    any,
+                ) => {
+                  const fantasyPoints =
+                    Number(
+                      row.fantasy_points_per_game ??
+                        0,
+                    );
+
+                  return {
+                    player_id:
+                      Number(
+                        row.player_id,
+                      ),
+
+                    player_name:
+                      String(
+                        row.player_name ??
+                          "Unknown Player",
+                      ),
+
+                    nba_player_id:
+                      null,
+
+                    nfl_player_id:
+                      row.nfl_player_id ===
+                        null ||
+                      row.nfl_player_id ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.nfl_player_id,
+                          ),
+
+                    times_drafted:
+                      0,
+
+                    avg_score:
+                      fantasyPoints,
+
+                    high_score:
+                      fantasyPoints,
+
+                    low_score:
+                      fantasyPoints,
+
+                    winning_lineups:
+                      0,
+
+                    runner_up_lineups:
+                      0,
+
+                    avg_finish:
+                      null,
+
+                    position_group:
+                      row.position_group ??
+                      row.position ??
+                      null,
+
+                    team_abbreviation:
+                      row.team_abbreviation ??
+                      null,
+
+                    nfl_games_played:
+                      Number(
+                        row.games_played ??
+                          0,
+                      ),
+
+                    nfl_fantasy_points_per_game:
+                      Number(
+                        row.fantasy_points_per_game ??
+                          0,
+                      ),
+
+                    nfl_passing_yards_per_game:
+                      Number(
+                        row.passing_yards_per_game ??
+                          0,
+                      ),
+
+                    nfl_passing_tds_per_game:
+                      Number(
+                        row.passing_tds_per_game ??
+                          0,
+                      ),
+
+                    nfl_passing_ints_per_game:
+                      Number(
+                        row.passing_ints_per_game ??
+                          0,
+                      ),
+
+                    nfl_rushing_yards_per_game:
+                      Number(
+                        row.rushing_yards_per_game ??
+                          0,
+                      ),
+
+                    nfl_rushing_tds_per_game:
+                      Number(
+                        row.rushing_tds_per_game ??
+                          0,
+                      ),
+
+                    nfl_receiving_targets_per_game:
+                      Number(
+                        row.receiving_targets_per_game ??
+                          0,
+                      ),
+
+                    nfl_receptions_per_game:
+                      Number(
+                        row.receptions_per_game ??
+                          0,
+                      ),
+
+                    nfl_receiving_yards_per_game:
+                      Number(
+                        row.receiving_yards_per_game ??
+                          0,
+                      ),
+
+                    nfl_receiving_tds_per_game:
+                      Number(
+                        row.receiving_tds_per_game ??
+                          0,
+                      ),
+
+                    nfl_fumbles_lost_per_game:
+                      Number(
+                        row.fumbles_lost_per_game ??
+                          0,
+                      ),
+                  };
+                },
+              )
+            : (
+                Array.isArray(
+                  rawRows,
+                )
+                  ? rawRows
+                  : []
+              );
 
       setRows(
-        safeResult.playerHistory ??
-          [],
+        nextRows,
       );
     } catch (
       error
@@ -1838,8 +2688,13 @@ export default function PlayerHistoryPage() {
         error,
       );
 
+      setRows([]);
+
       setMessage(
-        "Something went wrong while loading player history.",
+        historyMode ===
+        "season"
+          ? "Something went wrong while loading season stats."
+          : "Something went wrong while loading player history.",
       );
     } finally {
       setIsLoading(
@@ -1927,8 +2782,10 @@ export default function PlayerHistoryPage() {
                 );
 
             const matchesMinDrafted =
+              historyMode ===
+                "season" ||
               row.times_drafted >=
-              minTimesDrafted;
+                minTimesDrafted;
 
             return (
               matchesSearch &&
@@ -2080,6 +2937,210 @@ export default function PlayerHistoryPage() {
                 ) -
                 (
                   b.rounds_under_par ??
+                  0
+                );
+              break;
+
+            case "season_fantasy_points":
+              comparison =
+                (
+                  a.season_fantasy_points ??
+                  0
+                ) -
+                (
+                  b.season_fantasy_points ??
+                  0
+                );
+              break;
+
+            case "season_points":
+              comparison =
+                (
+                  a.season_points ??
+                  0
+                ) -
+                (
+                  b.season_points ??
+                  0
+                );
+              break;
+
+            case "season_rebounds":
+              comparison =
+                (
+                  a.season_rebounds ??
+                  0
+                ) -
+                (
+                  b.season_rebounds ??
+                  0
+                );
+              break;
+
+            case "season_assists":
+              comparison =
+                (
+                  a.season_assists ??
+                  0
+                ) -
+                (
+                  b.season_assists ??
+                  0
+                );
+              break;
+
+            case "season_steals":
+              comparison =
+                (
+                  a.season_steals ??
+                  0
+                ) -
+                (
+                  b.season_steals ??
+                  0
+                );
+              break;
+
+            case "season_blocks":
+              comparison =
+                (
+                  a.season_blocks ??
+                  0
+                ) -
+                (
+                  b.season_blocks ??
+                  0
+                );
+              break;
+
+            case "season_turnovers":
+              comparison =
+                (
+                  a.season_turnovers ??
+                  0
+                ) -
+                (
+                  b.season_turnovers ??
+                  0
+                );
+              break;
+
+            case "nfl_fp":
+              comparison =
+                (
+                  a.nfl_fantasy_points_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_fantasy_points_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_pass_yd":
+              comparison =
+                (
+                  a.nfl_passing_yards_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_passing_yards_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_pass_td":
+              comparison =
+                (
+                  a.nfl_passing_tds_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_passing_tds_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_int":
+              comparison =
+                (
+                  a.nfl_passing_ints_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_passing_ints_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_rush_yd":
+              comparison =
+                (
+                  a.nfl_rushing_yards_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_rushing_yards_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_rush_td":
+              comparison =
+                (
+                  a.nfl_rushing_tds_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_rushing_tds_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_targets":
+              comparison =
+                (
+                  a.nfl_receiving_targets_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_receiving_targets_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_receptions":
+              comparison =
+                (
+                  a.nfl_receptions_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_receptions_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_rec_yd":
+              comparison =
+                (
+                  a.nfl_receiving_yards_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_receiving_yards_per_game ??
+                  0
+                );
+              break;
+
+            case "nfl_rec_td":
+              comparison =
+                (
+                  a.nfl_receiving_tds_per_game ??
+                  0
+                ) -
+                (
+                  b.nfl_receiving_tds_per_game ??
                   0
                 );
               break;
@@ -2239,7 +3300,7 @@ export default function PlayerHistoryPage() {
     );
   }
 
-  function handleGolfRowClick(
+  function handlePlayerHistoryRowClick(
     row:
       PlayerHistoryRow,
   ) {
@@ -2577,6 +3638,81 @@ export default function PlayerHistoryPage() {
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="space-y-3">
+            <div
+              className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-100 p-1"
+              aria-label="Player stats mode"
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setHistoryMode(
+                    "league",
+                  );
+
+                  setSortKey(
+                    "times_drafted",
+                  );
+
+                  setSortDirection(
+                    "desc",
+                  );
+                }}
+                className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${
+                  historyMode ===
+                  "league"
+                    ? isGolf
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "bg-sky-700 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-white/70"
+                }`}
+              >
+                League History
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setHistoryMode(
+                    "season",
+                  );
+
+                  if (
+                    season ===
+                    "all"
+                  ) {
+                    setSeason(
+                      2026,
+                    );
+                  }
+
+                  setMinTimesDrafted(
+                    0,
+                  );
+
+                  setSortKey(
+                    selectedSport ===
+                      "nfl"
+                      ? "nfl_fp"
+                      : "season_fantasy_points",
+                  );
+
+                  setSortDirection(
+                    "desc",
+                  );
+                }}
+                className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${
+                  historyMode ===
+                  "season"
+                    ? isGolf
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "bg-sky-700 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-white/70"
+                }`}
+              >
+                Season Stats
+              </button>
+            </div>
+
             <div>
               <label
                 htmlFor="player-search"
@@ -2611,52 +3747,62 @@ export default function PlayerHistoryPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label
-                  htmlFor="min-times-drafted"
-                  className="mb-2 block text-sm font-medium text-slate-700"
-                >
-                  Min Drafted
-                </label>
+            <div
+              className={`grid gap-3 ${
+                historyMode ===
+                "league"
+                  ? "grid-cols-2"
+                  : "grid-cols-1"
+              }`}
+            >
+              {historyMode ===
+              "league" ? (
+                <div>
+                  <label
+                    htmlFor="min-times-drafted"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Min Drafted
+                  </label>
 
-                <select
-                  id="min-times-drafted"
-                  value={
-                    minTimesDrafted
-                  }
-                  onChange={
-                    (
-                      event,
-                    ) =>
-                      setMinTimesDrafted(
-                        Number(
-                          event.target.value,
-                        ),
-                      )
-                  }
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300"
-                >
-                  <option value={0}>
-                    Any
-                  </option>
-                  <option value={2}>
-                    2+
-                  </option>
-                  <option value={3}>
-                    3+
-                  </option>
-                  <option value={5}>
-                    5+
-                  </option>
-                  <option value={10}>
-                    10+
-                  </option>
-                  <option value={15}>
-                    15+
-                  </option>
-                </select>
-              </div>
+                  <select
+                    id="min-times-drafted"
+                    value={
+                      minTimesDrafted
+                    }
+                    onChange={
+                      (
+                        event,
+                      ) =>
+                        setMinTimesDrafted(
+                          Number(
+                            event.target.value,
+                          ),
+                        )
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300"
+                  >
+                    <option value={0}>
+                      Any
+                    </option>
+                    <option value={2}>
+                      2+
+                    </option>
+                    <option value={3}>
+                      3+
+                    </option>
+                    <option value={5}>
+                      5+
+                    </option>
+                    <option value={10}>
+                      10+
+                    </option>
+                    <option value={15}>
+                      15+
+                    </option>
+                  </select>
+                </div>
+              ) : null}
 
               <div>
                 <label
@@ -2686,9 +3832,12 @@ export default function PlayerHistoryPage() {
                   }
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300"
                 >
-                  <option value="all">
-                    All-Time
-                  </option>
+                  {historyMode ===
+                  "league" ? (
+                    <option value="all">
+                      All-Time
+                    </option>
+                  ) : null}
 
                   {[
                     2026,
@@ -2739,16 +3888,17 @@ export default function PlayerHistoryPage() {
               {isGolf
                 ? "golfers"
                 : "players"}
-              {minTimesDrafted >
-              0
+              {historyMode ===
+                "league" &&
+              minTimesDrafted >
+                0
                 ? ` with ${minTimesDrafted}+ drafts`
                 : ""}
               .
             </div>
           ) : null}
 
-          {isGolf &&
-          !isLoading &&
+          {!isLoading &&
           filteredRows.length >
             0 ? (
             <div className="mb-4 rounded-2xl border border-emerald-700/50 bg-slate-900/80 p-3">
@@ -2764,19 +3914,33 @@ export default function PlayerHistoryPage() {
                       [],
                     );
                   }}
-                  className="w-full rounded-xl border border-emerald-300 bg-white px-4 py-3 text-sm font-black text-emerald-800 transition hover:bg-emerald-50 sm:w-auto"
+                  className={`w-full rounded-xl border bg-white px-4 py-3 text-sm font-black transition sm:w-auto ${
+                    isGolf
+                      ? "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                      : "border-sky-300 text-sky-800 hover:bg-sky-50"
+                  }`}
                 >
-                  ⇄ Compare Golfers
+                  ⇄ Compare{" "}
+                  {isGolf
+                    ? "Golfers"
+                    : "Players"}
                 </button>
               ) : (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="font-black text-white">
-                      Select 2–3 golfers
+                      Select 2–3{" "}
+                      {isGolf
+                        ? "golfers"
+                        : "players"}
                     </div>
 
                     <div className="mt-0.5 text-xs text-emerald-300">
-                      Tap a golfer to add or remove them.
+                      Tap a{" "}
+                      {isGolf
+                        ? "golfer"
+                        : "player"}{" "}
+                      to add or remove them.
                       {" "}
                       {
                         comparePlayerIds.length
@@ -2857,7 +4021,11 @@ export default function PlayerHistoryPage() {
               {isGolf
                 ? "golfer"
                 : "player"}{" "}
-              history...
+              {historyMode ===
+              "season"
+                ? "stats"
+                : "history"}
+              ...
             </div>
           ) : filteredRows.length ===
             0 ? (
@@ -2868,6 +4036,1137 @@ export default function PlayerHistoryPage() {
                 : "player"}{" "}
               history found.
             </div>
+          ) : historyMode ===
+              "season" &&
+            selectedSport ===
+              "nfl" ? (
+            <>
+              <div className="mb-4 flex items-end gap-2 md:hidden">
+                <div className="min-w-0 flex-1">
+                  <label
+                    htmlFor="nfl-season-mobile-sort"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Sort by
+                  </label>
+
+                  <select
+                    id="nfl-season-mobile-sort"
+                    value={
+                      sortKey
+                    }
+                    onChange={
+                      (
+                        event,
+                      ) => {
+                        const nextKey =
+                          event.target.value as SortKey;
+
+                        setSortKey(
+                          nextKey,
+                        );
+
+                        setSortDirection(
+                          nextKey ===
+                            "nfl_int"
+                            ? "asc"
+                            : nextKey ===
+                                "player_name"
+                              ? "asc"
+                              : "desc",
+                        );
+                      }
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300"
+                  >
+                    <option value="nfl_fp">
+                      Fantasy Points / Game
+                    </option>
+
+                    <option value="nfl_pass_yd">
+                      Pass Yards / Game
+                    </option>
+
+                    <option value="nfl_pass_td">
+                      Pass TD / Game
+                    </option>
+
+                    <option value="nfl_int">
+                      INT / Game
+                    </option>
+
+                    <option value="nfl_rush_yd">
+                      Rush Yards / Game
+                    </option>
+
+                    <option value="nfl_rush_td">
+                      Rush TD / Game
+                    </option>
+
+                    <option value="nfl_targets">
+                      Targets / Game
+                    </option>
+
+                    <option value="nfl_receptions">
+                      Receptions / Game
+                    </option>
+
+                    <option value="nfl_rec_yd">
+                      Receiving Yards / Game
+                    </option>
+
+                    <option value="nfl_rec_td">
+                      Receiving TD / Game
+                    </option>
+
+                    <option value="player_name">
+                      Player Name
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection(
+                      (
+                        previous,
+                      ) =>
+                        previous ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700"
+                >
+                  {sortDirection ===
+                  "asc"
+                    ? "↑"
+                    : "↓"}
+                </button>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => {
+                    const position =
+                      String(
+                        row.position_group ??
+                          "",
+                      ).toUpperCase();
+
+                    const selected =
+                      isCompareSelected(
+                        row,
+                      );
+
+                    const stats =
+                      position ===
+                      "QB"
+                        ? [
+                            {
+                              label:
+                                "PASS",
+                              value:
+                                row.nfl_passing_yards_per_game,
+                              key:
+                                "nfl_pass_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "P TD",
+                              value:
+                                row.nfl_passing_tds_per_game,
+                              key:
+                                "nfl_pass_td" as SortKey,
+                            },
+                            {
+                              label:
+                                "INT",
+                              value:
+                                row.nfl_passing_ints_per_game,
+                              key:
+                                "nfl_int" as SortKey,
+                            },
+                            {
+                              label:
+                                "RUSH",
+                              value:
+                                row.nfl_rushing_yards_per_game,
+                              key:
+                                "nfl_rush_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "R TD",
+                              value:
+                                row.nfl_rushing_tds_per_game,
+                              key:
+                                "nfl_rush_td" as SortKey,
+                            },
+                          ]
+                        : [
+                            {
+                              label:
+                                "TGT",
+                              value:
+                                row.nfl_receiving_targets_per_game,
+                              key:
+                                "nfl_targets" as SortKey,
+                            },
+                            {
+                              label:
+                                "REC",
+                              value:
+                                row.nfl_receptions_per_game,
+                              key:
+                                "nfl_receptions" as SortKey,
+                            },
+                            {
+                              label:
+                                "REC YD",
+                              value:
+                                row.nfl_receiving_yards_per_game,
+                              key:
+                                "nfl_rec_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "RUSH",
+                              value:
+                                row.nfl_rushing_yards_per_game,
+                              key:
+                                "nfl_rush_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "TD",
+                              value:
+                                (
+                                  row.nfl_receiving_tds_per_game ??
+                                  0
+                                ) +
+                                (
+                                  row.nfl_rushing_tds_per_game ??
+                                  0
+                                ),
+                              key:
+                                sortKey ===
+                                "nfl_rush_td"
+                                  ? "nfl_rush_td" as SortKey
+                                  : "nfl_rec_td" as SortKey,
+                            },
+                          ];
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-3.5 text-left shadow-sm transition ${
+                          selected
+                            ? "border-sky-400 ring-2 ring-sky-300/60"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <PlayerHeadshot
+                            nbaPlayerId={
+                              null
+                            }
+                            nflPlayerId={
+                              row.nfl_player_id
+                            }
+                            playerName={
+                              row.player_name
+                            }
+                            size="md"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-black text-slate-950">
+                              {
+                                row.player_name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              {[
+                                row.team_abbreviation,
+                                row.position_group,
+                                row.nfl_games_played
+                                  ? `${row.nfl_games_played} GP`
+                                  : null,
+                              ]
+                                .filter(
+                                  Boolean,
+                                )
+                                .join(" · ")}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className={`text-xl font-black ${
+                              sortKey ===
+                              "nfl_fp"
+                                ? "text-sky-800"
+                                : "text-slate-950"
+                            }`}>
+                              {fmt(
+                                row.nfl_fantasy_points_per_game,
+                                2,
+                              )}
+                            </div>
+
+                            <div className="text-[10px] font-bold uppercase text-slate-400">
+                              FP/G
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-5 gap-1 text-center">
+                          {stats.map(
+                            (
+                              stat,
+                            ) => {
+                              const active =
+                                stat.key ===
+                                sortKey;
+
+                              return (
+                                <div
+                                  key={
+                                    stat.label
+                                  }
+                                  className={`rounded-lg px-1 py-1.5 ${
+                                    active
+                                      ? "border border-sky-300 bg-sky-50"
+                                      : ""
+                                  }`}
+                                >
+                                  <div className={`text-[13px] font-black ${
+                                    active
+                                      ? "text-sky-800"
+                                      : "text-slate-900"
+                                  }`}>
+                                    {fmt(
+                                      stat.value,
+                                      stat.label.includes(
+                                        "TD",
+                                      ) ||
+                                      stat.label ===
+                                        "INT"
+                                        ? 2
+                                        : 1,
+                                    )}
+                                  </div>
+
+                                  <div className={`text-[9px] font-bold uppercase ${
+                                    active
+                                      ? "text-sky-700"
+                                      : "text-slate-400"
+                                  }`}>
+                                    {
+                                      stat.label
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[1100px] w-full border-collapse text-sm">
+                  <thead className="bg-sky-50 text-slate-700">
+                    <tr className="text-left">
+                      <th className="px-4 py-3">
+                        {headerButton(
+                          "Player",
+                          "player_name",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        Pos
+                      </th>
+
+                      <th className="px-3 py-3">
+                        GP
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "FP/G",
+                          "nfl_fp",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Pass Yd/G",
+                          "nfl_pass_yd",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Pass TD/G",
+                          "nfl_pass_td",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "INT/G",
+                          "nfl_int",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rush Yd/G",
+                          "nfl_rush_yd",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rush TD/G",
+                          "nfl_rush_td",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "TGT/G",
+                          "nfl_targets",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "REC/G",
+                          "nfl_receptions",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rec Yd/G",
+                          "nfl_rec_yd",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rec TD/G",
+                          "nfl_rec_td",
+                        )}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="bg-white text-slate-800">
+                    {filteredRows.map(
+                      (
+                        row,
+                      ) => (
+                        <tr
+                          key={
+                            row.player_id
+                          }
+                          className={`border-t border-slate-100 ${
+                            isCompareSelected(
+                              row,
+                            )
+                              ? "bg-sky-50"
+                              : "hover:bg-sky-50/40"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePlayerHistoryRowClick(
+                                  row,
+                                )
+                              }
+                              className="flex items-center gap-2 font-bold text-sky-800"
+                            >
+                              <PlayerHeadshot
+                                nbaPlayerId={
+                                  null
+                                }
+                                nflPlayerId={
+                                  row.nfl_player_id
+                                }
+                                playerName={
+                                  row.player_name
+                                }
+                                size="xs"
+                              />
+
+                              {
+                                row.player_name
+                              }
+                            </button>
+                          </td>
+
+                          <td className="px-3 py-3 font-bold">
+                            {
+                              row.position_group ??
+                              "—"
+                            }
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {
+                              row.nfl_games_played ??
+                              "—"
+                            }
+                          </td>
+
+                          <td className="px-3 py-3 font-black text-sky-800">
+                            {fmt(
+                              row.nfl_fantasy_points_per_game,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_passing_yards_per_game,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_passing_tds_per_game,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_passing_ints_per_game,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_rushing_yards_per_game,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_rushing_tds_per_game,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_receiving_targets_per_game,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_receptions_per_game,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_receiving_yards_per_game,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.nfl_receiving_tds_per_game,
+                              2,
+                            )}
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : historyMode ===
+              "season" &&
+            selectedSport ===
+              "nba" ? (
+            <>
+              <div className="mb-4 flex items-end gap-2 md:hidden">
+                <div className="min-w-0 flex-1">
+                  <label
+                    htmlFor="nba-season-mobile-sort"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Sort by
+                  </label>
+
+                  <select
+                    id="nba-season-mobile-sort"
+                    value={
+                      sortKey
+                    }
+                    onChange={
+                      (
+                        event,
+                      ) => {
+                        const nextKey =
+                          event.target.value as SortKey;
+
+                        setSortKey(
+                          nextKey,
+                        );
+
+                        setSortDirection(
+                          nextKey ===
+                            "player_name"
+                            ? "asc"
+                            : "desc",
+                        );
+                      }
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300"
+                  >
+                    <option value="season_fantasy_points">
+                      Fantasy Points
+                    </option>
+
+                    <option value="season_points">
+                      Points
+                    </option>
+
+                    <option value="season_rebounds">
+                      Rebounds
+                    </option>
+
+                    <option value="season_assists">
+                      Assists
+                    </option>
+
+                    <option value="season_steals">
+                      Steals
+                    </option>
+
+                    <option value="season_blocks">
+                      Blocks
+                    </option>
+
+                    <option value="season_turnovers">
+                      Turnovers
+                    </option>
+
+                    <option value="player_name">
+                      Player Name
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection(
+                      (
+                        previous,
+                      ) =>
+                        previous ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700"
+                  aria-label="Reverse sort direction"
+                >
+                  {sortDirection ===
+                  "asc"
+                    ? "↑"
+                    : "↓"}
+                </button>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => {
+                    const selected =
+                      isCompareSelected(
+                        row,
+                      );
+
+                    /*
+                     * PTS / REB / AST already have permanent
+                     * quick-stat slots.
+                     *
+                     * Only replace the fourth slot when sorting
+                     * by a stat that is not already visible there.
+                     */
+                    const dynamicStat =
+                      sortKey ===
+                      "season_steals"
+                        ? {
+                            label:
+                              "STL",
+                            value:
+                              row.season_steals,
+                            key:
+                              "season_steals" as SortKey,
+                          }
+                        : sortKey ===
+                            "season_blocks"
+                          ? {
+                              label:
+                                "BLK",
+                              value:
+                                row.season_blocks,
+                              key:
+                                "season_blocks" as SortKey,
+                            }
+                          : sortKey ===
+                              "season_turnovers"
+                            ? {
+                                label:
+                                  "TO",
+                                value:
+                                  row.season_turnovers,
+                                key:
+                                  "season_turnovers" as SortKey,
+                              }
+                            : {
+                                label:
+                                  "FP",
+                                value:
+                                  row.season_fantasy_points,
+                                key:
+                                  "season_fantasy_points" as SortKey,
+                              };
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() => {
+                          if (
+                            compareMode
+                          ) {
+                            toggleComparePlayer(
+                              row,
+                            );
+                          }
+                        }}
+                        className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                          selected
+                            ? "border-sky-400 ring-2 ring-sky-300/60"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        {compareMode &&
+                        selected ? (
+                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-xs font-black text-white">
+                            ✓
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-3">
+                          <PlayerHeadshot
+                            nbaPlayerId={
+                              row.nba_player_id
+                            }
+                            nflPlayerId={
+                              null
+                            }
+                            playerName={
+                              row.player_name
+                            }
+                            size="md"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-black text-slate-950">
+                              {
+                                row.player_name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs font-medium text-slate-500">
+                              {[
+                                row.team_abbreviation,
+                                row.position_group,
+                              ]
+                                .filter(
+                                  Boolean,
+                                )
+                                .join(" · ") ||
+                                "NBA"}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div
+                              className={`text-xl font-black ${
+                                sortKey ===
+                                "season_fantasy_points"
+                                  ? "text-sky-800"
+                                  : "text-slate-950"
+                              }`}
+                            >
+                              {fmt(
+                                row.season_fantasy_points,
+                                1,
+                              )}
+                            </div>
+
+                            <div className="text-[10px] font-bold uppercase text-slate-400">
+                              FP
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                          {[
+                            {
+                              label:
+                                "PTS",
+                              value:
+                                row.season_points,
+                              key:
+                                "season_points" as SortKey,
+                            },
+                            {
+                              label:
+                                "REB",
+                              value:
+                                row.season_rebounds,
+                              key:
+                                "season_rebounds" as SortKey,
+                            },
+                            {
+                              label:
+                                "AST",
+                              value:
+                                row.season_assists,
+                              key:
+                                "season_assists" as SortKey,
+                            },
+                            {
+                              label:
+                                dynamicStat.label,
+                              value:
+                                dynamicStat.value,
+                              key:
+                                dynamicStat.key,
+                            },
+                          ].map(
+                            (
+                              stat,
+                              index,
+                            ) => {
+                              const active =
+                                stat.key ===
+                                sortKey;
+
+                              return (
+                                <div
+                                  key={`${row.player_id}-${stat.label}-${index}`}
+                                  className={`rounded-xl px-1.5 py-1.5 ${
+                                    active
+                                      ? "border border-sky-300 bg-sky-50"
+                                      : ""
+                                  }`}
+                                >
+                                  <div
+                                    className={`font-black ${
+                                      active
+                                        ? "text-sky-800"
+                                        : "text-slate-900"
+                                    }`}
+                                  >
+                                    {fmt(
+                                      stat.value,
+                                      1,
+                                    )}
+                                  </div>
+
+                                  <div
+                                    className={`text-[10px] font-bold uppercase ${
+                                      active
+                                        ? "text-sky-700"
+                                        : "text-slate-400"
+                                    }`}
+                                  >
+                                    {
+                                      stat.label
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
+                          <div>
+                            <span className="font-bold text-slate-900">
+                              {fmt(
+                                row.season_steals,
+                                1,
+                              )}
+                            </span>{" "}
+                            <span className="text-slate-400">
+                              STL
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="font-bold text-slate-900">
+                              {fmt(
+                                row.season_blocks,
+                                1,
+                              )}
+                            </span>{" "}
+                            <span className="text-slate-400">
+                              BLK
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="font-bold text-slate-900">
+                              {fmt(
+                                row.season_turnovers,
+                                1,
+                              )}
+                            </span>{" "}
+                            <span className="text-slate-400">
+                              TO
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[900px] w-full border-collapse text-sm">
+                  <thead className="bg-sky-50 text-slate-700">
+                    <tr className="text-left">
+                      <th className="px-4 py-3">
+                        {headerButton(
+                          "Player",
+                          "player_name",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "FP",
+                          "season_fantasy_points",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "PTS",
+                          "season_points",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "REB",
+                          "season_rebounds",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "AST",
+                          "season_assists",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "STL",
+                          "season_steals",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "BLK",
+                          "season_blocks",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "TO",
+                          "season_turnovers",
+                        )}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="bg-white text-slate-800">
+                    {filteredRows.map(
+                      (
+                        row,
+                      ) => (
+                        <tr
+                          key={
+                            row.player_id
+                          }
+                          className={`border-t border-slate-100 transition ${
+                            isCompareSelected(
+                              row,
+                            )
+                              ? "bg-sky-50"
+                              : "hover:bg-sky-50/40"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (
+                                  compareMode
+                                ) {
+                                  toggleComparePlayer(
+                                    row,
+                                  );
+                                }
+                              }}
+                              className={`flex items-center gap-3 rounded-xl px-2 py-1 text-left font-bold transition ${
+                                isCompareSelected(
+                                  row,
+                                )
+                                  ? "bg-sky-100 text-sky-950 ring-2 ring-sky-300"
+                                  : "text-sky-800"
+                              }`}
+                            >
+                              <PlayerHeadshot
+                                nbaPlayerId={
+                                  row.nba_player_id
+                                }
+                                nflPlayerId={
+                                  null
+                                }
+                                playerName={
+                                  row.player_name
+                                }
+                                size="xs"
+                              />
+
+                              <span>
+                                <span className="block">
+                                  {
+                                    row.player_name
+                                  }
+                                </span>
+
+                                <span className="block text-[10px] font-medium text-slate-400">
+                                  {[
+                                    row.team_abbreviation,
+                                    row.position_group,
+                                  ]
+                                    .filter(
+                                      Boolean,
+                                    )
+                                    .join(" · ")}
+                                </span>
+                              </span>
+                            </button>
+                          </td>
+
+                          <td className="px-3 py-3 font-black text-sky-800">
+                            {fmt(
+                              row.season_fantasy_points,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.season_points,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.season_rebounds,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.season_assists,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.season_steals,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.season_blocks,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.season_turnovers,
+                              1,
+                            )}
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : isGolf ? (
             <>
               <div className="mb-4 flex items-end gap-2 md:hidden">
@@ -3003,7 +5302,7 @@ export default function PlayerHistoryPage() {
                       }
                       type="button"
                       onClick={() =>
-                        handleGolfRowClick(
+                        handlePlayerHistoryRowClick(
                           row,
                         )
                       }
@@ -3403,7 +5702,7 @@ export default function PlayerHistoryPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                handleGolfRowClick(
+                                handlePlayerHistoryRowClick(
                                   row,
                                 )
                               }
@@ -3635,17 +5934,29 @@ export default function PlayerHistoryPage() {
                         key={
                           row.player_id
                         }
-                        className="border-t border-slate-100"
+                        className={`border-t border-slate-100 transition ${
+                          isCompareSelected(
+                            row,
+                          )
+                            ? "bg-sky-50"
+                            : ""
+                        }`}
                       >
                         <td className="px-4 py-3 font-medium">
                           <button
                             type="button"
                             onClick={() =>
-                              openPlayerProfile(
+                              handlePlayerHistoryRowClick(
                                 row,
                               )
                             }
-                            className="flex items-center gap-2 font-medium text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                            className={`flex items-center gap-2 rounded-xl px-2 py-1 font-medium transition ${
+                              isCompareSelected(
+                                row,
+                              )
+                                ? "bg-sky-100 text-sky-950 ring-2 ring-sky-300"
+                                : "text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                            }`}
                           >
                             <PlayerHeadshot
                               nbaPlayerId={
@@ -3752,10 +6063,88 @@ export default function PlayerHistoryPage() {
         }
       />
 
+      {compareMode &&
+      !compareOpen ? (
+        <div className="fixed bottom-[5.75rem] left-3 right-3 z-[11000] sm:hidden">
+          <div
+            className={`mx-auto flex max-w-md items-center gap-2 rounded-2xl border bg-slate-950/95 p-2.5 text-white shadow-2xl backdrop-blur ${
+              isGolf
+                ? "border-emerald-700/70"
+                : "border-sky-700/70"
+            }`}
+          >
+            <div className="min-w-0 flex-1 px-1">
+              <div className="text-xs font-black text-white">
+                Compare{" "}
+                {isGolf
+                  ? "Golfers"
+                  : "Players"}
+              </div>
+
+              <div
+                className={`text-[11px] ${
+                  isGolf
+                    ? "text-emerald-300"
+                    : "text-sky-300"
+                }`}
+              >
+                {
+                  comparePlayerIds.length
+                }
+                /3 selected
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={
+                cancelCompareMode
+              }
+              className="shrink-0 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                comparePlayerIds.length <
+                2
+              }
+              onClick={() =>
+                setCompareOpen(
+                  true,
+                )
+              }
+              className={`shrink-0 rounded-xl px-3 py-2 text-xs font-black text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-40 ${
+                isGolf
+                  ? "bg-emerald-700"
+                  : "bg-sky-700"
+              }`}
+            >
+              Compare (
+              {
+                comparePlayerIds.length
+              }
+              )
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {compareOpen ? (
-        <GolfCompareModal
+        <PlayerCompareModal
           rows={
             compareRows
+          }
+          sport={
+            selectedSport as
+              | "nba"
+              | "nfl"
+              | "golf"
+          }
+          historyMode={
+            historyMode
           }
           onClose={() =>
             setCompareOpen(

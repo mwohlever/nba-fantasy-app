@@ -69,19 +69,149 @@ function fantasyPoints(row, headers) {
   const rows = parseCsv(fs.readFileSync(csvPath, "utf8"));
   const headers = rows[0];
 
-  const required = ["PLAYER_ID", "PLAYER_NAME", "PTS", "REB", "AST", "STL", "BLK", "TOV"];
+  const required = [
+    "PLAYER_ID",
+    "PLAYER_NAME",
+    "PTS",
+    "REB",
+    "AST",
+    "STL",
+    "BLK",
+    "TOV",
+  ];
+
   for (const col of required) {
     if (!headers.includes(col)) {
       throw new Error(`CSV missing required column: ${col}`);
     }
   }
 
-  const payload = rows.slice(1).map((row) => ({
-    season,
-    nba_player_id: Number(row[headers.indexOf("PLAYER_ID")]),
-    player_name: row[headers.indexOf("PLAYER_NAME")],
-    fantasy_points: Math.round(fantasyPoints(row, headers) * 10) / 10,
-  })).filter((row) => row.nba_player_id && row.player_name);
+  const indexOf = (name) => headers.indexOf(name);
+
+  const numberValue = (row, name) => {
+    const index = indexOf(name);
+
+    if (index < 0) {
+      return null;
+    }
+
+    const raw = row[index];
+
+    if (
+      raw === undefined ||
+      raw === null ||
+      String(raw).trim() === ""
+    ) {
+      return null;
+    }
+
+    const value = Number(raw);
+
+    return Number.isFinite(value)
+      ? value
+      : null;
+  };
+
+  const round1 = (value) =>
+    value === null
+      ? null
+      : Math.round(value * 10) / 10;
+
+  const payload = rows
+    .slice(1)
+    .map((row) => {
+      const points =
+        numberValue(row, "PTS") ?? 0;
+
+      const rebounds =
+        numberValue(row, "REB") ?? 0;
+
+      const assists =
+        numberValue(row, "AST") ?? 0;
+
+      const steals =
+        numberValue(row, "STL") ?? 0;
+
+      const blocks =
+        numberValue(row, "BLK") ?? 0;
+
+      const turnovers =
+        numberValue(row, "TOV") ?? 0;
+
+      const fantasyPoints =
+        points +
+        rebounds * 1.2 +
+        assists * 1.5 +
+        steals * 2 +
+        blocks * 2 -
+        turnovers;
+
+      return {
+        season,
+
+        nba_player_id:
+          Number(
+            row[
+              indexOf(
+                "PLAYER_ID",
+              )
+            ],
+          ),
+
+        player_name:
+          row[
+            indexOf(
+              "PLAYER_NAME",
+            )
+          ],
+
+        games_played:
+          numberValue(
+            row,
+            "GP",
+          ),
+
+        points:
+          round1(
+            points,
+          ),
+
+        rebounds:
+          round1(
+            rebounds,
+          ),
+
+        assists:
+          round1(
+            assists,
+          ),
+
+        steals:
+          round1(
+            steals,
+          ),
+
+        blocks:
+          round1(
+            blocks,
+          ),
+
+        turnovers:
+          round1(
+            turnovers,
+          ),
+
+        fantasy_points:
+          round1(
+            fantasyPoints,
+          ),
+      };
+    })
+    .filter(
+      (row) =>
+        row.nba_player_id &&
+        row.player_name,
+    );
 
   const { error } = await supabase
     .from("player_nba_season_averages")

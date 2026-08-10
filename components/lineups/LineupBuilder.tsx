@@ -1745,6 +1745,7 @@ export default function LineupBuilder({
               activePill={activePill}
               inactivePill={inactivePill}
               rosterSlots={rosterSlots}
+              selectedSeason={selectedSeason}
             />
           )}
 
