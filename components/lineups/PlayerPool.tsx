@@ -2127,7 +2127,6 @@ export default function PlayerPool({
                             (player) =>
                               String(
                                 player.position_group ??
-                                  player.position ??
                                   "",
                               ).toUpperCase() ===
                               "QB",
