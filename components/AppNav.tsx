@@ -125,6 +125,19 @@ function AppNavContent() {
   const [desktopSportOpen, setDesktopSportOpen] = useState(false);
   const [mobileSportOpen, setMobileSportOpen] = useState(false);
 
+  useEffect(() => {
+    document.documentElement.dataset.mobileMoreOpen =
+      mobileMoreOpen
+        ? "true"
+        : "false";
+
+    return () => {
+      delete document.documentElement.dataset.mobileMoreOpen;
+    };
+  }, [
+    mobileMoreOpen,
+  ]);
+
   const isAdmin = currentUser?.role === "admin";
 
   const sportScopedPaths = [
@@ -310,6 +323,13 @@ function AppNavContent() {
 
   return (
     <>
+      <style jsx global>{`
+        html[data-mobile-more-open="true"]
+          [data-floating-compare="true"] {
+          display: none !important;
+        }
+      `}</style>
+
       {/* Desktop nav only */}
       <nav className="app-desktop-nav mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
         <div className="flex items-center justify-between gap-3">

@@ -129,6 +129,10 @@ export async function GET(request: Request) {
           headers: {
             Accept:
               "application/json, text/plain, */*",
+            "User-Agent":
+              kind === "scoreboard"
+                ? "111-sports-golf-provider/1.0"
+                : "111-sports-golf-course-provider/1.0",
           },
         },
       );
