@@ -50,8 +50,15 @@ function getOrdinal(value: number) {
   }
 }
 
-function formatScore(value: number) {
-  return Number(value ?? 0).toFixed(1);
+function formatScore(
+  value: number,
+  sport: "nba" | "nfl" | "golf",
+) {
+  const numericValue = Number(value ?? 0);
+
+  return sport === "golf"
+    ? String(Math.round(numericValue))
+    : numericValue.toFixed(1);
 }
 
 export async function notifyCompletedSlate(input: {
@@ -146,7 +153,20 @@ export async function notifyCompletedSlate(input: {
   const winnerTeamId = Number(winner.team_id);
   const winnerName =
     teamNameMap.get(winnerTeamId) ?? `Team ${winnerTeamId}`;
-  const winningScore = formatScore(winner.fantasy_points);
+
+  const sport =
+
+    input.slate.sport === "nfl"
+
+      ? "nfl"
+
+      : input.slate.sport === "golf"
+
+        ? "golf"
+
+        : "nba";
+
+  const winningScore = formatScore(winner.fantasy_points, sport);
 
   const startDate =
     input.slate.start_date ?? input.slate.date;
@@ -183,14 +203,6 @@ export async function notifyCompletedSlate(input: {
     (startDate === endDate
       ? startDate
       : `${startDate} - ${endDate}`);
-
-  const sport =
-    input.slate.sport === "nfl"
-      ? "nfl"
-      : input.slate.sport === "golf"
-        ? "golf"
-        : "nba";
-
   const [standardTemplate, winnerTemplate] = await Promise.all([
     getNotificationTemplate("slate_complete", sport),
     getNotificationTemplate("slate_complete_winner", sport),
@@ -210,7 +222,7 @@ export async function notifyCompletedSlate(input: {
 
     const finishNumber = Number(resultRow.finish_position ?? 0);
     const finishOrdinal = getOrdinal(finishNumber);
-    const teamScore = formatScore(resultRow.fantasy_points);
+    const teamScore = formatScore(resultRow.fantasy_points, sport);
     const isWinner = teamId === winnerTeamId;
 
     const template = isWinner ? winnerTemplate : standardTemplate;
