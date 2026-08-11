@@ -637,6 +637,25 @@ export async function getGolfTeamProfile(
       isCompletedResult,
     );
 
+  const tournamentWins =
+    completedRows
+      .filter(
+        (row) =>
+          Number(row.finishPosition) === 1,
+      )
+      .map((row) => ({
+        slateId: row.slateId,
+        tournamentName: row.slateLabel,
+        season: row.season,
+        date: row.slateStart,
+        score: row.score,
+      }))
+      .sort((a, b) =>
+        String(b.date).localeCompare(
+          String(a.date),
+        ),
+      );
+
   const selectedSeason =
     !isAllTime &&
     Number.isFinite(
@@ -1232,6 +1251,7 @@ export async function getGolfTeamProfile(
     milestoneThresholds,
     leagueAwards:
       leagueAwards ?? [],
+    tournamentWins,
     recentSlates:
       selectedRows.slice(0, 8),
   });

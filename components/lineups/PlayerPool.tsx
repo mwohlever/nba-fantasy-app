@@ -9,6 +9,7 @@ import type {
   PositionFilter,
   RosterSlotConfig,
   Team,
+  TargetDraftSlot,
 } from "@/components/lineups/types";
 
 type PlayerPoolProps = {
@@ -43,6 +44,20 @@ type PlayerPoolProps = {
   inactivePill: string;
   rosterSlots?: RosterSlotConfig[];
   selectedSeason: string;
+
+  /*
+   * Optional context used by the roster-slot workflow.
+   * The player browser itself remains shared with the normal
+   * Players tab.
+   */
+  slotDraftContext?: {
+    targetDraftSlot: TargetDraftSlot;
+    onDraftPlayer: (
+      player: Player,
+    ) => Promise<void>;
+  };
+
+  hidePositionFilter?: boolean;
 };
 
 type SortOption =
@@ -301,6 +316,8 @@ export default function PlayerPool({
   isAssigningPlayer,
   rosterSlots = [],
   selectedSeason,
+  slotDraftContext,
+  hidePositionFilter = false,
 }: PlayerPoolProps) {
   const { selectedSport } = useSelectedSport();
   const isGolf = selectedSport === "golf";
@@ -2139,7 +2156,8 @@ export default function PlayerPool({
         </div>
 
         <div className="draft-player-filter-row">
-          {!isGolf ? (
+          {!hidePositionFilter &&
+          !isGolf ? (
             <div
               className="draft-player-segment"
               aria-label="Position filter"
@@ -3802,6 +3820,25 @@ export default function PlayerPool({
           )
         }
         defaultMode="season"
+        actionLabel={
+          slotDraftContext
+            ? `Draft to ${slotDraftContext.targetDraftSlot.positionGroup} Slot`
+            : undefined
+        }
+        onAction={
+          slotDraftContext &&
+          researchPlayer
+            ? async () => {
+                await slotDraftContext.onDraftPlayer(
+                  researchPlayer,
+                );
+
+                setResearchPlayer(
+                  null,
+                );
+              }
+            : undefined
+        }
         onClose={() =>
           setResearchPlayer(
             null,
@@ -3841,7 +3878,10 @@ export default function PlayerPool({
 
       {compareMode &&
       !compareOpen ? (
-        <div className="fixed bottom-[5.75rem] left-3 right-3 z-[11000] sm:hidden">
+        <div
+          data-floating-compare-selection="true"
+          className="fixed bottom-[5.75rem] left-3 right-3 z-[11000] sm:hidden"
+        >
           <div className="mx-auto flex max-w-md items-center gap-2 rounded-2xl border border-sky-700/70 bg-slate-950/95 p-2.5 text-white shadow-2xl backdrop-blur">
             <div className="min-w-0 flex-1 px-1">
               <div className="text-xs font-black text-white">

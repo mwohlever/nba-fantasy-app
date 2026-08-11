@@ -1,42 +1,73 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
-import { useSelectedSport } from "@/components/providers/SportProvider";
-import type { Player,
+import {
+  useMemo,
+  useState,
+} from "react";
+
+import PlayerPool from "@/components/lineups/PlayerPool";
+
+import type {
+  Player,
+  PositionFilter,
+  RosterSlotConfig,
   TargetDraftSlot,
+  Team,
 } from "@/components/lineups/types";
 
 type Props = {
-  targetDraftSlot: TargetDraftSlot | null;
+  targetDraftSlot:
+    TargetDraftSlot | null;
+
   setTargetDraftSlot: (
-    slot: TargetDraftSlot | null
+    slot:
+      TargetDraftSlot | null,
   ) => void;
+
   players: Player[];
-  playerAverageMap: Map<number, number>;
-  playerProjections: Record<number, any>;
-  availablePlayerIdSet: Set<number>;
-  isAvailabilityLoading: boolean;
+
+  playerAverageMap:
+    Map<number, number>;
+
+  playerProjections:
+    Record<number, any>;
+
+  availablePlayerIdsForSlate:
+    number[];
+
+  availablePlayerIdSet:
+    Set<number>;
+
+  isAvailabilityLoading:
+    boolean;
+
   getOwnerTeamForPlayer: (
-    playerId: number
-  ) => { id: number; name: string } | null;
+    playerId: number,
+  ) => Team | null;
+
+  setDraftingPlayer:
+    React.Dispatch<
+      React.SetStateAction<
+        Player | null
+      >
+    >;
+
   handleAssignPlayerToTeam: (
     player: Player,
-    teamId: number
+    teamId: number,
   ) => Promise<void>;
-  onInspectPlayer: (player: Player) => void;
+
+  selectedSeason:
+    string;
+
+  rosterSlots?:
+    RosterSlotConfig[];
+
   hidden?: boolean;
-  isAssigningPlayer: boolean;
-  isSaving: boolean;
+
+  isAssigningPlayer:
+    boolean;
 };
-
-function fmt(value: number | null | undefined) {
-  if (value === null || value === undefined) {
-    return "—";
-  }
-
-  return Number(value).toFixed(1);
-}
 
 export default function SlotDraftModal({
   targetDraftSlot,
@@ -44,331 +75,290 @@ export default function SlotDraftModal({
   players,
   playerAverageMap,
   playerProjections,
+  availablePlayerIdsForSlate,
   availablePlayerIdSet,
   isAvailabilityLoading,
   getOwnerTeamForPlayer,
+  setDraftingPlayer,
   handleAssignPlayerToTeam,
-  onInspectPlayer,
+  selectedSeason,
+  rosterSlots = [],
   hidden = false,
   isAssigningPlayer,
-  isSaving,
 }: Props) {
-  const { selectedSport } = useSelectedSport();
-  const isGolf = selectedSport === "golf";
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showAllPlayers, setShowAllPlayers] = useState(false);
-
-  const filteredPlayers = useMemo(() => {
-    if (!targetDraftSlot) return [];
-
-    return players
-      .filter((player) => {
-        if (
-          player.position_group !==
-          targetDraftSlot.positionGroup
-        ) {
-          return false;
-        }
-
-        if (
-          !showAllPlayers &&
-          !isAvailabilityLoading &&
-          !availablePlayerIdSet.has(player.id)
-        ) {
-          return false;
-        }
-
-        if (getOwnerTeamForPlayer(player.id)) {
-          return false;
-        }
-
-        if (
-          searchTerm.trim() &&
-          !player.name
-            .toLowerCase()
-            .includes(
-              searchTerm.trim().toLowerCase()
-            )
-        ) {
-          return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (isGolf) {
-          const rankA = a.owgr_rank;
-          const rankB = b.owgr_rank;
-
-          if (rankA == null && rankB == null) {
-            return a.name.localeCompare(b.name);
-          }
-
-          if (rankA == null) return 1;
-          if (rankB == null) return -1;
-
-          if (rankA !== rankB) {
-            return rankA - rankB;
-          }
-
-          return a.name.localeCompare(b.name);
-        }
-
-        const avgA =
-          playerProjections?.[a.id]?.projection ??
-          playerAverageMap.get(a.id);
-
-        const avgB =
-          playerProjections?.[b.id]?.projection ??
-          playerAverageMap.get(b.id);
-
-        if (avgA == null && avgB == null) {
-          return a.name.localeCompare(b.name);
-        }
-
-        if (avgA == null) return 1;
-        if (avgB == null) return -1;
-
-        return avgB - avgA;
-      });
-  }, [
-    targetDraftSlot,
-    players,
-    playerAverageMap,
-    playerProjections,
-    availablePlayerIdSet,
-    isAvailabilityLoading,
-    getOwnerTeamForPlayer,
+  const [
     searchTerm,
-    showAllPlayers,
-    isGolf,
-  ]);
+    setSearchTerm,
+  ] = useState("");
 
-  if (!targetDraftSlot) return null;
+  const [
+    onSlateOnly,
+    setOnSlateOnly,
+  ] = useState(false);
 
-  async function draftPlayer(player: Player) {
-    if (!targetDraftSlot) return;
+  /*
+   * Position is intentionally fixed to the roster slot.
+   * PlayerPool still owns all other browser behavior.
+   */
+  const [
+    positionFilter,
+    setPositionFilter,
+  ] =
+    useState<PositionFilter>(
+      "All",
+    );
+
+  const filteredPlayers =
+    useMemo(() => {
+      if (!targetDraftSlot) {
+        return [];
+      }
+
+      return players.filter(
+        (player) => {
+          if (
+            player.position_group !==
+            targetDraftSlot.positionGroup
+          ) {
+            return false;
+          }
+
+          /*
+           * A player already owned by another team
+           * cannot be drafted into this open slot.
+           */
+          if (
+            getOwnerTeamForPlayer(
+              player.id,
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            searchTerm &&
+            !player.name
+              .toLowerCase()
+              .includes(
+                searchTerm.toLowerCase(),
+              )
+          ) {
+            return false;
+          }
+
+          if (
+            onSlateOnly &&
+            !isAvailabilityLoading &&
+            !availablePlayerIdSet.has(
+              player.id,
+            )
+          ) {
+            return false;
+          }
+
+          return true;
+        },
+      );
+    }, [
+      targetDraftSlot,
+      players,
+      getOwnerTeamForPlayer,
+      searchTerm,
+      onSlateOnly,
+      isAvailabilityLoading,
+      availablePlayerIdSet,
+    ]);
+
+  if (!targetDraftSlot) {
+    return null;
+  }
+
+  async function draftToSlot(
+    player: Player,
+  ) {
+    if (!targetDraftSlot) {
+      return;
+    }
 
     await handleAssignPlayerToTeam(
       player,
-      targetDraftSlot.teamId
+      targetDraftSlot.teamId,
     );
 
-    setTargetDraftSlot(null);
+    setTargetDraftSlot(
+      null,
+    );
+
     setSearchTerm("");
   }
 
   return (
     <div
-      className={`mobile-modal-safe slot-draft-overlay fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center ${
+      className={`fixed inset-x-0 top-0 bottom-[5rem] z-[10000] flex items-start justify-center bg-slate-950/75 p-0 backdrop-blur-sm sm:inset-0 sm:items-center sm:p-6 ${
         hidden
-          ? "slot-draft-overlay--hidden"
+          ? "pointer-events-none opacity-0"
           : ""
       }`}
       aria-hidden={hidden}
-      onClick={() => {
-        if (!hidden) {
-          setTargetDraftSlot(null);
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          setTargetDraftSlot(
+            null,
+          );
         }
       }}
     >
       <section
-        className="mobile-modal-panel-safe slot-draft-modal flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Draft to ${targetDraftSlot.positionGroup} roster spot`}
+        className="flex h-full max-h-full w-full flex-col overflow-hidden bg-slate-950 text-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-[30px] sm:border sm:border-slate-700"
       >
-        <header className="slot-draft-header">
-          <div className="min-w-0">
-            <div className="slot-draft-kicker">
-              Draft to roster spot
+        <header className="shrink-0 border-b border-slate-700 bg-slate-950/95 px-5 py-4 backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.22em] text-sky-300">
+                Draft to roster spot
+              </div>
+
+              <div className="mt-1 flex items-center gap-2">
+                <h2 className="text-2xl font-black text-white">
+                  {
+                    targetDraftSlot.teamName
+                  }
+                </h2>
+
+                <span className="rounded-full bg-sky-950 px-2.5 py-1 text-xs font-black text-sky-300">
+                  {
+                    targetDraftSlot.positionGroup
+                  }
+                </span>
+              </div>
+
+              <div className="mt-1 text-sm text-slate-400">
+                Choose an available{" "}
+                {
+                  targetDraftSlot.positionGroup
+                }.
+              </div>
             </div>
 
-            <h2>
-              {targetDraftSlot.teamName}
-              <span>
-                {targetDraftSlot.positionGroup}
-              </span>
-            </h2>
-
-            <p>
-              Choose an available{" "}
-              {targetDraftSlot.positionGroup}.
-            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setTargetDraftSlot(
+                  null,
+                )
+              }
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-2xl font-bold text-slate-300 transition hover:bg-slate-700"
+              aria-label="Close draft-to-slot browser"
+            >
+              ×
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              setTargetDraftSlot(null)
-            }
-            className="slot-draft-close"
-            aria-label="Close draft modal"
-          >
-            ×
-          </button>
         </header>
 
-        <div className="slot-draft-search">
-          <div className="slot-draft-search-heading">
-            <label htmlFor="slot-player-search">
-              Search players
-            </label>
-
-            <div
-              className="inline-flex shrink-0 rounded-full border border-slate-300 bg-slate-100 p-1 dark:border-slate-600 dark:bg-slate-800"
-              role="group"
-              aria-label="Player availability"
-            >
-              <button
-                type="button"
-                onClick={() => setShowAllPlayers(false)}
-                aria-pressed={!showAllPlayers}
-                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                  !showAllPlayers
-                    ? "bg-sky-600 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                }`}
-              >
-                On This Slate
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowAllPlayers(true)}
-                aria-pressed={showAllPlayers}
-                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                  showAllPlayers
-                    ? "bg-sky-600 text-white shadow-sm"
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
-                }`}
-              >
-                All Players
-              </button>
-            </div>
-          </div>
-
-          <input
-            id="slot-player-search"
-            type="text"
-            value={searchTerm}
-            onChange={(event) =>
-              setSearchTerm(event.target.value)
+        <div
+          data-slot-player-browser="true"
+          className="min-h-0 flex-1 overflow-y-auto px-4 pb-28 pt-4 sm:px-6 sm:pb-6"
+        >
+          <PlayerPool
+            players={
+              players
             }
-            placeholder={`Search ${targetDraftSlot.positionGroup} players...`}
-            autoFocus
+            filteredPlayers={
+              filteredPlayers
+            }
+            searchTerm={
+              searchTerm
+            }
+            setSearchTerm={
+              setSearchTerm
+            }
+            positionFilter={
+              positionFilter
+            }
+            setPositionFilter={
+              setPositionFilter
+            }
+            onSlateOnly={
+              onSlateOnly
+            }
+            setOnSlateOnly={
+              setOnSlateOnly
+            }
+            isAvailabilityLoading={
+              isAvailabilityLoading
+            }
+            availablePlayerIdsForSlate={
+              availablePlayerIdsForSlate
+            }
+            availablePlayerIdSet={
+              availablePlayerIdSet
+            }
+            playerAverageMap={
+              playerAverageMap
+            }
+            playerProjections={
+              playerProjections
+            }
+            getOwnerTeamForPlayer={
+              getOwnerTeamForPlayer
+            }
+            setDraftingPlayer={
+              setDraftingPlayer
+            }
+            isAssigningPlayer={
+              isAssigningPlayer
+            }
+            pillBase=""
+            activePill=""
+            inactivePill=""
+            rosterSlots={
+              rosterSlots
+            }
+            selectedSeason={
+              selectedSeason
+            }
+            hidePositionFilter
+            slotDraftContext={{
+              targetDraftSlot,
+              onDraftPlayer:
+                draftToSlot,
+            }}
           />
         </div>
 
-        <div className="slot-draft-results min-h-0 flex-1 overflow-y-auto p-4 pb-24 sm:p-5">
-          {isAvailabilityLoading ? (
-            <div className="slot-draft-empty">
-              <div aria-hidden="true">🏀</div>
-              <strong>
-                Loading available players
-              </strong>
-              <p>
-                Checking which players are scheduled
-                for this slate.
-              </p>
-            </div>
-          ) : filteredPlayers.length === 0 ? (
-            <div className="slot-draft-empty">
-              <div aria-hidden="true">📅</div>
-              <strong>
-                No players available yet
-              </strong>
-              <p>
-                {showAllPlayers
-                  ? `No undrafted ${targetDraftSlot.positionGroup} players match your search.`
-                  : `No ${targetDraftSlot.positionGroup} players are currently scheduled for this slate. Switch to All Players above for testing.`}
-              </p>
-            </div>
-          ) : (
-            <div className="slot-draft-player-list">
-              {filteredPlayers.map((player) => {
-                const projection =
-                  playerProjections?.[player.id]
-                    ?.projection ??
-                  playerAverageMap.get(player.id);
+        <style jsx global>{`
+          [data-slot-player-browser="true"] .draft-player-toolbar {
+            position: static !important;
+            top: auto !important;
+            bottom: auto !important;
+            z-index: auto !important;
+          }
 
-                return (
-                  <article
-                    key={player.id}
-                    className="slot-draft-player"
-                  >
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onInspectPlayer(player)
-                      }
-                      className="slot-draft-player-inspect"
-                      aria-label={`View stats for ${player.name}`}
-                    >
-                      <PlayerHeadshot
-                        nbaPlayerId={
-                          player.nba_player_id
-                        }
-                        nflPlayerId={
-                          player.nfl_player_id
-                        }
-                        espnGolfPlayerId={
-                          player.espn_player_id
-                        }
-                        imageUrl={
-                          player.headshot_url
-                        }
-                        playerName={player.name}
-                        size="md"
-                      />
+          /*
+           * The slot modal itself already stops 5rem above the
+           * viewport bottom so the persistent app nav stays visible.
+           *
+           * PlayerPool's canonical Compare control uses 5.75rem from
+           * the viewport bottom. Inside this backdrop-filtered shell,
+           * fixed positioning is relative to the shell instead.
+           *
+           * 0.75rem here + the shell's 5rem nav clearance = the same
+           * 5.75rem viewport position as the normal Players screen.
+           */
+          [data-slot-player-browser="true"] [data-floating-compare="true"] {
+            bottom: 0.75rem !important;
+          }
 
-                      <div className="min-w-0">
-                        <div className="truncate font-bold">
-                          {player.name}
-                        </div>
-
-                        <div className="mt-1 text-xs">
-                          {player.position_group} •{" "}
-                          {isGolf ? (
-                            <>
-                              OWGR{" "}
-                              {player.owgr_rank
-                                ? `#${player.owgr_rank}`
-                                : "—"}
-                            </>
-                          ) : (
-                            <>
-                              Proj {fmt(projection)}
-                            </>
-                          )}
-                        </div>
-
-                        <div className="slot-draft-player-view-label">
-                          View player stats
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void draftPlayer(player)
-                      }
-                      disabled={
-                        isAssigningPlayer || isSaving
-                      }
-                      className="slot-draft-player-action"
-                      aria-label={`Draft ${player.name} to ${targetDraftSlot.teamName}`}
-                    >
-                      {isAssigningPlayer || isSaving
-                        ? "Saving…"
-                        : "Draft"}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          [data-slot-player-browser="true"] [data-floating-compare-selection="true"] {
+            bottom: 0.75rem !important;
+          }
+        `}</style>
       </section>
     </div>
   );

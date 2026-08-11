@@ -47,6 +47,13 @@ type Props = {
   defaultMode:
     Mode;
 
+  actionLabel?: string;
+
+  onAction?:
+    () =>
+      void |
+      Promise<void>;
+
   onClose:
     () => void;
 };
@@ -437,6 +444,8 @@ export default function PlayerResearchModal({
   sport,
   season,
   defaultMode,
+  actionLabel,
+  onAction,
   onClose,
 }: Props) {
   const [
@@ -1665,6 +1674,25 @@ export default function PlayerResearchModal({
                 </div>
               </div>
             </section>
+
+            {actionLabel &&
+            onAction ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void onAction()
+                }
+                className={`w-full rounded-2xl border px-4 py-3.5 text-base font-black text-white shadow-lg transition ${
+                  sport === "golf"
+                    ? "border-emerald-500 bg-emerald-600 hover:bg-emerald-500"
+                    : sport === "nfl"
+                      ? "border-sky-500 bg-sky-600 hover:bg-sky-500"
+                      : "border-orange-500 bg-orange-600 hover:bg-orange-500"
+                }`}
+              >
+                {actionLabel}
+              </button>
+            ) : null}
 
             <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-700 bg-slate-900 p-1">
               <button

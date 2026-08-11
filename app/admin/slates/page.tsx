@@ -143,6 +143,8 @@ export default function AdminSlatesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRefreshingGolfField, setIsRefreshingGolfField] =
     useState(false);
+  const [isImportingGolfField, setIsImportingGolfField] =
+    useState(false);
   const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
     useState(false);
 
@@ -158,6 +160,7 @@ export default function AdminSlatesPage() {
     isReseeding ||
     isDeleting ||
     isRefreshingGolfField ||
+    isImportingGolfField ||
     isSyncingGolfRankings ||
     isRefreshingShotCast;
 
@@ -560,12 +563,88 @@ export default function AdminSlatesPage() {
         "Tournament field, scores, rounds, and hole data refreshed successfully.",
       );
     } catch (error) {
-      console.error(error);
-      setMessage(
-        "Something went wrong while refreshing the tournament field.",
-      );
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      const isWaitingForField =
+        errorMessage
+          .toLowerCase()
+          .includes(
+            "tournament field is not available yet",
+          );
+
+      if (isWaitingForField) {
+        setMessage(
+          "Tournament found. ESPN has not published the field yet. Automatic refresh will keep checking.",
+        );
+      } else {
+        console.error(error);
+        setMessage(
+          "Something went wrong while refreshing the tournament field.",
+        );
+      }
     } finally {
       setIsRefreshingGolfField(false);
+    }
+  }
+
+  async function handleImportPgaTourField() {
+    if (!selectedSlateId || !selectedSlate) return;
+
+    try {
+      setIsImportingGolfField(true);
+      setMessage("");
+
+      const response = await fetch(
+        "/api/admin/golf/import-field",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          body: JSON.stringify({
+            slateId: Number(selectedSlateId),
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result?.error ||
+            "PGA Tour field import failed.",
+        );
+        return;
+      }
+
+      await loadSlateDetail(
+        Number(selectedSlateId),
+      );
+
+      const playerCount =
+        Number(
+          result?.eventPlayersUpserted ??
+            result?.fieldPlayersFound ??
+            0,
+        );
+
+      setMessage(
+        `PGA Tour field imported successfully: ${playerCount} golfers loaded.`,
+      );
+    } catch (error) {
+      console.error(error);
+
+      setMessage(
+        error instanceof Error
+          ? `PGA Tour field import failed: ${error.message}`
+          : "Something went wrong while importing the PGA Tour field.",
+      );
+    } finally {
+      setIsImportingGolfField(false);
     }
   }
 
@@ -1165,6 +1244,26 @@ export default function AdminSlatesPage() {
                       {isRefreshingGolfField
                         ? "Refreshing Field..."
                         : "Refresh Tournament Field"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleImportPgaTourField()
+                      }
+                      disabled={
+                        isBusy || selectedSlate.is_locked
+                      }
+                      title={
+                        selectedSlate.is_locked
+                          ? "Unlock and save the slate before importing the field."
+                          : "Load the tournament field directly from PGA Tour when ESPN has not published its field yet."
+                      }
+                      className="rounded-xl border border-emerald-400 bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isImportingGolfField
+                        ? "Importing PGA Field..."
+                        : "Import PGA Tour Field"}
                     </button>
 
                     <button

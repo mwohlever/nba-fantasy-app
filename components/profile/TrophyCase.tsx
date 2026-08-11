@@ -18,6 +18,14 @@ export type LeagueAward = {
   featured: boolean;
 };
 
+export type GolfTournamentWin = {
+  slateId: number;
+  tournamentName: string;
+  season: number;
+  date: string;
+  score: number;
+};
+
 export type TrophyMilestones = {
   score175: number;
   score200: number;
@@ -61,6 +69,7 @@ type Props = {
   };
   milestones: TrophyMilestones;
   leagueAwards: LeagueAward[];
+  tournamentWins?: GolfTournamentWin[];
   thresholds: MilestoneThresholds;
 };
 
@@ -86,6 +95,352 @@ const rarityLabels: Record<Rarity, string> = {
 function formatNumber(value: number | null, digits = 1) {
   if (value === null || value === undefined) return "—";
   return Number(value).toFixed(digits);
+}
+
+type GolfTrophyKind =
+  | "masters"
+  | "pga"
+  | "us-open"
+  | "open"
+  | "players"
+  | "tour"
+  | "fedex"
+  | "wyndham"
+  | "generic";
+
+function getGolfTrophyKind(
+  tournamentName: string,
+): GolfTrophyKind {
+  const name = tournamentName.toLowerCase();
+
+  if (
+    name.includes("masters") &&
+    !name.includes("mastercard")
+  ) {
+    return "masters";
+  }
+
+  if (name.includes("pga championship")) {
+    return "pga";
+  }
+
+  if (
+    name.includes("u.s. open") ||
+    name.includes("us open")
+  ) {
+    return "us-open";
+  }
+
+  if (
+    name.includes("open championship") ||
+    name === "the open"
+  ) {
+    return "open";
+  }
+
+  if (name.includes("players championship")) {
+    return "players";
+  }
+
+  if (name.includes("tour championship")) {
+    return "tour";
+  }
+
+  if (
+    name.includes("fedex") &&
+    name.includes("st. jude")
+  ) {
+    return "fedex";
+  }
+
+  if (name.includes("wyndham")) {
+    return "wyndham";
+  }
+
+  return "generic";
+}
+
+function GolfTrophyArt({
+  tournamentName,
+}: {
+  tournamentName: string;
+}) {
+  const kind =
+    getGolfTrophyKind(tournamentName);
+
+  if (kind === "masters") {
+    return (
+      <div className="relative flex h-28 items-center justify-center">
+        <svg
+          viewBox="0 0 120 120"
+          className="h-28 w-28 drop-shadow-xl"
+          aria-hidden="true"
+        >
+          <path
+            d="M35 25 49 16h22l14 9 8 25-15 8-4-16v56H46V42l-4 16-15-8 8-25Z"
+            fill="#166534"
+            stroke="#86efac"
+            strokeWidth="3"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M49 16 60 30 71 16"
+            fill="none"
+            stroke="#dcfce7"
+            strokeWidth="3"
+          />
+          <path
+            d="M60 30v68"
+            stroke="#14532d"
+            strokeWidth="3"
+          />
+          <circle
+            cx="60"
+            cy="45"
+            r="3"
+            fill="#facc15"
+          />
+          <circle
+            cx="60"
+            cy="57"
+            r="3"
+            fill="#facc15"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  const isJug = kind === "open";
+
+  if (isJug) {
+    return (
+      <div className="flex h-28 items-center justify-center">
+        <svg
+          viewBox="0 0 120 120"
+          className="h-28 w-28 drop-shadow-xl"
+          aria-hidden="true"
+        >
+          <path
+            d="M47 17h27l-4 10 8 10-5 9v35c0 9-6 15-14 15s-14-6-14-15V46l-5-9 8-10-1-10Z"
+            fill="#d1d5db"
+            stroke="#f8fafc"
+            strokeWidth="3"
+          />
+          <path
+            d="M73 36c22 0 24 31 4 36"
+            fill="none"
+            stroke="#e5e7eb"
+            strokeWidth="6"
+            strokeLinecap="round"
+          />
+          <path
+            d="M49 100h22M43 108h34"
+            stroke="#f8fafc"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+          <path
+            d="M50 27h20"
+            stroke="#94a3b8"
+            strokeWidth="3"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  const palette =
+    kind === "wyndham"
+      ? {
+          metal: "#f8fafc",
+          edge: "#60a5fa",
+          accent: "#2563eb",
+        }
+      : kind === "fedex"
+        ? {
+            metal: "#e2e8f0",
+            edge: "#a78bfa",
+            accent: "#7c3aed",
+          }
+        : kind === "players"
+          ? {
+              metal: "#f8fafc",
+              edge: "#5eead4",
+              accent: "#0f766e",
+            }
+          : kind === "tour"
+            ? {
+                metal: "#e5e7eb",
+                edge: "#fbbf24",
+                accent: "#b45309",
+              }
+            : kind === "us-open"
+              ? {
+                  metal: "#f8fafc",
+                  edge: "#cbd5e1",
+                  accent: "#475569",
+                }
+              : kind === "pga"
+                ? {
+                    metal: "#f1f5f9",
+                    edge: "#93c5fd",
+                    accent: "#1d4ed8",
+                  }
+                : {
+                    metal: "#e5e7eb",
+                    edge: "#facc15",
+                    accent: "#a16207",
+                  };
+
+  return (
+    <div className="flex h-28 items-center justify-center">
+      <svg
+        viewBox="0 0 120 120"
+        className="h-28 w-28 drop-shadow-xl"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient
+            id={`cup-${kind}`}
+            x1="0"
+            y1="0"
+            x2="1"
+            y2="1"
+          >
+            <stop
+              offset="0"
+              stopColor="#ffffff"
+            />
+            <stop
+              offset=".45"
+              stopColor={palette.metal}
+            />
+            <stop
+              offset="1"
+              stopColor={palette.edge}
+            />
+          </linearGradient>
+        </defs>
+
+        <path
+          d={
+            kind === "us-open"
+              ? "M42 18h36l-5 49c-1 12-7 20-13 20s-12-8-13-20l-5-49Z"
+              : kind === "pga"
+                ? "M35 23h50l-7 42c-2 13-9 21-18 21s-16-8-18-21l-7-42Z"
+                : "M39 25h42l-6 39c-2 13-8 21-15 21s-13-8-15-21l-6-39Z"
+          }
+          fill={`url(#cup-${kind})`}
+          stroke="#f8fafc"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+        />
+
+        <path
+          d="M40 32C19 31 20 63 43 65M80 32c21-1 20 31-3 33"
+          fill="none"
+          stroke={palette.edge}
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+
+        <path
+          d="M60 85v12M46 99h28M40 108h40"
+          stroke="#e2e8f0"
+          strokeWidth="6"
+          strokeLinecap="round"
+        />
+
+        {kind === "players" ? (
+          <path
+            d="M54 43c8-7 13-11 19-16M55 43l-8 12M55 43l8 14"
+            fill="none"
+            stroke={palette.accent}
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+        ) : (
+          <circle
+            cx="60"
+            cy="48"
+            r="9"
+            fill={palette.accent}
+            opacity=".92"
+          />
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function formatGolfTrophyScore(
+  value: number,
+) {
+  const rounded = Math.round(
+    Number(value ?? 0),
+  );
+
+  if (rounded > 0) {
+    return `+${rounded}`;
+  }
+
+  return String(rounded);
+}
+
+function GolfTournamentTrophy({
+  win,
+}: {
+  win: GolfTournamentWin;
+}) {
+  const kind =
+    getGolfTrophyKind(
+      win.tournamentName,
+    );
+
+  const label =
+    kind === "masters"
+      ? "Green Jacket"
+      : kind === "open"
+        ? "Claret Jug"
+        : kind === "wyndham"
+          ? "Wyndham Trophy"
+          : "Tournament Champion";
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-emerald-800/70 bg-gradient-to-b from-slate-800 to-slate-950 px-4 py-5 text-center shadow-lg">
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-8 top-16 h-20 rounded-full bg-emerald-400/10 blur-2xl"
+      />
+
+      <div className="relative">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
+          {label}
+        </div>
+
+        <GolfTrophyArt
+          tournamentName={
+            win.tournamentName
+          }
+        />
+
+        <h4 className="mx-auto mt-1 max-w-[220px] text-base font-black leading-5 text-white">
+          {win.tournamentName}
+        </h4>
+
+        <div className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+          {win.season} Champion
+        </div>
+
+        <div className="mt-3 inline-flex items-center rounded-full border border-emerald-700/70 bg-emerald-950/70 px-3 py-1 text-sm font-black text-emerald-200">
+          {formatGolfTrophyScore(
+            win.score,
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function HardwareItem({
@@ -213,6 +568,7 @@ export default function TrophyCase({
   career,
   milestones,
   leagueAwards,
+  tournamentWins = [],
   thresholds,
 }: Props) {
   const isGolf = sport === "golf";
@@ -767,6 +1123,64 @@ export default function TrophyCase({
 
       {activeTab === "seasons" ? (
         <section className="trophy-content-section rounded-3xl border p-5 shadow-sm">
+          {isGolf ? (
+            <div className="mb-7">
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
+                Tournament Trophies
+              </div>
+
+              <div className="mt-1 flex items-end justify-between gap-3">
+                <div>
+                  <h3 className="trophy-section-title text-2xl font-black">
+                    The trophy shelf
+                  </h3>
+
+                  <p className="trophy-section-copy mt-1 text-sm">
+                    Every tournament victory earns its own piece of hardware.
+                  </p>
+                </div>
+
+                {tournamentWins.length > 0 ? (
+                  <div className="shrink-0 rounded-full border border-emerald-800 bg-emerald-950/70 px-3 py-1 text-xs font-black text-emerald-200">
+                    {tournamentWins.length}{" "}
+                    {tournamentWins.length === 1
+                      ? "trophy"
+                      : "trophies"}
+                  </div>
+                ) : null}
+              </div>
+
+              {tournamentWins.length === 0 ? (
+                <div className="mt-5 rounded-2xl border border-dashed border-emerald-900/80 bg-slate-950/40 px-5 py-9 text-center">
+                  <div className="text-4xl">
+                    🏆
+                  </div>
+
+                  <div className="mt-3 font-bold text-white">
+                    The shelf is waiting
+                  </div>
+
+                  <div className="mt-1 text-sm text-slate-400">
+                    Win a Golf tournament to add the first trophy.
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
+                  {tournamentWins.map(
+                    (win) => (
+                      <GolfTournamentTrophy
+                        key={`${win.slateId}-${win.season}`}
+                        win={win}
+                      />
+                    ),
+                  )}
+                </div>
+              )}
+
+              <div className="mt-7 border-t border-emerald-900/70" />
+            </div>
+          ) : null}
+
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className={`trophy-section-kicker text-xs font-bold uppercase tracking-[0.2em] ${

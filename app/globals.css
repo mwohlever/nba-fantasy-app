@@ -7845,3 +7845,157 @@ html
     font-size: 2.35rem;
   }
 }
+
+/* =========================================================
+   UNIFIED DRAFT SEASON STATS CARD
+   NBA / NFL / Golf share this exact geometry.
+   ========================================================= */
+
+.draft-player-card--season {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  column-gap: 0.75rem;
+  row-gap: 0.3rem;
+  align-items: center;
+  padding: 0.75rem;
+}
+
+.draft-player-card--season .draft-player-card-headshot {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  margin: 0;
+}
+
+/*
+ * Remove the main wrapper from layout calculations.
+ * Its children can now participate directly in the card grid.
+ */
+.draft-player-card--season .draft-player-card-main {
+  display: contents;
+}
+
+.draft-player-card--season .draft-player-card-name-row {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.45rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.draft-player-card--season .draft-player-card-name-row strong {
+  min-width: 0;
+  overflow: visible;
+  color: var(--app-text);
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.draft-player-card--season .draft-player-position {
+  flex: 0 0 auto;
+}
+
+.draft-player-card--season .draft-player-card-meta {
+  grid-column: 2;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+/*
+ * Golf, NFL and NBA each already render their four Season
+ * Stats in a grid-cols-4 element. Because the main wrapper
+ * now uses display:contents, that row can span BOTH card
+ * columns instead of being squeezed beside the headshot.
+ */
+.draft-player-card--season .grid.grid-cols-4 {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.35rem;
+}
+
+/*
+ * Whole Season Stats card opens the profile.
+ * No separate action column is needed.
+ */
+.draft-player-card--season .draft-player-card-action {
+  display: none !important;
+}
+
+
+
+
+/* =========================================================
+   FINAL RESEARCH UI POLISH
+   League History and Season Stats share card geometry.
+   ========================================================= */
+
+/*
+ * The unified card shell now applies in both research modes.
+ * League History does not have the professional-season stat
+ * grid, but identity/header spacing stays identical.
+ */
+.draft-player-card--research {
+  min-height: 0;
+}
+
+.draft-player-card--research .draft-player-card-main {
+  min-width: 0;
+}
+
+.draft-player-card--research .draft-player-card-name-row {
+  min-width: 0;
+}
+
+/*
+ * League History previously looked much shorter because it
+ * had the legacy action column. Keep that action compact while
+ * preserving the shared two-column card geometry.
+ */
+.draft-player-card--research:not(.draft-player-card--owned)
+  .draft-player-card-action {
+  align-self: center;
+}
+
+/*
+ * Player History mobile cards were slightly taller than Draft.
+ * Tighten only small screens; desktop tables/cards are unchanged.
+ */
+@media (max-width: 767px) {
+  .player-history-card,
+  [data-player-history-card="true"] {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+}
+
+/*
+ * Sport identity: selected controls should immediately signal
+ * which sport the user is researching.
+ */
+.draft-player-pool--golf .research-active,
+.player-history--golf .research-active {
+  background: rgb(5 150 105);
+  border-color: rgb(52 211 153);
+}
+
+.draft-player-pool--nfl .research-active,
+.player-history--nfl .research-active {
+  background: rgb(2 132 199);
+  border-color: rgb(56 189 248);
+}
+
+.draft-player-pool--nba .research-active,
+.player-history--nba .research-active {
+  background: rgb(234 88 12);
+  border-color: rgb(251 146 60);
+}

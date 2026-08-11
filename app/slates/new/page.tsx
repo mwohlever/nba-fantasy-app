@@ -437,17 +437,46 @@ teamSelections: teams
             slateId,
           );
         } catch (refreshError) {
-          setMessage(
-            `The slate was created, but the tournament field could not be loaded: ${
-              refreshError instanceof Error
-                ? refreshError.message
-                : "Unknown field-sync error."
-            } You can retry from Manage Slates.`
+          const message =
+            refreshError instanceof Error
+              ? refreshError.message
+              : "Unknown field-sync error.";
+
+          const waitingForField =
+            message
+              .toLowerCase()
+              .includes(
+                "tournament field is not available yet",
+              );
+
+          if (!waitingForField) {
+            setMessage(
+              `The slate was created, but the tournament field could not be loaded: ${message} You can retry from Manage Slates.`
+            );
+            return;
+          }
+
+          /*
+           * ESPN sometimes publishes the tournament itself
+           * before its scoreboard endpoint exposes competitors.
+           *
+           * This is a normal pre-tournament state, not a failed
+           * slate creation. The Golf refresh job will retry it.
+           */
+          console.info(
+            "Golf slate created; ESPN field is still pending.",
+            {
+              slateId,
+              tournament:
+                selectedGolfTournament?.name ??
+                "Golf",
+            },
           );
-          return;
         }
 
-        router.push(`/lineups/draft?sport=golf&slateId=${slateId}`);
+        router.push(
+          `/lineups/draft?sport=golf&slateId=${slateId}`,
+        );
         router.refresh();
       } else {
         router.push(`/lineups/draft?sport=${sport}`);

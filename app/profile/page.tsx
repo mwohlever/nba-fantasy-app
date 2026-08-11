@@ -124,6 +124,13 @@ type TeamProfile = {
   milestones: TrophyMilestones;
   milestoneThresholds: MilestoneThresholds;
   leagueAwards: LeagueAward[];
+  tournamentWins?: Array<{
+    slateId: number;
+    tournamentName: string;
+    season: number;
+    date: string;
+    score: number;
+  }>;
   recentSlates: Array<{
     slateId: number;
     slateLabel: string;
@@ -666,6 +673,7 @@ function ProfilePageContent() {
                     }}
                     milestones={profile.milestones}
                     leagueAwards={profile.leagueAwards}
+                    tournamentWins={profile.tournamentWins ?? []}
                     thresholds={profile.milestoneThresholds}
                     />
                   </div>

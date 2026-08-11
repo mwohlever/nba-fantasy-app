@@ -1148,8 +1148,37 @@ export default function LineupBuilder({
           console.error(error);
         });
     } catch (error) {
-      console.error(error);
-      if (!isSilent) alert("Something went wrong while refreshing stats.");
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      const golfFieldIsWaiting =
+        selectedSlate?.sport === "golf" &&
+        errorMessage
+          .toLowerCase()
+          .includes(
+            "tournament field is not available yet",
+          );
+
+      /*
+       * ESPN often publishes the tournament shell before
+       * the player field. For silent Golf auto-refreshes,
+       * this is an expected waiting state rather than an
+       * application error, so do not trigger the Next dev
+       * error overlay.
+       */
+      if (!golfFieldIsWaiting) {
+        console.error(error);
+      }
+
+      if (!isSilent) {
+        alert(
+          golfFieldIsWaiting
+            ? "The tournament is available, but ESPN has not published the field yet."
+            : "Something went wrong while refreshing stats.",
+        );
+      }
     } finally {
       refreshInFlightRef.current = false;
       setIsRefreshingStats(false);
@@ -1382,9 +1411,9 @@ export default function LineupBuilder({
             ? value(currentPlayer)
             : value;
 
-        if (!nextPlayer) {
-          setIsInspectingPlayerFromSlot(false);
-        }
+        setIsInspectingPlayerFromSlot(
+          Boolean(nextPlayer),
+        );
 
         return nextPlayer;
       });
@@ -1850,14 +1879,16 @@ export default function LineupBuilder({
         players={players}
         playerAverageMap={playerAverageMap}
         playerProjections={playerProjections}
+        availablePlayerIdsForSlate={availablePlayerIdsForSlate}
         availablePlayerIdSet={availablePlayerIdSet}
         isAvailabilityLoading={isAvailabilityLoading}
         getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+        setDraftingPlayer={setDraftingPlayerWithSlotRestore}
         handleAssignPlayerToTeam={handleAssignPlayerToTeam}
-        onInspectPlayer={inspectPlayerFromSlot}
+        selectedSeason={selectedSeason}
+        rosterSlots={rosterSlots}
         hidden={isInspectingPlayerFromSlot}
         isAssigningPlayer={isAssigningPlayer}
-        isSaving={isSaving}
       />
 
       <ReadOnlyPlayerModal
