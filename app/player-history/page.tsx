@@ -8,6 +8,7 @@ import {
 
 import AppNav from "@/components/AppNav";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import type {
   Player,
@@ -94,6 +95,32 @@ type PlayerHistoryRow = {
   nfl_receiving_tds_per_game?: number | null;
 
   nfl_fumbles_lost_per_game?: number | null;
+
+  /*
+   * PGA professional season research.
+   */
+  golf_season_tournaments_played?: number | null;
+  golf_season_rounds_played?: number | null;
+
+  golf_season_cuts_made?: number | null;
+  golf_season_cuts_made_pct?: number | null;
+
+  golf_season_wins?: number | null;
+  golf_season_top_5?: number | null;
+  golf_season_top_10?: number | null;
+
+  golf_season_scoring_average?: number | null;
+
+  golf_season_birdies_per_round?: number | null;
+  golf_season_birdie_rate?: number | null;
+  golf_season_bogey_rate?: number | null;
+
+  golf_season_gir_pct?: number | null;
+  golf_season_driving_accuracy_pct?: number | null;
+  golf_season_driving_distance?: number | null;
+  golf_season_putts_per_gir?: number | null;
+
+  golf_season_has_detailed_stats?: boolean;
 };
 
 type SortKey =
@@ -128,7 +155,20 @@ type SortKey =
   | "nfl_targets"
   | "nfl_receptions"
   | "nfl_rec_yd"
-  | "nfl_rec_td";
+  | "nfl_rec_td"
+  | "golf_scoring_avg"
+  | "golf_cuts_pct"
+  | "golf_wins"
+  | "golf_top5"
+  | "golf_top10"
+  | "golf_birdies_round"
+  | "golf_birdie_rate"
+  | "golf_bogey_rate"
+  | "golf_gir"
+  | "golf_drive_acc"
+  | "golf_drive_dist"
+  | "golf_putts_gir"
+  | "golf_events";
 
 type SortDirection =
   | "asc"
@@ -1153,6 +1193,12 @@ function PlayerCompareModal({
   const isGolf =
     sport === "golf";
 
+  const isGolfSeason =
+    sport ===
+      "golf" &&
+    historyMode ===
+      "season";
+
   const isNbaSeason =
     sport ===
       "nba" &&
@@ -1196,7 +1242,232 @@ function PlayerCompareModal({
 
   const metrics:
     CompareMetric[] =
-    isNflSeason
+    isGolfSeason
+      ? [
+          {
+            label:
+              "Scoring Avg",
+            value:
+              (row) =>
+                row.golf_season_scoring_average ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.golf_season_scoring_average,
+                  2,
+                ),
+            better:
+              "low",
+          },
+          {
+            label:
+              "Cuts",
+            value:
+              (row) =>
+                row.golf_season_cuts_made_pct ??
+                null,
+            display:
+              (row) =>
+                row.golf_season_cuts_made_pct ===
+                  null ||
+                row.golf_season_cuts_made_pct ===
+                  undefined
+                  ? "—"
+                  : `${row.golf_season_cuts_made ?? 0}/${row.golf_season_tournaments_played ?? 0} · ${fmt(
+                      row.golf_season_cuts_made_pct,
+                      0,
+                    )}%`,
+            better:
+              "high",
+          },
+          {
+            label:
+              "Wins",
+            value:
+              (row) =>
+                row.golf_season_wins ??
+                0,
+            display:
+              (row) =>
+                String(
+                  row.golf_season_wins ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Top 5",
+            value:
+              (row) =>
+                row.golf_season_top_5 ??
+                0,
+            display:
+              (row) =>
+                String(
+                  row.golf_season_top_5 ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Top 10",
+            value:
+              (row) =>
+                row.golf_season_top_10 ??
+                0,
+            display:
+              (row) =>
+                String(
+                  row.golf_season_top_10 ??
+                    0,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Birdies/R",
+            value:
+              (row) =>
+                row.golf_season_birdies_per_round ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.golf_season_birdies_per_round,
+                  2,
+                ),
+            better:
+              "high",
+          },
+          {
+            label:
+              "Birdie %",
+            value:
+              (row) =>
+                row.golf_season_birdie_rate ??
+                null,
+            display:
+              (row) =>
+                row.golf_season_birdie_rate ===
+                  null ||
+                row.golf_season_birdie_rate ===
+                  undefined
+                  ? "—"
+                  : `${fmt(
+                      row.golf_season_birdie_rate,
+                      1,
+                    )}%`,
+            better:
+              "high",
+          },
+          {
+            label:
+              "Bogey %",
+            value:
+              (row) =>
+                row.golf_season_bogey_rate ??
+                null,
+            display:
+              (row) =>
+                row.golf_season_bogey_rate ===
+                  null ||
+                row.golf_season_bogey_rate ===
+                  undefined
+                  ? "—"
+                  : `${fmt(
+                      row.golf_season_bogey_rate,
+                      1,
+                    )}%`,
+            better:
+              "low",
+          },
+          {
+            label:
+              "GIR",
+            value:
+              (row) =>
+                row.golf_season_gir_pct ??
+                null,
+            display:
+              (row) =>
+                row.golf_season_gir_pct ===
+                  null ||
+                row.golf_season_gir_pct ===
+                  undefined
+                  ? "—"
+                  : `${fmt(
+                      row.golf_season_gir_pct,
+                      1,
+                    )}%`,
+            better:
+              "high",
+          },
+          {
+            label:
+              "Drive Acc",
+            value:
+              (row) =>
+                row.golf_season_driving_accuracy_pct ??
+                null,
+            display:
+              (row) =>
+                row.golf_season_driving_accuracy_pct ===
+                  null ||
+                row.golf_season_driving_accuracy_pct ===
+                  undefined
+                  ? "—"
+                  : `${fmt(
+                      row.golf_season_driving_accuracy_pct,
+                      1,
+                    )}%`,
+            better:
+              "high",
+          },
+          {
+            label:
+              "Drive Dist",
+            value:
+              (row) =>
+                row.golf_season_driving_distance ??
+                null,
+            display:
+              (row) =>
+                row.golf_season_driving_distance ===
+                  null ||
+                row.golf_season_driving_distance ===
+                  undefined
+                  ? "—"
+                  : `${fmt(
+                      row.golf_season_driving_distance,
+                      1,
+                    )} yd`,
+            better:
+              "high",
+          },
+          {
+            label:
+              "Putts/GIR",
+            value:
+              (row) =>
+                row.golf_season_putts_per_gir ??
+                null,
+            display:
+              (row) =>
+                fmt(
+                  row.golf_season_putts_per_gir,
+                  2,
+                ),
+            better:
+              "low",
+          },
+        ]
+      : isNflSeason
       ? [
           {
             label:
@@ -1869,7 +2140,7 @@ function PlayerCompareModal({
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-end justify-center bg-slate-950/70 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-[12000] flex items-start justify-center bg-slate-950/75 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       onMouseDown={
         (
           event,
@@ -1883,7 +2154,7 @@ function PlayerCompareModal({
         }
       }
     >
-      <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-[28px] bg-slate-950 shadow-2xl sm:max-w-5xl sm:rounded-[28px]">
+      <div className="h-[100dvh] max-h-[100dvh] w-full overflow-y-auto rounded-none bg-slate-950 shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-5xl sm:rounded-[28px]">
         <div
           className={`sticky top-0 z-20 border-b bg-slate-950/95 px-4 py-4 text-white backdrop-blur sm:px-6 ${
             isGolf
@@ -2152,7 +2423,7 @@ export default function PlayerHistoryPage() {
     setHistoryMode,
   ] =
     useState<HistoryMode>(
-      "league",
+      "season",
     );
 
   const [
@@ -2269,15 +2540,61 @@ export default function PlayerHistoryPage() {
       false,
     );
 
-    setSortKey(
-      "times_drafted",
-    );
+    /*
+     * Switching sports should preserve the meaning of the
+     * currently selected tab.
+     *
+     * Previously every sport change reset to times_drafted,
+     * which is a League History sort key. Season Stats then
+     * had no meaningful numeric sort until the page reloaded.
+     */
+    if (
+      historyMode ===
+      "season"
+    ) {
+      if (
+        selectedSport ===
+        "golf"
+      ) {
+        setSortKey(
+          "golf_scoring_avg",
+        );
 
-    setSortDirection(
-      "desc",
-    );
+        setSortDirection(
+          "asc",
+        );
+      } else if (
+        selectedSport ===
+        "nfl"
+      ) {
+        setSortKey(
+          "nfl_fp",
+        );
+
+        setSortDirection(
+          "desc",
+        );
+      } else {
+        setSortKey(
+          "season_fantasy_points",
+        );
+
+        setSortDirection(
+          "desc",
+        );
+      }
+    } else {
+      setSortKey(
+        "times_drafted",
+      );
+
+      setSortDirection(
+        "desc",
+      );
+    }
   }, [
     selectedSport,
+    historyMode,
   ]);
 
   useEffect(() => {
@@ -2670,13 +2987,237 @@ export default function PlayerHistoryPage() {
                   };
                 },
               )
-            : (
-                Array.isArray(
-                  rawRows,
+            : historyMode ===
+                  "season" &&
+                selectedSport ===
+                  "golf"
+              ? (
+                  Array.isArray(
+                    rawRows,
+                  )
+                    ? rawRows
+                    : []
+                ).map(
+                  (
+                    row:
+                      any,
+                  ) => ({
+                    player_id:
+                      Number(
+                        row.player_id,
+                      ),
+
+                    player_name:
+                      String(
+                        row.player_name ??
+                          "Unknown Golfer",
+                      ),
+
+                    nba_player_id:
+                      null,
+
+                    nfl_player_id:
+                      null,
+
+                    espn_golf_player_id:
+                      row.espn_golf_player_id ??
+                      null,
+
+                    headshot_url:
+                      row.headshot_url ??
+                      null,
+
+                    country:
+                      row.country ??
+                      null,
+
+                    owgr_rank:
+                      row.owgr_rank ===
+                        null ||
+                      row.owgr_rank ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.owgr_rank,
+                          ),
+
+                    /*
+                     * Legacy fields stay structurally valid.
+                     * Golf Season Stats UI does not interpret
+                     * these as 111 league-history values.
+                     */
+                    times_drafted:
+                      0,
+
+                    avg_score:
+                      Number(
+                        row.scoring_average ??
+                          0,
+                      ),
+
+                    high_score:
+                      Number(
+                        row.scoring_average ??
+                          0,
+                      ),
+
+                    low_score:
+                      Number(
+                        row.scoring_average ??
+                          0,
+                      ),
+
+                    winning_lineups:
+                      0,
+
+                    runner_up_lineups:
+                      0,
+
+                    podium_lineups:
+                      0,
+
+                    avg_finish:
+                      null,
+
+                    golf_season_tournaments_played:
+                      Number(
+                        row.tournaments_played ??
+                          0,
+                      ),
+
+                    golf_season_rounds_played:
+                      Number(
+                        row.rounds_played ??
+                          0,
+                      ),
+
+                    golf_season_cuts_made:
+                      Number(
+                        row.cuts_made ??
+                          0,
+                      ),
+
+                    golf_season_cuts_made_pct:
+                      row.cuts_made_pct ===
+                        null ||
+                      row.cuts_made_pct ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.cuts_made_pct,
+                          ),
+
+                    golf_season_wins:
+                      Number(
+                        row.wins ??
+                          0,
+                      ),
+
+                    golf_season_top_5:
+                      Number(
+                        row.top_5_finishes ??
+                          0,
+                      ),
+
+                    golf_season_top_10:
+                      Number(
+                        row.top_10_finishes ??
+                          0,
+                      ),
+
+                    golf_season_scoring_average:
+                      row.scoring_average ===
+                        null ||
+                      row.scoring_average ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.scoring_average,
+                          ),
+
+                    golf_season_birdies_per_round:
+                      row.birdies_per_round ===
+                        null ||
+                      row.birdies_per_round ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.birdies_per_round,
+                          ),
+
+                    golf_season_birdie_rate:
+                      row.birdie_rate ===
+                        null ||
+                      row.birdie_rate ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.birdie_rate,
+                          ),
+
+                    golf_season_bogey_rate:
+                      row.bogey_rate ===
+                        null ||
+                      row.bogey_rate ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.bogey_rate,
+                          ),
+
+                    golf_season_gir_pct:
+                      row.greens_in_reg_pct ===
+                        null ||
+                      row.greens_in_reg_pct ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.greens_in_reg_pct,
+                          ),
+
+                    golf_season_driving_accuracy_pct:
+                      row.driving_accuracy_pct ===
+                        null ||
+                      row.driving_accuracy_pct ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.driving_accuracy_pct,
+                          ),
+
+                    golf_season_driving_distance:
+                      row.driving_distance ===
+                        null ||
+                      row.driving_distance ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.driving_distance,
+                          ),
+
+                    golf_season_putts_per_gir:
+                      row.putts_per_gir ===
+                        null ||
+                      row.putts_per_gir ===
+                        undefined
+                        ? null
+                        : Number(
+                            row.putts_per_gir,
+                          ),
+
+                    golf_season_has_detailed_stats:
+                      Boolean(
+                        row.has_detailed_stats,
+                      ),
+                  }),
                 )
-                  ? rawRows
-                  : []
-              );
+              : (
+                  Array.isArray(
+                    rawRows,
+                  )
+                    ? rawRows
+                    : []
+                );
 
       setRows(
         nextRows,
@@ -2721,6 +3262,9 @@ export default function PlayerHistoryPage() {
         "high_score",
         "low_score",
         "avg_finish",
+        "golf_scoring_avg",
+        "golf_bogey_rate",
+        "golf_putts_gir",
       ].includes(
         key,
       )
@@ -2943,84 +3487,240 @@ export default function PlayerHistoryPage() {
 
             case "season_fantasy_points":
               comparison =
-                (
+                Number(
                   a.season_fantasy_points ??
-                  0
+                  0,
                 ) -
-                (
+                Number(
                   b.season_fantasy_points ??
-                  0
+                  0,
                 );
               break;
 
             case "season_points":
               comparison =
-                (
+                Number(
                   a.season_points ??
-                  0
+                  0,
                 ) -
-                (
+                Number(
                   b.season_points ??
-                  0
+                  0,
                 );
               break;
 
             case "season_rebounds":
               comparison =
-                (
+                Number(
                   a.season_rebounds ??
-                  0
+                  0,
                 ) -
-                (
+                Number(
                   b.season_rebounds ??
-                  0
+                  0,
                 );
               break;
 
             case "season_assists":
               comparison =
-                (
+                Number(
                   a.season_assists ??
-                  0
+                  0,
                 ) -
-                (
+                Number(
                   b.season_assists ??
-                  0
+                  0,
                 );
               break;
 
             case "season_steals":
               comparison =
-                (
+                Number(
                   a.season_steals ??
-                  0
+                  0,
                 ) -
-                (
+                Number(
                   b.season_steals ??
-                  0
+                  0,
                 );
               break;
 
             case "season_blocks":
               comparison =
-                (
+                Number(
                   a.season_blocks ??
-                  0
+                  0,
                 ) -
-                (
+                Number(
                   b.season_blocks ??
-                  0
+                  0,
                 );
               break;
 
             case "season_turnovers":
               comparison =
-                (
+                Number(
                   a.season_turnovers ??
+                  0,
+                ) -
+                Number(
+                  b.season_turnovers ??
+                  0,
+                );
+              break;
+
+            case "golf_scoring_avg":
+              comparison =
+                (
+                  a.golf_season_scoring_average ??
+                  999
+                ) -
+                (
+                  b.golf_season_scoring_average ??
+                  999
+                );
+              break;
+
+            case "golf_cuts_pct":
+              comparison =
+                (
+                  a.golf_season_cuts_made_pct ??
+                  -1
+                ) -
+                (
+                  b.golf_season_cuts_made_pct ??
+                  -1
+                );
+              break;
+
+            case "golf_wins":
+              comparison =
+                (
+                  a.golf_season_wins ??
                   0
                 ) -
                 (
-                  b.season_turnovers ??
+                  b.golf_season_wins ??
+                  0
+                );
+              break;
+
+            case "golf_top5":
+              comparison =
+                (
+                  a.golf_season_top_5 ??
+                  0
+                ) -
+                (
+                  b.golf_season_top_5 ??
+                  0
+                );
+              break;
+
+            case "golf_top10":
+              comparison =
+                (
+                  a.golf_season_top_10 ??
+                  0
+                ) -
+                (
+                  b.golf_season_top_10 ??
+                  0
+                );
+              break;
+
+            case "golf_birdies_round":
+              comparison =
+                (
+                  a.golf_season_birdies_per_round ??
+                  -1
+                ) -
+                (
+                  b.golf_season_birdies_per_round ??
+                  -1
+                );
+              break;
+
+            case "golf_birdie_rate":
+              comparison =
+                (
+                  a.golf_season_birdie_rate ??
+                  -1
+                ) -
+                (
+                  b.golf_season_birdie_rate ??
+                  -1
+                );
+              break;
+
+            case "golf_bogey_rate":
+              comparison =
+                (
+                  a.golf_season_bogey_rate ??
+                  999
+                ) -
+                (
+                  b.golf_season_bogey_rate ??
+                  999
+                );
+              break;
+
+            case "golf_gir":
+              comparison =
+                (
+                  a.golf_season_gir_pct ??
+                  -1
+                ) -
+                (
+                  b.golf_season_gir_pct ??
+                  -1
+                );
+              break;
+
+            case "golf_drive_acc":
+              comparison =
+                (
+                  a.golf_season_driving_accuracy_pct ??
+                  -1
+                ) -
+                (
+                  b.golf_season_driving_accuracy_pct ??
+                  -1
+                );
+              break;
+
+            case "golf_drive_dist":
+              comparison =
+                (
+                  a.golf_season_driving_distance ??
+                  -1
+                ) -
+                (
+                  b.golf_season_driving_distance ??
+                  -1
+                );
+              break;
+
+            case "golf_putts_gir":
+              comparison =
+                (
+                  a.golf_season_putts_per_gir ??
+                  999
+                ) -
+                (
+                  b.golf_season_putts_per_gir ??
+                  999
+                );
+              break;
+
+            case "golf_events":
+              comparison =
+                (
+                  a.golf_season_tournaments_played ??
+                  0
+                ) -
+                (
+                  b.golf_season_tournaments_played ??
                   0
                 );
               break;
@@ -3563,7 +4263,8 @@ export default function PlayerHistoryPage() {
       nfl_player_id:
         row.nfl_player_id,
       position_group:
-        "G",
+        row.position_group ??
+        "",
       is_active:
         true,
       is_playing_today:
@@ -3616,23 +4317,6 @@ export default function PlayerHistoryPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                void loadPlayerHistory()
-              }
-              className={
-                isGolf
-                  ? "rounded-xl border border-emerald-300/40 bg-white/10 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/20"
-                  : "rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200"
-              }
-            >
-              Refresh{" "}
-              {isGolf
-                ? "Golfer"
-                : "Player"}{" "}
-              History
-            </button>
           </div>
         </section>
 
@@ -3691,13 +4375,19 @@ export default function PlayerHistoryPage() {
 
                   setSortKey(
                     selectedSport ===
-                      "nfl"
-                      ? "nfl_fp"
-                      : "season_fantasy_points",
+                      "golf"
+                      ? "golf_scoring_avg"
+                      : selectedSport ===
+                          "nfl"
+                        ? "nfl_fp"
+                        : "season_fantasy_points",
                   );
 
                   setSortDirection(
-                    "desc",
+                    selectedSport ===
+                      "golf"
+                      ? "asc"
+                      : "desc",
                   );
                 }}
                 className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${
@@ -3900,7 +4590,8 @@ export default function PlayerHistoryPage() {
 
           {!isLoading &&
           filteredRows.length >
-            0 ? (
+            0 &&
+          compareMode ? (
             <div className="mb-4 rounded-2xl border border-emerald-700/50 bg-slate-900/80 p-3">
               {!compareMode ? (
                 <button
@@ -4015,6 +4706,110 @@ export default function PlayerHistoryPage() {
             </div>
           ) : null}
 
+          {historyMode ===
+            "league" &&
+          !isGolf &&
+          !isLoading &&
+          filteredRows.length >
+            0 ? (
+            <div className="mb-4 flex items-end gap-2 md:hidden">
+              <div className="min-w-0 flex-1">
+                <label
+                  htmlFor="league-mobile-sort"
+                  className="mb-2 block text-sm font-medium text-slate-700"
+                >
+                  Sort by
+                </label>
+
+                <select
+                  id="league-mobile-sort"
+                  value={
+                    sortKey
+                  }
+                  onChange={
+                    (
+                      event,
+                    ) => {
+                      const nextKey =
+                        event.target.value as SortKey;
+
+                      setSortKey(
+                        nextKey,
+                      );
+
+                      setSortDirection(
+                        defaultDirection(
+                          nextKey,
+                        ),
+                      );
+                    }
+                  }
+                  className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition ${
+                    selectedSport ===
+                    "nba"
+                      ? "focus:border-orange-300"
+                      : "focus:border-sky-300"
+                  }`}
+                >
+                  <option value="times_drafted">
+                    Times Drafted
+                  </option>
+
+                  <option value="avg_score">
+                    Avg Score
+                  </option>
+
+                  <option value="high_score">
+                    Best Score
+                  </option>
+
+                  <option value="winning_lineups">
+                    Wins
+                  </option>
+
+                  <option value="runner_up_lineups">
+                    Runner-Ups
+                  </option>
+
+                  <option value="avg_finish">
+                    Avg Finish
+                  </option>
+
+                  <option value="player_name">
+                    Player Name
+                  </option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSortDirection(
+                    (
+                      previous,
+                    ) =>
+                      previous ===
+                      "asc"
+                        ? "desc"
+                        : "asc",
+                  )
+                }
+                className={`flex h-[46px] w-[52px] shrink-0 items-center justify-center rounded-xl border bg-white text-xl font-black ${
+                  selectedSport ===
+                  "nba"
+                    ? "border-orange-200 text-orange-700"
+                    : "border-sky-200 text-sky-700"
+                }`}
+                aria-label="Reverse sort direction"
+              >
+                {sortDirection ===
+                "asc"
+                  ? "↑"
+                  : "↓"}
+              </button>
+            </div>
+          ) : null}
+
           {isLoading ? (
             <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               Loading{" "}
@@ -4036,6 +4831,739 @@ export default function PlayerHistoryPage() {
                 : "player"}{" "}
               history found.
             </div>
+          ) : historyMode ===
+              "season" &&
+            selectedSport ===
+              "golf" ? (
+            <>
+              <div className="mb-4 flex items-end gap-2 md:hidden">
+                <div className="min-w-0 flex-1">
+                  <label
+                    htmlFor="golf-season-mobile-sort"
+                    className="mb-2 block text-sm font-medium text-slate-700"
+                  >
+                    Sort by
+                  </label>
+
+                  <select
+                    id="golf-season-mobile-sort"
+                    value={
+                      sortKey
+                    }
+                    onChange={
+                      (
+                        event,
+                      ) => {
+                        const nextKey =
+                          event.target.value as SortKey;
+
+                        setSortKey(
+                          nextKey,
+                        );
+
+                        setSortDirection(
+                          [
+                            "golf_scoring_avg",
+                            "golf_bogey_rate",
+                            "golf_putts_gir",
+                            "player_name",
+                          ].includes(
+                            nextKey,
+                          )
+                            ? "asc"
+                            : "desc",
+                        );
+                      }
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-300"
+                  >
+                    <option value="golf_scoring_avg">
+                      Scoring Average
+                    </option>
+
+                    <option value="golf_cuts_pct">
+                      Cuts Made %
+                    </option>
+
+                    <option value="golf_wins">
+                      Wins
+                    </option>
+
+                    <option value="golf_top5">
+                      Top 5s
+                    </option>
+
+                    <option value="golf_top10">
+                      Top 10s
+                    </option>
+
+                    <option value="golf_birdies_round">
+                      Birdies / Round
+                    </option>
+
+                    <option value="golf_birdie_rate">
+                      Birdie %
+                    </option>
+
+                    <option value="golf_bogey_rate">
+                      Bogey %
+                    </option>
+
+                    <option value="golf_gir">
+                      GIR %
+                    </option>
+
+                    <option value="golf_drive_acc">
+                      Driving Accuracy
+                    </option>
+
+                    <option value="golf_drive_dist">
+                      Driving Distance
+                    </option>
+
+                    <option value="golf_putts_gir">
+                      Putts / GIR
+                    </option>
+
+                    <option value="golf_events">
+                      Events Played
+                    </option>
+
+                    <option value="player_name">
+                      Golfer Name
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection(
+                      (
+                        previous,
+                      ) =>
+                        previous ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    )
+                  }
+                  className="flex h-[46px] w-[52px] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl font-black text-emerald-800"
+                  aria-label="Reverse sort direction"
+                >
+                  {sortDirection ===
+                  "asc"
+                    ? "↑"
+                    : "↓"}
+                </button>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => {
+                    const selected =
+                      isCompareSelected(
+                        row,
+                      );
+
+                    const dynamicStat =
+                      sortKey ===
+                        "golf_wins"
+                        ? {
+                            label:
+                              "WINS",
+                            value:
+                              String(
+                                row.golf_season_wins ??
+                                  0,
+                              ),
+                            key:
+                              "golf_wins" as SortKey,
+                          }
+                        : sortKey ===
+                            "golf_top5"
+                          ? {
+                              label:
+                                "TOP 5",
+                              value:
+                                String(
+                                  row.golf_season_top_5 ??
+                                    0,
+                                ),
+                              key:
+                                "golf_top5" as SortKey,
+                            }
+                          : sortKey ===
+                              "golf_birdie_rate"
+                            ? {
+                                label:
+                                  "BIRD %",
+                                value:
+                                  row.golf_season_birdie_rate ===
+                                    null ||
+                                  row.golf_season_birdie_rate ===
+                                    undefined
+                                    ? "—"
+                                    : `${fmt(
+                                        row.golf_season_birdie_rate,
+                                        1,
+                                      )}%`,
+                                key:
+                                  "golf_birdie_rate" as SortKey,
+                              }
+                            : sortKey ===
+                                "golf_bogey_rate"
+                              ? {
+                                  label:
+                                    "BOGEY %",
+                                  value:
+                                    row.golf_season_bogey_rate ===
+                                      null ||
+                                    row.golf_season_bogey_rate ===
+                                      undefined
+                                      ? "—"
+                                      : `${fmt(
+                                          row.golf_season_bogey_rate,
+                                          1,
+                                        )}%`,
+                                  key:
+                                    "golf_bogey_rate" as SortKey,
+                                }
+                              : sortKey ===
+                                  "golf_drive_acc"
+                                ? {
+                                    label:
+                                      "DRV ACC",
+                                    value:
+                                      row.golf_season_driving_accuracy_pct ===
+                                        null ||
+                                      row.golf_season_driving_accuracy_pct ===
+                                        undefined
+                                        ? "—"
+                                        : `${fmt(
+                                            row.golf_season_driving_accuracy_pct,
+                                            1,
+                                          )}%`,
+                                    key:
+                                      "golf_drive_acc" as SortKey,
+                                  }
+                                : sortKey ===
+                                    "golf_drive_dist"
+                                  ? {
+                                      label:
+                                        "DRV DIST",
+                                      value:
+                                        row.golf_season_driving_distance ===
+                                          null ||
+                                        row.golf_season_driving_distance ===
+                                          undefined
+                                          ? "—"
+                                          : fmt(
+                                              row.golf_season_driving_distance,
+                                              1,
+                                            ),
+                                      key:
+                                        "golf_drive_dist" as SortKey,
+                                    }
+                                  : sortKey ===
+                                      "golf_putts_gir"
+                                    ? {
+                                        label:
+                                          "PUTTS/GIR",
+                                        value:
+                                          fmt(
+                                            row.golf_season_putts_per_gir,
+                                            2,
+                                          ),
+                                        key:
+                                          "golf_putts_gir" as SortKey,
+                                      }
+                                    : sortKey ===
+                                        "golf_events"
+                                      ? {
+                                          label:
+                                            "EVENTS",
+                                          value:
+                                            String(
+                                              row.golf_season_tournaments_played ??
+                                                0,
+                                            ),
+                                          key:
+                                            "golf_events" as SortKey,
+                                        }
+                                      : {
+                                          label:
+                                            "GIR",
+                                          value:
+                                            row.golf_season_gir_pct ===
+                                              null ||
+                                            row.golf_season_gir_pct ===
+                                              undefined
+                                              ? "—"
+                                              : `${fmt(
+                                                  row.golf_season_gir_pct,
+                                                  1,
+                                                )}%`,
+                                          key:
+                                            "golf_gir" as SortKey,
+                                        };
+
+                    const scoringActive =
+                      sortKey ===
+                      "golf_scoring_avg";
+
+                    const cutsActive =
+                      sortKey ===
+                      "golf_cuts_pct";
+
+                    const top10Active =
+                      sortKey ===
+                      "golf_top10";
+
+                    const birdiesActive =
+                      sortKey ===
+                      "golf_birdies_round";
+
+                    const dynamicActive =
+                      dynamicStat.key ===
+                      sortKey;
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-3.5 text-left shadow-sm transition ${
+                          selected
+                            ? "border-emerald-400 ring-2 ring-emerald-300/50"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        {compareMode &&
+                        selected ? (
+                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-black text-white">
+                            ✓
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                            {row.headshot_url ||
+                            row.espn_golf_player_id ? (
+                              <img
+                                src={
+                                  row.headshot_url ??
+                                  `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                                }
+                                alt={
+                                  row.player_name
+                                }
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                ⛳
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate pr-7 font-black text-slate-950">
+                              {
+                                row.player_name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              {row.owgr_rank
+                                ? `OWGR #${row.owgr_rank}`
+                                : "OWGR —"}
+                              {" · "}
+                              {
+                                row.golf_season_tournaments_played ??
+                                0
+                              }{" "}
+                              events
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-4 gap-1 border-t border-slate-100 pt-2 text-center">
+                          {[
+                            {
+                              label:
+                                "AVG",
+                              value: fmt(
+                                row.golf_season_scoring_average,
+                                2,
+                              ),
+                              active:
+                                scoringActive,
+                            },
+                            {
+                              label:
+                                "CUTS",
+                              value:
+                                row.golf_season_cuts_made_pct ===
+                                  null ||
+                                row.golf_season_cuts_made_pct ===
+                                  undefined
+                                  ? "—"
+                                  : `${fmt(
+                                      row.golf_season_cuts_made_pct,
+                                      0,
+                                    )}%`,
+                              active:
+                                cutsActive,
+                            },
+                            {
+                              label:
+                                "BIRD/R",
+                              value: fmt(
+                                row.golf_season_birdies_per_round,
+                                2,
+                              ),
+                              active:
+                                birdiesActive,
+                            },
+                            {
+                              label:
+                                dynamicStat.label,
+                              value:
+                                dynamicStat.value,
+                              active:
+                                dynamicActive,
+                            },
+                          ].map(
+                            (
+                              stat,
+                            ) => (
+                              <div
+                                key={
+                                  stat.label
+                                }
+                                className={`rounded-lg border px-1 py-1.5 ${
+                                  stat.active
+                                    ? "border-emerald-400 bg-emerald-50"
+                                    : "border-transparent bg-slate-50"
+                                }`}
+                              >
+                                <div
+                                  className={`text-[13px] font-black ${
+                                    stat.active
+                                      ? "text-emerald-700"
+                                      : "text-slate-900"
+                                  }`}
+                                >
+                                  {
+                                    stat.value
+                                  }
+                                </div>
+
+                                <div
+                                  className={`text-[9px] font-bold uppercase ${
+                                    stat.active
+                                      ? "text-emerald-700"
+                                      : "text-slate-400"
+                                  }`}
+                                >
+                                  {
+                                    stat.label
+                                  }
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[1450px] w-full border-collapse text-sm">
+                  <thead className="bg-emerald-950 text-left text-white">
+                    <tr>
+                      <th className="px-4 py-3">
+                        {headerButton(
+                          "Golfer",
+                          "player_name",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        OWGR
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Avg",
+                          "golf_scoring_avg",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Cuts %",
+                          "golf_cuts_pct",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Wins",
+                          "golf_wins",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Top 5",
+                          "golf_top5",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Top 10",
+                          "golf_top10",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Bird/R",
+                          "golf_birdies_round",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Bird %",
+                          "golf_birdie_rate",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Bogey %",
+                          "golf_bogey_rate",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "GIR %",
+                          "golf_gir",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Drv Acc",
+                          "golf_drive_acc",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Drv Dist",
+                          "golf_drive_dist",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Putts/GIR",
+                          "golf_putts_gir",
+                        )}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredRows.map(
+                      (
+                        row,
+                      ) => (
+                        <tr
+                          key={
+                            row.player_id
+                          }
+                          className={`border-t border-slate-100 ${
+                            isCompareSelected(
+                              row,
+                            )
+                              ? "bg-emerald-50"
+                              : "hover:bg-emerald-50/40"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePlayerHistoryRowClick(
+                                  row,
+                                )
+                              }
+                              className="flex items-center gap-2 font-bold text-emerald-800"
+                            >
+                              <div className="h-8 w-8 overflow-hidden rounded-full bg-slate-100">
+                                {row.headshot_url ||
+                                row.espn_golf_player_id ? (
+                                  <img
+                                    src={
+                                      row.headshot_url ??
+                                      `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                                    }
+                                    alt={
+                                      row.player_name
+                                    }
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center">
+                                    ⛳
+                                  </div>
+                                )}
+                              </div>
+
+                              {
+                                row.player_name
+                              }
+                            </button>
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {row.owgr_rank
+                              ? `#${row.owgr_rank}`
+                              : "—"}
+                          </td>
+
+                          <td className="px-3 py-3 font-black">
+                            {fmt(
+                              row.golf_season_scoring_average,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {row.golf_season_cuts_made_pct ===
+                              null ||
+                            row.golf_season_cuts_made_pct ===
+                              undefined
+                              ? "—"
+                              : `${fmt(
+                                  row.golf_season_cuts_made_pct,
+                                  1,
+                                )}%`}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {
+                              row.golf_season_wins ??
+                              0
+                            }
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {
+                              row.golf_season_top_5 ??
+                              0
+                            }
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {
+                              row.golf_season_top_10 ??
+                              0
+                            }
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.golf_season_birdies_per_round,
+                              2,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {row.golf_season_birdie_rate ===
+                              null ||
+                            row.golf_season_birdie_rate ===
+                              undefined
+                              ? "—"
+                              : `${fmt(
+                                  row.golf_season_birdie_rate,
+                                  1,
+                                )}%`}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {row.golf_season_bogey_rate ===
+                              null ||
+                            row.golf_season_bogey_rate ===
+                              undefined
+                              ? "—"
+                              : `${fmt(
+                                  row.golf_season_bogey_rate,
+                                  1,
+                                )}%`}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {row.golf_season_gir_pct ===
+                              null ||
+                            row.golf_season_gir_pct ===
+                              undefined
+                              ? "—"
+                              : `${fmt(
+                                  row.golf_season_gir_pct,
+                                  1,
+                                )}%`}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {row.golf_season_driving_accuracy_pct ===
+                              null ||
+                            row.golf_season_driving_accuracy_pct ===
+                              undefined
+                              ? "—"
+                              : `${fmt(
+                                  row.golf_season_driving_accuracy_pct,
+                                  1,
+                                )}%`}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.golf_season_driving_distance,
+                              1,
+                            )}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {fmt(
+                              row.golf_season_putts_per_gir,
+                              2,
+                            )}
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           ) : historyMode ===
               "season" &&
             selectedSport ===
@@ -4163,7 +5691,7 @@ export default function PlayerHistoryPage() {
                         row,
                       );
 
-                    const stats =
+                    const fixedStats =
                       position ===
                       "QB"
                         ? [
@@ -4185,81 +5713,162 @@ export default function PlayerHistoryPage() {
                             },
                             {
                               label:
-                                "INT",
-                              value:
-                                row.nfl_passing_ints_per_game,
-                              key:
-                                "nfl_int" as SortKey,
-                            },
-                            {
-                              label:
                                 "RUSH",
                               value:
                                 row.nfl_rushing_yards_per_game,
                               key:
                                 "nfl_rush_yd" as SortKey,
                             },
-                            {
+                          ]
+                        : position ===
+                            "RB"
+                          ? [
+                              {
+                                label:
+                                  "RUSH",
+                                value:
+                                  row.nfl_rushing_yards_per_game,
+                                key:
+                                  "nfl_rush_yd" as SortKey,
+                              },
+                              {
+                                label:
+                                  "TGT",
+                                value:
+                                  row.nfl_receiving_targets_per_game,
+                                key:
+                                  "nfl_targets" as SortKey,
+                              },
+                              {
+                                label:
+                                  "REC",
+                                value:
+                                  row.nfl_receptions_per_game,
+                                key:
+                                  "nfl_receptions" as SortKey,
+                              },
+                            ]
+                          : [
+                              {
+                                label:
+                                  "TGT",
+                                value:
+                                  row.nfl_receiving_targets_per_game,
+                                key:
+                                  "nfl_targets" as SortKey,
+                              },
+                              {
+                                label:
+                                  "REC",
+                                value:
+                                  row.nfl_receptions_per_game,
+                                key:
+                                  "nfl_receptions" as SortKey,
+                              },
+                              {
+                                label:
+                                  "REC YD",
+                                value:
+                                  row.nfl_receiving_yards_per_game,
+                                key:
+                                  "nfl_rec_yd" as SortKey,
+                              },
+                            ];
+
+                    const nflDynamicStat =
+                      sortKey ===
+                      "nfl_int"
+                        ? {
+                            label:
+                              "INT",
+                            value:
+                              row.nfl_passing_ints_per_game,
+                            key:
+                              "nfl_int" as SortKey,
+                          }
+                        : sortKey ===
+                            "nfl_rush_td"
+                          ? {
                               label:
                                 "R TD",
                               value:
                                 row.nfl_rushing_tds_per_game,
                               key:
                                 "nfl_rush_td" as SortKey,
-                            },
-                          ]
-                        : [
-                            {
-                              label:
-                                "TGT",
-                              value:
-                                row.nfl_receiving_targets_per_game,
-                              key:
-                                "nfl_targets" as SortKey,
-                            },
-                            {
-                              label:
-                                "REC",
-                              value:
-                                row.nfl_receptions_per_game,
-                              key:
-                                "nfl_receptions" as SortKey,
-                            },
-                            {
-                              label:
-                                "REC YD",
-                              value:
-                                row.nfl_receiving_yards_per_game,
-                              key:
-                                "nfl_rec_yd" as SortKey,
-                            },
-                            {
-                              label:
-                                "RUSH",
-                              value:
-                                row.nfl_rushing_yards_per_game,
-                              key:
-                                "nfl_rush_yd" as SortKey,
-                            },
-                            {
-                              label:
-                                "TD",
-                              value:
-                                (
-                                  row.nfl_receiving_tds_per_game ??
-                                  0
-                                ) +
-                                (
-                                  row.nfl_rushing_tds_per_game ??
-                                  0
-                                ),
-                              key:
-                                sortKey ===
-                                "nfl_rush_td"
-                                  ? "nfl_rush_td" as SortKey
-                                  : "nfl_rec_td" as SortKey,
-                            },
-                          ];
+                            }
+                          : sortKey ===
+                              "nfl_rec_td"
+                            ? {
+                                label:
+                                  "REC TD",
+                                value:
+                                  row.nfl_receiving_tds_per_game,
+                                key:
+                                  "nfl_rec_td" as SortKey,
+                              }
+                            : sortKey ===
+                                "nfl_rec_yd"
+                              ? {
+                                  label:
+                                    "REC YD",
+                                  value:
+                                    row.nfl_receiving_yards_per_game,
+                                  key:
+                                    "nfl_rec_yd" as SortKey,
+                                }
+                              : sortKey ===
+                                  "nfl_receptions"
+                                ? {
+                                    label:
+                                      "REC",
+                                    value:
+                                      row.nfl_receptions_per_game,
+                                    key:
+                                      "nfl_receptions" as SortKey,
+                                  }
+                                : sortKey ===
+                                    "nfl_targets"
+                                  ? {
+                                      label:
+                                        "TGT",
+                                      value:
+                                        row.nfl_receiving_targets_per_game,
+                                      key:
+                                        "nfl_targets" as SortKey,
+                                    }
+                                  : sortKey ===
+                                      "nfl_pass_td"
+                                    ? {
+                                        label:
+                                          "P TD",
+                                        value:
+                                          row.nfl_passing_tds_per_game,
+                                        key:
+                                          "nfl_pass_td" as SortKey,
+                                      }
+                                    : sortKey ===
+                                        "nfl_pass_yd"
+                                      ? {
+                                          label:
+                                            "PASS",
+                                          value:
+                                            row.nfl_passing_yards_per_game,
+                                          key:
+                                            "nfl_pass_yd" as SortKey,
+                                        }
+                                      : {
+                                          label:
+                                            "FP/G",
+                                          value:
+                                            row.nfl_fantasy_points_per_game,
+                                          key:
+                                            "nfl_fp" as SortKey,
+                                        };
+
+                    const stats = [
+                      ...fixedStats,
+                      nflDynamicStat,
+                    ];
 
                     return (
                       <button
@@ -4333,7 +5942,7 @@ export default function PlayerHistoryPage() {
                           </div>
                         </div>
 
-                        <div className="mt-3 grid grid-cols-5 gap-1 text-center">
+                        <div className="mt-3 grid grid-cols-4 gap-1 text-center">
                           {stats.map(
                             (
                               stat,
@@ -4655,7 +6264,7 @@ export default function PlayerHistoryPage() {
                         );
                       }
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-orange-300"
                   >
                     <option value="season_fantasy_points">
                       Fantasy Points
@@ -4764,11 +6373,11 @@ export default function PlayerHistoryPage() {
                               }
                             : {
                                 label:
-                                  "FP",
+                                  "AST",
                                 value:
-                                  row.season_fantasy_points,
+                                  row.season_assists,
                                 key:
-                                  "season_fantasy_points" as SortKey,
+                                  "season_assists" as SortKey,
                               };
 
                     return (
@@ -4777,24 +6386,20 @@ export default function PlayerHistoryPage() {
                           row.player_id
                         }
                         type="button"
-                        onClick={() => {
-                          if (
-                            compareMode
-                          ) {
-                            toggleComparePlayer(
-                              row,
-                            );
-                          }
-                        }}
-                        className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-3.5 text-left shadow-sm transition ${
                           selected
-                            ? "border-sky-400 ring-2 ring-sky-300/60"
+                            ? "border-orange-400 ring-2 ring-orange-300/60"
                             : "border-slate-200"
                         }`}
                       >
                         {compareMode &&
                         selected ? (
-                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-xs font-black text-white">
+                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-orange-600 text-xs font-black text-white">
                             ✓
                           </div>
                         ) : null}
@@ -4814,7 +6419,7 @@ export default function PlayerHistoryPage() {
                           />
 
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-black text-slate-950">
+                            <div className="truncate pr-7 font-black text-slate-950">
                               {
                                 row.player_name
                               }
@@ -4832,30 +6437,18 @@ export default function PlayerHistoryPage() {
                                 "NBA"}
                             </div>
                           </div>
-
-                          <div className="text-right">
-                            <div
-                              className={`text-xl font-black ${
-                                sortKey ===
-                                "season_fantasy_points"
-                                  ? "text-sky-800"
-                                  : "text-slate-950"
-                              }`}
-                            >
-                              {fmt(
-                                row.season_fantasy_points,
-                                1,
-                              )}
-                            </div>
-
-                            <div className="text-[10px] font-bold uppercase text-slate-400">
-                              FP
-                            </div>
-                          </div>
                         </div>
 
-                        <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                        <div className="mt-3 grid grid-cols-4 gap-1 border-t border-slate-100 pt-2 text-center">
                           {[
+                            {
+                              label:
+                                "FP",
+                              value:
+                                row.season_fantasy_points,
+                              key:
+                                "season_fantasy_points" as SortKey,
+                            },
                             {
                               label:
                                 "PTS",
@@ -4871,14 +6464,6 @@ export default function PlayerHistoryPage() {
                                 row.season_rebounds,
                               key:
                                 "season_rebounds" as SortKey,
-                            },
-                            {
-                              label:
-                                "AST",
-                              value:
-                                row.season_assists,
-                              key:
-                                "season_assists" as SortKey,
                             },
                             {
                               label:
@@ -4900,16 +6485,16 @@ export default function PlayerHistoryPage() {
                               return (
                                 <div
                                   key={`${row.player_id}-${stat.label}-${index}`}
-                                  className={`rounded-xl px-1.5 py-1.5 ${
+                                  className={`rounded-lg border px-1 py-1.5 ${
                                     active
-                                      ? "border border-sky-300 bg-sky-50"
-                                      : ""
+                                      ? "border-orange-400 bg-orange-50"
+                                      : "border-transparent bg-slate-50"
                                   }`}
                                 >
                                   <div
-                                    className={`font-black ${
+                                    className={`text-[13px] font-black ${
                                       active
-                                        ? "text-sky-800"
+                                        ? "text-orange-700"
                                         : "text-slate-900"
                                     }`}
                                   >
@@ -4920,9 +6505,9 @@ export default function PlayerHistoryPage() {
                                   </div>
 
                                   <div
-                                    className={`text-[10px] font-bold uppercase ${
+                                    className={`text-[9px] font-bold uppercase ${
                                       active
-                                        ? "text-sky-700"
+                                        ? "text-orange-700"
                                         : "text-slate-400"
                                     }`}
                                   >
@@ -4934,44 +6519,6 @@ export default function PlayerHistoryPage() {
                               );
                             },
                           )}
-                        </div>
-
-                        <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
-                          <div>
-                            <span className="font-bold text-slate-900">
-                              {fmt(
-                                row.season_steals,
-                                1,
-                              )}
-                            </span>{" "}
-                            <span className="text-slate-400">
-                              STL
-                            </span>
-                          </div>
-
-                          <div>
-                            <span className="font-bold text-slate-900">
-                              {fmt(
-                                row.season_blocks,
-                                1,
-                              )}
-                            </span>{" "}
-                            <span className="text-slate-400">
-                              BLK
-                            </span>
-                          </div>
-
-                          <div>
-                            <span className="font-bold text-slate-900">
-                              {fmt(
-                                row.season_turnovers,
-                                1,
-                              )}
-                            </span>{" "}
-                            <span className="text-slate-400">
-                              TO
-                            </span>
-                          </div>
                         </div>
                       </button>
                     );
@@ -5061,15 +6608,11 @@ export default function PlayerHistoryPage() {
                           <td className="px-4 py-3">
                             <button
                               type="button"
-                              onClick={() => {
-                                if (
-                                  compareMode
-                                ) {
-                                  toggleComparePlayer(
-                                    row,
-                                  );
-                                }
-                              }}
+                              onClick={() =>
+                                handlePlayerHistoryRowClick(
+                                  row,
+                                )
+                              }
                               className={`flex items-center gap-3 rounded-xl px-2 py-1 text-left font-bold transition ${
                                 isCompareSelected(
                                   row,
@@ -5295,298 +6838,209 @@ export default function PlayerHistoryPage() {
                 {filteredRows.map(
                   (
                     row,
-                  ) => (
-                    <button
-                      key={
-                        row.player_id
-                      }
-                      type="button"
-                      onClick={() =>
-                        handlePlayerHistoryRowClick(
-                          row,
-                        )
-                      }
-                      className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
-                        isCompareSelected(
-                          row,
-                        )
-                          ? "border-emerald-400 ring-2 ring-emerald-300/50"
-                          : "border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40"
-                      }`}
-                    >
-                      {compareMode &&
+                  ) => {
+                    const selected =
                       isCompareSelected(
                         row,
-                      ) ? (
-                        <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-black text-white">
-                          ✓
-                        </div>
-                      ) : null}
+                      );
 
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
-                          {row.headshot_url ||
-                          row.espn_golf_player_id ? (
-                            <img
-                              src={
-                                row.headshot_url ??
-                                `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
-                              }
-                              alt={
+                    const dynamic =
+                      getGolfMobileDynamicStat(
+                        row,
+                      );
+
+                    const cards = [
+                      {
+                        label:
+                          "AVG",
+                        value:
+                          golfScore(
+                            row.avg_score,
+                          ),
+                        active:
+                          isVisibleSortSlotActive(
+                            "avg",
+                          ),
+                      },
+                      {
+                        label:
+                          "BEST",
+                        value:
+                          golfScore(
+                            row.high_score,
+                          ),
+                        active:
+                          isVisibleSortSlotActive(
+                            "best",
+                          ),
+                      },
+                      {
+                        label:
+                          "WINS",
+                        value:
+                          String(
+                            row.winning_lineups,
+                          ),
+                        active:
+                          isVisibleSortSlotActive(
+                            "wins",
+                          ),
+                      },
+                      {
+                        label:
+                          dynamic.label,
+                        value:
+                          dynamic.value,
+                        active:
+                          isVisibleSortSlotActive(
+                            "dynamic",
+                          ),
+                      },
+                    ];
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-3.5 text-left shadow-sm transition ${
+                          selected
+                            ? "border-emerald-400 ring-2 ring-emerald-300/50"
+                            : "border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40"
+                        }`}
+                      >
+                        {compareMode &&
+                        selected ? (
+                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-black text-white">
+                            ✓
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                            {row.headshot_url ||
+                            row.espn_golf_player_id ? (
+                              <img
+                                src={
+                                  row.headshot_url ??
+                                  `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                                }
+                                alt={
+                                  row.player_name
+                                }
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                ⛳
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate pr-7 font-black text-slate-950">
+                              {
                                 row.player_name
                               }
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center">
-                              ⛳
                             </div>
+
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              Drafted{" "}
+                              {
+                                row.times_drafted
+                              }
+                              x
+                              {row.owgr_rank
+                                ? ` · OWGR #${row.owgr_rank}`
+                                : ""}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-4 gap-1 border-t border-slate-100 pt-2 text-center">
+                          {cards.map(
+                            (
+                              card,
+                            ) => (
+                              <div
+                                key={
+                                  card.label
+                                }
+                                className={`rounded-lg border px-1 py-1.5 ${
+                                  card.active
+                                    ? "border-emerald-400 bg-emerald-50"
+                                    : "border-transparent bg-slate-50"
+                                }`}
+                              >
+                                <div
+                                  className={`text-[13px] font-black ${
+                                    card.active
+                                      ? "text-emerald-700"
+                                      : "text-slate-900"
+                                  }`}
+                                >
+                                  {
+                                    card.value
+                                  }
+                                </div>
+
+                                <div
+                                  className={`text-[9px] font-bold uppercase ${
+                                    card.active
+                                      ? "text-emerald-700"
+                                      : "text-slate-400"
+                                  }`}
+                                >
+                                  {
+                                    card.label
+                                  }
+                                </div>
+                              </div>
+                            ),
                           )}
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-base font-black text-slate-950">
-                            {
-                              row.player_name
-                            }
-                          </div>
-
-                          <div className="mt-0.5 text-xs text-slate-500">
-                            Drafted{" "}
-                            {
-                              row.times_drafted
-                            }
-                            x
-                            {row.owgr_rank
-                              ? ` · OWGR #${row.owgr_rank}`
-                              : ""}
-                          </div>
-                        </div>
-
-                        <div
-                          className={`rounded-xl px-2 py-1 text-right ${
-                            isVisibleSortSlotActive(
-                              "avg",
-                            )
-                              ? "border border-emerald-300/60 bg-emerald-50"
-                              : ""
-                          }`}
-                        >
-                          <div
-                            className={`text-xl font-black ${
-                              isVisibleSortSlotActive(
-                                "avg",
-                              )
-                                ? "text-emerald-800"
-                                : "text-emerald-800"
-                            }`}
-                          >
-                            {golfScore(
-                              row.avg_score,
-                            )}
-                          </div>
-
-                          <div
-                            className={`text-[10px] font-bold uppercase tracking-wide ${
-                              isVisibleSortSlotActive(
-                                "avg",
-                              )
-                                ? "text-emerald-700"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            Avg
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-4 gap-2 border-t border-slate-100 pt-3 text-center">
-                        <div
-                          className={`rounded-xl px-1.5 py-1.5 ${
-                            isVisibleSortSlotActive(
-                              "best",
-                            )
-                              ? "border border-emerald-300/60 bg-emerald-50"
-                              : ""
-                          }`}
-                        >
-                          <div
-                            className={`font-black ${
-                              isVisibleSortSlotActive(
-                                "best",
-                              )
-                                ? "text-emerald-800"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {golfScore(
-                              row.high_score,
-                            )}
-                          </div>
-
-                          <div
-                            className={`text-[10px] uppercase ${
-                              isVisibleSortSlotActive(
-                                "best",
-                              )
-                                ? "font-bold text-emerald-700"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            Best
-                          </div>
-                        </div>
-
-                        <div
-                          className={`rounded-xl px-1.5 py-1.5 ${
-                            isVisibleSortSlotActive(
-                              "wins",
-                            )
-                              ? "border border-emerald-300/60 bg-emerald-50"
-                              : ""
-                          }`}
-                        >
-                          <div
-                            className={`font-black ${
-                              isVisibleSortSlotActive(
-                                "wins",
-                              )
-                                ? "text-emerald-800"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {
-                              row.winning_lineups
-                            }
-                          </div>
-
-                          <div
-                            className={`text-[10px] uppercase ${
-                              isVisibleSortSlotActive(
-                                "wins",
-                              )
-                                ? "font-bold text-emerald-700"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            Wins
-                          </div>
-                        </div>
-
-                        <div
-                          className={`rounded-xl px-1.5 py-1.5 ${
-                            isVisibleSortSlotActive(
-                              "cuts",
-                            )
-                              ? "border border-emerald-300/60 bg-emerald-50"
-                              : ""
-                          }`}
-                        >
-                          <div
-                            className={`font-black ${
-                              isVisibleSortSlotActive(
-                                "cuts",
-                              )
-                                ? "text-emerald-800"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {cutDisplay(
-                              row.cuts_made,
-                              row.cut_opportunities,
-                            )}
-                          </div>
-
-                          <div
-                            className={`text-[10px] uppercase ${
-                              isVisibleSortSlotActive(
-                                "cuts",
-                              )
-                                ? "font-bold text-emerald-700"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            Cuts
-                          </div>
-                        </div>
-
-                        <div
-                          className={`rounded-xl px-1.5 py-1.5 ${
-                            isVisibleSortSlotActive(
-                              "dynamic",
-                            )
-                              ? "border border-emerald-300/60 bg-emerald-50"
-                              : ""
-                          }`}
-                        >
-                          <div
-                            className={`font-black ${
-                              isVisibleSortSlotActive(
-                                "dynamic",
-                              )
-                                ? "text-emerald-800"
-                                : "text-slate-900"
-                            }`}
-                          >
-                            {
-                              getGolfMobileDynamicStat(
-                                row,
-                              ).value
-                            }
-                          </div>
-
-                          <div
-                            className={`text-[10px] uppercase ${
-                              isVisibleSortSlotActive(
-                                "dynamic",
-                              )
-                                ? "font-bold text-emerald-700"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            {
-                              getGolfMobileDynamicStat(
-                                row,
-                              ).label
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      {(row.albatrosses ??
-                        0) >
-                        0 ||
-                      (row.holes_in_one ??
-                        0) >
-                        0 ? (
-                        <div className="mt-3 flex gap-2">
-                          {(row.albatrosses ??
-                            0) >
+                        {(row.albatrosses ??
+                          0) >
+                          0 ||
+                        (row.holes_in_one ??
+                          0) >
                           0 ? (
-                            <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-800">
-                              🦅{" "}
-                              {
-                                row.albatrosses
-                              }{" "}
-                              Albatross
-                            </span>
-                          ) : null}
+                          <div className="mt-2 flex gap-2">
+                            {(row.albatrosses ??
+                              0) >
+                            0 ? (
+                              <span className="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold text-violet-800">
+                                🦅{" "}
+                                {
+                                  row.albatrosses
+                                }{" "}
+                                Albatross
+                              </span>
+                            ) : null}
 
-                          {(row.holes_in_one ??
-                            0) >
-                          0 ? (
-                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
-                              ⛳{" "}
-                              {
-                                row.holes_in_one
-                              }{" "}
-                              Ace
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </button>
-                  ),
+                            {(row.holes_in_one ??
+                              0) >
+                            0 ? (
+                              <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800">
+                                ⛳{" "}
+                                {
+                                  row.holes_in_one
+                                }{" "}
+                                Ace
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </button>
+                    );
+                  },
                 )}
               </div>
 
@@ -5863,8 +7317,242 @@ export default function PlayerHistoryPage() {
               </div>
             </>
           ) : (
-            <div className="-mx-4 overflow-x-auto px-4">
-              <table className="min-w-full border-collapse text-sm">
+            <>
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => {
+                    const selected =
+                      isCompareSelected(
+                        row,
+                      );
+
+                    const leagueDynamicStat =
+                      sortKey ===
+                      "winning_lineups"
+                        ? {
+                            label:
+                              "WINS",
+                            value:
+                              String(
+                                row.winning_lineups,
+                              ),
+                            key:
+                              "winning_lineups" as SortKey,
+                          }
+                        : sortKey ===
+                            "runner_up_lineups"
+                          ? {
+                              label:
+                                "2ND",
+                              value:
+                                String(
+                                  row.runner_up_lineups,
+                                ),
+                              key:
+                                "runner_up_lineups" as SortKey,
+                            }
+                          : sortKey ===
+                              "avg_finish"
+                            ? {
+                                label:
+                                  "FINISH",
+                                value:
+                                  row.avg_finish
+                                    ? row.avg_finish.toFixed(
+                                        2,
+                                      )
+                                    : "—",
+                                key:
+                                  "avg_finish" as SortKey,
+                              }
+                            : sortKey ===
+                                "low_score"
+                              ? {
+                                  label:
+                                    "LOW",
+                                  value:
+                                    row.low_score.toFixed(
+                                      1,
+                                    ),
+                                  key:
+                                    "low_score" as SortKey,
+                                }
+                              : {
+                                  label:
+                                    "DRAFTED",
+                                  value:
+                                    String(
+                                      row.times_drafted,
+                                    ),
+                                  key:
+                                    "times_drafted" as SortKey,
+                                };
+
+                    const leagueCardStats = [
+                      {
+                        label:
+                          "AVG",
+                        value:
+                          row.avg_score.toFixed(
+                            1,
+                          ),
+                        key:
+                          "avg_score" as SortKey,
+                      },
+                      {
+                        label:
+                          "BEST",
+                        value:
+                          row.high_score.toFixed(
+                            1,
+                          ),
+                        key:
+                          "high_score" as SortKey,
+                      },
+                      {
+                        label:
+                          "WINS",
+                        value:
+                          String(
+                            row.winning_lineups,
+                          ),
+                        key:
+                          "winning_lineups" as SortKey,
+                      },
+                      leagueDynamicStat,
+                    ];
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                          selected
+                            ? selectedSport === "nfl"
+                              ? "border-sky-400 ring-2 ring-sky-300/50"
+                              : "border-orange-400 ring-2 ring-orange-300/50"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        {compareMode &&
+                        selected ? (
+                          <div
+                            className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full text-xs font-black text-white ${
+                              selectedSport === "nfl"
+                                ? "bg-sky-600"
+                                : "bg-orange-600"
+                            }`}
+                          >
+                            ✓
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-3">
+                          <PlayerHeadshot
+                            nbaPlayerId={
+                              row.nba_player_id
+                            }
+                            nflPlayerId={
+                              row.nfl_player_id
+                            }
+                            playerName={
+                              row.player_name
+                            }
+                            size="md"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate pr-7 font-black text-slate-950">
+                              {
+                                row.player_name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              Drafted{" "}
+                              {
+                                row.times_drafted
+                              }
+                              x
+                              {row.avg_finish
+                                ? ` · ${row.avg_finish.toFixed(
+                                    1,
+                                  )} avg finish`
+                                : ""}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-4 gap-1 text-center">
+                          {leagueCardStats.map(
+                            (
+                              stat,
+                              index,
+                            ) => {
+                              const active =
+                                stat.key ===
+                                sortKey;
+
+                              return (
+                                <div
+                                  key={`${row.player_id}-${stat.label}-${index}`}
+                                  className={`rounded-lg border px-1 py-1.5 ${
+                                    active
+                                      ? selectedSport === "nfl"
+                                        ? "border-sky-300 bg-sky-50"
+                                        : "border-orange-300 bg-orange-50"
+                                      : "border-transparent"
+                                  }`}
+                                >
+                                  <div
+                                    className={`text-[13px] font-black ${
+                                      active
+                                        ? selectedSport === "nfl"
+                                          ? "text-sky-800"
+                                          : "text-orange-800"
+                                        : "text-slate-900"
+                                    }`}
+                                  >
+                                    {
+                                      stat.value
+                                    }
+                                  </div>
+
+                                  <div
+                                    className={`mt-0.5 text-[9px] font-bold uppercase ${
+                                      active
+                                        ? selectedSport === "nfl"
+                                          ? "text-sky-700"
+                                          : "text-orange-700"
+                                        : "text-slate-400"
+                                    }`}
+                                  >
+                                    {
+                                      stat.label
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <div className="-mx-4 hidden overflow-x-auto px-4 md:block">
+                <table className="min-w-full border-collapse text-sm">
                 <thead className="bg-slate-100 text-slate-700">
                   <tr className="text-left">
                     <th className="px-4 py-3">
@@ -6026,42 +7714,129 @@ export default function PlayerHistoryPage() {
                     ),
                   )}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </div>
 
-      {!isGolf ? (
-        <ReadOnlyPlayerModal
-          player={
-            profilePlayer
-          }
-          setPlayer={
-            setProfilePlayer
-          }
-          playerAverageMap={
-            playerAverageMap
-          }
-          playerProjections={
-            playerProjections
-          }
-        />
-      ) : null}
+      <PlayerResearchModal
+        player={
+          isGolf
+            ? golfProfileRow
+              ? {
+                  id:
+                    golfProfileRow.player_id,
 
-      <GolfPlayerHistoryModal
-        row={
-          golfProfileRow
+                  name:
+                    golfProfileRow.player_name,
+
+                  espnGolfPlayerId:
+                    golfProfileRow.espn_golf_player_id ??
+                    null,
+
+                  headshotUrl:
+                    golfProfileRow.headshot_url ??
+                    null,
+
+                  owgrRank:
+                    golfProfileRow.owgr_rank ??
+                    null,
+
+                  country:
+                    golfProfileRow.country ??
+                    null,
+                }
+              : null
+            : profilePlayer
+              ? {
+                  id:
+                    profilePlayer.id,
+
+                  name:
+                    profilePlayer.name,
+
+                  nbaPlayerId:
+                    profilePlayer.nba_player_id ??
+                    null,
+
+                  nflPlayerId:
+                    profilePlayer.nfl_player_id ??
+                    null,
+
+                  positionGroup:
+                    profilePlayer.position_group ??
+                    null,
+
+                  teamAbbreviation:
+                    rows.find(
+                      (row) =>
+                        row.player_id ===
+                        profilePlayer.id,
+                    )
+                      ?.team_abbreviation ??
+                    null,
+                }
+              : null
+        }
+        sport={
+          selectedSport as
+            | "nba"
+            | "nfl"
+            | "golf"
         }
         season={
           season
         }
-        onClose={() =>
+        defaultMode={
+          historyMode
+        }
+        onClose={() => {
+          setProfilePlayer(
+            null,
+          );
+
           setGolfProfileRow(
             null,
-          )
-        }
+          );
+        }}
       />
+
+      {!compareMode &&
+      !compareOpen &&
+      !isLoading &&
+      filteredRows.length >
+        0 ? (
+        <div className="fixed bottom-[5.75rem] right-3 z-[10990] sm:hidden">
+          <button
+            type="button"
+            data-floating-compare="true"
+            onClick={() => {
+              setCompareMode(
+                true,
+              );
+
+              setComparePlayerIds(
+                [],
+              );
+            }}
+            className={`rounded-2xl border px-4 py-3 text-sm font-black text-white shadow-2xl backdrop-blur ${
+              isGolf
+                ? "border-emerald-400/80 bg-emerald-900/95 text-emerald-50"
+                : selectedSport ===
+                    "nfl"
+                  ? "border-sky-400/80 bg-sky-950/95 text-sky-50"
+                  : "border-orange-400/80 bg-orange-950/95 text-orange-50"
+            }`}
+          >
+            ⇄ Compare{" "}
+            {isGolf
+              ? "Golfers"
+              : "Players"}
+          </button>
+        </div>
+      ) : null}
 
       {compareMode &&
       !compareOpen ? (

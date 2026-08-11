@@ -1165,6 +1165,418 @@ export async function GET(
      * GOLF
      * ==================================================
      */
+    const [
+      golfStatsResult,
+      golfPlayersResult,
+    ] =
+      await Promise.all([
+        supabaseAdmin
+          .from(
+            "player_golf_season_stats",
+          )
+          .select(
+            `
+            season,
+            player_id,
+            espn_player_id,
+            player_name,
+            tournaments_played,
+            rounds_played,
+            holes_played,
+            cuts_made,
+            cuts_made_pct,
+            has_detailed_stats,
+            wins,
+            top_5_finishes,
+            top_10_finishes,
+            second_place,
+            third_place,
+            fourth_place,
+            fifth_place,
+            scoring_average,
+            adjusted_scoring_average,
+            birdies,
+            eagles,
+            pars,
+            bogeys,
+            doubles,
+            triple_bogeys_or_worse,
+            birdies_per_round,
+            birdie_rate,
+            eagle_rate,
+            bogey_rate,
+            greens_in_reg_pct,
+            driving_accuracy_pct,
+            driving_distance,
+            putts_per_gir,
+            sand_save_pct,
+            fedex_cup_points
+          `,
+          )
+          .eq(
+            "season",
+            season,
+          )
+          .range(
+            0,
+            5000,
+          ),
+
+        supabaseAdmin
+          .from(
+            "golf_players",
+          )
+          .select(
+            `
+            id,
+            display_name,
+            espn_player_id,
+            headshot_url,
+            country,
+            owgr_rank
+          `,
+          )
+          .range(
+            0,
+            5000,
+          ),
+      ]);
+
+    if (
+      golfStatsResult.error
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load Golf season statistics: ${golfStatsResult.error.message}`,
+        },
+        {
+          status:
+            500,
+
+          headers:
+            noStoreHeaders(),
+        },
+      );
+    }
+
+    if (
+      golfPlayersResult.error
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load Golf player identities: ${golfPlayersResult.error.message}`,
+        },
+        {
+          status:
+            500,
+
+          headers:
+            noStoreHeaders(),
+        },
+      );
+    }
+
+    const golfPlayerById =
+      new Map<
+        number,
+        any
+      >();
+
+    for (
+      const player
+      of golfPlayersResult.data ??
+        []
+    ) {
+      golfPlayerById.set(
+        Number(
+          player.id,
+        ),
+        player,
+      );
+    }
+
+    const golfPlayerStats =
+      (
+        golfStatsResult.data ??
+        []
+      ).map(
+        (
+          row:
+            any,
+        ) => {
+          const player =
+            golfPlayerById.get(
+              Number(
+                row.player_id,
+              ),
+            ) ??
+            null;
+
+          return {
+            player_id:
+              Number(
+                row.player_id,
+              ),
+
+            player_name:
+              String(
+                row.player_name ??
+                  player?.display_name ??
+                  "Unknown Golfer",
+              ),
+
+            espn_golf_player_id:
+              String(
+                row.espn_player_id ??
+                  player?.espn_player_id ??
+                  "",
+              ) ||
+              null,
+
+            headshot_url:
+              player?.headshot_url ??
+              null,
+
+            country:
+              player?.country ??
+              null,
+
+            owgr_rank:
+              player?.owgr_rank ===
+                null ||
+              player?.owgr_rank ===
+                undefined
+                ? null
+                : Number(
+                    player.owgr_rank,
+                  ),
+
+            tournaments_played:
+              Number(
+                row.tournaments_played ??
+                  0,
+              ),
+
+            rounds_played:
+              Number(
+                row.rounds_played ??
+                  0,
+              ),
+
+            holes_played:
+              Number(
+                row.holes_played ??
+                  0,
+              ),
+
+            cuts_made:
+              Number(
+                row.cuts_made ??
+                  0,
+              ),
+
+            cuts_made_pct:
+              row.cuts_made_pct ===
+                null ||
+              row.cuts_made_pct ===
+                undefined
+                ? null
+                : Number(
+                    row.cuts_made_pct,
+                  ),
+
+            has_detailed_stats:
+              Boolean(
+                row.has_detailed_stats,
+              ),
+
+            wins:
+              Number(
+                row.wins ??
+                  0,
+              ),
+
+            top_5_finishes:
+              Number(
+                row.top_5_finishes ??
+                  0,
+              ),
+
+            top_10_finishes:
+              Number(
+                row.top_10_finishes ??
+                  0,
+              ),
+
+            scoring_average:
+              row.scoring_average ===
+                null ||
+              row.scoring_average ===
+                undefined
+                ? null
+                : Number(
+                    row.scoring_average,
+                  ),
+
+            adjusted_scoring_average:
+              row.adjusted_scoring_average ===
+                null ||
+              row.adjusted_scoring_average ===
+                undefined
+                ? null
+                : Number(
+                    row.adjusted_scoring_average,
+                  ),
+
+            birdies_per_round:
+              row.birdies_per_round ===
+                null ||
+              row.birdies_per_round ===
+                undefined
+                ? null
+                : Number(
+                    row.birdies_per_round,
+                  ),
+
+            birdie_rate:
+              row.birdie_rate ===
+                null ||
+              row.birdie_rate ===
+                undefined
+                ? null
+                : Number(
+                    row.birdie_rate,
+                  ),
+
+            bogey_rate:
+              row.bogey_rate ===
+                null ||
+              row.bogey_rate ===
+                undefined
+                ? null
+                : Number(
+                    row.bogey_rate,
+                  ),
+
+            greens_in_reg_pct:
+              row.greens_in_reg_pct ===
+                null ||
+              row.greens_in_reg_pct ===
+                undefined
+                ? null
+                : Number(
+                    row.greens_in_reg_pct,
+                  ),
+
+            driving_accuracy_pct:
+              row.driving_accuracy_pct ===
+                null ||
+              row.driving_accuracy_pct ===
+                undefined
+                ? null
+                : Number(
+                    row.driving_accuracy_pct,
+                  ),
+
+            driving_distance:
+              row.driving_distance ===
+                null ||
+              row.driving_distance ===
+                undefined
+                ? null
+                : Number(
+                    row.driving_distance,
+                  ),
+
+            putts_per_gir:
+              row.putts_per_gir ===
+                null ||
+              row.putts_per_gir ===
+                undefined
+                ? null
+                : Number(
+                    row.putts_per_gir,
+                  ),
+
+            sand_save_pct:
+              row.sand_save_pct ===
+                null ||
+              row.sand_save_pct ===
+                undefined
+                ? null
+                : Number(
+                    row.sand_save_pct,
+                  ),
+
+            fedex_cup_points:
+              row.fedex_cup_points ===
+                null ||
+              row.fedex_cup_points ===
+                undefined
+                ? null
+                : Number(
+                    row.fedex_cup_points,
+                  ),
+
+            birdies:
+              Number(
+                row.birdies ??
+                  0,
+              ),
+
+            eagles:
+              Number(
+                row.eagles ??
+                  0,
+              ),
+
+            pars:
+              Number(
+                row.pars ??
+                  0,
+              ),
+
+            bogeys:
+              Number(
+                row.bogeys ??
+                  0,
+              ),
+          };
+        },
+      )
+      .sort(
+        (
+          a,
+          b,
+        ) => {
+          const aAverage =
+            a.scoring_average ??
+            999;
+
+          const bAverage =
+            b.scoring_average ??
+            999;
+
+          if (
+            aAverage !==
+            bAverage
+          ) {
+            return (
+              aAverage -
+              bAverage
+            );
+          }
+
+          return (
+            a.player_name.localeCompare(
+              b.player_name,
+            )
+          );
+        },
+      );
+
     return NextResponse.json(
       {
         success:
@@ -1178,14 +1590,17 @@ export async function GET(
 
         season,
 
+        professionalSeason:
+          season,
+
         available:
-          false,
+          true,
+
+        playerCount:
+          golfPlayerStats.length,
 
         playerStats:
-          [],
-
-        message:
-          "Full PGA season statistics are not loaded yet.",
+          golfPlayerStats,
       },
       {
         headers:

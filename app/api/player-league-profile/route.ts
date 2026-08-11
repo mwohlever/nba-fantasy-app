@@ -796,12 +796,21 @@ export async function GET(request: Request) {
               slateLabel,
               teamName,
 
+              /*
+               * team_slate_results is the authoritative source
+               * for a team's recorded finish.
+               *
+               * Do not require slates.is_locked here. A completed
+               * golf tournament can already have its finalized
+               * team result while that slate flag has not been
+               * flipped yet. Requiring is_locked caused legitimate
+               * finishes (and therefore podiums) to disappear from
+               * golfer League History.
+               */
               finishPosition:
-                slate?.is_locked
-                  ? numberOrNull(
-                      result?.finish_position,
-                    )
-                  : null,
+                numberOrNull(
+                  result?.finish_position,
+                ),
 
               fantasyPoints:
                 numberOrNull(
