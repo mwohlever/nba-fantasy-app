@@ -453,8 +453,14 @@ function HomePageContent() {
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const homeGolfRefreshInFlightRef = useRef(false);
+  const lastHomeGolfAutoRefreshRef = useRef(0);
 
   async function refreshSlateStatsById(slateId: number) {
+    if (homeGolfRefreshInFlightRef.current) return;
+
+    homeGolfRefreshInFlightRef.current = true;
+
     try {
       setIsRefreshingHomeStats(true);
       setMessage("");
@@ -501,6 +507,7 @@ function HomePageContent() {
       console.error("Failed to refresh stats", err);
       setMessage("Failed to refresh stats.");
     } finally {
+      homeGolfRefreshInFlightRef.current = false;
       setIsRefreshingHomeStats(false);
     }
   }
@@ -743,6 +750,61 @@ function HomePageContent() {
     isFinalSlate ? "Winner" : "Leader";
 
   const nextSlate = data?.nextSlate ?? null;
+
+  useEffect(() => {
+    if (sport !== "golf") return;
+    if (!latestSlate?.id) return;
+    if (latestSlate.is_locked) return;
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState !== "visible") return;
+
+      const now = Date.now();
+      const minimumGapMs = 4.5 * 60 * 1000;
+
+      if (
+        lastHomeGolfAutoRefreshRef.current &&
+        now - lastHomeGolfAutoRefreshRef.current < minimumGapMs
+      ) {
+        return;
+      }
+
+      lastHomeGolfAutoRefreshRef.current = now;
+      void refreshSlateStatsById(latestSlate.id);
+    };
+
+    // Opening Home during an active Golf slate immediately
+    // makes this browser/device an updater.
+    refreshIfVisible();
+
+    const interval = window.setInterval(
+      refreshIfVisible,
+      5 * 60 * 1000,
+    );
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshIfVisible();
+      }
+    };
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange,
+    );
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
+    };
+  }, [
+    sport,
+    latestSlate?.id,
+    latestSlate?.is_locked,
+  ]);
 
   useEffect(() => {
     if (!nextSlate?.id || !nextSlate.first_game_start_time) return;

@@ -84,6 +84,8 @@ export default function LineupBuilder({
   const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const refreshInFlightRef = useRef(false);
+  const lastGolfAutoRefreshRef = useRef(0);
   const [isGolfSlateMenuOpen, setIsGolfSlateMenuOpen] =
     useState(false);
 
@@ -298,15 +300,58 @@ export default function LineupBuilder({
   }, [selectedSlateIdNumber]);
 
   useEffect(() => {
-    if (!autoRefreshEnabled || !selectedSlateIdNumber) return;
+    if (!selectedSlateIdNumber) return;
 
-    const interval = window.setInterval(() => {
+    const isGolf = selectedSlate?.sport === "golf";
+    const shouldAutoRefresh = isGolf || autoRefreshEnabled;
+
+    if (!shouldAutoRefresh) return;
+    if (selectedSlate?.is_locked) return;
+
+    const refreshIfVisible = () => {
       if (document.visibilityState !== "visible") return;
-      void refreshStatsForSelectedSlate(true);
-    }, 30000);
 
-    return () => window.clearInterval(interval);
-  }, [autoRefreshEnabled, selectedSlateIdNumber]);
+      const now = Date.now();
+      const minimumGapMs = isGolf ? 4.5 * 60 * 1000 : 25 * 1000;
+
+      if (
+        lastGolfAutoRefreshRef.current &&
+        now - lastGolfAutoRefreshRef.current < minimumGapMs
+      ) {
+        return;
+      }
+
+      lastGolfAutoRefreshRef.current = now;
+      void refreshStatsForSelectedSlate(true);
+    };
+
+    // An open Golf page becomes a live-score updater immediately.
+    refreshIfVisible();
+
+    const intervalMs = isGolf ? 5 * 60 * 1000 : 30 * 1000;
+    const interval = window.setInterval(refreshIfVisible, intervalMs);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshIfVisible();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
+    };
+  }, [
+    autoRefreshEnabled,
+    selectedSlateIdNumber,
+    selectedSlate?.sport,
+    selectedSlate?.is_locked,
+  ]);
 
   useEffect(() => {
     if (!selectedSlateIdNumber) return;
@@ -986,6 +1031,10 @@ export default function LineupBuilder({
       return;
     }
 
+    if (refreshInFlightRef.current) return;
+
+    refreshInFlightRef.current = true;
+
     try {
       setIsRefreshingStats(true);
       if (!isSilent) {
@@ -1102,6 +1151,7 @@ export default function LineupBuilder({
       console.error(error);
       if (!isSilent) alert("Something went wrong while refreshing stats.");
     } finally {
+      refreshInFlightRef.current = false;
       setIsRefreshingStats(false);
     }
   }
