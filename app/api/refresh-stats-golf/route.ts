@@ -2671,16 +2671,38 @@ export async function POST(request: Request) {
 
     /*
      * A tournament is settled when ESPN explicitly reports Final,
-     * or when there are no golfers still scheduled, active, or
-     * waiting between rounds and at least one golfer has finished.
+     * or when every golfer is in a terminal state.
      *
-     * Cut, WD, DQ, and DNS golfers are terminal states.
+     * ESPN commonly leaves golfers who finish Sunday as
+     * "round_complete" instead of promoting them to "finished".
+     * Treat round_complete as terminal only when that golfer has
+     * completed the full four-round / 72-hole tournament.
+     *
+     * Cut, WD, DQ, and DNS golfers are already terminal states.
      */
+    const finalRoundCompleteGolfers =
+      competitors.filter(
+        (competitor) =>
+          competitor.status === "round_complete",
+      );
+
+    const allRoundCompleteGolfersAreFinished =
+      finalRoundCompleteGolfers.every(
+        (competitor) =>
+          competitor.roundsCompleted >=
+            EXPECTED_TOURNAMENT_ROUNDS &&
+          competitor.holesCompleted >=
+            EXPECTED_TOURNAMENT_ROUNDS * 18,
+      );
+
     const tournamentFieldIsSettled =
       statusCounts.scheduled === 0 &&
       statusCounts.active === 0 &&
-      statusCounts.round_complete === 0 &&
-      statusCounts.finished > 0;
+      allRoundCompleteGolfersAreFinished &&
+      (
+        statusCounts.finished > 0 ||
+        finalRoundCompleteGolfers.length > 0
+      );
 
     const tournamentIsComplete =
       tournament.completed ||
