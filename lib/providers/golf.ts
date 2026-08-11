@@ -29,6 +29,26 @@ function getEspnGolfProxyBaseUrl():
     );
   }
 
+  /*
+   * Prefer Vercel's stable production domain over VERCEL_URL.
+   *
+   * VERCEL_URL identifies the specific deployment handling the request.
+   * Preview/generated deployment URLs can be protected by Vercel
+   * Authentication, which breaks our server-to-server ESPN proxy call
+   * with a 401 even though the public production app is reachable.
+   *
+   * VERCEL_PROJECT_PRODUCTION_URL points at the project's production
+   * domain and is therefore the correct default for the Golf Edge proxy.
+   */
+  const productionUrl =
+    process.env
+      .VERCEL_PROJECT_PRODUCTION_URL
+      ?.trim();
+
+  if (productionUrl) {
+    return `https://${productionUrl}`;
+  }
+
   const vercelUrl =
     process.env.VERCEL_URL?.trim();
 
