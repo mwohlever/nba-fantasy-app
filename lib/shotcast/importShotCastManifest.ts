@@ -173,6 +173,174 @@ async function graphqlRequest(
   }
 }
 
+type TourcastWorldFile = {
+  pxX: number;
+  rotX: number;
+  rotY: number;
+  pxY: number;
+  coordX: number;
+  coordY: number;
+  dimX: number;
+  dimY: number;
+};
+
+function tourcastTerrainUrls(
+  tournamentId: string,
+  holeNumber: number,
+) {
+  const holeToken =
+    String(holeNumber).padStart(2, "0");
+
+  const root =
+    `https://tourcast.pgatour.com/models/` +
+    `${tournamentId}/3D_Assets/terrain`;
+
+  return {
+    imageUrl:
+      `${root}/terrain${holeToken}.jpg`,
+    worldFileUrl:
+      `${root}/terrain${holeToken}.tfw`,
+    glbUrl:
+      `${root}/cutGlb/terrain${holeToken}.glb`,
+  };
+}
+
+function parseTourcastWorldFile(
+  raw: string,
+): TourcastWorldFile | null {
+  const values = raw
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+
+  if (
+    values.length < 8 ||
+    values
+      .slice(0, 8)
+      .some((value) => !Number.isFinite(value))
+  ) {
+    return null;
+  }
+
+  const [
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  ] = values;
+
+  const determinant =
+    pxX * pxY -
+    rotY * rotX;
+
+  if (
+    Math.abs(determinant) < 1e-12 ||
+    dimX <= 0 ||
+    dimY <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  };
+}
+
+async function loadTourcastWorldFile(
+  tournamentId: string,
+  holeNumber: number,
+): Promise<TourcastWorldFile | null> {
+  const { worldFileUrl } =
+    tourcastTerrainUrls(
+      tournamentId,
+      holeNumber,
+    );
+
+  const controller =
+    new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    8_000,
+  );
+
+  try {
+    const response = await fetch(
+      worldFileUrl,
+      {
+        method: "GET",
+        headers: {
+          Accept: "*/*",
+          Referer:
+            `https://tourcast.pgatour.com/` +
+            `tourcast.html?id=${tournamentId}`,
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 15; Pixel 9) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+            "Chrome/150.0.0.0 Mobile Safari/537.36",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "Sec-CH-UA":
+            '"Not;A=Brand";v="8", ' +
+            '"Chromium";v="150", ' +
+            '"Google Chrome";v="150"',
+          "Sec-CH-UA-Mobile": "?1",
+          "Sec-CH-UA-Platform": '"Android"',
+        },
+        cache: "no-store",
+        redirect: "follow",
+        signal: controller.signal,
+      },
+    );
+
+    if (!response.ok) {
+      console.warn(
+        `[ShotCast] Hole ${holeNumber} TFW returned ` +
+        `${response.status}: ${worldFileUrl}`,
+      );
+      return null;
+    }
+
+    const raw =
+      await response.text();
+
+    const parsed =
+      parseTourcastWorldFile(raw);
+
+    if (!parsed) {
+      console.warn(
+        `[ShotCast] Hole ${holeNumber} TFW could not be parsed.`,
+      );
+    } else {
+      console.log(
+        `[ShotCast] Hole ${holeNumber} TFW loaded.`,
+      );
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn(
+      `[ShotCast] Hole ${holeNumber} TFW request failed:`,
+      error,
+    );
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function imageIsAvailable(
   url: string | null,
 ) {
@@ -523,6 +691,7 @@ export async function importShotCastManifest({
       const [
         alignedMapAvailable,
         alignedGreenAvailable,
+        tourcastWorldFile,
       ] = await Promise.all([
         imageIsAvailable(
           alignedMapUrl,
@@ -530,7 +699,51 @@ export async function importShotCastManifest({
         imageIsAvailable(
           alignedGreenUrl,
         ),
+        loadTourcastWorldFile(
+          normalizedTournamentId,
+          holeNumber,
+        ),
       ]);
+
+      const tourcastTerrain =
+        tourcastTerrainUrls(
+          normalizedTournamentId,
+          holeNumber,
+        );
+
+      /*
+       * Modern PGA TOURCAST:
+       *
+       * terrainNN.jpg = the overhead terrain image
+       * terrainNN.tfw = affine world-file calibration
+       *
+       * If the TFW exists, the terrain package is authoritative.
+       * The older Cloudinary pickle remains as a fallback.
+       */
+      const hasTourcastTerrain =
+        tourcastWorldFile !== null;
+
+      const resolvedAlignedMapUrl =
+        hasTourcastTerrain
+          ? tourcastTerrain.imageUrl
+          : alignedMapAvailable
+            ? alignedMapUrl
+            : null;
+
+      const calibration =
+        tourcastWorldFile
+          ? {
+              xScale: 1,
+              xOffset: 0,
+              yScale: 1,
+              yOffset: 0,
+              verified: true,
+              source:
+                "pga-tourcast-world-file",
+              affine:
+                tourcastWorldFile,
+            }
+          : null;
 
       return {
         holeNumber,
@@ -582,18 +795,27 @@ export async function importShotCastManifest({
         localImageUrl:
           officialImageUrl,
 
-        alignedMapUrl,
+        alignedMapUrl:
+          resolvedAlignedMapUrl,
 
         localAlignedMapUrl:
-          alignedMapAvailable
-            ? alignedMapUrl
-            : null,
+          resolvedAlignedMapUrl,
 
         alignedMapError:
-          alignedMapUrl &&
-          !alignedMapAvailable
-            ? "Asset is not currently published."
+          !resolvedAlignedMapUrl
+            ? "No aligned PGA TOURCAST terrain asset was found."
             : null,
+
+        tourcastTerrain: {
+          imageUrl:
+            tourcastTerrain.imageUrl,
+          worldFileUrl:
+            tourcastTerrain.worldFileUrl,
+          glbUrl:
+            tourcastTerrain.glbUrl,
+          available:
+            hasTourcastTerrain,
+        },
 
         alignedGreenUrl,
 
@@ -666,7 +888,7 @@ export async function importShotCastManifest({
             holeInfo.pinGreen,
           ),
 
-        calibration: null,
+        calibration,
       };
     }),
   );

@@ -39,6 +39,13 @@ type PgaCoordinate = {
   tourcastX: number | null;
   tourcastY: number | null;
   tourcastZ: number | null;
+
+  /*
+   * TOURCAST V3 supplies these normalized coordinates
+   * specifically for the matching enhancedPickle image.
+   */
+  enhancedX?: number | null;
+  enhancedY?: number | null;
 };
 
 type RawShotCoordinateGroup = {
@@ -48,6 +55,20 @@ type RawShotCoordinateGroup = {
 
 type RawStroke = {
   strokeNumber?: number | null;
+
+  /*
+   * PGA TOURCAST's native shot position.
+   *
+   * Their Golf Engine constructs each shot as:
+   *   position = new Vector3(shot.x, shot.y, 0)
+   *
+   * Do not confuse these with overview.bottomToTopCoords
+   * or overview.*.tourcastX/tourcastY.
+   */
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+
   playByPlay?: string | null;
   distance?: string | null;
   distanceRemaining?: string | null;
@@ -63,12 +84,35 @@ type RawStroke = {
   } | null;
 };
 
+type RawWorldPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+};
+
+type RawEnhancedPickle = {
+  leftToRight?: string | null;
+  bottomToTop?: string | null;
+  greenLeftToRight?: string | null;
+  greenBottomToTop?: string | null;
+};
+
 type RawHole = {
   holeNumber?: number | null;
   par?: number | null;
   yardage?: number | null;
   status?: string | null;
   score?: string | number | null;
+
+  /*
+   * TOURCAST uses the player/hole tee and pin positions
+   * as world-coordinate endpoints surrounding the shots.
+   */
+  tee?: RawWorldPoint | null;
+  pin?: RawWorldPoint | null;
+
+  enhancedPickle?: RawEnhancedPickle | null;
+
   strokes?: RawStroke[] | null;
 };
 
@@ -81,8 +125,26 @@ export type GolfShotCoordinateSet = {
   to: PgaCoordinate;
 };
 
+export type GolfWorldPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+};
+
 export type GolfHoleReplayShot = {
   strokeNumber: number;
+
+  /*
+   * Native PGA TOURCAST world positions.
+   *
+   * worldFrom is the tee for shot 1 and the previous
+   * landing position after that.
+   *
+   * worldTo is this stroke's raw PGA x/y position.
+   */
+  worldFrom: GolfWorldPoint | null;
+  worldTo: GolfWorldPoint | null;
+
   playByPlay: string | null;
   distance: string | null;
   distanceRemaining: string | null;
@@ -106,6 +168,20 @@ export type GolfHoleReplay = {
   yardage: number | null;
   holeStatus: string | null;
   holeScore: string | null;
+
+  /*
+   * PGA TOURCAST V3 supplies a hole image and coordinates
+   * that already share the same normalized coordinate frame.
+   *
+   * No terrain TFW calibration is required for this path.
+   */
+  shotcast: {
+    imageUrl: string;
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
   shots: GolfHoleReplayShot[];
 };
 
@@ -366,9 +442,36 @@ function coordinate(
       : null;
   }
 
+  const enhancedX =
+    numberOrNull(
+      value?.enhancedX,
+    );
+
+  const enhancedY =
+    numberOrNull(
+      value?.enhancedY,
+    );
+
   return {
-    x: numberOrNull(value?.x),
-    y: numberOrNull(value?.y),
+    /*
+     * IMPORTANT:
+     *
+     * When TOURCAST V3 supplies enhanced coordinates,
+     * those coordinates correspond directly to the
+     * enhancedPickle image returned for the same hole.
+     *
+     * Preserve legacy x/y only as fallback.
+     */
+    x:
+      enhancedX !== null
+        ? enhancedX
+        : numberOrNull(value?.x),
+
+    y:
+      enhancedY !== null
+        ? enhancedY
+        : numberOrNull(value?.y),
+
     tourcastX: numberOrNull(
       value?.tourcastX,
     ),
@@ -378,6 +481,9 @@ function coordinate(
     tourcastZ: numberOrNull(
       value?.tourcastZ,
     ),
+
+    enhancedX,
+    enhancedY,
   };
 }
 
@@ -399,6 +505,35 @@ function coordinateSet(
     to: coordinate(value.toCoords),
   };
 }
+
+function worldPoint(
+  value:
+    | RawWorldPoint
+    | RawStroke
+    | null
+    | undefined,
+): GolfWorldPoint | null {
+  const x = Number(value?.x);
+  const y = Number(value?.y);
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y)
+  ) {
+    return null;
+  }
+
+  const z = Number(value?.z);
+
+  return {
+    x,
+    y,
+    z: Number.isFinite(z)
+      ? z
+      : null,
+  };
+}
+
 
 const loadSchedule = unstable_cache(
   async (year: number) => {
@@ -447,17 +582,27 @@ const loadRoundShots = unstable_cache(
     roundNumber: number,
     _cacheBust: string | null,
   ) => {
+    /*
+     * Use the same compressed shot model consumed by
+     * PGA TOURCAST itself.
+     *
+     * V3 includes:
+     * - enhancedPickle hole imagery
+     * - enhancedX/enhancedY shot coordinates
+     * - tee/pin overview coordinates
+     * - radar data when available
+     */
     const operationName =
-      "shotDetailsV4Compressed";
+      "ShotDetailsCompressedV3";
 
     const query =
-      "query shotDetailsV4Compressed(" +
+      "query ShotDetailsCompressedV3(" +
       "$tournamentId: ID!, " +
       "$playerId: ID!, " +
       "$round: Int!, " +
       "$includeRadar: Boolean" +
       ") { " +
-      "shotDetailsV4Compressed(" +
+      "shotDetailsCompressedV3(" +
       "tournamentId: $tournamentId, " +
       "playerId: $playerId, " +
       "round: $round, " +
@@ -471,12 +616,12 @@ const loadRoundShots = unstable_cache(
         tournamentId,
         playerId: pgaPlayerId,
         round: roundNumber,
-        includeRadar: false,
+        includeRadar: true,
       },
     );
 
     const response =
-      data.shotDetailsV4Compressed;
+      data.shotDetailsCompressedV3;
 
     if (
       !response ||
@@ -492,7 +637,7 @@ const loadRoundShots = unstable_cache(
       response.payload,
     );
   },
-  ["pga-tour-round-shots-v1"],
+  ["pga-tour-round-shots-tourcast-v3"],
   {
     // Live holes can change, but repeated taps should not
     // hammer the upstream API.
@@ -574,44 +719,72 @@ export async function fetchGolfHoleReplay(
     return null;
   }
 
-  const shots = (hole.strokes ?? [])
-    .map((shot) => ({
-      strokeNumber: Number(
-        shot.strokeNumber ?? 0,
-      ),
-      playByPlay:
-        shot.playByPlay ?? null,
-      distance:
-        shot.distance ?? null,
-      distanceRemaining:
-        shot.distanceRemaining ?? null,
-      strokeType:
-        shot.strokeType ?? null,
-      fromLocation:
-        shot.fromLocation ?? null,
-      toLocation:
-        shot.toLocation ?? null,
-      fromLocationCode:
-        shot.fromLocationCode ?? null,
-      toLocationCode:
-        shot.toLocationCode ?? null,
-      finalStroke:
-        Boolean(shot.finalStroke),
-      leftToRight: coordinateSet(
-        shot.overview?.leftToRightCoords,
-      ),
-      bottomToTop: coordinateSet(
-        shot.overview?.bottomToTopCoords,
-      ),
-    }))
-    .filter(
-      (shot) => shot.strokeNumber > 0,
-    )
-    .sort(
-      (a, b) =>
-        a.strokeNumber -
-        b.strokeNumber,
-    );
+  const orderedRawStrokes =
+    [...(hole.strokes ?? [])]
+      .filter(
+        (shot) =>
+          Number(shot.strokeNumber ?? 0) > 0,
+      )
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+          shot.distance ?? null,
+        distanceRemaining:
+          shot.distanceRemaining ?? null,
+        strokeType:
+          shot.strokeType ?? null,
+        fromLocation:
+          shot.fromLocation ?? null,
+        toLocation:
+          shot.toLocation ?? null,
+        fromLocationCode:
+          shot.fromLocationCode ?? null,
+        toLocationCode:
+          shot.toLocationCode ?? null,
+        finalStroke:
+          Boolean(shot.finalStroke),
+        leftToRight: coordinateSet(
+          shot.overview?.leftToRightCoords,
+        ),
+        bottomToTop: coordinateSet(
+          shot.overview?.bottomToTopCoords,
+        ),
+      };
+
+      if (landingWorldPoint) {
+        previousWorldPoint =
+          landingWorldPoint;
+      }
+
+      return mappedShot;
+    },
+  );
 
   return {
     tournamentId,
@@ -638,6 +811,24 @@ export async function fetchGolfHoleReplay(
       hole.score === undefined
         ? null
         : String(hole.score),
+
+    shotcast:
+      typeof hole.enhancedPickle
+        ?.bottomToTop === "string" &&
+      hole.enhancedPickle
+        .bottomToTop.trim()
+        ? {
+            imageUrl:
+              hole.enhancedPickle
+                .bottomToTop.trim(),
+            orientation:
+              "bottomToTop",
+            source:
+              "pga-tourcast-v3-enhanced",
+            verified: true,
+          }
+        : null,
+
     shots,
   };
 }

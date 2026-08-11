@@ -49,6 +49,19 @@ type ReplayShot = {
   fromLocationCode: string | null;
   toLocationCode: string | null;
   finalStroke: boolean;
+
+  worldFrom?: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
+  worldTo?: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
   leftToRight: CoordinateSet | null;
   bottomToTop: CoordinateSet | null;
 };
@@ -63,6 +76,14 @@ type Replay = {
   yardage: number | null;
   holeStatus: string | null;
   holeScore: string | null;
+
+  shotcast: {
+    imageUrl: string;
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
   shots: ReplayShot[];
 };
 
@@ -91,6 +112,17 @@ type ShotCastCalibration = {
   yScale: number;
   yOffset: number;
   verified?: boolean;
+  source?: string;
+  affine?: {
+    pxX: number;
+    rotX: number;
+    rotY: number;
+    pxY: number;
+    coordX: number;
+    coordY: number;
+    dimX: number;
+    dimY: number;
+  };
 };
 
 type ShotCastManifestHole = {
@@ -548,8 +580,41 @@ export default function GolfHoleReplayPanel({
     useMemo<ActiveShotCastConfig | null>(
       () => {
         /*
+         * PRIMARY PATH:
+         *
+         * PGA TOURCAST V3 already supplies the exact
+         * bottom-to-top image and normalized coordinates.
+         *
+         * No terrain image, TFW, manual calibration, or
+         * admin import is required.
+         */
+        if (
+          replay?.shotcast?.verified ===
+            true &&
+          replay.shotcast.imageUrl
+        ) {
+          return {
+            title: `ShotCast · Hole ${holeNumber}`,
+            imageUrl:
+              replay.shotcast.imageUrl,
+            imageFit: "fill",
+            calibration: {
+              ...IDENTITY_CALIBRATION,
+              verified: true,
+              source:
+                replay.shotcast.source,
+            },
+            calibrationVerified: true,
+            aboutThisHole:
+              null,
+          };
+        }
+
+        /*
+         * FALLBACK:
+         *
          * Preserve the verified Rocket Classic proof of
-         * concept until that event has its own manifest.
+         * concept until all historical events use V3.
          */
         if (
           slateId === 161 &&
@@ -637,6 +702,7 @@ export default function GolfHoleReplayPanel({
       },
       [
         holeNumber,
+        replay,
         shotCastManifest,
         slateId,
       ],

@@ -11,11 +11,20 @@ import {
 type Coordinate = {
   x: number | null;
   y: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
 };
 
 type CoordinateSet = {
   from: Coordinate;
   to: Coordinate;
+};
+
+type WorldPoint = {
+  x: number;
+  y: number;
+  z?: number | null;
 };
 
 type MapShot = {
@@ -25,6 +34,10 @@ type MapShot = {
   fromLocation: string | null;
   toLocation: string | null;
   finalStroke: boolean;
+
+  worldFrom?: WorldPoint | null;
+  worldTo?: WorldPoint | null;
+
   bottomToTop: CoordinateSet | null;
 };
 
@@ -82,6 +95,18 @@ export type MapCalibration = {
   xOffset: number;
   yScale: number;
   yOffset: number;
+  verified?: boolean;
+  source?: string;
+  affine?: {
+    pxX: number;
+    rotX: number;
+    rotY: number;
+    pxY: number;
+    coordX: number;
+    coordY: number;
+    dimX: number;
+    dimY: number;
+  };
 };
 
 const VIEWBOX_SIZE = 1000;
@@ -133,30 +158,248 @@ function validPoint(
   );
 }
 
-function toPlotPoint(
-  coordinate: {
-    x: number;
-    y: number;
-  },
-  calibration: MapCalibration,
-): PlotPoint {
-  const calibratedX =
-    clampNormalized(
-      coordinate.x *
-        calibration.xScale +
-        calibration.xOffset,
-    );
+function validTourcastPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): coordinate is Coordinate & {
+  tourcastX: number;
+  tourcastY: number;
+} {
+  return (
+    coordinate?.tourcastX !== null &&
+    coordinate?.tourcastX !== undefined &&
+    coordinate?.tourcastY !== null &&
+    coordinate?.tourcastY !== undefined &&
+    Number.isFinite(
+      coordinate.tourcastX,
+    ) &&
+    Number.isFinite(
+      coordinate.tourcastY,
+    )
+  );
+}
 
-  const calibratedY =
-    clampNormalized(
-      coordinate.y *
-        calibration.yScale +
-        calibration.yOffset,
-    );
+function canPlotPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+  calibration: MapCalibration,
+) {
+  if (
+    calibration.affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    return true;
+  }
+
+  return validPoint(coordinate);
+}
+
+function worldToPlotPoint(
+  world: WorldPoint,
+  calibration: MapCalibration,
+): PlotPoint | null {
+  const affine =
+    calibration.affine;
+
+  if (!affine) {
+    return null;
+  }
+
+  const {
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  } = affine;
+
+  /*
+   * This is the same hole-texture UV conversion used by
+   * PGA TOURCAST's Golf Engine.
+   *
+   * Their source:
+   *
+   *   j = rotX * rotY - pxX * pxY
+   *   pixelY =
+   *     (rotX*(x-coordX) -
+   *      pxX*(y-coordY)) / j
+   *
+   *   v = pixelY / dimY
+   *
+   *   pixelX =
+   *     (x - rotY*pixelY - coordX) / pxX
+   *
+   *   u = pixelX / dimX
+   */
+  const determinant =
+    rotX * rotY -
+    pxX * pxY;
+
+  if (
+    Math.abs(determinant) < 1e-12 ||
+    Math.abs(pxX) < 1e-12 ||
+    dimX <= 0 ||
+    dimY <= 0
+  ) {
+    return null;
+  }
+
+  const pixelY =
+    (
+      rotX *
+        (world.x - coordX) -
+      pxX *
+        (world.y - coordY)
+    ) /
+    determinant;
+
+  const pixelX =
+    (
+      world.x -
+      rotY * pixelY -
+      coordX
+    ) /
+    pxX;
+
+  const normalizedX =
+    pixelX / dimX;
+
+  const normalizedY =
+    pixelY / dimY;
+
+  /*
+   * Do NOT clamp invalid native coordinates to an edge.
+   * If PGA did not supply coordinates in this TFW frame,
+   * return null so we fall back to the visible normalized
+   * bottomToTop placement.
+   */
+  if (
+    !Number.isFinite(normalizedX) ||
+    !Number.isFinite(normalizedY) ||
+    normalizedX < 0 ||
+    normalizedX > 1 ||
+    normalizedY < 0 ||
+    normalizedY > 1
+  ) {
+    return null;
+  }
 
   return {
-    x: calibratedX * VIEWBOX_SIZE,
-    y: calibratedY * VIEWBOX_SIZE,
+    x:
+      normalizedX *
+      VIEWBOX_SIZE,
+    y:
+      normalizedY *
+      VIEWBOX_SIZE,
+  };
+}
+
+function toPlotPoint(
+  coordinate: Coordinate,
+  calibration: MapCalibration,
+): PlotPoint {
+  /*
+   * PGA already supplies normalized bottomToTop x/y
+   * coordinates for every shot.
+   *
+   * These map directly onto the vertical TOURCAST
+   * terrain image:
+   *
+   *   0,0 = top-left
+   *   1,1 = bottom-right
+   *
+   * Prefer these authoritative placement coordinates
+   * whenever they are available.
+   */
+  if (validPoint(coordinate)) {
+    return {
+      x:
+        clampNormalized(
+          coordinate.x,
+        ) * VIEWBOX_SIZE,
+      y:
+        clampNormalized(
+          coordinate.y,
+        ) * VIEWBOX_SIZE,
+    };
+  }
+
+  /*
+   * Fallback for future PGA payloads that provide only
+   * TOURCAST world coordinates.
+   */
+  const affine =
+    calibration.affine;
+
+  if (
+    affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    const {
+      pxX,
+      rotX,
+      rotY,
+      pxY,
+      coordX,
+      coordY,
+      dimX,
+      dimY,
+    } = affine;
+
+    const determinant =
+      pxX * pxY -
+      rotY * rotX;
+
+    if (
+      Math.abs(determinant) > 1e-12 &&
+      dimX > 0 &&
+      dimY > 0
+    ) {
+      const deltaX =
+        coordinate.tourcastX -
+        coordX;
+
+      const deltaY =
+        coordinate.tourcastY -
+        coordY;
+
+      const pixelX =
+        (
+          pxY * deltaX -
+          rotY * deltaY
+        ) /
+        determinant;
+
+      const pixelY =
+        (
+          -rotX * deltaX +
+          pxX * deltaY
+        ) /
+        determinant;
+
+      return {
+        x:
+          clampNormalized(
+            pixelX / dimX,
+          ) * VIEWBOX_SIZE,
+        y:
+          clampNormalized(
+            pixelY / dimY,
+          ) * VIEWBOX_SIZE,
+      };
+    }
+  }
+
+  return {
+    x: 0,
+    y: 0,
   };
 }
 
@@ -368,7 +611,7 @@ export default function GolfHoleMap2D({
   const [
     revealedStrokeCount,
     setRevealedStrokeCount,
-  ] = useState<number | null>(0);
+  ] = useState<number | null>(null);
 
   const animationFrameRef =
     useRef<number | null>(null);
@@ -386,27 +629,61 @@ export default function GolfHoleMap2D({
         .map((shot): PlotShot | null => {
           if (
             !shot.bottomToTop ||
-            !validPoint(
+            !canPlotPoint(
               shot.bottomToTop.from,
+              calibration,
             ) ||
-            !validPoint(
+            !canPlotPoint(
               shot.bottomToTop.to,
+              calibration,
             )
           ) {
             return null;
           }
 
+          const nativeFrom =
+            shot.worldFrom
+              ? worldToPlotPoint(
+                  shot.worldFrom,
+                  calibration,
+                )
+              : null;
+
+          const nativeTo =
+            shot.worldTo
+              ? worldToPlotPoint(
+                  shot.worldTo,
+                  calibration,
+                )
+              : null;
+
+          /*
+           * Use PGA's real TOURCAST world frame only when
+           * BOTH endpoints successfully land inside this
+           * hole terrain image. Otherwise preserve the
+           * current bottomToTop placement.
+           */
+          const useNativeWorld =
+            nativeFrom !== null &&
+            nativeTo !== null;
+
           return {
             strokeNumber:
               shot.strokeNumber,
-            from: toPlotPoint(
-              shot.bottomToTop.from,
-              calibration,
-            ),
-            to: toPlotPoint(
-              shot.bottomToTop.to,
-              calibration,
-            ),
+            from:
+              useNativeWorld
+                ? nativeFrom
+                : toPlotPoint(
+                    shot.bottomToTop.from,
+                    calibration,
+                  ),
+            to:
+              useNativeWorld
+                ? nativeTo
+                : toPlotPoint(
+                    shot.bottomToTop.to,
+                    calibration,
+                  ),
             finalStroke:
               shot.finalStroke,
             distance: shot.distance,
@@ -642,7 +919,11 @@ export default function GolfHoleMap2D({
     useCallback(() => {
       cancelShotAnimation();
       setIsPlaying(false);
-      setRevealedStrokeCount(0);
+      /*
+       * Reset restores the complete static replay.
+       * Progressive hiding is used only while Play runs.
+       */
+      setRevealedStrokeCount(null);
       setTransform(
         DEFAULT_TRANSFORM,
       );
@@ -1073,17 +1354,19 @@ export default function GolfHoleMap2D({
           shot.strokeNumber,
         );
 
-        focusShot(shot);
-
         /*
-         * Give the camera enough time to settle before the
-         * ball begins moving.
+         * Keep the entire hole visible while the tracer
+         * travels. Do not move the camera between shots.
          */
+        setTransform(
+          DEFAULT_TRANSFORM,
+        );
+
         await new Promise<void>(
           (resolve) => {
             window.setTimeout(
               resolve,
-              800,
+              200,
             );
           },
         );
@@ -1148,6 +1431,15 @@ export default function GolfHoleMap2D({
     }
 
     cancelShotAnimation();
+
+    /*
+     * Playback always begins from the complete hole.
+     * Manual Focus Shot remains available separately.
+     */
+    setTransform(
+      DEFAULT_TRANSFORM,
+    );
+
     setRevealedStrokeCount(0);
 
     onSelectStroke(
