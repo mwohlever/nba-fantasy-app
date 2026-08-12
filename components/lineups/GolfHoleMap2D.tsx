@@ -1546,6 +1546,11 @@ export default function GolfHoleMap2D({
       null,
     );
 
+  const videoPanelRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
   const pointersRef =
     useRef(
       new Map<number, PointerPosition>(),
@@ -2755,6 +2760,35 @@ export default function GolfHoleMap2D({
     setIsPlaying(true);
   }
 
+  function openVideoReplay(
+    strokeNumber: number,
+  ) {
+    setIsPlaying(false);
+    setVideoStrokeNumber(
+      strokeNumber,
+    );
+
+    /*
+     * Desktop already shows the video beside the map.
+     * Mobile stacks it below the map/navigator, so bring that
+     * existing panel into view after React renders the video.
+     */
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia(
+        "(max-width: 639px)",
+      ).matches
+    ) {
+      window.setTimeout(() => {
+        videoPanelRef.current
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      }, 120);
+    }
+  }
+
   async function selectShot(
     strokeNumber: number,
   ) {
@@ -3598,6 +3632,49 @@ export default function GolfHoleMap2D({
               </div>
             ) : null}
 
+            {!animatedShot &&
+            selectedShot?.videoId &&
+            !isVideoPanelOpen ? (
+              <button
+                type="button"
+                data-shotcast-marker="true"
+                onClick={(event) => {
+                  event.stopPropagation();
+
+                  openVideoReplay(
+                    selectedShot.strokeNumber,
+                  );
+                }}
+                className="absolute bottom-2 right-2 z-20 flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-slate-950/80 px-3 py-2 text-left shadow-xl backdrop-blur-md transition duration-300 hover:bg-emerald-950/90 active:scale-[0.98] sm:hidden"
+                aria-label={`Watch PGA TOUR replay of shot ${selectedShot.strokeNumber}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-950 text-sm"
+                >
+                  🎥
+                </span>
+
+                <span className="min-w-0">
+                  <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-emerald-300">
+                    Replay available
+                  </span>
+
+                  <span className="mt-0.5 block text-[11px] font-bold text-white">
+                    Watch Shot{" "}
+                    {selectedShot.strokeNumber}
+                  </span>
+                </span>
+
+                <span
+                  aria-hidden="true"
+                  className="ml-1 text-xs font-black text-emerald-300"
+                >
+                  ↓
+                </span>
+              </button>
+            ) : null}
+
             <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
               {transform.scale.toFixed(
                 1,
@@ -3758,6 +3835,7 @@ export default function GolfHoleMap2D({
 
 
           <div
+            ref={videoPanelRef}
             className={`mt-3 ${
               isVideoPanelOpen
                 ? "sm:mt-0 sm:min-h-0 sm:flex-1"
@@ -3920,7 +3998,7 @@ export default function GolfHoleMap2D({
                   <button
                     type="button"
                     onClick={() =>
-                      setVideoStrokeNumber(
+                      openVideoReplay(
                         selectedShot.strokeNumber,
                       )
                     }
