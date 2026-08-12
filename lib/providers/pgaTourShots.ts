@@ -53,6 +53,53 @@ type RawShotCoordinateGroup = {
   toCoords?: Partial<PgaCoordinate> | null;
 };
 
+type RawRadarTrajectory = {
+  carry?: number | null;
+  carrySide?: number | null;
+  maxHeight?: number | null;
+  curve?: number | null;
+  spinAxis?: number | null;
+  valid?: boolean | null;
+};
+
+type RawRadarData = {
+  apexHeight?: number | null;
+  apexRange?: number | null;
+  apexSide?: number | null;
+  clubSpeed?: number | null;
+  ballSpeed?: number | null;
+  smashFactor?: number | null;
+  launchSpin?: number | null;
+  spinAxis?: number | null;
+  verticalLaunchAngle?: number | null;
+  horizontalLaunchAngle?: number | null;
+  actualFlightTime?: number | null;
+  ballImpactMeasured?: string | null;
+
+  normalizedTrajectory?: RawRadarTrajectory[] | null;
+  normalizedTrajectoryV2?: RawRadarTrajectory[] | null;
+
+  /*
+   * Keep the polynomial trajectory payload available for the
+   * next ShotCast phase without making the UI depend on it yet.
+   */
+  ballTrajectory?: unknown[] | null;
+};
+
+type RawBallPathPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  secondsSinceStart?: number | null;
+};
+
+type RawBallPath = {
+  isLipOut?: boolean | null;
+  path?: RawBallPathPoint[] | null;
+  reconstructionType?: string | null;
+  totalDistanceInches?: number | null;
+};
+
 type RawStroke = {
   strokeNumber?: number | null;
 
@@ -78,7 +125,24 @@ type RawStroke = {
   fromLocationCode?: string | null;
   toLocationCode?: string | null;
   finalStroke?: boolean | null;
+
+  /*
+   * TOURCAST V3 enrichments.
+   */
+  videoId?: string | null;
+  radarData?: RawRadarData | null;
+  ballPath?: RawBallPath | null;
+
   overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+
+  /*
+   * TOURCAST V3 also provides a second coordinate frame
+   * specifically for the dedicated Green View image.
+   */
+  green?: {
     leftToRightCoords?: RawShotCoordinateGroup | null;
     bottomToTopCoords?: RawShotCoordinateGroup | null;
   } | null;
@@ -131,6 +195,34 @@ export type GolfWorldPoint = {
   z: number | null;
 };
 
+export type GolfShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+export type GolfBallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+export type GolfBallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: GolfBallPathPoint[];
+};
+
 export type GolfHoleReplayShot = {
   strokeNumber: number;
 
@@ -154,8 +246,23 @@ export type GolfHoleReplayShot = {
   fromLocationCode: string | null;
   toLocationCode: string | null;
   finalStroke: boolean;
+
+  /*
+   * Rich TOURCAST shot data.
+   */
+  videoId: string | null;
+  radarData: GolfShotRadarData | null;
+  ballPath: GolfBallPath | null;
+
   leftToRight: GolfShotCoordinateSet | null;
   bottomToTop: GolfShotCoordinateSet | null;
+
+  /*
+   * Same stroke projected onto PGA's dedicated green image.
+   * May be null for shots that are nowhere near the green.
+   */
+  greenBottomToTop:
+    GolfShotCoordinateSet | null;
 };
 
 export type GolfHoleReplay = {
@@ -177,6 +284,13 @@ export type GolfHoleReplay = {
    */
   shotcast: {
     imageUrl: string;
+
+    /*
+     * Purpose-built PGA Green View crop.
+     * Coordinates come from stroke.green.bottomToTopCoords.
+     */
+    greenImageUrl: string | null;
+
     orientation: "bottomToTop";
     source: "pga-tourcast-v3-enhanced";
     verified: true;
@@ -506,6 +620,151 @@ function coordinateSet(
   };
 }
 
+function finiteNumber(
+  value: unknown,
+): number | null {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric)
+    ? numeric
+    : null;
+}
+
+function radarData(
+  value: RawRadarData | null | undefined,
+): GolfShotRadarData | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized =
+    value.normalizedTrajectoryV2?.find(
+      (row) => row?.valid !== false,
+    ) ??
+    value.normalizedTrajectory?.find(
+      (row) => row?.valid !== false,
+    ) ??
+    null;
+
+  const result: GolfShotRadarData = {
+    apexHeight:
+      finiteNumber(value.apexHeight),
+    clubSpeed:
+      finiteNumber(value.clubSpeed),
+    ballSpeed:
+      finiteNumber(value.ballSpeed),
+    smashFactor:
+      finiteNumber(value.smashFactor),
+    launchSpin:
+      finiteNumber(value.launchSpin),
+    spinAxis:
+      finiteNumber(value.spinAxis),
+    verticalLaunchAngle:
+      finiteNumber(
+        value.verticalLaunchAngle,
+      ),
+    horizontalLaunchAngle:
+      finiteNumber(
+        value.horizontalLaunchAngle,
+      ),
+    actualFlightTime:
+      finiteNumber(
+        value.actualFlightTime,
+      ),
+    carry:
+      finiteNumber(
+        normalized?.carry,
+      ),
+    carrySide:
+      finiteNumber(
+        normalized?.carrySide,
+      ),
+  };
+
+  /*
+   * PGA sometimes sends zeroes for measurements that were not
+   * actually captured (for example club speed on an approach).
+   * Preserve them here; the UI decides whether a value is useful.
+   */
+  return result;
+}
+
+function ballPath(
+  value: RawBallPath | null | undefined,
+): GolfBallPath | null {
+  if (!value?.path?.length) {
+    return null;
+  }
+
+  const points =
+    value.path
+      .map((point) => {
+        const x =
+          finiteNumber(point.x);
+        const y =
+          finiteNumber(point.y);
+        const secondsSinceStart =
+          finiteNumber(
+            point.secondsSinceStart,
+          );
+
+        if (
+          x === null ||
+          y === null ||
+          secondsSinceStart === null
+        ) {
+          return null;
+        }
+
+        return {
+          x,
+          y,
+          z:
+            finiteNumber(point.z),
+          secondsSinceStart,
+        };
+      })
+      .filter(
+        (
+          point,
+        ): point is GolfBallPathPoint =>
+          point !== null,
+      );
+
+  if (points.length < 2) {
+    return null;
+  }
+
+  return {
+    isLipOut:
+      Boolean(value.isLipOut),
+    reconstructionType:
+      value.reconstructionType ??
+      null,
+    totalDistanceInches:
+      finiteNumber(
+        value.totalDistanceInches,
+      ),
+    path: points,
+  };
+}
+
+function highResolutionTourcastUrl(
+  value: string,
+) {
+  /*
+   * PGA currently returns its enhanced TOURCAST portrait
+   * image with a Cloudinary width transform of w_500.
+   *
+   * The underlying source supports a substantially larger
+   * render, so request a sharper version for pinch/zoom.
+   */
+  return value.replace(
+    /\bw_500\b/,
+    "w_1400",
+  );
+}
+
 function worldPoint(
   value:
     | RawWorldPoint
@@ -719,12 +978,105 @@ export async function fetchGolfHoleReplay(
     return null;
   }
 
-  const orderedRawStrokes =
+  const rawStrokeCandidates =
     [...(hole.strokes ?? [])]
       .filter(
         (shot) =>
           Number(shot.strokeNumber ?? 0) > 0,
+      );
+
+  function strokeRichness(
+    shot: RawStroke,
+  ) {
+    let score = 0;
+
+    if (
+      shot.videoId?.trim()
+    ) {
+      score += 1000;
+    }
+
+    if (
+      shot.radarData
+        ?.ballTrajectory
+        ?.length
+    ) {
+      score += 500;
+    }
+
+    if (
+      shot.ballPath
+        ?.path
+        ?.length
+    ) {
+      score +=
+        200 +
+        shot.ballPath.path.length;
+    }
+
+    if (shot.radarData) {
+      score += 100;
+    }
+
+    if (
+      shot.green
+        ?.bottomToTopCoords
+    ) {
+      score += 50;
+    }
+
+    if (
+      shot.overview
+        ?.bottomToTopCoords
+    ) {
+      score += 25;
+    }
+
+    if (
+      Number.isFinite(
+        Number(shot.x),
+      ) &&
+      Number.isFinite(
+        Number(shot.y),
       )
+    ) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  const bestStrokeByNumber =
+    new Map<number, RawStroke>();
+
+  for (
+    const shot
+    of rawStrokeCandidates
+  ) {
+    const strokeNumber =
+      Number(
+        shot.strokeNumber ?? 0,
+      );
+
+    const existing =
+      bestStrokeByNumber.get(
+        strokeNumber,
+      );
+
+    if (
+      !existing ||
+      strokeRichness(shot) >
+        strokeRichness(existing)
+    ) {
+      bestStrokeByNumber.set(
+        strokeNumber,
+        shot,
+      );
+    }
+  }
+
+  const orderedRawStrokes =
+    [...bestStrokeByNumber.values()]
       .sort(
         (a, b) =>
           Number(a.strokeNumber ?? 0) -
@@ -769,12 +1121,35 @@ export async function fetchGolfHoleReplay(
           shot.toLocationCode ?? null,
         finalStroke:
           Boolean(shot.finalStroke),
+
+        videoId:
+          typeof shot.videoId === "string" &&
+          shot.videoId.trim()
+            ? shot.videoId.trim()
+            : null,
+
+        radarData:
+          radarData(
+            shot.radarData,
+          ),
+
+
+        ballPath:
+          ballPath(
+            shot.ballPath,
+          ),
+
         leftToRight: coordinateSet(
           shot.overview?.leftToRightCoords,
         ),
         bottomToTop: coordinateSet(
           shot.overview?.bottomToTopCoords,
         ),
+
+        greenBottomToTop:
+          coordinateSet(
+            shot.green?.bottomToTopCoords,
+          ),
       };
 
       if (landingWorldPoint) {
@@ -819,8 +1194,25 @@ export async function fetchGolfHoleReplay(
         .bottomToTop.trim()
         ? {
             imageUrl:
+              highResolutionTourcastUrl(
+                hole.enhancedPickle
+                  .bottomToTop.trim(),
+              ),
+
+            greenImageUrl:
+              typeof hole.enhancedPickle
+                ?.greenBottomToTop ===
+                "string" &&
               hole.enhancedPickle
-                .bottomToTop.trim(),
+                .greenBottomToTop
+                .trim()
+                ? highResolutionTourcastUrl(
+                    hole.enhancedPickle
+                      .greenBottomToTop
+                      .trim(),
+                  )
+                : null,
+
             orientation:
               "bottomToTop",
             source:

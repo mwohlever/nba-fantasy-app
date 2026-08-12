@@ -38,6 +38,44 @@ type CoordinateSet = {
   to: Coordinate;
 };
 
+type ShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+type BallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+type ShotFlightTrajectory = {
+  kind: string | null;
+  type: string | null;
+  xFit: number[];
+  yFit: number[];
+  zFit: number[];
+  timeStart: number;
+  timeEnd: number;
+};
+
+type BallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: BallPathPoint[];
+};
+
 type ReplayShot = {
   strokeNumber: number;
   playByPlay: string | null;
@@ -49,6 +87,11 @@ type ReplayShot = {
   fromLocationCode: string | null;
   toLocationCode: string | null;
   finalStroke: boolean;
+
+  videoId: string | null;
+  radarData: ShotRadarData | null;
+  flightTrajectory: ShotFlightTrajectory | null;
+  ballPath: BallPath | null;
 
   worldFrom?: {
     x: number;
@@ -64,6 +107,7 @@ type ReplayShot = {
 
   leftToRight: CoordinateSet | null;
   bottomToTop: CoordinateSet | null;
+  greenBottomToTop: CoordinateSet | null;
 };
 
 type Replay = {
@@ -79,6 +123,7 @@ type Replay = {
 
   shotcast: {
     imageUrl: string;
+    greenImageUrl: string | null;
     orientation: "bottomToTop";
     source: "pga-tourcast-v3-enhanced";
     verified: true;
@@ -335,6 +380,11 @@ export default function GolfHoleReplayPanel({
   const [
     isShotCastOpen,
     setIsShotCastOpen,
+  ] = useState(true);
+
+  const [
+    isAllShotsOpen,
+    setIsAllShotsOpen,
   ] = useState(false);
 
   /*
@@ -444,9 +494,26 @@ export default function GolfHoleReplayPanel({
         }
 
         setSelectedStrokeNumber(
-          result.replay.shots[0]
-            ?.strokeNumber ?? null,
+          (current) => {
+            if (
+              current !== null &&
+              result.replay?.shots.some(
+                (shot) =>
+                  shot.strokeNumber ===
+                  current,
+              )
+            ) {
+              return current;
+            }
+
+            return (
+              result.replay?.shots[0]
+                ?.strokeNumber ??
+              null
+            );
+          },
         );
+
         setLastUpdatedAt(new Date());
       } catch (error) {
         if (
@@ -719,6 +786,55 @@ export default function GolfHoleReplayPanel({
   );
 
   /*
+   * While a live ShotCast is actually open, refresh PGA
+   * shot data every 30 seconds.
+   *
+   * Stop polling when:
+   * - ShotCast closes
+   * - the hole is complete
+   * - this component unmounts
+   *
+   * Also skip requests while the browser tab is hidden.
+   */
+  useEffect(() => {
+    if (
+      !isShotCastOpen ||
+      isHoleComplete
+    ) {
+      return;
+    }
+
+    const refreshLiveShotCast = () => {
+      if (
+        document.visibilityState !==
+        "visible"
+      ) {
+        return;
+      }
+
+      void loadReplay({
+        forceRefresh: true,
+      });
+    };
+
+    const intervalId =
+      window.setInterval(
+        refreshLiveShotCast,
+        30_000,
+      );
+
+    return () => {
+      window.clearInterval(
+        intervalId,
+      );
+    };
+  }, [
+    isHoleComplete,
+    isShotCastOpen,
+    loadReplay,
+  ]);
+
+  /*
    * PGA's holeStatus can occasionally collapse exceptional
    * scores into a broader label (for example, reporting a
    * 2 on a par 5 as "Eagle").
@@ -949,54 +1065,8 @@ export default function GolfHoleReplayPanel({
 
           {activeShotCastConfig ? (
             <div className="mb-3">
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="text-xs font-bold text-slate-200">
-                      ShotCast
-                    </div>
-
-                    {!activeShotCastConfig
-                      .calibrationVerified ? (
-                      <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-300">
-                        Layout preview
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-0.5 text-[10px] text-slate-500">
-                    {activeShotCastConfig
-                      .calibrationVerified
-                      ? "Interactive aerial shot replay"
-                      : "Interactive hole layout · shot alignment pending"}
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setIsShotCastOpen(
-                      (current) =>
-                        !current,
-                    )
-                  }
-                  aria-expanded={
-                    isShotCastOpen
-                  }
-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
-                    isShotCastOpen
-                      ? "border-slate-600 bg-slate-950 text-slate-300"
-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
-                  }`}
-                >
-                  {isShotCastOpen
-                    ? "Hide ShotCast"
-                    : "Open ShotCast"}
-                </button>
-              </div>
-
               {isShotCastOpen ? (
-                <div className="mt-3">
+                <>
                   <GolfHoleMap2D
                     title={
                       activeShotCastConfig
@@ -1005,6 +1075,11 @@ export default function GolfHoleReplayPanel({
                     imageUrl={
                       activeShotCastConfig
                         .imageUrl
+                    }
+                    greenImageUrl={
+                      replay.shotcast
+                        ?.greenImageUrl ??
+                      null
                     }
                     imageFit={
                       activeShotCastConfig
@@ -1035,6 +1110,45 @@ export default function GolfHoleReplayPanel({
                     }
                   />
 
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {!activeShotCastConfig
+                        .calibrationVerified ? (
+                        <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-amber-300">
+                          Layout preview
+                        </span>
+                      ) : null}
+
+                      {!isHoleComplete &&
+                      replay.shots.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                          Auto-refreshing every 30 sec
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {replay.shots.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIsAllShotsOpen(
+                            (current) =>
+                              !current,
+                          )
+                        }
+                        aria-expanded={
+                          isAllShotsOpen
+                        }
+                        className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800"
+                      >
+                        {isAllShotsOpen
+                          ? "Hide all shots"
+                          : `All shots (${replay.shots.length})`}
+                      </button>
+                    ) : null}
+                  </div>
+
                   {activeShotCastConfig
                     .aboutThisHole ? (
                     <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
@@ -1050,7 +1164,7 @@ export default function GolfHoleReplayPanel({
                       </div>
                     </div>
                   ) : null}
-                </div>
+                </>
               ) : null}
             </div>
           ) : isManifestLoading ? (
@@ -1059,127 +1173,139 @@ export default function GolfHoleReplayPanel({
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-xl border border-slate-800">
-            {replay.shots.map(
-              (shot, index) => {
-                const summary =
-                  shotSummary(
-                    shot,
-                    completedResult,
-                  );
+          {replay.shots.length > 0 &&
+          (!activeShotCastConfig ||
+            isAllShotsOpen) ? (
+            <div className="overflow-hidden rounded-xl border border-slate-800">
+              {replay.shots.map(
+                (shot, index) => {
+                  const summary =
+                    shotSummary(
+                      shot,
+                      completedResult,
+                    );
 
-                const isCurrentBall =
-                  !isHoleComplete &&
-                  index ===
-                    replay.shots.length - 1;
+                  const isCurrentBall =
+                    !isHoleComplete &&
+                    index ===
+                      replay.shots.length - 1;
 
-                const isSelectedShot =
-                  shot.strokeNumber ===
-                  selectedStrokeNumber;
+                  const isSelectedShot =
+                    shot.strokeNumber ===
+                    selectedStrokeNumber;
 
-                return (
-                  <button
-                    type="button"
-                    key={shot.strokeNumber}
-                    onClick={() =>
-                      setSelectedStrokeNumber(
-                        shot.strokeNumber,
-                      )
-                    }
-                    className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
-                      index > 0
-                        ? "border-t border-slate-800"
-                        : ""
-                    } ${
-                      isSelectedShot
-                        ? "bg-emerald-500/10"
-                        : isCurrentBall
-                          ? "bg-amber-500/5"
-                          : "hover:bg-slate-900/70"
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
-                          shot.finalStroke
-                            ? resultBadgeClass(
-                                completedResult,
-                              )
-                            : isCurrentBall
-                              ? "border-amber-500 bg-amber-950 text-amber-200"
-                              : "border-slate-600 bg-slate-800 text-slate-200"
-                        }`}
-                      >
-                        {shot.strokeNumber}
-                      </span>
+                  return (
+                    <button
+                      type="button"
+                      key={shot.strokeNumber}
+                      onClick={() => {
+                        setSelectedStrokeNumber(
+                          shot.strokeNumber,
+                        );
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                          <strong className="text-sm text-white">
-                            Shot {shot.strokeNumber}
-                          </strong>
+                        if (
+                          activeShotCastConfig
+                        ) {
+                          setIsAllShotsOpen(
+                            false,
+                          );
+                        }
+                      }}
+                      className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+                        index > 0
+                          ? "border-t border-slate-800"
+                          : ""
+                      } ${
+                        isSelectedShot
+                          ? "bg-emerald-500/10"
+                          : isCurrentBall
+                            ? "bg-amber-500/5"
+                            : "hover:bg-slate-900/70"
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                            shot.finalStroke
+                              ? resultBadgeClass(
+                                  completedResult,
+                                )
+                              : isCurrentBall
+                                ? "border-amber-500 bg-amber-950 text-amber-200"
+                                : "border-slate-600 bg-slate-800 text-slate-200"
+                          }`}
+                        >
+                          {shot.strokeNumber}
+                        </span>
 
-                          {summary ? (
-                            <>
-                              <span
-                                aria-hidden="true"
-                                className="text-slate-600"
-                              >
-                                ·
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <strong className="text-sm text-white">
+                              Shot {shot.strokeNumber}
+                            </strong>
+
+                            {summary ? (
+                              <>
+                                <span
+                                  aria-hidden="true"
+                                  className="text-slate-600"
+                                >
+                                  ·
+                                </span>
+
+                                <span
+                                  className={`text-sm font-bold ${
+                                    shot.finalStroke
+                                      ? resultToneClass(
+                                          completedResult,
+                                        )
+                                      : "text-slate-200"
+                                  }`}
+                                >
+                                  {summary}
+                                </span>
+                              </>
+                            ) : null}
+
+                            {isCurrentBall ? (
+                              <span className="rounded-full border border-amber-700/60 bg-amber-950 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                                Current ball
                               </span>
-
-                              <span
-                                className={`text-sm font-bold ${
-                                  shot.finalStroke
-                                    ? resultToneClass(
-                                        completedResult,
-                                      )
-                                    : "text-slate-200"
-                                }`}
-                              >
-                                {summary}
-                              </span>
-                            </>
-                          ) : null}
-
-                          {isCurrentBall ? (
-                            <span className="rounded-full border border-amber-700/60 bg-amber-950 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
-                              Current ball
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div className="mt-1 text-xs text-slate-400">
-                          {locationLabel(
-                            shot.fromLocation,
-                          )}
-
-                          <span
-                            aria-hidden="true"
-                            className="mx-2 text-slate-600"
-                          >
-                            →
-                          </span>
-
-                          {shot.finalStroke
-                            ? "Hole"
-                            : locationLabel(
-                                shot.toLocation,
-                              )}
-                        </div>
-
-                        {shot.playByPlay ? (
-                          <div className="mt-1.5 text-[11px] leading-4 text-slate-600">
-                            {shot.playByPlay}
+                            ) : null}
                           </div>
-                        ) : null}
+
+                          <div className="mt-1 text-xs text-slate-400">
+                            {locationLabel(
+                              shot.fromLocation,
+                            )}
+
+                            <span
+                              aria-hidden="true"
+                              className="mx-2 text-slate-600"
+                            >
+                              →
+                            </span>
+
+                            {shot.finalStroke
+                              ? "Hole"
+                              : locationLabel(
+                                  shot.toLocation,
+                                )}
+                          </div>
+
+                          {shot.playByPlay ? (
+                            <div className="mt-1.5 text-[11px] leading-4 text-slate-600">
+                              {shot.playByPlay}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              },
-            )}
-          </div>
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          ) : null}
 
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-600">
             <span>

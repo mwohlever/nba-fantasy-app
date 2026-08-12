@@ -162,35 +162,60 @@ function tournamentState(
     return "upcoming";
   }
 
-  const statuses =
-    eventPlayers.map((row) =>
-      String(
+  const normalized =
+    eventPlayers.map((row) => ({
+      row,
+      status: String(
         row.status ?? "scheduled",
       ).toLowerCase(),
+    }));
+
+  const terminalStatuses =
+    new Set([
+      "finished",
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  /*
+   * ESPN can leave golfers who completed the entire event as
+   * `round_complete` rather than changing them to `finished`.
+   *
+   * A golfer who has completed Round 4 / 72 holes is therefore
+   * tournament-final even if the stored status remains
+   * `round_complete`.
+   */
+  const golferIsTournamentFinal = (
+    row: GolfEventPlayerRow,
+    status: string,
+  ) =>
+    terminalStatuses.has(status) ||
+    (
+      status === "round_complete" &&
+      (
+        Number(
+          row.rounds_completed ?? 0,
+        ) >= 4 ||
+        Number(
+          row.holes_completed ?? 0,
+        ) >= 72
+      )
     );
 
-  const hasFinishedGolfer =
-    statuses.includes("finished");
-
-  const hasNonTerminalGolfer =
-    statuses.some((status) =>
-      [
-        "scheduled",
-        "active",
-        "round_complete",
-      ].includes(status),
+  const allGolfersFinal =
+    normalized.every(
+      ({ row, status }) =>
+        golferIsTournamentFinal(
+          row,
+          status,
+        ),
     );
-
-  if (
-    hasFinishedGolfer &&
-    !hasNonTerminalGolfer
-  ) {
-    return "final";
-  }
 
   const hasActivity =
-    eventPlayers.some(
-      (row) =>
+    normalized.some(
+      ({ row, status }) =>
         Number(
           row.holes_completed ?? 0,
         ) > 0 ||
@@ -204,12 +229,15 @@ function tournamentState(
           "withdrawn",
           "disqualified",
           "finished",
-        ].includes(
-          String(
-            row.status ?? "",
-          ).toLowerCase(),
-        ),
+        ].includes(status),
     );
+
+  if (
+    hasActivity &&
+    allGolfersFinal
+  ) {
+    return "final";
+  }
 
   return hasActivity
     ? "live"
