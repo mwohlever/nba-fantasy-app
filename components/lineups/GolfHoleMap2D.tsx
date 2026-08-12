@@ -2124,12 +2124,17 @@ export default function GolfHoleMap2D({
               animationResolveRef.current =
                 null;
 
+              /*
+               * Keep the completed shot mounted briefly so the
+               * mobile info overlay can fade away naturally before
+               * playback advances to the next stroke.
+               */
               window.setTimeout(() => {
                 setAnimatedStrokeNumber(
                   null,
                 );
                 resolve();
-              }, 300);
+              }, 650);
 
               return;
             }
@@ -3538,9 +3543,60 @@ export default function GolfHoleMap2D({
               </svg>
             </div>
 
-            <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
-              Drag · Pinch · Twist · Scroll
-            </div>
+            {animatedShot ? (
+              <div
+                className={`pointer-events-none absolute bottom-2 right-2 z-20 max-w-[78%] rounded-xl border border-white/15 bg-slate-950/75 px-3 py-2 text-left shadow-xl backdrop-blur-md transition-all duration-500 ease-out sm:hidden ${
+                  animationProgress <= 0.03 ||
+                  animationProgress >= 1
+                    ? "translate-y-1 opacity-0"
+                    : "translate-y-0 opacity-100"
+                }`}
+                aria-hidden="true"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                      animatedShot.finalStroke
+                        ? "border-emerald-300 bg-emerald-500 text-white"
+                        : "border-yellow-200 bg-yellow-300 text-slate-950"
+                    }`}
+                  >
+                    {animatedShot.strokeNumber}
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-300">
+                      Shot {animatedShot.strokeNumber}
+                    </div>
+
+                    <div className="mt-0.5 truncate text-[12px] font-bold text-white">
+                      {shotDescription(
+                        animatedShot,
+                      ) || "Shot in progress"}
+                    </div>
+                  </div>
+                </div>
+
+                {animatedShot.fromLocation ||
+                animatedShot.toLocation ? (
+                  <div className="mt-1.5 flex items-center gap-1.5 truncate text-[10px] font-medium text-slate-300">
+                    <span className="truncate">
+                      {animatedShot.fromLocation ??
+                        "Previous position"}
+                    </span>
+
+                    <span className="shrink-0 text-slate-500">
+                      →
+                    </span>
+
+                    <span className="truncate">
+                      {animatedShot.toLocation ??
+                        "Landing area"}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
               {transform.scale.toFixed(
