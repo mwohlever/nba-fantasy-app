@@ -1643,7 +1643,10 @@ export default function PlayerPool({
 
   const golfSeasonSortLabel =
     sortBy ===
-      "golf_cuts_pct"
+      "owgr"
+      ? "OWGR"
+      : sortBy ===
+          "golf_cuts_pct"
       ? "CUTS"
       : sortBy ===
           "golf_wins"
@@ -1684,6 +1687,9 @@ export default function PlayerPool({
     switch (
       sortBy
     ) {
+      case "owgr":
+        return stat?.owgr_rank;
+
       case "golf_cuts_pct":
         return stat?.cuts_made_pct;
 
@@ -2272,6 +2278,10 @@ export default function PlayerPool({
                 researchMode ===
                   "season" ? (
                 <>
+                  <option value="owgr">
+                    OWGR
+                  </option>
+
                   <option value="golf_scoring_avg">
                     Scoring Average
                   </option>
@@ -2991,7 +3001,20 @@ export default function PlayerPool({
 
                     const dynamicBySort =
                       sortBy ===
-                        "golf_wins"
+                        "owgr"
+                        ? {
+                            label:
+                              "OWGR",
+                            value:
+                              golfSeasonStat.owgr_rank ??
+                              player.owgr_rank,
+                            key:
+                              "owgr",
+                            format:
+                              "rank",
+                          }
+                        : sortBy ===
+                            "golf_wins"
                         ? {
                             label:
                               "WINS",
@@ -3165,6 +3188,15 @@ export default function PlayerPool({
                         return `${value.toFixed(
                           1,
                         )}%`;
+                      }
+
+                      if (
+                        item.format ===
+                        "rank"
+                      ) {
+                        return `#${value.toFixed(
+                          0,
+                        )}`;
                       }
 
                       if (

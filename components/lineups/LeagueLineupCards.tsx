@@ -16,7 +16,7 @@ type Props = {
   getPlayerProjectionScore: (playerId: number) => number;
   getDraftNeeds: (teamId: number) => string;
   rosterSlots: RosterSlotConfig[];
-  setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setResearchPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
   setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
   isLocked: boolean;
 };
@@ -26,7 +26,7 @@ type MiniSlotProps = {
   positionGroup: string;
   team: OrderedTeam;
   isLocked: boolean;
-  setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setResearchPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
   setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
 };
 
@@ -35,7 +35,7 @@ function MiniSlot({
   positionGroup,
   team,
   isLocked,
-  setDraftingPlayer,
+  setResearchPlayer,
   setTargetDraftSlot,
 }: MiniSlotProps) {
   return (
@@ -44,7 +44,7 @@ function MiniSlot({
       disabled={!player && isLocked}
       onClick={() => {
         if (player) {
-          setDraftingPlayer(player);
+          setResearchPlayer(player);
           return;
         }
 
@@ -71,6 +71,7 @@ function MiniSlot({
         <PlayerHeadshot
           nbaPlayerId={player.nba_player_id}
           playerName={player.name}
+          imageUrl={player.headshot_url}
           size="sm"
           className="league-lineup-mini-headshot"
         />
@@ -93,7 +94,7 @@ export default function LeagueLineupCards({
   getPlayerProjectionScore,
   getDraftNeeds,
   rosterSlots,
-  setDraftingPlayer,
+  setResearchPlayer,
   setTargetDraftSlot,
   isLocked,
 }: Props) {
@@ -216,7 +217,7 @@ export default function LeagueLineupCards({
                           positionGroup={slotConfig.position}
                           team={team}
                           isLocked={isLocked}
-                          setDraftingPlayer={setDraftingPlayer}
+                          setResearchPlayer={setResearchPlayer}
                           setTargetDraftSlot={setTargetDraftSlot}
                         />
                       ))}

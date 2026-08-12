@@ -4,6 +4,7 @@ import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import SlotDraftModal from "@/components/lineups/SlotDraftModal";
 import PlayerPool from "@/components/lineups/PlayerPool";
@@ -116,6 +117,8 @@ export default function LineupBuilder({
     setIsInspectingPlayerFromSlot,
   ] = useState(false);
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+  const [leagueResearchPlayer, setLeagueResearchPlayer] =
+    useState<Player | null>(null);
   const [targetDraftSlot, setTargetDraftSlot] =
     useState<TargetDraftSlot | null>(null);
 
@@ -1837,7 +1840,7 @@ export default function LineupBuilder({
             }
             getDraftNeeds={getDraftNeeds}
             rosterSlots={rosterSlots}
-            setDraftingPlayer={setDraftingPlayer}
+            setResearchPlayer={setLeagueResearchPlayer}
             setTargetDraftSlot={setTargetDraftSlot}
             isLocked={Boolean(
               selectedSlate?.is_locked
@@ -1905,6 +1908,47 @@ export default function LineupBuilder({
           selectedSlate?.sport === "golf"
             ? selectedSlate.id
             : null
+        }
+      />
+
+      <PlayerResearchModal
+        player={
+          leagueResearchPlayer
+            ? {
+                id: leagueResearchPlayer.id,
+                name: leagueResearchPlayer.name,
+                nbaPlayerId:
+                  leagueResearchPlayer.nba_player_id ??
+                  null,
+                nflPlayerId:
+                  leagueResearchPlayer.nfl_player_id ??
+                  null,
+                espnGolfPlayerId:
+                  leagueResearchPlayer.espn_player_id ??
+                  null,
+                headshotUrl:
+                  leagueResearchPlayer.headshot_url ??
+                  null,
+                positionGroup:
+                  leagueResearchPlayer.position_group ??
+                  null,
+                owgrRank:
+                  leagueResearchPlayer.owgr_rank ??
+                  null,
+              }
+            : null
+        }
+        sport={
+          (selectedSlate?.sport ??
+            selectedSport) as
+            | "nba"
+            | "nfl"
+            | "golf"
+        }
+        season={Number(selectedSeason)}
+        defaultMode="season"
+        onClose={() =>
+          setLeagueResearchPlayer(null)
         }
       />
 
