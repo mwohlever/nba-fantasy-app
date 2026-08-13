@@ -1802,7 +1802,7 @@ export default function LineupBuilder({
               }
               rosterSlots={rosterSlots}
               isLocked={Boolean(selectedSlate?.is_locked)}
-              setDraftingPlayer={setDraftingPlayer}
+              setDraftingPlayer={setLeagueResearchPlayer}
               setTargetDraftSlot={setTargetDraftSlot}
             />
           ) : (
