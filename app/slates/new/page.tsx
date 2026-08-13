@@ -93,6 +93,7 @@ export default function NewSlatePage() {
   const [golfTournaments, setGolfTournaments] = useState<GolfTournament[]>([]);
   const [selectedGolfEventId, setSelectedGolfEventId] = useState("");
   const [cutPenaltyPerRound, setCutPenaltyPerRound] = useState(5);
+  const [hasCut, setHasCut] = useState(true);
   const [isLoadingGolfSchedule, setIsLoadingGolfSchedule] = useState(false);
 
   useEffect(() => {
@@ -400,6 +401,10 @@ setTeams(
             sport === "golf"
               ? cutPenaltyPerRound
               : undefined,
+          hasCut:
+            sport === "golf"
+              ? hasCut
+              : undefined,
 teamSelections: teams
   .filter((team) => team.is_participating)
   .sort((a, b) => a.draft_order - b.draft_order)
@@ -618,6 +623,21 @@ teamSelections: teams
                     <p className="mt-1 text-xs text-slate-500">
                       A golfer missing two scheduled rounds would receive
                       twice this amount.
+                    </p>
+
+                    <label className="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={hasCut}
+                        onChange={(e) => setHasCut(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      Tournament has a 36-hole cut
+                    </label>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Leave checked for normal PGA Tour events. Turn off for
+                      no-cut tournaments.
                     </p>
                   </div>
 

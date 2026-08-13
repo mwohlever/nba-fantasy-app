@@ -12,6 +12,7 @@ type AdminSlateRow = {
   display_name: string | null;
   external_event_id: string | null;
   cut_penalty_per_round: number | null;
+  has_cut: boolean;
   nba_team_abbreviations: string[] | null;
 };
 
@@ -43,6 +44,7 @@ export async function GET(request: Request) {
           "display_name",
           "external_event_id",
           "cut_penalty_per_round",
+          "has_cut",
           "nba_team_abbreviations",
         ].join(",")
       )

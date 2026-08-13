@@ -32,6 +32,7 @@ type GolfSlateRecord = {
   end_date: string;
   is_locked: boolean;
   cut_penalty_per_round: number | null;
+  has_cut: boolean;
 };
 
 type GolfPlayerIdRow = {
@@ -567,6 +568,7 @@ export async function POST(request: Request) {
           "end_date",
           "is_locked",
           "cut_penalty_per_round",
+          "has_cut",
         ].join(","),
       )
       .eq("id", slateId)
@@ -694,8 +696,9 @@ export async function POST(request: Request) {
     }
 
     const officialCut =
-      calculateGolfCutLine(
-        normalizedCompetitors.map(
+      slate.has_cut
+        ? calculateGolfCutLine(
+            normalizedCompetitors.map(
           (competitor) => ({
             score:
               getThirtySixHoleScore(
@@ -718,9 +721,10 @@ export async function POST(request: Request) {
               competitor.roundsCompleted,
             currentRound:
               competitor.currentRound,
-          }),
-        ),
-      );
+              }),
+            ),
+          )
+        : null;
 
     const protectedTerminalStatuses =
       new Set<GolfCompetitorStatus>([
@@ -931,7 +935,10 @@ export async function POST(request: Request) {
         courseError,
       );
     }
-    const penaltyPerRound = Math.max(0, slate.cut_penalty_per_round ?? 0);
+    const penaltyPerRound =
+      slate.has_cut
+        ? Math.max(0, slate.cut_penalty_per_round ?? 0)
+        : 0;
 
     const golfPlayerRows = competitors.map((competitor) => ({
       espn_player_id: competitor.espnPlayerId,
@@ -2824,6 +2831,7 @@ export async function POST(request: Request) {
       },
       scoring: {
         expectedRounds: EXPECTED_TOURNAMENT_ROUNDS,
+        hasCut: slate.has_cut,
         cutPenaltyPerRound: penaltyPerRound,
       },
       statusCounts,

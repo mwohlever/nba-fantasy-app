@@ -20,6 +20,7 @@ type SlateListRow = {
   display_name?: string | null;
   external_event_id?: string | null;
   cut_penalty_per_round?: number | null;
+  has_cut?: boolean;
   nba_team_abbreviations?: string[] | null;
 };
 
@@ -505,6 +506,10 @@ export default function AdminSlatesPage() {
                     selectedSlate.cut_penalty_per_round,
                   )
                 : undefined,
+            has_cut:
+              selectedSlate.sport === "golf"
+                ? selectedSlate.has_cut !== false
+                : undefined,
             nba_team_abbreviations:
               selectedSlate.nbaTeamsInput
                 .split(",")
@@ -984,7 +989,7 @@ export default function AdminSlatesPage() {
               </div>
 
               {selectedSlate.sport === "golf" ? (
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-5">
                   <div className="rounded-2xl border border-emerald-800 bg-emerald-950/35 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
                       Tournament Field
@@ -1038,6 +1043,37 @@ export default function AdminSlatesPage() {
                       <span className="text-sm text-slate-400">
                         per missed round
                       </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      Tournament Cut
+                    </div>
+
+                    <label className="mt-3 flex items-center gap-3 text-sm font-medium text-white">
+                      <input
+                        type="checkbox"
+                        checked={selectedSlate.has_cut !== false}
+                        onChange={(event) =>
+                          setSelectedSlate((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  has_cut: event.target.checked,
+                                }
+                              : current,
+                          )
+                        }
+                        disabled={isBusy}
+                        className="h-4 w-4 rounded border-slate-500"
+                      />
+                      36-hole cut
+                    </label>
+
+                    <div className="mt-2 text-xs leading-5 text-slate-400">
+                      Turn this off for no-cut tournaments. Projected cut,
+                      CUT statuses, and cut penalties will be disabled.
                     </div>
                   </div>
 

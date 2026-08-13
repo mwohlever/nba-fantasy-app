@@ -1208,6 +1208,7 @@ export default function GolfScoresDashboard({
         <GolfTournamentView
           players={allPlayers}
           teams={participatingTeams}
+          hasCut={selectedSlate?.has_cut !== false}
           getPlayersForTeam={getPlayersForTeam}
           getRawPlayerStat={getRawPlayerStat}
           setProfilePlayer={setProfilePlayer}

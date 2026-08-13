@@ -11,6 +11,7 @@ type GolfSlateRow = {
   is_locked: boolean;
   first_game_start_time: string | null;
   display_name: string | null;
+  has_cut: boolean;
 };
 
 type TeamResultRow = {
@@ -115,7 +116,7 @@ export async function getGolfHomeSummary() {
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name",
+        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut",
       )
       .eq("sport", "golf")
       .order("start_date", { ascending: false })
@@ -1026,8 +1027,9 @@ export async function getGolfHomeSummary() {
   });
 
   const projectedCut =
-    calculateGolfCutLine(
-      latestEventPlayers.map(
+    latestSlate?.has_cut !== false
+      ? calculateGolfCutLine(
+          latestEventPlayers.map(
         (player) => {
           const roundScores =
             cutRoundScoresByEventPlayerId.get(
@@ -1069,9 +1071,10 @@ export async function getGolfHomeSummary() {
             currentRound:
               player.current_round,
           };
-        },
-      ),
-    );
+            },
+          ),
+        )
+      : null;
 
   const tournamentFacts =
     tournamentLeaderboard
@@ -1117,6 +1120,7 @@ export async function getGolfHomeSummary() {
       display_name:
         slate.display_name ?? null,
       is_locked: slate.is_locked,
+      has_cut: slate.has_cut !== false,
       first_game_start_time:
         slate.first_game_start_time,
     };

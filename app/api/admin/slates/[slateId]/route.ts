@@ -21,6 +21,7 @@ type UpdateSlateBody = {
   teams?: SlateTeamUpdate[];
   nba_team_abbreviations?: string[];
   cut_penalty_per_round?: number;
+  has_cut?: boolean;
 };
 
 type RouteContext = {
@@ -57,7 +58,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
       supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, nba_team_abbreviations"
+          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations"
         )
         .eq("id", slateId)
         .single(),
@@ -187,6 +188,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const teams = body.teams ?? [];
     const isLocked = body.is_locked;
     const rawCutPenalty = Number(body.cut_penalty_per_round);
+    const hasCut = body.has_cut;
     const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
       .map((value) => normalizeNbaTeamCode(value))
       .filter(Boolean);
@@ -245,6 +247,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       is_locked?: boolean;
       nba_team_abbreviations?: string[];
       cut_penalty_per_round?: number;
+      has_cut?: boolean;
     } = {
       nba_team_abbreviations: nbaTeamAbbreviations,
     };
@@ -252,6 +255,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (existingSlate.sport === "golf") {
       slateUpdatePayload.cut_penalty_per_round =
         rawCutPenalty;
+
+      if (typeof hasCut === "boolean") {
+        slateUpdatePayload.has_cut = hasCut;
+      }
     }
 
     if (typeof isLocked === "boolean") {

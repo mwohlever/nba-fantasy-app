@@ -15,6 +15,7 @@ import type {
 type Props = {
   players: Player[];
   teams: OrderedTeam[];
+  hasCut?: boolean;
   getPlayersForTeam: (teamId: number) => Player[];
   getRawPlayerStat: (playerId: number) => PlayerStat | null;
   setProfilePlayer: (player: Player | null) => void;
@@ -77,6 +78,7 @@ function tournamentStatus(
 export default function GolfTournamentView({
   players,
   teams,
+  hasCut = true,
   getPlayersForTeam,
   getRawPlayerStat,
   setProfilePlayer,
@@ -268,7 +270,8 @@ export default function GolfTournamentView({
 
   const cutLine = useMemo(
     () =>
-      calculateGolfCutLine(
+      hasCut
+        ? calculateGolfCutLine(
         players.flatMap((player) => {
           const stat =
             getRawPlayerStat(
@@ -338,8 +341,10 @@ export default function GolfTournamentView({
             },
           ];
         }),
-      ),
+          )
+        : null,
     [
+      hasCut,
       players,
       getRawPlayerStat,
     ],

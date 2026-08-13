@@ -507,6 +507,11 @@ export async function POST(request: NextRequest) {
 
     const rawCutPenalty = Number(body?.cutPenaltyPerRound);
 
+    const hasCut =
+      sport === "golf"
+        ? body?.hasCut !== false
+        : true;
+
     const cutPenaltyPerRound =
       sport === "golf" && Number.isInteger(rawCutPenalty)
         ? rawCutPenalty
@@ -661,13 +666,15 @@ export async function POST(request: NextRequest) {
           sport === "golf" ? externalEventId : null,
         cut_penalty_per_round:
           sport === "golf" ? cutPenaltyPerRound : null,
+        has_cut:
+          sport === "golf" ? hasCut : true,
         nba_team_abbreviations:
           sport === "nba" ? nbaTeamAbbreviations : [],
         first_game_start_time:
           sport === "nba" ? firstGameStartTime : null,
       })
       .select(
-        "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, nba_team_abbreviations, first_game_start_time"
+        "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations, first_game_start_time"
       )
       .single();
 

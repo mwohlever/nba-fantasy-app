@@ -77,6 +77,7 @@ export type Slate = {
   label?: string;
   is_locked: boolean;
   sport?: string;
+  has_cut?: boolean;
 };
 
 export type SavedLineup = {
