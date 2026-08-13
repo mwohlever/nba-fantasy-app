@@ -875,12 +875,17 @@ export async function POST(request: Request) {
     let courseHolesUpserted = 0;
 
     try {
+      /*
+       * Course-hole metadata is required independently of the
+       * player scoring ingestion path.
+       *
+       * Always refresh it so new tournaments have all 18 pars
+       * and yardages available before golfers play those holes.
+       */
       const courses =
-        isPayloadIngestion
-          ? []
-          : await fetchGolfCoursesByEventId(
-        slate.external_event_id ?? "",
-      );
+        await fetchGolfCoursesByEventId(
+          slate.external_event_id ?? "",
+        );
 
       const courseRows = courses.flatMap((course) =>
         course.holes.map((hole) => ({

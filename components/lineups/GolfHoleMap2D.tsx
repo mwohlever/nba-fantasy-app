@@ -2888,6 +2888,13 @@ export default function GolfHoleMap2D({
     );
   }
 
+  /*
+   * Only a confirmed final stroke identifies the cup.
+   *
+   * Never infer the flag from the latest live shot: on an
+   * in-progress hole that endpoint is the golfer's current
+   * ball position, not the hole location.
+   */
   const cupPoint =
     [...plottedShots]
       .reverse()
@@ -2895,9 +2902,6 @@ export default function GolfHoleMap2D({
         (shot) =>
           shot.finalStroke,
       )?.to ??
-    plottedShots[
-      plottedShots.length - 1
-    ]?.to ??
     null;
 
   const animatedShot =
