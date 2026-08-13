@@ -497,6 +497,310 @@ const HOLE_DETAILS_QUERY = `
   }
 `;
 
+export type PgaTourCourseMetadata = {
+  tournamentId: string;
+  courseId: string;
+  courseName: string | null;
+  isHost: boolean;
+  holes: Array<{
+    holeNumber: number;
+    par: number;
+    yards: number | null;
+  }>;
+};
+
+/*
+ * Lightweight pre-tournament course import.
+ *
+ * This deliberately does NOT fetch terrain images, TFW files,
+ * green assets, or other ShotCast resources. It only asks PGA
+ * TOUR for the host course and its official 18-hole scorecard.
+ *
+ * That makes it appropriate to run when the tournament slate
+ * or field is created, before anybody tees off.
+ */
+export async function fetchPgaTourCourseMetadata(
+  input: {
+    tournamentId: string;
+    round?: number;
+  },
+): Promise<PgaTourCourseMetadata> {
+  const normalizedTournamentId =
+    input.tournamentId
+      .trim()
+      .toUpperCase();
+
+  const round =
+    Number(input.round ?? 1);
+
+  if (
+    !/^R\\d{7}$/.test(
+      normalizedTournamentId,
+    )
+  ) {
+    throw new Error(
+      "PGA tournament ID must look like R2026013.",
+    );
+  }
+
+  if (
+    !Number.isInteger(round) ||
+    round < 1 ||
+    round > 4
+  ) {
+    throw new Error(
+      "Round must be from 1 through 4.",
+    );
+  }
+
+  const leaderboardData =
+    await graphqlRequest(
+      "LeaderboardHoleByHole",
+      LEADERBOARD_QUERY,
+      {
+        tournamentId:
+          normalizedTournamentId,
+        round,
+      },
+    );
+
+  const leaderboard =
+    leaderboardData
+      ?.leaderboardHoleByHole;
+
+  if (!leaderboard) {
+    throw new Error(
+      "PGA TOUR returned no course information.",
+    );
+  }
+
+  const courses =
+    Array.isArray(
+      leaderboard.courses,
+    )
+      ? leaderboard.courses
+      : [];
+
+  const course =
+    courses.find(
+      (row: any) =>
+        row?.hostCourse === true &&
+        row?.enabled !== false,
+    ) ??
+    courses.find(
+      (row: any) =>
+        row?.enabled !== false,
+    ) ??
+    courses[0];
+
+  const courseId =
+    String(
+      course?.id ?? "",
+    ).trim();
+
+  if (!courseId) {
+    throw new Error(
+      "No enabled PGA host course was returned.",
+    );
+  }
+
+  const headerRows =
+    (
+      Array.isArray(
+        leaderboard.courseHoleHeaders,
+      )
+        ? leaderboard.courseHoleHeaders
+        : []
+    ).find(
+      (row: any) =>
+        String(
+          row?.courseId ?? "",
+        ) === courseId,
+    )?.holeHeaders ?? [];
+
+  const headersByHole =
+    new Map<number, any>(
+      (
+        Array.isArray(headerRows)
+          ? headerRows
+          : []
+      )
+        .filter(
+          (row: any) =>
+            Number.isInteger(
+              Number(
+                row?.holeNumber,
+              ),
+            ),
+        )
+        .map(
+          (row: any) => [
+            Number(
+              row.holeNumber,
+            ),
+            row,
+          ],
+        ),
+    );
+
+  /*
+   * Hole headers already provide par. HoleDetails adds official
+   * yardage and is available independently of a golfer's score.
+   */
+  const holes =
+    await Promise.all(
+      Array.from(
+        {
+          length: 18,
+        },
+        (_, index) =>
+          index + 1,
+      ).map(
+        async (
+          holeNumber,
+        ) => {
+          const header =
+            headersByHole.get(
+              holeNumber,
+            );
+
+          let detail:
+            | any
+            | null =
+            null;
+
+          try {
+            const holeData =
+              await graphqlRequest(
+                "HoleDetails",
+                HOLE_DETAILS_QUERY,
+                {
+                  tournamentId:
+                    normalizedTournamentId,
+                  courseId,
+                  hole:
+                    holeNumber,
+                },
+              );
+
+            detail =
+              holeData
+                ?.holeDetails ??
+              null;
+          } catch (error) {
+            /*
+             * Par can still come from the leaderboard hole
+             * headers if a single HoleDetails call is flaky.
+             */
+            console.warn(
+              `[Golf course metadata] Hole ${holeNumber} ` +
+                `details unavailable:`,
+              error,
+            );
+          }
+
+          const holeInfo =
+            detail?.holeInfo &&
+            typeof detail
+              .holeInfo ===
+              "object"
+              ? detail.holeInfo
+              : {};
+
+          const par =
+            numberOrNull(
+              holeInfo.par ??
+                header?.par,
+            );
+
+          const yards =
+            numberOrNull(
+              holeInfo.yards,
+            );
+
+          return {
+            holeNumber,
+            par,
+            yards,
+          };
+        },
+      ),
+    );
+
+  const validHoles =
+    holes
+      .filter(
+        (
+          hole,
+        ): hole is {
+          holeNumber: number;
+          par: number;
+          yards: number | null;
+        } =>
+          Number.isInteger(
+            hole.holeNumber,
+          ) &&
+          hole.holeNumber >= 1 &&
+          hole.holeNumber <= 18 &&
+          hole.par !== null &&
+          Number.isInteger(
+            hole.par,
+          ) &&
+          hole.par >= 2 &&
+          hole.par <= 7,
+      )
+      .map(
+        (hole) => ({
+          holeNumber:
+            hole.holeNumber,
+          par:
+            hole.par,
+          yards:
+            hole.yards !== null &&
+            Number.isFinite(
+              hole.yards,
+            ) &&
+            hole.yards > 0
+              ? hole.yards
+              : null,
+        }),
+      )
+      .sort(
+        (a, b) =>
+          a.holeNumber -
+          b.holeNumber,
+      );
+
+  if (
+    validHoles.length !== 18
+  ) {
+    throw new Error(
+      `PGA TOUR returned ${validHoles.length}/18 valid course pars.`,
+    );
+  }
+
+  return {
+    tournamentId:
+      normalizedTournamentId,
+    courseId,
+    courseName:
+      typeof course
+        ?.courseName ===
+        "string"
+        ? course
+            .courseName
+            .trim() ||
+          null
+        : null,
+    isHost:
+      course
+        ?.hostCourse ===
+      true,
+    holes:
+      validHoles,
+  };
+}
+
 export async function importShotCastManifest({
   tournamentId,
   round = 1,

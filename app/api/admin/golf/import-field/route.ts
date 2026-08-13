@@ -10,6 +10,14 @@ import {
   type PgaTourFieldPlayer,
 } from "@/lib/providers/pgaTourField";
 
+import {
+  fetchPgaTourCourseMetadata,
+} from "@/lib/shotcast/importShotCastManifest";
+
+import {
+  upsertGolfCourseHoles,
+} from "@/lib/golf/upsertGolfCourseHoles";
+
 type RequestBody = {
   slateId?: number | string;
 };
@@ -213,6 +221,36 @@ export async function POST(
       await fetchPgaTourField({
         year,
         tournamentName,
+      });
+
+    /*
+     * Course scorecard metadata belongs to tournament setup,
+     * not live scoring.
+     *
+     * The PGA field lookup above already resolved the official
+     * PGA tournament ID, so use that same ID to load and persist
+     * all 18 pars/yardages before play begins.
+     */
+    const courseMetadata =
+      await fetchPgaTourCourseMetadata({
+        tournamentId:
+          field.tournamentId,
+        round: 1,
+      });
+
+    const courseSync =
+      await upsertGolfCourseHoles({
+        slateId,
+        metadata: {
+          courseId:
+            courseMetadata.courseId,
+          courseName:
+            courseMetadata.courseName,
+          isHost:
+            courseMetadata.isHost,
+          holes:
+            courseMetadata.holes,
+        },
       });
 
     const {
@@ -522,6 +560,14 @@ export async function POST(
       eventPlayersUpserted:
         eventData?.length ??
         eventRows.length,
+      course: {
+        id:
+          courseSync.courseId,
+        name:
+          courseSync.courseName,
+        holesUpserted:
+          courseSync.holesUpserted,
+      },
       importedAt:
         refreshedAt,
       preview:

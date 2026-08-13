@@ -15,6 +15,10 @@ import {
   supabaseAdmin,
 } from "@/lib/supabaseAdmin";
 
+import {
+  upsertGolfCourseHoles,
+} from "@/lib/golf/upsertGolfCourseHoles";
+
 function parseSlateId(value: unknown) {
   const slateId = Number(value);
 
@@ -188,6 +192,81 @@ export async function POST(
         round,
       });
 
+    /*
+     * ShotCast already carries the official PGA host-course
+     * scorecard. Keep golf_course_holes synchronized whenever
+     * ShotCast is rebuilt so course metadata can self-heal.
+     */
+    const manifestCourseId =
+      String(
+        manifest.course?.id ??
+          "",
+      ).trim();
+
+    const manifestHoles =
+      Array.isArray(
+        manifest.holes,
+      )
+        ? manifest.holes
+            .filter(
+              (hole: any) =>
+                Number.isInteger(
+                  Number(
+                    hole?.holeNumber,
+                  ),
+                ) &&
+                Number.isInteger(
+                  Number(
+                    hole?.par,
+                  ),
+                ),
+            )
+            .map(
+              (hole: any) => ({
+                holeNumber:
+                  Number(
+                    hole.holeNumber,
+                  ),
+                par:
+                  Number(
+                    hole.par,
+                  ),
+                yards:
+                  hole.yards ===
+                    null ||
+                  hole.yards ===
+                    undefined
+                    ? null
+                    : Number(
+                        hole.yards,
+                      ),
+              }),
+            )
+        : [];
+
+    const courseSync =
+      await upsertGolfCourseHoles({
+        slateId,
+        metadata: {
+          courseId:
+            manifestCourseId,
+          courseName:
+            typeof manifest
+              .course?.name ===
+              "string"
+              ? manifest
+                  .course
+                  .name
+              : null,
+          isHost:
+            manifest.course
+              ?.hostCourse ===
+            true,
+          holes:
+            manifestHoles,
+        },
+      });
+
     const timestamp =
       new Date().toISOString();
 
@@ -229,6 +308,8 @@ export async function POST(
         manifest.course,
       summary:
         manifest.summary,
+      courseHolesUpserted:
+        courseSync.holesUpserted,
       generatedAt:
         manifest.generatedAt,
     });
