@@ -21,6 +21,7 @@ type Slate = {
   label?: string;
   is_locked: boolean;
   sport?: string;
+  has_cut?: boolean;
 };
 
 type SavedLineup = {
@@ -88,7 +89,7 @@ export default async function ScoresLineupsPage({
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, is_locked, sport, display_name",
+        "id, date, start_date, end_date, is_locked, sport, display_name, has_cut",
       )
       .eq("sport", sport)
       .order("start_date", { ascending: false })
@@ -206,6 +207,10 @@ export default async function ScoresLineupsPage({
               }),
         is_locked: slate.is_locked,
         sport: slate.sport ?? "nba",
+        has_cut:
+          sport === "golf"
+            ? slate.has_cut !== false
+            : true,
       };
     }) ?? [];
 
