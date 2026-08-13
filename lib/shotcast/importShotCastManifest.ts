@@ -534,7 +534,7 @@ export async function fetchPgaTourCourseMetadata(
     Number(input.round ?? 1);
 
   if (
-    !/^R\\d{7}$/.test(
+    !/^R\d{7}$/.test(
       normalizedTournamentId,
     )
   ) {
