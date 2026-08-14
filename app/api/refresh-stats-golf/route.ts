@@ -1228,7 +1228,7 @@ export async function POST(request: Request) {
       ? await supabaseAdmin
           .from("golf_event_players")
           .select(
-            "player_id, rounds_completed, status",
+            "id, player_id, rounds_completed, status",
           )
           .eq("slate_id", slateId)
           .in("player_id", playerIds)
@@ -1271,6 +1271,113 @@ export async function POST(request: Request) {
           ],
         ),
       );
+
+    /*
+     * Snapshot each persisted round BEFORE this refresh writes the
+     * current ESPN/PGA scoring state.
+     *
+     * Golf round-complete notifications should be driven by the actual
+     * round transition:
+     *
+     *   previous holes_completed < 18
+     *               ->
+     *   current holesCompleted >= 18
+     *
+     * Do not depend on aggregate rounds_completed or a particular
+     * competitor status transition. Those fields can advance on a
+     * different refresh than the golfer's final hole.
+     */
+    const previousEventPlayerIdByPlayerId =
+      new Map<number, number>(
+        (previousEventPlayerData ?? [])
+          .filter(
+            (row: any) =>
+              Number.isFinite(
+                Number(row.id),
+              ),
+          )
+          .map(
+            (row: any) => [
+              Number(row.player_id),
+              Number(row.id),
+            ],
+          ),
+      );
+
+    const previousPlayerIdByEventPlayerId =
+      new Map<number, number>(
+        Array.from(
+          previousEventPlayerIdByPlayerId.entries(),
+        ).map(
+          ([playerId, eventPlayerId]) => [
+            eventPlayerId,
+            playerId,
+          ],
+        ),
+      );
+
+    const previousEventPlayerIds =
+      Array.from(
+        previousPlayerIdByEventPlayerId.keys(),
+      );
+
+    const {
+      data: previousGolfRoundData,
+      error: previousGolfRoundError,
+    } =
+      previousEventPlayerIds.length > 0
+        ? await supabaseAdmin
+            .from("golf_rounds")
+            .select(
+              "event_player_id, round_number, holes_completed",
+            )
+            .in(
+              "event_player_id",
+              previousEventPlayerIds,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (previousGolfRoundError) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf players were loaded, but their previous round progress could not be read: " +
+            previousGolfRoundError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const previousRoundHolesByPlayerRound =
+      new Map<string, number>();
+
+    for (
+      const round of
+      previousGolfRoundData ?? []
+    ) {
+      const playerId =
+        previousPlayerIdByEventPlayerId.get(
+          Number(
+            round.event_player_id,
+          ),
+        );
+
+      if (playerId === undefined) {
+        continue;
+      }
+
+      previousRoundHolesByPlayerRound.set(
+        `${playerId}:${Number(
+          round.round_number,
+        )}`,
+        Number(
+          round.holes_completed ?? 0,
+        ),
+      );
+    }
 
     /*
      * Reconcile the pre-imported PGA field against ESPN's authoritative
@@ -2024,86 +2131,76 @@ export async function POST(request: Request) {
 
     try {
       const newlyCompletedRounds =
-        competitors
-          .map((competitor) => {
+        competitors.flatMap(
+          (competitor) => {
             const playerId =
               playerIdByEspnId.get(
                 competitor.espnPlayerId,
               );
 
             if (playerId === undefined) {
-              return null;
+              return [];
             }
-
-            const previous =
-              previousGolfProgressByPlayerId.get(
-                playerId,
-              ) ?? {
-                roundsCompleted: 0,
-                status: null,
-              };
-
-            const currentCompleted =
-              Number(
-                competitor.roundsCompleted ?? 0,
-              );
-
-            const completedAnotherRound =
-              currentCompleted >
-              previous.roundsCompleted;
 
             /*
-             * Repair the currently stored bad transition:
+             * A golfer has newly finished Round N only when the
+             * persisted pre-refresh round was incomplete and the
+             * current provider round has reached all 18 holes.
              *
-             * active after Hole 18
-             *          ↓
-             * round_complete
-             *
-             * This allows the first refresh after this fix to send
-             * the missed Round 3 notification.
+             * This is the actual golf event we care about.
              */
-            const repairedCompletedRound =
-              previous.status === "active" &&
-              competitor.status ===
-                "round_complete" &&
-              currentCompleted > 0;
-
-            if (
-              !completedAnotherRound &&
-              !repairedCompletedRound
-            ) {
-              return null;
-            }
-
-            const completedRound =
-              competitor.rounds.find(
-                (round) =>
+            return competitor.rounds.flatMap(
+              (round) => {
+                const roundNumber =
                   Number(
                     round.roundNumber,
-                  ) === currentCompleted,
-              ) ?? null;
+                  );
 
-            return {
-              playerId,
-              roundNumber:
-                currentCompleted,
-              roundScore:
-                completedRound?.scoreToPar ??
-                null,
-              fantasyPoints:
-                competitor.officialScoreToPar,
-            };
-          })
-          .filter(
-            (
-              row,
-            ): row is {
-              playerId: number;
-              roundNumber: number;
-              roundScore: number | null;
-              fantasyPoints: number | null;
-            } => row !== null,
-          );
+                const currentHoles =
+                  Number(
+                    round.holesCompleted ??
+                      0,
+                  );
+
+                if (
+                  !Number.isInteger(
+                    roundNumber,
+                  ) ||
+                  roundNumber < 1 ||
+                  roundNumber >
+                    EXPECTED_TOURNAMENT_ROUNDS ||
+                  currentHoles < 18
+                ) {
+                  return [];
+                }
+
+                const previousHoles =
+                  previousRoundHolesByPlayerRound.get(
+                    `${playerId}:${roundNumber}`,
+                  ) ?? 0;
+
+                if (
+                  previousHoles >= 18
+                ) {
+                  return [];
+                }
+
+                return [
+                  {
+                    playerId,
+                    roundNumber,
+                    roundScore:
+                      round.scoreToPar ??
+                      null,
+                    fantasyPoints:
+                      competitor
+                        .officialScoreToPar,
+                  },
+                ];
+              },
+            );
+          },
+        );
 
       playerFinishedNotifications =
         await notifyNewlyFinishedPlayers({
