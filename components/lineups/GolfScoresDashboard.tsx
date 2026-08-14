@@ -506,9 +506,8 @@ export default function GolfScoresDashboard({
     ],
   );
 
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(
-    leaderboard[0]?.team.id ?? null,
-  );
+  const [selectedTeamId, setSelectedTeamId] =
+    useState<number | null>(null);
 
   const [selectedHoleKey, setSelectedHoleKey] =
     useState<string | null>(null);
@@ -524,13 +523,74 @@ export default function GolfScoresDashboard({
     useState<GolfScoresView>("fantasy");
 
   useEffect(() => {
-    if (
-      selectedTeamId === null ||
-      !participatingTeams.some((team) => team.id === selectedTeamId)
-    ) {
-      setSelectedTeamId(leaderboard[0]?.team.id ?? null);
+    let cancelled = false;
+
+    async function selectInitialTeam() {
+      let ownTeamId: number | null = null;
+
+      try {
+        const response =
+          await fetch("/api/me", {
+            cache: "no-store",
+          });
+
+        if (response.ok) {
+          const payload =
+            await response.json();
+
+          const candidate =
+            payload?.team_id ??
+            payload?.teamId ??
+            payload?.team?.id ??
+            payload?.user?.team_id ??
+            payload?.user?.teamId ??
+            null;
+
+          const parsed =
+            Number(candidate);
+
+          if (
+            Number.isFinite(parsed) &&
+            participatingTeams.some(
+              (team) =>
+                team.id === parsed,
+            )
+          ) {
+            ownTeamId = parsed;
+          }
+        }
+      } catch {
+        /*
+         * Scores should still load if /api/me fails.
+         * Fall back to the current leaderboard leader.
+         */
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      setSelectedTeamId(
+        ownTeamId ??
+          leaderboard[0]?.team.id ??
+          null,
+      );
     }
-  }, [leaderboard, participatingTeams, selectedTeamId]);
+
+    void selectInitialTeam();
+
+    return () => {
+      cancelled = true;
+    };
+    /*
+     * Initial selection only.
+     * Do not switch the user back after they manually choose a team.
+     */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    leaderboard,
+    participatingTeams,
+  ]);
 
   const selectedTeam =
     participatingTeams.find((team) => team.id === selectedTeamId) ??
@@ -549,7 +609,67 @@ export default function GolfScoresDashboard({
   const selectedRank =
     leaderboard.findIndex((row) => row.team.id === selectedTeam.id) + 1;
 
-  const players = getPlayersForTeam(selectedTeam.id);
+  const players = [
+    ...getPlayersForTeam(selectedTeam.id),
+  ].sort((a, b) => {
+    const aStat =
+      getRawPlayerStat(a.id);
+
+    const bStat =
+      getRawPlayerStat(b.id);
+
+    const aPlaying =
+      (aStat?.rounds ?? []).some(
+        (round) =>
+          Number(
+            round.holes_completed ?? 0,
+          ) > 0 &&
+          Number(
+            round.holes_completed ?? 0,
+          ) < 18,
+      );
+
+    const bPlaying =
+      (bStat?.rounds ?? []).some(
+        (round) =>
+          Number(
+            round.holes_completed ?? 0,
+          ) > 0 &&
+          Number(
+            round.holes_completed ?? 0,
+          ) < 18,
+      );
+
+    if (aPlaying !== bPlaying) {
+      return aPlaying ? -1 : 1;
+    }
+
+    const aOverall =
+      aStat?.official_score_to_par ===
+        null ||
+      aStat?.official_score_to_par ===
+        undefined
+        ? Number.POSITIVE_INFINITY
+        : Number(
+            aStat.official_score_to_par,
+          );
+
+    const bOverall =
+      bStat?.official_score_to_par ===
+        null ||
+      bStat?.official_score_to_par ===
+        undefined
+        ? Number.POSITIVE_INFINITY
+        : Number(
+            bStat.official_score_to_par,
+          );
+
+    if (aOverall !== bOverall) {
+      return aOverall - bOverall;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
 
   const totalSlots =
     rosterSlots && rosterSlots.length > 0
@@ -987,7 +1107,13 @@ export default function GolfScoresDashboard({
                   </div>
                 ) : null}
 
-                <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
+                <div
+                  className={
+                    playingRound
+                      ? "border-t border-slate-200 bg-slate-50 px-4 py-4"
+                      : "hidden"
+                  }
+                >
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -1145,7 +1271,7 @@ export default function GolfScoresDashboard({
                             <div
                               className={`flex h-8 items-center justify-center rounded-md border text-[11px] font-black transition ${
                                 isSelected
-                                  ? "relative z-10 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-50"
+                                  ? "relative z-10 ring-2 ring-inset ring-emerald-400"
                                   : ""
                               } ${relativeClass(
                                 hole?.relative_to_par,

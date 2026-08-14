@@ -531,15 +531,41 @@ export default function GolfLeagueView({
       }
 
       if (sortBy === "score") {
-        const aValue = Number(
-          a.stat?.fantasy_points ??
-            Number.MAX_SAFE_INTEGER,
-        );
+        const aPlaying =
+          a.playingRound !== null;
 
-        const bValue = Number(
-          b.stat?.fantasy_points ??
-            Number.MAX_SAFE_INTEGER,
-        );
+        const bPlaying =
+          b.playingRound !== null;
+
+        if (aPlaying !== bPlaying) {
+          return aPlaying ? -1 : 1;
+        }
+
+        const aValue =
+          a.stat
+            ?.official_score_to_par ===
+            null ||
+          a.stat
+            ?.official_score_to_par ===
+            undefined
+            ? Number.MAX_SAFE_INTEGER
+            : Number(
+                a.stat
+                  .official_score_to_par,
+              );
+
+        const bValue =
+          b.stat
+            ?.official_score_to_par ===
+            null ||
+          b.stat
+            ?.official_score_to_par ===
+            undefined
+            ? Number.MAX_SAFE_INTEGER
+            : Number(
+                b.stat
+                  .official_score_to_par,
+              );
 
         if (aValue !== bValue) {
           return aValue - bValue;
@@ -978,7 +1004,13 @@ export default function GolfLeagueView({
                   </div>
                 </button>
 
-                <div className="border-t border-slate-800 bg-slate-900/40 px-4 py-3">
+                <div
+                  className={
+                    row.playingRound
+                      ? "border-t border-slate-800 bg-slate-900/40 px-4 py-3"
+                      : "hidden"
+                  }
+                >
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">

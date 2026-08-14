@@ -843,6 +843,31 @@ export async function GET(request: NextRequest) {
                 )
               );
 
+            /*
+             * Do not show tomorrow's expected notification
+             * immediately after today's round is completed.
+             *
+             * Example:
+             *   rounds_completed = 2
+             *   current_round = 2
+             *
+             * Round 2 is done, but Round 3 has not started yet.
+             * The Round 3 WAITING row appears only after the live
+             * provider advances this golfer to current_round = 3.
+             */
+            const currentRound =
+              Number(
+                eventPlayer.current_round ??
+                  0
+              );
+
+            if (
+              roundsCompleted > 0 &&
+              currentRound <= roundsCompleted
+            ) {
+              continue;
+            }
+
             const eventKey =
               `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
 

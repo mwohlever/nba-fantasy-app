@@ -277,6 +277,13 @@ export type GolfHoleReplay = {
   holeScore: string | null;
 
   /*
+   * PGA's actual pin in native TOURCAST world coordinates.
+   * This exists independently of whether the golfer has
+   * completed the hole.
+   */
+  pinWorld: GolfWorldPoint | null;
+
+  /*
    * PGA TOURCAST V3 supplies a hole image and coordinates
    * that already share the same normalized coordinate frame.
    *
@@ -1186,6 +1193,15 @@ export async function fetchGolfHoleReplay(
       hole.score === undefined
         ? null
         : String(hole.score),
+
+    /*
+     * PGA's authoritative hole pin. Do not infer this from
+     * finalStroke.
+     */
+    pinWorld:
+      worldPoint(
+        hole.pin,
+      ),
 
     shotcast:
       typeof hole.enhancedPickle
