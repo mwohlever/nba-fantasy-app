@@ -72,6 +72,8 @@ function cleanCoordinate(value: any) {
     tourcastX: numberOrNull(value.tourcastX),
     tourcastY: numberOrNull(value.tourcastY),
     tourcastZ: numberOrNull(value.tourcastZ),
+    enhancedX: numberOrNull(value.enhancedX),
+    enhancedY: numberOrNull(value.enhancedY),
   };
 }
 
@@ -341,6 +343,165 @@ async function loadTourcastWorldFile(
   }
 }
 
+type TourcastCourseData = {
+  pinsTees?: unknown;
+};
+
+type TourcastPinWorld = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+async function loadTourcastCourseData(
+  tournamentId: string,
+): Promise<TourcastCourseData | null> {
+  const url =
+    `https://tourcast.pgatour.com/models/` +
+    `${tournamentId}/3D_Assets/data/courseData.json`;
+
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(
+      () => controller.abort(),
+      10_000,
+    );
+
+  try {
+    const response =
+      await fetch(
+        url,
+        {
+          method: "GET",
+          headers: {
+            Accept:
+              "application/json,*/*",
+            Referer:
+              `https://tourcast.pgatour.com/` +
+              `tourcast.html?id=${tournamentId}`,
+            "User-Agent":
+              "111 Sports",
+          },
+          cache: "no-store",
+          redirect: "follow",
+          signal:
+            controller.signal,
+        },
+      );
+
+    if (!response.ok) {
+      console.warn(
+        `[ShotCast] courseData returned ${response.status}: ${url}`,
+      );
+
+      return null;
+    }
+
+    const payload =
+      await response.json();
+
+    if (
+      !payload ||
+      typeof payload !== "object" ||
+      !Array.isArray(
+        (payload as any)
+          .pinsTees,
+      )
+    ) {
+      console.warn(
+        "[ShotCast] PGA courseData did not contain pinsTees.",
+      );
+
+      return null;
+    }
+
+    return payload as TourcastCourseData;
+  } catch (error) {
+    console.warn(
+      "[ShotCast] PGA courseData request failed:",
+      error,
+    );
+
+    return null;
+  } finally {
+    clearTimeout(
+      timeout,
+    );
+  }
+}
+
+function pinWorldByRoundForHole(
+  courseData:
+    | TourcastCourseData
+    | null,
+  holeNumber: number,
+): Array<
+  TourcastPinWorld | null
+> {
+  if (
+    !courseData ||
+    !Array.isArray(
+      courseData.pinsTees,
+    )
+  ) {
+    return [];
+  }
+
+  return courseData.pinsTees.map(
+    (roundPins) => {
+      if (
+        !Array.isArray(
+          roundPins,
+        )
+      ) {
+        return null;
+      }
+
+      const values =
+        roundPins[
+          holeNumber - 1
+        ];
+
+      if (
+        !Array.isArray(values) ||
+        values.length < 4
+      ) {
+        return null;
+      }
+
+      const pinX =
+        Number(values[0]);
+
+      const pinY =
+        Number(values[1]);
+
+      if (
+        !Number.isFinite(pinX) ||
+        !Number.isFinite(pinY)
+      ) {
+        return null;
+      }
+
+      /*
+       * PGA's pinsTees supplies exact X/Y in the same
+       * raw TOURCAST terrain coordinate system used by
+       * terrainNN.tfw.
+       *
+       * worldToPlotPoint() only needs X/Y, but preserve a
+       * valid world-shaped object for the renderer.
+       */
+      return {
+        x: pinX,
+        y: pinY,
+        z: 0,
+      };
+    },
+  );
+}
+
+
 async function imageIsAvailable(
   url: string | null,
 ) {
@@ -481,6 +642,8 @@ const HOLE_DETAILS_QUERY = `
             tourcastX
             tourcastY
             tourcastZ
+            enhancedX
+            enhancedY
           }
 
           bottomToTopCoords {
@@ -490,6 +653,8 @@ const HOLE_DETAILS_QUERY = `
             tourcastX
             tourcastY
             tourcastZ
+            enhancedX
+            enhancedY
           }
         }
       }
@@ -828,6 +993,17 @@ export async function importShotCastManifest({
     );
   }
 
+  /*
+   * PGA TOURCAST hole geometry.
+   *
+   * courseData.json is a tournament-level static asset, so fetch
+   * it once and preserve all round-specific pin locations.
+   */
+  const tourcastCourseData =
+    await loadTourcastCourseData(
+      normalizedTournamentId,
+    );
+
   const leaderboardData =
     await graphqlRequest(
       "LeaderboardHoleByHole",
@@ -1052,6 +1228,22 @@ export async function importShotCastManifest({
       return {
         holeNumber,
         available: true,
+
+        /*
+         * PGA-authored pin positions, indexed by round:
+         *
+         *   [0] = Round 1
+         *   [1] = Round 2
+         *   [2] = Round 3
+         *   [3] = Round 4
+         *
+         * No inference from player shots is used.
+         */
+        pinWorldByRound:
+          pinWorldByRoundForHole(
+            tourcastCourseData,
+            holeNumber,
+          ),
 
         detailsId:
           detail.id ?? null,

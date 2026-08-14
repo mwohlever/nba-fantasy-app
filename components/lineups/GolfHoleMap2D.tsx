@@ -96,6 +96,16 @@ type Props = {
   imageUrl: string;
   greenImageUrl?: string | null;
   greenModelUrl?: string | null;
+
+  /*
+   * PGA's native TOURCAST hole pin.
+   */
+  pinWorld?: WorldPoint | null;
+  greenPin?: {
+    x: number;
+    y: number;
+  } | null;
+
   shots: MapShot[];
   selectedStrokeNumber: number | null;
   onSelectStroke: (
@@ -168,6 +178,16 @@ export type MapCalibration = {
 const VIEWBOX_SIZE = 1000;
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
+const GREEN_MAX_SCALE = 2;
+
+/*
+ * Presentation only.
+ *
+ * PGA's sampled putt coordinates and relative timestamps remain
+ * authoritative. We simply replay that real motion a little slower
+ * so the break is easier to watch.
+ */
+const PUTT_PLAYBACK_SLOWDOWN = 1.35;
 
 /*
  * Calibration is supplied by the tournament/hole configuration.
@@ -1238,10 +1258,19 @@ function trackingAnimationDuration(
       );
 
     if (realDuration > 0) {
+      /*
+       * Keep PGA's real sample timing relationships intact.
+       *
+       * The entire timestamp axis is stretched uniformly for
+       * presentation; no points, break, acceleration pattern, or
+       * path geometry are invented here.
+       */
       return clamp(
-        realDuration * 1000,
-        800,
-        3600,
+        realDuration *
+          1000 *
+          PUTT_PLAYBACK_SLOWDOWN,
+        1100,
+        6500,
       );
     }
   }
@@ -1533,6 +1562,8 @@ export default function GolfHoleMap2D({
   imageUrl,
   greenImageUrl = null,
   greenModelUrl = null,
+  pinWorld = null,
+  greenPin = null,
   shots,
   selectedStrokeNumber,
   onSelectStroke,
@@ -1874,11 +1905,18 @@ export default function GolfHoleMap2D({
       ],
     );
 
+  /*
+   * PGA's dedicated Green View is a hole-level asset.
+   *
+   * Make it available whenever the image exists, even before
+   * the golfer has a shot whose Green View coordinates fall
+   * inside the crop.
+   *
+   * Shot availability and image availability are separate
+   * concerns.
+   */
   const greenViewAvailable =
-    Boolean(
-      greenImageUrl &&
-      greenPlottedShots.length > 0,
-    );
+    Boolean(greenImageUrl);
 
   const isAnyGreenView =
     (
@@ -2229,6 +2267,261 @@ export default function GolfHoleMap2D({
       },
       [
         resetView,
+        updateTransform,
+      ],
+    );
+
+  /*
+   * Frame a genuine PGA putt rather than using a fixed Green View
+   * zoom.
+   *
+   * The fit is based on:
+   *   - PGA's actual sampled BallPath when available
+   *   - the shot endpoints as a safe geometry fallback
+   *   - PGA's confirmed cup point when available
+   *
+   * This changes only the viewport. It does not alter shot data.
+   */
+  const focusGreenPutt =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        const viewport =
+          viewportRef.current;
+
+        if (
+          !viewport ||
+          !shot
+        ) {
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+          return;
+        }
+
+        const width =
+          Math.max(
+            viewport.clientWidth,
+            1,
+          );
+
+        const height =
+          Math.max(
+            viewport.clientHeight,
+            1,
+          );
+
+        /*
+         * On-green BallPath is PGA's authoritative sampled roll.
+         */
+        const realRoll =
+          ballRollTrackPoints(
+            shot,
+          );
+
+        const fitPoints:
+          PlotPoint[] =
+          realRoll &&
+          realRoll.length >= 2
+            ? realRoll.map(
+                (point) => ({
+                  x: point.x,
+                  y: point.y,
+                }),
+              )
+            : [
+                shot.from,
+                shot.to,
+              ];
+
+        /*
+         * Keep the cup visible whenever PGA has definitively
+         * identified it from the final stroke.
+         */
+        if (greenHolePoint) {
+          fitPoints.push(
+            greenHolePoint,
+          );
+        }
+
+        let minX =
+          Infinity;
+
+        let maxX =
+          -Infinity;
+
+        let minY =
+          Infinity;
+
+        let maxY =
+          -Infinity;
+
+        for (
+          const point
+          of fitPoints
+        ) {
+          minX =
+            Math.min(
+              minX,
+              point.x,
+            );
+
+          maxX =
+            Math.max(
+              maxX,
+              point.x,
+            );
+
+          minY =
+            Math.min(
+              minY,
+              point.y,
+            );
+
+          maxY =
+            Math.max(
+              maxY,
+              point.y,
+            );
+        }
+
+        if (
+          !Number.isFinite(minX) ||
+          !Number.isFinite(maxX) ||
+          !Number.isFinite(minY) ||
+          !Number.isFinite(maxY)
+        ) {
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+          return;
+        }
+
+        /*
+         * Convert the PGA 1000×1000 plotting frame into the
+         * rendered viewport's pixel dimensions.
+         */
+        const pathWidthPx =
+          Math.max(
+            (
+              maxX -
+              minX
+            ) /
+              VIEWBOX_SIZE *
+              width,
+            1,
+          );
+
+        const pathHeightPx =
+          Math.max(
+            (
+              maxY -
+              minY
+            ) /
+              VIEWBOX_SIZE *
+              height,
+            1,
+          );
+
+        /*
+         * Leave breathing room around the rolling ball and flag.
+         * Padding is presentation-only and does not affect PGA data.
+         */
+        const padding =
+          clamp(
+            Math.min(
+              width,
+              height,
+            ) *
+              0.16,
+            42,
+            76,
+          );
+
+        const availableWidth =
+          Math.max(
+            width -
+              padding *
+                2,
+            1,
+          );
+
+        const availableHeight =
+          Math.max(
+            height -
+              padding *
+                2,
+            1,
+          );
+
+        const targetScale =
+          clamp(
+            Math.min(
+              availableWidth /
+                pathWidthPx,
+              availableHeight /
+                pathHeightPx,
+            ),
+            MIN_SCALE,
+            GREEN_MAX_SCALE,
+          );
+
+        const centerPlotX =
+          (
+            minX +
+            maxX
+          ) /
+          2;
+
+        const centerPlotY =
+          (
+            minY +
+            maxY
+          ) /
+          2;
+
+        const targetX =
+          centerPlotX /
+            VIEWBOX_SIZE *
+            width;
+
+        const targetY =
+          centerPlotY /
+            VIEWBOX_SIZE *
+            height;
+
+        const centerX =
+          width /
+          2;
+
+        const centerY =
+          height /
+          2;
+
+        updateTransform({
+          scale:
+            targetScale,
+
+          x:
+            (
+              centerX -
+              targetX
+            ) *
+            targetScale,
+
+          y:
+            (
+              centerY -
+              targetY
+            ) *
+            targetScale,
+
+          rotation: 0,
+        });
+      },
+      [
+        greenHolePoint,
         updateTransform,
       ],
     );
@@ -2632,12 +2925,11 @@ export default function GolfHoleMap2D({
           setViewMode("green");
 
           /*
-           * The Green View image itself is already a tight
-           * crop. Start at 1× rather than magnifying another
-           * 3–4× and destroying image clarity.
+           * Move into a putt-specific Green View derived from
+           * PGA's actual sampled roll path + cup.
            */
-          setTransform(
-            DEFAULT_TRANSFORM,
+          focusGreenPutt(
+            animationShot,
           );
         } else {
           setViewMode("course");
@@ -2651,7 +2943,7 @@ export default function GolfHoleMap2D({
             window.setTimeout(
               resolve,
               useGreenShot
-                ? 500
+                ? 700
                 : 200,
             );
           },
@@ -2688,9 +2980,26 @@ export default function GolfHoleMap2D({
           greenViewAvailable
         ) {
           setViewMode("green");
-          setTransform(
-            DEFAULT_TRANSFORM,
-          );
+
+          const upcomingGreenShot =
+            greenPlottedShots.find(
+              (candidate) =>
+                candidate.strokeNumber >
+                courseShot.strokeNumber &&
+                isGreenLocation(
+                  candidate.fromLocation,
+                ),
+            ) ?? null;
+
+          if (upcomingGreenShot) {
+            focusGreenPutt(
+              upcomingGreenShot,
+            );
+          } else {
+            setTransform(
+              DEFAULT_TRANSFORM,
+            );
+          }
 
           await new Promise<void>(
             (resolve) => {
@@ -2728,6 +3037,7 @@ export default function GolfHoleMap2D({
     animateShot,
     cancelShotAnimation,
     coursePlottedShots,
+    focusGreenPutt,
     greenPlottedShots,
     greenViewAvailable,
     isPlaying,
@@ -2840,15 +3150,16 @@ export default function GolfHoleMap2D({
 
     if (shouldUseGreen) {
       setViewMode("green");
-      setTransform(
-        DEFAULT_TRANSFORM,
+
+      focusGreenPutt(
+        greenShot,
       );
 
       await new Promise<void>(
         (resolve) => {
           window.setTimeout(
             resolve,
-            450,
+            700,
           );
         },
       );
@@ -2889,13 +3200,53 @@ export default function GolfHoleMap2D({
   }
 
   /*
-   * Only a confirmed final stroke identifies the cup.
+   * COURSE VIEW PIN
+   * ----------------
    *
-   * Never infer the flag from the latest live shot: on an
-   * in-progress hole that endpoint is the golfer's current
-   * ball position, not the hole location.
+   * pinWorld comes from PGA courseData.pinsTees.
+   *
+   * The active Course View uses terrainNN.jpg with its matching
+   * terrainNN.tfw affine, so this is the exact world -> image
+   * conversion already used for PGA native shot coordinates.
    */
+  const authoritativeCoursePinPoint =
+    !isAnyGreenView &&
+    pinWorld
+      ? worldToPlotPoint(
+          pinWorld,
+          calibration,
+        )
+      : null;
+
+  /*
+   * Course View:
+   *   use PGA's independent hole-level pin.
+   *
+   * Green View:
+   *   keep the confirmed final-stroke destination for now,
+   *   because St. Jude's pinGreen payload is an unavailable
+   *   -1/-1 sentinel.
+   */
+  /*
+   * Green View uses PGA's normalized enhanced pin coordinates
+   * directly against our VIEWBOX_SIZE coordinate space.
+   */
+  const authoritativeGreenPinPoint =
+    isAnyGreenView &&
+    greenPin
+      ? {
+          x:
+            greenPin.x *
+            VIEWBOX_SIZE,
+          y:
+            greenPin.y *
+            VIEWBOX_SIZE,
+        }
+      : null;
+
   const cupPoint =
+    authoritativeGreenPinPoint ??
+    authoritativeCoursePinPoint ??
     [...plottedShots]
       .reverse()
       .find(
@@ -2933,20 +3284,41 @@ export default function GolfHoleMap2D({
   const inverseScale =
     1 / transform.scale;
 
+  /*
+   * Course View keeps the existing highly visible shot markers.
+   *
+   * Green View is intentionally more restrained so close-putt
+   * markers do not cover the rolling ball, cup, or flag.
+   */
   const markerRadius =
-    25 * inverseScale;
+    (
+      viewMode === "green"
+        ? 15
+        : 25
+    ) *
+    inverseScale;
 
   const markerStroke =
-    Math.max(
-      3,
-      7 * inverseScale,
-    );
+    viewMode === "green"
+      ? Math.max(
+          1.5,
+          4 * inverseScale,
+        )
+      : Math.max(
+          3,
+          7 * inverseScale,
+        );
 
   const markerFontSize =
-    Math.max(
-      12,
-      29 * inverseScale,
-    );
+    viewMode === "green"
+      ? Math.max(
+          7,
+          18 * inverseScale,
+        )
+      : Math.max(
+          12,
+          29 * inverseScale,
+        );
 
   const selectedRadarMetrics =
     selectedShot

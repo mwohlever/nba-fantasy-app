@@ -121,6 +121,12 @@ type Replay = {
   holeStatus: string | null;
   holeScore: string | null;
 
+  pinWorld: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
   shotcast: {
     imageUrl: string;
     greenImageUrl: string | null;
@@ -180,6 +186,43 @@ type ShotCastManifestHole = {
   alignedMapUrl?: string | null;
   localAlignedMapUrl?: string | null;
   calibration?: ShotCastCalibration | null;
+  /*
+   * PGA courseData.pinsTees, preserved by round.
+   */
+  pinWorldByRound?: Array<
+    {
+      x: number;
+      y: number;
+      z?: number | null;
+    } | null
+  >;
+
+  /*
+   * PGA pinGreen coordinates for the dedicated Green View.
+   * enhancedX/enhancedY are normalized 0..1 image positions.
+   */
+  pinGreen?: {
+    leftToRight?: {
+      x: number | null;
+      y: number | null;
+      z: number | null;
+      enhancedX?: number | null;
+      enhancedY?: number | null;
+      tourcastX: number | null;
+      tourcastY: number | null;
+      tourcastZ: number | null;
+    } | null;
+    bottomToTop?: {
+      x: number | null;
+      y: number | null;
+      z: number | null;
+      enhancedX?: number | null;
+      enhancedY?: number | null;
+      tourcastX: number | null;
+      tourcastY: number | null;
+      tourcastZ: number | null;
+    } | null;
+  } | null;
 };
 
 type ShotCastManifest = {
@@ -477,6 +520,53 @@ export default function GolfHoleReplayPanel({
 
         setReplay(result.replay);
 
+        /*
+         * Temporary PGA pin-coordinate audit.
+         *
+         * Compare the authoritative hole pin with the latest
+         * live shot in every coordinate frame we currently have.
+         */
+        {
+          const latestShot =
+            result.replay.shots.length > 0
+              ? result.replay.shots[
+                  result.replay.shots.length - 1
+                ]
+              : null;
+
+          console.log(
+            "[PGA LIVE PIN AUDIT]",
+            {
+              tournamentId:
+                result.replay.tournamentId,
+              hole:
+                result.replay.holeNumber,
+
+              pinWorld:
+                result.replay.pinWorld,
+
+              shotCount:
+                result.replay.shots.length,
+
+              latestStroke:
+                latestShot?.strokeNumber ??
+                null,
+
+              latestWorldTo:
+                latestShot?.worldTo ??
+                null,
+
+              latestBottomToTop:
+                latestShot?.bottomToTop ??
+                null,
+
+              latestGreenBottomToTop:
+                latestShot?.greenBottomToTop ??
+                null,
+            },
+          );
+        }
+
         if (
           result.reconciledHole &&
           onReconciledRef.current
@@ -655,9 +745,132 @@ export default function GolfHoleReplayPanel({
     return () => controller.abort();
   }, [replay?.tournamentId]);
 
+  /*
+   * Hole-level PGA metadata is independent of the golfer's
+   * ShotDetails payload.
+   */
+  const manifestHole =
+    useMemo(
+      () =>
+        shotCastManifest
+          ?.holes.find(
+            (hole) =>
+              Number(
+                hole.holeNumber,
+              ) ===
+              holeNumber,
+          ) ??
+        null,
+      [
+        holeNumber,
+        shotCastManifest,
+      ],
+    );
+
+  /*
+   * PGA getTeeAndPinFromEventData() selects pinsTees by round.
+   * Match that behavior rather than hardcoding Round 1.
+   */
+  /*
+   * TOURCAST courseData may publish either:
+   *
+   * - multiple pin/tee sets, or
+   * - one authoritative set at pinsTees[0].
+   *
+   * St. Jude publishes one set. Prefer a round-specific
+   * value when PGA actually provides one, otherwise use
+   * PGA's sole authoritative set rather than returning null.
+   */
+  const authoritativePinWorld =
+    manifestHole
+      ?.pinWorldByRound?.[
+        Math.max(
+          0,
+          roundNumber - 1,
+        )
+      ] ??
+    manifestHole
+      ?.pinWorldByRound?.[0] ??
+    null;
+
+  /*
+   * PGA's dedicated Green View pin is already normalized
+   * against the enhanced bottom-to-top green image.
+   *
+   * The ordinary x/y values may be -1 sentinels here.
+   * enhancedX/enhancedY are the coordinates we want.
+   */
+  const authoritativeGreenPin =
+    (() => {
+      const pin =
+        manifestHole
+          ?.pinGreen
+          ?.bottomToTop;
+
+      const x =
+        pin?.enhancedX;
+
+      const y =
+        pin?.enhancedY;
+
+      if (
+        typeof x !== "number" ||
+        typeof y !== "number" ||
+        !Number.isFinite(x) ||
+        !Number.isFinite(y) ||
+        x < 0 ||
+        x > 1 ||
+        y < 0 ||
+        y > 1
+      ) {
+        return null;
+      }
+
+      return {
+        x,
+        y,
+      };
+    })();
+
   const activeShotCastConfig =
     useMemo<ActiveShotCastConfig | null>(
       () => {
+        /*
+         * AUTHORITATIVE COURSE VIEW
+         * -------------------------
+         *
+         * PGA pinsTees and terrainNN.tfw share the same raw
+         * TOURCAST coordinate system.
+         *
+         * Never project pinsTees onto the V3 enhanced pickle:
+         * that image uses a different normalized frame.
+         */
+        if (
+          authoritativePinWorld &&
+          manifestHole
+            ?.localAlignedMapUrl &&
+          manifestHole
+            ?.calibration
+            ?.affine
+        ) {
+          return {
+            title:
+              `ShotCast · Hole ${holeNumber}`,
+            imageUrl:
+              manifestHole
+                .localAlignedMapUrl,
+            imageFit: "fill",
+            calibration:
+              manifestHole.calibration,
+            calibrationVerified:
+              true,
+            aboutThisHole:
+              manifestHole
+                .aboutThisHole ??
+              null,
+          };
+        }
+
         /*
          * PRIMARY PATH:
          *
@@ -711,14 +924,6 @@ export default function GolfHoleReplayPanel({
             aboutThisHole: null,
           };
         }
-
-        const manifestHole =
-          shotCastManifest?.holes.find(
-            (hole) =>
-              Number(
-                hole.holeNumber,
-              ) === holeNumber,
-          ) ?? null;
 
         const imageUrl =
           manifestHole
@@ -1092,6 +1297,12 @@ export default function GolfHoleReplayPanel({
                       replay.shotcast
                         ?.greenImageUrl ??
                       null
+                    }
+                    pinWorld={
+                      authoritativePinWorld
+                    }
+                    greenPin={
+                      authoritativeGreenPin
                     }
                     imageFit={
                       activeShotCastConfig
