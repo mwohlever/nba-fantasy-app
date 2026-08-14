@@ -522,6 +522,13 @@ export default function GolfScoresDashboard({
   const [activeView, setActiveView] =
     useState<GolfScoresView>("fantasy");
 
+  const [
+    scorecardVisibilityByPlayer,
+    setScorecardVisibilityByPlayer,
+  ] = useState<
+    Record<number, boolean>
+  >({});
+
   useEffect(() => {
     let cancelled = false;
 
@@ -1036,6 +1043,12 @@ export default function GolfScoresDashboard({
                   ? "Upcoming round"
                   : "Round";
 
+            const showScorecard =
+              scorecardVisibilityByPlayer[
+                player.id
+              ] ??
+              (playingRound !== null);
+
             const holesByNumber = new Map(
               (displayRound?.holes ?? []).map((hole) => [
                 hole.hole_number,
@@ -1107,9 +1120,30 @@ export default function GolfScoresDashboard({
                   </div>
                 ) : null}
 
+                <div className="flex items-center justify-end border-t border-slate-200 bg-white px-4 py-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setScorecardVisibilityByPlayer(
+                        (current) => ({
+                          ...current,
+                          [player.id]:
+                            !showScorecard,
+                        }),
+                      )
+                    }
+                    aria-expanded={showScorecard}
+                    className="text-xs font-bold text-emerald-700 transition hover:text-emerald-900"
+                  >
+                    {showScorecard
+                      ? "Hide scorecard ↑"
+                      : "Show scorecard ↓"}
+                  </button>
+                </div>
+
                 <div
                   className={
-                    playingRound
+                    showScorecard
                       ? "border-t border-slate-200 bg-slate-50 px-4 py-4"
                       : "hidden"
                   }
@@ -1305,16 +1339,6 @@ export default function GolfScoresDashboard({
                     </div>
                   ) : null}
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setProfilePlayer(player)
-                    }
-                    className="mt-3 block w-full text-right text-xs font-semibold text-emerald-700 transition hover:text-emerald-900"
-                    aria-label={`Open ${player.name} full Golf scorecard`}
-                  >
-                    View full scorecard →
-                  </button>
                 </div>
               </article>
             );

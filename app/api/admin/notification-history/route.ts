@@ -834,39 +834,33 @@ export async function GET(request: NextRequest) {
                 eventPlayer.rounds_completed ?? 0
               );
 
+            const currentRound =
+              Number(
+                eventPlayer.current_round ?? 0
+              );
+
+            /*
+             * Audit the round that is relevant RIGHT NOW.
+             *
+             * A golfer who just completed Round 2 remains a
+             * Round 2 expectation until PGA advances that golfer
+             * to current_round = 3.
+             *
+             * That lets a missing Round 2 notification become
+             * MISSED instead of making the golfer disappear from
+             * the ledger, while still preventing tomorrow's
+             * Round 3 WAITING clutter from appearing today.
+             */
             const roundNumber =
               Math.min(
                 4,
                 Math.max(
                   1,
-                  roundsCompleted + 1
+                  currentRound > roundsCompleted
+                    ? currentRound
+                    : roundsCompleted || 1
                 )
               );
-
-            /*
-             * Do not show tomorrow's expected notification
-             * immediately after today's round is completed.
-             *
-             * Example:
-             *   rounds_completed = 2
-             *   current_round = 2
-             *
-             * Round 2 is done, but Round 3 has not started yet.
-             * The Round 3 WAITING row appears only after the live
-             * provider advances this golfer to current_round = 3.
-             */
-            const currentRound =
-              Number(
-                eventPlayer.current_round ??
-                  0
-              );
-
-            if (
-              roundsCompleted > 0 &&
-              currentRound <= roundsCompleted
-            ) {
-              continue;
-            }
 
             const eventKey =
               `player_finished:${slateId}:${playerId}:round-${roundNumber}`;

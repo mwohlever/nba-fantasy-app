@@ -299,6 +299,13 @@ export default function GolfLeagueView({
   const [roundView, setRoundView] =
     useState<LeagueRoundView>("current");
 
+  const [
+    scorecardVisibilityByPlayer,
+    setScorecardVisibilityByPlayer,
+  ] = useState<
+    Record<number, boolean>
+  >({});
+
   const [mobileControlsOpen, setMobileControlsOpen] =
     useState(false);
 
@@ -929,6 +936,12 @@ export default function GolfLeagueView({
               ? null
               : Number(roundView));
 
+          const showScorecard =
+            scorecardVisibilityByPlayer[
+              row.player.id
+            ] ??
+            (row.playingRound !== null);
+
           return (
             <div key={row.player.id}>
               {showSection ? (
@@ -1004,9 +1017,30 @@ export default function GolfLeagueView({
                   </div>
                 </button>
 
+                <div className="flex items-center justify-end border-t border-slate-800 bg-slate-950 px-4 py-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setScorecardVisibilityByPlayer(
+                        (current) => ({
+                          ...current,
+                          [row.player.id]:
+                            !showScorecard,
+                        }),
+                      )
+                    }
+                    aria-expanded={showScorecard}
+                    className="text-xs font-bold text-emerald-400 transition hover:text-emerald-300"
+                  >
+                    {showScorecard
+                      ? "Hide scorecard ↑"
+                      : "Show scorecard ↓"}
+                  </button>
+                </div>
+
                 <div
                   className={
-                    row.playingRound
+                    showScorecard
                       ? "border-t border-slate-800 bg-slate-900/40 px-4 py-3"
                       : "hidden"
                   }
