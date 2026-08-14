@@ -10,6 +10,16 @@ function normalizeSport(value: unknown): SportKey {
   return "nba";
 }
 
+function validIsoDateTime(value: string) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  return Number.isFinite(parsed.getTime())
+    ? parsed.toISOString()
+    : null;
+}
+
 export async function GET(request: NextRequest) {
   const authError = await requireAdminApi();
   if (authError) return authError;
@@ -23,6 +33,16 @@ export async function GET(request: NextRequest) {
 
     const sport =
       request.nextUrl.searchParams.get("sport")?.trim() ?? "";
+
+    const start =
+      validIsoDateTime(
+        request.nextUrl.searchParams.get("start")?.trim() ?? ""
+      );
+
+    const end =
+      validIsoDateTime(
+        request.nextUrl.searchParams.get("end")?.trim() ?? ""
+      );
 
     let sportSlateIds: number[] | null = null;
 
@@ -75,14 +95,18 @@ export async function GET(request: NextRequest) {
         `
       )
       .order("created_at", { ascending: false })
-      .limit(250);
+      .limit(1000);
 
     if (type) {
       query = query.eq("notification_type", type);
     }
 
-    if (status) {
-      query = query.eq("status", status);
+    if (start) {
+      query = query.gte("created_at", start);
+    }
+
+    if (end) {
+      query = query.lt("created_at", end);
     }
 
     if (sportSlateIds !== null) {
@@ -302,31 +326,738 @@ export async function GET(request: NextRequest) {
       );
     }
 
+
+    /*
+     * Expected Golf notification ledger.
+     *
+     * notification_history only contains events that actually reached
+     * sendLoggedNotification(). For Golf round-complete notifications we
+     * also want to see events that SHOULD exist before delivery.
+     *
+     * Expected event key:
+     *   player_finished:<slateId>:<playerId>:round-<roundNumber>
+     *
+     * If a matching notification_history row exists, that real delivery
+     * row remains authoritative. Otherwise:
+     *
+     *   incomplete round -> waiting
+     *   completed round  -> missed
+     *
+     * This is intentionally monitoring-only. It does not send pushes,
+     * modify notification preferences, or alter the live completion
+     * trigger.
+     */
+    type ExpectedLedgerRow = {
+      id: string;
+      event_key: string;
+      notification_type: string;
+      user_id: string | null;
+      team_id: number | null;
+      slate_id: number | null;
+      player_id: number | null;
+      title: string;
+      body: string;
+      status: "waiting" | "missed";
+      sent_count: number;
+      failed_count: number;
+      skipped: boolean;
+      reason: string | null;
+      metadata: Record<string, unknown>;
+      created_at: string;
+      completed_at: string | null;
+      sport: SportKey | null;
+      recipientName: string;
+      teamName: string | null;
+      playerName: string | null;
+      slateLabel: string | null;
+    };
+
+    const realEventKeys = new Set(
+      rows
+        .map((row) => row.event_key)
+        .filter(Boolean)
+        .map(String)
+    );
+
+    const expectedLedgerRows: ExpectedLedgerRow[] = [];
+
+    /*
+     * Only synthesize Golf expectations when Golf is included in the
+     * selected filter. NBA/NFL can adopt the same ledger model later
+     * without changing their current monitor behavior today.
+     */
+    if (!sport || sport === "all" || sport === "golf") {
+      const { data: golfSlates, error: golfSlatesError } =
+        await supabaseAdmin
+          .from("slates")
+          .select(
+            "id, date, start_date, end_date, sport, display_name"
+          )
+          .eq("sport", "golf");
+
+      if (golfSlatesError) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to build expected Golf notifications: " +
+              golfSlatesError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      const relevantGolfSlates = (golfSlates ?? []).filter((slate) => {
+        const rawStartDate =
+          slate.start_date ??
+          slate.date;
+
+        if (!rawStartDate) return false;
+
+        const rawEndDate =
+          slate.end_date ??
+          slate.date ??
+          rawStartDate;
+
+        /*
+         * A Golf tournament spans multiple calendar days.
+         *
+         * Include the slate whenever its date range overlaps the
+         * Notification Monitor's selected day:
+         *
+         *   slateEnd >= rangeStart
+         *   slateStart < rangeEnd
+         *
+         * Do NOT require the tournament itself to start on the selected
+         * day; Round 2/3/4 naturally occur after start_date.
+         */
+        const slateStart =
+          new Date(`${rawStartDate}T00:00:00Z`);
+
+        const slateEnd =
+          new Date(`${rawEndDate}T23:59:59.999Z`);
+
+        if (
+          start &&
+          slateEnd < new Date(start)
+        ) {
+          return false;
+        }
+
+        if (
+          end &&
+          slateStart >= new Date(end)
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+      const golfSlateIds =
+        relevantGolfSlates.map((slate) =>
+          Number(slate.id)
+        );
+
+      if (golfSlateIds.length > 0) {
+        /*
+         * Visible notification history is filtered to the selected day,
+         * but deduplication/reconciliation must use the entire tournament
+         * history. Otherwise a Round 1 notification sent yesterday would
+         * incorrectly appear MISSED while viewing Round 2 today.
+         */
+        const {
+          data: tournamentNotificationHistory,
+          error: tournamentNotificationHistoryError,
+        } = await supabaseAdmin
+          .from("notification_history")
+          .select("event_key")
+          .in("slate_id", golfSlateIds)
+          .eq("notification_type", "player_finished")
+          .not("event_key", "is", null);
+
+        if (tournamentNotificationHistoryError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to reconcile expected Golf notifications: " +
+                tournamentNotificationHistoryError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        for (
+          const row of tournamentNotificationHistory ?? []
+        ) {
+          if (row.event_key) {
+            realEventKeys.add(
+              String(row.event_key)
+            );
+          }
+        }
+
+        const [
+          { data: golfLineups, error: golfLineupsError },
+          { data: eventPlayers, error: eventPlayersError },
+        ] = await Promise.all([
+          supabaseAdmin
+            .from("lineups")
+            .select(
+              `
+                id,
+                slate_id,
+                team_id,
+                lineup_players (
+                  player_id
+                )
+              `
+            )
+            .in("slate_id", golfSlateIds),
+
+          supabaseAdmin
+            .from("golf_event_players")
+            .select(
+              `
+                id,
+                slate_id,
+                player_id,
+                current_round,
+                rounds_completed,
+                status
+              `
+            )
+            .in("slate_id", golfSlateIds),
+        ]);
+
+        if (golfLineupsError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from lineups: " +
+                golfLineupsError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        if (eventPlayersError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from event players: " +
+                eventPlayersError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        const safeGolfLineups =
+          (golfLineups ?? []) as Array<{
+            id: number;
+            slate_id: number;
+            team_id: number;
+            lineup_players:
+              | Array<{ player_id: number }>
+              | null;
+          }>;
+
+        const safeEventPlayers =
+          (eventPlayers ?? []) as Array<{
+            id: number;
+            slate_id: number;
+            player_id: number;
+            current_round: number | null;
+            rounds_completed: number | null;
+            status: string | null;
+          }>;
+
+        const eventPlayerIds =
+          safeEventPlayers.map((row) =>
+            Number(row.id)
+          );
+
+        const { data: golfRounds, error: golfRoundsError } =
+          eventPlayerIds.length > 0
+            ? await supabaseAdmin
+                .from("golf_rounds")
+                .select(
+                  "event_player_id, round_number, holes_completed"
+                )
+                .in("event_player_id", eventPlayerIds)
+            : { data: [], error: null };
+
+        if (golfRoundsError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from rounds: " +
+                golfRoundsError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        const teamIdsForLedger = Array.from(
+          new Set(
+            safeGolfLineups.map((row) =>
+              Number(row.team_id)
+            )
+          )
+        );
+
+        const { data: ledgerUsers, error: ledgerUsersError } =
+          teamIdsForLedger.length > 0
+            ? await supabaseAdmin
+                .from("app_users")
+                .select(
+                  "id, team_id, display_name"
+                )
+                .in(
+                  "team_id",
+                  teamIdsForLedger
+                )
+                .eq("is_active", true)
+            : { data: [], error: null };
+
+        if (ledgerUsersError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from users: " +
+                ledgerUsersError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        const ledgerUserIds =
+          (ledgerUsers ?? []).map((row) =>
+            String(row.id)
+          );
+
+        const { data: ledgerPreferences } =
+          ledgerUserIds.length > 0
+            ? await supabaseAdmin
+                .from("notification_preferences")
+                .select(
+                  "user_id, notifications_enabled, player_finished_enabled"
+                )
+                .in(
+                  "user_id",
+                  ledgerUserIds
+                )
+            : { data: [] };
+
+        const ledgerUserByTeamId =
+          new Map(
+            (ledgerUsers ?? []).map((row) => [
+              Number(row.team_id),
+              row,
+            ])
+          );
+
+        const ledgerPreferenceByUserId =
+          new Map(
+            (ledgerPreferences ?? []).map((row) => [
+              String(row.user_id),
+              row,
+            ])
+          );
+
+        const ledgerSlateById =
+          new Map(
+            relevantGolfSlates.map((slate) => [
+              Number(slate.id),
+              slate,
+            ])
+          );
+
+        const ledgerEventPlayerBySlatePlayer =
+          new Map(
+            safeEventPlayers.map((row) => [
+              `${Number(row.slate_id)}:${Number(row.player_id)}`,
+              row,
+            ])
+          );
+
+        const ledgerRoundsByEventPlayer =
+          new Map<
+            number,
+            Array<{
+              round_number: number;
+              holes_completed: number | null;
+            }>
+          >();
+
+        for (const round of golfRounds ?? []) {
+          const eventPlayerId =
+            Number(round.event_player_id);
+
+          const existing =
+            ledgerRoundsByEventPlayer.get(
+              eventPlayerId
+            ) ?? [];
+
+          existing.push({
+            round_number:
+              Number(round.round_number),
+            holes_completed:
+              round.holes_completed === null
+                ? null
+                : Number(round.holes_completed),
+          });
+
+          ledgerRoundsByEventPlayer.set(
+            eventPlayerId,
+            existing
+          );
+        }
+
+        /*
+         * One tournament-wide expected round.
+         *
+         * golf_rounds may contain placeholder/future rows, so the
+         * highest persisted round number is NOT evidence that the field
+         * is currently playing that round.
+         *
+         * rounds_completed is the meaningful progression signal:
+         *
+         *   nobody has completed a round -> Round 1
+         *   field has completed R1      -> Round 2
+         *   field has completed R2      -> Round 3
+         *   field has completed R3      -> Round 4
+         */
+        const maxRoundsCompleted =
+          safeEventPlayers.reduce(
+            (max, row) =>
+              Math.max(
+                max,
+                Number(
+                  row.rounds_completed ?? 0
+                )
+              ),
+            0
+          );
+
+        const ledgerTournamentRound =
+          Math.min(
+            4,
+            Math.max(
+              1,
+              maxRoundsCompleted + 1
+            )
+          );
+
+        const ledgerPlayerIds =
+          Array.from(
+            new Set(
+              safeGolfLineups.flatMap((lineup) =>
+                (lineup.lineup_players ?? []).map(
+                  (row) => Number(row.player_id)
+                )
+              )
+            )
+          );
+
+        const { data: ledgerGolfPlayers } =
+          ledgerPlayerIds.length > 0
+            ? await supabaseAdmin
+                .from("golf_players")
+                .select("id, display_name")
+                .in("id", ledgerPlayerIds)
+            : { data: [] };
+
+        const ledgerPlayerNameById =
+          new Map(
+            (ledgerGolfPlayers ?? []).map((row) => [
+              Number(row.id),
+              String(row.display_name),
+            ])
+          );
+
+        for (const lineup of safeGolfLineups) {
+          const slateId =
+            Number(lineup.slate_id);
+
+          const teamId =
+            Number(lineup.team_id);
+
+          const slate =
+            ledgerSlateById.get(slateId);
+
+          if (!slate) continue;
+
+          const user =
+            ledgerUserByTeamId.get(teamId) ??
+            null;
+
+          const preference =
+            user
+              ? ledgerPreferenceByUserId.get(
+                  String(user.id)
+                ) ?? null
+              : null;
+
+          /*
+           * Do not create expected rows for users who have explicitly
+           * disabled player-finished notifications. The monitor should
+           * represent notifications the system is actually expected to
+           * deliver.
+           *
+           * Missing preference rows use the app default: enabled.
+           */
+          if (
+            preference &&
+            (
+              preference.notifications_enabled === false ||
+              preference.player_finished_enabled === false
+            )
+          ) {
+            continue;
+          }
+
+          const slateLabel =
+            String(
+              slate.display_name?.trim() ||
+                slate.start_date ||
+                slate.date ||
+                `Slate ${slateId}`
+            );
+
+          const expectedCreatedAt =
+            `${String(
+              slate.start_date ??
+                slate.date
+            )}T00:00:00.000Z`;
+
+          for (
+            const lineupPlayer of
+              lineup.lineup_players ?? []
+          ) {
+            const playerId =
+              Number(
+                lineupPlayer.player_id
+              );
+
+            const eventPlayer =
+              ledgerEventPlayerBySlatePlayer.get(
+                `${slateId}:${playerId}`
+              );
+
+            if (!eventPlayer) {
+              continue;
+            }
+
+            const rounds =
+              ledgerRoundsByEventPlayer.get(
+                Number(eventPlayer.id)
+              ) ?? [];
+
+            const roundNumber =
+              ledgerTournamentRound;
+
+            const eventKey =
+              `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
+
+            /*
+             * If the delivery pipeline already processed this exact
+             * current-round event, the real notification_history row is
+             * authoritative and no synthetic row is needed.
+             */
+            if (
+              realEventKeys.has(eventKey)
+            ) {
+              continue;
+            }
+
+            const persistedRound =
+              rounds.find(
+                (round) =>
+                  Number(
+                    round.round_number
+                  ) === roundNumber
+              ) ?? null;
+
+            /*
+             * A current-round notification becomes MISSED only after
+             * that exact round is genuinely complete.
+             *
+             * Future placeholder round rows do not matter.
+             */
+            const roundComplete =
+              Number(
+                eventPlayer.rounds_completed ??
+                  0
+              ) >= roundNumber ||
+              Number(
+                persistedRound
+                  ?.holes_completed ?? 0
+              ) >= 18;
+
+            const playerName =
+              ledgerPlayerNameById.get(
+                playerId
+              ) ??
+              `Golfer ${playerId}`;
+
+            expectedLedgerRows.push({
+              id:
+                `expected:${eventKey}`,
+              event_key:
+                eventKey,
+              notification_type:
+                "player_finished",
+              user_id:
+                user
+                  ? String(user.id)
+                  : null,
+              team_id:
+                teamId,
+              slate_id:
+                slateId,
+              player_id:
+                playerId,
+              title:
+                `⛳ ${playerName} finished!`,
+              body:
+                roundComplete
+                  ? `${playerName} completed Round ${roundNumber}, but no notification event was recorded.`
+                  : `Waiting for ${playerName} to complete Round ${roundNumber}.`,
+              status:
+                roundComplete
+                  ? "missed"
+                  : "waiting",
+              sent_count: 0,
+              failed_count: 0,
+              skipped: false,
+              reason:
+                roundComplete
+                  ? `Round ${roundNumber} is complete, but no matching notification event reached the delivery pipeline.`
+                  : `Waiting for Round ${roundNumber} completion.`,
+              metadata: {
+                expected: true,
+                roundNumber,
+                ledgerTournamentRound,
+                roundsCompleted:
+                  Number(
+                    eventPlayer.rounds_completed ??
+                      0
+                  ),
+                playerStatus:
+                  eventPlayer.status ??
+                  null,
+                holesCompleted:
+                  persistedRound
+                    ?.holes_completed ??
+                  null,
+                devices: [],
+              },
+              created_at:
+                expectedCreatedAt,
+              completed_at:
+                roundComplete
+                  ? new Date().toISOString()
+                  : null,
+              sport:
+                "golf",
+              recipientName:
+                user?.display_name ??
+                "No recipient",
+              teamName:
+                teamMap.get(teamId) ??
+                `Team ${teamId}`,
+              playerName,
+              slateLabel,
+            });
+          }
+        }
+      }
+    }
+
+    const history = rows.map((row) => {
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : null;
+
+      return {
+        ...row,
+        sport: rowSport,
+        recipientName: row.user_id
+          ? userMap.get(String(row.user_id)) ??
+            "Unknown user"
+          : "No recipient",
+        teamName: row.team_id
+          ? teamMap.get(Number(row.team_id)) ??
+            `Team ${row.team_id}`
+          : null,
+        playerName: resolvePlayerName(row),
+        slateLabel: row.slate_id
+          ? slateMap.get(Number(row.slate_id)) ??
+            `Slate ${row.slate_id}`
+          : null,
+      };
+    });
+
+    const combinedHistory = [
+      ...history,
+      ...expectedLedgerRows,
+    ].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+    );
+
+    const filteredHistory =
+      status
+        ? combinedHistory.filter(
+            (row) =>
+              row.status === status
+          )
+        : combinedHistory;
+
+    const summary = {
+      total: combinedHistory.length,
+      sent: combinedHistory.filter(
+        (row) => row.status === "sent"
+      ).length,
+      partial: combinedHistory.filter(
+        (row) => row.status === "partial"
+      ).length,
+      failed: combinedHistory.filter(
+        (row) => row.status === "failed"
+      ).length,
+      skipped: combinedHistory.filter(
+        (row) => row.status === "skipped"
+      ).length,
+      pending: combinedHistory.filter(
+        (row) => row.status === "pending"
+      ).length,
+      waiting: combinedHistory.filter(
+        (row) => row.status === "waiting"
+      ).length,
+      missed: combinedHistory.filter(
+        (row) => row.status === "missed"
+      ).length,
+      devicesSent: combinedHistory.reduce(
+        (sum, row) =>
+          sum + Number(row.sent_count ?? 0),
+        0
+      ),
+      devicesFailed: combinedHistory.reduce(
+        (sum, row) =>
+          sum + Number(row.failed_count ?? 0),
+        0
+      ),
+    };
+
     return NextResponse.json({
       success: true,
-      history: rows.map((row) => {
-        const rowSport = row.slate_id
-          ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
-          : null;
-
-        return {
-          ...row,
-          sport: rowSport,
-          recipientName: row.user_id
-            ? userMap.get(String(row.user_id)) ??
-              "Unknown user"
-            : "No recipient",
-          teamName: row.team_id
-            ? teamMap.get(Number(row.team_id)) ??
-              `Team ${row.team_id}`
-            : null,
-          playerName: resolvePlayerName(row),
-          slateLabel: row.slate_id
-            ? slateMap.get(Number(row.slate_id)) ??
-              `Slate ${row.slate_id}`
-            : null,
-        };
-      }),
+      history: filteredHistory,
+      summary,
+      range: {
+        start,
+        end,
+      },
     });
   } catch (error) {
     console.error(

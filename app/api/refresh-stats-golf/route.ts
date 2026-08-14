@@ -472,12 +472,17 @@ async function fetchTournamentForSlate(
   );
 }
 
-async function insertInBatches(
+async function upsertInBatches(
   table: string,
   rows: Record<string, unknown>[],
+  onConflict: string,
 ): Promise<DatabaseError | null> {
   for (const batch of chunkRows(rows, INSERT_BATCH_SIZE)) {
-    const { error } = await supabaseAdmin.from(table).insert(batch);
+    const { error } = await supabaseAdmin
+      .from(table)
+      .upsert(batch, {
+        onConflict,
+      });
 
     if (error) {
       return {
@@ -1600,166 +1605,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const eventPlayerIds = eventPlayers.map((eventPlayer) =>
-      Number(eventPlayer.id),
-    );
-
-    const { data: existingRoundsData, error: existingRoundsError } =
-      await supabaseAdmin
-        .from("golf_rounds")
-        .select(
-          "id, event_player_id, round_number",
-        )
-        .in("event_player_id", eventPlayerIds);
-
-    if (existingRoundsError) {
-      return NextResponse.json(
-        {
-          error:
-            "Tournament players were saved, but existing Golf rounds could not be read: " +
-            existingRoundsError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const existingRoundRows =
-      existingRoundsData ?? [];
-
-    const existingRoundIds =
-      existingRoundRows.map(
-        (round) =>
-          Number(round.id),
-      );
-
-    const existingRoundKeyById =
-      new Map(
-        existingRoundRows.map(
-          (round) => [
-            Number(round.id),
-            `${Number(
-              round.event_player_id,
-            )}:${Number(
-              round.round_number,
-            )}`,
-          ],
-        ),
-      );
-
-    let preservedHoleRows: Array<{
-      eventPlayerRoundKey: string;
-      hole_number: number;
-      strokes: number | null;
-      relative_to_par: number | null;
-      score_display: string | null;
-    }> = [];
-
-    if (existingRoundIds.length > 0) {
-      const {
-        data: existingHoleData,
-        error: existingHoleError,
-      } =
-        await supabaseAdmin
-          .from("golf_holes")
-          .select(
-            "round_id, hole_number, strokes, relative_to_par, score_display",
-          )
-          .in(
-            "round_id",
-            existingRoundIds,
-          );
-
-      if (existingHoleError) {
-        return NextResponse.json(
-          {
-            error:
-              "Existing Golf holes could not be read before refresh: " +
-              existingHoleError.message,
-          },
-          { status: 500 },
-        );
-      }
-
-      preservedHoleRows =
-        (existingHoleData ?? [])
-          .map((hole) => {
-            const key =
-              existingRoundKeyById.get(
-                Number(
-                  hole.round_id,
-                ),
-              );
-
-            return key
-              ? {
-                  eventPlayerRoundKey:
-                    key,
-                  hole_number:
-                    Number(
-                      hole.hole_number,
-                    ),
-                  strokes:
-                    hole.strokes ===
-                    null
-                      ? null
-                      : Number(
-                          hole.strokes,
-                        ),
-                  relative_to_par:
-                    hole.relative_to_par ===
-                    null
-                      ? null
-                      : Number(
-                          hole.relative_to_par,
-                        ),
-                  score_display:
-                    hole.score_display ??
-                    null,
-                }
-              : null;
-          })
-          .filter(
-            (
-              row,
-            ): row is NonNullable<
-              typeof row
-            > => row !== null,
-          );
-    }
-
-    if (existingRoundIds.length > 0) {
-      const { error: holesDeleteError } = await supabaseAdmin
-        .from("golf_holes")
-        .delete()
-        .in("round_id", existingRoundIds);
-
-      if (holesDeleteError) {
-        return NextResponse.json(
-          {
-            error:
-              "Existing Golf holes could not be cleared: " +
-              holesDeleteError.message,
-          },
-          { status: 500 },
-        );
-      }
-    }
-
-    const { error: roundsDeleteError } = await supabaseAdmin
-      .from("golf_rounds")
-      .delete()
-      .in("event_player_id", eventPlayerIds);
-
-    if (roundsDeleteError) {
-      return NextResponse.json(
-        {
-          error:
-            "Existing Golf rounds could not be cleared: " +
-            roundsDeleteError.message,
-        },
-        { status: 500 },
-      );
-    }
+    /*
+     * Persist Golf scoring incrementally.
+     *
+     * golf_rounds is uniquely keyed by:
+     *   event_player_id + round_number
+     *
+     * golf_holes is uniquely keyed by:
+     *   round_id + hole_number
+     *
+     * Do not delete and reconstruct the scorecard on each refresh.
+     * Completed holes already stored in the database remain intact if a
+     * later ESPN snapshot is temporarily incomplete.
+     */
 
     /*
      * ESPN remains the primary tee-time provider.
@@ -2037,7 +1895,10 @@ export async function POST(request: Request) {
       const { data: insertedRoundsData, error: roundsInsertError } =
         await supabaseAdmin
           .from("golf_rounds")
-          .insert(batch)
+          .upsert(batch, {
+            onConflict:
+              "event_player_id,round_number",
+          })
           .select("id, event_player_id, round_number");
 
       if (roundsInsertError) {
@@ -2088,92 +1949,17 @@ export async function POST(request: Request) {
     });
 
     /*
-     * ESPN occasionally lags PGA ShotCast by a hole.
+     * Upsert the holes present in this ESPN snapshot.
      *
-     * Keep a previously persisted completed hole when the newly
-     * parsed ESPN response simply omits it. If ESPN DOES return
-     * the same hole, the new ESPN row wins.
+     * Previously completed holes that are absent from a transient
+     * snapshot are intentionally left untouched in the database.
      */
-    const newHoleKeys =
-      new Set(
-        holeRows.map(
-          (hole) =>
-            `${hole.round_id}:${hole.hole_number}`,
-        ),
-      );
-
-    const preservedMissingHoles =
-      preservedHoleRows.flatMap(
-        (hole) => {
-          const newRoundId =
-            roundIdByKey.get(
-              hole.eventPlayerRoundKey,
-            );
-
-          if (
-            newRoundId === undefined
-          ) {
-            return [];
-          }
-
-          const key =
-            `${newRoundId}:${hole.hole_number}`;
-
-          if (
-            newHoleKeys.has(key)
-          ) {
-            return [];
-          }
-
-          if (
-            hole.strokes === null
-          ) {
-            return [];
-          }
-
-          return [
-            {
-              round_id:
-                newRoundId,
-              hole_number:
-                hole.hole_number,
-              strokes:
-                hole.strokes,
-              relative_to_par:
-                hole.relative_to_par,
-              score_display:
-                hole.score_display,
-              updated_at:
-                refreshedAt,
-            },
-          ];
-        },
-      );
-
-    const mergedHoleRows = [
-      ...holeRows,
-      ...preservedMissingHoles,
-    ];
-
     const holesInsertError =
-      await insertInBatches(
+      await upsertInBatches(
         "golf_holes",
-        mergedHoleRows,
+        holeRows,
+        "round_id,hole_number",
       );
-
-    if (
-      preservedMissingHoles.length >
-      0
-    ) {
-      console.log(
-        "Preserved Golf holes while ESPN scoring feed lagged",
-        {
-          slateId,
-          preserved:
-            preservedMissingHoles.length,
-        },
-      );
-    }
 
     if (holesInsertError) {
       return NextResponse.json(

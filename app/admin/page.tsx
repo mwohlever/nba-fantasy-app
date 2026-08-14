@@ -47,9 +47,9 @@ const adminGroups = [
       },
       {
         href: "/admin/notification-history",
-        title: "Notification History",
+        title: "Notification Monitor",
         description:
-          "Review sends, skips, failures, recipients, and device delivery.",
+          "Audit delivery results, failures, recipients, devices, and notification diagnostics.",
       },
     ],
   },
