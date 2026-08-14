@@ -714,39 +714,15 @@ export async function GET(request: NextRequest) {
         }
 
         /*
-         * One tournament-wide expected round.
+         * Expected Golf notification rounds are determined per golfer.
          *
-         * golf_rounds may contain placeholder/future rows, so the
-         * highest persisted round number is NOT evidence that the field
-         * is currently playing that round.
+         * Golfers do not all complete a round at the same time. Using
+         * the field-wide maximum rounds_completed advances every golfer
+         * to the next round as soon as the first golfer finishes.
          *
-         * rounds_completed is the meaningful progression signal:
-         *
-         *   nobody has completed a round -> Round 1
-         *   field has completed R1      -> Round 2
-         *   field has completed R2      -> Round 3
-         *   field has completed R3      -> Round 4
+         * Instead, each golfer's own rounds_completed determines the
+         * round whose completion notification should currently exist.
          */
-        const maxRoundsCompleted =
-          safeEventPlayers.reduce(
-            (max, row) =>
-              Math.max(
-                max,
-                Number(
-                  row.rounds_completed ?? 0
-                )
-              ),
-            0
-          );
-
-        const ledgerTournamentRound =
-          Math.min(
-            4,
-            Math.max(
-              1,
-              maxRoundsCompleted + 1
-            )
-          );
 
         const ledgerPlayerIds =
           Array.from(
@@ -853,8 +829,19 @@ export async function GET(request: NextRequest) {
                 Number(eventPlayer.id)
               ) ?? [];
 
+            const roundsCompleted =
+              Number(
+                eventPlayer.rounds_completed ?? 0
+              );
+
             const roundNumber =
-              ledgerTournamentRound;
+              Math.min(
+                4,
+                Math.max(
+                  1,
+                  roundsCompleted + 1
+                )
+              );
 
             const eventKey =
               `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
@@ -937,12 +924,7 @@ export async function GET(request: NextRequest) {
               metadata: {
                 expected: true,
                 roundNumber,
-                ledgerTournamentRound,
-                roundsCompleted:
-                  Number(
-                    eventPlayer.rounds_completed ??
-                      0
-                  ),
+                roundsCompleted,
                 playerStatus:
                   eventPlayer.status ??
                   null,
