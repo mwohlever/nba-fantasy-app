@@ -495,9 +495,20 @@ export default function GolfHoleReplayPanel({
 
         setSelectedStrokeNumber(
           (current) => {
+            const shots =
+              result.replay?.shots ?? [];
+
+            if (forceRefresh) {
+              return (
+                shots.at(-1)
+                  ?.strokeNumber ??
+                null
+              );
+            }
+
             if (
               current !== null &&
-              result.replay?.shots.some(
+              shots.some(
                 (shot) =>
                   shot.strokeNumber ===
                   current,
@@ -507,7 +518,7 @@ export default function GolfHoleReplayPanel({
             }
 
             return (
-              result.replay?.shots[0]
+              shots[0]
                 ?.strokeNumber ??
               null
             );
@@ -549,6 +560,7 @@ export default function GolfHoleReplayPanel({
       new AbortController();
 
     void loadReplay({
+      forceRefresh: true,
       signal: controller.signal,
     });
 
