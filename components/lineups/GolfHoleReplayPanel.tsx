@@ -425,6 +425,24 @@ export default function GolfHoleReplayPanel({
     setIsShotCastOpen,
   ] = useState(true);
 
+  /*
+   * A new golfer / round / hole is a new replay.
+   *
+   * Do not allow a stroke number from the previous replay to
+   * survive merely because the next hole also has (for example)
+   * a Stroke 2.
+   */
+  useEffect(() => {
+    setSelectedStrokeNumber(null);
+    setReplay(null);
+    setMessage("");
+  }, [
+    slateId,
+    playerId,
+    roundNumber,
+    holeNumber,
+  ]);
+
   const [
     isAllShotsOpen,
     setIsAllShotsOpen,
@@ -835,42 +853,6 @@ export default function GolfHoleReplayPanel({
   const activeShotCastConfig =
     useMemo<ActiveShotCastConfig | null>(
       () => {
-        /*
-         * AUTHORITATIVE COURSE VIEW
-         * -------------------------
-         *
-         * PGA pinsTees and terrainNN.tfw share the same raw
-         * TOURCAST coordinate system.
-         *
-         * Never project pinsTees onto the V3 enhanced pickle:
-         * that image uses a different normalized frame.
-         */
-        if (
-          authoritativePinWorld &&
-          manifestHole
-            ?.localAlignedMapUrl &&
-          manifestHole
-            ?.calibration
-            ?.affine
-        ) {
-          return {
-            title:
-              `ShotCast · Hole ${holeNumber}`,
-            imageUrl:
-              manifestHole
-                .localAlignedMapUrl,
-            imageFit: "fill",
-            calibration:
-              manifestHole.calibration,
-            calibrationVerified:
-              true,
-            aboutThisHole:
-              manifestHole
-                .aboutThisHole ??
-              null,
-          };
-        }
-
         /*
          * PRIMARY PATH:
          *
