@@ -2067,6 +2067,30 @@ export async function POST(request: Request) {
           continue;
         }
 
+        /*
+         * A published future tee time is useful scheduling data,
+         * but it does NOT by itself mean the golfer has advanced
+         * to that round.
+         *
+         * Only promote the top-level current_round when the golfer
+         * has completed the immediately preceding round.
+         *
+         * Examples:
+         *
+         *   completed R2 + R3 tee time -> promote to R3
+         *   completed R2 + R4 tee time -> remain R3
+         *   completed R3 + R4 tee time -> promote to R4
+         *
+         * We may still persist farther-ahead tee-time rows; this gate
+         * affects only the golfer's current/top-level round state.
+         */
+        if (
+          roundsCompleted <
+          fallbackRoundNumber - 1
+        ) {
+          continue;
+        }
+
         const pgaFallback =
           pgaTeeTimesByName.get(
             normalizeGolfNameKey(
