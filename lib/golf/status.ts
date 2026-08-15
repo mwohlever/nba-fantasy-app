@@ -49,6 +49,40 @@ export function formatGolfTeeTime(
   const raw = rawValue?.trim() ?? "";
 
   /*
+   * PGA TOUR's tee-time page can explicitly label its source clock
+   * as UTC, for example:
+   *
+   *   3:30 PM UTC
+   *
+   * In that case the parsed ISO value is the authoritative instant.
+   * Convert that instant to the app's Eastern-time display convention
+   * instead of stripping "UTC" and displaying the UTC clock as local.
+   */
+  if (
+    /\\bUTC\\b/i.test(raw) &&
+    parsedValue
+  ) {
+    const parsedUtc =
+      new Date(parsedValue);
+
+    if (
+      !Number.isNaN(
+        parsedUtc.getTime(),
+      )
+    ) {
+      return parsedUtc.toLocaleTimeString(
+        "en-US",
+        {
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone:
+            "America/New_York",
+        },
+      );
+    }
+  }
+
+  /*
    * Prefer the source's tournament-local display clock.
    *
    * Examples:
@@ -59,6 +93,42 @@ export function formatGolfTeeTime(
    * This avoids accidentally converting a PGA TOUR local tee time
    * into another timezone.
    */
+  /*
+   * A raw PGA TOUR clock explicitly marked UTC is NOT a
+   * tournament-local display clock.
+   *
+   * Example:
+   *   raw:    3:20 PM UTC
+   *   parsed: 2026-08-15T15:20:00+00:00
+   *
+   * Convert the authoritative parsed instant to Eastern before
+   * the generic 12-hour raw-clock matcher gets a chance to strip
+   * the UTC suffix.
+   */
+  if (
+    /\bUTC\b/i.test(raw) &&
+    parsedValue
+  ) {
+    const utcInstant =
+      new Date(parsedValue);
+
+    if (
+      !Number.isNaN(
+        utcInstant.getTime(),
+      )
+    ) {
+      return utcInstant.toLocaleTimeString(
+        "en-US",
+        {
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone:
+            "America/New_York",
+        },
+      );
+    }
+  }
+
   const twelveHourMatch = raw.match(
     /(?:^|\s)(\d{1,2}:\d{2}\s*[AP]M)(?:\s|$)/i,
   );

@@ -16,6 +16,7 @@ import {
 
 import {
   fetchPgaTourTeeTimes,
+  resolvePgaTourTournament,
 } from "@/lib/providers/pgaTourTeeTimes";
 
 type RefreshBody = {
@@ -58,6 +59,103 @@ type DatabaseError = {
 
 const EXPECTED_TOURNAMENT_ROUNDS = 4;
 const INSERT_BATCH_SIZE = 750;
+
+function normalizeGolfNameKey(
+  value: string,
+) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      "",
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      " ",
+    )
+    .trim();
+}
+
+function pgaUtcTeeTimeToIso(input: {
+  raw: string;
+  tournamentStartDate: string | null;
+  roundNumber: number;
+}): string | null {
+  const match =
+    input.raw
+      .trim()
+      .match(
+        /^(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s*UTC)?$/i,
+      );
+
+  if (
+    !match ||
+    !input.tournamentStartDate
+  ) {
+    return null;
+  }
+
+  const start =
+    new Date(
+      input.tournamentStartDate,
+    );
+
+  if (
+    Number.isNaN(
+      start.getTime(),
+    )
+  ) {
+    return null;
+  }
+
+  let hour =
+    Number(match[1]);
+
+  const minute =
+    Number(match[2]);
+
+  const meridiem =
+    match[3].toUpperCase();
+
+  if (
+    !Number.isInteger(hour) ||
+    hour < 1 ||
+    hour > 12 ||
+    !Number.isInteger(minute) ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  if (hour === 12) {
+    hour = 0;
+  }
+
+  if (meridiem === "PM") {
+    hour += 12;
+  }
+
+  const roundDate =
+    new Date(
+      Date.UTC(
+        start.getUTCFullYear(),
+        start.getUTCMonth(),
+        start.getUTCDate() +
+          Math.max(
+            0,
+            input.roundNumber - 1,
+          ),
+        hour,
+        minute,
+        0,
+        0,
+      ),
+    );
+
+  return roundDate.toISOString();
+}
 
 function parseSlateId(value: unknown): number | null {
   const parsed = Number(value);
@@ -1727,20 +1825,39 @@ export async function POST(request: Request) {
      */
 
     /*
-     * ESPN remains the primary tee-time provider.
+     * ESPN remains authoritative for scoring and live round
+     * advancement.
      *
-     * Once Round 3 is complete, ESPN may create R4 rows without
-     * publishing Sunday's tee times. When that happens, fill only
-     * the missing future-round tee times from the official PGA TOUR
-     * tournament tee-times page.
+     * ESPN can, however, finish a round and create the next
+     * round's placeholder rows before it publishes the tee
+     * times. PGA TOUR frequently has the official next-round
+     * pairings available first.
+     *
+     * In that narrow window:
+     *
+     *   - do NOT advance tournament.currentRound ourselves
+     *   - do NOT manufacture scoring activity
+     *   - fill only missing tee times on the already-published
+     *     next-round placeholder
+     *
+     * Resolve the PGA tournament ID from PGA's official season
+     * schedule so this works for future tournaments without a
+     * hard-coded tournament map.
      */
     const tournamentRound =
       Number(
         tournament.currentRound ?? 0,
       );
 
+    const fallbackRoundNumber =
+      tournamentRound >= 1 &&
+      tournamentRound <
+        EXPECTED_TOURNAMENT_ROUNDS
+        ? tournamentRound + 1
+        : null;
+
     const needsFutureTeeFallback =
-      tournamentRound >= 3 &&
+      fallbackRoundNumber !== null &&
       competitors.some(
         (competitor) => {
           const futureRound =
@@ -1749,14 +1866,14 @@ export async function POST(request: Request) {
                 Number(
                   round.roundNumber,
                 ) ===
-                Math.min(
-                  4,
-                  tournamentRound + 1,
-                ),
+                fallbackRoundNumber,
             );
 
           return (
-            futureRound &&
+            futureRound !==
+              undefined &&
+            futureRound
+              .holesCompleted === 0 &&
             !futureRound.teeTime &&
             !futureRound.teeTimeRaw
           );
@@ -1764,61 +1881,48 @@ export async function POST(request: Request) {
       );
 
     const pgaTeeTimesByName =
-      new Map<string, string>();
+      new Map<
+        string,
+        {
+          raw: string;
+          iso: string | null;
+        }
+      >();
 
     if (
-      needsFutureTeeFallback
+      needsFutureTeeFallback &&
+      fallbackRoundNumber !== null
     ) {
       try {
-        /*
-         * Current PGA TOUR tournament URLs use IDs such as:
-         *
-         *   R2026013
-         *
-         * The ESPN event is still the primary tournament identity;
-         * this URL is used only as a fallback source for missing
-         * published tee times.
-         *
-         * Wyndham 2026 is R2026013. Future tournaments can use the
-         * same mechanism once their PGA TOUR ID is available.
-         */
-        const pgaTournamentId =
-          tournament.name ===
-            "Wyndham Championship"
-            ? "R2026013"
-            : null;
+        const year =
+          tournament.startDate
+            ? new Date(
+                tournament.startDate,
+              ).getUTCFullYear()
+            : new Date()
+                .getUTCFullYear();
 
-        if (pgaTournamentId) {
-          const year =
-            tournament.startDate
-              ? new Date(
-                  tournament.startDate,
-                ).getUTCFullYear()
-              : new Date().getUTCFullYear();
+        const pgaTournament =
+          await resolvePgaTourTournament(
+            {
+              tournamentName:
+                tournament.name,
+              year,
+            },
+          );
 
-          const slug =
-            tournament.name
-              .toLowerCase()
-              .replace(
-                /[^a-z0-9]+/g,
-                "-",
-              )
-              .replace(
-                /^-|-$/g,
-                "",
-              );
-
-          const tournamentUrl =
-            `https://www.pgatour.com/tournaments/${year}/${slug}/${pgaTournamentId}/tee-times`;
-
+        if (pgaTournament) {
           const pgaTeeTimes =
             await fetchPgaTourTeeTimes(
               {
-                tournamentUrl,
+                tournamentUrl:
+                  pgaTournament
+                    .tournamentUrl,
               },
               competitors.map(
                 (competitor) =>
-                  competitor.displayName,
+                  competitor
+                    .displayName,
               ),
             );
 
@@ -1827,10 +1931,25 @@ export async function POST(request: Request) {
             of pgaTeeTimes
           ) {
             pgaTeeTimesByName.set(
-              row.playerName
-                .toLowerCase()
-                .trim(),
-              row.teeTimeRaw,
+              normalizeGolfNameKey(
+                row.playerName,
+              ),
+              {
+                raw:
+                  row.teeTimeRaw,
+                iso:
+                  pgaUtcTeeTimeToIso(
+                    {
+                      raw:
+                        row.teeTimeRaw,
+                      tournamentStartDate:
+                        tournament
+                          .startDate,
+                      roundNumber:
+                        fallbackRoundNumber,
+                    },
+                  ),
+              },
             );
           }
 
@@ -1839,23 +1958,205 @@ export async function POST(request: Request) {
             {
               tournament:
                 tournament.name,
-              pgaTournamentId,
+              round:
+                fallbackRoundNumber,
+              pgaTournamentId:
+                pgaTournament
+                  .tournamentId,
               matched:
-                pgaTeeTimesByName.size,
+                pgaTeeTimesByName
+                  .size,
+            },
+          );
+        } else {
+          console.warn(
+            "PGA TOUR tournament could not be resolved from schedule",
+            {
+              tournament:
+                tournament.name,
+              year,
             },
           );
         }
       } catch (error) {
         /*
-         * Tee-time fallback must never break score refresh.
-         * If PGA TOUR is temporarily unavailable, ESPN data still
-         * refreshes normally and future tee times simply remain blank.
+         * PGA tee-time fallback must never break score refresh.
+         * If PGA is temporarily unavailable, ESPN data continues
+         * refreshing normally and the future tee times stay blank.
          */
         console.warn(
           "PGA TOUR tee-time fallback failed",
           error,
         );
       }
+    }
+
+    /*
+     * A successfully resolved future round is authoritative evidence
+     * that the golfer has advanced beyond the round represented by
+     * the stale top-level ESPN competitor status.
+     *
+     * golf_event_players is initially persisted before the PGA TOUR
+     * future-round fallback runs. Without this reconciliation a golfer
+     * can have:
+     *
+     *   golf_rounds:        Round 3 scheduled + real tee time
+     *   golf_event_players: Round 2 / round_complete
+     *
+     * That stale top-level state then leaks into Scores, Home, and the
+     * notification monitor.
+     *
+     * Promote the top-level event-player state only when we have an
+     * actual zero-hole future round plus a resolved tee time. This keeps
+     * the fallback conservative and works generically for R2/R3/R4.
+     */
+    const promotedFutureRoundEventRows =
+      [];
+
+    if (fallbackRoundNumber !== null) {
+      for (const competitor of competitors) {
+        const futureRound =
+          competitor.rounds.find(
+            (round) =>
+              Number(
+                round.roundNumber,
+              ) ===
+              fallbackRoundNumber,
+          );
+
+        if (
+          !futureRound ||
+          Number(
+            futureRound.holesCompleted ??
+              0,
+          ) !== 0
+        ) {
+          continue;
+        }
+
+        const playerId =
+          playerIdByEspnId.get(
+            competitor.espnPlayerId,
+          );
+
+        if (playerId === undefined) {
+          continue;
+        }
+
+        const eventRow =
+          liveEventPlayerRows.find(
+            (row) =>
+              Number(row.player_id) ===
+              Number(playerId),
+          );
+
+        if (!eventRow) {
+          continue;
+        }
+
+        const roundsCompleted =
+          Number(
+            eventRow.rounds_completed ??
+              0,
+          );
+
+        if (
+          fallbackRoundNumber <=
+          roundsCompleted
+        ) {
+          continue;
+        }
+
+        const pgaFallback =
+          pgaTeeTimesByName.get(
+            normalizeGolfNameKey(
+              competitor.displayName,
+            ),
+          ) ??
+          null;
+
+        const resolvedTeeTime =
+          futureRound.teeTime ??
+          pgaFallback?.iso ??
+          null;
+
+        const resolvedTeeTimeRaw =
+          futureRound.teeTimeRaw ??
+          pgaFallback?.raw ??
+          null;
+
+        /*
+         * Do not manufacture progression from a placeholder round.
+         * We only promote when a real future tee time exists.
+         */
+        if (
+          !resolvedTeeTime &&
+          !resolvedTeeTimeRaw
+        ) {
+          continue;
+        }
+
+        eventRow.current_round =
+          fallbackRoundNumber;
+
+        eventRow.last_hole = null;
+
+        eventRow.status =
+          "scheduled";
+
+        eventRow.tee_time =
+          resolvedTeeTime;
+
+        eventRow.tee_time_raw =
+          resolvedTeeTimeRaw;
+
+        promotedFutureRoundEventRows.push(
+          eventRow,
+        );
+      }
+    }
+
+    if (
+      promotedFutureRoundEventRows.length >
+      0
+    ) {
+      const {
+        error:
+          futureRoundPromotionError,
+      } =
+        await supabaseAdmin
+          .from("golf_event_players")
+          .upsert(
+            promotedFutureRoundEventRows,
+            {
+              onConflict:
+                "slate_id,player_id",
+            },
+          );
+
+      if (futureRoundPromotionError) {
+        return NextResponse.json(
+          {
+            error:
+              "Golf future-round state could not be reconciled: " +
+              futureRoundPromotionError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      console.log(
+        "Promoted Golf future-round event state",
+        {
+          tournament:
+            tournament.name,
+          round:
+            fallbackRoundNumber,
+          golfers:
+            promotedFutureRoundEventRows
+              .length,
+        },
+      );
     }
 
     const roundRows = competitors.flatMap((competitor) => {
@@ -1900,33 +2201,67 @@ export async function POST(request: Request) {
         ];
       }
 
+      const pgaFallback =
+        pgaTeeTimesByName.get(
+          normalizeGolfNameKey(
+            competitor.displayName,
+          ),
+        ) ??
+        null;
+
       const persistedRounds =
         competitor.rounds.map(
-          (round) => ({
-            event_player_id:
-              eventPlayerId,
-            round_number:
-              round.roundNumber,
-            score_to_par:
-              round.scoreToPar,
-            score_display:
-              round.scoreDisplay,
-            strokes:
-              round.strokes,
-            holes_completed:
-              round.holesCompleted,
-            tee_time:
-              round.teeTime,
-            tee_time_raw:
-              round.teeTimeRaw,
-            status:
-              getRoundStatus(
-                round,
-                tournament.status,
-              ),
-            updated_at:
-              refreshedAt,
-          }),
+          (round) => {
+            const isFallbackRound =
+              fallbackRoundNumber !==
+                null &&
+              round.roundNumber ===
+                fallbackRoundNumber &&
+              round.holesCompleted ===
+                0 &&
+              !round.teeTime &&
+              !round.teeTimeRaw;
+
+            return {
+              event_player_id:
+                eventPlayerId,
+              round_number:
+                round.roundNumber,
+              score_to_par:
+                round.scoreToPar,
+              score_display:
+                round.scoreDisplay,
+              strokes:
+                round.strokes,
+              holes_completed:
+                round.holesCompleted,
+              tee_time:
+                round.teeTime ??
+                (
+                  isFallbackRound
+                    ? pgaFallback
+                        ?.iso ??
+                      null
+                    : null
+                ),
+              tee_time_raw:
+                round.teeTimeRaw ??
+                (
+                  isFallbackRound
+                    ? pgaFallback
+                        ?.raw ??
+                      null
+                    : null
+                ),
+              status:
+                getRoundStatus(
+                  round,
+                  tournament.status,
+                ),
+              updated_at:
+                refreshedAt,
+            };
+          },
         );
 
       const highestProviderRound =
@@ -1975,18 +2310,18 @@ export async function POST(request: Request) {
           tee_time:
             competitor.teeTime ??
             pgaTeeTimesByName.get(
-              competitor.displayName
-                .toLowerCase()
-                .trim(),
-            ) ??
+              normalizeGolfNameKey(
+                competitor.displayName,
+              ),
+            )?.iso ??
             null,
           tee_time_raw:
             competitor.teeTimeRaw ??
             pgaTeeTimesByName.get(
-              competitor.displayName
-                .toLowerCase()
-                .trim(),
-            ) ??
+              normalizeGolfNameKey(
+                competitor.displayName,
+              ),
+            )?.raw ??
             null,
           status:
             "scheduled" as const,

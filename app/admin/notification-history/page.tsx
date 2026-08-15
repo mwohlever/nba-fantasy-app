@@ -194,7 +194,7 @@ function buildDateOptions() {
   const today = new Date();
 
   return Array.from(
-    { length: 1 },
+    { length: 30 },
     (_, index) => {
       const date = new Date(
         today.getFullYear(),

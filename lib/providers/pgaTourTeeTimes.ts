@@ -1,12 +1,22 @@
 import "server-only";
 
-type PgaTourTeeTime = {
+export type PgaTourTeeTime = {
   playerName: string;
   teeTimeRaw: string;
 };
 
+export type PgaTourTournamentRef = {
+  tournamentId: string;
+  tournamentUrl: string;
+};
+
 type FetchPgaTourTeeTimesInput = {
   tournamentUrl: string;
+};
+
+type ResolvePgaTourTournamentInput = {
+  tournamentName: string;
+  year: number;
 };
 
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -24,6 +34,11 @@ function normalizeName(value: string) {
       " ",
     )
     .trim();
+}
+
+function slugify(value: string) {
+  return normalizeName(value)
+    .replace(/\s+/g, "-");
 }
 
 function decodeHtml(value: string) {
@@ -60,6 +75,63 @@ function flattenHtml(html: string) {
     .trim();
 }
 
+function findNormalizedNamePosition(
+  text: string,
+  playerName: string,
+) {
+  const targetWords =
+    normalizeName(playerName)
+      .split(/\s+/)
+      .filter(Boolean);
+
+  if (targetWords.length === 0) {
+    return null;
+  }
+
+  const words = [
+    ...text.matchAll(
+      /[\p{L}\p{N}'’-]+/gu,
+    ),
+  ]
+    .map((match) => ({
+      original:
+        match[0],
+      normalized:
+        normalizeName(
+          match[0],
+        ),
+      index:
+        match.index ?? -1,
+    }))
+    .filter(
+      (word) =>
+        word.index >= 0 &&
+        Boolean(word.normalized),
+    );
+
+  for (
+    let index = 0;
+    index <=
+      words.length -
+        targetWords.length;
+    index++
+  ) {
+    const matches =
+      targetWords.every(
+        (targetWord, offset) =>
+          words[index + offset]
+            ?.normalized ===
+          targetWord,
+      );
+
+    if (matches) {
+      return words[index].index;
+    }
+  }
+
+  return null;
+}
+
 function findClosestTimeBefore(
   text: string,
   position: number,
@@ -67,7 +139,7 @@ function findClosestTimeBefore(
   const start =
     Math.max(
       0,
-      position - 220,
+      position - 260,
     );
 
   const window =
@@ -78,7 +150,7 @@ function findClosestTimeBefore(
 
   const matches = [
     ...window.matchAll(
-      /\b(\d{1,2}:\d{2}\s*(?:AM|PM))\b/gi,
+      /\b(\d{1,2}:\d{2}\s*(?:AM|PM))(?:\s*(UTC))?\b/gi,
     ),
   ];
 
@@ -86,18 +158,32 @@ function findClosestTimeBefore(
     return null;
   }
 
-  return (
-    matches.at(-1)?.[1]
+  const match =
+    matches.at(-1);
+
+  const time =
+    match?.[1]
       ?.replace(/\s+/g, " ")
       .toUpperCase() ??
-    null
-  );
+    null;
+
+  if (!time) {
+    return null;
+  }
+
+  const zone =
+    match?.[2]
+      ?.toUpperCase() ??
+    null;
+
+  return zone
+    ? `${time} ${zone}`
+    : time;
 }
 
-export async function fetchPgaTourTeeTimes(
-  input: FetchPgaTourTeeTimesInput,
-  playerNames: string[],
-): Promise<PgaTourTeeTime[]> {
+async function fetchPgaHtml(
+  url: string,
+) {
   const controller =
     new AbortController();
 
@@ -111,7 +197,7 @@ export async function fetchPgaTourTeeTimes(
   try {
     const response =
       await fetch(
-        input.tournamentUrl,
+        url,
         {
           headers: {
             Accept:
@@ -129,106 +215,203 @@ export async function fetchPgaTourTeeTimes(
 
     if (!response.ok) {
       throw new Error(
-        `PGA TOUR tee-times page failed (${response.status})`,
+        `PGA TOUR request failed (${response.status})`,
       );
     }
 
-    const html =
-      await response.text();
-
-    const text =
-      flattenHtml(html);
-
-    const results:
-      PgaTourTeeTime[] = [];
-
-    for (
-      const playerName
-      of playerNames
-    ) {
-      const normalizedPlayer =
-        normalizeName(
-          playerName,
-        );
-
-      if (!normalizedPlayer) {
-        continue;
-      }
-
-      /*
-       * Search the flattened PGA TOUR page text.
-       *
-       * We intentionally require a full display-name match.
-       * This keeps the fallback conservative and prevents
-       * accidental tee-time assignment to similarly named players.
-       */
-      const normalizedText =
-        normalizeName(text);
-
-      let normalizedIndex =
-        normalizedText.indexOf(
-          normalizedPlayer,
-        );
-
-      if (
-        normalizedIndex < 0
-      ) {
-        continue;
-      }
-
-      /*
-       * The normalized string cannot safely be used as an index
-       * into the original text because punctuation/whitespace
-       * lengths differ. Find the player's component words in the
-       * original page instead.
-       */
-      const words =
-        playerName
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean);
-
-      const surname =
-        words.at(-1);
-
-      if (!surname) {
-        continue;
-      }
-
-      const surnameRegex =
-        new RegExp(
-          `\\b${surname.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&",
-          )}\\b`,
-          "i",
-        );
-
-      const surnameMatch =
-        surnameRegex.exec(text);
-
-      if (!surnameMatch) {
-        continue;
-      }
-
-      const teeTimeRaw =
-        findClosestTimeBefore(
-          text,
-          surnameMatch.index,
-        );
-
-      if (!teeTimeRaw) {
-        continue;
-      }
-
-      results.push({
-        playerName,
-        teeTimeRaw,
-      });
-    }
-
-    return results;
+    return await response.text();
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/*
+ * Resolve the PGA TOUR tournament ID generically from PGA's
+ * official season schedule.
+ *
+ * This avoids maintaining an ESPN -> PGA tournament-ID map.
+ * PGA schedule links contain the canonical tournament slug and
+ * ID, for example:
+ *
+ * /tournaments/2026/fedex-st-jude-championship/R2026027/...
+ */
+export async function resolvePgaTourTournament(
+  input: ResolvePgaTourTournamentInput,
+): Promise<PgaTourTournamentRef | null> {
+  const tournamentName =
+    input.tournamentName.trim();
+
+  const year =
+    Number(input.year);
+
+  if (
+    !tournamentName ||
+    !Number.isInteger(year) ||
+    year < 2000
+  ) {
+    return null;
+  }
+
+  const scheduleUrl =
+    `https://www.pgatour.com/schedule/${year}`;
+
+  const html =
+    await fetchPgaHtml(
+      scheduleUrl,
+    );
+
+  const targetSlug =
+    slugify(
+      tournamentName,
+    );
+
+  const links = [
+    ...html.matchAll(
+      new RegExp(
+        `(?:https?:\\/\\/www\\.pgatour\\.com)?\\/tournaments\\/${year}\\/([^\\/"'?]+)\\/(R\\d{7})(?:\\/[^"'\\s<]*)?`,
+        "gi",
+      ),
+    ),
+  ];
+
+  const candidates =
+    links
+      .map((match) => ({
+        slug:
+          String(
+            match[1] ?? "",
+          )
+            .trim()
+            .toLowerCase(),
+        tournamentId:
+          String(
+            match[2] ?? "",
+          )
+            .trim()
+            .toUpperCase(),
+      }))
+      .filter(
+        (candidate) =>
+          Boolean(
+            candidate.slug,
+          ) &&
+          /^R\d{7}$/.test(
+            candidate.tournamentId,
+          ),
+      );
+
+  const exact =
+    candidates.find(
+      (candidate) =>
+        candidate.slug ===
+        targetSlug,
+    );
+
+  const normalized =
+    exact ??
+    candidates.find(
+      (candidate) =>
+        normalizeName(
+          candidate.slug.replace(
+            /-/g,
+            " ",
+          ),
+        ) ===
+        normalizeName(
+          tournamentName,
+        ),
+    );
+
+  if (!normalized) {
+    return null;
+  }
+
+  return {
+    tournamentId:
+      normalized.tournamentId,
+    tournamentUrl:
+      `https://www.pgatour.com/tournaments/${year}/${normalized.slug}/${normalized.tournamentId}/tee-times`,
+  };
+}
+
+export async function fetchPgaTourTeeTimes(
+  input: FetchPgaTourTeeTimesInput,
+  playerNames: string[],
+): Promise<PgaTourTeeTime[]> {
+  const html =
+    await fetchPgaHtml(
+      input.tournamentUrl,
+    );
+
+  const text =
+    flattenHtml(html);
+
+  const normalizedText =
+    normalizeName(text);
+
+  const results:
+    PgaTourTeeTime[] = [];
+
+  for (
+    const playerName
+    of playerNames
+  ) {
+    const normalizedPlayer =
+      normalizeName(
+        playerName,
+      );
+
+    if (!normalizedPlayer) {
+      continue;
+    }
+
+    /*
+     * Require the full display name to exist on PGA's page.
+     * This keeps the fallback conservative and avoids assigning
+     * a time to a similarly named golfer.
+     */
+    if (
+      !normalizedText.includes(
+        normalizedPlayer,
+      )
+    ) {
+      continue;
+    }
+
+    /*
+     * Locate the actual full-name occurrence using normalized
+     * word comparison rather than a literal surname regex.
+     *
+     * This preserves diacritics in the source text while letting
+     * names such as Ludvig Åberg match safely.
+     */
+    const playerPosition =
+      findNormalizedNamePosition(
+        text,
+        playerName,
+      );
+
+    if (
+      playerPosition === null
+    ) {
+      continue;
+    }
+
+    const teeTimeRaw =
+      findClosestTimeBefore(
+        text,
+        playerPosition,
+      );
+
+    if (!teeTimeRaw) {
+      continue;
+    }
+
+    results.push({
+      playerName,
+      teeTimeRaw,
+    });
+  }
+
+  return results;
 }

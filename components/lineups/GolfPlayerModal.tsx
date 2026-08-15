@@ -43,7 +43,12 @@ function statusLabel(stat: PlayerStat | null) {
   if (status === "disqualified") return "Disqualified";
   if (status === "did_not_start") return "Did not start";
 
-  return stat?.tee_time_raw || "Scheduled";
+  return (
+    formatGolfTeeTime(
+      stat?.tee_time_raw,
+      stat?.tee_time,
+    ) ?? "Scheduled"
+  );
 }
 
 function holeClass(hole: GolfHoleStat) {
@@ -194,23 +199,73 @@ function PenaltyRound({
 }
 
 function formatGolfTeeTime(
-  value: string | null | undefined,
+  rawValue: string | null | undefined,
+  parsedValue?: string | null,
 ) {
-  if (!value) return null;
+  const raw =
+    rawValue?.trim() ?? "";
 
-  const parsed = new Date(value);
+  /*
+   * PGA TOUR future-round tee times can be explicitly UTC.
+   * When that happens, use the parsed ISO instant and display it
+   * in Eastern time instead of showing the UTC clock literally.
+   */
+  if (
+    /\\bUTC\\b/i.test(raw) &&
+    parsedValue
+  ) {
+    const parsedUtc =
+      new Date(parsedValue);
 
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
+    if (
+      !Number.isNaN(
+        parsedUtc.getTime(),
+      )
+    ) {
+      return parsedUtc.toLocaleString(
+        [],
+        {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone:
+            "America/New_York",
+        },
+      );
+    }
   }
 
-  return parsed.toLocaleString([], {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const value =
+    parsedValue ??
+    rawValue;
+
+  if (!value) return null;
+
+  const parsed =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      parsed.getTime(),
+    )
+  ) {
+    return raw || value;
+  }
+
+  return parsed.toLocaleString(
+    [],
+    {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone:
+        "America/New_York",
+    },
+  );
 }
 
 function RoundScorecard({
@@ -298,7 +353,8 @@ function RoundScorecard({
       : displayHolesCompleted > 0
         ? `Thru ${displayHolesCompleted}`
         : formatGolfTeeTime(
-            round.tee_time ?? round.tee_time_raw,
+            round.tee_time_raw,
+            round.tee_time,
           ) ?? "Not started";
 
   return (
