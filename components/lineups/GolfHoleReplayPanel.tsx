@@ -127,6 +127,14 @@ type Replay = {
     z?: number | null;
   } | null;
 
+  /*
+   * Round-specific ShotDetailsCompressedV3 Green View pin.
+   */
+  greenPin: {
+    x: number;
+    y: number;
+  } | null;
+
   shotcast: {
     imageUrl: string;
     greenImageUrl: string | null;
@@ -820,16 +828,25 @@ export default function GolfHoleReplayPanel({
    */
   const authoritativeGreenPin =
     (() => {
-      const pin =
+      /*
+       * Primary source:
+       *   live, round-scoped ShotDetailsCompressedV3.
+       *
+       * Manifest pinGreen remains only as a compatibility
+       * fallback for older/unavailable V3 payloads.
+       */
+      const manifestPin =
         manifestHole
           ?.pinGreen
           ?.bottomToTop;
 
       const x =
-        pin?.enhancedX;
+        replay?.greenPin?.x ??
+        manifestPin?.enhancedX;
 
       const y =
-        pin?.enhancedY;
+        replay?.greenPin?.y ??
+        manifestPin?.enhancedY;
 
       if (
         typeof x !== "number" ||

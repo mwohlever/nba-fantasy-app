@@ -154,6 +154,35 @@ type RawWorldPoint = {
   z?: number | null;
 };
 
+/*
+ * ShotDetailsCompressedV3 point-of-interest coordinates.
+ *
+ * PGA supplies ordinary x/y as -1 sentinels for the enhanced
+ * pickle path while preserving:
+ *
+ * - tourcastX/Y/Z for native TOURCAST world space
+ * - enhancedX/Y for the normalized image coordinate space
+ */
+type RawPointOfInterestCoordinate = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+  enhancedX?: number | null;
+  enhancedY?: number | null;
+};
+
+type RawPointOfInterestCoords = {
+  leftToRightCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+  bottomToTopCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+};
+
 type RawEnhancedPickle = {
   leftToRight?: string | null;
   bottomToTop?: string | null;
@@ -169,11 +198,20 @@ type RawHole = {
   score?: string | number | null;
 
   /*
-   * TOURCAST uses the player/hole tee and pin positions
-   * as world-coordinate endpoints surrounding the shots.
+   * Legacy/raw player-hole endpoints.
    */
   tee?: RawWorldPoint | null;
   pin?: RawWorldPoint | null;
+
+  /*
+   * ShotDetailsCompressedV3 supplies the authoritative pin
+   * independently in both the overview and Green View frames.
+   *
+   * These are round-specific because the V3 request itself is
+   * scoped to the requested round.
+   */
+  pinOverview?: RawPointOfInterestCoords | null;
+  pinGreen?: RawPointOfInterestCoords | null;
 
   enhancedPickle?: RawEnhancedPickle | null;
 
@@ -282,6 +320,16 @@ export type GolfHoleReplay = {
    * completed the hole.
    */
   pinWorld: GolfWorldPoint | null;
+
+  /*
+   * PGA's round-specific pin on the dedicated Green View
+   * image, already normalized into the same 0..1 coordinate
+   * frame used by stroke.green.bottomToTopCoords.
+   */
+  greenPin: {
+    x: number;
+    y: number;
+  } | null;
 
   /*
    * PGA TOURCAST V3 supplies a hole image and coordinates
@@ -1168,6 +1216,76 @@ export async function fetchGolfHoleReplay(
     },
   );
 
+  /*
+   * PGA's live/round-specific cup comes directly from the
+   * ShotDetailsCompressedV3 hole object.
+   *
+   * Green View uses enhancedX/enhancedY.
+   * Native 3D/course space uses tourcastX/Y/Z.
+   */
+  const rawGreenPin =
+    hole.pinGreen
+      ?.bottomToTopCoords ??
+    null;
+
+  const greenPinX =
+    rawGreenPin?.enhancedX;
+  const greenPinY =
+    rawGreenPin?.enhancedY;
+
+  const greenPin =
+    typeof greenPinX === "number" &&
+    typeof greenPinY === "number" &&
+    Number.isFinite(greenPinX) &&
+    Number.isFinite(greenPinY) &&
+    greenPinX >= 0 &&
+    greenPinX <= 1 &&
+    greenPinY >= 0 &&
+    greenPinY <= 1
+      ? {
+          x: greenPinX,
+          y: greenPinY,
+        }
+      : null;
+
+  /*
+   * pinGreen and pinOverview describe the same physical cup
+   * in different image projections. Prefer pinGreen's native
+   * TOURCAST coordinates because that is the same object
+   * driving Green View.
+   */
+  const rawPinWorld =
+    rawGreenPin ??
+    hole.pinOverview
+      ?.bottomToTopCoords ??
+    null;
+
+  const pinTourcastX =
+    rawPinWorld?.tourcastX;
+  const pinTourcastY =
+    rawPinWorld?.tourcastY;
+  const pinTourcastZ =
+    rawPinWorld?.tourcastZ;
+
+  const livePinWorld =
+    typeof pinTourcastX === "number" &&
+    typeof pinTourcastY === "number" &&
+    Number.isFinite(pinTourcastX) &&
+    Number.isFinite(pinTourcastY)
+      ? {
+          x: pinTourcastX,
+          y: pinTourcastY,
+          z:
+            typeof pinTourcastZ ===
+              "number" &&
+            Number.isFinite(
+              pinTourcastZ,
+            )
+              ? pinTourcastZ
+              : null,
+        }
+      : null;
+
   return {
     tournamentId,
     pgaPlayerId,
@@ -1195,13 +1313,19 @@ export async function fetchGolfHoleReplay(
         : String(hole.score),
 
     /*
-     * PGA's authoritative hole pin. Do not infer this from
-     * finalStroke.
+     * PGA's authoritative round-specific hole pin comes from
+     * ShotDetailsCompressedV3 pinGreen/pinOverview.
+     *
+     * Keep the legacy hole.pin fallback only for payloads that
+     * do not expose the newer V3 point-of-interest fields.
      */
     pinWorld:
+      livePinWorld ??
       worldPoint(
         hole.pin,
       ),
+
+    greenPin,
 
     shotcast:
       typeof hole.enhancedPickle
