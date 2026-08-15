@@ -116,11 +116,14 @@ async function retryHistoryRow(
     );
   }
 
-  if (history.status !== "failed") {
+  if (
+    history.status !== "failed" &&
+    history.status !== "partial"
+  ) {
     return NextResponse.json(
       {
         error:
-          "Only failed notifications can be retried.",
+          "Only failed or partial notifications can be retried.",
       },
       { status: 409 }
     );
@@ -406,7 +409,7 @@ async function sendMissedGolfEvent(
   } = await supabaseAdmin
     .from("golf_rounds")
     .select(
-      "round_number, holes_completed"
+      "round_number, holes_completed, score_to_par"
     )
     .eq(
       "event_player_id",
@@ -513,7 +516,18 @@ async function sendMissedGolfEvent(
           game_status: 3,
           round_number:
             roundNumber,
-          round_score: null,
+          round_score:
+            persistedRound
+              ?.score_to_par ===
+            null ||
+            persistedRound
+              ?.score_to_par ===
+            undefined
+              ? null
+              : Number(
+                  persistedRound
+                    .score_to_par
+                ),
           event_key_suffix:
             `round-${roundNumber}`,
         },

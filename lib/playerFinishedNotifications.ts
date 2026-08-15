@@ -265,7 +265,22 @@ export async function notifyNewlyFinishedPlayers(input: {
       userId: user?.id ?? null,
       teamId,
       slateId: input.slate.id,
-      playerId: Number(stat.player_id),
+
+      /*
+       * notification_history.player_id references the shared
+       * players table. Golf uses golf_players, whose numeric IDs
+       * are a different namespace and therefore cannot be written
+       * into that foreign-key column.
+       *
+       * Preserve the Golf player identity in the event key and
+       * metadata instead. The Notification Monitor's expected
+       * ledger already knows the Golf player from that event key.
+       */
+      playerId:
+        sport === "golf"
+          ? null
+          : Number(stat.player_id),
+
       title,
       body,
       url: `/lineups/scores?slateId=${input.slate.id}`,
@@ -281,6 +296,15 @@ export async function notifyNewlyFinishedPlayers(input: {
         teamName,
         slateLabel,
         sportEmoji: getSportConfig(sport).emoji,
+
+        /*
+         * Golf cannot use notification_history.player_id because
+         * that FK points at players rather than golf_players.
+         */
+        golfPlayerId:
+          sport === "golf"
+            ? Number(stat.player_id)
+            : null,
       },
     });
 
