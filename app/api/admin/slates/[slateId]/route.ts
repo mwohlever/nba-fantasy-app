@@ -22,6 +22,8 @@ type UpdateSlateBody = {
   nba_team_abbreviations?: string[];
   cut_penalty_per_round?: number;
   has_cut?: boolean;
+  tournament_analysis?: string;
+  show_tournament_analysis?: boolean;
 };
 
 type RouteContext = {
@@ -58,7 +60,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
       supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations"
+          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, tournament_analysis, show_tournament_analysis, nba_team_abbreviations"
         )
         .eq("id", slateId)
         .single(),
@@ -189,6 +191,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     const isLocked = body.is_locked;
     const rawCutPenalty = Number(body.cut_penalty_per_round);
     const hasCut = body.has_cut;
+
+    const tournamentAnalysis =
+      typeof body.tournament_analysis === "string"
+        ? body.tournament_analysis.trim()
+        : "";
+
+    const showTournamentAnalysis =
+      body.show_tournament_analysis;
+
     const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
       .map((value) => normalizeNbaTeamCode(value))
       .filter(Boolean);
@@ -197,6 +208,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json(
         { error: "At least one team config is required." },
         { status: 400 }
+      );
+    }
+
+    if (tournamentAnalysis.length > 4000) {
+      return NextResponse.json(
+        {
+          error:
+            "Tournament Analysis must be 4,000 characters or fewer.",
+        },
+        { status: 400 },
       );
     }
 
@@ -248,6 +269,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       nba_team_abbreviations?: string[];
       cut_penalty_per_round?: number;
       has_cut?: boolean;
+      tournament_analysis?: string | null;
+      show_tournament_analysis?: boolean;
     } = {
       nba_team_abbreviations: nbaTeamAbbreviations,
     };
@@ -258,6 +281,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       if (typeof hasCut === "boolean") {
         slateUpdatePayload.has_cut = hasCut;
+      }
+
+      slateUpdatePayload.tournament_analysis =
+        tournamentAnalysis || null;
+
+      if (
+        typeof showTournamentAnalysis ===
+        "boolean"
+      ) {
+        slateUpdatePayload.show_tournament_analysis =
+          showTournamentAnalysis;
       }
     }
 

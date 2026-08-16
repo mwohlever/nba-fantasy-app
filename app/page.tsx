@@ -31,6 +31,8 @@ type LatestSlate = {
   display_name?: string | null;
   is_locked: boolean;
   first_game_start_time: string | null;
+  tournament_analysis?: string | null;
+  show_tournament_analysis?: boolean;
 };
 
 type LatestSlateRow = {
@@ -954,6 +956,32 @@ function HomePageContent() {
               View Scores
             </Link>
           </div>
+
+          {isGolf &&
+          latestSlate?.show_tournament_analysis === true &&
+          latestSlate.tournament_analysis?.trim() ? (
+            <details className="group mb-4 overflow-hidden rounded-2xl border border-emerald-800/70 bg-emerald-950/25">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-emerald-100 [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2">
+                  <span aria-hidden="true">📝</span>
+                  Tournament Analysis
+                </span>
+
+                <span
+                  aria-hidden="true"
+                  className="text-xs text-emerald-300 transition-transform group-open:rotate-180"
+                >
+                  ▼
+                </span>
+              </summary>
+
+              <div className="border-t border-emerald-900/70 px-4 py-4">
+                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">
+                  {latestSlate.tournament_analysis.trim()}
+                </p>
+              </div>
+            </details>
+          ) : null}
 
           {isLoading ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">

@@ -185,7 +185,9 @@ export async function GET(request: Request) {
       supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
       supabaseAdmin
         .from("slates")
-        .select("id, date, start_date, end_date, is_locked, first_game_start_time")
+        .select(
+          "id, date, start_date, end_date, is_locked, first_game_start_time, tournament_analysis, show_tournament_analysis"
+        )
         .eq("sport", sport)
         .order("start_date", { ascending: false })
         .order("end_date", { ascending: false }),
@@ -1316,6 +1318,10 @@ export async function GET(request: Request) {
             label: formatSlateLabel(latestSlate.start_date, latestSlate.end_date),
             is_locked: latestSlate.is_locked,
             first_game_start_time: latestSlate.first_game_start_time,
+            tournament_analysis:
+              (latestSlate as any).tournament_analysis ?? null,
+            show_tournament_analysis:
+              (latestSlate as any).show_tournament_analysis === true,
           }
         : null,
       nextSlate: nextSlate

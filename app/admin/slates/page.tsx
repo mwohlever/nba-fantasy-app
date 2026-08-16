@@ -21,6 +21,8 @@ type SlateListRow = {
   external_event_id?: string | null;
   cut_penalty_per_round?: number | null;
   has_cut?: boolean;
+  tournament_analysis?: string | null;
+  show_tournament_analysis?: boolean;
   nba_team_abbreviations?: string[] | null;
 };
 
@@ -509,6 +511,14 @@ export default function AdminSlatesPage() {
             has_cut:
               selectedSlate.sport === "golf"
                 ? selectedSlate.has_cut !== false
+                : undefined,
+            tournament_analysis:
+              selectedSlate.sport === "golf"
+                ? selectedSlate.tournament_analysis ?? ""
+                : undefined,
+            show_tournament_analysis:
+              selectedSlate.sport === "golf"
+                ? selectedSlate.show_tournament_analysis === true
                 : undefined,
             nba_team_abbreviations:
               selectedSlate.nbaTeamsInput
@@ -1145,6 +1155,89 @@ export default function AdminSlatesPage() {
                     placeholder="BOS, CLE, NYK"
                     className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-sky-400"
                   />
+                </div>
+              ) : null}
+
+              {selectedSlate.sport === "golf" ? (
+                <div className="rounded-2xl border border-emerald-800 bg-emerald-950/25 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                        Tournament Analysis
+                      </div>
+
+                      <p className="mt-1 text-xs leading-5 text-slate-400">
+                        Write a short tournament commentary for the Home page.
+                        Keep it hidden while drafting, then turn it on whenever
+                        you want everyone to see it.
+                      </p>
+                    </div>
+
+                    <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedSlate.show_tournament_analysis === true
+                        }
+                        onChange={(event) =>
+                          setSelectedSlate((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  show_tournament_analysis:
+                                    event.target.checked,
+                                }
+                              : current,
+                          )
+                        }
+                        disabled={isBusy}
+                        className="h-4 w-4 rounded border-slate-500"
+                      />
+
+                      <span className="text-sm font-semibold text-slate-200">
+                        {selectedSlate.show_tournament_analysis
+                          ? "Showing on Home"
+                          : "Hidden"}
+                      </span>
+                    </label>
+                  </div>
+
+                  <textarea
+                    value={
+                      selectedSlate.tournament_analysis ?? ""
+                    }
+                    onChange={(event) =>
+                      setSelectedSlate((current) =>
+                        current
+                          ? {
+                              ...current,
+                              tournament_analysis:
+                                event.target.value,
+                            }
+                          : current,
+                      )
+                    }
+                    disabled={isBusy}
+                    maxLength={4000}
+                    rows={5}
+                    placeholder="Example: Mark's Sunday charge remains technically possible, assuming the other three teams voluntarily withdraw."
+                    className="mt-4 w-full resize-y rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm leading-6 text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-emerald-400 disabled:opacity-60"
+                  />
+
+                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
+                    <span>
+                      Saved with the selected tournament.
+                    </span>
+
+                    <span>
+                      {
+                        (
+                          selectedSlate.tournament_analysis ??
+                          ""
+                        ).length
+                      }/4000
+                    </span>
+                  </div>
                 </div>
               ) : null}
 

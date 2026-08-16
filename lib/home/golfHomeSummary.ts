@@ -12,6 +12,8 @@ type GolfSlateRow = {
   first_game_start_time: string | null;
   display_name: string | null;
   has_cut: boolean;
+  tournament_analysis: string | null;
+  show_tournament_analysis: boolean;
 };
 
 type TeamResultRow = {
@@ -116,7 +118,7 @@ export async function getGolfHomeSummary() {
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut",
+        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut, tournament_analysis, show_tournament_analysis",
       )
       .eq("sport", "golf")
       .order("start_date", { ascending: false })
@@ -1123,6 +1125,10 @@ export async function getGolfHomeSummary() {
       has_cut: slate.has_cut !== false,
       first_game_start_time:
         slate.first_game_start_time,
+      tournament_analysis:
+        slate.tournament_analysis ?? null,
+      show_tournament_analysis:
+        slate.show_tournament_analysis === true,
     };
   }
 
