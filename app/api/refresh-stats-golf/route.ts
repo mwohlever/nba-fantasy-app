@@ -359,6 +359,94 @@ function normalizeGolfCompetitorState(
   const tournamentHasStarted =
     tournament.status !== "scheduled";
 
+  /*
+   * A future-round tee time can be published before the current
+   * tournament day is over. Keep that tee time, but do not let it
+   * erase today's completed-round state.
+   *
+   * Example:
+   *   Saturday: R3 complete + Sunday R4 tee time exists
+   *     -> round_complete
+   *
+   *   Sunday: R4 tee-time calendar date has arrived
+   *     -> scheduled until the golfer starts
+   *
+   * Compare calendar dates in America/New_York because PGA tournament
+   * day/status presentation in the app is Eastern-time based.
+   */
+  const easternDateKey = (
+    value: Date | string,
+  ): string | null => {
+    const date =
+      value instanceof Date
+        ? value
+        : new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const parts =
+      new Intl.DateTimeFormat(
+        "en-CA",
+        {
+          timeZone: "America/New_York",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        },
+      ).formatToParts(date);
+
+    const year =
+      parts.find(
+        (part) => part.type === "year",
+      )?.value;
+
+    const month =
+      parts.find(
+        (part) => part.type === "month",
+      )?.value;
+
+    const day =
+      parts.find(
+        (part) => part.type === "day",
+      )?.value;
+
+    return year && month && day
+      ? `${year}-${month}-${day}`
+      : null;
+  };
+
+  const nextRound =
+    rounds.find(
+      (round) =>
+        Number(round.roundNumber) ===
+          derivedRoundsCompleted + 1 &&
+        Number(
+          round.holesCompleted ?? 0,
+        ) === 0 &&
+        (
+          round.strokes === null ||
+          Number(round.strokes) === 0
+        ),
+    ) ?? null;
+
+  const nextRoundTeeTime =
+    nextRound?.teeTime ?? null;
+
+  const todayEastern =
+    easternDateKey(new Date());
+
+  const nextRoundDateEastern =
+    nextRoundTeeTime
+      ? easternDateKey(nextRoundTeeTime)
+      : null;
+
+  const nextRoundDayHasArrived =
+    nextRoundDateEastern !== null &&
+    todayEastern !== null &&
+    nextRoundDateEastern <= todayEastern;
+
   const terminalStatuses =
     new Set<GolfCompetitorStatus>([
       "finished",
@@ -395,12 +483,15 @@ function normalizeGolfCompetitorState(
       tournamentRound !== null &&
       tournamentRound >
         derivedRoundsCompleted &&
-      derivedRoundsCompleted > 0
+      derivedRoundsCompleted > 0 &&
+      nextRoundDayHasArrived
     ) {
       /*
-       * The tournament has advanced to the next round, but this
-       * golfer has not started it yet. Treat that as upcoming rather
-       * than preserving a stale R1/R2 round_complete state.
+       * The next competitive day has actually arrived for this golfer.
+       * It is now correct to reset the daily completion state and show
+       * the golfer as upcoming until the next round begins.
+       *
+       * Merely receiving tomorrow's tee time does NOT trigger this.
        */
       normalizedStatus = "scheduled";
     } else if (

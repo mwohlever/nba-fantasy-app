@@ -222,6 +222,25 @@ function statusMeta(row: LeagueGolferRow) {
     };
   }
 
+  /*
+   * A future-round tee time may already exist before today's round
+   * completion state expires. Prefer the persisted current status:
+   * round_complete means today's golfer is done even if tomorrow's
+   * tee time is already available.
+   */
+  if (
+    status === "round_complete" &&
+    row.mostRecentRound?.holes_completed === 18
+  ) {
+    return {
+      label: "✓ Round complete",
+      detail: `Round ${row.mostRecentRound.round_number}`,
+      className:
+        "border-slate-600 bg-slate-800 text-slate-200",
+      section: "Round complete",
+    };
+  }
+
   if (row.upcomingRound) {
     const teeTime = formatTeeTime(
       row.upcomingRound.tee_time ??
