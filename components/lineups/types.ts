@@ -67,6 +67,7 @@ export type PlayerHistoryDetailRow = {
 export type Team = {
   id: number;
   name: string;
+  avatarUrl?: string | null;
 };
 
 export type Slate = {

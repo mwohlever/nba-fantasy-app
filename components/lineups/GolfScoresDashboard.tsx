@@ -908,7 +908,11 @@ export default function GolfScoresDashboard({
                     {medalForPosition(index + 1)}
                   </span>
 
-                  <TeamAvatar teamName={row.team.name} size="xs" />
+                  <TeamAvatar
+                    teamName={row.team.name}
+                    avatarUrl={row.team.avatarUrl}
+                    size="xs"
+                  />
 
                   <strong className="truncate text-sm text-slate-950">
                     {row.team.name}

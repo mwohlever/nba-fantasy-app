@@ -77,6 +77,7 @@ export default async function ScoresLineupsPage({
   const [
     { data: rawPlayers, error: playersError },
     { data: teams, error: teamsError },
+    { data: teamUsers, error: teamUsersError },
     { data: slates, error: slatesError },
     { data: slateTeams, error: slateTeamsError },
     { data: allPlayerStats, error: allPlayerStatsError },
@@ -86,6 +87,10 @@ export default async function ScoresLineupsPage({
       .select(playersSelect)
       .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
     supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+    supabaseAdmin
+      .from("app_users")
+      .select("team_id, avatar_url")
+      .not("team_id", "is", null),
     supabaseAdmin
       .from("slates")
       .select(
@@ -111,6 +116,7 @@ export default async function ScoresLineupsPage({
   if (
     playersError ||
     teamsError ||
+    teamUsersError ||
     slatesError ||
     slateTeamsError ||
     allPlayerStatsError
@@ -127,6 +133,7 @@ export default async function ScoresLineupsPage({
               <div className="mt-2 text-sm text-red-600">
                 {playersError?.message ||
                   teamsError?.message ||
+                  teamUsersError?.message ||
                   slatesError?.message ||
                   slateTeamsError?.message ||
                   allPlayerStatsError?.message}
@@ -137,6 +144,22 @@ export default async function ScoresLineupsPage({
       </main>
     );
   }
+
+  const avatarUrlByTeamId = new Map<number, string | null>();
+
+  (teamUsers ?? []).forEach((user: any) => {
+    if (user.team_id === null || user.team_id === undefined) return;
+
+    avatarUrlByTeamId.set(
+      Number(user.team_id),
+      user.avatar_url ?? null
+    );
+  });
+
+  const teamsWithAvatars = (teams ?? []).map((team: any) => ({
+    ...team,
+    avatarUrl: avatarUrlByTeamId.get(Number(team.id)) ?? null,
+  }));
 
   const normalizedPlayers = (rawPlayers ?? []).map((p: any) => {
     if (sport === "nfl") {
@@ -488,7 +511,7 @@ export default async function ScoresLineupsPage({
 
         <LineupBuilder
           players={normalizedPlayers}
-          teams={teams ?? []}
+          teams={teamsWithAvatars}
           slates={safeSlates}
           slateTeamConfigs={safeSlateTeams}
           playerAverages={playerAverages}
