@@ -1,6 +1,7 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import AdminPushDevices from "@/components/admin/AdminPushDevices";
 import {
   Fragment,
   useCallback,
@@ -325,6 +326,7 @@ export default function NotificationHistoryPage() {
 
       params.set("start", range.start);
       params.set("end", range.end);
+      params.set("date", selectedDate);
 
       if (typeFilter) {
         params.set("type", typeFilter);
@@ -573,6 +575,8 @@ export default function NotificationHistoryPage() {
             }
           />
         </section>
+
+        <AdminPushDevices />
 
         <section className="rounded-3xl border border-slate-700 bg-slate-900 p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
@@ -902,7 +906,9 @@ export default function NotificationHistoryPage() {
                               ) : null}
 
                               {row.status ===
-                              "failed" ? (
+                                "failed" ||
+                              row.status ===
+                                "partial" ? (
                                 <button
                                   type="button"
                                   disabled={
