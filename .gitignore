@@ -51,3 +51,22 @@ tourcast-hole*-assets/
 tourcast-hole*-assets.tar.gz
 golf-shot-tracker-current.txt
 pgatour-shot-test/
+
+# ----------------------------------------------------
+# Local development / ChatGPT collectors and backups
+# ----------------------------------------------------
+/tmp/
+*-collector.txt
+*-collector.zip
+*.before-*
+*.bak-*
+*.before.*
+*.bak.*
+
+# Local investigation artifacts
+*-probe.txt
+*-debug.txt
+*-audit.txt
+
+# Large/local research outputs
+/tmp-*.json
