@@ -590,14 +590,16 @@ teamSelections: teams
           }
 
           /*
-           * ESPN sometimes publishes the tournament itself
-           * before its scoreboard endpoint exposes competitors.
+           * ESPN sometimes publishes the tournament before it
+           * exposes competitors.
            *
-           * This is a normal pre-tournament state, not a failed
-           * slate creation. The Golf refresh job will retry it.
+           * We already have an official PGA TOUR field importer
+           * specifically for this state. Use it automatically
+           * instead of leaving a known tournament empty while
+           * waiting for ESPN.
            */
           console.info(
-            "Golf slate created; ESPN field is still pending.",
+            "ESPN Golf field is empty; trying PGA TOUR field fallback.",
             {
               slateId,
               tournament:
@@ -605,6 +607,71 @@ teamSelections: teams
                 "Golf",
             },
           );
+
+          const pgaFieldResponse =
+            await fetch(
+              "/api/admin/golf/import-field",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+                body: JSON.stringify({
+                  slateId,
+                }),
+              },
+            );
+
+          const pgaFieldResult =
+            await pgaFieldResponse.json();
+
+          if (!pgaFieldResponse.ok) {
+            const pgaMessage =
+              typeof pgaFieldResult?.error ===
+              "string"
+                ? pgaFieldResult.error
+                : "Unknown PGA TOUR field import error.";
+
+            /*
+             * The slate itself was created successfully, so do
+             * not destroy or roll it back if PGA also happens to
+             * be unavailable. Leave the slate intact and make the
+             * failure visible in the console/admin tools.
+             */
+            console.warn(
+              "Golf slate created, but PGA TOUR field fallback also failed.",
+              {
+                slateId,
+                tournament:
+                  selectedGolfTournament?.name ??
+                  "Golf",
+                error: pgaMessage,
+              },
+            );
+          } else {
+            console.info(
+              "PGA TOUR field fallback completed.",
+              {
+                slateId,
+                tournament:
+                  selectedGolfTournament?.name ??
+                  "Golf",
+                fieldPlayersFound:
+                  pgaFieldResult
+                    ?.fieldPlayersFound ??
+                  null,
+                playersImported:
+                  pgaFieldResult
+                    ?.playersImported ??
+                  null,
+                pgaTournamentId:
+                  pgaFieldResult
+                    ?.pgaTournamentId ??
+                  null,
+              },
+            );
+          }
         }
 
         router.push(

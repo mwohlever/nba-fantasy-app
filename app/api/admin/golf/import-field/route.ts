@@ -224,34 +224,48 @@ export async function POST(
       });
 
     /*
-     * Course scorecard metadata belongs to tournament setup,
-     * not live scoring.
+     * Course metadata is useful, but it must NEVER block the
+     * tournament field import.
      *
-     * The PGA field lookup above already resolved the official
-     * PGA tournament ID, so use that same ID to load and persist
-     * all 18 pars/yardages before play begins.
+     * PGA can publish the official field before enabling the
+     * host-course / ShotCast payload. In that state we still
+     * need the golfers immediately for drafting.
      */
-    const courseMetadata =
-      await fetchPgaTourCourseMetadata({
-        tournamentId:
-          field.tournamentId,
-        round: 1,
-      });
+    let courseSync:
+      Awaited<
+        ReturnType<
+          typeof upsertGolfCourseHoles
+        >
+      > | null = null;
 
-    const courseSync =
-      await upsertGolfCourseHoles({
-        slateId,
-        metadata: {
-          courseId:
-            courseMetadata.courseId,
-          courseName:
-            courseMetadata.courseName,
-          isHost:
-            courseMetadata.isHost,
-          holes:
-            courseMetadata.holes,
-        },
-      });
+    try {
+      const courseMetadata =
+        await fetchPgaTourCourseMetadata({
+          tournamentId:
+            field.tournamentId,
+          round: 1,
+        });
+
+      courseSync =
+        await upsertGolfCourseHoles({
+          slateId,
+          metadata: {
+            courseId:
+              courseMetadata.courseId,
+            courseName:
+              courseMetadata.courseName,
+            isHost:
+              courseMetadata.isHost,
+            holes:
+              courseMetadata.holes,
+          },
+        });
+    } catch (courseError) {
+      console.warn(
+        "PGA field available, but course metadata is not available yet. Continuing with field import.",
+        courseError,
+      );
+    }
 
     const {
       data: existingData,
@@ -560,14 +574,17 @@ export async function POST(
       eventPlayersUpserted:
         eventData?.length ??
         eventRows.length,
-      course: {
-        id:
-          courseSync.courseId,
-        name:
-          courseSync.courseName,
-        holesUpserted:
-          courseSync.holesUpserted,
-      },
+      course:
+        courseSync
+          ? {
+              id:
+                courseSync.courseId,
+              name:
+                courseSync.courseName,
+              holesUpserted:
+                courseSync.holesUpserted,
+            }
+          : null,
       importedAt:
         refreshedAt,
       preview:
