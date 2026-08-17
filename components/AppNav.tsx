@@ -595,11 +595,22 @@ function AppNavContent() {
                 aria-label={`Switch sport, currently ${getSportConfig(selectedSport).label}`}
                 className="block"
               >
-                <img
-                  src={getSportConfig(selectedSport).logo}
-                  alt={`${getSportConfig(selectedSport).label} logo`}
-                  className="h-12 w-12 rounded-full object-cover shadow-sm"
-                />
+                <span className="relative block h-12 w-12">
+                  <img
+                    src={getSportConfig(selectedSport).logo}
+                    alt={`${getSportConfig(selectedSport).label} logo`}
+                    className="h-12 w-12 rounded-full object-cover shadow-sm"
+                  />
+
+                  {selectedSport === "ncaa" ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -bottom-1 -right-1 rounded-full border border-slate-700 bg-slate-950 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-white shadow-md"
+                    >
+                      NCAA
+                    </span>
+                  ) : null}
+                </span>
               </button>
 
               {mobileSportOpen ? (

@@ -13,7 +13,7 @@ export const SPORTS: SportConfig[] = [
     key: "ncaa",
     label: "NCAA Pick 'Em",
     emoji: "🏈",
-    logo: "/logos/ncaa-pickem.svg",
+    logo: "/logos/nfl.png",
   },
 ];
 

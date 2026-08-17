@@ -1136,7 +1136,7 @@ export default function NcaaPickEmHome() {
 
             {data.games.length >
             0 ? (
-              <div className="sticky bottom-16 z-20 rounded-2xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl backdrop-blur sm:static">
+              <div className="rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-sm">
                 {data.locked ? (
                   <div className="text-center text-sm font-semibold text-slate-400">
                     🔒 Picks are locked. Everyone&apos;s selections are now visible.
