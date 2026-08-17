@@ -1,0 +1,400 @@
+============================================================
+PGA GREEN PIN — EXACT PATCH BLOCKS
+============================================================
+
+===== pgaTourShots.ts TYPES 115-190 =====
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+
+  /*
+   * TOURCAST V3 enrichments.
+   */
+  videoId?: string | null;
+  radarData?: RawRadarData | null;
+  ballPath?: RawBallPath | null;
+
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+
+  /*
+   * TOURCAST V3 also provides a second coordinate frame
+   * specifically for the dedicated Green View image.
+   */
+  green?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawWorldPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+};
+
+type RawEnhancedPickle = {
+  leftToRight?: string | null;
+  bottomToTop?: string | null;
+  greenLeftToRight?: string | null;
+  greenBottomToTop?: string | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+
+  /*
+   * TOURCAST uses the player/hole tee and pin positions
+   * as world-coordinate endpoints surrounding the shots.
+   */
+  tee?: RawWorldPoint | null;
+  pin?: RawWorldPoint | null;
+
+  enhancedPickle?: RawEnhancedPickle | null;
+
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+===== pgaTourShots.ts RETURN 1170-1245 =====
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+
+    /*
+     * PGA's authoritative hole pin. Do not infer this from
+     * finalStroke.
+     */
+    pinWorld:
+      worldPoint(
+        hole.pin,
+      ),
+
+    shotcast:
+      typeof hole.enhancedPickle
+        ?.bottomToTop === "string" &&
+      hole.enhancedPickle
+        .bottomToTop.trim()
+        ? {
+            imageUrl:
+              highResolutionTourcastUrl(
+                hole.enhancedPickle
+                  .bottomToTop.trim(),
+              ),
+
+            greenImageUrl:
+              typeof hole.enhancedPickle
+                ?.greenBottomToTop ===
+                "string" &&
+              hole.enhancedPickle
+                .greenBottomToTop
+                .trim()
+                ? highResolutionTourcastUrl(
+                    hole.enhancedPickle
+                      .greenBottomToTop
+                      .trim(),
+                  )
+                : null,
+
+            orientation:
+              "bottomToTop",
+            source:
+              "pga-tourcast-v3-enhanced",
+            verified: true,
+          }
+        : null,
+
+    shots,
+  };
+}
+
+===== GolfHoleReplayPanel.tsx TYPES 95-215 =====
+
+  worldFrom?: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
+  worldTo?: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
+  leftToRight: CoordinateSet | null;
+  bottomToTop: CoordinateSet | null;
+  greenBottomToTop: CoordinateSet | null;
+};
+
+type Replay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+
+  pinWorld: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
+  shotcast: {
+    imageUrl: string;
+    greenImageUrl: string | null;
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
+  shots: ReplayShot[];
+};
+
+type ReconciledHole = {
+  hole_number: number;
+  strokes: number;
+  relative_to_par: number;
+  score_display: string;
+  holes_completed: number;
+  round_score_to_par: number;
+  round_strokes: number;
+};
+
+type ResponseBody = {
+  success?: boolean;
+  available?: boolean;
+  message?: string;
+  replay?: Replay | null;
+  reconciledHole?: ReconciledHole | null;
+  error?: string;
+};
+
+type ShotCastCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+  verified?: boolean;
+  source?: string;
+  affine?: {
+    pxX: number;
+    rotX: number;
+    rotY: number;
+    pxY: number;
+    coordX: number;
+    coordY: number;
+    dimX: number;
+    dimY: number;
+  };
+};
+
+type ShotCastManifestHole = {
+  holeNumber: number;
+  available: boolean;
+  par: number | null;
+  yards: number | null;
+  aboutThisHole: string | null;
+  localImageUrl: string | null;
+  alignedMapUrl?: string | null;
+  localAlignedMapUrl?: string | null;
+  calibration?: ShotCastCalibration | null;
+  /*
+   * PGA courseData.pinsTees, preserved by round.
+   */
+  pinWorldByRound?: Array<
+    {
+      x: number;
+      y: number;
+      z?: number | null;
+    } | null
+  >;
+
+  /*
+   * PGA pinGreen coordinates for the dedicated Green View.
+   * enhancedX/enhancedY are normalized 0..1 image positions.
+   */
+  pinGreen?: {
+    leftToRight?: {
+      x: number | null;
+      y: number | null;
+      z: number | null;
+      enhancedX?: number | null;
+      enhancedY?: number | null;
+      tourcastX: number | null;
+      tourcastY: number | null;
+      tourcastZ: number | null;
+    } | null;
+    bottomToTop?: {
+
+===== GolfHoleReplayPanel.tsx FETCH/MAPPING 530-580 =====
+
+        if (!result.replay) {
+          setMessage(
+            result.message ||
+              "Shot tracking is not available for this hole yet.",
+          );
+          return;
+        }
+
+        setReplay(result.replay);
+
+        /*
+         * Temporary PGA pin-coordinate audit.
+         *
+         * Compare the authoritative hole pin with the latest
+         * live shot in every coordinate frame we currently have.
+         */
+        {
+          const latestShot =
+            result.replay.shots.length > 0
+              ? result.replay.shots[
+                  result.replay.shots.length - 1
+                ]
+              : null;
+
+          console.log(
+            "[PGA LIVE PIN AUDIT]",
+            {
+              tournamentId:
+                result.replay.tournamentId,
+              hole:
+                result.replay.holeNumber,
+
+              pinWorld:
+                result.replay.pinWorld,
+
+              shotCount:
+                result.replay.shots.length,
+
+              latestStroke:
+                latestShot?.strokeNumber ??
+                null,
+
+              latestWorldTo:
+                latestShot?.worldTo ??
+                null,
+
+              latestBottomToTop:
+                latestShot?.bottomToTop ??
+                null,
+
+
+===== GolfHoleReplayPanel.tsx PIN AUTHORITY 780-845 =====
+          ) ??
+        null,
+      [
+        holeNumber,
+        shotCastManifest,
+      ],
+    );
+
+  /*
+   * PGA getTeeAndPinFromEventData() selects pinsTees by round.
+   * Match that behavior rather than hardcoding Round 1.
+   */
+  /*
+   * TOURCAST courseData may publish either:
+   *
+   * - multiple pin/tee sets, or
+   * - one authoritative set at pinsTees[0].
+   *
+   * St. Jude publishes one set. Prefer a round-specific
+   * value when PGA actually provides one, otherwise use
+   * PGA's sole authoritative set rather than returning null.
+   */
+  const authoritativePinWorld =
+    manifestHole
+      ?.pinWorldByRound?.[
+        Math.max(
+          0,
+          roundNumber - 1,
+        )
+      ] ??
+    manifestHole
+      ?.pinWorldByRound?.[0] ??
+    null;
+
+  /*
+   * PGA's dedicated Green View pin is already normalized
+   * against the enhanced bottom-to-top green image.
+   *
+   * The ordinary x/y values may be -1 sentinels here.
+   * enhancedX/enhancedY are the coordinates we want.
+   */
+  const authoritativeGreenPin =
+    (() => {
+      const pin =
+        manifestHole
+          ?.pinGreen
+          ?.bottomToTop;
+
+      const x =
+        pin?.enhancedX;
+
+      const y =
+        pin?.enhancedY;
+
+      if (
+        typeof x !== "number" ||
+        typeof y !== "number" ||
+        !Number.isFinite(x) ||
+        !Number.isFinite(y) ||
+        x < 0 ||
+        x > 1 ||
+        y < 0 ||
+        y > 1
+      ) {
+        return null;
+      }

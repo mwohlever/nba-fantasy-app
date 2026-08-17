@@ -1,0 +1,561 @@
+============================================================
+CURRENT COURSE PROVIDER TRACE
+============================================================
+
+=== fetchGolfCoursesByEventId DEFINITION ===
+1104-};
+1105-
+1106-type EspnLeaderboardCourseHole = {
+1107-  number?: number;
+1108-  shotsToPar?: number;
+1109-  totalYards?: number;
+1110-};
+1111-
+1112-type EspnLeaderboardCourse = {
+1113-  id?: string;
+1114-  name?: string;
+1115-  totalYards?: number;
+1116-  shotsToPar?: number;
+1117-  parIn?: number;
+1118-  parOut?: number;
+1119-  host?: boolean;
+1120-  holes?: EspnLeaderboardCourseHole[];
+1121-};
+1122-
+1123-type EspnLeaderboardPayload = {
+1124-  events?: Array<{
+1125-    courses?: EspnLeaderboardCourse[];
+1126-  }>;
+1127-};
+1128-
+1129-function nullableFiniteNumber(value: unknown): number | null {
+1130-  const numeric = Number(value);
+1131-  return Number.isFinite(numeric) ? numeric : null;
+1132-}
+1133-
+1134:export async function fetchGolfCoursesByEventId(
+1135-  espnEventId: string,
+1136-): Promise<GolfCourse[]> {
+1137-  const normalizedEventId = espnEventId.trim();
+1138-
+1139-  if (!normalizedEventId) {
+1140-    return [];
+1141-  }
+1142-
+1143-  const payload =
+1144-    await fetchEspnGolfJson<EspnLeaderboardPayload>(
+1145-      {
+1146-        kind: "course",
+1147-        eventId:
+1148-          normalizedEventId,
+1149-      },
+1150-    );
+1151-  const courses = payload.events?.[0]?.courses ?? [];
+1152-
+1153-  return courses
+1154-    .map((course): GolfCourse | null => {
+1155-      const espnCourseId = String(course.id ?? "").trim();
+1156-
+1157-      if (!espnCourseId) {
+1158-        return null;
+1159-      }
+1160-
+1161-      const holes = (course.holes ?? [])
+1162-        .map((hole): GolfCourseHole | null => {
+1163-          const holeNumber = Number(hole.number);
+1164-          const par = Number(hole.shotsToPar);
+1165-
+1166-          if (
+1167-            !Number.isInteger(holeNumber) ||
+1168-            holeNumber < 1 ||
+1169-            holeNumber > 18 ||
+1170-            !Number.isInteger(par) ||
+1171-            par < 2 ||
+1172-            par > 7
+1173-          ) {
+1174-            return null;
+1175-          }
+1176-
+1177-          const yards = nullableFiniteNumber(hole.totalYards);
+1178-
+1179-          return {
+1180-            holeNumber,
+1181-            par,
+1182-            yards:
+1183-              yards !== null && yards > 0
+1184-                ? yards
+1185-                : null,
+1186-          };
+1187-        })
+1188-        .filter(
+1189-          (hole): hole is GolfCourseHole =>
+1190-            hole !== null,
+1191-        )
+1192-        .sort(
+1193-          (a, b) => a.holeNumber - b.holeNumber,
+1194-        );
+1195-
+1196-      return {
+1197-        espnCourseId,
+1198-        name:
+1199-          typeof course.name === "string"
+1200-            ? course.name.trim() || null
+1201-            : null,
+1202-        totalYards: nullableFiniteNumber(
+1203-          course.totalYards,
+1204-        ),
+1205-        totalPar: nullableFiniteNumber(
+1206-          course.shotsToPar,
+1207-        ),
+1208-        parIn: nullableFiniteNumber(course.parIn),
+1209-        parOut: nullableFiniteNumber(course.parOut),
+1210-        isHost: Boolean(course.host),
+1211-        holes,
+1212-      };
+1213-    })
+1214-    .filter(
+1215-      (course): course is GolfCourse =>
+1216-        course !== null &&
+1217-        course.holes.length > 0,
+1218-    );
+1219-}
+1220-
+
+=== COURSE TYPES / PARSERS ===
+1069-
+1070-      return {
+1071-        espnEventId,
+1072-        name,
+1073-        startDate: parseEspnDate(entry.startDate),
+1074-        endDate: parseEspnDate(entry.endDate),
+1075-      };
+1076-    })
+1077-    .filter((event): event is GolfScheduleEvent => event !== null);
+1078-
+1079-  return Array.from(
+1080-    new Map(schedule.map((event) => [event.espnEventId, event])).values(),
+1081-  ).sort((a, b) => {
+1082-    const aDate = a.startDate ?? "";
+1083-    const bDate = b.startDate ?? "";
+1084-
+1085-    return aDate.localeCompare(bDate);
+1086-  });
+1087-}
+1088-
+1089:export type GolfCourseHole = {
+1090-  holeNumber: number;
+1091-  par: number;
+1092-  yards: number | null;
+1093-};
+1094-
+1095:export type GolfCourse = {
+1096-  espnCourseId: string;
+1097-  name: string | null;
+1098:  totalYards: number | null;
+1099-  totalPar: number | null;
+1100-  parIn: number | null;
+1101-  parOut: number | null;
+1102:  isHost: boolean;
+1103:  holes: GolfCourseHole[];
+1104-};
+1105-
+1106:type EspnLeaderboardCourseHole = {
+1107-  number?: number;
+1108:  shotsToPar?: number;
+1109:  totalYards?: number;
+1110-};
+1111-
+1112-type EspnLeaderboardCourse = {
+1113-  id?: string;
+1114-  name?: string;
+1115:  totalYards?: number;
+1116:  shotsToPar?: number;
+1117-  parIn?: number;
+1118-  parOut?: number;
+1119-  host?: boolean;
+1120:  holes?: EspnLeaderboardCourseHole[];
+1121-};
+1122-
+1123-type EspnLeaderboardPayload = {
+1124-  events?: Array<{
+1125-    courses?: EspnLeaderboardCourse[];
+1126-  }>;
+1127-};
+1128-
+1129-function nullableFiniteNumber(value: unknown): number | null {
+1130-  const numeric = Number(value);
+1131-  return Number.isFinite(numeric) ? numeric : null;
+1132-}
+1133-
+1134:export async function fetchGolfCoursesByEventId(
+1135-  espnEventId: string,
+1136:): Promise<GolfCourse[]> {
+1137-  const normalizedEventId = espnEventId.trim();
+1138-
+1139-  if (!normalizedEventId) {
+1140-    return [];
+1141-  }
+1142-
+1143-  const payload =
+1144-    await fetchEspnGolfJson<EspnLeaderboardPayload>(
+1145-      {
+1146-        kind: "course",
+1147-        eventId:
+1148-          normalizedEventId,
+1149-      },
+1150-    );
+1151-  const courses = payload.events?.[0]?.courses ?? [];
+1152-
+1153-  return courses
+1154:    .map((course): GolfCourse | null => {
+1155-      const espnCourseId = String(course.id ?? "").trim();
+1156-
+1157-      if (!espnCourseId) {
+1158-        return null;
+1159-      }
+1160-
+1161-      const holes = (course.holes ?? [])
+1162:        .map((hole): GolfCourseHole | null => {
+1163-          const holeNumber = Number(hole.number);
+1164:          const par = Number(hole.shotsToPar);
+1165-
+1166-          if (
+1167-            !Number.isInteger(holeNumber) ||
+1168-            holeNumber < 1 ||
+1169-            holeNumber > 18 ||
+1170-            !Number.isInteger(par) ||
+1171-            par < 2 ||
+1172-            par > 7
+1173-          ) {
+1174-            return null;
+1175-          }
+1176-
+1177:          const yards = nullableFiniteNumber(hole.totalYards);
+1178-
+1179-          return {
+1180-            holeNumber,
+1181-            par,
+1182-            yards:
+1183-              yards !== null && yards > 0
+1184-                ? yards
+1185-                : null,
+1186-          };
+1187-        })
+1188-        .filter(
+1189:          (hole): hole is GolfCourseHole =>
+1190-            hole !== null,
+1191-        )
+1192-        .sort(
+1193-          (a, b) => a.holeNumber - b.holeNumber,
+1194-        );
+1195-
+1196-      return {
+1197-        espnCourseId,
+1198-        name:
+1199-          typeof course.name === "string"
+1200-            ? course.name.trim() || null
+1201-            : null,
+1202:        totalYards: nullableFiniteNumber(
+1203:          course.totalYards,
+1204-        ),
+1205-        totalPar: nullableFiniteNumber(
+1206:          course.shotsToPar,
+1207-        ),
+1208-        parIn: nullableFiniteNumber(course.parIn),
+1209-        parOut: nullableFiniteNumber(course.parOut),
+1210:        isHost: Boolean(course.host),
+1211-        holes,
+1212-      };
+1213-    })
+1214-    .filter(
+1215:      (course): course is GolfCourse =>
+1216-        course !== null &&
+1217-        course.holes.length > 0,
+1218-    );
+1219-}
+1220-
+
+=== CURRENT REFRESH COURSE UPSERT ===
+1-import { NextResponse } from "next/server";
+2-import { getCurrentUser } from "@/lib/auth";
+3-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+4-import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+5-import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+6-import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
+7-import {
+8:  fetchGolfCoursesByEventId,
+9-  fetchGolfTournamentByEventId,
+10-  parseGolfTournamentByEventIdFromPayload,
+11-  type GolfCompetitor,
+12-  type GolfCompetitorStatus,
+13-  type GolfRound,
+14-  type GolfTournament,
+15-} from "@/lib/providers/golf";
+16-
+17-import {
+18-  fetchPgaTourTeeTimes,
+19-} from "@/lib/providers/pgaTourTeeTimes";
+20-
+21-type RefreshBody = {
+22-  slateId?: number | string;
+23-  scoreboardPayload?: unknown;
+24-};
+25-
+26-type GolfSlateRecord = {
+27-  id: number;
+28-  sport: string;
+29-  display_name: string | null;
+30-  external_event_id: string | null;
+31-  start_date: string;
+32-  end_date: string;
+33-  is_locked: boolean;
+34-  cut_penalty_per_round: number | null;
+35-};
+36-
+37-type GolfPlayerIdRow = {
+38-  id: number;
+39-  display_name?: string;
+40-  espn_player_id: string;
+41-};
+42-
+43-type GolfEventPlayerIdRow = {
+44-  id: number;
+45-  player_id: number;
+46-};
+47-
+48-type GolfRoundIdRow = {
+49-  id: number;
+50-  event_player_id: number;
+51-  round_number: number;
+52-};
+53-
+54-type DatabaseError = {
+55-  message: string;
+56-};
+57-
+58-const EXPECTED_TOURNAMENT_ROUNDS = 4;
+59-const INSERT_BATCH_SIZE = 750;
+60-
+61-function parseSlateId(value: unknown): number | null {
+62-  const parsed = Number(value);
+63-
+64-  if (!Number.isInteger(parsed) || parsed <= 0) {
+65-    return null;
+66-  }
+67-
+68-  return parsed;
+69-}
+70-
+71-function getTournamentYear(startDate: string): string | null {
+72-  const year = startDate.slice(0, 4);
+73-  return /^\d{4}$/.test(year) ? year : null;
+74-}
+75-
+76-function deduplicateCompetitors(
+77-  competitors: GolfCompetitor[],
+78-): GolfCompetitor[] {
+79-  return Array.from(
+80-    new Map(
+81-      competitors.map((competitor) => [competitor.espnPlayerId, competitor]),
+82-    ).values(),
+83-  );
+84-}
+85-
+86-function chunkRows<T>(rows: T[], size: number): T[][] {
+87-  const chunks: T[][] = [];
+88-
+89-  for (let index = 0; index < rows.length; index += size) {
+90-    chunks.push(rows.slice(index, index + size));
+91-  }
+92-
+93-  return chunks;
+94-}
+95-
+96-function getRoundStatus(
+97-  round: GolfRound,
+98-  tournamentStatus: GolfTournament["status"],
+99-): "scheduled" | "active" | "finished" | "not_played" {
+100-  if (round.holesCompleted === 18) {
+101-    return "finished";
+102-  }
+103-
+104-  if (round.holesCompleted > 0) {
+105-    return "active";
+106-  }
+107-
+108-  if (round.strokes !== null && round.strokes > 0) {
+109-    return "active";
+110-  }
+111-
+112-  return tournamentStatus === "scheduled" ? "scheduled" : "not_played";
+113-}
+114-
+115-function normalizeGolfCompetitorState(
+116-  competitor: GolfCompetitor,
+117-  tournament: GolfTournament,
+118-): GolfCompetitor {
+119-  const rounds =
+120-    [...competitor.rounds].sort(
+121-      (a, b) =>
+122-        Number(a.roundNumber) -
+123-        Number(b.roundNumber),
+124-    );
+125-
+126-  const completedRounds =
+127-    rounds.filter(
+128-      (round) =>
+--
+856-    }
+857-
+858-    if (competitors.length === 0) {
+859-      return NextResponse.json(
+860-        {
+861-          error:
+862-            "ESPN returned the tournament, but the tournament field is not available yet.",
+863-          tournament: {
+864-            eventId: tournament.espnEventId,
+865-            name: tournament.name,
+866-            status: tournament.status,
+867-          },
+868-        },
+869-        { status: 502 },
+870-      );
+871-    }
+872-
+873-    const refreshedAt = new Date().toISOString();
+874-
+875-    let courseHolesUpserted = 0;
+876-
+877-    try {
+878-      /*
+879-       * Course-hole metadata is required independently of the
+880-       * player scoring ingestion path.
+881-       *
+882-       * Always refresh it so new tournaments have all 18 pars
+883-       * and yardages available before golfers play those holes.
+884-       */
+885-      const courses =
+886:        await fetchGolfCoursesByEventId(
+887-          slate.external_event_id ?? "",
+888-        );
+889-
+890-      const courseRows = courses.flatMap((course) =>
+891-        course.holes.map((hole) => ({
+892-          slate_id: slateId,
+893-          course_id: course.espnCourseId,
+894-          course_name: course.name,
+895-          is_host: course.isHost,
+896-          hole_number: hole.holeNumber,
+897-          par: hole.par,
+898-          yards: hole.yards,
+899-          updated_at: refreshedAt,
+900-        })),
+901-      );
+902-
+903-      if (courseRows.length > 0) {
+904-        const { error: courseDeleteError } =
+905-          await supabaseAdmin
+906-            .from("golf_course_holes")
+907-            .delete()
+908-            .eq("slate_id", slateId);
+909-
+910-        if (courseDeleteError) {
+911-          throw new Error(courseDeleteError.message);
+912-        }
+913-
+914-        const { error: courseUpsertError } =
+915-          await supabaseAdmin
+916-            .from("golf_course_holes")
+917-            .upsert(courseRows, {
+918-              onConflict:
+919-                "slate_id,course_id,hole_number",
+920-            });
+921-
+922-        if (courseUpsertError) {
+923-          throw new Error(courseUpsertError.message);
+924-        }
+925-
+926-        courseHolesUpserted = courseRows.length;
+927-      }
+928-    } catch (courseError) {
+929-      console.error(
+930-        "Golf player data will refresh, but course-hole data could not be saved:",
+931-        courseError,
+932-      );
+933-    }
+934-    const penaltyPerRound = Math.max(0, slate.cut_penalty_per_round ?? 0);
+935-
+936-    const golfPlayerRows = competitors.map((competitor) => ({
+937-      espn_player_id: competitor.espnPlayerId,
+938-      display_name: competitor.displayName,
+939-      short_name: competitor.shortName,
+940-      country: competitor.country,
+941-      country_flag_url: competitor.countryFlagUrl,
+942-      player_url: competitor.playerUrl,
+943-      headshot_url:
+944-        `https://a.espncdn.com/i/headshots/golf/players/full/` +
+945-        `${competitor.espnPlayerId}.png`,
+946-      is_active: true,
+947-      updated_at: refreshedAt,
+948-    }));
+949-
+950-    function normalizeGolfName(value: string) {
+951-      return value
+952-        .normalize("NFD")
+953-        .replace(/\p{Diacritic}/gu, "")
+954-        .toLowerCase()
+955-        .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+956-        .replace(/&/g, "and")
+957-        .replace(/[^a-z0-9]+/g, " ")
+958-        .trim()
+959-        .replace(/\s+/g, " ");
+960-    }
+961-
+962-    /*
+963-     * Pre-draft field imports may create temporary `pga:*`
+964-     * identities before ESPN publishes its competitor feed.
+965-     *
+966-     * Reconcile those records by normalized name so existing
+967-     * drafted player IDs are preserved instead of creating
+968-     * duplicate ESPN player records.
+969-     */
+970-    const {
+971-      data: existingGolfPlayerData,
+972-      error: existingGolfPlayerError,
+973-    } = await supabaseAdmin
+974-      .from("golf_players")
+975-      .select(
+976-        "id, display_name, espn_player_id",
+977-      );
+978-
+979-    if (existingGolfPlayerError) {
+980-      return NextResponse.json(
+981-        {
+982-          error:
+983-            "The tournament field was available, but existing Golf players could not be loaded: " +
+984-            existingGolfPlayerError.message,
+985-        },
+986-        { status: 500 },
+987-      );
+988-    }
+989-
+990-    const existingGolfPlayers =
+991-      (existingGolfPlayerData ??
+992-        []) as unknown as GolfPlayerIdRow[];
+993-
+994-    const existingByEspnId =
+995-      new Map(
+996-        existingGolfPlayers.map(
+997-          (player) => [
+998-            String(
+999-              player.espn_player_id,
+1000-            ),
+1001-            player,
+1002-          ],
+1003-        ),
+1004-      );
+1005-
+1006-    const existingByNormalizedName =
+
+=== DATABASE TRACE RESULT ===
+FedEx St. Jude slate 163 currently has ZERO golf_course_holes rows.

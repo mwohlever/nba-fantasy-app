@@ -1,0 +1,125 @@
+==================================================
+111 SPORTS — WYNDHAM TOURCAST TERRAIN PROBE
+==================================================
+ROOT: https://tourcast.pgatour.com/models/R202601/3D_Assets/
+
+==================================================
+ASSET: terrain/terrain05.jpg
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/terrain05.jpg
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/terrain05.jpg'
+}
+
+==================================================
+ASSET: terrain/terrain05.tfw
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/terrain05.tfw
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/terrain05.tfw'
+}
+
+==================================================
+ASSET: terrain/cutGlb/terrain05.glb
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/cutGlb/terrain05.glb
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/cutGlb/terrain05.glb'
+}
+
+==================================================
+ASSET: terrain/cutouts/5.png
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/cutouts/5.png
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/cutouts/5.png'
+}
+
+==================================================
+ASSET: terrain/greens/Green05.glb
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/greens/Green05.glb
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/greens/Green05.glb'
+}
+
+==================================================
+ASSET: terrain/course.jpg
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/course.jpg
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/course.jpg'
+}
+
+==================================================
+ASSET: terrain/course.tfw
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/course.tfw
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/course.tfw'
+}
+
+==================================================
+ASSET: data/courseData.json
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/data/courseData.json
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/data/courseData.json'
+}
+
+==================================================
+ASSET: data/tee_angles.txt
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/data/tee_angles.txt
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/data/tee_angles.txt'
+}
+
+==================================================
+ASSET: data/yardages.json
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/data/yardages.json
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/data/yardages.json'
+}
+
+==================================================
+ASSET: terrain/extents.txt
+URL: https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/extents.txt
+{
+  status: 403,
+  ok: false,
+  contentType: 'application/xml',
+  contentLength: null,
+  finalUrl: 'https://tourcast.pgatour.com/models/R202601/3D_Assets/terrain/extents.txt'
+}

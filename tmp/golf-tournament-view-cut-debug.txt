@@ -1,0 +1,633 @@
+============================================================
+GOLF TOURNAMENT VIEW - DEFINITION
+============================================================
+38-
+39-  if (!Number.isFinite(numeric)) return "—";
+40-  if (numeric === 0) return "E";
+41-
+42-  return numeric > 0
+43-    ? `+${numeric}`
+44-    : String(numeric);
+45-}
+46-
+47-function formatPosition(
+48-  value: number | null | undefined,
+49-) {
+50-  if (!value) return "—";
+51-  return `T${value}`;
+52-}
+53-
+54-function tournamentStatus(
+55-  stat: PlayerStat,
+56-) {
+57-  const meta =
+58-    getGolfStatusMeta(stat);
+59-
+60-  const className =
+61-    meta.state === "playing"
+62-      ? "border-emerald-700 bg-emerald-950 text-emerald-200"
+63-      : meta.state === "upcoming"
+64-        ? "border-sky-700 bg-sky-950 text-sky-200"
+65-        : meta.state === "cut" ||
+66-            meta.state === "disqualified"
+67-          ? "border-red-800 bg-red-950 text-red-200"
+68-          : meta.state === "withdrawn"
+69-            ? "border-amber-700 bg-amber-950 text-amber-200"
+70-            : "border-slate-600 bg-slate-800 text-slate-200";
+71-
+72-  return {
+73-    ...meta,
+74-    className,
+75-  };
+76-}
+77-
+78:export default function GolfTournamentView({
+79-  players,
+80-  teams,
+81-  hasCut = true,
+82-  getPlayersForTeam,
+83-  getRawPlayerStat,
+84-  setProfilePlayer,
+85-}: Props) {
+86-  const [searchTerm, setSearchTerm] =
+87-    useState("");
+88-
+89-  const [draftedOnly, setDraftedOnly] =
+90-    useState(false);
+91-
+92-  const [playingNowOnly, setPlayingNowOnly] =
+93-    useState(false);
+94-
+95-  const [
+96-    selectedOwnerTeamId,
+97-    setSelectedOwnerTeamId,
+98-  ] = useState<number | "drafted" | null>(null);
+99-
+100-  const fantasyTeams = useMemo(
+101-    () =>
+102-      teams.filter(
+103-        (team) =>
+104-          team.is_participating !== false,
+105-      ),
+106-    [teams],
+107-  );
+108-
+109-  const ownerByPlayerId = useMemo(() => {
+110-    const map =
+111-      new Map<number, OrderedTeam>();
+112-
+113-    teams
+114-      .filter(
+115-        (team) =>
+116-          team.is_participating !== false,
+117-      )
+118-      .forEach((team) => {
+119-        getPlayersForTeam(team.id).forEach(
+120-          (player) => {
+121-            map.set(player.id, team);
+122-          },
+123-        );
+124-      });
+125-
+126-    return map;
+127-  }, [teams, getPlayersForTeam]);
+128-
+129-  const leaderboardRanks =
+130-    useMemo(
+131-      () =>
+132-        buildGolfLeaderboardRanks(
+133-          players.flatMap(
+134-            (player) => {
+135-              const stat =
+136-                getRawPlayerStat(
+137-                  player.id,
+138-                );
+139-
+140-              if (!stat) {
+141-                return [];
+142-              }
+143-
+144-              return [
+145-                {
+146-                  id: player.id,
+147-                  score:
+148-                    stat.official_score_to_par ??
+149-                    stat.fantasy_points,
+150-                  fallbackOrder:
+151-                    stat.leaderboard_order,
+152-                  status:
+153-                    stat.status,
+154-                },
+155-              ];
+156-            },
+157-          ),
+158-        ),
+159-      [
+160-        players,
+161-        getRawPlayerStat,
+162-      ],
+163-    );
+164-
+165-  const rows = useMemo<TournamentRow[]>(() => {
+166-    const normalizedSearch =
+167-      searchTerm.trim().toLowerCase();
+168-
+169-    return players
+170-      .map((player) => {
+171-        const stat =
+172-          getRawPlayerStat(player.id);
+173-
+174-        if (!stat) return null;
+175-
+176-        return {
+177-          player,
+178-          stat,
+
+============================================================
+ALL CUT REFERENCES
+============================================================
+components/lineups/GolfTournamentView.tsx-1-"use client";
+components/lineups/GolfTournamentView.tsx-2-
+components/lineups/GolfTournamentView.tsx-3-import { Fragment, useMemo, useState } from "react";
+components/lineups/GolfTournamentView.tsx-4-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+components/lineups/GolfTournamentView.tsx-5-import { getGolfStatusMeta } from "@/lib/golf/status";
+components/lineups/GolfTournamentView.tsx:6:import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+components/lineups/GolfTournamentView.tsx-7-import { buildGolfLeaderboardRanks } from "@/lib/golf/leaderboard";
+components/lineups/GolfTournamentView.tsx-8-import TeamAvatar from "@/components/ui/TeamAvatar";
+components/lineups/GolfTournamentView.tsx-9-import type {
+components/lineups/GolfTournamentView.tsx-10-  OrderedTeam,
+components/lineups/GolfTournamentView.tsx-11-  Player,
+components/lineups/GolfTournamentView.tsx-12-  PlayerStat,
+components/lineups/GolfTournamentView.tsx-13-} from "@/components/lineups/types";
+components/lineups/GolfTournamentView.tsx-14-
+components/lineups/GolfTournamentView.tsx-15-type Props = {
+components/lineups/GolfTournamentView.tsx-16-  players: Player[];
+components/lineups/GolfTournamentView.tsx-17-  teams: OrderedTeam[];
+components/lineups/GolfTournamentView.tsx:18:  hasCut?: boolean;
+components/lineups/GolfTournamentView.tsx-19-  getPlayersForTeam: (teamId: number) => Player[];
+components/lineups/GolfTournamentView.tsx-20-  getRawPlayerStat: (playerId: number) => PlayerStat | null;
+components/lineups/GolfTournamentView.tsx-21-  setProfilePlayer: (player: Player | null) => void;
+components/lineups/GolfTournamentView.tsx-22-};
+components/lineups/GolfTournamentView.tsx-23-
+components/lineups/GolfTournamentView.tsx-24-type TournamentRow = {
+components/lineups/GolfTournamentView.tsx-25-  player: Player;
+components/lineups/GolfTournamentView.tsx-26-  stat: PlayerStat;
+components/lineups/GolfTournamentView.tsx-27-  owner: OrderedTeam | null;
+components/lineups/GolfTournamentView.tsx-28-};
+components/lineups/GolfTournamentView.tsx-29-
+components/lineups/GolfTournamentView.tsx-30-function formatGolfScore(
+components/lineups/GolfTournamentView.tsx-31-  value: number | null | undefined,
+components/lineups/GolfTournamentView.tsx-32-) {
+components/lineups/GolfTournamentView.tsx-33-  if (value === null || value === undefined) {
+components/lineups/GolfTournamentView.tsx-34-    return "—";
+components/lineups/GolfTournamentView.tsx-35-  }
+components/lineups/GolfTournamentView.tsx-36-
+components/lineups/GolfTournamentView.tsx-37-  const numeric = Number(value);
+components/lineups/GolfTournamentView.tsx-38-
+components/lineups/GolfTournamentView.tsx-39-  if (!Number.isFinite(numeric)) return "—";
+components/lineups/GolfTournamentView.tsx-40-  if (numeric === 0) return "E";
+components/lineups/GolfTournamentView.tsx-41-
+components/lineups/GolfTournamentView.tsx-42-  return numeric > 0
+components/lineups/GolfTournamentView.tsx-43-    ? `+${numeric}`
+components/lineups/GolfTournamentView.tsx-44-    : String(numeric);
+components/lineups/GolfTournamentView.tsx-45-}
+components/lineups/GolfTournamentView.tsx-46-
+components/lineups/GolfTournamentView.tsx-47-function formatPosition(
+components/lineups/GolfTournamentView.tsx-48-  value: number | null | undefined,
+--
+components/lineups/GolfTournamentView.tsx-69-            ? "border-amber-700 bg-amber-950 text-amber-200"
+components/lineups/GolfTournamentView.tsx-70-            : "border-slate-600 bg-slate-800 text-slate-200";
+components/lineups/GolfTournamentView.tsx-71-
+components/lineups/GolfTournamentView.tsx-72-  return {
+components/lineups/GolfTournamentView.tsx-73-    ...meta,
+components/lineups/GolfTournamentView.tsx-74-    className,
+components/lineups/GolfTournamentView.tsx-75-  };
+components/lineups/GolfTournamentView.tsx-76-}
+components/lineups/GolfTournamentView.tsx-77-
+components/lineups/GolfTournamentView.tsx-78-export default function GolfTournamentView({
+components/lineups/GolfTournamentView.tsx-79-  players,
+components/lineups/GolfTournamentView.tsx-80-  teams,
+components/lineups/GolfTournamentView.tsx:81:  hasCut = true,
+components/lineups/GolfTournamentView.tsx-82-  getPlayersForTeam,
+components/lineups/GolfTournamentView.tsx-83-  getRawPlayerStat,
+components/lineups/GolfTournamentView.tsx-84-  setProfilePlayer,
+components/lineups/GolfTournamentView.tsx-85-}: Props) {
+components/lineups/GolfTournamentView.tsx-86-  const [searchTerm, setSearchTerm] =
+components/lineups/GolfTournamentView.tsx-87-    useState("");
+components/lineups/GolfTournamentView.tsx-88-
+components/lineups/GolfTournamentView.tsx-89-  const [draftedOnly, setDraftedOnly] =
+components/lineups/GolfTournamentView.tsx-90-    useState(false);
+components/lineups/GolfTournamentView.tsx-91-
+components/lineups/GolfTournamentView.tsx-92-  const [playingNowOnly, setPlayingNowOnly] =
+components/lineups/GolfTournamentView.tsx-93-    useState(false);
+components/lineups/GolfTournamentView.tsx-94-
+components/lineups/GolfTournamentView.tsx-95-  const [
+components/lineups/GolfTournamentView.tsx-96-    selectedOwnerTeamId,
+components/lineups/GolfTournamentView.tsx-97-    setSelectedOwnerTeamId,
+components/lineups/GolfTournamentView.tsx-98-  ] = useState<number | "drafted" | null>(null);
+components/lineups/GolfTournamentView.tsx-99-
+components/lineups/GolfTournamentView.tsx-100-  const fantasyTeams = useMemo(
+components/lineups/GolfTournamentView.tsx-101-    () =>
+components/lineups/GolfTournamentView.tsx-102-      teams.filter(
+components/lineups/GolfTournamentView.tsx-103-        (team) =>
+components/lineups/GolfTournamentView.tsx-104-          team.is_participating !== false,
+components/lineups/GolfTournamentView.tsx-105-      ),
+components/lineups/GolfTournamentView.tsx-106-    [teams],
+components/lineups/GolfTournamentView.tsx-107-  );
+components/lineups/GolfTournamentView.tsx-108-
+components/lineups/GolfTournamentView.tsx-109-  const ownerByPlayerId = useMemo(() => {
+components/lineups/GolfTournamentView.tsx-110-    const map =
+components/lineups/GolfTournamentView.tsx-111-      new Map<number, OrderedTeam>();
+--
+components/lineups/GolfTournamentView.tsx-259-          b.player.name,
+components/lineups/GolfTournamentView.tsx-260-        );
+components/lineups/GolfTournamentView.tsx-261-      });
+components/lineups/GolfTournamentView.tsx-262-  }, [
+components/lineups/GolfTournamentView.tsx-263-    players,
+components/lineups/GolfTournamentView.tsx-264-    getRawPlayerStat,
+components/lineups/GolfTournamentView.tsx-265-    ownerByPlayerId,
+components/lineups/GolfTournamentView.tsx-266-    searchTerm,
+components/lineups/GolfTournamentView.tsx-267-    draftedOnly,
+components/lineups/GolfTournamentView.tsx-268-    leaderboardRanks,
+components/lineups/GolfTournamentView.tsx-269-  ]);
+components/lineups/GolfTournamentView.tsx-270-
+components/lineups/GolfTournamentView.tsx:271:  const cutLine = useMemo(
+components/lineups/GolfTournamentView.tsx-272-    () =>
+components/lineups/GolfTournamentView.tsx:273:      hasCut
+components/lineups/GolfTournamentView.tsx:274:        ? calculateGolfCutLine(
+components/lineups/GolfTournamentView.tsx-275-        players.flatMap((player) => {
+components/lineups/GolfTournamentView.tsx-276-          const stat =
+components/lineups/GolfTournamentView.tsx-277-            getRawPlayerStat(
+components/lineups/GolfTournamentView.tsx-278-              player.id,
+components/lineups/GolfTournamentView.tsx-279-            );
+components/lineups/GolfTournamentView.tsx-280-
+components/lineups/GolfTournamentView.tsx-281-          if (!stat) {
+components/lineups/GolfTournamentView.tsx-282-            return [];
+components/lineups/GolfTournamentView.tsx-283-          }
+components/lineups/GolfTournamentView.tsx-284-
+components/lineups/GolfTournamentView.tsx-285-          const roundOne =
+components/lineups/GolfTournamentView.tsx-286-            (stat.rounds ?? []).find(
+components/lineups/GolfTournamentView.tsx-287-              (round) =>
+components/lineups/GolfTournamentView.tsx-288-                Number(
+components/lineups/GolfTournamentView.tsx-289-                  round.round_number,
+components/lineups/GolfTournamentView.tsx-290-                ) === 1,
+components/lineups/GolfTournamentView.tsx-291-            );
+components/lineups/GolfTournamentView.tsx-292-
+components/lineups/GolfTournamentView.tsx-293-          const roundTwo =
+components/lineups/GolfTournamentView.tsx-294-            (stat.rounds ?? []).find(
+components/lineups/GolfTournamentView.tsx-295-              (round) =>
+components/lineups/GolfTournamentView.tsx-296-                Number(
+components/lineups/GolfTournamentView.tsx-297-                  round.round_number,
+components/lineups/GolfTournamentView.tsx-298-                ) === 2,
+components/lineups/GolfTournamentView.tsx-299-            );
+components/lineups/GolfTournamentView.tsx-300-
+components/lineups/GolfTournamentView.tsx-301-          const hasThirtySixHoleScore =
+components/lineups/GolfTournamentView.tsx-302-            roundOne?.score_to_par !==
+components/lineups/GolfTournamentView.tsx-303-              null &&
+components/lineups/GolfTournamentView.tsx-304-            roundOne?.score_to_par !==
+--
+components/lineups/GolfTournamentView.tsx-335-              holesCompleted:
+components/lineups/GolfTournamentView.tsx-336-                stat.holes_completed,
+components/lineups/GolfTournamentView.tsx-337-              roundsCompleted:
+components/lineups/GolfTournamentView.tsx-338-                stat.rounds_completed,
+components/lineups/GolfTournamentView.tsx-339-              currentRound:
+components/lineups/GolfTournamentView.tsx-340-                stat.current_round,
+components/lineups/GolfTournamentView.tsx-341-            },
+components/lineups/GolfTournamentView.tsx-342-          ];
+components/lineups/GolfTournamentView.tsx-343-        }),
+components/lineups/GolfTournamentView.tsx-344-          )
+components/lineups/GolfTournamentView.tsx-345-        : null,
+components/lineups/GolfTournamentView.tsx-346-    [
+components/lineups/GolfTournamentView.tsx:347:      hasCut,
+components/lineups/GolfTournamentView.tsx-348-      players,
+components/lineups/GolfTournamentView.tsx-349-      getRawPlayerStat,
+components/lineups/GolfTournamentView.tsx-350-    ],
+components/lineups/GolfTournamentView.tsx-351-  );
+components/lineups/GolfTournamentView.tsx-352-
+components/lineups/GolfTournamentView.tsx-353-  const draftedCount = useMemo(
+components/lineups/GolfTournamentView.tsx-354-    () =>
+components/lineups/GolfTournamentView.tsx-355-      players.filter((player) =>
+components/lineups/GolfTournamentView.tsx-356-        ownerByPlayerId.has(player.id),
+components/lineups/GolfTournamentView.tsx-357-      ).length,
+components/lineups/GolfTournamentView.tsx-358-    [players, ownerByPlayerId],
+components/lineups/GolfTournamentView.tsx-359-  );
+components/lineups/GolfTournamentView.tsx-360-
+components/lineups/GolfTournamentView.tsx-361-  /*
+components/lineups/GolfTournamentView.tsx-362-   * Once Round 3 begins the cut is historical and locked.
+components/lineups/GolfTournamentView.tsx-363-   * Keep displaying the official cut score/rule, but stop
+components/lineups/GolfTournamentView.tsx-364-   * showing live population counts because Saturday scoring
+components/lineups/GolfTournamentView.tsx:365:   * makes "inside / at cut / outside" misleading.
+components/lineups/GolfTournamentView.tsx-366-   */
+components/lineups/GolfTournamentView.tsx-367-  const hideCutPopulationCounts =
+components/lineups/GolfTournamentView.tsx-368-    players.some((player) => {
+components/lineups/GolfTournamentView.tsx-369-      const stat =
+components/lineups/GolfTournamentView.tsx-370-        getRawPlayerStat(player.id);
+components/lineups/GolfTournamentView.tsx-371-
+components/lineups/GolfTournamentView.tsx-372-      return Number(
+components/lineups/GolfTournamentView.tsx-373-        stat?.current_round ?? 0,
+components/lineups/GolfTournamentView.tsx-374-      ) >= 3;
+components/lineups/GolfTournamentView.tsx-375-    });
+components/lineups/GolfTournamentView.tsx-376-
+components/lineups/GolfTournamentView.tsx-377-  function getCurrentGolfRound(
+components/lineups/GolfTournamentView.tsx-378-    row: TournamentRow,
+components/lineups/GolfTournamentView.tsx-379-  ) {
+components/lineups/GolfTournamentView.tsx-380-    const rounds =
+components/lineups/GolfTournamentView.tsx-381-      [...(row.stat.rounds ?? [])]
+components/lineups/GolfTournamentView.tsx-382-        .sort(
+components/lineups/GolfTournamentView.tsx-383-          (a, b) =>
+components/lineups/GolfTournamentView.tsx-384-            a.round_number -
+components/lineups/GolfTournamentView.tsx-385-            b.round_number,
+components/lineups/GolfTournamentView.tsx-386-        );
+components/lineups/GolfTournamentView.tsx-387-
+components/lineups/GolfTournamentView.tsx-388-    const statedCurrentRound =
+components/lineups/GolfTournamentView.tsx-389-      Number(
+components/lineups/GolfTournamentView.tsx-390-        row.stat.current_round ?? 0,
+components/lineups/GolfTournamentView.tsx-391-      );
+components/lineups/GolfTournamentView.tsx-392-
+components/lineups/GolfTournamentView.tsx-393-    if (statedCurrentRound > 0) {
+components/lineups/GolfTournamentView.tsx-394-      const matchingRound =
+components/lineups/GolfTournamentView.tsx-395-        rounds.find(
+--
+components/lineups/GolfTournamentView.tsx-459-    }
+components/lineups/GolfTournamentView.tsx-460-
+components/lineups/GolfTournamentView.tsx-461-    /*
+components/lineups/GolfTournamentView.tsx-462-     * The main rows array is already sorted by the provider's
+components/lineups/GolfTournamentView.tsx-463-     * leaderboard order. Filtering preserves that display order.
+components/lineups/GolfTournamentView.tsx-464-     */
+components/lineups/GolfTournamentView.tsx-465-    return rows.filter(
+components/lineups/GolfTournamentView.tsx-466-      isGolferPlayingNow,
+components/lineups/GolfTournamentView.tsx-467-    );
+components/lineups/GolfTournamentView.tsx-468-  }, [playingNowOnly, rows]);
+components/lineups/GolfTournamentView.tsx-469-
+components/lineups/GolfTournamentView.tsx-470-  /*
+components/lineups/GolfTournamentView.tsx:471:   * The projected cut is score-based, while the provider's displayed
+components/lineups/GolfTournamentView.tsx-472-   * leaderboard order can temporarily contain golfers with no usable
+components/lineups/GolfTournamentView.tsx-473-   * score (for example, an upcoming/stale row mixed among leaders).
+components/lineups/GolfTournamentView.tsx-474-   *
+components/lineups/GolfTournamentView.tsx-475-   * Never use simple adjacent rows to locate the cut divider.
+components/lineups/GolfTournamentView.tsx-476-   * Instead find the first DISPLAYED golfer who:
+components/lineups/GolfTournamentView.tsx-477-   *
+components/lineups/GolfTournamentView.tsx-478-   *   1. has a real score, and
+components/lineups/GolfTournamentView.tsx-479-   *   2. is worse than the cut score.
+components/lineups/GolfTournamentView.tsx-480-   *
+components/lineups/GolfTournamentView.tsx-481-   * Unscored golfers therefore cannot accidentally pull the cut line
+components/lineups/GolfTournamentView.tsx-482-   * toward the top of the leaderboard.
+components/lineups/GolfTournamentView.tsx-483-   */
+components/lineups/GolfTournamentView.tsx:484:  const firstOutsideCutPlayerId =
+components/lineups/GolfTournamentView.tsx-485-    useMemo(() => {
+components/lineups/GolfTournamentView.tsx:486:      if (!cutLine) {
+components/lineups/GolfTournamentView.tsx-487-        return null;
+components/lineups/GolfTournamentView.tsx-488-      }
+components/lineups/GolfTournamentView.tsx-489-
+components/lineups/GolfTournamentView.tsx-490-      const outsideRow =
+components/lineups/GolfTournamentView.tsx-491-        visibleRows.find((row) => {
+components/lineups/GolfTournamentView.tsx-492-          const rawScore =
+components/lineups/GolfTournamentView.tsx-493-            row.stat.official_score_to_par ??
+components/lineups/GolfTournamentView.tsx-494-            row.stat.fantasy_points;
+components/lineups/GolfTournamentView.tsx-495-
+components/lineups/GolfTournamentView.tsx-496-          if (
+components/lineups/GolfTournamentView.tsx-497-            rawScore === null ||
+components/lineups/GolfTournamentView.tsx-498-            rawScore === undefined
+components/lineups/GolfTournamentView.tsx-499-          ) {
+components/lineups/GolfTournamentView.tsx-500-            return false;
+components/lineups/GolfTournamentView.tsx-501-          }
+components/lineups/GolfTournamentView.tsx-502-
+components/lineups/GolfTournamentView.tsx-503-          const score =
+components/lineups/GolfTournamentView.tsx-504-            Number(rawScore);
+components/lineups/GolfTournamentView.tsx-505-
+components/lineups/GolfTournamentView.tsx-506-          return (
+components/lineups/GolfTournamentView.tsx-507-            Number.isFinite(score) &&
+components/lineups/GolfTournamentView.tsx:508:            score > cutLine.score
+components/lineups/GolfTournamentView.tsx-509-          );
+components/lineups/GolfTournamentView.tsx-510-        });
+components/lineups/GolfTournamentView.tsx-511-
+components/lineups/GolfTournamentView.tsx-512-      return (
+components/lineups/GolfTournamentView.tsx-513-        outsideRow?.player.id ??
+components/lineups/GolfTournamentView.tsx-514-        null
+components/lineups/GolfTournamentView.tsx-515-      );
+components/lineups/GolfTournamentView.tsx-516-    }, [
+components/lineups/GolfTournamentView.tsx:517:      cutLine,
+components/lineups/GolfTournamentView.tsx-518-      visibleRows,
+components/lineups/GolfTournamentView.tsx-519-    ]);
+components/lineups/GolfTournamentView.tsx-520-
+components/lineups/GolfTournamentView.tsx-521-
+components/lineups/GolfTournamentView.tsx-522-  return (
+components/lineups/GolfTournamentView.tsx-523-    <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-sm">
+components/lineups/GolfTournamentView.tsx-524-      <header className="border-b border-slate-800 bg-gradient-to-r from-emerald-950 to-slate-950 px-5 py-5 text-white">
+components/lineups/GolfTournamentView.tsx-525-        <div className="flex flex-wrap items-end justify-between gap-3">
+components/lineups/GolfTournamentView.tsx-526-          <div>
+components/lineups/GolfTournamentView.tsx-527-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
+components/lineups/GolfTournamentView.tsx-528-              Tournament view
+components/lineups/GolfTournamentView.tsx-529-            </span>
+components/lineups/GolfTournamentView.tsx-530-
+components/lineups/GolfTournamentView.tsx-531-            <h3 className="mt-1 text-2xl font-black">
+components/lineups/GolfTournamentView.tsx-532-              Official Leaderboard
+components/lineups/GolfTournamentView.tsx-533-            </h3>
+components/lineups/GolfTournamentView.tsx-534-
+components/lineups/GolfTournamentView.tsx-535-            <p className="mt-1 text-sm text-slate-300">
+components/lineups/GolfTournamentView.tsx-536-              Full field with fantasy ownership highlighted.
+components/lineups/GolfTournamentView.tsx-537-            </p>
+components/lineups/GolfTournamentView.tsx-538-          </div>
+components/lineups/GolfTournamentView.tsx-539-
+components/lineups/GolfTournamentView.tsx-540-          <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">
+components/lineups/GolfTournamentView.tsx-541-            {rows.length} golfers
+components/lineups/GolfTournamentView.tsx-542-          </div>
+components/lineups/GolfTournamentView.tsx-543-        </div>
+components/lineups/GolfTournamentView.tsx-544-      </header>
+components/lineups/GolfTournamentView.tsx-545-
+components/lineups/GolfTournamentView.tsx:546:      {cutLine ? (
+components/lineups/GolfTournamentView.tsx-547-        <div className="border-b border-amber-500/30 bg-amber-950/30 px-4 py-3 text-white">
+components/lineups/GolfTournamentView.tsx-548-          <div className="flex flex-wrap items-center justify-between gap-3">
+components/lineups/GolfTournamentView.tsx-549-            <div>
+components/lineups/GolfTournamentView.tsx-550-              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">
+components/lineups/GolfTournamentView.tsx:551:                {cutLine.official
+components/lineups/GolfTournamentView.tsx-552-                  ? "Cut line"
+components/lineups/GolfTournamentView.tsx:553:                  : "Projected cut"}
+components/lineups/GolfTournamentView.tsx-554-              </span>
+components/lineups/GolfTournamentView.tsx-555-
+components/lineups/GolfTournamentView.tsx-556-              <div className="mt-1 flex items-baseline gap-2">
+components/lineups/GolfTournamentView.tsx-557-                <strong className="text-3xl font-black">
+components/lineups/GolfTournamentView.tsx:558:                  {cutLine.display}
+components/lineups/GolfTournamentView.tsx-559-                </strong>
+components/lineups/GolfTournamentView.tsx-560-
+components/lineups/GolfTournamentView.tsx-561-                <span className="text-xs font-semibold text-amber-200/80">
+components/lineups/GolfTournamentView.tsx:562:                  {cutLine.ruleLabel}
+components/lineups/GolfTournamentView.tsx-563-                </span>
+components/lineups/GolfTournamentView.tsx-564-              </div>
+components/lineups/GolfTournamentView.tsx-565-            </div>
+components/lineups/GolfTournamentView.tsx-566-
+components/lineups/GolfTournamentView.tsx-567-            {!hideCutPopulationCounts ? (
+components/lineups/GolfTournamentView.tsx-568-              <div className="grid grid-cols-2 gap-x-5 text-right text-[11px] text-slate-300 sm:grid-cols-3">
+components/lineups/GolfTournamentView.tsx-569-                <div>
+components/lineups/GolfTournamentView.tsx-570-                  <strong className="block text-base text-white">
+components/lineups/GolfTournamentView.tsx:571:                    {cutLine.inside}
+components/lineups/GolfTournamentView.tsx-572-                  </strong>
+components/lineups/GolfTournamentView.tsx-573-                  inside
+components/lineups/GolfTournamentView.tsx-574-                </div>
+components/lineups/GolfTournamentView.tsx-575-
+components/lineups/GolfTournamentView.tsx-576-                <div>
+components/lineups/GolfTournamentView.tsx-577-                  <strong className="block text-base text-white">
+components/lineups/GolfTournamentView.tsx:578:                    {cutLine.tiedAtCut}
+components/lineups/GolfTournamentView.tsx-579-                  </strong>
+components/lineups/GolfTournamentView.tsx-580-                  at cut score
+components/lineups/GolfTournamentView.tsx-581-                </div>
+components/lineups/GolfTournamentView.tsx-582-
+components/lineups/GolfTournamentView.tsx-583-                <div className="hidden sm:block">
+components/lineups/GolfTournamentView.tsx-584-                  <strong className="block text-base text-white">
+components/lineups/GolfTournamentView.tsx:585:                    {cutLine.outside}
+components/lineups/GolfTournamentView.tsx-586-                  </strong>
+components/lineups/GolfTournamentView.tsx-587-                  outside
+components/lineups/GolfTournamentView.tsx-588-                </div>
+components/lineups/GolfTournamentView.tsx-589-              </div>
+components/lineups/GolfTournamentView.tsx-590-            ) : null}
+components/lineups/GolfTournamentView.tsx-591-          </div>
+components/lineups/GolfTournamentView.tsx-592-        </div>
+components/lineups/GolfTournamentView.tsx-593-      ) : null}
+components/lineups/GolfTournamentView.tsx-594-
+components/lineups/GolfTournamentView.tsx-595-      <div className="border-b border-slate-800 bg-slate-900 p-3">
+components/lineups/GolfTournamentView.tsx-596-        <div className="flex flex-col gap-2 sm:flex-row">
+components/lineups/GolfTournamentView.tsx-597-          <label className="min-w-0 flex-1">
+components/lineups/GolfTournamentView.tsx-598-            <span className="sr-only">
+components/lineups/GolfTournamentView.tsx-599-              Search golfers
+components/lineups/GolfTournamentView.tsx-600-            </span>
+components/lineups/GolfTournamentView.tsx-601-
+components/lineups/GolfTournamentView.tsx-602-            <input
+components/lineups/GolfTournamentView.tsx-603-              type="search"
+components/lineups/GolfTournamentView.tsx-604-              value={searchTerm}
+components/lineups/GolfTournamentView.tsx-605-              onChange={(event) =>
+components/lineups/GolfTournamentView.tsx-606-                setSearchTerm(
+components/lineups/GolfTournamentView.tsx-607-                  event.target.value,
+components/lineups/GolfTournamentView.tsx-608-                )
+components/lineups/GolfTournamentView.tsx-609-              }
+components/lineups/GolfTournamentView.tsx-610-              placeholder="Search golfers..."
+components/lineups/GolfTournamentView.tsx-611-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-emerald-500"
+components/lineups/GolfTournamentView.tsx-612-            />
+components/lineups/GolfTournamentView.tsx-613-          </label>
+components/lineups/GolfTournamentView.tsx-614-
+components/lineups/GolfTournamentView.tsx-615-          <button
+--
+components/lineups/GolfTournamentView.tsx-794-        </div>
+components/lineups/GolfTournamentView.tsx-795-        <div className="text-right">
+components/lineups/GolfTournamentView.tsx-796-          Status
+components/lineups/GolfTournamentView.tsx-797-        </div>
+components/lineups/GolfTournamentView.tsx-798-      </div>
+components/lineups/GolfTournamentView.tsx-799-
+components/lineups/GolfTournamentView.tsx-800-      <div className="divide-y divide-slate-800">
+components/lineups/GolfTournamentView.tsx-801-        {visibleRows.map((row) => {
+components/lineups/GolfTournamentView.tsx-802-          const status =
+components/lineups/GolfTournamentView.tsx-803-            tournamentStatus(row.stat);
+components/lineups/GolfTournamentView.tsx-804-
+components/lineups/GolfTournamentView.tsx-805-          const showCutDivider =
+components/lineups/GolfTournamentView.tsx:806:            Boolean(cutLine) &&
+components/lineups/GolfTournamentView.tsx-807-            row.player.id ===
+components/lineups/GolfTournamentView.tsx:808:              firstOutsideCutPlayerId;
+components/lineups/GolfTournamentView.tsx-809-
+components/lineups/GolfTournamentView.tsx-810-          return (
+components/lineups/GolfTournamentView.tsx-811-            <Fragment key={row.player.id}>
+components/lineups/GolfTournamentView.tsx-812-              {showCutDivider ? (
+components/lineups/GolfTournamentView.tsx-813-                <div className="flex items-center gap-3 border-y border-amber-500/50 bg-amber-950/40 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-amber-300">
+components/lineups/GolfTournamentView.tsx-814-                  <span className="h-px flex-1 bg-amber-500/40" />
+components/lineups/GolfTournamentView.tsx-815-
+components/lineups/GolfTournamentView.tsx-816-                  <span>
+components/lineups/GolfTournamentView.tsx:817:                    {cutLine?.official
+components/lineups/GolfTournamentView.tsx-818-                      ? "Cut line"
+components/lineups/GolfTournamentView.tsx:819:                      : "Projected cut"}{" "}
+components/lineups/GolfTournamentView.tsx:820:                    {cutLine?.display}
+components/lineups/GolfTournamentView.tsx-821-                  </span>
+components/lineups/GolfTournamentView.tsx-822-
+components/lineups/GolfTournamentView.tsx-823-                  <span className="h-px flex-1 bg-amber-500/40" />
+components/lineups/GolfTournamentView.tsx-824-                </div>
+components/lineups/GolfTournamentView.tsx-825-              ) : null}
+components/lineups/GolfTournamentView.tsx-826-
+components/lineups/GolfTournamentView.tsx-827-            <button
+components/lineups/GolfTournamentView.tsx-828-              key={row.player.id}
+components/lineups/GolfTournamentView.tsx-829-              type="button"
+components/lineups/GolfTournamentView.tsx-830-              onClick={() =>
+components/lineups/GolfTournamentView.tsx-831-                setProfilePlayer(row.player)
+components/lineups/GolfTournamentView.tsx-832-              }
+components/lineups/GolfTournamentView.tsx-833-              className={`grid w-full grid-cols-[54px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-900 md:grid-cols-[70px_minmax(220px,1fr)_150px_100px_180px] ${
+components/lineups/GolfTournamentView.tsx-834-                selectedOwnerTeamId === null ||
+components/lineups/GolfTournamentView.tsx-835-                (selectedOwnerTeamId === "drafted"
+components/lineups/GolfTournamentView.tsx-836-                  ? Boolean(row.owner)
+components/lineups/GolfTournamentView.tsx-837-                  : row.owner?.id === selectedOwnerTeamId)
+components/lineups/GolfTournamentView.tsx-838-                  ? "opacity-100"
+components/lineups/GolfTournamentView.tsx-839-                  : "opacity-30 grayscale"
+components/lineups/GolfTournamentView.tsx-840-              } ${
+components/lineups/GolfTournamentView.tsx-841-                (selectedOwnerTeamId === "drafted" &&
+components/lineups/GolfTournamentView.tsx-842-                  row.owner) ||
+components/lineups/GolfTournamentView.tsx-843-                (typeof selectedOwnerTeamId === "number" &&
+components/lineups/GolfTournamentView.tsx-844-                  row.owner?.id === selectedOwnerTeamId)
+components/lineups/GolfTournamentView.tsx-845-                  ? "bg-emerald-950/30"
+components/lineups/GolfTournamentView.tsx-846-                  : ""
+components/lineups/GolfTournamentView.tsx-847-              }`}
+components/lineups/GolfTournamentView.tsx-848-              aria-label={`Open ${row.player.name} tournament scorecard`}
+components/lineups/GolfTournamentView.tsx-849-            >
+components/lineups/GolfTournamentView.tsx-850-              <div className="text-sm font-black text-slate-200">
+--
+components/lineups/GolfScoresDashboard.tsx-411-  selectedSlate,
+components/lineups/GolfScoresDashboard.tsx-412-  rosterSlots,
+components/lineups/GolfScoresDashboard.tsx-413-  lastRefreshSummary,
+components/lineups/GolfScoresDashboard.tsx-414-  getPlayersForTeam,
+components/lineups/GolfScoresDashboard.tsx-415-  getTeamStats,
+components/lineups/GolfScoresDashboard.tsx-416-  getRawPlayerStat,
+components/lineups/GolfScoresDashboard.tsx-417-  controls,
+components/lineups/GolfScoresDashboard.tsx-418-  setProfilePlayer,
+components/lineups/GolfScoresDashboard.tsx-419-}: Props) {
+components/lineups/GolfScoresDashboard.tsx-420-  console.log("[GOLF CUT DEBUG]", {
+components/lineups/GolfScoresDashboard.tsx-421-    selectedSlate,
+components/lineups/GolfScoresDashboard.tsx-422-    slateId: selectedSlate?.id,
+components/lineups/GolfScoresDashboard.tsx:423:    rawHasCut: selectedSlate?.has_cut,
+components/lineups/GolfScoresDashboard.tsx:424:    computedHasCut: selectedSlate?.has_cut !== false,
+components/lineups/GolfScoresDashboard.tsx-425-  });
+components/lineups/GolfScoresDashboard.tsx-426-  const participatingTeams = useMemo(
+components/lineups/GolfScoresDashboard.tsx-427-    () => teams.filter((team) => team.is_participating !== false),
+components/lineups/GolfScoresDashboard.tsx-428-    [teams],
+components/lineups/GolfScoresDashboard.tsx-429-  );
+components/lineups/GolfScoresDashboard.tsx-430-
+components/lineups/GolfScoresDashboard.tsx-431-  const leaderboard = useMemo(
+components/lineups/GolfScoresDashboard.tsx-432-    () =>
+components/lineups/GolfScoresDashboard.tsx-433-      participatingTeams
+components/lineups/GolfScoresDashboard.tsx-434-        .map((team) => {
+components/lineups/GolfScoresDashboard.tsx-435-          const teamPlayers = getPlayersForTeam(team.id);
+components/lineups/GolfScoresDashboard.tsx-436-          const playerStatuses = teamPlayers.map(
+components/lineups/GolfScoresDashboard.tsx-437-            (player) => getRawPlayerStat(player.id)?.status ?? "scheduled",
+components/lineups/GolfScoresDashboard.tsx-438-          );
+components/lineups/GolfScoresDashboard.tsx-439-
+components/lineups/GolfScoresDashboard.tsx-440-          /*
+components/lineups/GolfScoresDashboard.tsx-441-           * These counters describe each golfer's CURRENT round state,
+components/lineups/GolfScoresDashboard.tsx-442-           * not whether the entire tournament is final.
+components/lineups/GolfScoresDashboard.tsx-443-           *
+components/lineups/GolfScoresDashboard.tsx-444-           * A golfer who has completed Round 2 should therefore count
+components/lineups/GolfScoresDashboard.tsx-445-           * as complete while waiting for the next tournament round.
+components/lineups/GolfScoresDashboard.tsx-446-           * True terminal states also count as complete here.
+components/lineups/GolfScoresDashboard.tsx-447-           */
+components/lineups/GolfScoresDashboard.tsx-448-          const completedStatuses = new Set([
+components/lineups/GolfScoresDashboard.tsx-449-            "round_complete",
+components/lineups/GolfScoresDashboard.tsx-450-            "finished",
+components/lineups/GolfScoresDashboard.tsx-451-            "cut",
+components/lineups/GolfScoresDashboard.tsx-452-            "withdrawn",
+components/lineups/GolfScoresDashboard.tsx-453-            "disqualified",
+components/lineups/GolfScoresDashboard.tsx-454-            "did_not_start",
+--
+components/lineups/GolfScoresDashboard.tsx-1205-      ) : activeView === "league" ? (
+components/lineups/GolfScoresDashboard.tsx-1206-        <GolfLeagueView
+components/lineups/GolfScoresDashboard.tsx-1207-          slateId={selectedSlate?.id ?? null}
+components/lineups/GolfScoresDashboard.tsx-1208-          teams={participatingTeams}
+components/lineups/GolfScoresDashboard.tsx-1209-          getPlayersForTeam={getPlayersForTeam}
+components/lineups/GolfScoresDashboard.tsx-1210-          getRawPlayerStat={getRawPlayerStat}
+components/lineups/GolfScoresDashboard.tsx-1211-          setProfilePlayer={setProfilePlayer}
+components/lineups/GolfScoresDashboard.tsx-1212-        />
+components/lineups/GolfScoresDashboard.tsx-1213-      ) : (
+components/lineups/GolfScoresDashboard.tsx-1214-        <GolfTournamentView
+components/lineups/GolfScoresDashboard.tsx-1215-          players={allPlayers}
+components/lineups/GolfScoresDashboard.tsx-1216-          teams={participatingTeams}
+components/lineups/GolfScoresDashboard.tsx:1217:          hasCut={selectedSlate?.has_cut !== false}
+components/lineups/GolfScoresDashboard.tsx-1218-          getPlayersForTeam={getPlayersForTeam}
+components/lineups/GolfScoresDashboard.tsx-1219-          getRawPlayerStat={getRawPlayerStat}
+components/lineups/GolfScoresDashboard.tsx-1220-          setProfilePlayer={setProfilePlayer}
+components/lineups/GolfScoresDashboard.tsx-1221-        />
+components/lineups/GolfScoresDashboard.tsx-1222-      )}
+components/lineups/GolfScoresDashboard.tsx-1223-      
+components/lineups/GolfScoresDashboard.tsx-1224-    </section>
+components/lineups/GolfScoresDashboard.tsx-1225-  );
+components/lineups/GolfScoresDashboard.tsx-1226-}

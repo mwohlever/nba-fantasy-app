@@ -1,0 +1,688 @@
+============================================================
+PGA LEADERBOARD SCHEMA PROBE
+============================================================
+Generated: 2026-08-13T18:27:51.190Z
+
+=== EXISTING LEADERBOARD QUERY ===
+const LEADERBOARD_QUERY = `
+  query LeaderboardHoleByHole(
+    $tournamentId: ID!,
+    $round: Int!
+  ) {
+    leaderboardHoleByHole(
+      tournamentId: $tournamentId,
+      round: $round
+    ) {
+      tournamentId
+      tournamentName
+      currentRound
+      courses {
+        id
+        courseName
+        courseCode
+        hostCourse
+        scoringLevel
+        enabled
+      }
+      courseHoleHeaders {
+        courseId
+        holeHeaders {
+          holeNumber
+          order
+          displayValue
+          par
+        }
+      }
+    }
+  }
+`;
+
+
+
+=== GRAPHQL HELPERS / ENDPOINT ===
+
+--- orchestrator.pgatour.com ---
+    1 | const PGA_GRAPHQL_URL =
+    2 |   "https://orchestrator.pgatour.com/graphql";
+    3 | 
+    4 | const DEFAULT_PGA_API_KEY =
+    5 |   "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+    6 | 
+    7 | const REQUEST_TIMEOUT_MS = 20_000;
+    8 | 
+    9 | type ImportOptions = {
+   10 |   tournamentId: string;
+   11 |   round?: number;
+   12 | };
+   13 | 
+   14 | type AssetReference = {
+   15 |   imageOrg: string | null;
+   16 |   imagePath: string | null;
+   17 |   resolvedUrl: string | null;
+   18 | } | null;
+   19 | 
+   20 | function numberOrNull(value: unknown) {
+   21 |   const numeric = Number(value);
+   22 | 
+   23 |   return Number.isFinite(numeric)
+   24 |     ? numeric
+   25 |     : null;
+   26 | }
+   27 | 
+   28 | function normalizeUrl(value: unknown) {
+   29 |   if (typeof value !== "string") {
+   30 |     return null;
+   31 |   }
+   32 | 
+   33 |   const trimmed = value.trim();
+   34 |   return trimmed || null;
+   35 | }
+   36 | 
+
+--- graphqlRequest ---
+   95 | function requestHeaders() {
+   96 |   return {
+   97 |     Accept:
+   98 |       "application/graphql-response+json, application/json",
+   99 |     "Content-Type": "application/json",
+  100 |     "x-api-key":
+  101 |       process.env.PGA_TOUR_API_KEY?.trim() ||
+  102 |       DEFAULT_PGA_API_KEY,
+  103 |     "x-pgat-platform": "web",
+  104 |     Origin: "https://www.pgatour.com",
+  105 |     Referer: "https://www.pgatour.com/",
+  106 |     "User-Agent": "111 Sports",
+  107 |   };
+  108 | }
+  109 | 
+  110 | async function graphqlRequest(
+  111 |   operationName: string,
+  112 |   query: string,
+  113 |   variables: Record<string, unknown>,
+  114 | ) {
+  115 |   const controller =
+  116 |     new AbortController();
+  117 | 
+  118 |   const timeout = setTimeout(
+  119 |     () => controller.abort(),
+  120 |     REQUEST_TIMEOUT_MS,
+  121 |   );
+  122 | 
+  123 |   try {
+  124 |     const response = await fetch(
+  125 |       PGA_GRAPHQL_URL,
+  126 |       {
+  127 |         method: "POST",
+  128 |         headers: requestHeaders(),
+  129 |         body: JSON.stringify({
+  130 |           operationName,
+  131 |           query,
+  132 |           variables,
+  133 |         }),
+  134 |         cache: "no-store",
+  135 |         signal: controller.signal,
+  136 |       },
+  137 |     );
+  138 | 
+  139 |     const text = await response.text();
+  140 | 
+  141 |     let body: any;
+  142 | 
+  143 |     try {
+  144 |       body = JSON.parse(text);
+  542 |       "PGA tournament ID must look like R2026013.",
+  543 |     );
+  544 |   }
+  545 | 
+  546 |   if (
+  547 |     !Number.isInteger(round) ||
+  548 |     round < 1 ||
+  549 |     round > 4
+  550 |   ) {
+  551 |     throw new Error(
+  552 |       "Round must be from 1 through 4.",
+  553 |     );
+  554 |   }
+  555 | 
+  556 |   const leaderboardData =
+  557 |     await graphqlRequest(
+  558 |       "LeaderboardHoleByHole",
+  559 |       LEADERBOARD_QUERY,
+  560 |       {
+  561 |         tournamentId:
+  562 |           normalizedTournamentId,
+  563 |         round,
+  564 |       },
+  565 |     );
+  566 | 
+  567 |   const leaderboard =
+  568 |     leaderboardData
+  569 |       ?.leaderboardHoleByHole;
+  570 | 
+  571 |   if (!leaderboard) {
+  572 |     throw new Error(
+  573 |       "PGA TOUR returned no course information.",
+  574 |     );
+  575 |   }
+  576 | 
+  577 |   const courses =
+  578 |     Array.isArray(
+  579 |       leaderboard.courses,
+  580 |     )
+  581 |       ? leaderboard.courses
+  582 |       : [];
+  583 | 
+  584 |   const course =
+  585 |     courses.find(
+  586 |       (row: any) =>
+  587 |         row?.hostCourse === true &&
+  588 |         row?.enabled !== false,
+  589 |     ) ??
+  590 |     courses.find(
+  591 |       (row: any) =>
+  659 |         async (
+  660 |           holeNumber,
+  661 |         ) => {
+  662 |           const header =
+  663 |             headersByHole.get(
+  664 |               holeNumber,
+  665 |             );
+  666 | 
+  667 |           let detail:
+  668 |             | any
+  669 |             | null =
+  670 |             null;
+  671 | 
+  672 |           try {
+  673 |             const holeData =
+  674 |               await graphqlRequest(
+  675 |                 "HoleDetails",
+  676 |                 HOLE_DETAILS_QUERY,
+  677 |                 {
+  678 |                   tournamentId:
+  679 |                     normalizedTournamentId,
+  680 |                   courseId,
+  681 |                   hole:
+  682 |                     holeNumber,
+  683 |                 },
+  684 |               );
+  685 | 
+  686 |             detail =
+  687 |               holeData
+  688 |                 ?.holeDetails ??
+  689 |               null;
+  690 |           } catch (error) {
+  691 |             /*
+  692 |              * Par can still come from the leaderboard hole
+  693 |              * headers if a single HoleDetails call is flaky.
+  694 |              */
+  695 |             console.warn(
+  696 |               `[Golf course metadata] Hole ${holeNumber} ` +
+  697 |                 `details unavailable:`,
+  698 |               error,
+  699 |             );
+  700 |           }
+  701 | 
+  702 |           const holeInfo =
+  703 |             detail?.holeInfo &&
+  704 |             typeof detail
+  705 |               .holeInfo ===
+  706 |               "object"
+  707 |               ? detail.holeInfo
+  708 |               : {};
+  817 |       "PGA tournament ID must look like R2026013.",
+  818 |     );
+  819 |   }
+  820 | 
+  821 |   if (
+  822 |     !Number.isInteger(round) ||
+  823 |     round < 1 ||
+  824 |     round > 4
+  825 |   ) {
+  826 |     throw new Error(
+  827 |       "Round must be from 1 through 4.",
+  828 |     );
+  829 |   }
+  830 | 
+  831 |   const leaderboardData =
+  832 |     await graphqlRequest(
+  833 |       "LeaderboardHoleByHole",
+  834 |       LEADERBOARD_QUERY,
+  835 |       {
+  836 |         tournamentId:
+  837 |           normalizedTournamentId,
+  838 |         round,
+  839 |       },
+  840 |     );
+  841 | 
+  842 |   const leaderboard =
+  843 |     leaderboardData
+  844 |       ?.leaderboardHoleByHole;
+  845 | 
+  846 |   if (!leaderboard) {
+  847 |     throw new Error(
+  848 |       "PGA TOUR returned no course information.",
+  849 |     );
+  850 |   }
+  851 | 
+  852 |   const courses =
+  853 |     Array.isArray(leaderboard.courses)
+  854 |       ? leaderboard.courses
+  855 |       : [];
+  856 | 
+  857 |   const course =
+  858 |     courses.find(
+  859 |       (row: any) =>
+  860 |         row?.hostCourse === true &&
+  861 |         row?.enabled !== false,
+  862 |     ) ??
+  863 |     courses.find(
+  864 |       (row: any) =>
+  865 |         row?.enabled !== false,
+  866 |     ) ??
+  901 |           ),
+  902 |         )
+  903 |         .map((row: any) => [
+  904 |           Number(row.holeNumber),
+  905 |           row,
+  906 |         ]),
+  907 |     );
+  908 | 
+  909 |   const details = await Promise.all(
+  910 |     Array.from(
+  911 |       { length: 18 },
+  912 |       (_, index) => index + 1,
+  913 |     ).map(async (holeNumber) => {
+  914 |       try {
+  915 |         const holeData =
+  916 |           await graphqlRequest(
+  917 |             "HoleDetails",
+  918 |             HOLE_DETAILS_QUERY,
+  919 |             {
+  920 |               tournamentId:
+  921 |                 normalizedTournamentId,
+  922 |               courseId,
+  923 |               hole: holeNumber,
+  924 |             },
+  925 |           );
+  926 | 
+  927 |         return {
+  928 |           holeNumber,
+  929 |           detail:
+  930 |             holeData?.holeDetails ??
+  931 |             null,
+  932 |           error: null,
+  933 |         };
+  934 |       } catch (error) {
+  935 |         return {
+  936 |           holeNumber,
+  937 |           detail: null,
+  938 |           error:
+  939 |             error instanceof Error
+  940 |               ? error.message
+  941 |               : String(error),
+  942 |         };
+  943 |       }
+  944 |     }),
+  945 |   );
+  946 | 
+  947 |   const holes = await Promise.all(
+  948 |     details.map(async ({
+  949 |       holeNumber,
+  950 |       detail,
+
+--- x-api-key ---
+   85 |       cleanCoordinate(
+   86 |         value.leftToRightCoords,
+   87 |       ),
+   88 |     bottomToTop:
+   89 |       cleanCoordinate(
+   90 |         value.bottomToTopCoords,
+   91 |       ),
+   92 |   };
+   93 | }
+   94 | 
+   95 | function requestHeaders() {
+   96 |   return {
+   97 |     Accept:
+   98 |       "application/graphql-response+json, application/json",
+   99 |     "Content-Type": "application/json",
+  100 |     "x-api-key":
+  101 |       process.env.PGA_TOUR_API_KEY?.trim() ||
+  102 |       DEFAULT_PGA_API_KEY,
+  103 |     "x-pgat-platform": "web",
+  104 |     Origin: "https://www.pgatour.com",
+  105 |     Referer: "https://www.pgatour.com/",
+  106 |     "User-Agent": "111 Sports",
+  107 |   };
+  108 | }
+  109 | 
+  110 | async function graphqlRequest(
+  111 |   operationName: string,
+  112 |   query: string,
+  113 |   variables: Record<string, unknown>,
+  114 | ) {
+  115 |   const controller =
+  116 |     new AbortController();
+  117 | 
+  118 |   const timeout = setTimeout(
+  119 |     () => controller.abort(),
+  120 |     REQUEST_TIMEOUT_MS,
+  121 |   );
+  122 | 
+  123 |   try {
+  124 |     const response = await fetch(
+  125 |       PGA_GRAPHQL_URL,
+  126 |       {
+  127 |         method: "POST",
+  128 |         headers: requestHeaders(),
+  129 |         body: JSON.stringify({
+  130 |           operationName,
+  131 |           query,
+  132 |           variables,
+  133 |         }),
+  134 |         cache: "no-store",
+
+--- LeaderboardHoleByHole ---
+  375 |         response.headers
+  376 |           .get("content-type")
+  377 |           ?.toLowerCase()
+  378 |           .startsWith("image/") ??
+  379 |         false
+  380 |       )
+  381 |     );
+  382 |   } catch {
+  383 |     return false;
+  384 |   } finally {
+  385 |     clearTimeout(timeout);
+  386 |   }
+  387 | }
+  388 | 
+  389 | const LEADERBOARD_QUERY = `
+  390 |   query LeaderboardHoleByHole(
+  391 |     $tournamentId: ID!,
+  392 |     $round: Int!
+  393 |   ) {
+  394 |     leaderboardHoleByHole(
+  395 |       tournamentId: $tournamentId,
+  396 |       round: $round
+  397 |     ) {
+  398 |       tournamentId
+  399 |       tournamentName
+  400 |       currentRound
+  401 |       courses {
+  402 |         id
+  403 |         courseName
+  404 |         courseCode
+  405 |         hostCourse
+  406 |         scoringLevel
+  407 |         enabled
+  408 |       }
+  409 |       courseHoleHeaders {
+  410 |         courseId
+  411 |         holeHeaders {
+  412 |           holeNumber
+  413 |           order
+  414 |           displayValue
+  415 |           par
+  416 |         }
+  417 |       }
+  418 |     }
+  419 |   }
+  420 | `;
+  421 | 
+  422 | const HOLE_DETAILS_QUERY = `
+  423 |   query HoleDetails(
+  424 |     $tournamentId: ID!,
+  379 |         false
+  380 |       )
+  381 |     );
+  382 |   } catch {
+  383 |     return false;
+  384 |   } finally {
+  385 |     clearTimeout(timeout);
+  386 |   }
+  387 | }
+  388 | 
+  389 | const LEADERBOARD_QUERY = `
+  390 |   query LeaderboardHoleByHole(
+  391 |     $tournamentId: ID!,
+  392 |     $round: Int!
+  393 |   ) {
+  394 |     leaderboardHoleByHole(
+  395 |       tournamentId: $tournamentId,
+  396 |       round: $round
+  397 |     ) {
+  398 |       tournamentId
+  399 |       tournamentName
+  400 |       currentRound
+  401 |       courses {
+  402 |         id
+  403 |         courseName
+  404 |         courseCode
+  405 |         hostCourse
+  406 |         scoringLevel
+  407 |         enabled
+  408 |       }
+  409 |       courseHoleHeaders {
+  410 |         courseId
+  411 |         holeHeaders {
+  412 |           holeNumber
+  413 |           order
+  414 |           displayValue
+  415 |           par
+  416 |         }
+  417 |       }
+  418 |     }
+  419 |   }
+  420 | `;
+  421 | 
+  422 | const HOLE_DETAILS_QUERY = `
+  423 |   query HoleDetails(
+  424 |     $tournamentId: ID!,
+  425 |     $courseId: ID!,
+  426 |     $hole: Int!
+  427 |   ) {
+  428 |     holeDetails(
+  543 |     );
+  544 |   }
+  545 | 
+  546 |   if (
+  547 |     !Number.isInteger(round) ||
+  548 |     round < 1 ||
+  549 |     round > 4
+  550 |   ) {
+  551 |     throw new Error(
+  552 |       "Round must be from 1 through 4.",
+  553 |     );
+  554 |   }
+  555 | 
+  556 |   const leaderboardData =
+  557 |     await graphqlRequest(
+  558 |       "LeaderboardHoleByHole",
+  559 |       LEADERBOARD_QUERY,
+  560 |       {
+  561 |         tournamentId:
+  562 |           normalizedTournamentId,
+  563 |         round,
+  564 |       },
+  565 |     );
+  566 | 
+  567 |   const leaderboard =
+  568 |     leaderboardData
+  569 |       ?.leaderboardHoleByHole;
+  570 | 
+  571 |   if (!leaderboard) {
+  572 |     throw new Error(
+  573 |       "PGA TOUR returned no course information.",
+  574 |     );
+  575 |   }
+  576 | 
+  577 |   const courses =
+  578 |     Array.isArray(
+  579 |       leaderboard.courses,
+  580 |     )
+  581 |       ? leaderboard.courses
+  582 |       : [];
+  583 | 
+  584 |   const course =
+  585 |     courses.find(
+  586 |       (row: any) =>
+  587 |         row?.hostCourse === true &&
+  588 |         row?.enabled !== false,
+  589 |     ) ??
+  590 |     courses.find(
+  591 |       (row: any) =>
+  592 |         row?.enabled !== false,
+  554 |   }
+  555 | 
+  556 |   const leaderboardData =
+  557 |     await graphqlRequest(
+  558 |       "LeaderboardHoleByHole",
+  559 |       LEADERBOARD_QUERY,
+  560 |       {
+  561 |         tournamentId:
+  562 |           normalizedTournamentId,
+  563 |         round,
+  564 |       },
+  565 |     );
+  566 | 
+  567 |   const leaderboard =
+  568 |     leaderboardData
+  569 |       ?.leaderboardHoleByHole;
+  570 | 
+  571 |   if (!leaderboard) {
+  572 |     throw new Error(
+  573 |       "PGA TOUR returned no course information.",
+  574 |     );
+  575 |   }
+  576 | 
+  577 |   const courses =
+  578 |     Array.isArray(
+  579 |       leaderboard.courses,
+  580 |     )
+  581 |       ? leaderboard.courses
+  582 |       : [];
+  583 | 
+  584 |   const course =
+  585 |     courses.find(
+  586 |       (row: any) =>
+  587 |         row?.hostCourse === true &&
+  588 |         row?.enabled !== false,
+  589 |     ) ??
+  590 |     courses.find(
+  591 |       (row: any) =>
+  592 |         row?.enabled !== false,
+  593 |     ) ??
+  594 |     courses[0];
+  595 | 
+  596 |   const courseId =
+  597 |     String(
+  598 |       course?.id ?? "",
+  599 |     ).trim();
+  600 | 
+  601 |   if (!courseId) {
+  602 |     throw new Error(
+  603 |       "No enabled PGA host course was returned.",
+  818 |     );
+  819 |   }
+  820 | 
+  821 |   if (
+  822 |     !Number.isInteger(round) ||
+  823 |     round < 1 ||
+  824 |     round > 4
+  825 |   ) {
+  826 |     throw new Error(
+  827 |       "Round must be from 1 through 4.",
+  828 |     );
+  829 |   }
+  830 | 
+  831 |   const leaderboardData =
+  832 |     await graphqlRequest(
+  833 |       "LeaderboardHoleByHole",
+  834 |       LEADERBOARD_QUERY,
+  835 |       {
+  836 |         tournamentId:
+  837 |           normalizedTournamentId,
+  838 |         round,
+  839 |       },
+  840 |     );
+  841 | 
+  842 |   const leaderboard =
+  843 |     leaderboardData
+  844 |       ?.leaderboardHoleByHole;
+  845 | 
+  846 |   if (!leaderboard) {
+  847 |     throw new Error(
+  848 |       "PGA TOUR returned no course information.",
+  849 |     );
+  850 |   }
+  851 | 
+  852 |   const courses =
+  853 |     Array.isArray(leaderboard.courses)
+  854 |       ? leaderboard.courses
+  855 |       : [];
+  856 | 
+  857 |   const course =
+  858 |     courses.find(
+  859 |       (row: any) =>
+  860 |         row?.hostCourse === true &&
+  861 |         row?.enabled !== false,
+  862 |     ) ??
+  863 |     courses.find(
+  864 |       (row: any) =>
+  865 |         row?.enabled !== false,
+  866 |     ) ??
+  867 |     courses[0];
+  829 |   }
+  830 | 
+  831 |   const leaderboardData =
+  832 |     await graphqlRequest(
+  833 |       "LeaderboardHoleByHole",
+  834 |       LEADERBOARD_QUERY,
+  835 |       {
+  836 |         tournamentId:
+  837 |           normalizedTournamentId,
+  838 |         round,
+  839 |       },
+  840 |     );
+  841 | 
+  842 |   const leaderboard =
+  843 |     leaderboardData
+  844 |       ?.leaderboardHoleByHole;
+  845 | 
+  846 |   if (!leaderboard) {
+  847 |     throw new Error(
+  848 |       "PGA TOUR returned no course information.",
+  849 |     );
+  850 |   }
+  851 | 
+  852 |   const courses =
+  853 |     Array.isArray(leaderboard.courses)
+  854 |       ? leaderboard.courses
+  855 |       : [];
+  856 | 
+  857 |   const course =
+  858 |     courses.find(
+  859 |       (row: any) =>
+  860 |         row?.hostCourse === true &&
+  861 |         row?.enabled !== false,
+  862 |     ) ??
+  863 |     courses.find(
+  864 |       (row: any) =>
+  865 |         row?.enabled !== false,
+  866 |     ) ??
+  867 |     courses[0];
+  868 | 
+  869 |   const courseId =
+  870 |     String(course?.id ?? "").trim();
+  871 | 
+  872 |   if (!courseId) {
+  873 |     throw new Error(
+  874 |       "No enabled PGA course was returned.",
+  875 |     );
+  876 |   }
+  877 | 
+  878 |   const headerRows =
+
+=== DONE ===

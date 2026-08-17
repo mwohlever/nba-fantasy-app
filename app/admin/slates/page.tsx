@@ -4,6 +4,7 @@ import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 
@@ -118,6 +119,7 @@ function formatRefreshTime(value: string | null) {
 
 export default function AdminSlatesPage() {
   const { selectedSport } = useSelectedSport();
+  const router = useRouter();
 
   const [slates, setSlates] = useState<SlateListRow[]>([]);
   const [selectedSlateId, setSelectedSlateId] =
@@ -172,6 +174,11 @@ export default function AdminSlatesPage() {
     isRefreshingShotCast;
 
   useEffect(() => {
+    if (selectedSport === "ncaa") {
+      router.replace("/admin/ncaa-pickem");
+      return;
+    }
+
     setSelectedSlateId("");
     setSelectedSlate(null);
     setTeams([]);
@@ -180,7 +187,7 @@ export default function AdminSlatesPage() {
     setShotCastTournamentId("");
     setGolfAdminTab("tournament");
     void loadSlates();
-  }, [selectedSport]);
+  }, [selectedSport, router]);
 
   useEffect(() => {
     if (!selectedSlateId) return;
@@ -518,13 +525,9 @@ export default function AdminSlatesPage() {
                 ? selectedSlate.has_cut !== false
                 : undefined,
             tournament_analysis:
-              selectedSlate.sport === "golf"
-                ? selectedSlate.tournament_analysis ?? ""
-                : undefined,
+              selectedSlate.tournament_analysis ?? "",
             show_tournament_analysis:
-              selectedSlate.sport === "golf"
-                ? selectedSlate.show_tournament_analysis === true
-                : undefined,
+              selectedSlate.show_tournament_analysis === true,
             nba_team_abbreviations:
               selectedSlate.nbaTeamsInput
                 .split(",")
@@ -1181,17 +1184,17 @@ export default function AdminSlatesPage() {
                 </div>
               ) : null}
 
-              {selectedSlate.sport === "golf" &&
+              {selectedSlate.sport !== "golf" ||
               golfAdminTab === "tournament" ? (
-                <div className="rounded-2xl border border-emerald-800 bg-emerald-950/25 p-4">
+                <div className="rounded-2xl border border-sky-800 bg-sky-950/25 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
-                        Tournament Analysis
+                        MW Analysis
                       </div>
 
                       <p className="mt-1 text-xs leading-5 text-slate-400">
-                        Write a short tournament commentary for the Home page.
+                        Write a short slate analysis for the Home page.
                         Keep it hidden while drafting, then turn it on whenever
                         you want everyone to see it.
                       </p>
@@ -1244,13 +1247,13 @@ export default function AdminSlatesPage() {
                     disabled={isBusy}
                     maxLength={4000}
                     rows={5}
-                    placeholder="Example: Mark's Sunday charge remains technically possible, assuming the other three teams voluntarily withdraw."
-                    className="mt-4 w-full resize-y rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm leading-6 text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-emerald-400 disabled:opacity-60"
+                    placeholder="Write the latest MW Analysis..."
+                    className="mt-4 w-full resize-y rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm leading-6 text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-sky-400 disabled:opacity-60"
                   />
 
                   <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
                     <span>
-                      Saved with the selected tournament.
+                      Saved with the selected slate.
                     </span>
 
                     <span>

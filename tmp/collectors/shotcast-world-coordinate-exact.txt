@@ -1,0 +1,499 @@
+============================================================
+GOLF HOLE MAP — TFW / WORLD COORDINATE HELPERS
+============================================================
+    coordinate?.tourcastY !== undefined &&
+    Number.isFinite(
+      coordinate.tourcastX,
+    ) &&
+    Number.isFinite(
+      coordinate.tourcastY,
+    )
+  );
+}
+
+function canPlotPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+  calibration: MapCalibration,
+) {
+  if (
+    calibration.affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    return true;
+  }
+
+  return validPoint(coordinate);
+}
+
+function worldToPlotPoint(
+  world: WorldPoint,
+  calibration: MapCalibration,
+): PlotPoint | null {
+  const affine =
+    calibration.affine;
+
+  if (!affine) {
+    return null;
+  }
+
+  const {
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  } = affine;
+
+  /*
+   * This is the same hole-texture UV conversion used by
+   * PGA TOURCAST's Golf Engine.
+   *
+   * Their source:
+   *
+   *   j = rotX * rotY - pxX * pxY
+   *   pixelY =
+   *     (rotX*(x-coordX) -
+   *      pxX*(y-coordY)) / j
+   *
+   *   v = pixelY / dimY
+   *
+   *   pixelX =
+   *     (x - rotY*pixelY - coordX) / pxX
+   *
+   *   u = pixelX / dimX
+   */
+  const determinant =
+    rotX * rotY -
+    pxX * pxY;
+
+  if (
+    Math.abs(determinant) < 1e-12 ||
+    Math.abs(pxX) < 1e-12 ||
+    dimX <= 0 ||
+    dimY <= 0
+  ) {
+    return null;
+  }
+
+  const pixelY =
+    (
+      rotX *
+        (world.x - coordX) -
+      pxX *
+        (world.y - coordY)
+    ) /
+    determinant;
+
+  const pixelX =
+    (
+      world.x -
+      rotY * pixelY -
+      coordX
+    ) /
+    pxX;
+
+  const normalizedX =
+    pixelX / dimX;
+
+  const normalizedY =
+    pixelY / dimY;
+
+  /*
+   * Do NOT clamp invalid native coordinates to an edge.
+   * If PGA did not supply coordinates in this TFW frame,
+   * return null so we fall back to the visible normalized
+   * bottomToTop placement.
+   */
+  if (
+    !Number.isFinite(normalizedX) ||
+    !Number.isFinite(normalizedY) ||
+    normalizedX < 0 ||
+    normalizedX > 1 ||
+    normalizedY < 0 ||
+    normalizedY > 1
+  ) {
+    return null;
+  }
+
+  return {
+    x:
+      normalizedX *
+      VIEWBOX_SIZE,
+    y:
+      normalizedY *
+      VIEWBOX_SIZE,
+  };
+}
+
+function toPlotPoint(
+  coordinate: Coordinate,
+  calibration: MapCalibration,
+): PlotPoint {
+  /*
+   * PGA already supplies normalized bottomToTop x/y
+   * coordinates for every shot.
+   *
+   * These map directly onto the vertical TOURCAST
+   * terrain image:
+   *
+   *   0,0 = top-left
+   *   1,1 = bottom-right
+   *
+   * Prefer these authoritative placement coordinates
+   * whenever they are available.
+   */
+  if (validPoint(coordinate)) {
+    return {
+      x:
+        clampNormalized(
+          coordinate.x,
+        ) * VIEWBOX_SIZE,
+      y:
+        clampNormalized(
+          coordinate.y,
+        ) * VIEWBOX_SIZE,
+    };
+  }
+
+  /*
+   * Fallback for future PGA payloads that provide only
+   * TOURCAST world coordinates.
+   */
+  const affine =
+    calibration.affine;
+
+  if (
+    affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    const {
+      pxX,
+      rotX,
+      rotY,
+      pxY,
+      coordX,
+      coordY,
+      dimX,
+      dimY,
+    } = affine;
+
+    const determinant =
+      pxX * pxY -
+      rotY * rotX;
+
+    if (
+      Math.abs(determinant) > 1e-12 &&
+      dimX > 0 &&
+      dimY > 0
+    ) {
+      const deltaX =
+        coordinate.tourcastX -
+        coordX;
+
+      const deltaY =
+        coordinate.tourcastY -
+        coordY;
+
+      const pixelX =
+        (
+          pxY * deltaX -
+          rotY * deltaY
+        ) /
+        determinant;
+
+      const pixelY =
+        (
+          -rotX * deltaX +
+          pxX * deltaY
+        ) /
+        determinant;
+
+      return {
+        x:
+          clampNormalized(
+            pixelX / dimX,
+          ) * VIEWBOX_SIZE,
+        y:
+          clampNormalized(
+            pixelY / dimY,
+          ) * VIEWBOX_SIZE,
+      };
+    }
+  }
+
+  return {
+    x: 0,
+    y: 0,
+  };
+}
+
+function curveControlPoint(
+  from: PlotPoint,
+  to: PlotPoint,
+): PlotPoint {
+  const midpointX =
+    (from.x + to.x) / 2;
+
+  const midpointY =
+    (from.y + to.y) / 2;
+
+  const distance = Math.hypot(
+    to.x - from.x,
+    to.y - from.y,
+  );
+
+============================================================
+PGA PROVIDER — WORLD COORDINATE TYPES / HELPERS
+============================================================
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+export type GolfBallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+export type GolfBallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: GolfBallPathPoint[];
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+
+  /*
+   * Native PGA TOURCAST world positions.
+   *
+   * worldFrom is the tee for shot 1 and the previous
+   * landing position after that.
+   *
+   * worldTo is this stroke's raw PGA x/y position.
+   */
+  worldFrom: GolfWorldPoint | null;
+  worldTo: GolfWorldPoint | null;
+
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+
+  /*
+   * Rich TOURCAST shot data.
+   */
+  videoId: string | null;
+  radarData: GolfShotRadarData | null;
+  ballPath: GolfBallPath | null;
+
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+
+  /*
+   * Same stroke projected onto PGA's dedicated green image.
+   * May be null for shots that are nowhere near the green.
+   */
+  greenBottomToTop:
+    GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+
+  /*
+   * PGA TOURCAST V3 supplies a hole image and coordinates
+   * that already share the same normalized coordinate frame.
+   *
+   * No terrain TFW calibration is required for this path.
+   */
+  shotcast: {
+    imageUrl: string;
+
+    /*
+     * Purpose-built PGA Green View crop.
+     * Coordinates come from stroke.green.bottomToTopCoords.
+     */
+    greenImageUrl: string | null;
+
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+
+============================================================
+PGA PROVIDER — WORLD COORDINATE ASSIGNMENT
+============================================================
+        ?.bottomToTopCoords
+    ) {
+      score += 25;
+    }
+
+    if (
+      Number.isFinite(
+        Number(shot.x),
+      ) &&
+      Number.isFinite(
+        Number(shot.y),
+      )
+    ) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  const bestStrokeByNumber =
+    new Map<number, RawStroke>();
+
+  for (
+    const shot
+    of rawStrokeCandidates
+  ) {
+    const strokeNumber =
+      Number(
+        shot.strokeNumber ?? 0,
+      );
+
+    const existing =
+      bestStrokeByNumber.get(
+        strokeNumber,
+      );
+
+    if (
+      !existing ||
+      strokeRichness(shot) >
+        strokeRichness(existing)
+    ) {
+      bestStrokeByNumber.set(
+        strokeNumber,
+        shot,
+      );
+    }
+  }
+
+  const orderedRawStrokes =
+    [...bestStrokeByNumber.values()]
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+          shot.distance ?? null,
+        distanceRemaining:
+          shot.distanceRemaining ?? null,
+        strokeType:
+          shot.strokeType ?? null,
+        fromLocation:
+          shot.fromLocation ?? null,
+        toLocation:
+          shot.toLocation ?? null,
+        fromLocationCode:
+          shot.fromLocationCode ?? null,
+        toLocationCode:
+          shot.toLocationCode ?? null,
+        finalStroke:
+          Boolean(shot.finalStroke),
+
+        videoId:
+          typeof shot.videoId === "string" &&
+          shot.videoId.trim()
+            ? shot.videoId.trim()
+            : null,
+
+        radarData:
+          radarData(
+            shot.radarData,
+          ),
+
+
+        ballPath:
+          ballPath(
+            shot.ballPath,
+          ),

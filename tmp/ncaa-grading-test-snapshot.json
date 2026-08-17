@@ -1,0 +1,35 @@
+{
+  "createdAt": "2026-08-17T16:49:03.518Z",
+  "week": {
+    "id": 1,
+    "season": 2026,
+    "week_number": 1,
+    "status": "open"
+  },
+  "game": {
+    "id": 1,
+    "week_id": 1,
+    "away_team_id": "228",
+    "away_team_name": "Clemson Tigers",
+    "away_score": 0,
+    "home_team_id": "99",
+    "home_team_name": "LSU Tigers",
+    "home_score": 0,
+    "status": "pre",
+    "status_detail": "Sat, September 5th at 7:30 PM EDT",
+    "winner_team_id": null,
+    "included": true,
+    "updated_at": "2026-08-17T16:41:26.137+00:00"
+  },
+  "picks": [
+    {
+      "id": 1,
+      "week_id": 1,
+      "game_id": 1,
+      "team_id": 4,
+      "picked_team_id": "99",
+      "is_correct": null,
+      "updated_at": "2026-08-17T14:42:04.995+00:00"
+    }
+  ]
+}

@@ -1,0 +1,2716 @@
+============================================================
+NCAA NOTIFICATION CONTROL — FINAL PATCH SURFACE
+Generated: Mon Aug 17 01:35:12 PM EDT 2026
+============================================================
+
+============================================================
+FILE: app/admin/notification-templates/page.tsx
+============================================================
+"use client";
+
+import AppNav from "@/components/AppNav";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import { getSportConfig } from "@/lib/sports";
+import { useEffect, useMemo, useState } from "react";
+
+type NotificationTemplateType =
+  | "draft_turn"
+  | "draft_final_pick"
+  | "player_finished"
+  | "slate_complete"
+  | "slate_complete_winner";
+
+type NotificationTemplate = {
+  notificationType: NotificationTemplateType;
+  sport: SportKey;
+  titleTemplate: string;
+  bodyTemplate: string;
+  description: string;
+  availablePlaceholders: string[];
+};
+
+type EditableTemplate = {
+  titleTemplate: string;
+  bodyTemplate: string;
+};
+
+type SportKey = "nba" | "nfl" | "golf";
+
+function getTemplateLabels(
+  sport: SportKey,
+  sportEmoji: string
+): Record<NotificationTemplateType, string> {
+  if (sport === "golf") {
+    return {
+      draft_turn: `${sportEmoji} Draft Turn`,
+      draft_final_pick: "🏁 Last Draft Pick",
+      player_finished: `${sportEmoji} Golfer Finished Round`,
+      slate_complete: "🏆 Tournament Complete",
+      slate_complete_winner: "🥇 Tournament Winner",
+    };
+  }
+
+  return {
+    draft_turn: `${sportEmoji} Draft Turn`,
+    draft_final_pick: "🏁 Final Draft Pick",
+    player_finished:
+      sport === "nfl"
+        ? `${sportEmoji} Player Finished Game`
+        : `${sportEmoji} Player Finished Game`,
+    slate_complete: "🏆 Slate Complete",
+    slate_complete_winner: "🥇 Slate Winner",
+  };
+}
+
+function getTemplateDescription(
+  sport: SportKey,
+  type: NotificationTemplateType,
+  fallback: string
+) {
+  if (sport !== "golf") return fallback;
+
+  const descriptions: Record<NotificationTemplateType, string> = {
+    draft_turn:
+      "Sent to the next participant after a Golf draft pick is submitted.",
+    draft_final_pick:
+      "Sent when the next participant is making their final golfer selection.",
+    player_finished:
+      "Used when a drafted golfer completes a tournament round.",
+    slate_complete:
+      "Sent after a Golf tournament finishes and final standings are calculated.",
+    slate_complete_winner:
+      "Sent to the participant who wins a completed Golf tournament.",
+  };
+
+  return descriptions[type];
+}
+
+const TEMPLATE_ORDER: NotificationTemplateType[] = [
+  "draft_turn",
+  "draft_final_pick",
+  "player_finished",
+  "slate_complete",
+  "slate_complete_winner",
+];
+
+function getPreviewValues(
+  sport: SportKey
+): Record<string, string> {
+  if (sport === "golf") {
+    return {
+      "{teamName}": "Josh",
+      "{slateLabel}": "Rocket Classic",
+      "{roundNumber}": "4",
+      "{roundScore}": "-3",
+      "{roundOrdinal}": "4th",
+      "{overallPickNumber}": "13",
+      "{positionNeed}": "golfer",
+      "{remainingNeeds}": "1 golfer",
+      "{playerName}": "Scottie Scheffler",
+      "{fantasyPoints}": "-5",
+      "{winnerName}": "Josh",
+      "{winningScore}": "-31",
+      "{teamScore}": "-24",
+      "{finishNumber}": "2",
+      "{finishOrdinal}": "2nd",
+    };
+  }
+
+  return {
+    "{teamName}": "Josh",
+    "{slateLabel}": "2026-07-18",
+    "{roundNumber}": "4",
+    "{roundOrdinal}": "4th",
+    "{overallPickNumber}": "13",
+    "{positionNeed}": sport === "nfl" ? "WR" : "F/C",
+    "{remainingNeeds}": sport === "nfl" ? "1 WR" : "1 F/C",
+    "{playerName}":
+      sport === "nfl" ? "Ja'Marr Chase" : "Anthony Edwards",
+    "{fantasyPoints}": sport === "nfl" ? "27.4" : "46.7",
+    "{winnerName}": "Josh",
+    "{winningScore}": sport === "nfl" ? "146.2" : "247.4",
+    "{teamScore}": sport === "nfl" ? "131.8" : "231.8",
+    "{finishNumber}": "2",
+    "{finishOrdinal}": "2nd",
+  };
+}
+
+function renderPreview(
+  value: string,
+  previewValues: Record<string, string>,
+  extraValues: Record<string, string> = {}
+) {
+  return Object.entries({
+    ...previewValues,
+    ...extraValues,
+  }).reduce(
+    (result, [placeholder, replacement]) =>
+      result.replaceAll(placeholder, replacement),
+    value
+  );
+}
+
+function emptyDrafts() {
+  return {
+    draft_turn: { titleTemplate: "", bodyTemplate: "" },
+    draft_final_pick: { titleTemplate: "", bodyTemplate: "" },
+    player_finished: { titleTemplate: "", bodyTemplate: "" },
+    slate_complete: { titleTemplate: "", bodyTemplate: "" },
+    slate_complete_winner: {
+      titleTemplate: "",
+      bodyTemplate: "",
+    },
+  };
+}
+
+export default function NotificationTemplatesPage() {
+  const { selectedSport } = useSelectedSport();
+
+  const sport: SportKey =
+    selectedSport === "nfl"
+      ? "nfl"
+      : selectedSport === "golf"
+        ? "golf"
+        : "nba";
+
+  const sportEmoji = getSportConfig(sport).emoji;
+  const previewOverrides = { "{sportEmoji}": sportEmoji };
+  const previewValues = getPreviewValues(sport);
+  const TEMPLATE_LABELS = getTemplateLabels(
+    sport,
+    sportEmoji
+  );
+
+  const [activeTemplateType, setActiveTemplateType] =
+    useState<NotificationTemplateType>("draft_turn");
+
+  const [templates, setTemplates] = useState<
+    Record<NotificationTemplateType, NotificationTemplate> | null
+  >(null);
+
+  const [defaults, setDefaults] = useState<
+    Record<NotificationTemplateType, NotificationTemplate> | null
+  >(null);
+
+  const [drafts, setDrafts] =
+    useState<Record<NotificationTemplateType, EditableTemplate>>(
+      emptyDrafts()
+    );
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [savingType, setSavingType] =
+    useState<NotificationTemplateType | null>(null);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadTemplates() {
+      try {
+        setIsLoading(true);
+        setMessage("");
+        setTemplates(null);
+        setDefaults(null);
+        setDrafts(emptyDrafts());
+
+        const response = await fetch(
+          `/api/admin/notification-templates?sport=${sport}`,
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          }
+        );
+
+        const result = await response.json();
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        if (!response.ok) {
+          setMessage(result.error || "Failed to load notification templates.");
+          return;
+        }
+
+        const templateMap = Object.fromEntries(
+          result.templates.map((template: NotificationTemplate) => [
+            template.notificationType,
+            template,
+          ])
+        ) as Record<NotificationTemplateType, NotificationTemplate>;
+
+        const defaultMap = Object.fromEntries(
+          result.defaults.map((template: NotificationTemplate) => [
+            template.notificationType,
+            template,
+          ])
+        ) as Record<NotificationTemplateType, NotificationTemplate>;
+
+        setTemplates(templateMap);
+        setDefaults(defaultMap);
+
+        setDrafts(
+          Object.fromEntries(
+            TEMPLATE_ORDER.map((type) => [
+              type,
+              {
+                titleTemplate: templateMap[type].titleTemplate,
+                bodyTemplate: templateMap[type].bodyTemplate,
+              },
+            ])
+          ) as Record<NotificationTemplateType, EditableTemplate>
+        );
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.error(error);
+        setMessage(
+          "Something went wrong while loading the templates."
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadTemplates();
+
+    return () => {
+      controller.abort();
+    };
+  }, [sport]);
+
+  const unsavedChanges = useMemo(() => {
+    return Object.fromEntries(
+      TEMPLATE_ORDER.map((type) => [
+        type,
+        Boolean(templates) &&
+          (drafts[type].titleTemplate !== templates?.[type].titleTemplate ||
+            drafts[type].bodyTemplate !== templates?.[type].bodyTemplate),
+      ])
+    ) as Record<NotificationTemplateType, boolean>;
+  }, [drafts, templates]);
+
+  async function saveTemplate(
+    notificationType: NotificationTemplateType,
+    resetToDefault = false
+  ) {
+    try {
+      setSavingType(notificationType);
+      setMessage("");
+
+      const draft = drafts[notificationType];
+
+      const response = await fetch("/api/admin/notification-templates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notificationType,
+          sport,
+          titleTemplate: draft.titleTemplate,
+          bodyTemplate: draft.bodyTemplate,
+          resetToDefault,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to save notification template.");
+        return;
+      }
+
+      setTemplates((current) =>
+        current
+          ? { ...current, [notificationType]: result.template }
+          : current
+      );
+
+      setDrafts((current) => ({
+        ...current,
+        [notificationType]: {
+          titleTemplate: result.template.titleTemplate,
+          bodyTemplate: result.template.bodyTemplate,
+        },
+      }));
+
+      setMessage(
+        resetToDefault
+          ? `${TEMPLATE_LABELS[notificationType]} restored to default.`
+          : `${TEMPLATE_LABELS[notificationType]} saved.`
+      );
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong while saving the template.");
+    } finally {
+      setSavingType(null);
+    }
+  }
+
+  function updateDraft(
+    type: NotificationTemplateType,
+    patch: Partial<EditableTemplate>
+  ) {
+    setDrafts((current) => ({
+      ...current,
+      [type]: { ...current[type], ...patch },
+    }));
+  }
+
+  function appendPlaceholder(placeholder: string) {
+    const current = drafts[activeTemplateType].bodyTemplate;
+    const separator = !current || current.endsWith(" ") ? "" : " ";
+
+    updateDraft(activeTemplateType, {
+      bodyTemplate: `${current}${separator}${placeholder}`,
+    });
+  }
+
+  const activeTemplate = templates?.[activeTemplateType] ?? null;
+  const activeDefault = defaults?.[activeTemplateType] ?? null;
+  const activeDraft = drafts[activeTemplateType];
+  const isSaving = savingType === activeTemplateType;
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Notification Templates
+          </h1>
+
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Choose a notification type, edit its wording, and preview the
+            final message.
+          </p>
+        </section>
+
+        {message ? (
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              message.toLowerCase().includes("saved") ||
+              message.toLowerCase().includes("restored")
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {message}
+          </div>
+        ) : null}
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <label className="text-sm font-semibold text-slate-700">
+            Notification type
+          </label>
+
+          <select
+            value={activeTemplateType}
+            onChange={(event) => {
+              setActiveTemplateType(
+                event.target.value as NotificationTemplateType
+              );
+              setMessage("");
+            }}
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+          >
+            {TEMPLATE_ORDER.map((type) => (
+              <option key={type} value={type}>
+                {TEMPLATE_LABELS[type]}
+                {unsavedChanges[type] ? " • Unsaved" : ""}
+              </option>
+            ))}
+          </select>
+        </section>
+
+        {isLoading || !activeTemplate || !activeDefault ? (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+            Loading notification template…
+          </section>
+        ) : (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold">
+              {TEMPLATE_LABELS[activeTemplateType]}
+            </h2>
+
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              {getTemplateDescription(
+                sport,
+                activeTemplateType,
+                activeTemplate.description
+              )}
+            </p>
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <label className="text-sm font-semibold">
+                  Notification title
+                </label>
+
+                <input
+                  value={activeDraft.titleTemplate}
+                  onChange={(event) =>
+                    updateDraft(activeTemplateType, {
+                      titleTemplate: event.target.value,
+                    })
+                  }
+                  maxLength={100}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold">
+                  Notification message
+                </label>
+
+                <textarea
+                  value={activeDraft.bodyTemplate}
+                  onChange={(event) =>
+                    updateDraft(activeTemplateType, {
+                      bodyTemplate: event.target.value,
+                    })
+                  }
+                  maxLength={240}
+                  rows={4}
+                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                <div className="text-sm font-semibold text-sky-950">
+                  Available placeholders
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {activeTemplate.availablePlaceholders.map((placeholder) => (
+                    <button
+                      key={placeholder}
+                      type="button"
+                      onClick={() => appendPlaceholder(placeholder)}
+                      className="rounded-full border border-sky-200 bg-white px-3 py-1.5 font-mono text-xs text-sky-800"
+                    >
+                      {placeholder}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Preview
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="font-semibold">
+                    {renderPreview(
+                      activeDraft.titleTemplate,
+                      previewValues,
+                      previewOverrides
+                    )}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {renderPreview(
+                      activeDraft.bodyTemplate,
+                      previewValues,
+                      previewOverrides
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() =>
+                    void saveTemplate(activeTemplateType, false)
+                  }
+                  disabled={
+                    isSaving || !unsavedChanges[activeTemplateType]
+                  }
+                  className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
+                >
+                  {isSaving ? "Saving…" : "Save Changes"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    void saveTemplate(activeTemplateType, true)
+                  }
+                  disabled={isSaving}
+                  className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold"
+                >
+                  Restore Default
+                </button>
+
+                {unsavedChanges[activeTemplateType] ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDrafts((current) => ({
+                        ...current,
+                        [activeTemplateType]: {
+                          titleTemplate: activeTemplate.titleTemplate,
+                          bodyTemplate: activeTemplate.bodyTemplate,
+                        },
+                      }))
+                    }
+                    className="rounded-xl px-5 py-3 text-sm font-semibold text-slate-500"
+                  >
+                    Discard Changes
+                  </button>
+                ) : null}
+              </div>
+
+              <p className="text-xs text-slate-400">
+                Default: “{activeDefault.titleTemplate}” / “
+                {activeDefault.bodyTemplate}”
+              </p>
+            </div>
+          </section>
+        )}
+      </div>
+    </main>
+  );
+}
+
+============================================================
+FILE: app/api/admin/notification-templates/route.ts
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getDefaultNotificationTemplate,
+  getNotificationTemplate,
+  isNotificationSport,
+  isNotificationTemplateType,
+  normalizeNotificationSport,
+  NOTIFICATION_TEMPLATE_DEFAULTS,
+  type NotificationSport,
+  type NotificationTemplateType,
+} from "@/lib/notificationTemplates";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SaveTemplateBody = {
+  notificationType?: unknown;
+  sport?: unknown;
+  titleTemplate?: unknown;
+  bodyTemplate?: unknown;
+  resetToDefault?: unknown;
+};
+
+function findUnsupportedPlaceholders(
+  value: string,
+  allowedPlaceholders: string[]
+) {
+  const found = value.match(/\{[^{}]+\}/g) ?? [];
+
+  return [...new Set(found)].filter(
+    (placeholder) => !allowedPlaceholders.includes(placeholder)
+  );
+}
+
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const sport = normalizeNotificationSport(
+      request.nextUrl.searchParams.get("sport")
+    );
+
+    const notificationTypes = Object.keys(
+      NOTIFICATION_TEMPLATE_DEFAULTS[sport]
+    ) as NotificationTemplateType[];
+
+    const templates = await Promise.all(
+      notificationTypes.map((notificationType) =>
+        getNotificationTemplate(notificationType, sport)
+      )
+    );
+
+    const defaults = notificationTypes.map((notificationType) =>
+      getDefaultNotificationTemplate(notificationType, sport)
+    );
+
+    return NextResponse.json({
+      success: true,
+      sport,
+      templates,
+      defaults,
+    });
+  } catch (error) {
+    console.error("Failed to load notification templates", error);
+
+    return NextResponse.json(
+      { error: "Unable to load notification templates." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser || currentUser.role !== "admin") {
+      return NextResponse.json(
+        { error: "Administrator access required." },
+        { status: 403 }
+      );
+    }
+
+    const body = (await request.json()) as SaveTemplateBody;
+
+    if (!isNotificationTemplateType(body.notificationType)) {
+      return NextResponse.json(
+        { error: "Unsupported notification type." },
+        { status: 400 }
+      );
+    }
+
+    if (!isNotificationSport(body.sport)) {
+      return NextResponse.json(
+        { error: "Unsupported sport." },
+        { status: 400 }
+      );
+    }
+
+    const notificationType: NotificationTemplateType =
+      body.notificationType;
+
+    const sport: NotificationSport = body.sport;
+
+    const defaults = getDefaultNotificationTemplate(
+      notificationType,
+      sport
+    );
+
+    const resetToDefault = body.resetToDefault === true;
+
+    const titleTemplate = resetToDefault
+      ? defaults.titleTemplate
+      : String(body.titleTemplate ?? "").trim();
+
+    const bodyTemplate = resetToDefault
+      ? defaults.bodyTemplate
+      : String(body.bodyTemplate ?? "").trim();
+
+    if (!titleTemplate || !bodyTemplate) {
+      return NextResponse.json(
+        { error: "A title and message are required." },
+        { status: 400 }
+      );
+    }
+
+    if (titleTemplate.length > 100) {
+      return NextResponse.json(
+        {
+          error:
+            "The notification title must be 100 characters or fewer.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (bodyTemplate.length > 240) {
+      return NextResponse.json(
+        {
+          error:
+            "The notification message must be 240 characters or fewer.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const unsupportedPlaceholders =
+      findUnsupportedPlaceholders(
+        `${titleTemplate} ${bodyTemplate}`,
+        defaults.availablePlaceholders
+      );
+
+    if (unsupportedPlaceholders.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Unsupported placeholder${
+            unsupportedPlaceholders.length === 1 ? "" : "s"
+          }: ${unsupportedPlaceholders.join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabaseAdmin
+      .from("notification_templates")
+      .upsert(
+        {
+          notification_type: notificationType,
+          sport,
+          title_template: titleTemplate,
+          body_template: bodyTemplate,
+          description: defaults.description,
+          available_placeholders:
+            defaults.availablePlaceholders,
+          updated_at: new Date().toISOString(),
+          updated_by: currentUser.id,
+        },
+        {
+          onConflict: "notification_type,sport",
+        }
+      );
+
+    if (error) {
+      console.error("Notification template upsert failed", {
+        notificationType,
+        sport,
+        error,
+      });
+
+      return NextResponse.json(
+        {
+          error: `Failed to save template: ${error.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      template: {
+        ...defaults,
+        titleTemplate,
+        bodyTemplate,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to save notification template", error);
+
+    return NextResponse.json(
+      { error: "Unable to save notification template." },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+FILE: app/api/cron/ncaa-pickem-reminders/route.ts
+============================================================
+import {
+  NextResponse,
+} from "next/server";
+
+import {
+  sendLoggedNotification,
+} from "@/lib/notifications";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+export const maxDuration =
+  60;
+
+/*
+ * We deliberately use the existing Golf cron secret rather
+ * than introduce another production secret just for this
+ * tiny scheduled check.
+ *
+ * The route itself is completely independent from Golf.
+ */
+function isAuthorized(
+  request: Request,
+) {
+  const secret =
+    process.env
+      .GOLF_CRON_SECRET
+      ?.trim();
+
+  if (!secret) {
+    console.error(
+      "GOLF_CRON_SECRET is not configured.",
+    );
+
+    return false;
+  }
+
+  return (
+    request.headers.get(
+      "authorization",
+    ) ===
+    `Bearer ${secret}`
+  );
+}
+
+function formatLockTime(
+  value: string,
+) {
+  const date =
+    new Date(value);
+
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone:
+        "America/New_York",
+      timeZoneName:
+        "short",
+    },
+  ).format(date);
+}
+
+export async function GET(
+  request: Request,
+) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json(
+      {
+        error:
+          "Unauthorized.",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  try {
+    const now =
+      Date.now();
+
+    /*
+     * There is no guaranteed production scheduler.
+     *
+     * Normal logged-in app activity can call this check.
+     * Once a card enters its final 24 hours, the first
+     * available app heartbeat can send the reminder.
+     *
+     * sendLoggedNotification() + the per-user/week event key
+     * makes repeated checks safe and prevents duplicate pushes.
+     */
+    const windowStart =
+      new Date(
+        now,
+      ).toISOString();
+
+    const windowEnd =
+      new Date(
+        now +
+          24 *
+            60 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const {
+      data: weeks,
+      error: weeksError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ncaa_pickem_weeks",
+        )
+        .select(
+          "id, season, week_number, label, lock_at, status",
+        )
+        .eq(
+          "status",
+          "open",
+        )
+        .not(
+          "lock_at",
+          "is",
+          null,
+        )
+        .gte(
+          "lock_at",
+          windowStart,
+        )
+        .lte(
+          "lock_at",
+          windowEnd,
+        );
+
+    if (weeksError) {
+      throw new Error(
+        `Failed to load Pick 'Em weeks: ${weeksError.message}`,
+      );
+    }
+
+    if (
+      !weeks ||
+      weeks.length === 0
+    ) {
+      return NextResponse.json({
+        success: true,
+        checkedWeeks: 0,
+        remindersSent: 0,
+        remindersSkipped: 0,
+        message:
+          "No Pick 'Em week is currently within the 24-hour reminder window.",
+      });
+    }
+
+    const {
+      data: users,
+      error: usersError,
+    } =
+      await supabaseAdmin
+        .from(
+          "app_users",
+        )
+        .select(
+          "id, team_id, display_name",
+        )
+        .eq(
+          "is_active",
+          true,
+        );
+
+    if (usersError) {
+      throw new Error(
+        `Failed to load active users: ${usersError.message}`,
+      );
+    }
+
+    const activeUsers =
+      (
+        users ??
+        []
+      ).filter(
+        (user) =>
+          user.team_id !==
+            null &&
+          user.team_id !==
+            undefined,
+      );
+
+    const userIds =
+      activeUsers.map(
+        (user) =>
+          String(
+            user.id,
+          ),
+      );
+
+    const {
+      data: preferences,
+      error:
+        preferencesError,
+    } =
+      userIds.length >
+      0
+        ? await supabaseAdmin
+            .from(
+              "notification_preferences",
+            )
+            .select(
+              "user_id, notifications_enabled, pickem_reminder_enabled",
+            )
+            .in(
+              "user_id",
+              userIds,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (
+      preferencesError
+    ) {
+      throw new Error(
+        `Failed to load notification preferences: ${preferencesError.message}`,
+      );
+    }
+
+    const preferenceByUser =
+      new Map(
+        (
+          preferences ??
+          []
+        ).map(
+          (row) => [
+            String(
+              row.user_id,
+            ),
+            row,
+          ],
+        ),
+      );
+
+    let remindersSent =
+      0;
+
+    let remindersSkipped =
+      0;
+
+    let duplicateEvents =
+      0;
+
+    const details:
+      Array<{
+        weekId: number;
+        teamId: number;
+        user: string;
+        activeGames: number;
+        savedPicks: number;
+        missingPicks: number;
+        result:
+          | "sent"
+          | "skipped"
+          | "duplicate"
+          | "failed";
+        reason?: string;
+      }> = [];
+
+    for (
+      const week
+      of weeks
+    ) {
+      const weekId =
+        Number(
+          week.id,
+        );
+
+      const {
+        data: games,
+        error: gamesError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ncaa_pickem_games",
+          )
+          .select(
+            "id",
+          )
+          .eq(
+            "week_id",
+            weekId,
+          )
+          .eq(
+            "included",
+            true,
+          );
+
+      if (gamesError) {
+        throw new Error(
+          `Failed to load Pick 'Em games for week ${weekId}: ${gamesError.message}`,
+        );
+      }
+
+      const gameIds =
+        (
+          games ??
+          []
+        ).map(
+          (game) =>
+            Number(
+              game.id,
+            ),
+        );
+
+      const activeGameCount =
+        gameIds.length;
+
+      if (
+        activeGameCount ===
+        0
+      ) {
+        continue;
+      }
+
+      const {
+        data: picks,
+        error: picksError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ncaa_pickem_picks",
+          )
+          .select(
+            "game_id, team_id",
+          )
+          .eq(
+            "week_id",
+            weekId,
+          )
+          .in(
+            "game_id",
+            gameIds,
+          );
+
+      if (picksError) {
+        throw new Error(
+          `Failed to load Pick 'Em picks for week ${weekId}: ${picksError.message}`,
+        );
+      }
+
+      const pickedGamesByTeam =
+        new Map<
+          number,
+          Set<number>
+        >();
+
+      for (
+        const pick
+        of picks ?? []
+      ) {
+        const teamId =
+          Number(
+            pick.team_id,
+          );
+
+        const gameId =
+          Number(
+            pick.game_id,
+          );
+
+        const existing =
+          pickedGamesByTeam.get(
+            teamId,
+          ) ??
+          new Set<number>();
+
+        existing.add(
+          gameId,
+        );
+
+        pickedGamesByTeam.set(
+          teamId,
+          existing,
+        );
+      }
+
+      for (
+        const user
+        of activeUsers
+      ) {
+        const userId =
+          String(
+            user.id,
+          );
+
+        const teamId =
+          Number(
+            user.team_id,
+          );
+
+        const displayName =
+          String(
+            user.display_name ??
+              "Player",
+          );
+
+        const preference =
+          preferenceByUser.get(
+            userId,
+          );
+
+        /*
+         * Existing accounts with no notification_preferences
+         * row use the app's normal defaults: notifications on.
+         */
+        const notificationsEnabled =
+          preference
+            ?.notifications_enabled ??
+          true;
+
+        const reminderEnabled =
+          preference
+            ?.pickem_reminder_enabled ??
+          true;
+
+        const pickedGames =
+          pickedGamesByTeam.get(
+            teamId,
+          ) ??
+          new Set<number>();
+
+        const savedPicks =
+          pickedGames.size;
+
+        const missingPicks =
+          Math.max(
+            activeGameCount -
+              savedPicks,
+            0,
+          );
+
+        if (
+          missingPicks ===
+          0
+        ) {
+          remindersSkipped +=
+            1;
+
+          details.push({
+            weekId,
+            teamId,
+            user:
+              displayName,
+            activeGames:
+              activeGameCount,
+            savedPicks,
+            missingPicks,
+            result:
+              "skipped",
+            reason:
+              "Weekly card is already complete.",
+          });
+
+          continue;
+        }
+
+        if (
+          !notificationsEnabled ||
+          !reminderEnabled
+        ) {
+          remindersSkipped +=
+            1;
+
+          details.push({
+            weekId,
+            teamId,
+            user:
+              displayName,
+            activeGames:
+              activeGameCount,
+            savedPicks,
+            missingPicks,
+            result:
+              "skipped",
+            reason:
+              !notificationsEnabled
+                ? "Notifications are disabled."
+                : "Pick 'Em reminders are disabled.",
+          });
+
+          continue;
+        }
+
+        const title =
+          "🏈 Pick 'Em locks soon";
+
+        const lockDisplay =
+          week.lock_at
+            ? formatLockTime(
+                week.lock_at,
+              )
+            : null;
+
+        const deadline =
+          lockDisplay
+            ? ` Picks lock ${lockDisplay}.`
+            : "";
+
+        const body =
+          missingPicks === 1
+            ? `${displayName}, you still have 1 pick to save for ${week.label}.${deadline}`
+            : `${displayName}, you still have ${missingPicks} picks to save for ${week.label}.${deadline}`;
+
+        const result =
+          await sendLoggedNotification({
+            eventKey:
+              `ncaa_pickem_lock_reminder:${weekId}:${userId}`,
+
+            notificationType:
+              "ncaa_pickem_lock_reminder",
+
+            userId,
+            teamId,
+
+            title,
+            body,
+
+            url:
+              `/ncaa-pickem?season=${week.season}&week=${week.week_number}`,
+
+            tag:
+              `ncaa-pickem-lock-${weekId}`,
+
+            metadata: {
+              sport:
+                "ncaa",
+              season:
+                Number(
+                  week.season,
+                ),
+              weekNumber:
+                Number(
+                  week.week_number,
+                ),
+              weekLabel:
+                week.label,
+              weekId,
+              lockAt:
+                week.lock_at,
+              lockDisplay:
+                week.lock_at
+                  ? formatLockTime(
+                      week.lock_at,
+                    )
+                  : null,
+              activeGames:
+                activeGameCount,
+              savedPicks,
+              missingPicks,
+            },
+          });
+
+        if (
+          result.duplicate
+        ) {
+          duplicateEvents +=
+            1;
+
+          details.push({
+            weekId,
+            teamId,
+            user:
+              displayName,
+            activeGames:
+              activeGameCount,
+            savedPicks,
+            missingPicks,
+            result:
+              "duplicate",
+            reason:
+              result.reason,
+          });
+
+          continue;
+        }
+
+        if (
+          result.sent >
+          0
+        ) {
+          remindersSent +=
+            1;
+
+          details.push({
+            weekId,
+            teamId,
+            user:
+              displayName,
+            activeGames:
+              activeGameCount,
+            savedPicks,
+            missingPicks,
+            result:
+              "sent",
+          });
+        } else {
+          remindersSkipped +=
+            1;
+
+          details.push({
+            weekId,
+            teamId,
+            user:
+              displayName,
+            activeGames:
+              activeGameCount,
+            savedPicks,
+            missingPicks,
+            result:
+              result.skipped
+                ? "skipped"
+                : "failed",
+            reason:
+              result.reason,
+          });
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      checkedWeeks:
+        weeks.length,
+      remindersSent,
+      remindersSkipped,
+      duplicateEvents,
+      details,
+    });
+  } catch (error) {
+    console.error(
+      "NCAA Pick 'Em reminder cron failed",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to process NCAA Pick 'Em reminders.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+============================================================
+FILE: lib/notifications.ts
+============================================================
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendPushToUser, type PushResult } from "@/lib/push";
+
+type LoggedNotificationInput = {
+  eventKey?: string | null;
+  notificationType: string;
+
+  userId?: string | null;
+  teamId?: number | null;
+  slateId?: number | null;
+  playerId?: number | null;
+
+  title: string;
+  body: string;
+  url: string;
+  tag: string;
+
+  metadata?: Record<string, unknown>;
+  skipReason?: string | null;
+};
+
+export type LoggedNotificationResult = PushResult & {
+  duplicate?: boolean;
+  historyId?: string | null;
+};
+
+function getStatus(result: PushResult) {
+  if (result.skipped) return "skipped";
+  if (result.sent > 0 && result.failed > 0) return "partial";
+  if (result.sent > 0) return "sent";
+  return "failed";
+}
+
+export async function sendLoggedNotification(
+  input: LoggedNotificationInput
+): Promise<LoggedNotificationResult> {
+  const initialMetadata = input.metadata ?? {};
+
+  const { data: historyRow, error: historyError } = await supabaseAdmin
+    .from("notification_history")
+    .insert({
+      event_key: input.eventKey ?? null,
+      notification_type: input.notificationType,
+      user_id: input.userId ?? null,
+      team_id: input.teamId ?? null,
+      slate_id: input.slateId ?? null,
+      player_id: input.playerId ?? null,
+      title: input.title,
+      body: input.body,
+      status: "pending",
+      metadata: initialMetadata,
+    })
+    .select("id")
+    .single();
+
+  if (historyError) {
+    if (historyError.code === "23505" && input.eventKey) {
+      return {
+        sent: 0,
+        failed: 0,
+        skipped: true,
+        duplicate: true,
+        reason: "This notification event was already processed.",
+        historyId: null,
+        devices: [],
+      };
+    }
+
+    console.error("Failed to create notification history record", historyError);
+  }
+
+  const historyId = historyRow?.id ?? null;
+
+  if (input.skipReason) {
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: "skipped",
+          skipped: true,
+          reason: input.skipReason,
+          metadata: {
+            ...initialMetadata,
+            devices: [],
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: input.skipReason,
+      historyId,
+      devices: [],
+    };
+  }
+
+  if (!input.userId) {
+    const reason = "No recipient account was available.";
+
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: "skipped",
+          skipped: true,
+          reason,
+          metadata: {
+            ...initialMetadata,
+            devices: [],
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason,
+      historyId,
+      devices: [],
+    };
+  }
+
+  try {
+    const result = await sendPushToUser(input.userId, {
+      title: input.title,
+      body: input.body,
+      url: input.url,
+      tag: input.tag,
+    });
+
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: getStatus(result),
+          sent_count: result.sent,
+          failed_count: result.failed,
+          skipped: result.skipped,
+          reason: result.reason ?? null,
+          metadata: {
+            ...initialMetadata,
+            devices: result.devices,
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    return {
+      ...result,
+      historyId,
+    };
+  } catch (error) {
+    const reason =
+      error instanceof Error
+        ? error.message
+        : "Unexpected push notification error.";
+
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: "failed",
+          sent_count: 0,
+          failed_count: 1,
+          skipped: false,
+          reason,
+          metadata: {
+            ...initialMetadata,
+            devices: [],
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    console.error("Logged notification failed", error);
+
+    return {
+      sent: 0,
+      failed: 1,
+      skipped: false,
+      reason,
+      historyId,
+      devices: [],
+    };
+  }
+}
+
+============================================================
+FILE: lib/notificationTemplates.ts
+============================================================
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export type NotificationSport = "nba" | "nfl" | "golf";
+
+const NBA_NOTIFICATION_DEFAULTS = {
+  draft_turn: {
+    notificationType: "draft_turn",
+    titleTemplate: "{sportEmoji} Your turn to draft!",
+    bodyTemplate:
+      "{teamName}, you're on the clock for your {roundOrdinal} round pick.",
+    description:
+      "Sent to the next participant after a draft pick is submitted.",
+    availablePlaceholders: [
+      "{sportEmoji}",
+      "{teamName}",
+      "{slateLabel}",
+      "{roundNumber}",
+      "{roundOrdinal}",
+      "{overallPickNumber}",
+      "{remainingNeeds}",
+    ],
+  },
+  draft_final_pick: {
+    notificationType: "draft_final_pick",
+    titleTemplate: "{sportEmoji} Last pick!",
+    bodyTemplate:
+      "{teamName}, you're on the clock for your last pick — you need a {positionNeed}!",
+    description:
+      "Sent when the next participant is making their final draft pick.",
+    availablePlaceholders: [
+      "{sportEmoji}",
+      "{teamName}",
+      "{slateLabel}",
+      "{roundNumber}",
+      "{roundOrdinal}",
+      "{overallPickNumber}",
+      "{positionNeed}",
+      "{remainingNeeds}",
+    ],
+  },
+  player_finished: {
+    notificationType: "player_finished",
+    titleTemplate: "{sportEmoji} {playerName} finished!",
+    bodyTemplate:
+      "{playerName} finished with {fantasyPoints} fantasy points for {teamName}.",
+    description:
+      "Sent when one of a participant's drafted players finishes a game.",
+    availablePlaceholders: [
+      "{sportEmoji}",
+      "{playerName}",
+      "{fantasyPoints}",
+      "{teamName}",
+      "{slateLabel}",
+    ],
+  },
+  slate_complete: {
+    notificationType: "slate_complete",
+    titleTemplate: "🏆 Slate Complete!",
+    bodyTemplate:
+      "{winnerName} wins with {winningScore} fantasy points. You finished {finishOrdinal} with {teamScore}.",
+    description:
+      "Sent to participants after a slate finishes and final standings are calculated.",
+    availablePlaceholders: [
+      "{winnerName}",
+      "{winningScore}",
+      "{teamName}",
+      "{teamScore}",
+      "{finishNumber}",
+      "{finishOrdinal}",
+      "{slateLabel}",
+    ],
+  },
+  slate_complete_winner: {
+    notificationType: "slate_complete_winner",
+    titleTemplate: "🏆 You won!",
+    bodyTemplate:
+      "You won the {slateLabel} slate with {teamScore} fantasy points!",
+    description:
+      "Sent to the participant who wins a completed slate.",
+    availablePlaceholders: [
+      "{winnerName}",
+      "{winningScore}",
+      "{teamName}",
+      "{teamScore}",
+      "{finishNumber}",
+      "{finishOrdinal}",
+      "{slateLabel}",
+    ],
+  },
+} as const;
+
+const NFL_NOTIFICATION_DEFAULTS = {
+  draft_turn: {
+    ...NBA_NOTIFICATION_DEFAULTS.draft_turn,
+    description:
+      "Sent to the next participant after an NFL draft pick is submitted.",
+  },
+  draft_final_pick: {
+    ...NBA_NOTIFICATION_DEFAULTS.draft_final_pick,
+    description:
+      "Sent when the next participant is making their final NFL draft pick.",
+  },
+  player_finished: {
+    ...NBA_NOTIFICATION_DEFAULTS.player_finished,
+    description:
+      "Sent when one of a participant's drafted NFL players finishes a game.",
+  },
+  slate_complete: {
+    ...NBA_NOTIFICATION_DEFAULTS.slate_complete,
+    description:
+      "Sent after an NFL slate finishes and final standings are calculated.",
+  },
+  slate_complete_winner: {
+    ...NBA_NOTIFICATION_DEFAULTS.slate_complete_winner,
+    description:
+      "Sent to the participant who wins a completed NFL slate.",
+  },
+} as const;
+
+const GOLF_NOTIFICATION_DEFAULTS = {
+  draft_turn: {
+    notificationType: "draft_turn",
+    titleTemplate: "{sportEmoji} You're on the clock!",
+    bodyTemplate:
+      "{teamName}, it's your turn to make your {roundOrdinal} pick in {slateLabel}.",
+    description:
+      "Sent to the next participant after a Golf draft pick is submitted.",
+    availablePlaceholders: [
+      "{sportEmoji}",
+      "{teamName}",
+      "{slateLabel}",
+      "{roundNumber}",
+      "{roundOrdinal}",
+      "{overallPickNumber}",
+    ],
+  },
+  draft_final_pick: {
+    notificationType: "draft_final_pick",
+    titleTemplate: "{sportEmoji} Last pick!",
+    bodyTemplate:
+      "{teamName}, you're on the clock for the final pick of {slateLabel}.",
+    description:
+      "Sent when the next participant is making their final golfer selection.",
+    availablePlaceholders: [
+      "{sportEmoji}",
+      "{teamName}",
+      "{slateLabel}",
+      "{roundNumber}",
+      "{roundOrdinal}",
+      "{overallPickNumber}",
+    ],
+  },
+  player_finished: {
+    notificationType: "player_finished",
+    titleTemplate: "{sportEmoji} {playerName} finished!",
+    bodyTemplate:
+      "{playerName} completed Round {roundNumber} at {slateLabel} with a score of {roundScore}.",
+    description:
+      "Sent when one of a participant's drafted golfers completes a tournament round.",
+    availablePlaceholders: [
+      "{sportEmoji}",
+      "{playerName}",
+      "{roundNumber}",
+      "{roundScore}",
+      "{fantasyPoints}",
+      "{teamName}",
+      "{slateLabel}",
+    ],
+  },
+  slate_complete: {
+    notificationType: "slate_complete",
+    titleTemplate: "🏆 Tournament Complete!",
+    bodyTemplate:
+      "{winnerName} wins {slateLabel} with {winningScore}. You finished {finishOrdinal} with {teamScore}.",
+    description:
+      "Sent after a Golf tournament finishes and final standings are calculated.",
+    availablePlaceholders: [
+      "{winnerName}",
+      "{winningScore}",
+      "{teamName}",
+      "{teamScore}",
+      "{finishNumber}",
+      "{finishOrdinal}",
+      "{slateLabel}",
+    ],
+  },
+  slate_complete_winner: {
+    notificationType: "slate_complete_winner",
+    titleTemplate: "🏆 Tournament Winner!",
+    bodyTemplate:
+      "You won {slateLabel} with a score of {teamScore}!",
+    description:
+      "Sent to the participant who wins a completed Golf tournament.",
+    availablePlaceholders: [
+      "{winnerName}",
+      "{winningScore}",
+      "{teamName}",
+      "{teamScore}",
+      "{finishNumber}",
+      "{finishOrdinal}",
+      "{slateLabel}",
+    ],
+  },
+} as const;
+
+export const NOTIFICATION_TEMPLATE_DEFAULTS = {
+  nba: NBA_NOTIFICATION_DEFAULTS,
+  nfl: NFL_NOTIFICATION_DEFAULTS,
+  golf: GOLF_NOTIFICATION_DEFAULTS,
+} as const;
+
+export type NotificationTemplateType =
+  keyof typeof NBA_NOTIFICATION_DEFAULTS;
+
+export type NotificationTemplate = {
+  notificationType: NotificationTemplateType;
+  sport: NotificationSport;
+  titleTemplate: string;
+  bodyTemplate: string;
+  description: string;
+  availablePlaceholders: string[];
+};
+
+type NotificationTemplateRow = {
+  notification_type: string;
+  sport: string;
+  title_template: string;
+  body_template: string;
+  description: string | null;
+  available_placeholders: string[] | null;
+};
+
+export function normalizeNotificationSport(
+  value: unknown
+): NotificationSport {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+
+  return "nba";
+}
+
+export function isNotificationSport(
+  value: unknown
+): value is NotificationSport {
+  return value === "nba" || value === "nfl" || value === "golf";
+}
+
+export function isNotificationTemplateType(
+  value: unknown
+): value is NotificationTemplateType {
+  return (
+    typeof value === "string" &&
+    value in NBA_NOTIFICATION_DEFAULTS
+  );
+}
+
+export function renderNotificationTemplate(
+  template: string,
+  values: Record<string, string | number | null | undefined>
+) {
+  return Object.entries(values).reduce((result, [key, value]) => {
+    const replacement = value == null ? "" : String(value);
+
+    return result.replaceAll(`{${key}}`, replacement);
+  }, template);
+}
+
+export function getDefaultNotificationTemplate(
+  notificationType: NotificationTemplateType,
+  sport: NotificationSport = "nba"
+): NotificationTemplate {
+  const template =
+    NOTIFICATION_TEMPLATE_DEFAULTS[sport][notificationType];
+
+  return {
+    notificationType,
+    sport,
+    titleTemplate: template.titleTemplate,
+    bodyTemplate: template.bodyTemplate,
+    description: template.description,
+    availablePlaceholders: [...template.availablePlaceholders],
+  };
+}
+
+export async function getNotificationTemplate(
+  notificationType: NotificationTemplateType,
+  sport: NotificationSport = "nba"
+): Promise<NotificationTemplate> {
+  const fallback = getDefaultNotificationTemplate(
+    notificationType,
+    sport
+  );
+
+  const { data, error } = await supabaseAdmin
+    .from("notification_templates")
+    .select(
+      `
+        notification_type,
+        sport,
+        title_template,
+        body_template,
+        description,
+        available_placeholders
+      `
+    )
+    .eq("notification_type", notificationType)
+    .eq("sport", sport)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to load notification template", {
+      notificationType,
+      sport,
+      error,
+    });
+
+    return fallback;
+  }
+
+  const row = data as NotificationTemplateRow | null;
+
+  if (!row) {
+    return fallback;
+  }
+
+  return {
+    notificationType,
+    sport,
+    titleTemplate:
+      row.title_template?.trim() || fallback.titleTemplate,
+    bodyTemplate:
+      row.body_template?.trim() || fallback.bodyTemplate,
+    description:
+      row.description?.trim() || fallback.description,
+    availablePlaceholders:
+      row.available_placeholders?.length
+        ? row.available_placeholders
+        : fallback.availablePlaceholders,
+  };
+}
+
+============================================================
+FILE: app/api/notification-preferences/route.ts
+============================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type PreferencesBody = {
+  notificationsEnabled?: boolean;
+  draftTurnEnabled?: boolean;
+  playerFinishedEnabled?: boolean;
+  slateFinalEnabled?: boolean;
+  pickemReminderEnabled?: boolean;
+};
+
+const defaultPreferences = {
+  notifications_enabled: true,
+  draft_turn_enabled: true,
+  player_finished_enabled: true,
+  slate_final_enabled: false,
+  pickem_reminder_enabled: true,
+};
+
+function formatPreferences(row: {
+  notifications_enabled: boolean;
+  draft_turn_enabled: boolean;
+  player_finished_enabled: boolean;
+  slate_final_enabled: boolean;
+  pickem_reminder_enabled: boolean;
+}) {
+  return {
+    notificationsEnabled: row.notifications_enabled,
+    draftTurnEnabled: row.draft_turn_enabled,
+    playerFinishedEnabled: row.player_finished_enabled,
+    slateFinalEnabled: row.slate_final_enabled,
+    pickemReminderEnabled: row.pickem_reminder_enabled,
+  };
+}
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("notification_preferences")
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
+      )
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load preferences: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (data) {
+      return NextResponse.json({
+        success: true,
+        preferences: formatPreferences(data),
+      });
+    }
+
+    const { data: created, error: createError } = await supabaseAdmin
+      .from("notification_preferences")
+      .insert({
+        user_id: user.id,
+        ...defaultPreferences,
+      })
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
+      )
+      .single();
+
+    if (createError || !created) {
+      return NextResponse.json(
+        {
+          error:
+            createError?.message ??
+            "Failed to create notification preferences.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      preferences: formatPreferences(created),
+    });
+  } catch (error) {
+    console.error("Failed to load notification preferences", error);
+
+    return NextResponse.json(
+      { error: "Unable to load notification preferences." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json()) as PreferencesBody;
+
+    const update = {
+      notifications_enabled:
+        typeof body.notificationsEnabled === "boolean"
+          ? body.notificationsEnabled
+          : defaultPreferences.notifications_enabled,
+      draft_turn_enabled:
+        typeof body.draftTurnEnabled === "boolean"
+          ? body.draftTurnEnabled
+          : defaultPreferences.draft_turn_enabled,
+      player_finished_enabled:
+        typeof body.playerFinishedEnabled === "boolean"
+          ? body.playerFinishedEnabled
+          : defaultPreferences.player_finished_enabled,
+      slate_final_enabled:
+        typeof body.slateFinalEnabled === "boolean"
+          ? body.slateFinalEnabled
+          : defaultPreferences.slate_final_enabled,
+      pickem_reminder_enabled:
+        typeof body.pickemReminderEnabled === "boolean"
+          ? body.pickemReminderEnabled
+          : defaultPreferences.pickem_reminder_enabled,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("notification_preferences")
+      .upsert(
+        {
+          user_id: user.id,
+          ...update,
+        },
+        {
+          onConflict: "user_id",
+        }
+      )
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
+      )
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          error:
+            error?.message ??
+            "Failed to update notification preferences.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      preferences: formatPreferences(data),
+    });
+  } catch (error) {
+    console.error("Failed to update notification preferences", error);
+
+    return NextResponse.json(
+      { error: "Unable to update notification preferences." },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+FILE: supabase/migrations/20260731_sport_specific_notification_templates.sql
+============================================================
+begin;
+
+alter table public.notification_templates
+  add column if not exists sport text;
+
+update public.notification_templates
+set sport = 'nba'
+where sport is null
+   or sport not in ('nba', 'nfl', 'golf');
+
+alter table public.notification_templates
+  alter column sport set default 'nba';
+
+alter table public.notification_templates
+  alter column sport set not null;
+
+do $$
+declare
+  constraint_row record;
+begin
+  for constraint_row in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel
+      on rel.oid = con.conrelid
+    join pg_namespace nsp
+      on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'notification_templates'
+      and con.contype = 'u'
+      and (
+        select array_agg(
+          att.attname::text
+          order by keys.ordinality
+        )
+        from unnest(con.conkey) with ordinality
+          as keys(attnum, ordinality)
+        join pg_attribute att
+          on att.attrelid = rel.oid
+         and att.attnum = keys.attnum
+      ) = array['notification_type']::text[]
+  loop
+    execute format(
+      'alter table public.notification_templates drop constraint %I',
+      constraint_row.conname
+    );
+  end loop;
+end
+$$;
+
+alter table public.notification_templates
+  drop constraint if exists notification_templates_pkey;
+
+alter table public.notification_templates
+  add constraint notification_templates_pkey
+  primary key (notification_type, sport);
+
+alter table public.notification_templates
+  drop constraint if exists notification_templates_sport_check;
+
+alter table public.notification_templates
+  add constraint notification_templates_sport_check
+  check (sport in ('nba', 'nfl', 'golf'));
+
+create unique index if not exists
+  notification_templates_type_sport_unique
+on public.notification_templates (
+  notification_type,
+  sport
+);
+
+commit;
+
+============================================================
+NOTIFICATION TEMPLATE REFERENCES
+============================================================
+app/api/admin/notification-templates/route.ts:7:  isNotificationTemplateType,
+app/api/admin/notification-templates/route.ts:11:  type NotificationTemplateType,
+app/api/admin/notification-templates/route.ts:19:  titleTemplate?: unknown;
+app/api/admin/notification-templates/route.ts:20:  bodyTemplate?: unknown;
+app/api/admin/notification-templates/route.ts:46:    ) as NotificationTemplateType[];
+app/api/admin/notification-templates/route.ts:90:    if (!isNotificationTemplateType(body.notificationType)) {
+app/api/admin/notification-templates/route.ts:104:    const notificationType: NotificationTemplateType =
+app/api/admin/notification-templates/route.ts:116:    const titleTemplate = resetToDefault
+app/api/admin/notification-templates/route.ts:117:      ? defaults.titleTemplate
+app/api/admin/notification-templates/route.ts:118:      : String(body.titleTemplate ?? "").trim();
+app/api/admin/notification-templates/route.ts:120:    const bodyTemplate = resetToDefault
+app/api/admin/notification-templates/route.ts:121:      ? defaults.bodyTemplate
+app/api/admin/notification-templates/route.ts:122:      : String(body.bodyTemplate ?? "").trim();
+app/api/admin/notification-templates/route.ts:124:    if (!titleTemplate || !bodyTemplate) {
+app/api/admin/notification-templates/route.ts:131:    if (titleTemplate.length > 100) {
+app/api/admin/notification-templates/route.ts:141:    if (bodyTemplate.length > 240) {
+app/api/admin/notification-templates/route.ts:153:        `${titleTemplate} ${bodyTemplate}`,
+app/api/admin/notification-templates/route.ts:169:      .from("notification_templates")
+app/api/admin/notification-templates/route.ts:174:          title_template: titleTemplate,
+app/api/admin/notification-templates/route.ts:175:          body_template: bodyTemplate,
+app/api/admin/notification-templates/route.ts:206:        titleTemplate,
+app/api/admin/notification-templates/route.ts:207:        bodyTemplate,
+app/api/admin/notification-history/route.ts:344:     * sendLoggedNotification(). For Golf round-complete notifications we
+app/api/admin/notification-history/route.ts.before-ledger-debug-20260814-101630:334:     * sendLoggedNotification(). For Golf round-complete notifications we
+app/api/admin/notification-history/route.ts.before-ledger-overlap-fix-20260814-101841:334:     * sendLoggedNotification(). For Golf round-complete notifications we
+app/api/admin/notification-history/route.ts.before-current-round-ledger-20260814-102117:334:     * sendLoggedNotification(). For Golf round-complete notifications we
+app/api/admin/notification-history/route.ts.before-recovery-controls-20260814-103119:334:     * sendLoggedNotification(). For Golf round-complete notifications we
+app/api/admin/notification-history/action/route.ts:494:       * sendLoggedNotification's event_key still protects against
+app/api/admin/ncaa-pickem/import-week/route.ts:203:          "ncaa_pickem_weeks",
+app/api/admin/ncaa-pickem/import-week/route.ts:271:            "ncaa_pickem_weeks",
+app/api/admin/ncaa-pickem/import-week/route.ts:320:          "ncaa_pickem_games",
+app/api/admin/ncaa-pickem/import-week/route.ts:443:            "ncaa_pickem_games",
+app/api/admin/ncaa-pickem/import-week/route.ts:498:          "ncaa_pickem_weeks",
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:135:      .from("ncaa_pickem_weeks")
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:177:        .from("ncaa_pickem_weeks")
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:214:      .from("ncaa_pickem_games")
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:305:        .from("ncaa_pickem_games")
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:334:      .from("ncaa_pickem_weeks")
+app/api/admin/ncaa-pickem/week-control/route.ts:149:        "ncaa_pickem_weeks",
+app/api/notification-preferences/route.ts:18:  pickem_reminder_enabled: true,
+app/api/notification-preferences/route.ts:26:  pickem_reminder_enabled: boolean;
+app/api/notification-preferences/route.ts:33:    pickemReminderEnabled: row.pickem_reminder_enabled,
+app/api/notification-preferences/route.ts:51:        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
+app/api/notification-preferences/route.ts:77:        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
+app/api/notification-preferences/route.ts:136:      pickem_reminder_enabled:
+app/api/notification-preferences/route.ts:139:          : defaultPreferences.pickem_reminder_enabled,
+app/api/notification-preferences/route.ts:155:        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
+app/api/push/test/route.ts:3:import { sendLoggedNotification } from "@/lib/notifications";
+app/api/push/test/route.ts:18:    const result = await sendLoggedNotification({
+app/api/refresh-stats-golf/route.ts:3063:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:1185:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:1403:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:1440:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:1440:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:1499:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:2696:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:2718:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-incremental-scorecard-20260814-094936:2730:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/refresh-stats-golf/route.ts.before-golf-day-boundary:2972:       * sendLoggedNotification's event keys prevent duplicate pushes.
+app/api/cron/ncaa-pickem-reminders/route.ts:6:  sendLoggedNotification,
+app/api/cron/ncaa-pickem-reminders/route.ts:99:     * sendLoggedNotification() + the per-user/week event key
+app/api/cron/ncaa-pickem-reminders/route.ts:122:          "ncaa_pickem_weeks",
+app/api/cron/ncaa-pickem-reminders/route.ts:219:              "user_id, notifications_enabled, pickem_reminder_enabled",
+app/api/cron/ncaa-pickem-reminders/route.ts:293:            "ncaa_pickem_games",
+app/api/cron/ncaa-pickem-reminders/route.ts:340:            "ncaa_pickem_picks",
+app/api/cron/ncaa-pickem-reminders/route.ts:432:            ?.pickem_reminder_enabled ??
+app/api/cron/ncaa-pickem-reminders/route.ts:524:          await sendLoggedNotification({
+app/api/cron/ncaa-pickem-reminders/route.ts:526:              `ncaa_pickem_lock_reminder:${weekId}:${userId}`,
+app/api/cron/ncaa-pickem-reminders/route.ts:529:              "ncaa_pickem_lock_reminder",
+app/api/cron/refresh-ncaa/route.ts:78:        "ncaa_pickem_weeks",
+app/api/ncaa-pickem/week/route.ts:99:      .from("ncaa_pickem_weeks")
+app/api/ncaa-pickem/week/route.ts:195:            "ncaa_pickem_games",
+app/api/ncaa-pickem/week/route.ts:215:            "ncaa_pickem_picks",
+app/api/ncaa-pickem/week/route.ts:381:          "ncaa_pickem_picks",
+app/api/ncaa-pickem/picks/route.ts:93:      .from("ncaa_pickem_weeks")
+app/api/ncaa-pickem/picks/route.ts:140:      .from("ncaa_pickem_games")
+app/api/ncaa-pickem/picks/route.ts:243:      .from("ncaa_pickem_picks")
+app/api/ncaa-pickem/standings/route.ts:88:            "ncaa_pickem_weeks",
+app/api/ncaa-pickem/standings/route.ts:219:              "ncaa_pickem_picks",
+app/api/ncaa-pickem/standings/route.ts:236:              "ncaa_pickem_games",
+app/api/refresh-stats-ncaa/route.ts:78:          "ncaa_pickem_weeks",
+app/api/refresh-stats-ncaa/route.ts:168:          "ncaa_pickem_games",
+app/api/refresh-stats-ncaa/route.ts:340:            "ncaa_pickem_games",
+app/api/refresh-stats-ncaa/route.ts:400:            "ncaa_pickem_picks",
+app/api/refresh-stats-ncaa/route.ts:452:              "ncaa_pickem_picks",
+app/api/refresh-stats-ncaa/route.ts:573:            "ncaa_pickem_weeks",
+app/admin/notification-templates/page.tsx:8:type NotificationTemplateType =
+app/admin/notification-templates/page.tsx:16:  notificationType: NotificationTemplateType;
+app/admin/notification-templates/page.tsx:18:  titleTemplate: string;
+app/admin/notification-templates/page.tsx:19:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx:25:  titleTemplate: string;
+app/admin/notification-templates/page.tsx:26:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx:34:): Record<NotificationTemplateType, string> {
+app/admin/notification-templates/page.tsx:59:  type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx:64:  const descriptions: Record<NotificationTemplateType, string> = {
+app/admin/notification-templates/page.tsx:80:const TEMPLATE_ORDER: NotificationTemplateType[] = [
+app/admin/notification-templates/page.tsx:147:    draft_turn: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx:148:    draft_final_pick: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx:149:    player_finished: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx:150:    slate_complete: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx:152:      titleTemplate: "",
+app/admin/notification-templates/page.tsx:153:      bodyTemplate: "",
+app/admin/notification-templates/page.tsx:177:    useState<NotificationTemplateType>("draft_turn");
+app/admin/notification-templates/page.tsx:180:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx:184:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx:188:    useState<Record<NotificationTemplateType, EditableTemplate>>(
+app/admin/notification-templates/page.tsx:194:    useState<NotificationTemplateType | null>(null);
+app/admin/notification-templates/page.tsx:232:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx:239:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx:249:                titleTemplate: templateMap[type].titleTemplate,
+app/admin/notification-templates/page.tsx:250:                bodyTemplate: templateMap[type].bodyTemplate,
+app/admin/notification-templates/page.tsx:253:          ) as Record<NotificationTemplateType, EditableTemplate>
+app/admin/notification-templates/page.tsx:286:          (drafts[type].titleTemplate !== templates?.[type].titleTemplate ||
+app/admin/notification-templates/page.tsx:287:            drafts[type].bodyTemplate !== templates?.[type].bodyTemplate),
+app/admin/notification-templates/page.tsx:289:    ) as Record<NotificationTemplateType, boolean>;
+app/admin/notification-templates/page.tsx:293:    notificationType: NotificationTemplateType,
+app/admin/notification-templates/page.tsx:308:          titleTemplate: draft.titleTemplate,
+app/admin/notification-templates/page.tsx:309:          bodyTemplate: draft.bodyTemplate,
+app/admin/notification-templates/page.tsx:330:          titleTemplate: result.template.titleTemplate,
+app/admin/notification-templates/page.tsx:331:          bodyTemplate: result.template.bodyTemplate,
+app/admin/notification-templates/page.tsx:349:    type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx:359:    const current = drafts[activeTemplateType].bodyTemplate;
+app/admin/notification-templates/page.tsx:363:      bodyTemplate: `${current}${separator}${placeholder}`,
+app/admin/notification-templates/page.tsx:410:                event.target.value as NotificationTemplateType
+app/admin/notification-templates/page.tsx:450:                  value={activeDraft.titleTemplate}
+app/admin/notification-templates/page.tsx:453:                      titleTemplate: event.target.value,
+app/admin/notification-templates/page.tsx:467:                  value={activeDraft.bodyTemplate}
+app/admin/notification-templates/page.tsx:470:                      bodyTemplate: event.target.value,
+app/admin/notification-templates/page.tsx:506:                      activeDraft.titleTemplate,
+app/admin/notification-templates/page.tsx:513:                      activeDraft.bodyTemplate,
+app/admin/notification-templates/page.tsx:553:                          titleTemplate: activeTemplate.titleTemplate,
+app/admin/notification-templates/page.tsx:554:                          bodyTemplate: activeTemplate.bodyTemplate,
+app/admin/notification-templates/page.tsx:566:                Default: “{activeDefault.titleTemplate}” / “
+app/admin/notification-templates/page.tsx:567:                {activeDefault.bodyTemplate}”
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:8:type NotificationTemplateType =
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:16:  notificationType: NotificationTemplateType;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:18:  titleTemplate: string;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:19:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:25:  titleTemplate: string;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:26:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:34:): Record<NotificationTemplateType, string> {
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:59:  type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:64:  const descriptions: Record<NotificationTemplateType, string> = {
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:80:const TEMPLATE_ORDER: NotificationTemplateType[] = [
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:146:    draft_turn: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:147:    draft_final_pick: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:148:    player_finished: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:149:    slate_complete: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:151:      titleTemplate: "",
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:152:      bodyTemplate: "",
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:176:    useState<NotificationTemplateType>("draft_turn");
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:179:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:183:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:187:    useState<Record<NotificationTemplateType, EditableTemplate>>(
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:193:    useState<NotificationTemplateType | null>(null);
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:221:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:228:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:238:                titleTemplate: templateMap[type].titleTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:239:                bodyTemplate: templateMap[type].bodyTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:242:          ) as Record<NotificationTemplateType, EditableTemplate>
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:260:          (drafts[type].titleTemplate !== templates?.[type].titleTemplate ||
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:261:            drafts[type].bodyTemplate !== templates?.[type].bodyTemplate),
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:263:    ) as Record<NotificationTemplateType, boolean>;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:267:    notificationType: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:282:          titleTemplate: draft.titleTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:283:          bodyTemplate: draft.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:304:          titleTemplate: result.template.titleTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:305:          bodyTemplate: result.template.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:323:    type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:333:    const current = drafts[activeTemplateType].bodyTemplate;
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:337:      bodyTemplate: `${current}${separator}${placeholder}`,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:384:                event.target.value as NotificationTemplateType
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:424:                  value={activeDraft.titleTemplate}
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:427:                      titleTemplate: event.target.value,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:441:                  value={activeDraft.bodyTemplate}
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:444:                      bodyTemplate: event.target.value,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:480:                      activeDraft.titleTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:487:                      activeDraft.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:527:                          titleTemplate: activeTemplate.titleTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:528:                          bodyTemplate: activeTemplate.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:540:                Default: “{activeDefault.titleTemplate}” / “
+app/admin/notification-templates/page.tsx.before-fix-round-score-preview:541:                {activeDefault.bodyTemplate}”
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:8:type NotificationTemplateType =
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:16:  notificationType: NotificationTemplateType;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:18:  titleTemplate: string;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:19:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:25:  titleTemplate: string;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:26:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:34:): Record<NotificationTemplateType, string> {
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:59:  type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:64:  const descriptions: Record<NotificationTemplateType, string> = {
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:80:const TEMPLATE_ORDER: NotificationTemplateType[] = [
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:146:    draft_turn: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:147:    draft_final_pick: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:148:    player_finished: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:149:    slate_complete: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:151:      titleTemplate: "",
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:152:      bodyTemplate: "",
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:176:    useState<NotificationTemplateType>("draft_turn");
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:179:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:183:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:187:    useState<Record<NotificationTemplateType, EditableTemplate>>(
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:193:    useState<NotificationTemplateType | null>(null);
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:221:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:228:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:238:                titleTemplate: templateMap[type].titleTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:239:                bodyTemplate: templateMap[type].bodyTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:242:          ) as Record<NotificationTemplateType, EditableTemplate>
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:260:          (drafts[type].titleTemplate !== templates?.[type].titleTemplate ||
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:261:            drafts[type].bodyTemplate !== templates?.[type].bodyTemplate),
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:263:    ) as Record<NotificationTemplateType, boolean>;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:267:    notificationType: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:282:          titleTemplate: draft.titleTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:283:          bodyTemplate: draft.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:304:          titleTemplate: result.template.titleTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:305:          bodyTemplate: result.template.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:323:    type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:333:    const current = drafts[activeTemplateType].bodyTemplate;
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:337:      bodyTemplate: `${current}${separator}${placeholder}`,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:384:                event.target.value as NotificationTemplateType
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:424:                  value={activeDraft.titleTemplate}
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:427:                      titleTemplate: event.target.value,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:441:                  value={activeDraft.bodyTemplate}
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:444:                      bodyTemplate: event.target.value,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:480:                      activeDraft.titleTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:487:                      activeDraft.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:527:                          titleTemplate: activeTemplate.titleTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:528:                          bodyTemplate: activeTemplate.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:540:                Default: “{activeDefault.titleTemplate}” / “
+app/admin/notification-templates/page.tsx.before-round-score-preview-final:541:                {activeDefault.bodyTemplate}”
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:8:type NotificationTemplateType =
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:16:  notificationType: NotificationTemplateType;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:18:  titleTemplate: string;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:19:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:25:  titleTemplate: string;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:26:  bodyTemplate: string;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:34:): Record<NotificationTemplateType, string> {
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:59:  type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:64:  const descriptions: Record<NotificationTemplateType, string> = {
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:80:const TEMPLATE_ORDER: NotificationTemplateType[] = [
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:147:    draft_turn: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:148:    draft_final_pick: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:149:    player_finished: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:150:    slate_complete: { titleTemplate: "", bodyTemplate: "" },
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:152:      titleTemplate: "",
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:153:      bodyTemplate: "",
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:177:    useState<NotificationTemplateType>("draft_turn");
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:180:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:184:    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:188:    useState<Record<NotificationTemplateType, EditableTemplate>>(
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:194:    useState<NotificationTemplateType | null>(null);
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:222:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:229:        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:239:                titleTemplate: templateMap[type].titleTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:240:                bodyTemplate: templateMap[type].bodyTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:243:          ) as Record<NotificationTemplateType, EditableTemplate>
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:261:          (drafts[type].titleTemplate !== templates?.[type].titleTemplate ||
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:262:            drafts[type].bodyTemplate !== templates?.[type].bodyTemplate),
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:264:    ) as Record<NotificationTemplateType, boolean>;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:268:    notificationType: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:283:          titleTemplate: draft.titleTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:284:          bodyTemplate: draft.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:305:          titleTemplate: result.template.titleTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:306:          bodyTemplate: result.template.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:324:    type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:334:    const current = drafts[activeTemplateType].bodyTemplate;
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:338:      bodyTemplate: `${current}${separator}${placeholder}`,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:385:                event.target.value as NotificationTemplateType
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:425:                  value={activeDraft.titleTemplate}
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:428:                      titleTemplate: event.target.value,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:442:                  value={activeDraft.bodyTemplate}
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:445:                      bodyTemplate: event.target.value,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:481:                      activeDraft.titleTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:488:                      activeDraft.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:528:                          titleTemplate: activeTemplate.titleTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:529:                          bodyTemplate: activeTemplate.bodyTemplate,
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:541:                Default: “{activeDefault.titleTemplate}” / “
+app/admin/notification-templates/page.tsx.before-template-request-race-fix:542:                {activeDefault.bodyTemplate}”
+lib/draftNotifications.ts:3:import { sendLoggedNotification } from "@/lib/notifications";
+lib/draftNotifications.ts:7:  type NotificationTemplateType,
+lib/draftNotifications.ts:344:  const templateType: NotificationTemplateType = isFinalPick
+lib/draftNotifications.ts:378:    notificationTemplate.titleTemplate,
+lib/draftNotifications.ts:383:    notificationTemplate.bodyTemplate,
+lib/draftNotifications.ts:387:  const result = await sendLoggedNotification({
+lib/notificationTemplates.ts:8:    titleTemplate: "{sportEmoji} Your turn to draft!",
+lib/notificationTemplates.ts:9:    bodyTemplate:
+lib/notificationTemplates.ts:25:    titleTemplate: "{sportEmoji} Last pick!",
+lib/notificationTemplates.ts:26:    bodyTemplate:
+lib/notificationTemplates.ts:43:    titleTemplate: "{sportEmoji} {playerName} finished!",
+lib/notificationTemplates.ts:44:    bodyTemplate:
+lib/notificationTemplates.ts:58:    titleTemplate: "🏆 Slate Complete!",
+lib/notificationTemplates.ts:59:    bodyTemplate:
+lib/notificationTemplates.ts:75:    titleTemplate: "🏆 You won!",
+lib/notificationTemplates.ts:76:    bodyTemplate:
+lib/notificationTemplates.ts:123:    titleTemplate: "{sportEmoji} You're on the clock!",
+lib/notificationTemplates.ts:124:    bodyTemplate:
+lib/notificationTemplates.ts:139:    titleTemplate: "{sportEmoji} Last pick!",
+lib/notificationTemplates.ts:140:    bodyTemplate:
+lib/notificationTemplates.ts:155:    titleTemplate: "{sportEmoji} {playerName} finished!",
+lib/notificationTemplates.ts:156:    bodyTemplate:
+lib/notificationTemplates.ts:172:    titleTemplate: "🏆 Tournament Complete!",
+lib/notificationTemplates.ts:173:    bodyTemplate:
+lib/notificationTemplates.ts:189:    titleTemplate: "🏆 Tournament Winner!",
+lib/notificationTemplates.ts:190:    bodyTemplate:
+lib/notificationTemplates.ts:212:export type NotificationTemplateType =
+lib/notificationTemplates.ts:216:  notificationType: NotificationTemplateType;
+lib/notificationTemplates.ts:218:  titleTemplate: string;
+lib/notificationTemplates.ts:219:  bodyTemplate: string;
+lib/notificationTemplates.ts:248:export function isNotificationTemplateType(
+lib/notificationTemplates.ts:250:): value is NotificationTemplateType {
+lib/notificationTemplates.ts:269:  notificationType: NotificationTemplateType,
+lib/notificationTemplates.ts:278:    titleTemplate: template.titleTemplate,
+lib/notificationTemplates.ts:279:    bodyTemplate: template.bodyTemplate,
+lib/notificationTemplates.ts:286:  notificationType: NotificationTemplateType,
+lib/notificationTemplates.ts:295:    .from("notification_templates")
+lib/notificationTemplates.ts:329:    titleTemplate:
+lib/notificationTemplates.ts:330:      row.title_template?.trim() || fallback.titleTemplate,
+lib/notificationTemplates.ts:331:    bodyTemplate:
+lib/notificationTemplates.ts:332:      row.body_template?.trim() || fallback.bodyTemplate,
+lib/notifications.ts:34:export async function sendLoggedNotification(
+lib/playerFinishedNotifications.ts:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/playerFinishedNotifications.ts:237:      template.titleTemplate,
+lib/playerFinishedNotifications.ts:242:      template.bodyTemplate,
+lib/playerFinishedNotifications.ts:258:    const result = await sendLoggedNotification({
+lib/slateCompleteNotifications.ts:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/slateCompleteNotifications.ts:241:      template.titleTemplate,
+lib/slateCompleteNotifications.ts:246:      template.bodyTemplate,
+lib/slateCompleteNotifications.ts:263:    const notificationResult = await sendLoggedNotification({
+lib/profile/ncaaPickEmTeamProfile.ts:370:          "ncaa_pickem_weeks",
+lib/profile/ncaaPickEmTeamProfile.ts:392:          "ncaa_pickem_games",
+lib/profile/ncaaPickEmTeamProfile.ts:411:          "ncaa_pickem_picks",
+lib/playerFinishedNotifications.ts.before-round-event-keys:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/playerFinishedNotifications.ts.before-round-event-keys:178:      template.titleTemplate,
+lib/playerFinishedNotifications.ts.before-round-event-keys:183:      template.bodyTemplate,
+lib/playerFinishedNotifications.ts.before-round-event-keys:199:    const result = await sendLoggedNotification({
+lib/playerFinishedNotifications.ts.before-display-name-label:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/playerFinishedNotifications.ts.before-display-name-label:204:      template.titleTemplate,
+lib/playerFinishedNotifications.ts.before-display-name-label:209:      template.bodyTemplate,
+lib/playerFinishedNotifications.ts.before-display-name-label:225:    const result = await sendLoggedNotification({
+lib/playerFinishedNotifications.ts.before-round-score-continuation:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/playerFinishedNotifications.ts.before-round-score-continuation:204:      template.titleTemplate,
+lib/playerFinishedNotifications.ts.before-round-score-continuation:209:      template.bodyTemplate,
+lib/playerFinishedNotifications.ts.before-round-score-continuation:225:    const result = await sendLoggedNotification({
+lib/notificationTemplates.ts.before-round-score-continuation:8:    titleTemplate: "{sportEmoji} Your turn to draft!",
+lib/notificationTemplates.ts.before-round-score-continuation:9:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:25:    titleTemplate: "{sportEmoji} Last pick!",
+lib/notificationTemplates.ts.before-round-score-continuation:26:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:43:    titleTemplate: "{sportEmoji} {playerName} finished!",
+lib/notificationTemplates.ts.before-round-score-continuation:44:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:58:    titleTemplate: "🏆 Slate Complete!",
+lib/notificationTemplates.ts.before-round-score-continuation:59:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:75:    titleTemplate: "🏆 You won!",
+lib/notificationTemplates.ts.before-round-score-continuation:76:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:123:    titleTemplate: "{sportEmoji} You're on the clock!",
+lib/notificationTemplates.ts.before-round-score-continuation:124:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:139:    titleTemplate: "{sportEmoji} Last pick!",
+lib/notificationTemplates.ts.before-round-score-continuation:140:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:155:    titleTemplate: "{sportEmoji} {playerName} finished!",
+lib/notificationTemplates.ts.before-round-score-continuation:156:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:170:    titleTemplate: "🏆 Tournament Complete!",
+lib/notificationTemplates.ts.before-round-score-continuation:171:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:187:    titleTemplate: "🏆 Tournament Winner!",
+lib/notificationTemplates.ts.before-round-score-continuation:188:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:210:export type NotificationTemplateType =
+lib/notificationTemplates.ts.before-round-score-continuation:214:  notificationType: NotificationTemplateType;
+lib/notificationTemplates.ts.before-round-score-continuation:216:  titleTemplate: string;
+lib/notificationTemplates.ts.before-round-score-continuation:217:  bodyTemplate: string;
+lib/notificationTemplates.ts.before-round-score-continuation:246:export function isNotificationTemplateType(
+lib/notificationTemplates.ts.before-round-score-continuation:248:): value is NotificationTemplateType {
+lib/notificationTemplates.ts.before-round-score-continuation:267:  notificationType: NotificationTemplateType,
+lib/notificationTemplates.ts.before-round-score-continuation:276:    titleTemplate: template.titleTemplate,
+lib/notificationTemplates.ts.before-round-score-continuation:277:    bodyTemplate: template.bodyTemplate,
+lib/notificationTemplates.ts.before-round-score-continuation:284:  notificationType: NotificationTemplateType,
+lib/notificationTemplates.ts.before-round-score-continuation:293:    .from("notification_templates")
+lib/notificationTemplates.ts.before-round-score-continuation:327:    titleTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:328:      row.title_template?.trim() || fallback.titleTemplate,
+lib/notificationTemplates.ts.before-round-score-continuation:329:    bodyTemplate:
+lib/notificationTemplates.ts.before-round-score-continuation:330:      row.body_template?.trim() || fallback.bodyTemplate,
+lib/slateCompleteNotifications.ts.before-friendly-slate-label:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/slateCompleteNotifications.ts.before-friendly-slate-label:197:      template.titleTemplate,
+lib/slateCompleteNotifications.ts.before-friendly-slate-label:202:      template.bodyTemplate,
+lib/slateCompleteNotifications.ts.before-friendly-slate-label:219:    const notificationResult = await sendLoggedNotification({
+lib/slateCompleteNotifications.ts.before-display-name:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/slateCompleteNotifications.ts.before-display-name:197:      template.titleTemplate,
+lib/slateCompleteNotifications.ts.before-display-name:202:      template.bodyTemplate,
+lib/slateCompleteNotifications.ts.before-display-name:219:    const notificationResult = await sendLoggedNotification({
+lib/slateCompleteNotifications.ts.before-final-display-name-fix:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/slateCompleteNotifications.ts.before-final-display-name-fix:205:      template.titleTemplate,
+lib/slateCompleteNotifications.ts.before-final-display-name-fix:210:      template.bodyTemplate,
+lib/slateCompleteNotifications.ts.before-final-display-name-fix:227:    const notificationResult = await sendLoggedNotification({
+lib/slateCompleteNotifications.ts.before-db-label-fallback:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/slateCompleteNotifications.ts.before-db-label-fallback:205:      template.titleTemplate,
+lib/slateCompleteNotifications.ts.before-db-label-fallback:210:      template.bodyTemplate,
+lib/slateCompleteNotifications.ts.before-db-label-fallback:227:    const notificationResult = await sendLoggedNotification({
+lib/slateCompleteNotifications.ts.before-golf-score-format:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/slateCompleteNotifications.ts.before-golf-score-format:229:      template.titleTemplate,
+lib/slateCompleteNotifications.ts.before-golf-score-format:234:      template.bodyTemplate,
+lib/slateCompleteNotifications.ts.before-golf-score-format:251:    const notificationResult = await sendLoggedNotification({
+lib/slateCompleteNotifications.ts.before-fix-sport-order:5:import { sendLoggedNotification } from "@/lib/notifications";
+lib/slateCompleteNotifications.ts.before-fix-sport-order:236:      template.titleTemplate,
+lib/slateCompleteNotifications.ts.before-fix-sport-order:241:      template.bodyTemplate,
+lib/slateCompleteNotifications.ts.before-fix-sport-order:258:    const notificationResult = await sendLoggedNotification({
+supabase/migrations/20260731_sport_specific_notification_templates.sql:3:alter table public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:6:update public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:11:alter table public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:14:alter table public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:29:      and rel.relname = 'notification_templates'
+supabase/migrations/20260731_sport_specific_notification_templates.sql:44:      'alter table public.notification_templates drop constraint %I',
+supabase/migrations/20260731_sport_specific_notification_templates.sql:51:alter table public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:52:  drop constraint if exists notification_templates_pkey;
+supabase/migrations/20260731_sport_specific_notification_templates.sql:54:alter table public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:55:  add constraint notification_templates_pkey
+supabase/migrations/20260731_sport_specific_notification_templates.sql:58:alter table public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:59:  drop constraint if exists notification_templates_sport_check;
+supabase/migrations/20260731_sport_specific_notification_templates.sql:61:alter table public.notification_templates
+supabase/migrations/20260731_sport_specific_notification_templates.sql:62:  add constraint notification_templates_sport_check
+supabase/migrations/20260731_sport_specific_notification_templates.sql:66:  notification_templates_type_sport_unique
+supabase/migrations/20260731_sport_specific_notification_templates.sql:67:on public.notification_templates (
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:3:create table if not exists public.ncaa_pickem_weeks (
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:14:  constraint ncaa_pickem_weeks_season_week_key
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:18:create table if not exists public.ncaa_pickem_games (
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:21:    references public.ncaa_pickem_weeks(id)
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:57:  ncaa_pickem_games_week_id_idx
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:58:on public.ncaa_pickem_games (week_id);
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:61:  ncaa_pickem_games_kickoff_at_idx
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:62:on public.ncaa_pickem_games (kickoff_at);
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:64:create table if not exists public.ncaa_pickem_picks (
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:68:    references public.ncaa_pickem_weeks(id)
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:72:    references public.ncaa_pickem_games(id)
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:86:  constraint ncaa_pickem_picks_game_team_key
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:91:  ncaa_pickem_picks_week_team_idx
+supabase/migrations/20260817_ncaa_pickem_foundation.sql:92:on public.ncaa_pickem_picks (week_id, team_id);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getGolfTeamProfile } from "@/lib/profile/golfTeamProfile";
+import { getNcaaPickEmTeamProfile } from "@/lib/profile/ncaaPickEmTeamProfile";
 
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
@@ -46,7 +47,9 @@ export async function GET(req: Request) {
         ? "nfl"
         : sportParam === "golf"
           ? "golf"
-          : "nba";
+          : sportParam === "ncaa"
+            ? "ncaa"
+            : "nba";
 
     if (!teamId || Number.isNaN(teamId)) {
       return NextResponse.json({ error: "Missing or invalid teamId." }, { status: 400 });
@@ -54,6 +57,13 @@ export async function GET(req: Request) {
 
     if (sport === "golf") {
       return getGolfTeamProfile(
+        teamId,
+        seasonParam,
+      );
+    }
+
+    if (sport === "ncaa") {
+      return getNcaaPickEmTeamProfile(
         teamId,
         seasonParam,
       );

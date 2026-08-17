@@ -1,0 +1,4385 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+function GolfGreen3D(_props: Record<string, unknown>) { return null; }
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type WorldPoint = {
+  x: number;
+  y: number;
+  z?: number | null;
+};
+
+type ShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+type BallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+type ShotFlightTrajectory = {
+  kind: string | null;
+  type: string | null;
+  xFit: number[];
+  yFit: number[];
+  zFit: number[];
+  timeStart: number;
+  timeEnd: number;
+};
+
+type BallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: BallPathPoint[];
+};
+
+type MapShot = {
+  strokeNumber: number;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  finalStroke: boolean;
+
+  videoId?: string | null;
+  radarData?: ShotRadarData | null;
+  flightTrajectory?: ShotFlightTrajectory | null;
+  ballPath?: BallPath | null;
+
+  worldFrom?: WorldPoint | null;
+  worldTo?: WorldPoint | null;
+
+  bottomToTop: CoordinateSet | null;
+
+  /*
+   * Coordinates on PGA's dedicated Green View image.
+   */
+  greenBottomToTop?: CoordinateSet | null;
+};
+
+type Props = {
+  title: string;
+  imageUrl: string;
+  greenImageUrl?: string | null;
+  greenModelUrl?: string | null;
+
+  /*
+   * PGA's native TOURCAST hole pin.
+   */
+  pinWorld?: WorldPoint | null;
+
+  shots: MapShot[];
+  selectedStrokeNumber: number | null;
+  onSelectStroke: (
+    strokeNumber: number,
+  ) => void;
+  calibration: MapCalibration;
+  showShotOverlay?: boolean;
+  imageFit?: "fill" | "contain";
+  emptyStateLabel?: string;
+};
+
+type PlotPoint = {
+  x: number;
+  y: number;
+};
+
+type PlotShot = {
+  strokeNumber: number;
+  from: PlotPoint;
+  to: PlotPoint;
+  finalStroke: boolean;
+  videoId: string | null;
+  radarData: ShotRadarData | null;
+  flightTrajectory: ShotFlightTrajectory | null;
+  ballPath: BallPath | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+};
+
+type TransformState = {
+  scale: number;
+  x: number;
+  y: number;
+  rotation: number;
+};
+
+type PointerPosition = {
+  x: number;
+  y: number;
+};
+
+type GestureSnapshot = {
+  distance: number;
+  angle: number;
+  midpoint: PointerPosition;
+  transform: TransformState;
+};
+
+export type MapCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+  verified?: boolean;
+  source?: string;
+  affine?: {
+    pxX: number;
+    rotX: number;
+    rotY: number;
+    pxY: number;
+    coordX: number;
+    coordY: number;
+    dimX: number;
+    dimY: number;
+  };
+};
+
+const VIEWBOX_SIZE = 1000;
+const MIN_SCALE = 1;
+const MAX_SCALE = 5;
+const GREEN_MAX_SCALE = 2;
+
+/*
+ * Presentation only.
+ *
+ * PGA's sampled putt coordinates and relative timestamps remain
+ * authoritative. We simply replay that real motion a little slower
+ * so the break is easier to watch.
+ */
+const PUTT_PLAYBACK_SLOWDOWN = 1.35;
+
+/*
+ * Calibration is supplied by the tournament/hole configuration.
+ * The map engine itself is no longer tied to one course.
+ */
+
+const DEFAULT_TRANSFORM: TransformState = {
+  scale: 1,
+  x: 0,
+  y: 0,
+  rotation: 0,
+};
+
+function clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
+) {
+  return Math.min(
+    maximum,
+    Math.max(minimum, value),
+  );
+}
+
+function clampNormalized(
+  value: number,
+) {
+  return clamp(value, 0, 1);
+}
+
+function validPoint(
+  coordinate: Coordinate | null | undefined,
+): coordinate is {
+  x: number;
+  y: number;
+} {
+  return (
+    coordinate?.x !== null &&
+    coordinate?.x !== undefined &&
+    coordinate?.y !== null &&
+    coordinate?.y !== undefined &&
+    Number.isFinite(coordinate.x) &&
+    Number.isFinite(coordinate.y)
+  );
+}
+
+function clampNormalizedPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): (Coordinate & {
+  x: number;
+  y: number;
+}) | null {
+  if (
+    !coordinate ||
+    typeof coordinate.x !== "number" ||
+    typeof coordinate.y !== "number" ||
+    !Number.isFinite(coordinate.x) ||
+    !Number.isFinite(coordinate.y)
+  ) {
+    return null;
+  }
+
+  /*
+   * Approach shots often begin outside PGA's dedicated
+   * Green View crop. Preserve the incoming direction by
+   * projecting that endpoint onto the edge of the crop.
+   */
+  return {
+    ...coordinate,
+    x: Math.max(
+      0,
+      Math.min(1, coordinate.x),
+    ),
+    y: Math.max(
+      0,
+      Math.min(1, coordinate.y),
+    ),
+  };
+}
+
+function validNormalizedPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): coordinate is Coordinate & {
+  x: number;
+  y: number;
+} {
+  return (
+    validPoint(coordinate) &&
+    coordinate.x >= 0 &&
+    coordinate.x <= 1 &&
+    coordinate.y >= 0 &&
+    coordinate.y <= 1
+  );
+}
+
+function validTourcastPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): coordinate is Coordinate & {
+  tourcastX: number;
+  tourcastY: number;
+} {
+  return (
+    coordinate?.tourcastX !== null &&
+    coordinate?.tourcastX !== undefined &&
+    coordinate?.tourcastY !== null &&
+    coordinate?.tourcastY !== undefined &&
+    Number.isFinite(
+      coordinate.tourcastX,
+    ) &&
+    Number.isFinite(
+      coordinate.tourcastY,
+    )
+  );
+}
+
+function canPlotPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+  calibration: MapCalibration,
+) {
+  if (
+    calibration.affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    return true;
+  }
+
+  return validPoint(coordinate);
+}
+
+function worldToPlotPoint(
+  world: WorldPoint,
+  calibration: MapCalibration,
+): PlotPoint | null {
+  const affine =
+    calibration.affine;
+
+  if (!affine) {
+    return null;
+  }
+
+  const {
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  } = affine;
+
+  /*
+   * This is the same hole-texture UV conversion used by
+   * PGA TOURCAST's Golf Engine.
+   *
+   * Their source:
+   *
+   *   j = rotX * rotY - pxX * pxY
+   *   pixelY =
+   *     (rotX*(x-coordX) -
+   *      pxX*(y-coordY)) / j
+   *
+   *   v = pixelY / dimY
+   *
+   *   pixelX =
+   *     (x - rotY*pixelY - coordX) / pxX
+   *
+   *   u = pixelX / dimX
+   */
+  const determinant =
+    rotX * rotY -
+    pxX * pxY;
+
+  if (
+    Math.abs(determinant) < 1e-12 ||
+    Math.abs(pxX) < 1e-12 ||
+    dimX <= 0 ||
+    dimY <= 0
+  ) {
+    return null;
+  }
+
+  const pixelY =
+    (
+      rotX *
+        (world.x - coordX) -
+      pxX *
+        (world.y - coordY)
+    ) /
+    determinant;
+
+  const pixelX =
+    (
+      world.x -
+      rotY * pixelY -
+      coordX
+    ) /
+    pxX;
+
+  const normalizedX =
+    pixelX / dimX;
+
+  const normalizedY =
+    pixelY / dimY;
+
+  /*
+   * Do NOT clamp invalid native coordinates to an edge.
+   * If PGA did not supply coordinates in this TFW frame,
+   * return null so we fall back to the visible normalized
+   * bottomToTop placement.
+   */
+  if (
+    !Number.isFinite(normalizedX) ||
+    !Number.isFinite(normalizedY) ||
+    normalizedX < 0 ||
+    normalizedX > 1 ||
+    normalizedY < 0 ||
+    normalizedY > 1
+  ) {
+    return null;
+  }
+
+  return {
+    x:
+      normalizedX *
+      VIEWBOX_SIZE,
+    y:
+      normalizedY *
+      VIEWBOX_SIZE,
+  };
+}
+
+function toPlotPoint(
+  coordinate: Coordinate,
+  calibration: MapCalibration,
+): PlotPoint {
+  /*
+   * PGA already supplies normalized bottomToTop x/y
+   * coordinates for every shot.
+   *
+   * These map directly onto the vertical TOURCAST
+   * terrain image:
+   *
+   *   0,0 = top-left
+   *   1,1 = bottom-right
+   *
+   * Prefer these authoritative placement coordinates
+   * whenever they are available.
+   */
+  if (validPoint(coordinate)) {
+    return {
+      x:
+        clampNormalized(
+          coordinate.x,
+        ) * VIEWBOX_SIZE,
+      y:
+        clampNormalized(
+          coordinate.y,
+        ) * VIEWBOX_SIZE,
+    };
+  }
+
+  /*
+   * Fallback for future PGA payloads that provide only
+   * TOURCAST world coordinates.
+   */
+  const affine =
+    calibration.affine;
+
+  if (
+    affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    const {
+      pxX,
+      rotX,
+      rotY,
+      pxY,
+      coordX,
+      coordY,
+      dimX,
+      dimY,
+    } = affine;
+
+    const determinant =
+      pxX * pxY -
+      rotY * rotX;
+
+    if (
+      Math.abs(determinant) > 1e-12 &&
+      dimX > 0 &&
+      dimY > 0
+    ) {
+      const deltaX =
+        coordinate.tourcastX -
+        coordX;
+
+      const deltaY =
+        coordinate.tourcastY -
+        coordY;
+
+      const pixelX =
+        (
+          pxY * deltaX -
+          rotY * deltaY
+        ) /
+        determinant;
+
+      const pixelY =
+        (
+          -rotX * deltaX +
+          pxX * deltaY
+        ) /
+        determinant;
+
+      return {
+        x:
+          clampNormalized(
+            pixelX / dimX,
+          ) * VIEWBOX_SIZE,
+        y:
+          clampNormalized(
+            pixelY / dimY,
+          ) * VIEWBOX_SIZE,
+      };
+    }
+  }
+
+  return {
+    x: 0,
+    y: 0,
+  };
+}
+
+function curveControlPoint(
+  from: PlotPoint,
+  to: PlotPoint,
+): PlotPoint {
+  const midpointX =
+    (from.x + to.x) / 2;
+
+  const midpointY =
+    (from.y + to.y) / 2;
+
+  const distance = Math.hypot(
+    to.x - from.x,
+    to.y - from.y,
+  );
+
+  const curveAmount =
+    Math.min(42, distance * 0.075);
+
+  return {
+    x: midpointX + curveAmount,
+    y: midpointY,
+  };
+}
+
+function curvePath(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  const control =
+    curveControlPoint(from, to);
+
+  return [
+    `M ${from.x} ${from.y}`,
+    `Q ${control.x} ${control.y}`,
+    `${to.x} ${to.y}`,
+  ].join(" ");
+}
+
+function pointOnQuadraticCurve(
+  from: PlotPoint,
+  to: PlotPoint,
+  progress: number,
+): PlotPoint {
+  const control =
+    curveControlPoint(from, to);
+
+  const t = clamp(progress, 0, 1);
+  const inverse = 1 - t;
+
+  return {
+    x:
+      inverse * inverse * from.x +
+      2 * inverse * t * control.x +
+      t * t * to.x,
+    y:
+      inverse * inverse * from.y +
+      2 * inverse * t * control.y +
+      t * t * to.y,
+  };
+}
+
+function approximateCurveLength(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  let length = 0;
+  let previous = from;
+
+  for (
+    let index = 1;
+    index <= 24;
+    index += 1
+  ) {
+    const point =
+      pointOnQuadraticCurve(
+        from,
+        to,
+        index / 24,
+      );
+
+    length += Math.hypot(
+      point.x - previous.x,
+      point.y - previous.y,
+    );
+
+    previous = point;
+  }
+
+  return Math.max(length, 1);
+}
+
+type TrackedPlotPoint = PlotPoint & {
+  t: number;
+  altitude: number;
+};
+
+type LocalTrackPoint = {
+  x: number;
+  y: number;
+  t: number;
+  altitude: number;
+};
+
+function evaluatePolynomial(
+  coefficients: number[],
+  time: number,
+) {
+  let result = 0;
+  let power = 1;
+
+  for (
+    const coefficient
+      of coefficients
+  ) {
+    result +=
+      coefficient * power;
+
+    power *= time;
+  }
+
+  return result;
+}
+
+function mapLocalTrackToPlot(
+  from: PlotPoint,
+  to: PlotPoint,
+  localPoints: LocalTrackPoint[],
+): TrackedPlotPoint[] | null {
+  if (localPoints.length < 2) {
+    return null;
+  }
+
+  const first =
+    localPoints[0];
+
+  const last =
+    localPoints[
+      localPoints.length - 1
+    ];
+
+  const localDx =
+    last.x - first.x;
+
+  const localDy =
+    last.y - first.y;
+
+  const localLength =
+    Math.hypot(
+      localDx,
+      localDy,
+    );
+
+  const screenDx =
+    to.x - from.x;
+
+  const screenDy =
+    to.y - from.y;
+
+  const screenLength =
+    Math.hypot(
+      screenDx,
+      screenDy,
+    );
+
+  if (
+    localLength < 1e-6 ||
+    screenLength < 1e-6
+  ) {
+    return null;
+  }
+
+  const localLengthSq =
+    localLength *
+    localLength;
+
+  const perpendicularX =
+    -screenDy /
+    screenLength;
+
+  const perpendicularY =
+    screenDx /
+    screenLength;
+
+  const lateralScale =
+    screenLength /
+    localLength;
+
+  return localPoints.map(
+    (point) => {
+      const dx =
+        point.x -
+        first.x;
+
+      const dy =
+        point.y -
+        first.y;
+
+      /*
+       * Position along the shot's local start→finish axis.
+       */
+      const along =
+        (
+          dx * localDx +
+          dy * localDy
+        ) /
+        localLengthSq;
+
+      /*
+       * Signed distance away from the straight start→finish
+       * line. This is what preserves PGA's actual curve/break
+       * when we rotate the tracking data onto our map.
+       */
+      const lateral =
+        (
+          localDx * dy -
+          localDy * dx
+        ) /
+        localLength;
+
+      return {
+        x:
+          from.x +
+          screenDx * along +
+          perpendicularX *
+            lateral *
+            lateralScale,
+
+        y:
+          from.y +
+          screenDy * along +
+          perpendicularY *
+            lateral *
+            lateralScale,
+
+        t:
+          point.t,
+
+        altitude:
+          point.altitude,
+      };
+    },
+  );
+}
+
+function flightTrackPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] | null {
+  const trajectory =
+    shot.flightTrajectory;
+
+  if (
+    !trajectory ||
+    trajectory.timeEnd <=
+      trajectory.timeStart
+  ) {
+    return null;
+  }
+
+  const sampleCount = 64;
+
+  const raw: {
+    x: number;
+    y: number;
+    z: number;
+    t: number;
+  }[] = [];
+
+  for (
+    let index = 0;
+    index < sampleCount;
+    index += 1
+  ) {
+    const normalizedTime =
+      index /
+      (sampleCount - 1);
+
+    const time =
+      trajectory.timeStart +
+      (
+        trajectory.timeEnd -
+        trajectory.timeStart
+      ) *
+        normalizedTime;
+
+    raw.push({
+      x: evaluatePolynomial(
+        trajectory.xFit,
+        time,
+      ),
+
+      /*
+       * PGA radar Y is height for the payload we've
+       * verified from TOURCAST.
+       */
+      y: evaluatePolynomial(
+        trajectory.yFit,
+        time,
+      ),
+
+      /*
+       * PGA radar Z carries the horizontal side component.
+       */
+      z: evaluatePolynomial(
+        trajectory.zFit,
+        time,
+      ),
+
+      t:
+        normalizedTime,
+    });
+  }
+
+  /*
+   * Remove the start→finish height baseline so altitude is
+   * the ball's height ABOVE its straight ground-level path.
+   */
+  const firstHeight =
+    raw[0].y;
+
+  const lastHeight =
+    raw[
+      raw.length - 1
+    ].y;
+
+  const altitudeValues =
+    raw.map((point) => {
+      const baseline =
+        firstHeight +
+        (
+          lastHeight -
+          firstHeight
+        ) *
+          point.t;
+
+      return Math.max(
+        0,
+        point.y -
+          baseline,
+      );
+    });
+
+  const maximumAltitude =
+    Math.max(
+      ...altitudeValues,
+      0.0001,
+    );
+
+  const localPoints:
+    LocalTrackPoint[] =
+    raw.map(
+      (
+        point,
+        index,
+      ) => ({
+        /*
+         * X = downrange
+         * Z = lateral movement
+         */
+        x:
+          point.x,
+
+        y:
+          point.z,
+
+        t:
+          point.t,
+
+        altitude:
+          clamp(
+            altitudeValues[index] /
+              maximumAltitude,
+            0,
+            1,
+          ),
+      }),
+    );
+
+  return mapLocalTrackToPlot(
+    shot.from,
+    shot.to,
+    localPoints,
+  );
+}
+
+function ballRollTrackPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] | null {
+  const path =
+    shot.ballPath?.path;
+
+  if (!path || path.length < 2) {
+    return null;
+  }
+
+  const ordered =
+    [...path].sort(
+      (
+        first,
+        second,
+      ) =>
+        first.secondsSinceStart -
+        second.secondsSinceStart,
+    );
+
+  const startTime =
+    ordered[0]
+      .secondsSinceStart;
+
+  const endTime =
+    ordered[
+      ordered.length - 1
+    ].secondsSinceStart;
+
+  const duration =
+    Math.max(
+      endTime - startTime,
+      0.001,
+    );
+
+  const localPoints:
+    LocalTrackPoint[] =
+    ordered.map(
+      (point) => ({
+        x:
+          point.x,
+
+        y:
+          point.y,
+
+        t:
+          clamp(
+            (
+              point.secondsSinceStart -
+              startTime
+            ) /
+              duration,
+            0,
+            1,
+          ),
+
+        altitude: 0,
+      }),
+    );
+
+  return mapLocalTrackToPlot(
+    shot.from,
+    shot.to,
+    localPoints,
+  );
+}
+
+function fallbackTrackPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] {
+  const result:
+    TrackedPlotPoint[] = [];
+
+  const samples = 32;
+
+  for (
+    let index = 0;
+    index < samples;
+    index += 1
+  ) {
+    const t =
+      index /
+      (samples - 1);
+
+    const point =
+      pointOnQuadraticCurve(
+        shot.from,
+        shot.to,
+        t,
+      );
+
+    result.push({
+      ...point,
+      t,
+      altitude: 0,
+    });
+  }
+
+  return result;
+}
+
+function hasRealTrackingPath(
+  shot: PlotShot,
+) {
+  return Boolean(
+    (
+      isGreenLocation(
+        shot.fromLocation,
+      ) &&
+      shot.ballPath?.path.length
+    ) ||
+      shot.flightTrajectory ||
+      shot.ballPath?.path.length,
+  );
+}
+
+function trackedPathPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] {
+  /*
+   * Once the ball is already on the green, PGA's BallPath is
+   * authoritative: it contains the actual sampled roll/break.
+   */
+  if (
+    isGreenLocation(
+      shot.fromLocation,
+    )
+  ) {
+    const roll =
+      ballRollTrackPoints(
+        shot,
+      );
+
+    if (roll) {
+      return roll;
+    }
+  }
+
+  /*
+   * For full shots, use the actual radar polynomial.
+   */
+  const flight =
+    flightTrackPoints(
+      shot,
+    );
+
+  if (flight) {
+    return flight;
+  }
+
+  /*
+   * Some PGA shots expose a sampled BallPath even without
+   * radar. Use that before falling back.
+   */
+  const roll =
+    ballRollTrackPoints(
+      shot,
+    );
+
+  if (roll) {
+    return roll;
+  }
+
+  /*
+   * Last-resort legacy behavior.
+   */
+  return fallbackTrackPoints(
+    shot,
+  );
+}
+
+function trackedPathLength(
+  points: TrackedPlotPoint[],
+) {
+  let length = 0;
+
+  for (
+    let index = 1;
+    index < points.length;
+    index += 1
+  ) {
+    length +=
+      Math.hypot(
+        points[index].x -
+          points[index - 1].x,
+
+        points[index].y -
+          points[index - 1].y,
+      );
+  }
+
+  return Math.max(
+    length,
+    1,
+  );
+}
+
+function trackedPathD(
+  points: TrackedPlotPoint[],
+) {
+  if (!points.length) {
+    return "";
+  }
+
+  return [
+    `M ${points[0].x} ${points[0].y}`,
+    ...points
+      .slice(1)
+      .map(
+        (point) =>
+          `L ${point.x} ${point.y}`,
+      ),
+  ].join(" ");
+}
+
+function pointOnTrackedPath(
+  points: TrackedPlotPoint[],
+  progress: number,
+): TrackedPlotPoint | null {
+  if (!points.length) {
+    return null;
+  }
+
+  if (points.length === 1) {
+    return points[0];
+  }
+
+  const target =
+    clamp(
+      progress,
+      0,
+      1,
+    );
+
+  if (
+    target <=
+    points[0].t
+  ) {
+    return points[0];
+  }
+
+  for (
+    let index = 1;
+    index < points.length;
+    index += 1
+  ) {
+    const previous =
+      points[index - 1];
+
+    const current =
+      points[index];
+
+    if (
+      target >
+      current.t
+    ) {
+      continue;
+    }
+
+    const interval =
+      Math.max(
+        current.t -
+          previous.t,
+        0.000001,
+      );
+
+    const localProgress =
+      clamp(
+        (
+          target -
+          previous.t
+        ) /
+          interval,
+        0,
+        1,
+      );
+
+    return {
+      x:
+        previous.x +
+        (
+          current.x -
+          previous.x
+        ) *
+          localProgress,
+
+      y:
+        previous.y +
+        (
+          current.y -
+          previous.y
+        ) *
+          localProgress,
+
+      t:
+        target,
+
+      altitude:
+        previous.altitude +
+        (
+          current.altitude -
+          previous.altitude
+        ) *
+          localProgress,
+    };
+  }
+
+  return points[
+    points.length - 1
+  ];
+}
+
+function trackingAnimationDuration(
+  shot: PlotShot,
+) {
+  if (
+    isGreenLocation(
+      shot.fromLocation,
+    ) &&
+    shot.ballPath?.path.length
+  ) {
+    const path =
+      shot.ballPath.path;
+
+    const first =
+      path[0]
+        .secondsSinceStart;
+
+    const last =
+      path[
+        path.length - 1
+      ].secondsSinceStart;
+
+    const realDuration =
+      Math.max(
+        0,
+        last - first,
+      );
+
+    if (realDuration > 0) {
+      /*
+       * Keep PGA's real sample timing relationships intact.
+       *
+       * The entire timestamp axis is stretched uniformly for
+       * presentation; no points, break, acceleration pattern, or
+       * path geometry are invented here.
+       */
+      return clamp(
+        realDuration *
+          1000 *
+          PUTT_PLAYBACK_SLOWDOWN,
+        1100,
+        6500,
+      );
+    }
+  }
+
+  const trajectory =
+    shot.flightTrajectory;
+
+  if (trajectory) {
+    const realDuration =
+      trajectory.timeEnd -
+      trajectory.timeStart;
+
+    /*
+     * TOURCAST-style replay is intentionally a little faster
+     * than real-time flight while still respecting PGA timing.
+     */
+    return clamp(
+      realDuration *
+        1000 *
+        0.62,
+      1400,
+      4300,
+    );
+  }
+
+  if (
+    shot.ballPath?.path.length
+  ) {
+    const path =
+      shot.ballPath.path;
+
+    const first =
+      path[0]
+        .secondsSinceStart;
+
+    const last =
+      path[
+        path.length - 1
+      ].secondsSinceStart;
+
+    return clamp(
+      (
+        last -
+        first
+      ) * 1000,
+      800,
+      3600,
+    );
+  }
+
+  return shot.finalStroke
+    ? 1150
+    : shot.strokeNumber === 1
+      ? 2200
+      : 1550;
+}
+
+function easeInOutCubic(
+  value: number,
+) {
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 -
+        Math.pow(
+          -2 * value + 2,
+          3,
+        ) /
+          2;
+}
+
+function isGreenLocation(
+  value: string | null | undefined,
+) {
+  return (
+    value
+      ?.trim()
+      .toLowerCase()
+      .includes("green") ??
+    false
+  );
+}
+
+function usefulPositiveNumber(
+  value: number | null | undefined,
+) {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value > 0
+  );
+}
+
+function usefulNumber(
+  value: number | null | undefined,
+) {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  );
+}
+
+function radarMetrics(
+  shot: PlotShot,
+) {
+  const radar =
+    shot.radarData;
+
+  if (!radar) {
+    return [];
+  }
+
+  const metrics: {
+    label: string;
+    value: string;
+  }[] = [];
+
+  if (
+    usefulPositiveNumber(
+      radar.ballSpeed,
+    )
+  ) {
+    metrics.push({
+      label: "Ball speed",
+      value:
+        `${radar.ballSpeed!.toFixed(1)} mph`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.clubSpeed,
+    )
+  ) {
+    metrics.push({
+      label: "Club speed",
+      value:
+        `${radar.clubSpeed!.toFixed(1)} mph`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.apexHeight,
+    )
+  ) {
+    metrics.push({
+      label: "Apex",
+      value:
+        `${radar.apexHeight!.toFixed(1)} ft`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.carry,
+    )
+  ) {
+    metrics.push({
+      label: "Carry",
+      value:
+        `${radar.carry!.toFixed(0)} yds`,
+    });
+  }
+
+  if (
+    usefulNumber(
+      radar.verticalLaunchAngle,
+    ) &&
+    radar.verticalLaunchAngle !== 0
+  ) {
+    metrics.push({
+      label: "Launch",
+      value:
+        `${radar.verticalLaunchAngle!.toFixed(1)}°`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.launchSpin,
+    )
+  ) {
+    metrics.push({
+      label: "Spin",
+      value:
+        `${Math.round(radar.launchSpin!)} rpm`,
+    });
+  }
+
+  if (
+    usefulNumber(
+      radar.spinAxis,
+    ) &&
+    radar.spinAxis !== 0
+  ) {
+    metrics.push({
+      label: "Spin axis",
+      value:
+        `${radar.spinAxis!.toFixed(1)}°`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.smashFactor,
+    )
+  ) {
+    metrics.push({
+      label: "Smash",
+      value:
+        radar.smashFactor!.toFixed(2),
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.actualFlightTime,
+    )
+  ) {
+    metrics.push({
+      label: "Flight",
+      value:
+        `${radar.actualFlightTime!.toFixed(1)} sec`,
+    });
+  }
+
+  const headlineMetrics = new Set([
+    "Ball speed",
+    "Apex",
+    "Carry",
+    "Spin",
+  ]);
+
+  return metrics.filter((metric) =>
+    headlineMetrics.has(metric.label),
+  );
+}
+
+function shotDescription(
+  shot: PlotShot,
+) {
+  return [
+    shot.distance,
+    shot.finalStroke
+      ? "In the hole"
+      : shot.distanceRemaining
+        ? `${shot.distanceRemaining} remaining`
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function pointerDistance(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return Math.hypot(
+    second.x - first.x,
+    second.y - first.y,
+  );
+}
+
+function pointerAngle(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return (
+    Math.atan2(
+      second.y - first.y,
+      second.x - first.x,
+    ) *
+    (180 / Math.PI)
+  );
+}
+
+function pointerMidpoint(
+  first: PointerPosition,
+  second: PointerPosition,
+): PointerPosition {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+}
+
+export default function GolfHoleMap2D({
+  title,
+  imageUrl,
+  greenImageUrl = null,
+  greenModelUrl = null,
+  pinWorld = null,
+  shots,
+  selectedStrokeNumber,
+  onSelectStroke,
+  calibration,
+  showShotOverlay = true,
+  imageFit = "fill",
+  emptyStateLabel = "No shot data is available yet.",
+}: Props) {
+  const viewportRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const videoPanelRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const pointersRef =
+    useRef(
+      new Map<number, PointerPosition>(),
+    );
+
+  const dragStartRef =
+    useRef<{
+      pointer: PointerPosition;
+      transform: TransformState;
+    } | null>(null);
+
+  const gestureStartRef =
+    useRef<GestureSnapshot | null>(
+      null,
+    );
+
+  const [transform, setTransform] =
+    useState<TransformState>(
+      DEFAULT_TRANSFORM,
+    );
+
+  const [isInteracting, setIsInteracting] =
+    useState(false);
+
+  const [isPlaying, setIsPlaying] =
+    useState(false);
+
+  const [viewMode, setViewMode] =
+    useState<
+      "course" |
+      "green" |
+      "green3d"
+    >(
+      "course",
+    );
+
+  /*
+   * Video playback will replace only the right-side contextual
+   * panel. The map remains visible so the shot's location stays
+   * in context.
+   *
+   * We intentionally do not invent a playback URL from PGA's
+   * videoId. Once the actual PGA player source is verified, it
+   * can plug directly into this state.
+   */
+  const [
+    videoStrokeNumber,
+    setVideoStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animatedStrokeNumber,
+    setAnimatedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animationProgress,
+    setAnimationProgress,
+  ] = useState(1);
+
+  const [
+    revealedStrokeCount,
+    setRevealedStrokeCount,
+  ] = useState<number | null>(null);
+
+  const animationFrameRef =
+    useRef<number | null>(null);
+
+  const animationResolveRef =
+    useRef<(() => void) | null>(null);
+
+  /*
+   * Load PGA's dedicated Green View as soon as ShotCast
+   * mounts instead of waiting until the approach lands.
+   *
+   * By the time playback reaches the green, the browser
+   * should already have the image decoded/cached.
+   */
+  useEffect(() => {
+    if (!greenImageUrl) {
+      return;
+    }
+
+    const image = new Image();
+
+    image.decoding = "async";
+    image.src = greenImageUrl;
+
+    /*
+     * decode() encourages the browser to finish decoding
+     * before we actually switch views. Some browsers may
+     * reject decode() even though the image still loads,
+     * so deliberately ignore that rejection.
+     */
+    void image
+      .decode()
+      .catch(() => undefined);
+  }, [greenImageUrl]);
+
+  const coursePlottedShots =
+    useMemo(
+      () => {
+        if (!showShotOverlay) {
+          return [];
+        }
+
+        return shots
+          .map(
+            (
+              shot,
+            ): PlotShot | null => {
+              if (
+                !shot.bottomToTop ||
+                !canPlotPoint(
+                  shot.bottomToTop.from,
+                  calibration,
+                ) ||
+                !canPlotPoint(
+                  shot.bottomToTop.to,
+                  calibration,
+                )
+              ) {
+                return null;
+              }
+
+              const nativeFrom =
+                shot.worldFrom
+                  ? worldToPlotPoint(
+                      shot.worldFrom,
+                      calibration,
+                    )
+                  : null;
+
+              const nativeTo =
+                shot.worldTo
+                  ? worldToPlotPoint(
+                      shot.worldTo,
+                      calibration,
+                    )
+                  : null;
+
+              const useNativeWorld =
+                nativeFrom !== null &&
+                nativeTo !== null;
+
+              return {
+                strokeNumber:
+                  shot.strokeNumber,
+                from:
+                  useNativeWorld
+                    ? nativeFrom
+                    : toPlotPoint(
+                        shot.bottomToTop
+                          .from,
+                        calibration,
+                      ),
+                to:
+                  useNativeWorld
+                    ? nativeTo
+                    : toPlotPoint(
+                        shot.bottomToTop
+                          .to,
+                        calibration,
+                      ),
+                finalStroke:
+                  shot.finalStroke,
+                videoId:
+                  shot.videoId ?? null,
+                radarData:
+                  shot.radarData ?? null,
+                flightTrajectory:
+                  shot.flightTrajectory ??
+                  null,
+                ballPath:
+                  shot.ballPath ?? null,
+                distance:
+                  shot.distance,
+                distanceRemaining:
+                  shot.distanceRemaining,
+                fromLocation:
+                  shot.fromLocation,
+                toLocation:
+                  shot.toLocation,
+              };
+            },
+          )
+          .filter(
+            (
+              shot,
+            ): shot is PlotShot =>
+              shot !== null,
+          );
+      },
+      [
+        calibration,
+        shots,
+        showShotOverlay,
+      ],
+    );
+
+  const greenPlottedShots =
+    useMemo(
+      () => {
+        if (
+          !showShotOverlay ||
+          !greenImageUrl
+        ) {
+          return [];
+        }
+
+        return shots
+          .map(
+            (
+              shot,
+            ): PlotShot | null => {
+              const coordinates =
+                shot.greenBottomToTop;
+
+              /*
+               * PGA often returns Green View coordinates for
+               * every stroke, including shots that originate
+               * several hundred yards outside the crop.
+               *
+               * Keep only endpoints that genuinely belong
+               * inside the Green View image.
+               */
+              if (!coordinates) {
+                return null;
+              }
+
+              const to =
+                coordinates.to;
+
+              /*
+               * A stroke is useful in Green View whenever
+               * its LANDING point belongs to the green crop.
+               *
+               * Keep the actual point in a local variable so
+               * TypeScript preserves the validity narrowing.
+               *
+               * For putts, both endpoints are naturally
+               * inside the crop.
+               *
+               * For the approach, PGA may report a starting
+               * coordinate outside the crop. Keep that shot
+               * and clamp its starting point to the image
+               * edge so Green View retains the incoming
+               * approach trail and landing marker.
+               */
+              if (
+                !validNormalizedPoint(to)
+              ) {
+                return null;
+              }
+
+              const from =
+                validNormalizedPoint(
+                  coordinates.from,
+                )
+                  ? coordinates.from
+                  : clampNormalizedPoint(
+                      coordinates.from,
+                    );
+
+              if (!from) {
+                return null;
+              }
+
+              return {
+                strokeNumber:
+                  shot.strokeNumber,
+                from: {
+                  x:
+                    from.x *
+                    VIEWBOX_SIZE,
+                  y:
+                    from.y *
+                    VIEWBOX_SIZE,
+                },
+                to: {
+                  x:
+                    to.x *
+                    VIEWBOX_SIZE,
+                  y:
+                    to.y *
+                    VIEWBOX_SIZE,
+                },
+                finalStroke:
+                  shot.finalStroke,
+                videoId:
+                  shot.videoId ?? null,
+                radarData:
+                  shot.radarData ?? null,
+                flightTrajectory:
+                  shot.flightTrajectory ??
+                  null,
+                ballPath:
+                  shot.ballPath ?? null,
+                distance:
+                  shot.distance,
+                distanceRemaining:
+                  shot.distanceRemaining,
+                fromLocation:
+                  shot.fromLocation,
+                toLocation:
+                  shot.toLocation,
+              };
+            },
+          )
+          .filter(
+            (
+              shot,
+            ): shot is PlotShot =>
+              shot !== null,
+          );
+      },
+      [
+        greenImageUrl,
+        shots,
+        showShotOverlay,
+      ],
+    );
+
+  const greenViewAvailable =
+    Boolean(
+      greenImageUrl &&
+      greenPlottedShots.length > 0,
+    );
+
+  const isAnyGreenView =
+    (
+      viewMode === "green" ||
+      viewMode === "green3d"
+    ) &&
+    greenViewAvailable;
+
+  const plottedShots =
+    isAnyGreenView
+      ? greenPlottedShots
+      : coursePlottedShots;
+
+  const activeImageUrl =
+    isAnyGreenView &&
+    greenImageUrl
+      ? greenImageUrl
+      : imageUrl;
+
+  const green3dAvailable =
+    Boolean(
+      greenModelUrl,
+    );
+
+  const selectedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    ) ??
+    plottedShots[0] ??
+    null;
+
+  /*
+   * The final stroke's destination is PGA's cup location
+   * in the normalized Green View coordinate system.
+   */
+  const greenHolePoint =
+    greenPlottedShots.find(
+      (shot) =>
+        shot.finalStroke,
+    )?.to ?? null;
+
+  /*
+   * Navigation always follows the complete hole sequence,
+   * regardless of whether the current camera is using the
+   * Course View or Green View coordinate frame.
+   */
+  const selectedCourseShotIndex =
+    coursePlottedShots.findIndex(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    );
+
+  const previousShot =
+    selectedCourseShotIndex > 0
+      ? coursePlottedShots[
+          selectedCourseShotIndex - 1
+        ]
+      : null;
+
+  const nextShot =
+    selectedCourseShotIndex >= 0 &&
+    selectedCourseShotIndex <
+      coursePlottedShots.length - 1
+      ? coursePlottedShots[
+          selectedCourseShotIndex + 1
+        ]
+      : null;
+
+  const constrainTransform =
+    useCallback(
+      (
+        next: TransformState,
+      ): TransformState => {
+        const viewport =
+          viewportRef.current;
+
+        const width =
+          viewport?.clientWidth ?? 400;
+
+        const height =
+          viewport?.clientHeight ?? 400;
+
+        const scale =
+          clamp(
+            next.scale,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        /*
+         * Keep the transformed course image covering the
+         * viewport instead of allowing it to be dragged
+         * completely away and exposing a large black void.
+         *
+         * At 1×:
+         *   no translation is allowed.
+         *
+         * At higher zoom:
+         *   translation is limited to the extra image area
+         *   created by scaling around the center.
+         */
+        const maxX =
+          ((scale - 1) * width) / 2;
+
+        const maxY =
+          ((scale - 1) * height) / 2;
+
+        return {
+          scale,
+          x: clamp(
+            next.x,
+            -maxX,
+            maxX,
+          ),
+          y: clamp(
+            next.y,
+            -maxY,
+            maxY,
+          ),
+          rotation:
+            ((next.rotation + 180) %
+              360) -
+            180,
+        };
+      },
+      [],
+    );
+
+  const updateTransform =
+    useCallback(
+      (
+        updater:
+          | TransformState
+          | ((
+              current: TransformState,
+            ) => TransformState),
+      ) => {
+        setTransform((current) => {
+          const next =
+            typeof updater ===
+            "function"
+              ? updater(current)
+              : updater;
+
+          return constrainTransform(
+            next,
+          );
+        });
+      },
+      [constrainTransform],
+    );
+
+  const cancelShotAnimation =
+    useCallback(() => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+
+        animationFrameRef.current =
+          null;
+      }
+
+      animationResolveRef.current?.();
+      animationResolveRef.current =
+        null;
+
+      setAnimatedStrokeNumber(null);
+      setAnimationProgress(1);
+    }, []);
+
+  const animateShot =
+    useCallback(
+      (
+        shot: PlotShot,
+      ) =>
+        new Promise<void>((resolve) => {
+          cancelShotAnimation();
+
+          const prefersReducedMotion =
+            window.matchMedia(
+              "(prefers-reduced-motion: reduce)",
+            ).matches;
+
+          if (prefersReducedMotion) {
+            setAnimatedStrokeNumber(
+              shot.strokeNumber,
+            );
+            setAnimationProgress(1);
+
+            window.setTimeout(() => {
+              setAnimatedStrokeNumber(
+                null,
+              );
+              resolve();
+            }, 150);
+
+            return;
+          }
+
+          const duration =
+            trackingAnimationDuration(
+              shot,
+            );
+
+          const startedAt =
+            performance.now();
+
+          setAnimatedStrokeNumber(
+            shot.strokeNumber,
+          );
+          setAnimationProgress(0);
+
+          animationResolveRef.current =
+            resolve;
+
+          const tick = (
+            now: number,
+          ) => {
+            const rawProgress =
+              clamp(
+                (now - startedAt) /
+                  duration,
+                0,
+                1,
+              );
+
+            setAnimationProgress(
+              hasRealTrackingPath(
+                shot,
+              )
+                ? rawProgress
+                : easeInOutCubic(
+                    rawProgress,
+                  ),
+            );
+
+            if (rawProgress >= 1) {
+              animationFrameRef.current =
+                null;
+
+              animationResolveRef.current =
+                null;
+
+              /*
+               * Keep the completed shot mounted briefly so the
+               * mobile info overlay can fade away naturally before
+               * playback advances to the next stroke.
+               */
+              window.setTimeout(() => {
+                setAnimatedStrokeNumber(
+                  null,
+                );
+                resolve();
+              }, 650);
+
+              return;
+            }
+
+            animationFrameRef.current =
+              window.requestAnimationFrame(
+                tick,
+              );
+          };
+
+          animationFrameRef.current =
+            window.requestAnimationFrame(
+              tick,
+            );
+        }),
+      [cancelShotAnimation],
+    );
+
+  const resetView =
+    useCallback(() => {
+      cancelShotAnimation();
+      setIsPlaying(false);
+      /*
+       * Reset restores the complete static replay.
+       * Progressive hiding is used only while Play runs.
+       */
+      setRevealedStrokeCount(null);
+      setViewMode("course");
+      setTransform(
+        DEFAULT_TRANSFORM,
+      );
+    }, [cancelShotAnimation]);
+
+  const focusShot =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        if (!shot) {
+          resetView();
+          return;
+        }
+
+        const viewport =
+          viewportRef.current;
+
+        if (!viewport) {
+          return;
+        }
+
+        const width =
+          viewport.clientWidth;
+
+        const height =
+          viewport.clientHeight;
+
+        const targetScale =
+          shot.strokeNumber === 1
+            ? 1.55
+            : shot.finalStroke
+              ? 3.75
+              : 3;
+
+        const targetX =
+          (shot.to.x /
+            VIEWBOX_SIZE) *
+          width;
+
+        const targetY =
+          (shot.to.y /
+            VIEWBOX_SIZE) *
+          height;
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        updateTransform({
+          scale: targetScale,
+          x:
+            (centerX - targetX) *
+            targetScale,
+          y:
+            (centerY - targetY) *
+            targetScale,
+          rotation: 0,
+        });
+      },
+      [
+        resetView,
+        updateTransform,
+      ],
+    );
+
+  /*
+   * Frame a genuine PGA putt rather than using a fixed Green View
+   * zoom.
+   *
+   * The fit is based on:
+   *   - PGA's actual sampled BallPath when available
+   *   - the shot endpoints as a safe geometry fallback
+   *   - PGA's confirmed cup point when available
+   *
+   * This changes only the viewport. It does not alter shot data.
+   */
+  const focusGreenPutt =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        const viewport =
+          viewportRef.current;
+
+        if (
+          !viewport ||
+          !shot
+        ) {
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+          return;
+        }
+
+        const width =
+          Math.max(
+            viewport.clientWidth,
+            1,
+          );
+
+        const height =
+          Math.max(
+            viewport.clientHeight,
+            1,
+          );
+
+        /*
+         * On-green BallPath is PGA's authoritative sampled roll.
+         */
+        const realRoll =
+          ballRollTrackPoints(
+            shot,
+          );
+
+        const fitPoints:
+          PlotPoint[] =
+          realRoll &&
+          realRoll.length >= 2
+            ? realRoll.map(
+                (point) => ({
+                  x: point.x,
+                  y: point.y,
+                }),
+              )
+            : [
+                shot.from,
+                shot.to,
+              ];
+
+        /*
+         * Keep the cup visible whenever PGA has definitively
+         * identified it from the final stroke.
+         */
+        if (greenHolePoint) {
+          fitPoints.push(
+            greenHolePoint,
+          );
+        }
+
+        let minX =
+          Infinity;
+
+        let maxX =
+          -Infinity;
+
+        let minY =
+          Infinity;
+
+        let maxY =
+          -Infinity;
+
+        for (
+          const point
+          of fitPoints
+        ) {
+          minX =
+            Math.min(
+              minX,
+              point.x,
+            );
+
+          maxX =
+            Math.max(
+              maxX,
+              point.x,
+            );
+
+          minY =
+            Math.min(
+              minY,
+              point.y,
+            );
+
+          maxY =
+            Math.max(
+              maxY,
+              point.y,
+            );
+        }
+
+        if (
+          !Number.isFinite(minX) ||
+          !Number.isFinite(maxX) ||
+          !Number.isFinite(minY) ||
+          !Number.isFinite(maxY)
+        ) {
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+          return;
+        }
+
+        /*
+         * Convert the PGA 1000×1000 plotting frame into the
+         * rendered viewport's pixel dimensions.
+         */
+        const pathWidthPx =
+          Math.max(
+            (
+              maxX -
+              minX
+            ) /
+              VIEWBOX_SIZE *
+              width,
+            1,
+          );
+
+        const pathHeightPx =
+          Math.max(
+            (
+              maxY -
+              minY
+            ) /
+              VIEWBOX_SIZE *
+              height,
+            1,
+          );
+
+        /*
+         * Leave breathing room around the rolling ball and flag.
+         * Padding is presentation-only and does not affect PGA data.
+         */
+        const padding =
+          clamp(
+            Math.min(
+              width,
+              height,
+            ) *
+              0.16,
+            42,
+            76,
+          );
+
+        const availableWidth =
+          Math.max(
+            width -
+              padding *
+                2,
+            1,
+          );
+
+        const availableHeight =
+          Math.max(
+            height -
+              padding *
+                2,
+            1,
+          );
+
+        const targetScale =
+          clamp(
+            Math.min(
+              availableWidth /
+                pathWidthPx,
+              availableHeight /
+                pathHeightPx,
+            ),
+            MIN_SCALE,
+            GREEN_MAX_SCALE,
+          );
+
+        const centerPlotX =
+          (
+            minX +
+            maxX
+          ) /
+          2;
+
+        const centerPlotY =
+          (
+            minY +
+            maxY
+          ) /
+          2;
+
+        const targetX =
+          centerPlotX /
+            VIEWBOX_SIZE *
+            width;
+
+        const targetY =
+          centerPlotY /
+            VIEWBOX_SIZE *
+            height;
+
+        const centerX =
+          width /
+          2;
+
+        const centerY =
+          height /
+          2;
+
+        updateTransform({
+          scale:
+            targetScale,
+
+          x:
+            (
+              centerX -
+              targetX
+            ) *
+            targetScale,
+
+          y:
+            (
+              centerY -
+              targetY
+            ) *
+            targetScale,
+
+          rotation: 0,
+        });
+      },
+      [
+        greenHolePoint,
+        updateTransform,
+      ],
+    );
+
+  function zoomAroundPoint(
+    clientX: number,
+    clientY: number,
+    scaleMultiplier: number,
+  ) {
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+    const localX =
+      clientX - rect.left;
+
+    const localY =
+      clientY - rect.top;
+
+    updateTransform(
+      (current) => {
+        const nextScale =
+          clamp(
+            current.scale *
+              scaleMultiplier,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        const ratio =
+          nextScale /
+          current.scale;
+
+        const centerX =
+          rect.width / 2;
+
+        const centerY =
+          rect.height / 2;
+
+        return {
+          ...current,
+          scale: nextScale,
+          x:
+            localX -
+            centerX -
+            (localX -
+              centerX -
+              current.x) *
+              ratio,
+          y:
+            localY -
+            centerY -
+            (localY -
+              centerY -
+              current.y) *
+              ratio,
+        };
+      },
+    );
+  }
+
+  function handleWheel(
+    event: React.WheelEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      event.deltaY < 0
+        ? 1.12
+        : 0.89,
+    );
+  }
+
+  function handleDoubleClick(
+    event: React.MouseEvent<HTMLDivElement>,
+  ) {
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      transform.scale >= 2.5
+        ? 0.5
+        : 1.75,
+    );
+  }
+
+  function handlePointerDown(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    const target =
+      event.target as Element | null;
+
+    /*
+     * Shot markers control replay selection. Do not let the
+     * pan/zoom layer capture those presses as drag gestures.
+     */
+    if (
+      target?.closest(
+        '[data-shotcast-marker="true"]',
+      )
+    ) {
+      return;
+    }
+
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    viewport.setPointerCapture(
+      event.pointerId,
+    );
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    setIsInteracting(true);
+    setIsPlaying(false);
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 1) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    } else if (
+      pointers.length >= 2
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      gestureStartRef.current = {
+        distance:
+          pointerDistance(
+            first,
+            second,
+          ),
+        angle:
+          pointerAngle(
+            first,
+            second,
+          ),
+        midpoint:
+          pointerMidpoint(
+            first,
+            second,
+          ),
+        transform: {
+          ...transform,
+        },
+      };
+
+      dragStartRef.current =
+        null;
+    }
+  }
+
+  function handlePointerMove(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    if (
+      !pointersRef.current.has(
+        event.pointerId,
+      )
+    ) {
+      return;
+    }
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (
+      pointers.length === 1 &&
+      dragStartRef.current
+    ) {
+      const pointer =
+        pointers[0];
+
+      const start =
+        dragStartRef.current;
+
+      updateTransform({
+        ...start.transform,
+        x:
+          start.transform.x +
+          pointer.x -
+          start.pointer.x,
+        y:
+          start.transform.y +
+          pointer.y -
+          start.pointer.y,
+      });
+
+      return;
+    }
+
+    if (
+      pointers.length >= 2 &&
+      gestureStartRef.current
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      const distance =
+        pointerDistance(
+          first,
+          second,
+        );
+
+      const angle =
+        pointerAngle(
+          first,
+          second,
+        );
+
+      const midpoint =
+        pointerMidpoint(
+          first,
+          second,
+        );
+
+      const start =
+        gestureStartRef.current;
+
+      const distanceRatio =
+        start.distance > 0
+          ? distance /
+            start.distance
+          : 1;
+
+      updateTransform({
+        scale:
+          start.transform.scale *
+          distanceRatio,
+        rotation:
+          start.transform.rotation +
+          angle -
+          start.angle,
+        x:
+          start.transform.x +
+          midpoint.x -
+          start.midpoint.x,
+        y:
+          start.transform.y +
+          midpoint.y -
+          start.midpoint.y,
+      });
+    }
+  }
+
+  function releasePointer(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    pointersRef.current.delete(
+      event.pointerId,
+    );
+
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId,
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId,
+      );
+    }
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 0) {
+      dragStartRef.current =
+        null;
+
+      gestureStartRef.current =
+        null;
+
+      setIsInteracting(false);
+    } else if (
+      pointers.length === 1
+    ) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+      }
+
+      animationResolveRef.current?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function runReplay() {
+      if (
+        coursePlottedShots.length === 0
+      ) {
+        setIsPlaying(false);
+        return;
+      }
+
+      for (
+        const courseShot
+        of coursePlottedShots
+      ) {
+        if (cancelled) {
+          return;
+        }
+
+        onSelectStroke(
+          courseShot.strokeNumber,
+        );
+
+        const greenShot =
+          greenPlottedShots.find(
+            (candidate) =>
+              candidate.strokeNumber ===
+              courseShot.strokeNumber,
+          ) ?? null;
+
+        const startsOnGreen =
+          isGreenLocation(
+            courseShot.fromLocation,
+          );
+
+        const finishesOnGreen =
+          courseShot.finalStroke ||
+          isGreenLocation(
+            courseShot.toLocation,
+          );
+
+        const useGreenShot =
+          startsOnGreen &&
+          greenViewAvailable &&
+          greenShot !== null;
+
+        const animationShot =
+          useGreenShot
+            ? greenShot
+            : courseShot;
+
+        /*
+         * Drives and approaches play on Course View.
+         * Putts play on PGA's dedicated Green View.
+         */
+        if (useGreenShot) {
+          setViewMode("green");
+
+          /*
+           * Move into a putt-specific Green View derived from
+           * PGA's actual sampled roll path + cup.
+           */
+          focusGreenPutt(
+            animationShot,
+          );
+        } else {
+          setViewMode("course");
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+        }
+
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              useGreenShot
+                ? 700
+                : 200,
+            );
+          },
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        await animateShot(
+          animationShot,
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        /*
+         * Strokes are sequential, so using the actual stroke
+         * number works in BOTH Course View and Green View,
+         * even though Green View may omit drives entirely.
+         */
+        setRevealedStrokeCount(
+          courseShot.strokeNumber,
+        );
+
+        /*
+         * Let the approach finish on Course View, then switch
+         * to the dedicated Green View before the first putt.
+         */
+        if (
+          finishesOnGreen &&
+          !startsOnGreen &&
+          greenViewAvailable
+        ) {
+          setViewMode("green");
+
+          const upcomingGreenShot =
+            greenPlottedShots.find(
+              (candidate) =>
+                candidate.strokeNumber >
+                courseShot.strokeNumber &&
+                isGreenLocation(
+                  candidate.fromLocation,
+                ),
+            ) ?? null;
+
+          if (upcomingGreenShot) {
+            focusGreenPutt(
+              upcomingGreenShot,
+            );
+          } else {
+            setTransform(
+              DEFAULT_TRANSFORM,
+            );
+          }
+
+          await new Promise<void>(
+            (resolve) => {
+              window.setTimeout(
+                resolve,
+                750,
+              );
+            },
+          );
+        } else {
+          await new Promise<void>(
+            (resolve) => {
+              window.setTimeout(
+                resolve,
+                500,
+              );
+            },
+          );
+        }
+      }
+
+      if (!cancelled) {
+        setRevealedStrokeCount(null);
+        setIsPlaying(false);
+      }
+    }
+
+    void runReplay();
+
+    return () => {
+      cancelled = true;
+      cancelShotAnimation();
+    };
+  }, [
+    animateShot,
+    cancelShotAnimation,
+    coursePlottedShots,
+    focusGreenPutt,
+    greenPlottedShots,
+    greenViewAvailable,
+    isPlaying,
+    onSelectStroke,
+  ]);
+
+  function startPlayback() {
+    if (!coursePlottedShots[0]) {
+      return;
+    }
+
+    cancelShotAnimation();
+    setViewMode("course");
+
+    /*
+     * Playback always begins from the complete hole.
+     * Manual Recenter Shot remains available separately.
+     */
+    setTransform(
+      DEFAULT_TRANSFORM,
+    );
+
+    setRevealedStrokeCount(0);
+
+    onSelectStroke(
+      coursePlottedShots[0]
+        .strokeNumber,
+    );
+
+    setIsPlaying(true);
+  }
+
+  function openVideoReplay(
+    strokeNumber: number,
+  ) {
+    setIsPlaying(false);
+    setVideoStrokeNumber(
+      strokeNumber,
+    );
+
+    /*
+     * Desktop already shows the video beside the map.
+     * Mobile stacks it below the map/navigator, so bring that
+     * existing panel into view after React renders the video.
+     */
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia(
+        "(max-width: 639px)",
+      ).matches
+    ) {
+      window.setTimeout(() => {
+        videoPanelRef.current
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+      }, 120);
+    }
+  }
+
+  async function selectShot(
+    strokeNumber: number,
+  ) {
+    setIsPlaying(false);
+    setVideoStrokeNumber(null);
+
+    /*
+     * Individual-shot replay represents the state of the
+     * hole AT that moment.
+     *
+     * Keep earlier shots visible, hide all later shots,
+     * and let the selected shot reveal itself again during
+     * its animation.
+     */
+    setRevealedStrokeCount(
+      Math.max(0, strokeNumber - 1),
+    );
+
+    cancelShotAnimation();
+
+    const courseShot =
+      coursePlottedShots.find(
+        (candidate) =>
+          candidate.strokeNumber ===
+          strokeNumber,
+      ) ?? null;
+
+    const greenShot =
+      greenPlottedShots.find(
+        (candidate) =>
+          candidate.strokeNumber ===
+          strokeNumber,
+      ) ?? null;
+
+    if (!courseShot) {
+      return;
+    }
+
+    onSelectStroke(
+      strokeNumber,
+    );
+
+    const shouldUseGreen =
+      greenViewAvailable &&
+      greenShot !== null &&
+      isGreenLocation(
+        courseShot.fromLocation,
+      );
+
+    if (shouldUseGreen) {
+      setViewMode("green");
+
+      focusGreenPutt(
+        greenShot,
+      );
+
+      await new Promise<void>(
+        (resolve) => {
+          window.setTimeout(
+            resolve,
+            700,
+          );
+        },
+      );
+
+      await animateShot(
+        greenShot,
+      );
+
+      setRevealedStrokeCount(
+        strokeNumber,
+      );
+
+      return;
+    }
+
+    setViewMode("course");
+
+    focusShot(
+      courseShot,
+    );
+
+    await new Promise<void>(
+      (resolve) => {
+        window.setTimeout(
+          resolve,
+          500,
+        );
+      },
+    );
+
+    await animateShot(
+      courseShot,
+    );
+
+    setRevealedStrokeCount(
+      strokeNumber,
+    );
+  }
+
+  /*
+   * COURSE VIEW PIN
+   * ----------------
+   *
+   * pinWorld comes from PGA courseData.pinsTees.
+   *
+   * The active Course View uses terrainNN.jpg with its matching
+   * terrainNN.tfw affine, so this is the exact world -> image
+   * conversion already used for PGA native shot coordinates.
+   */
+  const authoritativeCoursePinPoint =
+    !isAnyGreenView &&
+    pinWorld
+      ? worldToPlotPoint(
+          pinWorld,
+          calibration,
+        )
+      : null;
+
+  /*
+   * Course View:
+   *   use PGA's independent hole-level pin.
+   *
+   * Green View:
+   *   keep the confirmed final-stroke destination for now,
+   *   because St. Jude's pinGreen payload is an unavailable
+   *   -1/-1 sentinel.
+   */
+  const cupPoint =
+    authoritativeCoursePinPoint ??
+    [...plottedShots]
+      .reverse()
+      .find(
+        (shot) =>
+          shot.finalStroke,
+      )?.to ??
+    null;
+
+  const animatedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        animatedStrokeNumber,
+    ) ?? null;
+
+  const animatedTrackedPath =
+    animatedShot
+      ? trackedPathPoints(
+          animatedShot,
+        )
+      : null;
+
+  const animatedBallPoint =
+    animatedTrackedPath
+      ? pointOnTrackedPath(
+          animatedTrackedPath,
+          animationProgress,
+        )
+      : null;
+
+  const animatedAltitude =
+    animatedBallPoint
+      ?.altitude ?? 0;
+
+  const inverseScale =
+    1 / transform.scale;
+
+  /*
+   * Course View keeps the existing highly visible shot markers.
+   *
+   * Green View is intentionally more restrained so close-putt
+   * markers do not cover the rolling ball, cup, or flag.
+   */
+  const markerRadius =
+    (
+      viewMode === "green"
+        ? 15
+        : 25
+    ) *
+    inverseScale;
+
+  const markerStroke =
+    viewMode === "green"
+      ? Math.max(
+          1.5,
+          4 * inverseScale,
+        )
+      : Math.max(
+          3,
+          7 * inverseScale,
+        );
+
+  const markerFontSize =
+    viewMode === "green"
+      ? Math.max(
+          7,
+          18 * inverseScale,
+        )
+      : Math.max(
+          12,
+          29 * inverseScale,
+        );
+
+  const selectedRadarMetrics =
+    selectedShot
+      ? radarMetrics(
+          selectedShot,
+        )
+      : [];
+
+  const isVideoPanelOpen =
+    selectedShot !== null &&
+    videoStrokeNumber ===
+      selectedShot.strokeNumber &&
+    Boolean(
+      selectedShot.videoId,
+    );
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-3 py-2.5">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+            ShotCast replay
+          </div>
+
+          <div className="mt-0.5 flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span>{title}</span>
+
+            {viewMode === "green" &&
+            greenViewAvailable ? (
+              <span className="rounded-full border border-emerald-700 bg-emerald-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-emerald-300">
+                Green View
+              </span>
+            ) : null}
+
+            {viewMode === "green3d" &&
+            green3dAvailable ? (
+              <span className="rounded-full border border-cyan-700 bg-cyan-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-cyan-300">
+                3D Green
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          {greenViewAvailable ? (
+            <div className="mr-1 flex overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPlaying(false);
+                  cancelShotAnimation();
+                  setViewMode("course");
+                  setTransform(
+                    DEFAULT_TRANSFORM,
+                  );
+                }}
+                className={`px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+                  viewMode === "course"
+                    ? "bg-slate-700 text-white"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Course
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPlaying(false);
+                  cancelShotAnimation();
+                  setViewMode("green");
+                  setTransform(
+                    DEFAULT_TRANSFORM,
+                  );
+                }}
+                className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+                  viewMode === "green"
+                    ? "bg-emerald-900 text-emerald-200"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Green
+              </button>
+
+              {green3dAvailable ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPlaying(false);
+                    cancelShotAnimation();
+                    setViewMode(
+                      "green3d",
+                    );
+                  }}
+                  className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+                    viewMode === "green3d"
+                      ? "bg-cyan-900 text-cyan-200"
+                      : "text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  3D
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {plottedShots.length > 0 ? (
+            <>
+              {viewMode !== "green3d" ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    focusShot(
+                      selectedShot,
+                    )
+                  }
+                  className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+                >
+                  Recenter shot
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={startPlayback}
+                disabled={isPlaying}
+                className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+              >
+                {isPlaying
+                  ? "Playing hole…"
+                  : "▶ Play Hole"}
+              </button>
+            </>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={resetView}
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-[10px] font-bold text-slate-400"
+          >
+            Reset
+          </button>
+        </div>
+      </header>
+
+      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(260px,430px)_1fr]">
+        <div className="mx-auto w-full max-w-[430px]">
+          {viewMode === "green3d" &&
+          greenModelUrl ? (
+            <GolfGreen3D
+              modelUrl={
+                greenModelUrl
+              }
+              title={title}
+              selectedShot={
+                selectedShot
+                  ? {
+                      strokeNumber:
+                        selectedShot.strokeNumber,
+                      from:
+                        selectedShot.from,
+                      to:
+                        selectedShot.to,
+                      finalStroke:
+                        selectedShot.finalStroke,
+                    }
+                  : null
+              }
+              holePoint={
+                greenHolePoint
+              }
+            />
+          ) : (
+          <div
+            ref={viewportRef}
+            className={`relative aspect-square overflow-hidden rounded-xl border border-slate-700 bg-slate-950 select-none ${
+              isInteracting
+                ? "cursor-grabbing"
+                : "cursor-grab"
+            }`}
+            style={{
+              touchAction: "none",
+            }}
+            onWheel={handleWheel}
+            onDoubleClick={
+              handleDoubleClick
+            }
+            onPointerDown={
+              handlePointerDown
+            }
+            onPointerMove={
+              handlePointerMove
+            }
+            onPointerUp={
+              releasePointer
+            }
+            onPointerCancel={
+              releasePointer
+            }
+          >
+            <div
+              className="absolute inset-0 will-change-transform"
+              style={{
+                transform: [
+                  `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+                  `scale(${transform.scale})`,
+                  `rotate(${transform.rotation}deg)`,
+                ].join(" "),
+                transformOrigin:
+                  "50% 50%",
+                transition:
+                  isInteracting
+                    ? "none"
+                    : "transform 650ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            >
+              <img
+                key={activeImageUrl}
+                src={activeImageUrl}
+                alt={
+                  viewMode === "green"
+                    ? `${title} green view`
+                    : `${title} aerial hole layout`
+                }
+                draggable={false}
+                className={`absolute inset-0 h-full w-full ${
+                  imageFit === "contain"
+                    ? "object-contain"
+                    : "object-fill"
+                }`}
+              />
+
+              <svg
+                viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full"
+                role="img"
+                aria-label={`${title} shot paths`}
+              >
+                <defs>
+                  <filter
+                    id="shot-path-shadow"
+                    x="-40%"
+                    y="-40%"
+                    width="180%"
+                    height="180%"
+                  >
+                    <feDropShadow
+                      dx="0"
+                      dy="2"
+                      stdDeviation={
+                        3 *
+                        inverseScale
+                      }
+                      floodColor="#020617"
+                      floodOpacity="0.95"
+                    />
+                  </filter>
+                </defs>
+
+                {plottedShots.map(
+                  (shot) => {
+                    const isSelected =
+                      shot.strokeNumber ===
+                      selectedShot
+                        ?.strokeNumber;
+
+                    const isAnimating =
+                      shot.strokeNumber ===
+                      animatedStrokeNumber;
+
+                    const isRevealMode =
+                      revealedStrokeCount !==
+                      null;
+
+                    const wasRevealed =
+                      !isRevealMode ||
+                      shot.strokeNumber <=
+                        revealedStrokeCount;
+
+                    const showPath =
+                      wasRevealed ||
+                      isAnimating;
+
+                    const actualPath =
+                      trackedPathPoints(
+                        shot,
+                      );
+
+                    const pathLength =
+                      trackedPathLength(
+                        actualPath,
+                      );
+
+                    const pathD =
+                      trackedPathD(
+                        actualPath,
+                      );
+
+                    const showLandingMarker =
+                      wasRevealed ||
+                      (isAnimating &&
+                        animationProgress >=
+                          0.98);
+
+                    return (
+                      <g
+                        key={`path-${shot.strokeNumber}`}
+                        data-shotcast-marker="true"
+                        className={
+                          showLandingMarker
+                            ? "cursor-pointer"
+                            : "pointer-events-none"
+                        }
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => {
+                          event.stopPropagation();
+
+                          selectShot(
+                            shot.strokeNumber,
+                          );
+                        }}
+                      >
+                        <circle
+                          cx={shot.to.x}
+                          cy={shot.to.y}
+                          r={
+                            markerRadius *
+                            1.85
+                          }
+                          fill="transparent"
+                          stroke="transparent"
+                          pointerEvents="all"
+                        />
+
+                        <path
+                          d={
+                            pathD
+                          }
+                          fill="none"
+                          visibility={
+                            showPath
+                              ? "visible"
+                              : "hidden"
+                          }
+                          stroke={
+                            isSelected
+                              ? "#facc15"
+                              : "#f8fafc"
+                          }
+                          strokeWidth={
+                            (isSelected
+                              ? 11
+                              : 7) *
+                            inverseScale
+                          }
+                          strokeLinecap="round"
+                          strokeDasharray={
+                            isAnimating
+                              ? `${pathLength} ${pathLength}`
+                              : isSelected
+                                ? "0"
+                                : `${18 * inverseScale} ${13 * inverseScale}`
+                          }
+                          strokeDashoffset={
+                            isAnimating
+                              ? pathLength *
+                                (1 -
+                                  animationProgress)
+                              : 0
+                          }
+                          opacity={
+                            isSelected
+                              ? 1
+                              : 0.75
+                          }
+                          filter="url(#shot-path-shadow)"
+                        />
+
+                        {showLandingMarker ? (
+                          <>
+                            <circle
+                              cx={shot.to.x}
+                              cy={shot.to.y}
+                              r={
+                                isSelected
+                                  ? markerRadius *
+                                    1.2
+                                  : markerRadius
+                              }
+                              fill={
+                                shot.finalStroke
+                                  ? "#10b981"
+                                  : isSelected
+                                    ? "#facc15"
+                                    : "#0f172a"
+                              }
+                              stroke="#ffffff"
+                              strokeWidth={
+                                markerStroke
+                              }
+                              filter="url(#shot-path-shadow)"
+                            />
+
+                            <text
+                              x={shot.to.x}
+                              y={
+                                shot.to.y +
+                                markerFontSize *
+                                  0.34
+                              }
+                              textAnchor="middle"
+                              fontSize={
+                                markerFontSize
+                              }
+                              fontWeight="900"
+                              fill={
+                                isSelected &&
+                                !shot.finalStroke
+                                  ? "#111827"
+                                  : "#ffffff"
+                              }
+                              className="pointer-events-none select-none"
+                            >
+                              {
+                                shot.strokeNumber
+                              }
+                            </text>
+                          </>
+                        ) : null}
+                      </g>
+                    );
+                  },
+                )}
+
+                {cupPoint ? (
+                  <g className="pointer-events-none">
+                    <line
+                      x1={cupPoint.x}
+                      y1={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      x2={cupPoint.x}
+                      y2={
+                        cupPoint.y -
+                        48 * inverseScale
+                      }
+                      stroke="#f8fafc"
+                      strokeWidth={
+                        5 * inverseScale
+                      }
+                      strokeLinecap="round"
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <path
+                      d={[
+                        `M ${cupPoint.x} ${
+                          cupPoint.y -
+                          48 * inverseScale
+                        }`,
+                        `L ${
+                          cupPoint.x +
+                          35 * inverseScale
+                        } ${
+                          cupPoint.y -
+                          36 * inverseScale
+                        }`,
+                        `L ${cupPoint.x} ${
+                          cupPoint.y -
+                          24 * inverseScale
+                        }`,
+                        "Z",
+                      ].join(" ")}
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        2.5 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <ellipse
+                      cx={cupPoint.x}
+                      cy={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      rx={
+                        10 *
+                        inverseScale
+                      }
+                      ry={
+                        4 *
+                        inverseScale
+                      }
+                      fill="#020617"
+                      opacity="0.85"
+                    />
+                  </g>
+                ) : null}
+
+                {animatedBallPoint ? (
+                  <g className="pointer-events-none">
+                    {animatedAltitude >
+                    0.02 ? (
+                      <circle
+                        cx={
+                          animatedBallPoint.x
+                        }
+                        cy={
+                          animatedBallPoint.y
+                        }
+                        r={
+                          (
+                            19 +
+                            animatedAltitude *
+                              18
+                          ) *
+                          inverseScale
+                        }
+                        fill="none"
+                        stroke="#38bdf8"
+                        strokeWidth={
+                          3 *
+                          inverseScale
+                        }
+                        opacity={
+                          0.22 +
+                          animatedAltitude *
+                            0.28
+                        }
+                      />
+                    ) : null}
+
+                    <circle
+                      cx={
+                        animatedBallPoint.x
+                      }
+                      cy={
+                        animatedBallPoint.y
+                      }
+                      r={
+                        (
+                          13 +
+                          animatedAltitude *
+                            5
+                        ) *
+                        inverseScale
+                      }
+                      fill="#ffffff"
+                      stroke="#0f172a"
+                      strokeWidth={
+                        4 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <circle
+                      cx={
+                        animatedBallPoint.x -
+                        3 *
+                          inverseScale
+                      }
+                      cy={
+                        animatedBallPoint.y -
+                        3 *
+                          inverseScale
+                      }
+                      r={
+                        2.2 *
+                        inverseScale
+                      }
+                      fill="#94a3b8"
+                    />
+                  </g>
+                ) : null}
+
+                {viewMode === "course" &&
+                plottedShots[0] ? (
+                  <g>
+                    <circle
+                      cx={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      cy={
+                        plottedShots[0]
+                          .from.y
+                      }
+                      r={
+                        21 *
+                        inverseScale
+                      }
+                      fill="#0f172a"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        markerStroke
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <text
+                      x={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      y={
+                        plottedShots[0]
+                          .from.y +
+                        markerFontSize *
+                          0.3
+                      }
+                      textAnchor="middle"
+                      fontSize={
+                        markerFontSize *
+                        0.86
+                      }
+                      fontWeight="900"
+                      fill="#ffffff"
+                      className="pointer-events-none select-none"
+                    >
+                      T
+                    </text>
+                  </g>
+                ) : null}
+              </svg>
+            </div>
+
+            {animatedShot ? (
+              <div
+                className={`pointer-events-none absolute bottom-2 right-2 z-20 max-w-[90%] rounded-xl border border-white/15 bg-slate-950/75 px-3 py-2 text-left shadow-xl backdrop-blur-md transition-all duration-500 ease-out sm:hidden ${
+                  animationProgress <= 0.03 ||
+                  animationProgress >= 1
+                    ? "translate-y-1 opacity-0"
+                    : "translate-y-0 opacity-100"
+                }`}
+                aria-hidden="true"
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                      animatedShot.finalStroke
+                        ? "border-emerald-300 bg-emerald-500 text-white"
+                        : "border-yellow-200 bg-yellow-300 text-slate-950"
+                    }`}
+                  >
+                    {animatedShot.strokeNumber}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-300">
+                      Shot {animatedShot.strokeNumber}
+                    </div>
+
+                    <div className="mt-0.5 whitespace-normal break-words text-[12px] font-bold leading-4 text-white">
+                      {shotDescription(
+                        animatedShot,
+                      ) || "Shot in progress"}
+                    </div>
+                  </div>
+                </div>
+
+                {animatedShot.fromLocation ||
+                animatedShot.toLocation ? (
+                  <div className="mt-1.5 flex items-center gap-1.5 truncate text-[10px] font-medium text-slate-300">
+                    <span className="truncate">
+                      {animatedShot.fromLocation ??
+                        "Previous position"}
+                    </span>
+
+                    <span className="shrink-0 text-slate-500">
+                      →
+                    </span>
+
+                    <span className="truncate">
+                      {animatedShot.toLocation ??
+                        "Landing area"}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {!animatedShot &&
+            selectedShot?.videoId &&
+            !isVideoPanelOpen ? (
+              <button
+                type="button"
+                data-shotcast-marker="true"
+                onClick={(event) => {
+                  event.stopPropagation();
+
+                  openVideoReplay(
+                    selectedShot.strokeNumber,
+                  );
+                }}
+                className="absolute bottom-2 right-2 z-20 flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-slate-950/80 px-3 py-2 text-left shadow-xl backdrop-blur-md transition duration-300 hover:bg-emerald-950/90 active:scale-[0.98] sm:hidden"
+                aria-label={`Watch PGA TOUR replay of shot ${selectedShot.strokeNumber}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-950 text-sm"
+                >
+                  🎥
+                </span>
+
+                <span className="min-w-0">
+                  <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-emerald-300">
+                    Replay available
+                  </span>
+
+                  <span className="mt-0.5 block text-[11px] font-bold text-white">
+                    Watch Shot{" "}
+                    {selectedShot.strokeNumber}
+                  </span>
+                </span>
+
+                <span
+                  aria-hidden="true"
+                  className="ml-1 text-xs font-black text-emerald-300"
+                >
+                  ↓
+                </span>
+              </button>
+            ) : null}
+
+            <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              {transform.scale.toFixed(
+                1,
+              )}
+              × ·{" "}
+              {Math.round(
+                transform.rotation,
+              )}
+              °
+            </div>
+          </div>
+          )}
+        </div>
+
+        <div
+          className={`min-w-0 ${
+            isVideoPanelOpen
+              ? "sm:flex sm:h-full sm:flex-col"
+              : ""
+          }`}
+        >
+          {coursePlottedShots.length > 0 ? (
+            <div
+              className={`rounded-xl border border-slate-700 bg-slate-950 p-3 ${
+                isVideoPanelOpen
+                  ? "sm:hidden"
+                  : ""
+              }`}
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
+                    Shot navigator
+                  </div>
+
+                  <div className="mt-0.5 text-[10px] text-slate-500">
+                    Tap any number to replay that exact shot
+                  </div>
+                </div>
+
+
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!previousShot}
+                  onClick={() => {
+                    if (!previousShot) {
+                      return;
+                    }
+
+                    void selectShot(
+                      previousShot.strokeNumber,
+                    );
+                  }}
+                  aria-label="Previous shot"
+                  className="flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-25"
+                >
+                  ← Prev
+                </button>
+
+                <div
+                  className="relative grid min-w-0 flex-1 items-center"
+                  style={{
+                    gridTemplateColumns:
+                      `repeat(${coursePlottedShots.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {coursePlottedShots.length >
+                  1 ? (
+                    <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-1/2 h-px -translate-y-1/2 bg-slate-700" />
+                  ) : null}
+
+                  {coursePlottedShots.map(
+                    (shot) => {
+                      const selected =
+                        shot.strokeNumber ===
+                        selectedStrokeNumber;
+
+                      const revealed =
+                        selectedStrokeNumber !==
+                          null &&
+                        shot.strokeNumber <=
+                          selectedStrokeNumber;
+
+                      return (
+                        <div
+                          key={`navigator-${shot.strokeNumber}`}
+                          className="relative z-10 flex justify-center"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void selectShot(
+                                shot.strokeNumber,
+                              );
+                            }}
+                            aria-label={`Replay shot ${shot.strokeNumber}`}
+                            aria-current={
+                              selected
+                                ? "step"
+                                : undefined
+                            }
+                            className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-black transition ${
+                              selected
+                                ? shot.finalStroke
+                                  ? "border-emerald-300 bg-emerald-500 text-white ring-2 ring-emerald-400/25"
+                                  : "border-yellow-300 bg-yellow-300 text-slate-950 ring-2 ring-yellow-300/25"
+                                : revealed
+                                  ? "border-emerald-600 bg-slate-950 text-emerald-300 hover:bg-emerald-950"
+                                  : "border-slate-600 bg-slate-950 text-slate-400 hover:border-slate-500 hover:text-white"
+                            }`}
+                          >
+                            {
+                              shot.strokeNumber
+                            }
+                          </button>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!nextShot}
+                  onClick={() => {
+                    if (!nextShot) {
+                      return;
+                    }
+
+                    void selectShot(
+                      nextShot.strokeNumber,
+                    );
+                  }}
+                  aria-label="Next shot"
+                  className="flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-25"
+                >
+                  Next →
+                </button>
+              </div>
+
+              {selectedShot ? (
+                <div className="mt-3 text-center text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                  Shot{" "}
+                  {
+                    selectedShot.strokeNumber
+                  }{" "}
+                  of{" "}
+                  {
+                    coursePlottedShots.length
+                  }
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+
+          <div
+            ref={videoPanelRef}
+            className={`mt-3 ${
+              isVideoPanelOpen
+                ? "sm:mt-0 sm:min-h-0 sm:flex-1"
+                : ""
+            }`}
+          >
+          {selectedShot ? (
+            isVideoPanelOpen ? (
+              <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 sm:flex sm:h-full sm:min-h-0 sm:flex-col">
+                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-800 px-3 py-2.5">
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
+                      Shot {selectedShot.strokeNumber} replay
+                    </div>
+
+                    <div className="mt-0.5 text-xs font-bold text-slate-300">
+                      PGA TOUR video available
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVideoStrokeNumber(
+                        null,
+                      )
+                    }
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800"
+                  >
+                    × Back to shot
+                  </button>
+                </div>
+
+                <div className="bg-black sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
+                  <div className="relative aspect-video w-full overflow-hidden bg-black sm:aspect-auto sm:min-h-0 sm:flex-1">
+                    <iframe
+                      key={
+                        selectedShot.videoId
+                      }
+                      src={`https://players.brightcove.net/6116716431001/ZNwBVBwf_default/index.html?videoId=${encodeURIComponent(
+                        selectedShot.videoId ?? "",
+                      )}&autoplay=true`}
+                      title={`PGA TOUR Shot ${selectedShot.strokeNumber} video replay`}
+                      className="absolute inset-0 h-full w-full border-0"
+                      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  </div>
+
+                  <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-800 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-400">
+                        PGA TOUR replay
+                      </div>
+
+                      <div className="mt-0.5 text-[10px] text-slate-500">
+                        Shot {selectedShot.strokeNumber}
+                        {selectedShot.distance
+                          ? ` · ${selectedShot.distance}`
+                          : ""}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-[9px] font-semibold text-slate-600">
+                      Video provided by PGA TOUR
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black ${
+                      selectedShot.finalStroke
+                        ? "border-emerald-400 bg-emerald-700 text-white"
+                        : "border-yellow-400 bg-yellow-300 text-slate-950"
+                    }`}
+                  >
+                    {
+                      selectedShot.strokeNumber
+                    }
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-white">
+                      Shot{" "}
+                      {
+                        selectedShot.strokeNumber
+                      }
+                    </div>
+
+                    <div className="mt-0.5 text-xs font-bold text-slate-300">
+                      {shotDescription(
+                        selectedShot,
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+                  {selectedShot.fromLocation ||
+                    "Unknown lie"}
+
+                  <span className="mx-2 text-slate-600">
+                    →
+                  </span>
+
+                  {selectedShot.finalStroke
+                    ? "Hole"
+                    : selectedShot.toLocation ||
+                      "Unknown lie"}
+                </div>
+
+                {selectedRadarMetrics.length >
+                0 ? (
+                  <div className="mt-3">
+                    <div className="mb-2 text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                      Shot data
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedRadarMetrics.map(
+                        (metric) => (
+                          <div
+                            key={metric.label}
+                            className="rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-2"
+                          >
+                            <div className="text-[8px] font-black uppercase tracking-[0.1em] text-slate-600">
+                              {metric.label}
+                            </div>
+
+                            <div className="mt-0.5 text-sm font-black text-slate-100">
+                              {metric.value}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedShot.ballPath
+                  ?.path.length ? (
+                  <div className="mt-3 rounded-lg border border-emerald-900/70 bg-emerald-950/30 px-3 py-2 text-[10px] text-emerald-300">
+                    ✓ Real PGA ball path available
+                    <span className="ml-1 text-emerald-500">
+                      ·{" "}
+                      {
+                        selectedShot.ballPath
+                          .path.length
+                      }{" "}
+                      samples
+                    </span>
+                  </div>
+                ) : null}
+
+                {selectedShot.videoId ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openVideoReplay(
+                        selectedShot.strokeNumber,
+                      )
+                    }
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-700 bg-emerald-950 px-3 py-2.5 text-xs font-black text-emerald-200 transition hover:bg-emerald-900"
+                  >
+                    <span aria-hidden="true">
+                      🎥
+                    </span>
+
+                    Video replay available
+                  </button>
+                ) : null}
+              </div>
+            )
+          ) : (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="text-sm font-black text-slate-200">
+                Hole layout
+              </div>
+
+              <div className="mt-1 text-xs leading-5 text-slate-500">
+                {emptyStateLabel}
+              </div>
+            </div>
+          )}
+          </div>
+
+          <div className="mt-3 text-[10px] leading-4 text-slate-500">
+            {plottedShots.length > 0
+              ? "Drag or pinch for a closer view, and twist with two fingers to rotate the course."
+              : "Drag or pinch for a closer view, and twist with two fingers to rotate the course."}
+          </div>
+        </div>
+      </div>
+
+    </section>
+  );
+}

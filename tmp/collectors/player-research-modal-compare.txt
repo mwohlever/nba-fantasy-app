@@ -1,0 +1,2461 @@
+============================================================
+PLAYER RESEARCH MODAL COMPARE
+============================================================
+
+=== PLAYERRESEARCHMODAL — FULL FILE ===
+"use client";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+
+type Sport =
+  | "nba"
+  | "nfl"
+  | "golf";
+
+type Mode =
+  | "season"
+  | "league";
+
+export type ResearchPlayer = {
+  id: number;
+  name: string;
+
+  nbaPlayerId?: number | null;
+  nflPlayerId?: number | null;
+  espnGolfPlayerId?: string | null;
+
+  headshotUrl?: string | null;
+
+  positionGroup?: string | null;
+  teamAbbreviation?: string | null;
+
+  owgrRank?: number | null;
+  country?: string | null;
+};
+
+type Props = {
+  player:
+    ResearchPlayer | null;
+
+  sport:
+    Sport;
+
+  season:
+    number | "all";
+
+  defaultMode:
+    Mode;
+
+  actionLabel?: string;
+
+  onAction?:
+    () =>
+      void |
+      Promise<void>;
+
+  onClose:
+    () => void;
+};
+
+type LeagueProfile = {
+  summary?: {
+    timesDrafted?: number;
+    wins?: number;
+    runnerUps?: number;
+    podiums?: number;
+
+    winRate?:
+      number | null;
+
+    averageFantasyPoints?:
+      number | null;
+
+    bestFantasyPoints?:
+      number | null;
+
+    worstFantasyPoints?:
+      number | null;
+
+    averageFinish?:
+      number | null;
+
+    cutsMade?: number;
+    cutOpportunities?: number;
+
+    cutsMadePct?:
+      number | null;
+
+    roundsUnderPar?: number;
+    completedRounds?: number;
+
+    draftedMostBy?: {
+      teamName: string;
+      count: number;
+    } | null;
+
+    draftedByBreakdown?: Array<{
+      teamName: string;
+      count: number;
+    }>;
+  };
+
+  recentHistory?: Array<{
+    slateId?: number;
+    slateLabel?: string;
+    teamName?: string;
+
+    finishPosition?:
+      number | null;
+
+    fantasyPoints?:
+      number | null;
+
+    golferScore?:
+      number | null;
+  }>;
+};
+
+function fmt(
+  value:
+    number |
+    null |
+    undefined,
+  digits = 1,
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(
+      Number(
+        value,
+      ),
+    )
+  ) {
+    return "—";
+  }
+
+  return Number(
+    value,
+  ).toFixed(
+    digits,
+  );
+}
+
+function pct(
+  value:
+    number |
+    null |
+    undefined,
+  digits = 0,
+) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "—";
+  }
+
+  return `${fmt(
+    value,
+    digits,
+  )}%`;
+}
+
+function ordinal(
+  value:
+    number |
+    null |
+    undefined,
+) {
+  if (
+    !value
+  ) {
+    return "—";
+  }
+
+  const mod100 =
+    value % 100;
+
+  if (
+    mod100 >= 11 &&
+    mod100 <= 13
+  ) {
+    return `${value}th`;
+  }
+
+  const suffix =
+    value % 10 === 1
+      ? "st"
+      : value % 10 === 2
+        ? "nd"
+        : value % 10 === 3
+          ? "rd"
+          : "th";
+
+  return `${value}${suffix}`;
+}
+
+function formatSlateLabel(
+  value:
+    string |
+    null |
+    undefined,
+) {
+  const label =
+    String(
+      value ??
+      "",
+    ).trim();
+
+  if (!label) {
+    return "Slate";
+  }
+
+  function formatSingleDate(
+    raw:
+      string,
+  ) {
+    const match =
+      raw.match(
+        /^(\d{4})-(\d{2})-(\d{2})$/,
+      );
+
+    if (!match) {
+      return raw;
+    }
+
+    const [
+      ,
+      year,
+      month,
+      day,
+    ] = match;
+
+    const date =
+      new Date(
+        Number(
+          year,
+        ),
+        Number(
+          month,
+        ) - 1,
+        Number(
+          day,
+        ),
+        12,
+        0,
+        0,
+      );
+
+    return date;
+  }
+
+  /*
+   * Single-day slate:
+   * 2026-05-10
+   * → May 10, 2026
+   */
+  const single =
+    formatSingleDate(
+      label,
+    );
+
+  if (
+    single instanceof
+    Date
+  ) {
+    return single.toLocaleDateString(
+      "en-US",
+      {
+        month:
+          "long",
+        day:
+          "numeric",
+        year:
+          "numeric",
+      },
+    );
+  }
+
+  /*
+   * Multi-day slate:
+   * 2026-05-25 - 2026-05-26
+   *
+   * Same month/year:
+   * → May 25–26, 2026
+   *
+   * Different months:
+   * → May 31 – June 1, 2026
+   *
+   * Different years:
+   * → December 31, 2025 – January 1, 2026
+   */
+  const rangeMatch =
+    label.match(
+      /^(\d{4}-\d{2}-\d{2})\s*-\s*(\d{4}-\d{2}-\d{2})$/,
+    );
+
+  if (!rangeMatch) {
+    return label;
+  }
+
+  const startDate =
+    formatSingleDate(
+      rangeMatch[1],
+    );
+
+  const endDate =
+    formatSingleDate(
+      rangeMatch[2],
+    );
+
+  if (
+    !(
+      startDate instanceof
+      Date
+    ) ||
+    !(
+      endDate instanceof
+      Date
+    )
+  ) {
+    return label;
+  }
+
+  const sameYear =
+    startDate.getFullYear() ===
+    endDate.getFullYear();
+
+  const sameMonth =
+    sameYear &&
+    startDate.getMonth() ===
+      endDate.getMonth();
+
+  if (
+    sameMonth
+  ) {
+    const month =
+      startDate.toLocaleDateString(
+        "en-US",
+        {
+          month:
+            "long",
+        },
+      );
+
+    return (
+      `${month} ` +
+      `${startDate.getDate()}–${endDate.getDate()}, ` +
+      `${endDate.getFullYear()}`
+    );
+  }
+
+  if (
+    sameYear
+  ) {
+    const startText =
+      startDate.toLocaleDateString(
+        "en-US",
+        {
+          month:
+            "long",
+          day:
+            "numeric",
+        },
+      );
+
+    const endText =
+      endDate.toLocaleDateString(
+        "en-US",
+        {
+          month:
+            "long",
+          day:
+            "numeric",
+          year:
+            "numeric",
+        },
+      );
+
+    return (
+      `${startText} – ${endText}`
+    );
+  }
+
+  return (
+    `${startDate.toLocaleDateString(
+      "en-US",
+      {
+        month:
+          "long",
+        day:
+          "numeric",
+        year:
+          "numeric",
+      },
+    )} – ` +
+    `${endDate.toLocaleDateString(
+      "en-US",
+      {
+        month:
+          "long",
+        day:
+          "numeric",
+        year:
+          "numeric",
+      },
+    )}`
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value:
+    string |
+    number;
+  detail?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-700 bg-slate-900/85 p-4">
+      <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </div>
+
+      <div className="mt-1 text-xl font-black text-white">
+        {value}
+      </div>
+
+      {detail ? (
+        <div className="mt-1 text-[11px] text-slate-400">
+          {detail}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default function PlayerResearchModal({
+  player,
+  sport,
+  season,
+  defaultMode,
+  actionLabel,
+  onAction,
+  onClose,
+}: Props) {
+  const [
+    mode,
+    setMode,
+  ] =
+    useState<Mode>(
+      defaultMode,
+    );
+
+  const [
+    seasonRow,
+    setSeasonRow,
+  ] =
+    useState<any | null>(
+      null,
+    );
+
+  const [
+    leagueProfile,
+    setLeagueProfile,
+  ] =
+    useState<LeagueProfile | null>(
+      null,
+    );
+
+  const [
+    seasonLoading,
+    setSeasonLoading,
+  ] =
+    useState(false);
+
+  const [
+    leagueLoading,
+    setLeagueLoading,
+  ] =
+    useState(false);
+
+  const [
+    seasonError,
+    setSeasonError,
+  ] =
+    useState("");
+
+  const [
+    leagueError,
+    setLeagueError,
+  ] =
+    useState("");
+
+  const effectiveSeason =
+    season ===
+    "all"
+      ? 2026
+      : season;
+
+  useEffect(() => {
+    setMode(
+      defaultMode,
+    );
+  }, [
+    player?.id,
+    defaultMode,
+  ]);
+
+  useEffect(() => {
+    if (!player) {
+      setSeasonRow(
+        null,
+      );
+
+      return;
+    }
+
+    const currentPlayer =
+      player;
+
+    let active =
+      true;
+
+    async function loadSeason() {
+      try {
+        setSeasonLoading(
+          true,
+        );
+
+        setSeasonError(
+          "",
+        );
+
+        const response =
+          await fetch(
+            `/api/player-season-stats?season=${effectiveSeason}&sport=${sport}`,
+            {
+              cache:
+                "no-store",
+            },
+          );
+
+        const result =
+          await response.json();
+
+        if (!active) {
+          return;
+        }
+
+        if (
+          !response.ok ||
+          result.available ===
+            false
+        ) {
+          setSeasonRow(
+            null,
+          );
+
+          setSeasonError(
+            result.message ??
+              result.error ??
+              "Season statistics are not available.",
+          );
+
+          return;
+        }
+
+        const rows =
+          result.playerStats ??
+          result.playerSeasonStats ??
+          result.players ??
+          [];
+
+        const match =
+          Array.isArray(
+            rows,
+          )
+            ? rows.find(
+                (
+                  row:
+                    any,
+                ) =>
+                  Number(
+                    row.player_id,
+                  ) ===
+                  currentPlayer.id,
+              )
+            : null;
+
+        setSeasonRow(
+          match ??
+            null,
+        );
+
+        if (!match) {
+          setSeasonError(
+            "No professional season statistics were found for this player.",
+          );
+        }
+      } catch (
+        error
+      ) {
+        console.error(
+          "Unable to load professional player profile",
+          error,
+        );
+
+        if (active) {
+          setSeasonRow(
+            null,
+          );
+
+          setSeasonError(
+            "Unable to load professional season statistics.",
+          );
+        }
+      } finally {
+        if (active) {
+          setSeasonLoading(
+            false,
+          );
+        }
+      }
+    }
+
+    void loadSeason();
+
+    return () => {
+      active =
+        false;
+    };
+  }, [
+    player?.id,
+    sport,
+    effectiveSeason,
+  ]);
+
+  useEffect(() => {
+    if (!player) {
+      setLeagueProfile(
+        null,
+      );
+
+      return;
+    }
+
+    const currentPlayer =
+      player;
+
+    let active =
+      true;
+
+    async function loadLeague() {
+      try {
+        setLeagueLoading(
+          true,
+        );
+
+        setLeagueError(
+          "",
+        );
+
+        const response =
+          await fetch(
+            `/api/player-league-profile?playerId=${currentPlayer.id}&season=${season}&sport=${sport}`,
+            {
+              cache:
+                "no-store",
+            },
+          );
+
+        const result =
+          await response.json();
+
+        if (!active) {
+          return;
+        }
+
+        if (!response.ok) {
+          setLeagueProfile(
+            null,
+          );
+
+          setLeagueError(
+            result.error ??
+              "Unable to load 111 Sports history.",
+          );
+
+          return;
+        }
+
+        setLeagueProfile(
+          result as LeagueProfile,
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "Unable to load league player profile",
+          error,
+        );
+
+        if (active) {
+          setLeagueProfile(
+            null,
+          );
+
+          setLeagueError(
+            "Unable to load 111 Sports history.",
+          );
+        }
+      } finally {
+        if (active) {
+          setLeagueLoading(
+            false,
+          );
+        }
+      }
+    }
+
+    void loadLeague();
+
+    return () => {
+      active =
+        false;
+    };
+  }, [
+    player?.id,
+    sport,
+    season,
+  ]);
+
+  useEffect(() => {
+    if (!player) {
+      return;
+    }
+
+    function handleKeyDown(
+      event:
+        KeyboardEvent,
+    ) {
+      if (
+        event.key ===
+        "Escape"
+      ) {
+        onClose();
+      }
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+  }, [
+    player,
+    onClose,
+  ]);
+
+  const leagueSummary =
+    leagueProfile?.summary;
+
+  const seasonSubtitle =
+    sport ===
+    "golf"
+      ? `${effectiveSeason} PGA Season`
+      : sport ===
+          "nfl"
+        ? `${effectiveSeason} NFL Season`
+        : `${effectiveSeason} NBA Season`;
+
+  const identitySecondary =
+    useMemo(
+      () =>
+        [
+          player?.teamAbbreviation,
+          player?.positionGroup,
+        ]
+          .filter(
+            Boolean,
+          )
+          .join(
+            " · ",
+          ),
+      [
+        player?.teamAbbreviation,
+        player?.positionGroup,
+      ],
+    );
+
+  if (!player) {
+    return null;
+  }
+
+  const currentPlayer =
+    player;
+
+  function renderNbaSeason() {
+    if (!seasonRow) {
+      return null;
+    }
+
+    return (
+      <>
+        <section>
+          <div className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-sky-300">
+            Season Box Score
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard
+              label="Fantasy Points"
+              value={
+                fmt(
+                  seasonRow.fantasy_points,
+                  1,
+                )
+              }
+              detail="111 scoring"
+            />
+
+            <StatCard
+              label="Points"
+              value={
+                fmt(
+                  seasonRow.points,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Rebounds"
+              value={
+                fmt(
+                  seasonRow.rebounds,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Assists"
+              value={
+                fmt(
+                  seasonRow.assists,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Steals"
+              value={
+                fmt(
+                  seasonRow.steals,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Blocks"
+              value={
+                fmt(
+                  seasonRow.blocks,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Turnovers"
+              value={
+                fmt(
+                  seasonRow.turnovers,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Games"
+              value={
+                seasonRow.games_played ??
+                "—"
+              }
+            />
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  function renderNflSeason() {
+    if (!seasonRow) {
+      return null;
+    }
+
+    const position =
+      String(
+        seasonRow.position_group ??
+        seasonRow.position ??
+        currentPlayer.positionGroup ??
+        "",
+      ).toUpperCase();
+
+    const isQuarterback =
+      position ===
+      "QB";
+
+    return (
+      <div className="space-y-5">
+        <section>
+          <div className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-sky-300">
+            Season Production
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard
+              label="Fantasy Points / Game"
+              value={
+                fmt(
+                  seasonRow.fantasy_points_per_game,
+                  2,
+                )
+              }
+              detail="111 scoring"
+            />
+
+            <StatCard
+              label="Games"
+              value={
+                seasonRow.games_played ??
+                "—"
+              }
+            />
+
+            {isQuarterback ? (
+              <>
+                <StatCard
+                  label="Pass Yards / Game"
+                  value={
+                    fmt(
+                      seasonRow.passing_yards_per_game,
+                      1,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Pass TD / Game"
+                  value={
+                    fmt(
+                      seasonRow.passing_tds_per_game,
+                      2,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="INT / Game"
+                  value={
+                    fmt(
+                      seasonRow.passing_ints_per_game,
+                      2,
+                    )
+                  }
+                />
+              </>
+            ) : null}
+
+            <StatCard
+              label="Rush Yards / Game"
+              value={
+                fmt(
+                  seasonRow.rushing_yards_per_game,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Rush TD / Game"
+              value={
+                fmt(
+                  seasonRow.rushing_tds_per_game,
+                  2,
+                )
+              }
+            />
+
+            {!isQuarterback ? (
+              <>
+                <StatCard
+                  label="Targets / Game"
+                  value={
+                    fmt(
+                      seasonRow.receiving_targets_per_game,
+                      2,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Receptions / Game"
+                  value={
+                    fmt(
+                      seasonRow.receptions_per_game,
+                      2,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Receiving Yards / Game"
+                  value={
+                    fmt(
+                      seasonRow.receiving_yards_per_game,
+                      1,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Receiving TD / Game"
+                  value={
+                    fmt(
+                      seasonRow.receiving_tds_per_game,
+                      2,
+                    )
+                  }
+                />
+              </>
+            ) : null}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  function renderGolfSeason() {
+    if (!seasonRow) {
+      return null;
+    }
+
+    const hasDetailed =
+      Boolean(
+        seasonRow.has_detailed_stats,
+      );
+
+    return (
+      <div className="space-y-5">
+        <section>
+          <div className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+            PGA Results
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard
+              label="Scoring Average"
+              value={
+                fmt(
+                  seasonRow.scoring_average,
+                  2,
+                )
+              }
+            />
+
+            <StatCard
+              label="Cuts Made"
+              value={
+                seasonRow.cuts_made_pct ===
+                  null ||
+                seasonRow.cuts_made_pct ===
+                  undefined
+                  ? `${seasonRow.cuts_made ?? 0}`
+                  : `${seasonRow.cuts_made ?? 0}/${seasonRow.tournaments_played ?? 0}`
+              }
+              detail={
+                seasonRow.cuts_made_pct ===
+                  null ||
+                seasonRow.cuts_made_pct ===
+                  undefined
+                  ? "Partial PGA record"
+                  : pct(
+                      seasonRow.cuts_made_pct,
+                      1,
+                    )
+              }
+            />
+
+            <StatCard
+              label="Wins"
+              value={
+                seasonRow.wins ??
+                0
+              }
+            />
+
+            <StatCard
+              label="Top 5"
+              value={
+                seasonRow.top_5_finishes ??
+                0
+              }
+            />
+
+            <StatCard
+              label="Top 10"
+              value={
+                seasonRow.top_10_finishes ??
+                0
+              }
+            />
+
+            <StatCard
+              label="Events"
+              value={
+                seasonRow.tournaments_played ??
+                0
+              }
+            />
+          </div>
+        </section>
+
+        {hasDetailed ? (
+          <>
+            <section>
+              <div className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                Scoring Profile
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard
+                  label="Birdies / Round"
+                  value={
+                    fmt(
+                      seasonRow.birdies_per_round,
+                      2,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Birdie %"
+                  value={
+                    pct(
+                      seasonRow.birdie_rate,
+                      1,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Bogey %"
+                  value={
+                    pct(
+                      seasonRow.bogey_rate,
+                      1,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Rounds"
+                  value={
+                    seasonRow.rounds_played ??
+                    "—"
+                  }
+                />
+              </div>
+            </section>
+
+            <section>
+              <div className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                Ball Striking & Putting
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard
+                  label="GIR"
+                  value={
+                    pct(
+                      seasonRow.greens_in_reg_pct,
+                      1,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Driving Accuracy"
+                  value={
+                    pct(
+                      seasonRow.driving_accuracy_pct,
+                      1,
+                    )
+                  }
+                />
+
+                <StatCard
+                  label="Driving Distance"
+                  value={
+                    seasonRow.driving_distance ===
+                      null ||
+                    seasonRow.driving_distance ===
+                      undefined
+                      ? "—"
+                      : `${fmt(
+                          seasonRow.driving_distance,
+                          1,
+                        )} yd`
+                  }
+                />
+
+                <StatCard
+                  label="Putts / GIR"
+                  value={
+                    fmt(
+                      seasonRow.putts_per_gir,
+                      2,
+                    )
+                  }
+                />
+              </div>
+            </section>
+          </>
+        ) : (
+          <div className="rounded-2xl border border-amber-700/40 bg-amber-950/20 px-4 py-3 text-sm text-amber-200">
+            ESPN has results for this golfer, but detailed PGA performance statistics are not available for this season.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderSeasonProfile() {
+    if (
+      seasonLoading
+    ) {
+      return (
+        <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-sm text-slate-400">
+          Loading professional season statistics…
+        </div>
+      );
+    }
+
+    if (
+      seasonError ||
+      !seasonRow
+    ) {
+      return (
+        <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-sm text-slate-400">
+          {seasonError ||
+            "No professional season statistics are available."}
+        </div>
+      );
+    }
+
+    if (
+      sport ===
+      "golf"
+    ) {
+      return renderGolfSeason();
+    }
+
+    if (
+      sport ===
+      "nfl"
+    ) {
+      return renderNflSeason();
+    }
+
+    return renderNbaSeason();
+  }
+
+  function renderLeagueProfile() {
+    if (
+      leagueLoading
+    ) {
+      return (
+        <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-sm text-slate-400">
+          Loading 111 Sports history…
+        </div>
+      );
+    }
+
+    if (
+      leagueError ||
+      !leagueProfile
+    ) {
+      return (
+        <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-sm text-slate-400">
+          {leagueError ||
+            "No 111 Sports history is available."}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-5">
+        <section>
+          <div
+            className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${
+              sport ===
+              "golf"
+                ? "text-emerald-300"
+                : "text-sky-300"
+            }`}
+          >
+            League Impact
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard
+              label="Drafted"
+              value={
+                leagueSummary?.timesDrafted ??
+                0
+              }
+            />
+
+            <StatCard
+              label="Wins"
+              value={
+                leagueSummary?.wins ??
+                0
+              }
+            />
+
+            <StatCard
+              label={
+                sport ===
+                "golf"
+                  ? "Podiums"
+                  : "Runner-Ups"
+              }
+              value={
+                sport ===
+                "golf"
+                  ? leagueSummary?.podiums ??
+                    0
+                  : leagueSummary?.runnerUps ??
+                    0
+              }
+            />
+
+            <StatCard
+              label="Win Rate"
+              value={
+                leagueSummary?.winRate ===
+                  null ||
+                leagueSummary?.winRate ===
+                  undefined
+                  ? "—"
+                  : pct(
+                      leagueSummary.winRate,
+                      0,
+                    )
+              }
+            />
+
+            <StatCard
+              label={
+                sport ===
+                "golf"
+                  ? "Avg Score"
+                  : "Avg FP"
+              }
+              value={
+                fmt(
+                  leagueSummary?.averageFantasyPoints,
+                  sport ===
+                    "golf"
+                    ? 1
+                    : 1,
+                )
+              }
+            />
+
+            <StatCard
+              label={
+                sport ===
+                "golf"
+                  ? "Best Score"
+                  : "Best FP"
+              }
+              value={
+                fmt(
+                  leagueSummary?.bestFantasyPoints,
+                  1,
+                )
+              }
+            />
+
+            <StatCard
+              label="Avg Finish"
+              value={
+                leagueSummary?.averageFinish ===
+                  null ||
+                leagueSummary?.averageFinish ===
+                  undefined
+                  ? "—"
+                  : ordinal(
+                      Math.round(
+                        leagueSummary.averageFinish,
+                      ),
+                    )
+              }
+            />
+
+            <StatCard
+              label="Most Drafted By"
+              value={
+                leagueSummary?.draftedMostBy?.teamName ??
+                "—"
+              }
+              detail={
+                leagueSummary?.draftedMostBy
+                  ? `${leagueSummary.draftedMostBy.count} drafts`
+                  : undefined
+              }
+            />
+          </div>
+        </section>
+
+        {(leagueProfile.recentHistory ??
+          []).length >
+        0 ? (
+          <section>
+            <div
+              className={`mb-3 text-xs font-black uppercase tracking-[0.18em] ${
+                sport ===
+                "golf"
+                  ? "text-emerald-300"
+                  : "text-sky-300"
+              }`}
+            >
+              Recent Drafts
+            </div>
+
+            <div className="space-y-2">
+              {(
+                leagueProfile.recentHistory ??
+                []
+              )
+                .slice(
+                  0,
+                  8,
+                )
+                .map(
+                  (
+                    history,
+                    index,
+                  ) => (
+                    <div
+                      key={`${history.slateId ?? history.slateLabel ?? index}-${index}`}
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-white">
+                          {formatSlateLabel(
+                            history.slateLabel,
+                          )}
+                        </div>
+
+                        <div className="mt-0.5 text-[11px] text-slate-400">
+                          {history.teamName
+                            ? `Drafted by ${history.teamName}`
+                            : "111 Sports"}
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 text-right">
+                        <div className="font-black text-white">
+                          {fmt(
+                            sport ===
+                              "golf"
+                              ? history.golferScore ??
+                                  history.fantasyPoints
+                              : history.fantasyPoints,
+                            1,
+                          )}
+                        </div>
+
+                        <div className="text-[10px] uppercase text-slate-400">
+                          {history.finishPosition
+                            ? ordinal(
+                                history.finishPosition,
+                              )
+                            : sport ===
+                                "golf"
+                              ? "Score"
+                              : "FP"}
+                        </div>
+                      </div>
+                    </div>
+                  ),
+                )}
+            </div>
+          </section>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-400">
+            This player has not been drafted in this view yet.
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-[12000] flex items-start justify-center bg-slate-950/75 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      onMouseDown={
+        (
+          event,
+        ) => {
+          if (
+            event.target ===
+            event.currentTarget
+          ) {
+            onClose();
+          }
+        }
+      }
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${player.name} profile`}
+        className="flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden bg-slate-950 text-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-[30px] sm:border sm:border-slate-700"
+      >
+        <header
+          className={`shrink-0 border-b bg-slate-950/95 px-5 py-4 backdrop-blur ${
+            sport ===
+            "golf"
+              ? "border-emerald-900"
+              : "border-sky-900"
+          }`}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div
+                className={`text-xs font-black uppercase tracking-[0.22em] ${
+                  sport ===
+                  "golf"
+                    ? "text-emerald-300"
+                    : "text-sky-300"
+                }`}
+              >
+                Player Profile
+              </div>
+
+              <div className="mt-1 text-xs text-slate-500">
+                {mode ===
+                "season"
+                  ? seasonSubtitle
+                  : "111 Sports League History"}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={
+                onClose
+              }
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-xl font-bold text-slate-300 transition hover:bg-slate-700"
+              aria-label="Close player profile"
+            >
+              ×
+            </button>
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="space-y-5 p-4 pb-28 sm:p-6 sm:pb-8">
+            <section
+              className={`overflow-hidden rounded-3xl border bg-gradient-to-br p-5 ${
+                sport ===
+                "golf"
+                  ? "border-emerald-700 from-emerald-950 via-emerald-900 to-slate-950"
+                  : "border-sky-800 from-sky-950 via-slate-900 to-slate-950"
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-white/10 bg-white/10">
+                  {sport ===
+                  "golf" ? (
+                    player.headshotUrl ||
+                    player.espnGolfPlayerId ? (
+                      <img
+                        src={
+                          player.headshotUrl ??
+                          `https://a.espncdn.com/i/headshots/golf/players/full/${player.espnGolfPlayerId}.png`
+                        }
+                        alt={
+                          player.name
+                        }
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-3xl">
+                        ⛳
+                      </div>
+                    )
+                  ) : (
+                    <PlayerHeadshot
+                      nbaPlayerId={
+                        player.nbaPlayerId ??
+                        null
+                      }
+                      nflPlayerId={
+                        player.nflPlayerId ??
+                        null
+                      }
+                      playerName={
+                        player.name
+                      }
+                      size="xl"
+                    />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div
+                    className={`text-xs font-black uppercase tracking-[0.18em] ${
+                      sport ===
+                      "golf"
+                        ? "text-emerald-300"
+                        : "text-sky-300"
+                    }`}
+                  >
+                    {mode ===
+                    "season"
+                      ? seasonSubtitle
+                      : "111 Sports"}
+                  </div>
+
+                  <h2 className="mt-1 text-2xl font-black leading-tight text-white sm:text-3xl">
+                    {
+                      player.name
+                    }
+                  </h2>
+
+                  <div className="mt-2 text-sm text-slate-300">
+                    {sport ===
+                    "golf"
+                      ? [
+                          player.owgrRank
+                            ? `OWGR #${player.owgrRank}`
+                            : null,
+                          player.country,
+                        ]
+                          .filter(
+                            Boolean,
+                          )
+                          .join(
+                            " · ",
+                          ) ||
+                        "PGA"
+                      : identitySecondary ||
+                        sport.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {actionLabel &&
+            onAction ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void onAction()
+                }
+                className={`w-full rounded-2xl border px-4 py-3.5 text-base font-black text-white shadow-lg transition ${
+                  sport === "golf"
+                    ? "border-emerald-500 bg-emerald-600 hover:bg-emerald-500"
+                    : sport === "nfl"
+                      ? "border-sky-500 bg-sky-600 hover:bg-sky-500"
+                      : "border-orange-500 bg-orange-600 hover:bg-orange-500"
+                }`}
+              >
+                {actionLabel}
+              </button>
+            ) : null}
+
+            <div className="grid grid-cols-2 gap-1 rounded-2xl border border-slate-700 bg-slate-900 p-1">
+              <button
+                type="button"
+                onClick={() =>
+                  setMode(
+                    "season",
+                  )
+                }
+                className={`rounded-xl px-3 py-2.5 text-sm font-black transition ${
+                  mode ===
+                  "season"
+                    ? sport ===
+                        "golf"
+                      ? "bg-emerald-700 text-white shadow"
+                      : "bg-sky-700 text-white shadow"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Season Stats
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setMode(
+                    "league",
+                  )
+                }
+                className={`rounded-xl px-3 py-2.5 text-sm font-black transition ${
+                  mode ===
+                  "league"
+                    ? sport ===
+                        "golf"
+                      ? "bg-emerald-700 text-white shadow"
+                      : "bg-sky-700 text-white shadow"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                League History
+              </button>
+            </div>
+
+            {mode ===
+            "season"
+              ? renderSeasonProfile()
+              : renderLeagueProfile()}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+=== DRAFTPLAYERMODAL — FULL FILE ===
+"use client";
+
+import PlayerModal from "@/components/lineups/PlayerModal";
+import type {
+  OrderedTeam,
+  Player,
+  PlayerHistoryDetailRow,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
+
+type TeamStats = {
+  totalPlayers: number;
+  guards: number;
+  fcPlayers: number;
+};
+
+type AssignmentStatus = {
+  canAssign: boolean;
+  reason: string;
+};
+
+type Props = {
+  draftingPlayer: Player | null;
+  setDraftingPlayer: React.Dispatch<
+    React.SetStateAction<Player | null>
+  >;
+  playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
+  availablePlayerIdSet: Set<number>;
+  ownerTeamForDraftingPlayer: OrderedTeam | null;
+  isAssigningPlayer: boolean;
+  isSaving: boolean;
+  handleRemovePlayerFromTeam: (
+    player: Player
+  ) => Promise<void>;
+  draftingPlayerHistory: PlayerHistoryDetailRow[];
+  isDraftingPlayerHistoryLoading: boolean;
+  orderedTeamsForSlate: OrderedTeam[];
+  getTeamStats: (teamId: number) => TeamStats;
+  getTeamAssignmentStatus: (
+    teamId: number,
+    player: Player
+  ) => AssignmentStatus;
+  getOwnerTeamIdForPlayer: (
+    playerId: number
+  ) => number | null;
+  handleAssignPlayerToTeam: (
+    player: Player,
+    teamId: number
+  ) => Promise<void>;
+  targetDraftSlot: TargetDraftSlot | null;
+  handleDraftToTargetSlot: (
+    player: Player
+  ) => Promise<void>;
+};
+
+export default function DraftPlayerModal({
+  draftingPlayer,
+  setDraftingPlayer,
+  playerAverageMap,
+  playerProjections,
+  availablePlayerIdSet,
+  ownerTeamForDraftingPlayer,
+  isAssigningPlayer,
+  isSaving,
+  handleRemovePlayerFromTeam,
+  draftingPlayerHistory,
+  isDraftingPlayerHistoryLoading,
+  orderedTeamsForSlate,
+  getTeamStats,
+  getTeamAssignmentStatus,
+  getOwnerTeamIdForPlayer,
+  handleAssignPlayerToTeam,
+  targetDraftSlot,
+  handleDraftToTargetSlot,
+}: Props) {
+  void draftingPlayerHistory;
+
+  return (
+    <PlayerModal
+      mode="draft"
+      player={draftingPlayer}
+      onClose={() => setDraftingPlayer(null)}
+      playerAverageMap={playerAverageMap}
+      playerProjections={playerProjections}
+      availablePlayerIdSet={
+        availablePlayerIdSet
+      }
+      ownerTeam={
+        ownerTeamForDraftingPlayer
+      }
+      isAssigningPlayer={
+        isAssigningPlayer
+      }
+      isSaving={isSaving}
+      isExternalLoading={
+        isDraftingPlayerHistoryLoading
+      }
+      orderedTeamsForSlate={
+        orderedTeamsForSlate
+      }
+      getTeamStats={getTeamStats}
+      getTeamAssignmentStatus={
+        getTeamAssignmentStatus
+      }
+      getOwnerTeamIdForPlayer={
+        getOwnerTeamIdForPlayer
+      }
+      handleAssignPlayerToTeam={
+        handleAssignPlayerToTeam
+      }
+      targetDraftSlot={targetDraftSlot}
+      handleDraftToTargetSlot={
+        handleDraftToTargetSlot
+      }
+      handleRemovePlayerFromTeam={
+        handleRemovePlayerFromTeam
+      }
+    />
+  );
+}
+
+=== LEAGUELINEUPCARDS — FULL FILE ===
+"use client";
+
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import type {
+  OrderedTeam,
+  Player,
+  RosterSlotConfig,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
+
+type Props = {
+  teams: OrderedTeam[];
+  currentTeamId: number | null;
+  getPlayersForTeam: (teamId: number) => Player[];
+  getPlayerProjectionScore: (playerId: number) => number;
+  getDraftNeeds: (teamId: number) => string;
+  rosterSlots: RosterSlotConfig[];
+  setResearchPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
+  isLocked: boolean;
+};
+
+type MiniSlotProps = {
+  player: Player | null;
+  positionGroup: string;
+  team: OrderedTeam;
+  isLocked: boolean;
+  setResearchPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
+};
+
+function MiniSlot({
+  player,
+  positionGroup,
+  team,
+  isLocked,
+  setResearchPlayer,
+  setTargetDraftSlot,
+}: MiniSlotProps) {
+  return (
+    <button
+      type="button"
+      disabled={!player && isLocked}
+      onClick={() => {
+        if (player) {
+          setResearchPlayer(player);
+          return;
+        }
+
+        if (isLocked) return;
+
+        setTargetDraftSlot({
+          teamId: team.id,
+          teamName: team.name,
+          positionGroup,
+        });
+      }}
+      className={`league-lineup-mini-slot ${
+        player
+          ? "league-lineup-mini-slot--filled"
+          : "league-lineup-mini-slot--empty"
+      }`}
+      aria-label={
+        player
+          ? `View ${player.name}`
+          : `Draft ${positionGroup} for ${team.name}`
+      }
+    >
+      {player ? (
+        <PlayerHeadshot
+          nbaPlayerId={player.nba_player_id}
+          playerName={player.name}
+          imageUrl={player.headshot_url}
+          size="sm"
+          className="league-lineup-mini-headshot"
+        />
+      ) : (
+        <span aria-hidden="true">+</span>
+      )}
+    </button>
+  );
+}
+
+const FALLBACK_ROSTER_SLOTS: RosterSlotConfig[] = [
+  { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+  { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+];
+
+export default function LeagueLineupCards({
+  teams,
+  currentTeamId,
+  getPlayersForTeam,
+  getPlayerProjectionScore,
+  getDraftNeeds,
+  rosterSlots,
+  setResearchPlayer,
+  setTargetDraftSlot,
+  isLocked,
+}: Props) {
+  const otherTeams = teams.filter(
+    (team) => team.id !== currentTeamId
+  );
+
+  if (otherTeams.length === 0) {
+    return null;
+  }
+
+  const effectiveSlots =
+    rosterSlots.length > 0 ? rosterSlots : FALLBACK_ROSTER_SLOTS;
+
+  const totalSlots = effectiveSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
+  );
+
+  return (
+    <section className="league-lineups-shell">
+      <div className="league-lineups-heading">
+        <div>
+          <div className="league-lineups-kicker">
+            Around the league
+          </div>
+
+          <h2>League Lineups</h2>
+
+          <p>
+            Swipe to compare rosters and remaining needs.
+          </p>
+        </div>
+
+        <div className="league-lineups-swipe-note">
+          Swipe →
+        </div>
+      </div>
+
+      <div className="league-lineups-strip">
+        {otherTeams.map((team) => {
+          const rosterPlayers = getPlayersForTeam(team.id);
+
+          const playersByPosition = new Map<string, Player[]>();
+          rosterPlayers.forEach((player) => {
+            const existing =
+              playersByPosition.get(player.position_group) ?? [];
+            existing.push(player);
+            playersByPosition.set(player.position_group, existing);
+          });
+
+          const projectedTotal = rosterPlayers.reduce(
+            (sum, player) =>
+              sum + getPlayerProjectionScore(player.id),
+            0
+          );
+
+          const rosterCount = rosterPlayers.length;
+          const isComplete = rosterCount === totalSlots;
+          const isParticipating =
+            team.is_participating !== false;
+
+          return (
+            <article
+              key={team.id}
+              className={`league-lineup-card ${
+                !isParticipating
+                  ? "league-lineup-card--inactive"
+                  : ""
+              }`}
+            >
+              <div className="league-lineup-card-header">
+                <div className="flex min-w-0 items-center gap-3">
+                  <TeamAvatar
+                    teamName={team.name}
+                    size="lg"
+                  />
+
+                  <div className="min-w-0">
+                    <h3>{team.name}</h3>
+
+                    <div className="league-lineup-draft-order">
+                      Draft position #
+                      {team.draft_order ?? "—"}
+                      {!isParticipating ? " • Out" : ""}
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className={`league-lineup-count ${
+                    isComplete
+                      ? "league-lineup-count--complete"
+                      : ""
+                  }`}
+                >
+                  {rosterCount}/{totalSlots}
+                </div>
+              </div>
+
+              <div className="league-lineup-formation">
+                {effectiveSlots.map((slotConfig) => {
+                  const positionPlayers =
+                    playersByPosition.get(slotConfig.position) ?? [];
+
+                  const slotList: Array<Player | null> = Array.from(
+                    { length: slotConfig.slot_count },
+                    (_, index) => positionPlayers[index] ?? null
+                  );
+
+                  return (
+                    <div
+                      key={slotConfig.position}
+                      className="league-lineup-row"
+                    >
+                      {slotList.map((player, index) => (
+                        <MiniSlot
+                          key={`${slotConfig.position}-${team.id}-${index}`}
+                          player={player}
+                          positionGroup={slotConfig.position}
+                          team={team}
+                          isLocked={isLocked}
+                          setResearchPlayer={setResearchPlayer}
+                          setTargetDraftSlot={setTargetDraftSlot}
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="league-lineup-progress">
+                <div
+                  style={{
+                    width: `${Math.min(
+                      (rosterCount / totalSlots) * 100,
+                      100
+                    )}%`,
+                  }}
+                />
+              </div>
+
+              <div className="league-lineup-card-footer">
+                <div>
+                  <span>Projected</span>
+                  <strong>
+                    {projectedTotal.toFixed(1)}
+                  </strong>
+                </div>
+
+                <div className="league-lineup-need">
+                  {isComplete
+                    ? "✓ Complete"
+                    : getDraftNeeds(team.id)}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+=== DRAFTROSTERCOURT — FULL FILE ===
+"use client";
+
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import type {
+  Player,
+  RosterSlotConfig,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
+
+type Props = {
+  teamId: number | null;
+  teamName: string | null;
+  players: Player[];
+  rosterSlots: RosterSlotConfig[];
+  isLocked: boolean;
+  setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
+};
+
+type SlotProps = {
+  player: Player | null;
+  positionGroup: string;
+  slotNumber: number;
+  disabled: boolean;
+  onPlayerClick: (player: Player) => void;
+  onEmptyClick: (positionGroup: string) => void;
+};
+
+function DraftRosterSlot({
+  player,
+  positionGroup,
+  slotNumber,
+  disabled,
+  onPlayerClick,
+  onEmptyClick,
+}: SlotProps) {
+  const label = player?.name ?? positionGroup;
+
+  return (
+    <button
+      type="button"
+      disabled={!player && disabled}
+      onClick={() => {
+        if (player) {
+          onPlayerClick(player);
+          return;
+        }
+
+        onEmptyClick(positionGroup);
+      }}
+      aria-label={
+        player
+          ? `View ${player.name}`
+          : `Draft ${positionGroup} into slot ${slotNumber}`
+      }
+      className={`draft-roster-slot ${
+        player
+          ? "draft-roster-slot--filled"
+          : "draft-roster-slot--empty"
+      }`}
+    >
+      <span className="draft-roster-headshot">
+        {player ? (
+          <PlayerHeadshot
+            nbaPlayerId={player.nba_player_id}
+            nflPlayerId={player.nfl_player_id}
+            espnGolfPlayerId={player.espn_player_id}
+            imageUrl={player.headshot_url}
+            playerName={player.name}
+            size="xl"
+            className="draft-roster-player-image"
+          />
+        ) : (
+          <span className="draft-roster-plus" aria-hidden="true">
+            +
+          </span>
+        )}
+      </span>
+
+      <span className="draft-roster-player-name">
+        {label}
+      </span>
+
+      <span className="draft-roster-position">
+        {player ? positionGroup : "Empty"}
+      </span>
+    </button>
+  );
+}
+
+export default function DraftRosterCourt({
+  teamId,
+  teamName,
+  players,
+  rosterSlots,
+  isLocked,
+  setDraftingPlayer,
+  setTargetDraftSlot,
+}: Props) {
+  // Fallback to NBA's 2G/3F-C shape if no roster_slots rows were found,
+  // so nothing breaks if this ever runs before the config is seeded.
+  const effectiveSlots: RosterSlotConfig[] =
+    rosterSlots.length > 0
+      ? rosterSlots
+      : [
+          { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+          { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+        ];
+
+  const totalSlots = effectiveSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
+  );
+
+  const playersByPosition = new Map<string, Player[]>();
+  for (const player of players) {
+    const existing = playersByPosition.get(player.position_group) ?? [];
+    existing.push(player);
+    playersByPosition.set(player.position_group, existing);
+  }
+
+  const completedSlots = Math.min(players.length, totalSlots);
+  const progressPercent = totalSlots > 0 ? (completedSlots / totalSlots) * 100 : 0;
+
+  function openEmptySlot(positionGroup: string) {
+    if (!teamId || !teamName || isLocked) return;
+
+    setTargetDraftSlot({
+      teamId,
+      teamName,
+      positionGroup,
+    });
+  }
+
+  return (
+    <section className="draft-roster-court">
+      <div className="draft-roster-header">
+        <div>
+          <div className="draft-roster-kicker">
+            Your lineup
+          </div>
+
+          <h2 className="draft-roster-title">
+            {teamName ?? "Loading your team..."}
+          </h2>
+        </div>
+
+        <div className="draft-roster-count">
+          <strong>{completedSlots}/{totalSlots}</strong>
+          <span>{completedSlots === totalSlots ? "Complete" : "Filled"}</span>
+        </div>
+      </div>
+
+      <div className="draft-roster-progress">
+        <div
+          className="draft-roster-progress-fill"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      <div className="draft-roster-formation">
+        {effectiveSlots.map((slotConfig) => {
+          const positionPlayers = playersByPosition.get(slotConfig.position) ?? [];
+
+          const slots: Array<Player | null> = Array.from(
+            { length: slotConfig.slot_count },
+            (_, index) => positionPlayers[index] ?? null
+          );
+
+          return (
+            <div
+              key={slotConfig.position}
+              className="draft-roster-row"
+            >
+              {slots.map((player, index) => (
+                <DraftRosterSlot
+                  key={`${slotConfig.position}-${index}`}
+                  player={player}
+                  positionGroup={slotConfig.position}
+                  slotNumber={index + 1}
+                  disabled={!teamId || isLocked}
+                  onPlayerClick={setDraftingPlayer}
+                  onEmptyClick={openEmptySlot}
+                />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="draft-roster-footer">
+        {isLocked ? (
+          <span>🔒 This slate is locked</span>
+        ) : completedSlots === totalSlots ? (
+          <span>✅ Lineup complete</span>
+        ) : (
+          <span>Tap an empty spot to draft a player</span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+=== SEARCH FOR DRAFT DECISION / ROSTER ACTION TEXT ===
+components/lineups/PlayerModal.tsx:360:              {isDraftMode ? "Draft decision" : "Player profile"}
+components/lineups/PlayerModal.tsx:468:            <span>Roster action</span>
+components/lineups/PlayerModal.tsx:471:              {ownerTeam ? `Currently on ${ownerTeam.name}` : "Choose a lineup"}
+components/lineups/PlayerModal.tsx:813:            <div className="player-modal-section-kicker">Ownership history</div>
+components/lineups/PlayerModal.tsx:815:            <h3>Drafted By</h3>
+components/lineups/PlayerModal.tsx:820:          <div className="player-modal-empty">No ownership history yet.</div>
+components/lineups/PlayerModal.tsx:890:            <span>Most drafted by</span>
+components/lineups/PlayerModal.tsx:938:                    <h3>Golf Profile</h3>
+components/lineups/PlayerResearchModal.tsx:1423:              label="Most Drafted By"
+components/lineups/PlayerResearchModal.tsx:1479:                            ? `Drafted by ${history.teamName}`
+components/lineups/PlayerResearchModal.tsx.before-final-profile-cleanup:1201:              label="Most Drafted By"
+components/lineups/PlayerResearchModal.tsx.before-final-profile-cleanup:1256:                            ? `Drafted by ${history.teamName}`
+components/lineups/PlayerResearchModal.tsx.before-date-range-fix:1261:              label="Most Drafted By"
+components/lineups/PlayerResearchModal.tsx.before-date-range-fix:1317:                            ? `Drafted by ${history.teamName}`
+components/lineups/PlayerResearchModal.tsx.before-shared-slot-browser:1414:              label="Most Drafted By"
+components/lineups/PlayerResearchModal.tsx.before-shared-slot-browser:1470:                            ? `Drafted by ${history.teamName}`
+components/home/FunFactCarousel.tsx:114:          * drafted by a fantasy team
+components/profile/GolfProfileOverview.tsx:147:              Golf Profile
+components/profile/GolfProfileOverview.tsx:343:            Hole results from every golfer drafted by this team.
+app/player-history/page.tsx:958:                    Drafted By
+app/player-history/page.tsx:962:                    League ownership history.
+app/player-history/page.tsx:1064:                                Drafted by{" "}
+app/player-history/page.tsx.bak-nfl-ui-cleanup:918:                    Drafted By
+app/player-history/page.tsx.bak-nfl-ui-cleanup:922:                    League ownership history.
+app/player-history/page.tsx.bak-nfl-ui-cleanup:1024:                                Drafted by{" "}
+app/player-history/page.tsx.before-final-profile-cleanup:958:                    Drafted By
+app/player-history/page.tsx.before-final-profile-cleanup:962:                    League ownership history.
+app/player-history/page.tsx.before-final-profile-cleanup:1064:                                Drafted by{" "}
+app/player-history/page.tsx.before-season-sort-rewrite:958:                    Drafted By
+app/player-history/page.tsx.before-season-sort-rewrite:962:                    League ownership history.
+app/player-history/page.tsx.before-season-sort-rewrite:1064:                                Drafted by{" "}
+app/player-history/page.tsx.before-sport-switch-sort-fix:958:                    Drafted By
+app/player-history/page.tsx.before-sport-switch-sort-fix:962:                    League ownership history.
+app/player-history/page.tsx.before-sport-switch-sort-fix:1064:                                Drafted by{" "}
+app/player-history/page.tsx.before-draft-integration:958:                    Drafted By
+app/player-history/page.tsx.before-draft-integration:962:                    League ownership history.
+app/player-history/page.tsx.before-draft-integration:1064:                                Drafted by{" "}
+app/player-history/page.tsx.before-season-defaults:958:                    Drafted By
+app/player-history/page.tsx.before-season-defaults:962:                    League ownership history.
+app/player-history/page.tsx.before-season-defaults:1064:                                Drafted by{" "}
+app/player-history/page.tsx.before-unified-card-final:958:                    Drafted By
+app/player-history/page.tsx.before-unified-card-final:962:                    League ownership history.
+app/player-history/page.tsx.before-unified-card-final:1064:                                Drafted by{" "}
+app/player-history/page.tsx.before-final-research-polish:958:                    Drafted By
+app/player-history/page.tsx.before-final-research-polish:962:                    League ownership history.
+app/player-history/page.tsx.before-final-research-polish:1064:                                Drafted by{" "}
+app/player-history/page.tsx.bak-final-research-ui:958:                    Drafted By
+app/player-history/page.tsx.bak-final-research-ui:962:                    League ownership history.
+app/player-history/page.tsx.bak-final-research-ui:1064:                                Drafted by{" "}
+app/player-history/page.tsx.before-final-history-unification:958:                    Drafted By
+app/player-history/page.tsx.before-final-history-unification:962:                    League ownership history.
+app/player-history/page.tsx.before-final-history-unification:1064:                                Drafted by{" "}
+
+=== PLAYERRESEARCHMODAL USAGES ===
+components/lineups/PlayerPool.tsx:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx:3807:      <PlayerResearchModal
+components/lineups/LineupBuilder.tsx:7:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/LineupBuilder.tsx:1914:      <PlayerResearchModal
+components/lineups/PlayerResearchModal.tsx:442:export default function PlayerResearchModal({
+components/lineups/PlayerResearchModal.tsx.before-final-profile-cleanup:222:export default function PlayerResearchModal({
+components/lineups/PlayerResearchModal.tsx.before-date-range-fix:282:export default function PlayerResearchModal({
+components/lineups/PlayerPool.tsx.before-unified-season-card-layout:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-unified-season-card-layout:3066:      <PlayerResearchModal
+components/lineups/PlayerPool.tsx.before-season-defaults:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-season-defaults:3058:      <PlayerResearchModal
+components/lineups/PlayerPool.tsx.before-final-research-polish:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-final-research-polish:3058:      <PlayerResearchModal
+components/lineups/PlayerPool.tsx.bak-final-research-ui:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.bak-final-research-ui:3069:      <PlayerResearchModal
+components/lineups/PlayerPool.tsx.before-league-history-cards:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-league-history-cards:3069:      <PlayerResearchModal
+components/lineups/PlayerPool.tsx.before-draft-league-history-final:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-draft-league-history-final:3069:      <PlayerResearchModal
+components/lineups/PlayerPool.tsx.before-shared-slot-browser:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-shared-slot-browser:3757:      <PlayerResearchModal
+components/lineups/PlayerResearchModal.tsx.before-shared-slot-browser:435:export default function PlayerResearchModal({
+components/lineups/PlayerPool.tsx.before-slot-compare-bar-position:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-slot-compare-bar-position:3775:      <PlayerResearchModal
+components/lineups/PlayerPool.tsx.before-owgr-season-sort:5:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/PlayerPool.tsx.before-owgr-season-sort:3775:      <PlayerResearchModal
+components/lineups/LineupBuilder.tsx.bak-own-lineup-modal:7:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+components/lineups/LineupBuilder.tsx.bak-own-lineup-modal:1914:      <PlayerResearchModal
+app/player-history/page.tsx:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx:7724:      <PlayerResearchModal
+app/player-history/page.tsx.before-final-profile-cleanup:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-final-profile-cleanup:7479:      <PlayerResearchModal
+app/player-history/page.tsx.before-season-sort-rewrite:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-season-sort-rewrite:7472:      <PlayerResearchModal
+app/player-history/page.tsx.before-sport-switch-sort-fix:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-sport-switch-sort-fix:7472:      <PlayerResearchModal
+app/player-history/page.tsx.before-draft-integration:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-draft-integration:7519:      <PlayerResearchModal
+app/player-history/page.tsx.before-season-defaults:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-season-defaults:7502:      <PlayerResearchModal
+app/player-history/page.tsx.before-unified-card-final:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-unified-card-final:7502:      <PlayerResearchModal
+app/player-history/page.tsx.before-final-research-polish:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-final-research-polish:7781:      <PlayerResearchModal
+app/player-history/page.tsx.bak-final-research-ui:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.bak-final-research-ui:7781:      <PlayerResearchModal
+app/player-history/page.tsx.before-final-history-unification:11:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+app/player-history/page.tsx.before-final-history-unification:7781:      <PlayerResearchModal
+
+=== GIT DIFF ===
+diff --git a/components/lineups/LineupBuilder.tsx b/components/lineups/LineupBuilder.tsx
+index f4b35ae..842e665 100644
+--- a/components/lineups/LineupBuilder.tsx
++++ b/components/lineups/LineupBuilder.tsx
+@@ -1802,7 +1802,7 @@ export default function LineupBuilder({
+               }
+               rosterSlots={rosterSlots}
+               isLocked={Boolean(selectedSlate?.is_locked)}
+-              setDraftingPlayer={setDraftingPlayer}
++              setDraftingPlayer={setLeagueResearchPlayer}
+               setTargetDraftSlot={setTargetDraftSlot}
+             />
+           ) : (

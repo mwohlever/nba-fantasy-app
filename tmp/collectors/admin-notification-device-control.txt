@@ -1,0 +1,3534 @@
+============================================================
+ADMIN NOTIFICATION DEVICE CONTROL — TARGETED COLLECTOR
+============================================================
+
+===== 1. PROFILE NOTIFICATION SETTINGS — DEVICE UI =====
+app/profile/page.tsx-823-                              }
+app/profile/page.tsx-824-                              disabled={
+app/profile/page.tsx-825-                                isSavingPreferences ||
+app/profile/page.tsx-826-                                !notificationPreferences.notificationsEnabled
+app/profile/page.tsx-827-                              }
+app/profile/page.tsx-828-                              onChange={(checked) =>
+app/profile/page.tsx-829-                                void updateNotificationPreferences({
+app/profile/page.tsx-830-                                  ...notificationPreferences,
+app/profile/page.tsx-831-                                  playerFinishedEnabled: checked,
+app/profile/page.tsx-832-                                })
+app/profile/page.tsx-833-                              }
+app/profile/page.tsx-834-                            />
+app/profile/page.tsx-835-
+app/profile/page.tsx-836-                            <SettingToggle
+app/profile/page.tsx-837-                              label={notificationCopy.finalLabel}
+app/profile/page.tsx-838-                              description={notificationCopy.finalDescription}
+app/profile/page.tsx-839-                              checked={
+app/profile/page.tsx-840-                                notificationPreferences.slateFinalEnabled
+app/profile/page.tsx-841-                              }
+app/profile/page.tsx-842-                              disabled={
+app/profile/page.tsx-843-                                isSavingPreferences ||
+app/profile/page.tsx-844-                                !notificationPreferences.notificationsEnabled
+app/profile/page.tsx-845-                              }
+app/profile/page.tsx-846-                              onChange={(checked) =>
+app/profile/page.tsx-847-                                void updateNotificationPreferences({
+app/profile/page.tsx-848-                                  ...notificationPreferences,
+app/profile/page.tsx-849-                                  slateFinalEnabled: checked,
+app/profile/page.tsx-850-                                })
+app/profile/page.tsx-851-                              }
+app/profile/page.tsx-852-                            />
+app/profile/page.tsx-853-                          </div>
+app/profile/page.tsx-854-                        )}
+app/profile/page.tsx-855-
+app/profile/page.tsx-856-                        <p className="mt-4 text-xs leading-5 text-slate-500">
+app/profile/page.tsx-857-                          These choices are saved to your league account.
+app/profile/page.tsx:858:                          Push delivery also requires this device to be
+app/profile/page.tsx-859-                          registered.
+app/profile/page.tsx-860-                        </p>
+app/profile/page.tsx-861-                      </section>
+app/profile/page.tsx-862-                    ) : null}
+app/profile/page.tsx-863-
+app/profile/page.tsx-864-                    {activeSettingsTab === "security" ? (
+app/profile/page.tsx-865-                      <ChangePinForm />
+app/profile/page.tsx-866-                    ) : null}
+app/profile/page.tsx-867-                  </div>
+app/profile/page.tsx-868-                ) : null}
+app/profile/page.tsx-869-              </>
+app/profile/page.tsx-870-            )}
+app/profile/page.tsx-871-          </>
+app/profile/page.tsx-872-        )}
+app/profile/page.tsx-873-      </div>
+app/profile/page.tsx-874-    </main>
+app/profile/page.tsx-875-  );
+app/profile/page.tsx-876-}
+app/profile/page.tsx-877-
+app/profile/page.tsx-878-
+app/profile/page.tsx-879-export default function ProfilePage() {
+app/profile/page.tsx-880-  return (
+app/profile/page.tsx-881-    <Suspense
+app/profile/page.tsx-882-      fallback={
+app/profile/page.tsx-883-        <main className="min-h-screen bg-slate-50 px-3 py-5 pb-24 text-slate-900 sm:px-4 sm:py-6 sm:pb-6">
+app/profile/page.tsx-884-          <div className="mx-auto max-w-7xl">
+app/profile/page.tsx-885-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+app/profile/page.tsx-886-              <div className="text-sm text-slate-500">
+app/profile/page.tsx-887-                Loading profile...
+app/profile/page.tsx-888-              </div>
+app/profile/page.tsx-889-            </section>
+app/profile/page.tsx-890-          </div>
+app/profile/page.tsx-891-        </main>
+app/profile/page.tsx-892-      }
+app/profile/page.tsx-893-    >
+app/profile/page.tsx-894-      <ProfilePageContent />
+app/profile/page.tsx-895-    </Suspense>
+app/profile/page.tsx-896-  );
+app/profile/page.tsx-897-}
+--
+components/profile/PushDeviceControls.tsx-96-  const [permission, setPermission] =
+components/profile/PushDeviceControls.tsx-97-    useState<NotificationPermission>("default");
+components/profile/PushDeviceControls.tsx-98-
+components/profile/PushDeviceControls.tsx-99-  const [currentEndpoint, setCurrentEndpoint] =
+components/profile/PushDeviceControls.tsx-100-    useState<string | null>(null);
+components/profile/PushDeviceControls.tsx-101-
+components/profile/PushDeviceControls.tsx-102-  const [registeredDevices, setRegisteredDevices] =
+components/profile/PushDeviceControls.tsx-103-    useState<RegisteredDevice[]>([]);
+components/profile/PushDeviceControls.tsx-104-
+components/profile/PushDeviceControls.tsx-105-  const [isLoadingDevices, setIsLoadingDevices] =
+components/profile/PushDeviceControls.tsx-106-    useState(true);
+components/profile/PushDeviceControls.tsx-107-
+components/profile/PushDeviceControls.tsx-108-  const [isWorking, setIsWorking] =
+components/profile/PushDeviceControls.tsx-109-    useState(false);
+components/profile/PushDeviceControls.tsx-110-
+components/profile/PushDeviceControls.tsx-111-  const [removingEndpoint, setRemovingEndpoint] =
+components/profile/PushDeviceControls.tsx-112-    useState<string | null>(null);
+components/profile/PushDeviceControls.tsx-113-
+components/profile/PushDeviceControls.tsx-114-  const [message, setMessage] =
+components/profile/PushDeviceControls.tsx-115-    useState("");
+components/profile/PushDeviceControls.tsx-116-
+components/profile/PushDeviceControls.tsx-117-  async function loadRegisteredDevices() {
+components/profile/PushDeviceControls.tsx-118-    const response = await fetch(
+components/profile/PushDeviceControls.tsx-119-      "/api/push-subscriptions",
+components/profile/PushDeviceControls.tsx-120-      {
+components/profile/PushDeviceControls.tsx-121-        method: "GET",
+components/profile/PushDeviceControls.tsx-122-        cache: "no-store",
+components/profile/PushDeviceControls.tsx-123-      },
+components/profile/PushDeviceControls.tsx-124-    );
+components/profile/PushDeviceControls.tsx-125-
+components/profile/PushDeviceControls.tsx-126-    const result = await response.json();
+components/profile/PushDeviceControls.tsx-127-
+components/profile/PushDeviceControls.tsx-128-    if (!response.ok) {
+components/profile/PushDeviceControls.tsx-129-      throw new Error(
+components/profile/PushDeviceControls.tsx-130-        result.error ||
+components/profile/PushDeviceControls.tsx:131:          "Unable to load registered devices.",
+components/profile/PushDeviceControls.tsx-132-      );
+components/profile/PushDeviceControls.tsx-133-    }
+components/profile/PushDeviceControls.tsx-134-
+components/profile/PushDeviceControls.tsx-135-    const devices = Array.isArray(
+components/profile/PushDeviceControls.tsx-136-      result.subscriptions,
+components/profile/PushDeviceControls.tsx-137-    )
+components/profile/PushDeviceControls.tsx-138-      ? (result.subscriptions as RegisteredDevice[])
+components/profile/PushDeviceControls.tsx-139-      : [];
+components/profile/PushDeviceControls.tsx-140-
+components/profile/PushDeviceControls.tsx-141-    setRegisteredDevices(devices);
+components/profile/PushDeviceControls.tsx-142-
+components/profile/PushDeviceControls.tsx-143-    return devices;
+components/profile/PushDeviceControls.tsx-144-  }
+components/profile/PushDeviceControls.tsx-145-
+components/profile/PushDeviceControls.tsx-146-  async function inspectCurrentBrowser(
+components/profile/PushDeviceControls.tsx-147-    devices?: RegisteredDevice[],
+components/profile/PushDeviceControls.tsx-148-  ) {
+components/profile/PushDeviceControls.tsx-149-    const supported =
+components/profile/PushDeviceControls.tsx-150-      "serviceWorker" in navigator &&
+components/profile/PushDeviceControls.tsx-151-      "PushManager" in window &&
+components/profile/PushDeviceControls.tsx-152-      "Notification" in window;
+components/profile/PushDeviceControls.tsx-153-
+components/profile/PushDeviceControls.tsx-154-    setIsSupported(supported);
+components/profile/PushDeviceControls.tsx-155-
+components/profile/PushDeviceControls.tsx-156-    if (!supported) {
+components/profile/PushDeviceControls.tsx-157-      setCurrentEndpoint(null);
+components/profile/PushDeviceControls.tsx-158-      setIsSubscribed(false);
+components/profile/PushDeviceControls.tsx-159-      return;
+components/profile/PushDeviceControls.tsx-160-    }
+components/profile/PushDeviceControls.tsx-161-
+components/profile/PushDeviceControls.tsx-162-    setPermission(Notification.permission);
+components/profile/PushDeviceControls.tsx-163-
+components/profile/PushDeviceControls.tsx-164-    const registration =
+components/profile/PushDeviceControls.tsx-165-      await navigator.serviceWorker.register(
+components/profile/PushDeviceControls.tsx-166-        "/sw.js",
+components/profile/PushDeviceControls.tsx-167-      );
+components/profile/PushDeviceControls.tsx-168-
+components/profile/PushDeviceControls.tsx-169-    const subscription =
+components/profile/PushDeviceControls.tsx-170-      await registration.pushManager.getSubscription();
+components/profile/PushDeviceControls.tsx-171-
+components/profile/PushDeviceControls.tsx-172-    const endpoint =
+components/profile/PushDeviceControls.tsx-173-      subscription?.endpoint ?? null;
+components/profile/PushDeviceControls.tsx-174-
+components/profile/PushDeviceControls.tsx-175-    setCurrentEndpoint(endpoint);
+components/profile/PushDeviceControls.tsx-176-
+components/profile/PushDeviceControls.tsx-177-    let activeDevices = devices;
+components/profile/PushDeviceControls.tsx-178-
+components/profile/PushDeviceControls.tsx-179-    if (!activeDevices) {
+components/profile/PushDeviceControls.tsx-180-      activeDevices =
+components/profile/PushDeviceControls.tsx-181-        await loadRegisteredDevices();
+components/profile/PushDeviceControls.tsx-182-    }
+components/profile/PushDeviceControls.tsx-183-
+components/profile/PushDeviceControls.tsx-184-    const activeInDatabase =
+components/profile/PushDeviceControls.tsx-185-      Boolean(endpoint) &&
+components/profile/PushDeviceControls.tsx-186-      activeDevices.some(
+components/profile/PushDeviceControls.tsx-187-        (device) =>
+components/profile/PushDeviceControls.tsx-188-          device.endpoint === endpoint,
+components/profile/PushDeviceControls.tsx-189-      );
+components/profile/PushDeviceControls.tsx-190-
+components/profile/PushDeviceControls.tsx-191-    setIsSubscribed(
+components/profile/PushDeviceControls.tsx-192-      Boolean(
+components/profile/PushDeviceControls.tsx-193-        subscription &&
+components/profile/PushDeviceControls.tsx-194-          activeInDatabase,
+components/profile/PushDeviceControls.tsx-195-      ),
+components/profile/PushDeviceControls.tsx-196-    );
+components/profile/PushDeviceControls.tsx-197-  }
+components/profile/PushDeviceControls.tsx-198-
+components/profile/PushDeviceControls.tsx-199-  async function refreshDeviceState() {
+components/profile/PushDeviceControls.tsx-200-    setIsLoadingDevices(true);
+components/profile/PushDeviceControls.tsx-201-
+components/profile/PushDeviceControls.tsx-202-    try {
+components/profile/PushDeviceControls.tsx-203-      const devices =
+components/profile/PushDeviceControls.tsx-204-        await loadRegisteredDevices();
+components/profile/PushDeviceControls.tsx-205-
+components/profile/PushDeviceControls.tsx-206-      await inspectCurrentBrowser(devices);
+components/profile/PushDeviceControls.tsx-207-    } finally {
+components/profile/PushDeviceControls.tsx-208-      setIsLoadingDevices(false);
+components/profile/PushDeviceControls.tsx-209-    }
+components/profile/PushDeviceControls.tsx-210-  }
+components/profile/PushDeviceControls.tsx-211-
+components/profile/PushDeviceControls.tsx-212-  useEffect(() => {
+components/profile/PushDeviceControls.tsx-213-    let active = true;
+components/profile/PushDeviceControls.tsx-214-
+components/profile/PushDeviceControls.tsx-215-    async function checkPushStatus() {
+components/profile/PushDeviceControls.tsx-216-      const supported =
+components/profile/PushDeviceControls.tsx-217-        "serviceWorker" in navigator &&
+components/profile/PushDeviceControls.tsx-218-        "PushManager" in window &&
+components/profile/PushDeviceControls.tsx-219-        "Notification" in window;
+components/profile/PushDeviceControls.tsx-220-
+components/profile/PushDeviceControls.tsx-221-      if (!active) {
+components/profile/PushDeviceControls.tsx-222-        return;
+components/profile/PushDeviceControls.tsx-223-      }
+components/profile/PushDeviceControls.tsx-224-
+components/profile/PushDeviceControls.tsx-225-      setIsSupported(supported);
+components/profile/PushDeviceControls.tsx-226-
+components/profile/PushDeviceControls.tsx-227-      if (!supported) {
+components/profile/PushDeviceControls.tsx-228-        setIsLoadingDevices(false);
+components/profile/PushDeviceControls.tsx-229-        return;
+components/profile/PushDeviceControls.tsx-230-      }
+components/profile/PushDeviceControls.tsx-231-
+components/profile/PushDeviceControls.tsx-232-      setPermission(Notification.permission);
+components/profile/PushDeviceControls.tsx-233-
+components/profile/PushDeviceControls.tsx-234-      try {
+components/profile/PushDeviceControls.tsx-235-        const registration =
+components/profile/PushDeviceControls.tsx-236-          await navigator.serviceWorker.register(
+components/profile/PushDeviceControls.tsx-237-            "/sw.js",
+components/profile/PushDeviceControls.tsx-238-          );
+components/profile/PushDeviceControls.tsx-239-
+components/profile/PushDeviceControls.tsx-240-        const subscription =
+components/profile/PushDeviceControls.tsx-241-          await registration.pushManager.getSubscription();
+components/profile/PushDeviceControls.tsx-242-
+components/profile/PushDeviceControls.tsx-243-        const response = await fetch(
+components/profile/PushDeviceControls.tsx-244-          "/api/push-subscriptions",
+components/profile/PushDeviceControls.tsx-245-          {
+components/profile/PushDeviceControls.tsx-246-            method: "GET",
+components/profile/PushDeviceControls.tsx-247-            cache: "no-store",
+components/profile/PushDeviceControls.tsx-248-          },
+components/profile/PushDeviceControls.tsx-249-        );
+components/profile/PushDeviceControls.tsx-250-
+components/profile/PushDeviceControls.tsx-251-        const result =
+components/profile/PushDeviceControls.tsx-252-          await response.json();
+components/profile/PushDeviceControls.tsx-253-
+components/profile/PushDeviceControls.tsx-254-        if (!response.ok) {
+components/profile/PushDeviceControls.tsx-255-          throw new Error(
+components/profile/PushDeviceControls.tsx-256-            result.error ||
+components/profile/PushDeviceControls.tsx:257:              "Unable to load registered devices.",
+components/profile/PushDeviceControls.tsx-258-          );
+components/profile/PushDeviceControls.tsx-259-        }
+components/profile/PushDeviceControls.tsx-260-
+components/profile/PushDeviceControls.tsx-261-        const devices =
+components/profile/PushDeviceControls.tsx-262-          Array.isArray(
+components/profile/PushDeviceControls.tsx-263-            result.subscriptions,
+components/profile/PushDeviceControls.tsx-264-          )
+components/profile/PushDeviceControls.tsx-265-            ? (result.subscriptions as RegisteredDevice[])
+components/profile/PushDeviceControls.tsx-266-            : [];
+components/profile/PushDeviceControls.tsx-267-
+components/profile/PushDeviceControls.tsx-268-        if (!active) {
+components/profile/PushDeviceControls.tsx-269-          return;
+components/profile/PushDeviceControls.tsx-270-        }
+components/profile/PushDeviceControls.tsx-271-
+components/profile/PushDeviceControls.tsx-272-        const endpoint =
+components/profile/PushDeviceControls.tsx-273-          subscription?.endpoint ?? null;
+components/profile/PushDeviceControls.tsx-274-
+components/profile/PushDeviceControls.tsx-275-        setCurrentEndpoint(endpoint);
+components/profile/PushDeviceControls.tsx-276-        setRegisteredDevices(devices);
+components/profile/PushDeviceControls.tsx-277-
+components/profile/PushDeviceControls.tsx-278-        /*
+components/profile/PushDeviceControls.tsx-279-         * A local browser subscription alone does not mean the
+components/profile/PushDeviceControls.tsx-280-         * device is enabled in 111 Sports.
+components/profile/PushDeviceControls.tsx-281-         *
+components/profile/PushDeviceControls.tsx-282-         * The exact endpoint must also be active server-side.
+components/profile/PushDeviceControls.tsx-283-         */
+components/profile/PushDeviceControls.tsx-284-        setIsSubscribed(
+components/profile/PushDeviceControls.tsx-285-          Boolean(
+components/profile/PushDeviceControls.tsx-286-            subscription &&
+components/profile/PushDeviceControls.tsx-287-              endpoint &&
+components/profile/PushDeviceControls.tsx-288-              devices.some(
+components/profile/PushDeviceControls.tsx-289-                (device) =>
+components/profile/PushDeviceControls.tsx-290-                  device.endpoint ===
+components/profile/PushDeviceControls.tsx-291-                  endpoint,
+components/profile/PushDeviceControls.tsx-292-              ),
+components/profile/PushDeviceControls.tsx-293-          ),
+components/profile/PushDeviceControls.tsx-294-        );
+components/profile/PushDeviceControls.tsx-295-      } catch (error) {
+components/profile/PushDeviceControls.tsx-296-        console.error(
+components/profile/PushDeviceControls.tsx-297-          "Failed to inspect push status",
+components/profile/PushDeviceControls.tsx-298-          error,
+components/profile/PushDeviceControls.tsx-299-        );
+components/profile/PushDeviceControls.tsx-300-
+components/profile/PushDeviceControls.tsx-301-        if (active) {
+components/profile/PushDeviceControls.tsx-302-          setMessage(
+components/profile/PushDeviceControls.tsx-303-            "Unable to check push notification status.",
+components/profile/PushDeviceControls.tsx-304-          );
+components/profile/PushDeviceControls.tsx-305-        }
+components/profile/PushDeviceControls.tsx-306-      } finally {
+components/profile/PushDeviceControls.tsx-307-        if (active) {
+components/profile/PushDeviceControls.tsx-308-          setIsLoadingDevices(false);
+components/profile/PushDeviceControls.tsx-309-        }
+components/profile/PushDeviceControls.tsx-310-      }
+components/profile/PushDeviceControls.tsx-311-    }
+components/profile/PushDeviceControls.tsx-312-
+components/profile/PushDeviceControls.tsx-313-    void checkPushStatus();
+components/profile/PushDeviceControls.tsx-314-
+components/profile/PushDeviceControls.tsx-315-    return () => {
+components/profile/PushDeviceControls.tsx-316-      active = false;
+components/profile/PushDeviceControls.tsx-317-    };
+components/profile/PushDeviceControls.tsx-318-  }, []);
+components/profile/PushDeviceControls.tsx-319-
+components/profile/PushDeviceControls.tsx-320-  async function enablePush() {
+components/profile/PushDeviceControls.tsx-321-    try {
+components/profile/PushDeviceControls.tsx-322-      setIsWorking(true);
+components/profile/PushDeviceControls.tsx-323-      setMessage("");
+components/profile/PushDeviceControls.tsx-324-
+components/profile/PushDeviceControls.tsx-325-      const publicKey =
+components/profile/PushDeviceControls.tsx-326-        process.env
+components/profile/PushDeviceControls.tsx-327-          .NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+components/profile/PushDeviceControls.tsx-328-
+components/profile/PushDeviceControls.tsx-329-      if (!publicKey) {
+components/profile/PushDeviceControls.tsx-330-        setMessage(
+components/profile/PushDeviceControls.tsx-331-          "The public notification key is not configured.",
+components/profile/PushDeviceControls.tsx-332-        );
+components/profile/PushDeviceControls.tsx-333-        return;
+components/profile/PushDeviceControls.tsx-334-      }
+components/profile/PushDeviceControls.tsx-335-
+components/profile/PushDeviceControls.tsx-336-      const nextPermission =
+components/profile/PushDeviceControls.tsx-337-        await Notification.requestPermission();
+components/profile/PushDeviceControls.tsx-338-
+components/profile/PushDeviceControls.tsx-339-      setPermission(nextPermission);
+components/profile/PushDeviceControls.tsx-340-
+components/profile/PushDeviceControls.tsx-341-      if (nextPermission !== "granted") {
+components/profile/PushDeviceControls.tsx-342-        setMessage(
+components/profile/PushDeviceControls.tsx-343-          nextPermission === "denied"
+components/profile/PushDeviceControls.tsx-344-            ? "Notifications are blocked in this browser's settings."
+components/profile/PushDeviceControls.tsx-345-            : "Notification permission was not granted.",
+components/profile/PushDeviceControls.tsx-346-        );
+components/profile/PushDeviceControls.tsx-347-
+components/profile/PushDeviceControls.tsx-348-        return;
+components/profile/PushDeviceControls.tsx-349-      }
+components/profile/PushDeviceControls.tsx-350-
+components/profile/PushDeviceControls.tsx-351-      const registration =
+components/profile/PushDeviceControls.tsx-352-        await navigator.serviceWorker.register(
+components/profile/PushDeviceControls.tsx-353-          "/sw.js",
+components/profile/PushDeviceControls.tsx-354-        );
+components/profile/PushDeviceControls.tsx-355-
+components/profile/PushDeviceControls.tsx-356-      await navigator.serviceWorker.ready;
+components/profile/PushDeviceControls.tsx-357-
+--
+components/profile/PushDeviceControls.tsx-367-                urlBase64ToUint8Array(
+components/profile/PushDeviceControls.tsx-368-                  publicKey,
+components/profile/PushDeviceControls.tsx-369-                ),
+components/profile/PushDeviceControls.tsx-370-            },
+components/profile/PushDeviceControls.tsx-371-          );
+components/profile/PushDeviceControls.tsx-372-      }
+components/profile/PushDeviceControls.tsx-373-
+components/profile/PushDeviceControls.tsx-374-      const subscriptionJson =
+components/profile/PushDeviceControls.tsx-375-        subscription.toJSON();
+components/profile/PushDeviceControls.tsx-376-
+components/profile/PushDeviceControls.tsx-377-      const response = await fetch(
+components/profile/PushDeviceControls.tsx-378-        "/api/push-subscriptions",
+components/profile/PushDeviceControls.tsx-379-        {
+components/profile/PushDeviceControls.tsx-380-          method: "POST",
+components/profile/PushDeviceControls.tsx-381-          headers: {
+components/profile/PushDeviceControls.tsx-382-            "Content-Type":
+components/profile/PushDeviceControls.tsx-383-              "application/json",
+components/profile/PushDeviceControls.tsx-384-          },
+components/profile/PushDeviceControls.tsx-385-          body: JSON.stringify({
+components/profile/PushDeviceControls.tsx-386-            endpoint:
+components/profile/PushDeviceControls.tsx-387-              subscriptionJson.endpoint,
+components/profile/PushDeviceControls.tsx-388-            keys:
+components/profile/PushDeviceControls.tsx-389-              subscriptionJson.keys,
+components/profile/PushDeviceControls.tsx-390-            deviceName:
+components/profile/PushDeviceControls.tsx-391-              getDeviceName(),
+components/profile/PushDeviceControls.tsx-392-          }),
+components/profile/PushDeviceControls.tsx-393-        },
+components/profile/PushDeviceControls.tsx-394-      );
+components/profile/PushDeviceControls.tsx-395-
+components/profile/PushDeviceControls.tsx-396-      const result =
+components/profile/PushDeviceControls.tsx-397-        await response.json();
+components/profile/PushDeviceControls.tsx-398-
+components/profile/PushDeviceControls.tsx-399-      if (!response.ok) {
+components/profile/PushDeviceControls.tsx-400-        setMessage(
+components/profile/PushDeviceControls.tsx-401-          result.error ||
+components/profile/PushDeviceControls.tsx:402:            "Unable to register this device.",
+components/profile/PushDeviceControls.tsx-403-        );
+components/profile/PushDeviceControls.tsx-404-
+components/profile/PushDeviceControls.tsx-405-        return;
+components/profile/PushDeviceControls.tsx-406-      }
+components/profile/PushDeviceControls.tsx-407-
+components/profile/PushDeviceControls.tsx-408-      setCurrentEndpoint(
+components/profile/PushDeviceControls.tsx-409-        subscription.endpoint,
+components/profile/PushDeviceControls.tsx-410-      );
+components/profile/PushDeviceControls.tsx-411-
+components/profile/PushDeviceControls.tsx-412-      await refreshDeviceState();
+components/profile/PushDeviceControls.tsx-413-
+components/profile/PushDeviceControls.tsx-414-      setMessage(
+components/profile/PushDeviceControls.tsx:415:        "Push notifications are enabled on this device.",
+components/profile/PushDeviceControls.tsx-416-      );
+components/profile/PushDeviceControls.tsx-417-    } catch (error) {
+components/profile/PushDeviceControls.tsx-418-      console.error(
+components/profile/PushDeviceControls.tsx-419-        "Failed to enable push",
+components/profile/PushDeviceControls.tsx-420-        error,
+components/profile/PushDeviceControls.tsx-421-      );
+components/profile/PushDeviceControls.tsx-422-
+components/profile/PushDeviceControls.tsx-423-      setMessage(
+components/profile/PushDeviceControls.tsx-424-        "Unable to enable push notifications.",
+components/profile/PushDeviceControls.tsx-425-      );
+components/profile/PushDeviceControls.tsx-426-    } finally {
+components/profile/PushDeviceControls.tsx-427-      setIsWorking(false);
+components/profile/PushDeviceControls.tsx-428-    }
+components/profile/PushDeviceControls.tsx-429-  }
+components/profile/PushDeviceControls.tsx-430-
+components/profile/PushDeviceControls.tsx-431-  async function disableEndpoint(
+components/profile/PushDeviceControls.tsx-432-    endpoint: string,
+components/profile/PushDeviceControls.tsx-433-  ) {
+components/profile/PushDeviceControls.tsx-434-    const response = await fetch(
+components/profile/PushDeviceControls.tsx-435-      "/api/push-subscriptions",
+components/profile/PushDeviceControls.tsx-436-      {
+components/profile/PushDeviceControls.tsx-437-        method: "DELETE",
+components/profile/PushDeviceControls.tsx-438-        headers: {
+components/profile/PushDeviceControls.tsx-439-          "Content-Type":
+components/profile/PushDeviceControls.tsx-440-            "application/json",
+components/profile/PushDeviceControls.tsx-441-        },
+components/profile/PushDeviceControls.tsx-442-        body: JSON.stringify({
+components/profile/PushDeviceControls.tsx-443-          endpoint,
+components/profile/PushDeviceControls.tsx-444-        }),
+components/profile/PushDeviceControls.tsx-445-      },
+components/profile/PushDeviceControls.tsx-446-    );
+components/profile/PushDeviceControls.tsx-447-
+components/profile/PushDeviceControls.tsx-448-    const result =
+components/profile/PushDeviceControls.tsx-449-      await response.json();
+components/profile/PushDeviceControls.tsx-450-
+components/profile/PushDeviceControls.tsx-451-    if (!response.ok) {
+components/profile/PushDeviceControls.tsx-452-      throw new Error(
+components/profile/PushDeviceControls.tsx-453-        result.error ||
+components/profile/PushDeviceControls.tsx:454:          "Unable to disable this device.",
+components/profile/PushDeviceControls.tsx-455-      );
+components/profile/PushDeviceControls.tsx-456-    }
+components/profile/PushDeviceControls.tsx-457-  }
+components/profile/PushDeviceControls.tsx-458-
+components/profile/PushDeviceControls.tsx-459-  async function disablePush() {
+components/profile/PushDeviceControls.tsx-460-    try {
+components/profile/PushDeviceControls.tsx-461-      setIsWorking(true);
+components/profile/PushDeviceControls.tsx-462-      setMessage("");
+components/profile/PushDeviceControls.tsx-463-
+components/profile/PushDeviceControls.tsx-464-      const registration =
+components/profile/PushDeviceControls.tsx-465-        await navigator.serviceWorker.getRegistration(
+components/profile/PushDeviceControls.tsx-466-          "/",
+components/profile/PushDeviceControls.tsx-467-        );
+components/profile/PushDeviceControls.tsx-468-
+components/profile/PushDeviceControls.tsx-469-      const subscription =
+components/profile/PushDeviceControls.tsx-470-        await registration?.pushManager.getSubscription();
+components/profile/PushDeviceControls.tsx-471-
+components/profile/PushDeviceControls.tsx-472-      /*
+components/profile/PushDeviceControls.tsx-473-       * If this browser still has a subscription, disable the
+components/profile/PushDeviceControls.tsx-474-       * exact endpoint server-side BEFORE removing the browser
+components/profile/PushDeviceControls.tsx-475-       * subscription.
+components/profile/PushDeviceControls.tsx-476-       *
+components/profile/PushDeviceControls.tsx-477-       * We no longer silently ignore a failed DELETE.
+components/profile/PushDeviceControls.tsx-478-       */
+components/profile/PushDeviceControls.tsx-479-      if (subscription) {
+components/profile/PushDeviceControls.tsx-480-        await disableEndpoint(
+components/profile/PushDeviceControls.tsx-481-          subscription.endpoint,
+components/profile/PushDeviceControls.tsx-482-        );
+components/profile/PushDeviceControls.tsx-483-
+components/profile/PushDeviceControls.tsx-484-        try {
+components/profile/PushDeviceControls.tsx-485-          await subscription.unsubscribe();
+components/profile/PushDeviceControls.tsx-486-        } catch (error) {
+components/profile/PushDeviceControls.tsx-487-          /*
+components/profile/PushDeviceControls.tsx-488-           * Server-side delivery is already disabled, so this
+components/profile/PushDeviceControls.tsx-489-           * browser will no longer receive 111 Sports pushes.
+components/profile/PushDeviceControls.tsx-490-           * Local cleanup can safely fail without reactivating it.
+components/profile/PushDeviceControls.tsx-491-           */
+components/profile/PushDeviceControls.tsx-492-          console.warn(
+components/profile/PushDeviceControls.tsx-493-            "Push endpoint disabled server-side, but browser unsubscribe failed",
+components/profile/PushDeviceControls.tsx-494-            error,
+components/profile/PushDeviceControls.tsx-495-          );
+components/profile/PushDeviceControls.tsx-496-        }
+components/profile/PushDeviceControls.tsx-497-      } else if (currentEndpoint) {
+components/profile/PushDeviceControls.tsx-498-        await disableEndpoint(
+components/profile/PushDeviceControls.tsx-499-          currentEndpoint,
+components/profile/PushDeviceControls.tsx-500-        );
+components/profile/PushDeviceControls.tsx-501-      }
+components/profile/PushDeviceControls.tsx-502-
+components/profile/PushDeviceControls.tsx-503-      await refreshDeviceState();
+components/profile/PushDeviceControls.tsx-504-
+components/profile/PushDeviceControls.tsx-505-      setMessage(
+components/profile/PushDeviceControls.tsx:506:        "Push notifications are disabled on this device.",
+components/profile/PushDeviceControls.tsx-507-      );
+components/profile/PushDeviceControls.tsx-508-    } catch (error) {
+components/profile/PushDeviceControls.tsx-509-      console.error(
+components/profile/PushDeviceControls.tsx-510-        "Failed to disable push",
+components/profile/PushDeviceControls.tsx-511-        error,
+components/profile/PushDeviceControls.tsx-512-      );
+components/profile/PushDeviceControls.tsx-513-
+components/profile/PushDeviceControls.tsx-514-      setMessage(
+components/profile/PushDeviceControls.tsx-515-        error instanceof Error
+components/profile/PushDeviceControls.tsx-516-          ? error.message
+components/profile/PushDeviceControls.tsx-517-          : "Unable to disable push notifications.",
+components/profile/PushDeviceControls.tsx-518-      );
+components/profile/PushDeviceControls.tsx-519-    } finally {
+components/profile/PushDeviceControls.tsx-520-      setIsWorking(false);
+components/profile/PushDeviceControls.tsx-521-    }
+components/profile/PushDeviceControls.tsx-522-  }
+components/profile/PushDeviceControls.tsx-523-
+components/profile/PushDeviceControls.tsx:524:  async function removeRegisteredDevice(
+components/profile/PushDeviceControls.tsx-525-    device: RegisteredDevice,
+components/profile/PushDeviceControls.tsx-526-  ) {
+components/profile/PushDeviceControls.tsx-527-    try {
+components/profile/PushDeviceControls.tsx-528-      setRemovingEndpoint(
+components/profile/PushDeviceControls.tsx-529-        device.endpoint,
+components/profile/PushDeviceControls.tsx-530-      );
+components/profile/PushDeviceControls.tsx-531-
+components/profile/PushDeviceControls.tsx-532-      setMessage("");
+components/profile/PushDeviceControls.tsx-533-
+components/profile/PushDeviceControls.tsx-534-      await disableEndpoint(
+components/profile/PushDeviceControls.tsx-535-        device.endpoint,
+components/profile/PushDeviceControls.tsx-536-      );
+components/profile/PushDeviceControls.tsx-537-
+components/profile/PushDeviceControls.tsx-538-      /*
+components/profile/PushDeviceControls.tsx-539-       * If the user removes the endpoint that belongs to this
+components/profile/PushDeviceControls.tsx-540-       * browser, also clean up its local PushSubscription.
+components/profile/PushDeviceControls.tsx-541-       */
+components/profile/PushDeviceControls.tsx-542-      if (
+components/profile/PushDeviceControls.tsx-543-        currentEndpoint &&
+components/profile/PushDeviceControls.tsx-544-        device.endpoint ===
+components/profile/PushDeviceControls.tsx-545-          currentEndpoint
+components/profile/PushDeviceControls.tsx-546-      ) {
+components/profile/PushDeviceControls.tsx-547-        const registration =
+components/profile/PushDeviceControls.tsx-548-          await navigator.serviceWorker.getRegistration(
+components/profile/PushDeviceControls.tsx-549-            "/",
+components/profile/PushDeviceControls.tsx-550-          );
+components/profile/PushDeviceControls.tsx-551-
+components/profile/PushDeviceControls.tsx-552-        const subscription =
+components/profile/PushDeviceControls.tsx-553-          await registration?.pushManager.getSubscription();
+components/profile/PushDeviceControls.tsx-554-
+components/profile/PushDeviceControls.tsx-555-        if (
+components/profile/PushDeviceControls.tsx-556-          subscription?.endpoint ===
+components/profile/PushDeviceControls.tsx-557-          device.endpoint
+components/profile/PushDeviceControls.tsx-558-        ) {
+components/profile/PushDeviceControls.tsx-559-          try {
+components/profile/PushDeviceControls.tsx-560-            await subscription.unsubscribe();
+components/profile/PushDeviceControls.tsx-561-          } catch (error) {
+components/profile/PushDeviceControls.tsx-562-            console.warn(
+components/profile/PushDeviceControls.tsx:563:              "Registered device removed server-side, but browser unsubscribe failed",
+components/profile/PushDeviceControls.tsx-564-              error,
+components/profile/PushDeviceControls.tsx-565-            );
+components/profile/PushDeviceControls.tsx-566-          }
+components/profile/PushDeviceControls.tsx-567-        }
+components/profile/PushDeviceControls.tsx-568-      }
+components/profile/PushDeviceControls.tsx-569-
+components/profile/PushDeviceControls.tsx-570-      await refreshDeviceState();
+components/profile/PushDeviceControls.tsx-571-
+components/profile/PushDeviceControls.tsx-572-      setMessage(
+components/profile/PushDeviceControls.tsx:573:        `${device.device_name || "Device"} removed from push notifications.`,
+components/profile/PushDeviceControls.tsx-574-      );
+components/profile/PushDeviceControls.tsx-575-    } catch (error) {
+components/profile/PushDeviceControls.tsx-576-      console.error(
+components/profile/PushDeviceControls.tsx:577:        "Failed to remove registered device",
+components/profile/PushDeviceControls.tsx-578-        error,
+components/profile/PushDeviceControls.tsx-579-      );
+components/profile/PushDeviceControls.tsx-580-
+components/profile/PushDeviceControls.tsx-581-      setMessage(
+components/profile/PushDeviceControls.tsx-582-        error instanceof Error
+components/profile/PushDeviceControls.tsx-583-          ? error.message
+components/profile/PushDeviceControls.tsx:584:          : "Unable to remove this device.",
+components/profile/PushDeviceControls.tsx-585-      );
+components/profile/PushDeviceControls.tsx-586-    } finally {
+components/profile/PushDeviceControls.tsx-587-      setRemovingEndpoint(null);
+components/profile/PushDeviceControls.tsx-588-    }
+components/profile/PushDeviceControls.tsx-589-  }
+components/profile/PushDeviceControls.tsx-590-
+components/profile/PushDeviceControls.tsx-591-  async function sendTestPush() {
+components/profile/PushDeviceControls.tsx-592-    try {
+components/profile/PushDeviceControls.tsx-593-      setIsWorking(true);
+components/profile/PushDeviceControls.tsx-594-      setMessage("");
+components/profile/PushDeviceControls.tsx-595-
+components/profile/PushDeviceControls.tsx-596-      const response = await fetch(
+components/profile/PushDeviceControls.tsx-597-        "/api/push/test",
+components/profile/PushDeviceControls.tsx-598-        {
+components/profile/PushDeviceControls.tsx-599-          method: "POST",
+components/profile/PushDeviceControls.tsx-600-        },
+components/profile/PushDeviceControls.tsx-601-      );
+components/profile/PushDeviceControls.tsx-602-
+components/profile/PushDeviceControls.tsx-603-      const result =
+components/profile/PushDeviceControls.tsx-604-        await response.json();
+components/profile/PushDeviceControls.tsx-605-
+components/profile/PushDeviceControls.tsx-606-      if (
+components/profile/PushDeviceControls.tsx-607-        !response.ok ||
+components/profile/PushDeviceControls.tsx-608-        !result.success
+components/profile/PushDeviceControls.tsx-609-      ) {
+components/profile/PushDeviceControls.tsx-610-        setMessage(
+components/profile/PushDeviceControls.tsx-611-          result.error ||
+components/profile/PushDeviceControls.tsx-612-            "The test notification could not be sent.",
+components/profile/PushDeviceControls.tsx-613-        );
+components/profile/PushDeviceControls.tsx-614-
+components/profile/PushDeviceControls.tsx-615-        return;
+components/profile/PushDeviceControls.tsx-616-      }
+components/profile/PushDeviceControls.tsx-617-
+components/profile/PushDeviceControls.tsx-618-      setMessage(
+components/profile/PushDeviceControls.tsx-619-        `Test sent to ${result.sent} device${
+components/profile/PushDeviceControls.tsx-620-          result.sent === 1
+components/profile/PushDeviceControls.tsx-621-            ? ""
+components/profile/PushDeviceControls.tsx-622-            : "s"
+components/profile/PushDeviceControls.tsx-623-        }.`,
+components/profile/PushDeviceControls.tsx-624-      );
+components/profile/PushDeviceControls.tsx-625-    } catch (error) {
+components/profile/PushDeviceControls.tsx-626-      console.error(
+components/profile/PushDeviceControls.tsx-627-        "Failed to send push test",
+components/profile/PushDeviceControls.tsx-628-        error,
+components/profile/PushDeviceControls.tsx-629-      );
+components/profile/PushDeviceControls.tsx-630-
+components/profile/PushDeviceControls.tsx-631-      setMessage(
+components/profile/PushDeviceControls.tsx-632-        "Unable to send the test notification.",
+components/profile/PushDeviceControls.tsx-633-      );
+components/profile/PushDeviceControls.tsx-634-    } finally {
+components/profile/PushDeviceControls.tsx-635-      setIsWorking(false);
+components/profile/PushDeviceControls.tsx-636-    }
+components/profile/PushDeviceControls.tsx-637-  }
+components/profile/PushDeviceControls.tsx-638-
+components/profile/PushDeviceControls.tsx-639-  if (isSupported === null) {
+components/profile/PushDeviceControls.tsx-640-    return (
+components/profile/PushDeviceControls.tsx-641-      <div className="rounded-2xl border border-dashed border-sky-300 bg-white/70 px-4 py-6 text-center text-sm text-slate-500">
+components/profile/PushDeviceControls.tsx:642:        Checking this device...
+components/profile/PushDeviceControls.tsx-643-      </div>
+components/profile/PushDeviceControls.tsx-644-    );
+components/profile/PushDeviceControls.tsx-645-  }
+components/profile/PushDeviceControls.tsx-646-
+components/profile/PushDeviceControls.tsx-647-  if (!isSupported) {
+components/profile/PushDeviceControls.tsx-648-    return (
+components/profile/PushDeviceControls.tsx-649-      <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4 text-sm text-orange-800">
+components/profile/PushDeviceControls.tsx-650-        This browser does not support Web Push
+components/profile/PushDeviceControls.tsx-651-        notifications.
+components/profile/PushDeviceControls.tsx-652-      </div>
+components/profile/PushDeviceControls.tsx-653-    );
+components/profile/PushDeviceControls.tsx-654-  }
+components/profile/PushDeviceControls.tsx-655-
+components/profile/PushDeviceControls.tsx-656-  return (
+components/profile/PushDeviceControls.tsx-657-    <div className="rounded-2xl border border-sky-200 bg-white p-4">
+components/profile/PushDeviceControls.tsx-658-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+components/profile/PushDeviceControls.tsx-659-        <div>
+components/profile/PushDeviceControls.tsx-660-          <div className="font-semibold text-slate-900">
+components/profile/PushDeviceControls.tsx:661:            This Device
+components/profile/PushDeviceControls.tsx-662-          </div>
+components/profile/PushDeviceControls.tsx-663-
+components/profile/PushDeviceControls.tsx-664-          <div className="mt-1 text-sm text-slate-500">
+components/profile/PushDeviceControls.tsx-665-            {isSubscribed
+components/profile/PushDeviceControls.tsx-666-              ? `${getDeviceName()} is enabled for push notifications.`
+components/profile/PushDeviceControls.tsx-667-              : permission === "denied"
+components/profile/PushDeviceControls.tsx-668-                ? "Notifications are blocked by your browser."
+components/profile/PushDeviceControls.tsx-669-                : `${getDeviceName()} is not enabled for push notifications.`}
+components/profile/PushDeviceControls.tsx-670-          </div>
+components/profile/PushDeviceControls.tsx-671-        </div>
+components/profile/PushDeviceControls.tsx-672-
+components/profile/PushDeviceControls.tsx-673-        <div className="flex flex-wrap gap-2">
+components/profile/PushDeviceControls.tsx-674-          {isSubscribed ? (
+components/profile/PushDeviceControls.tsx-675-            <>
+components/profile/PushDeviceControls.tsx-676-              <button
+components/profile/PushDeviceControls.tsx-677-                type="button"
+components/profile/PushDeviceControls.tsx-678-                onClick={() =>
+components/profile/PushDeviceControls.tsx-679-                  void sendTestPush()
+components/profile/PushDeviceControls.tsx-680-                }
+components/profile/PushDeviceControls.tsx-681-                disabled={isWorking}
+components/profile/PushDeviceControls.tsx-682-                className="rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50"
+components/profile/PushDeviceControls.tsx-683-              >
+components/profile/PushDeviceControls.tsx-684-                Send Test
+components/profile/PushDeviceControls.tsx-685-              </button>
+components/profile/PushDeviceControls.tsx-686-
+components/profile/PushDeviceControls.tsx-687-              <button
+components/profile/PushDeviceControls.tsx-688-                type="button"
+components/profile/PushDeviceControls.tsx-689-                onClick={() =>
+components/profile/PushDeviceControls.tsx-690-                  void disablePush()
+components/profile/PushDeviceControls.tsx-691-                }
+components/profile/PushDeviceControls.tsx-692-                disabled={isWorking}
+components/profile/PushDeviceControls.tsx-693-                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+components/profile/PushDeviceControls.tsx-694-              >
+components/profile/PushDeviceControls.tsx-695-                {isWorking
+components/profile/PushDeviceControls.tsx-696-                  ? "Disabling..."
+components/profile/PushDeviceControls.tsx-697-                  : "Disable"}
+components/profile/PushDeviceControls.tsx-698-              </button>
+components/profile/PushDeviceControls.tsx-699-            </>
+components/profile/PushDeviceControls.tsx-700-          ) : (
+components/profile/PushDeviceControls.tsx-701-            <button
+components/profile/PushDeviceControls.tsx-702-              type="button"
+components/profile/PushDeviceControls.tsx-703-              onClick={() =>
+components/profile/PushDeviceControls.tsx-704-                void enablePush()
+components/profile/PushDeviceControls.tsx-705-              }
+components/profile/PushDeviceControls.tsx-706-              disabled={
+components/profile/PushDeviceControls.tsx-707-                isWorking ||
+components/profile/PushDeviceControls.tsx-708-                permission === "denied"
+components/profile/PushDeviceControls.tsx-709-              }
+components/profile/PushDeviceControls.tsx-710-              className="rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-800 disabled:opacity-50"
+components/profile/PushDeviceControls.tsx-711-            >
+components/profile/PushDeviceControls.tsx-712-              {isWorking
+components/profile/PushDeviceControls.tsx-713-                ? "Enabling..."
+components/profile/PushDeviceControls.tsx:714:                : "Enable on This Device"}
+components/profile/PushDeviceControls.tsx-715-            </button>
+components/profile/PushDeviceControls.tsx-716-          )}
+components/profile/PushDeviceControls.tsx-717-        </div>
+components/profile/PushDeviceControls.tsx-718-      </div>
+components/profile/PushDeviceControls.tsx-719-
+components/profile/PushDeviceControls.tsx-720-      {message ? (
+components/profile/PushDeviceControls.tsx-721-        <div className="mt-4 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+components/profile/PushDeviceControls.tsx-722-          {message}
+components/profile/PushDeviceControls.tsx-723-        </div>
+components/profile/PushDeviceControls.tsx-724-      ) : null}
+components/profile/PushDeviceControls.tsx-725-
+components/profile/PushDeviceControls.tsx-726-      <div className="mt-5 border-t border-slate-200 pt-5">
+components/profile/PushDeviceControls.tsx-727-        <div>
+
+===== 2. DEVICE / PUSH API ROUTES =====
+app/api/admin/notification-history/action/route.ts
+app/api/admin/notification-history/route.ts
+app/api/admin/notification-templates/route.ts
+app/api/notification-preferences/route.ts
+app/api/push-subscriptions/route.ts
+app/api/push/test/route.ts
+
+===== 3. CONTENTS OF RELEVANT DEVICE / PUSH ROUTES =====
+
+------------------------------------------------------------
+FILE: app/api/admin/notification-history/action/route.ts
+------------------------------------------------------------
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  notifyNewlyFinishedPlayers,
+} from "@/lib/playerFinishedNotifications";
+import {
+  sendPushToUser,
+  type PushResult,
+} from "@/lib/push";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type RecoveryBody = {
+  action?: unknown;
+  historyId?: unknown;
+  eventKey?: unknown;
+};
+
+function deliveryStatus(
+  result: PushResult
+) {
+  if (result.skipped) {
+    return "skipped";
+  }
+
+  if (
+    result.sent > 0 &&
+    result.failed > 0
+  ) {
+    return "partial";
+  }
+
+  if (result.sent > 0) {
+    return "sent";
+  }
+
+  return "failed";
+}
+
+function notificationUrl(
+  notificationType: string,
+  slateId: number | null
+) {
+  if (
+    notificationType === "draft_turn" ||
+    notificationType ===
+      "draft_final_pick"
+  ) {
+    return slateId
+      ? `/lineups/draft?slateId=${slateId}`
+      : "/lineups/draft";
+  }
+
+  if (slateId) {
+    return `/lineups/scores?slateId=${slateId}`;
+  }
+
+  return "/";
+}
+
+function notificationTag(
+  eventKey: string | null,
+  historyId: string
+) {
+  if (eventKey) {
+    return eventKey
+      .replaceAll(":", "-")
+      .replaceAll("_", "-");
+  }
+
+  return `notification-retry-${historyId}`;
+}
+
+async function retryHistoryRow(
+  historyId: string
+) {
+  const {
+    data: history,
+    error: historyError,
+  } = await supabaseAdmin
+    .from("notification_history")
+    .select(
+      `
+        id,
+        event_key,
+        notification_type,
+        user_id,
+        slate_id,
+        title,
+        body,
+        status,
+        sent_count,
+        failed_count,
+        metadata
+      `
+    )
+    .eq("id", historyId)
+    .maybeSingle();
+
+  if (historyError) {
+    throw new Error(
+      `Failed to load notification: ${historyError.message}`
+    );
+  }
+
+  if (!history) {
+    return NextResponse.json(
+      {
+        error:
+          "Notification history record was not found.",
+      },
+      { status: 404 }
+    );
+  }
+
+  if (
+    history.status !== "failed" &&
+    history.status !== "partial"
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Only failed or partial notifications can be retried.",
+      },
+      { status: 409 }
+    );
+  }
+
+  if (!history.user_id) {
+    return NextResponse.json(
+      {
+        error:
+          "This notification has no recipient account.",
+      },
+      { status: 409 }
+    );
+  }
+
+  /*
+   * Retry the existing event rather than inserting a second
+   * notification_history row. This preserves the event-key
+   * dedupe record while allowing manual recovery.
+   */
+  await supabaseAdmin
+    .from("notification_history")
+    .update({
+      status: "pending",
+      reason:
+        "Manual retry in progress.",
+      completed_at: null,
+    })
+    .eq("id", history.id);
+
+  try {
+    const result =
+      await sendPushToUser(
+        String(history.user_id),
+        {
+          title: String(history.title),
+          body: String(history.body),
+          url: notificationUrl(
+            String(
+              history.notification_type
+            ),
+            history.slate_id === null
+              ? null
+              : Number(
+                  history.slate_id
+                )
+          ),
+          tag: notificationTag(
+            history.event_key
+              ? String(
+                  history.event_key
+                )
+              : null,
+            String(history.id)
+          ),
+        }
+      );
+
+    const previousMetadata =
+      history.metadata &&
+      typeof history.metadata ===
+        "object"
+        ? history.metadata
+        : {};
+
+    await supabaseAdmin
+      .from("notification_history")
+      .update({
+        status:
+          deliveryStatus(result),
+        sent_count:
+          Number(
+            history.sent_count ?? 0
+          ) + result.sent,
+        failed_count:
+          result.failed,
+        skipped:
+          result.skipped,
+        reason:
+          result.reason ?? null,
+        metadata: {
+          ...previousMetadata,
+          devices:
+            result.devices,
+          manuallyRetriedAt:
+            new Date().toISOString(),
+        },
+        completed_at:
+          new Date().toISOString(),
+      })
+      .eq("id", history.id);
+
+    return NextResponse.json({
+      success: true,
+      action: "retry",
+      result,
+    });
+  } catch (error) {
+    const reason =
+      error instanceof Error
+        ? error.message
+        : "Unexpected retry error.";
+
+    await supabaseAdmin
+      .from("notification_history")
+      .update({
+        status: "failed",
+        reason,
+        completed_at:
+          new Date().toISOString(),
+      })
+      .eq("id", history.id);
+
+    throw error;
+  }
+}
+
+async function sendMissedGolfEvent(
+  eventKey: string
+) {
+  const match =
+    /^player_finished:(\d+):(\d+):round-(\d+)$/.exec(
+      eventKey
+    );
+
+  if (!match) {
+    return NextResponse.json(
+      {
+        error:
+          "Manual Send currently supports missed Golf round-finished events only.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const slateId =
+    Number(match[1]);
+
+  const playerId =
+    Number(match[2]);
+
+  const roundNumber =
+    Number(match[3]);
+
+  if (
+    !Number.isInteger(slateId) ||
+    !Number.isInteger(playerId) ||
+    !Number.isInteger(roundNumber) ||
+    roundNumber < 1 ||
+    roundNumber > 4
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Invalid Golf notification event key.",
+      },
+      { status: 400 }
+    );
+  }
+
+  /*
+   * Race protection:
+   * if the normal refresh path fired after the monitor loaded,
+   * do not create a second event.
+   */
+  const {
+    data: existingHistory,
+    error: existingHistoryError,
+  } = await supabaseAdmin
+    .from("notification_history")
+    .select("id, status")
+    .eq("event_key", eventKey)
+    .maybeSingle();
+
+  if (existingHistoryError) {
+    throw new Error(
+      `Failed to check notification history: ${existingHistoryError.message}`
+    );
+  }
+
+  if (existingHistory) {
+    return NextResponse.json(
+      {
+        error:
+          "This notification event has already reached the delivery pipeline. Refresh the monitor.",
+      },
+      { status: 409 }
+    );
+  }
+
+  const [
+    {
+      data: slate,
+      error: slateError,
+
+------------------------------------------------------------
+FILE: app/api/admin/notification-history/route.ts
+------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+function normalizeSport(value: unknown): SportKey {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
+function validIsoDateTime(value: string) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  return Number.isFinite(parsed.getTime())
+    ? parsed.toISOString()
+    : null;
+}
+
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const type =
+      request.nextUrl.searchParams.get("type")?.trim() ?? "";
+
+    const status =
+      request.nextUrl.searchParams.get("status")?.trim() ?? "";
+
+    const sport =
+      request.nextUrl.searchParams.get("sport")?.trim() ?? "";
+
+    const requestedDate =
+      request.nextUrl.searchParams.get("date")?.trim() ?? "";
+
+    const selectedDate =
+      /^\d{4}-\d{2}-\d{2}$/.test(
+        requestedDate
+      )
+        ? requestedDate
+        : null;
+
+    const start =
+      validIsoDateTime(
+        request.nextUrl.searchParams.get("start")?.trim() ?? ""
+      );
+
+    const end =
+      validIsoDateTime(
+        request.nextUrl.searchParams.get("end")?.trim() ?? ""
+      );
+
+    let sportSlateIds: number[] | null = null;
+
+    if (sport && sport !== "all") {
+      const normalizedSport = normalizeSport(sport);
+
+      const { data: sportSlates, error: sportSlatesError } =
+        await supabaseAdmin
+          .from("slates")
+          .select("id")
+          .eq("sport", normalizedSport);
+
+      if (sportSlatesError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to filter by sport: ` +
+              sportSlatesError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      sportSlateIds = (sportSlates ?? []).map((row) =>
+        Number(row.id)
+      );
+    }
+
+    let query = supabaseAdmin
+      .from("notification_history")
+      .select(
+        `
+          id,
+          event_key,
+          notification_type,
+          user_id,
+          team_id,
+          slate_id,
+          player_id,
+          title,
+          body,
+          status,
+          sent_count,
+          failed_count,
+          skipped,
+          reason,
+          metadata,
+          created_at,
+          completed_at
+        `
+      )
+      .order("created_at", { ascending: false })
+      .limit(1000);
+
+    if (type) {
+      query = query.eq("notification_type", type);
+    }
+
+    if (start) {
+      query = query.gte("created_at", start);
+    }
+
+    if (end) {
+      query = query.lt("created_at", end);
+    }
+
+    if (sportSlateIds !== null) {
+      query =
+        sportSlateIds.length > 0
+          ? query.in("slate_id", sportSlateIds)
+          : query.is("slate_id", null);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load notification history: ` +
+            error.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    const rows = data ?? [];
+
+    const userIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.user_id)
+          .filter(Boolean)
+          .map(String)
+      )
+    );
+
+    const teamIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.team_id)
+          .filter(Boolean)
+          .map(Number)
+      )
+    );
+
+    const slateIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.slate_id)
+          .filter(Boolean)
+          .map(Number)
+      )
+    );
+
+    const [
+      { data: users },
+      { data: teams },
+      { data: slates },
+    ] = await Promise.all([
+      userIds.length
+        ? supabaseAdmin
+            .from("app_users")
+            .select("id, display_name")
+            .in("id", userIds)
+        : Promise.resolve({ data: [] }),
+
+      teamIds.length
+        ? supabaseAdmin
+            .from("teams")
+            .select("id, name")
+            .in("id", teamIds)
+        : Promise.resolve({ data: [] }),
+
+      slateIds.length
+        ? supabaseAdmin
+            .from("slates")
+            .select(
+              "id, date, start_date, end_date, sport, display_name"
+            )
+            .in("id", slateIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const userMap = new Map(
+      (users ?? []).map((row) => [
+        String(row.id),
+        row.display_name,
+      ])
+    );
+
+    const teamMap = new Map(
+      (teams ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const slateSportMap = new Map<number, SportKey>(
+      (slates ?? []).map((row) => [
+        Number(row.id),
+        normalizeSport(row.sport),
+      ])
+    );
+
+    const slateMap = new Map(
+      (slates ?? []).map((row) => {
+        const startDate = row.start_date ?? row.date;
+        const endDate = row.end_date ?? row.date;
+
+        const dateLabel =
+          startDate === endDate
+            ? startDate
+            : `${startDate} - ${endDate}`;
+
+        return [
+          Number(row.id),
+          row.display_name?.trim() || dateLabel,
+        ];
+      })
+    );
+
+    const nbaPlayerIds = new Set<number>();
+    const nflPlayerIds = new Set<number>();
+    const golfPlayerIds = new Set<number>();
+
+    for (const row of rows) {
+      if (!row.player_id) continue;
+
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : "nba";
+
+      const playerId = Number(row.player_id);
+
+      if (rowSport === "nfl") {
+        nflPlayerIds.add(playerId);
+      } else if (rowSport === "golf") {
+        golfPlayerIds.add(playerId);
+      } else {
+        nbaPlayerIds.add(playerId);
+      }
+    }
+
+    const [
+      { data: nbaPlayers },
+      { data: nflPlayers },
+      { data: golfPlayers },
+    ] = await Promise.all([
+      nbaPlayerIds.size
+        ? supabaseAdmin
+            .from("players")
+            .select("id, name")
+            .in("id", [...nbaPlayerIds])
+        : Promise.resolve({ data: [] }),
+
+      nflPlayerIds.size
+        ? supabaseAdmin
+            .from("players_nfl")
+            .select("id, name")
+            .in("id", [...nflPlayerIds])
+        : Promise.resolve({ data: [] }),
+
+      golfPlayerIds.size
+        ? supabaseAdmin
+            .from("golf_players")
+            .select("id, display_name")
+            .in("id", [...golfPlayerIds])
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const nbaPlayerMap = new Map(
+      (nbaPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const nflPlayerMap = new Map(
+      (nflPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const golfPlayerMap = new Map(
+      (golfPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.display_name,
+      ])
+    );
+
+    function resolvePlayerName(
+      row: (typeof rows)[number]
+    ) {
+      if (!row.player_id) return null;
+
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : "nba";
+
+      const playerId = Number(row.player_id);
+
+      if (rowSport === "golf") {
+        return (
+
+------------------------------------------------------------
+FILE: app/api/admin/notification-templates/route.ts
+------------------------------------------------------------
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getDefaultNotificationTemplate,
+  getNotificationTemplate,
+  isNotificationSport,
+  isNotificationTemplateType,
+  normalizeNotificationSport,
+  NOTIFICATION_TEMPLATE_DEFAULTS,
+  type NotificationSport,
+  type NotificationTemplateType,
+} from "@/lib/notificationTemplates";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SaveTemplateBody = {
+  notificationType?: unknown;
+  sport?: unknown;
+  titleTemplate?: unknown;
+  bodyTemplate?: unknown;
+  resetToDefault?: unknown;
+};
+
+function findUnsupportedPlaceholders(
+  value: string,
+  allowedPlaceholders: string[]
+) {
+  const found = value.match(/\{[^{}]+\}/g) ?? [];
+
+  return [...new Set(found)].filter(
+    (placeholder) => !allowedPlaceholders.includes(placeholder)
+  );
+}
+
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const sport = normalizeNotificationSport(
+      request.nextUrl.searchParams.get("sport")
+    );
+
+    const notificationTypes = Object.keys(
+      NOTIFICATION_TEMPLATE_DEFAULTS[sport]
+    ) as NotificationTemplateType[];
+
+    const templates = await Promise.all(
+      notificationTypes.map((notificationType) =>
+        getNotificationTemplate(notificationType, sport)
+      )
+    );
+
+    const defaults = notificationTypes.map((notificationType) =>
+      getDefaultNotificationTemplate(notificationType, sport)
+    );
+
+    return NextResponse.json({
+      success: true,
+      sport,
+      templates,
+      defaults,
+    });
+  } catch (error) {
+    console.error("Failed to load notification templates", error);
+
+    return NextResponse.json(
+      { error: "Unable to load notification templates." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const currentUser = await getCurrentUser();
+
+    if (!currentUser || currentUser.role !== "admin") {
+      return NextResponse.json(
+        { error: "Administrator access required." },
+        { status: 403 }
+      );
+    }
+
+    const body = (await request.json()) as SaveTemplateBody;
+
+    if (!isNotificationTemplateType(body.notificationType)) {
+      return NextResponse.json(
+        { error: "Unsupported notification type." },
+        { status: 400 }
+      );
+    }
+
+    if (!isNotificationSport(body.sport)) {
+      return NextResponse.json(
+        { error: "Unsupported sport." },
+        { status: 400 }
+      );
+    }
+
+    const notificationType: NotificationTemplateType =
+      body.notificationType;
+
+    const sport: NotificationSport = body.sport;
+
+    const defaults = getDefaultNotificationTemplate(
+      notificationType,
+      sport
+    );
+
+    const resetToDefault = body.resetToDefault === true;
+
+    const titleTemplate = resetToDefault
+      ? defaults.titleTemplate
+      : String(body.titleTemplate ?? "").trim();
+
+    const bodyTemplate = resetToDefault
+      ? defaults.bodyTemplate
+      : String(body.bodyTemplate ?? "").trim();
+
+    if (!titleTemplate || !bodyTemplate) {
+      return NextResponse.json(
+        { error: "A title and message are required." },
+        { status: 400 }
+      );
+    }
+
+    if (titleTemplate.length > 100) {
+      return NextResponse.json(
+        {
+          error:
+            "The notification title must be 100 characters or fewer.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (bodyTemplate.length > 240) {
+      return NextResponse.json(
+        {
+          error:
+            "The notification message must be 240 characters or fewer.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const unsupportedPlaceholders =
+      findUnsupportedPlaceholders(
+        `${titleTemplate} ${bodyTemplate}`,
+        defaults.availablePlaceholders
+      );
+
+    if (unsupportedPlaceholders.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Unsupported placeholder${
+            unsupportedPlaceholders.length === 1 ? "" : "s"
+          }: ${unsupportedPlaceholders.join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabaseAdmin
+      .from("notification_templates")
+      .upsert(
+        {
+          notification_type: notificationType,
+          sport,
+          title_template: titleTemplate,
+          body_template: bodyTemplate,
+          description: defaults.description,
+          available_placeholders:
+            defaults.availablePlaceholders,
+          updated_at: new Date().toISOString(),
+          updated_by: currentUser.id,
+        },
+        {
+          onConflict: "notification_type,sport",
+        }
+      );
+
+    if (error) {
+      console.error("Notification template upsert failed", {
+        notificationType,
+        sport,
+        error,
+      });
+
+      return NextResponse.json(
+        {
+          error: `Failed to save template: ${error.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      template: {
+        ...defaults,
+        titleTemplate,
+        bodyTemplate,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to save notification template", error);
+
+    return NextResponse.json(
+      { error: "Unable to save notification template." },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/notification-preferences/route.ts
+------------------------------------------------------------
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type PreferencesBody = {
+  notificationsEnabled?: boolean;
+  draftTurnEnabled?: boolean;
+  playerFinishedEnabled?: boolean;
+  slateFinalEnabled?: boolean;
+};
+
+const defaultPreferences = {
+  notifications_enabled: true,
+  draft_turn_enabled: true,
+  player_finished_enabled: true,
+  slate_final_enabled: false,
+};
+
+function formatPreferences(row: {
+  notifications_enabled: boolean;
+  draft_turn_enabled: boolean;
+  player_finished_enabled: boolean;
+  slate_final_enabled: boolean;
+}) {
+  return {
+    notificationsEnabled: row.notifications_enabled,
+    draftTurnEnabled: row.draft_turn_enabled,
+    playerFinishedEnabled: row.player_finished_enabled,
+    slateFinalEnabled: row.slate_final_enabled,
+  };
+}
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("notification_preferences")
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+      )
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load preferences: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (data) {
+      return NextResponse.json({
+        success: true,
+        preferences: formatPreferences(data),
+      });
+    }
+
+    const { data: created, error: createError } = await supabaseAdmin
+      .from("notification_preferences")
+      .insert({
+        user_id: user.id,
+        ...defaultPreferences,
+      })
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+      )
+      .single();
+
+    if (createError || !created) {
+      return NextResponse.json(
+        {
+          error:
+            createError?.message ??
+            "Failed to create notification preferences.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      preferences: formatPreferences(created),
+    });
+  } catch (error) {
+    console.error("Failed to load notification preferences", error);
+
+    return NextResponse.json(
+      { error: "Unable to load notification preferences." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json()) as PreferencesBody;
+
+    const update = {
+      notifications_enabled:
+        typeof body.notificationsEnabled === "boolean"
+          ? body.notificationsEnabled
+          : defaultPreferences.notifications_enabled,
+      draft_turn_enabled:
+        typeof body.draftTurnEnabled === "boolean"
+          ? body.draftTurnEnabled
+          : defaultPreferences.draft_turn_enabled,
+      player_finished_enabled:
+        typeof body.playerFinishedEnabled === "boolean"
+          ? body.playerFinishedEnabled
+          : defaultPreferences.player_finished_enabled,
+      slate_final_enabled:
+        typeof body.slateFinalEnabled === "boolean"
+          ? body.slateFinalEnabled
+          : defaultPreferences.slate_final_enabled,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("notification_preferences")
+      .upsert(
+        {
+          user_id: user.id,
+          ...update,
+        },
+        {
+          onConflict: "user_id",
+        }
+      )
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+      )
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          error:
+            error?.message ??
+            "Failed to update notification preferences.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      preferences: formatPreferences(data),
+    });
+  } catch (error) {
+    console.error("Failed to update notification preferences", error);
+
+    return NextResponse.json(
+      { error: "Unable to update notification preferences." },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/push-subscriptions/route.ts
+------------------------------------------------------------
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SubscriptionBody = {
+  endpoint?: string;
+  keys?: {
+    p256dh?: string;
+    auth?: string;
+  };
+  deviceName?: string;
+};
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .select("id, endpoint, device_name, is_active, created_at, last_used_at")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load devices: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      subscriptions: data ?? [],
+    });
+  } catch (error) {
+    console.error("Failed to load push subscriptions", error);
+
+    return NextResponse.json(
+      { error: "Unable to load registered devices." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json()) as SubscriptionBody;
+
+    const endpoint = String(body.endpoint ?? "").trim();
+    const p256dhKey = String(body.keys?.p256dh ?? "").trim();
+    const authKey = String(body.keys?.auth ?? "").trim();
+
+    if (!endpoint || !p256dhKey || !authKey) {
+      return NextResponse.json(
+        { error: "Invalid push subscription." },
+        { status: 400 }
+      );
+    }
+
+    const userAgent = request.headers.get("user-agent");
+
+    const { data, error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .upsert(
+        {
+          user_id: user.id,
+          endpoint,
+          p256dh_key: p256dhKey,
+          auth_key: authKey,
+          user_agent: userAgent,
+          device_name: body.deviceName?.trim() || "Web browser",
+          is_active: true,
+          updated_at: new Date().toISOString(),
+          last_used_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "endpoint",
+        }
+      )
+      .select("id, device_name, is_active")
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          error:
+            error?.message ??
+            "Failed to register this device.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      subscription: data,
+    });
+  } catch (error) {
+    console.error("Failed to register push subscription", error);
+
+    return NextResponse.json(
+      { error: "Unable to register this device." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json()) as {
+      endpoint?: string;
+    };
+
+    const endpoint = String(body.endpoint ?? "").trim();
+
+    if (!endpoint) {
+      return NextResponse.json(
+        { error: "Missing subscription endpoint." },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id)
+      .eq("endpoint", endpoint);
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to disable device: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error("Failed to disable push subscription", error);
+
+    return NextResponse.json(
+      { error: "Unable to disable this device." },
+      { status: 500 }
+    );
+  }
+}
+
+------------------------------------------------------------
+FILE: app/api/push/test/route.ts
+------------------------------------------------------------
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { sendLoggedNotification } from "@/lib/notifications";
+
+export const runtime = "nodejs";
+
+export async function POST() {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const result = await sendLoggedNotification({
+      notificationType: "push_test",
+      userId: user.id,
+      teamId: user.teamId,
+      title: "🔔 Notifications are working!",
+      body: `Hey ${user.displayName}, this device is connected to 111 Sports.`,
+      url: "/profile",
+      tag: "push-test",
+      metadata: {
+        displayName: user.displayName,
+      },
+    });
+
+    if (result.sent === 0) {
+      return NextResponse.json(
+        {
+          error: result.reason ?? "No notifications were delivered.",
+          ...result,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error("Unable to send push test", error);
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to send test notification.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+===== 4. ADMIN NOTIFICATIONS PAGE / COMPONENT MAP =====
+app/admin/notification-history/page.tsx
+app/admin/notification-templates/page.tsx
+app/api/admin/notification-history/action/route.ts
+app/api/admin/notification-history/route.ts
+app/api/admin/notification-templates/route.ts
+app/api/notification-preferences/route.ts
+
+===== 5. ADMIN NOTIFICATION UI TARGETS =====
+app/admin/page.tsx-1-"use client";
+app/admin/page.tsx-2-
+app/admin/page.tsx-3-import Link from "next/link";
+app/admin/page.tsx-4-import AppNav from "@/components/AppNav";
+app/admin/page.tsx-5-
+app/admin/page.tsx-6-const adminGroups = [
+app/admin/page.tsx-7-  {
+app/admin/page.tsx-8-    title: "Slates & Draft",
+app/admin/page.tsx-9-    description: "Create, configure, and maintain fantasy slates.",
+app/admin/page.tsx-10-    cards: [
+app/admin/page.tsx-11-      {
+app/admin/page.tsx-12-        href: "/slates/new",
+app/admin/page.tsx-13-        title: "Create Slate",
+app/admin/page.tsx-14-        description:
+app/admin/page.tsx-15-          "Choose dates, participating teams, and the initial draft order.",
+app/admin/page.tsx-16-      },
+app/admin/page.tsx-17-      {
+app/admin/page.tsx-18-        href: "/admin/slates",
+app/admin/page.tsx-19-        title: "Manage Slates",
+app/admin/page.tsx-20-        description:
+app/admin/page.tsx-21-          "Edit slate settings, participation, order, lock status, and reseeding.",
+app/admin/page.tsx-22-      },
+app/admin/page.tsx-23-      {
+app/admin/page.tsx-24-        href: "/admin/slate-games",
+app/admin/page.tsx-25-        title: "Slate NBA Games",
+app/admin/page.tsx-26-        description:
+app/admin/page.tsx-27-          "Attach exact NBA game IDs for reliable multi-day refreshes.",
+app/admin/page.tsx-28-      },
+app/admin/page.tsx-29-      {
+app/admin/page.tsx-30-        href: "/admin/corrections",
+app/admin/page.tsx-31-        title: "Corrections",
+app/admin/page.tsx-32-        description:
+app/admin/page.tsx-33-          "Fix historical rosters, stats, totals, and finish positions.",
+app/admin/page.tsx-34-      },
+app/admin/page.tsx-35-    ],
+app/admin/page.tsx-36-  },
+app/admin/page.tsx-37-  {
+app/admin/page.tsx:38:    title: "Notifications",
+app/admin/page.tsx-39-    description:
+app/admin/page.tsx-40-      "Control push notification wording and review delivery results.",
+app/admin/page.tsx-41-    cards: [
+app/admin/page.tsx-42-      {
+app/admin/page.tsx-43-        href: "/admin/notification-templates",
+app/admin/page.tsx:44:        title: "Notification Templates",
+app/admin/page.tsx-45-        description:
+app/admin/page.tsx-46-          "Edit draft-turn, final-pick, and player-finished messages.",
+app/admin/page.tsx-47-      },
+app/admin/page.tsx-48-      {
+app/admin/page.tsx-49-        href: "/admin/notification-history",
+app/admin/page.tsx-50-        title: "Notification Monitor",
+app/admin/page.tsx-51-        description:
+app/admin/page.tsx-52-          "Audit delivery results, failures, recipients, devices, and notification diagnostics.",
+app/admin/page.tsx-53-      },
+app/admin/page.tsx-54-    ],
+app/admin/page.tsx-55-  },
+app/admin/page.tsx-56-  {
+app/admin/page.tsx-57-    title: "Players & League",
+app/admin/page.tsx-58-    description: "Maintain player records and future league settings.",
+app/admin/page.tsx-59-    cards: [
+app/admin/page.tsx-60-      {
+app/admin/page.tsx-61-        href: "/admin/players",
+app/admin/page.tsx-62-        title: "Manage NBA Players",
+app/admin/page.tsx-63-        description:
+app/admin/page.tsx-64-          "Edit names, NBA IDs, teams, active status, and availability.",
+app/admin/page.tsx-65-      },
+app/admin/page.tsx-66-      {
+app/admin/page.tsx-67-        href: "/admin/players-nfl",
+app/admin/page.tsx-68-        title: "Manage NFL Players",
+app/admin/page.tsx-69-        description:
+app/admin/page.tsx-70-          "Edit positions, teams, and active status for NFL players.",
+app/admin/page.tsx-71-      },
+app/admin/page.tsx-72-      {
+app/admin/page.tsx-73-        href: "/admin/league-awards",
+app/admin/page.tsx-74-        title: "League Awards",
+app/admin/page.tsx-75-        description:
+app/admin/page.tsx-76-          "Create and manage custom seasonal awards for each league member.",
+app/admin/page.tsx-77-      },
+app/admin/page.tsx-78-    ],
+app/admin/page.tsx-79-  },
+app/admin/page.tsx-80-];
+app/admin/page.tsx-81-
+app/admin/page.tsx-82-export default function AdminPage() {
+app/admin/page.tsx-83-  return (
+app/admin/page.tsx-84-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/admin/page.tsx-85-      <div className="mx-auto max-w-[1600px] space-y-6">
+app/admin/page.tsx-86-        <AppNav />
+app/admin/page.tsx-87-
+app/admin/page.tsx-88-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+app/admin/page.tsx-89-          <h1 className="text-3xl font-bold tracking-tight">
+app/admin/page.tsx-90-            Commissioner Control Center
+app/admin/page.tsx-91-          </h1>
+app/admin/page.tsx-92-
+app/admin/page.tsx-93-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+app/admin/page.tsx:94:            Manage slates, players, notifications, corrections, and league
+app/admin/page.tsx-95-            operations.
+app/admin/page.tsx-96-          </p>
+app/admin/page.tsx-97-        </section>
+app/admin/page.tsx-98-
+app/admin/page.tsx-99-        {adminGroups.map((group) => (
+app/admin/page.tsx-100-          <section
+app/admin/page.tsx-101-            key={group.title}
+app/admin/page.tsx-102-            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+app/admin/page.tsx-103-          >
+app/admin/page.tsx-104-            <h2 className="text-xl font-semibold">{group.title}</h2>
+app/admin/page.tsx-105-            <p className="mt-1 text-sm text-slate-600">
+app/admin/page.tsx-106-              {group.description}
+app/admin/page.tsx-107-            </p>
+app/admin/page.tsx-108-
+app/admin/page.tsx-109-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+app/admin/page.tsx-110-              {group.cards.map((card) => (
+app/admin/page.tsx-111-                <Link
+app/admin/page.tsx-112-                  key={card.href}
+app/admin/page.tsx-113-                  href={card.href}
+app/admin/page.tsx-114-                  className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-sky-300 hover:bg-sky-50"
+app/admin/page.tsx-115-                >
+app/admin/page.tsx-116-                  <h3 className="font-semibold text-slate-950">
+app/admin/page.tsx-117-                    {card.title}
+app/admin/page.tsx-118-                  </h3>
+app/admin/page.tsx-119-
+app/admin/page.tsx-120-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+app/admin/page.tsx-121-                    {card.description}
+app/admin/page.tsx-122-                  </p>
+app/admin/page.tsx-123-
+app/admin/page.tsx-124-                  <div className="mt-4 text-sm font-semibold text-sky-700">
+app/admin/page.tsx-125-                    Open →
+app/admin/page.tsx-126-                  </div>
+app/admin/page.tsx-127-                </Link>
+app/admin/page.tsx-128-              ))}
+app/admin/page.tsx-129-            </div>
+app/admin/page.tsx-130-          </section>
+app/admin/page.tsx-131-        ))}
+app/admin/page.tsx-132-      </div>
+app/admin/page.tsx-133-    </main>
+app/admin/page.tsx-134-  );
+app/admin/page.tsx-135-}
+--
+app/admin/notification-templates/page.tsx-183-  const [defaults, setDefaults] = useState<
+app/admin/notification-templates/page.tsx-184-    Record<NotificationTemplateType, NotificationTemplate> | null
+app/admin/notification-templates/page.tsx-185-  >(null);
+app/admin/notification-templates/page.tsx-186-
+app/admin/notification-templates/page.tsx-187-  const [drafts, setDrafts] =
+app/admin/notification-templates/page.tsx-188-    useState<Record<NotificationTemplateType, EditableTemplate>>(
+app/admin/notification-templates/page.tsx-189-      emptyDrafts()
+app/admin/notification-templates/page.tsx-190-    );
+app/admin/notification-templates/page.tsx-191-
+app/admin/notification-templates/page.tsx-192-  const [isLoading, setIsLoading] = useState(true);
+app/admin/notification-templates/page.tsx-193-  const [savingType, setSavingType] =
+app/admin/notification-templates/page.tsx-194-    useState<NotificationTemplateType | null>(null);
+app/admin/notification-templates/page.tsx-195-  const [message, setMessage] = useState("");
+app/admin/notification-templates/page.tsx-196-
+app/admin/notification-templates/page.tsx-197-  useEffect(() => {
+app/admin/notification-templates/page.tsx-198-    const controller = new AbortController();
+app/admin/notification-templates/page.tsx-199-
+app/admin/notification-templates/page.tsx-200-    async function loadTemplates() {
+app/admin/notification-templates/page.tsx-201-      try {
+app/admin/notification-templates/page.tsx-202-        setIsLoading(true);
+app/admin/notification-templates/page.tsx-203-        setMessage("");
+app/admin/notification-templates/page.tsx-204-        setTemplates(null);
+app/admin/notification-templates/page.tsx-205-        setDefaults(null);
+app/admin/notification-templates/page.tsx-206-        setDrafts(emptyDrafts());
+app/admin/notification-templates/page.tsx-207-
+app/admin/notification-templates/page.tsx-208-        const response = await fetch(
+app/admin/notification-templates/page.tsx-209-          `/api/admin/notification-templates?sport=${sport}`,
+app/admin/notification-templates/page.tsx-210-          {
+app/admin/notification-templates/page.tsx-211-            cache: "no-store",
+app/admin/notification-templates/page.tsx-212-            signal: controller.signal,
+app/admin/notification-templates/page.tsx-213-          }
+app/admin/notification-templates/page.tsx-214-        );
+app/admin/notification-templates/page.tsx-215-
+app/admin/notification-templates/page.tsx-216-        const result = await response.json();
+app/admin/notification-templates/page.tsx-217-
+app/admin/notification-templates/page.tsx-218-        if (controller.signal.aborted) {
+app/admin/notification-templates/page.tsx-219-          return;
+app/admin/notification-templates/page.tsx-220-        }
+app/admin/notification-templates/page.tsx-221-
+app/admin/notification-templates/page.tsx-222-        if (!response.ok) {
+app/admin/notification-templates/page.tsx:223:          setMessage(result.error || "Failed to load notification templates.");
+app/admin/notification-templates/page.tsx-224-          return;
+app/admin/notification-templates/page.tsx-225-        }
+app/admin/notification-templates/page.tsx-226-
+app/admin/notification-templates/page.tsx-227-        const templateMap = Object.fromEntries(
+app/admin/notification-templates/page.tsx-228-          result.templates.map((template: NotificationTemplate) => [
+app/admin/notification-templates/page.tsx-229-            template.notificationType,
+app/admin/notification-templates/page.tsx-230-            template,
+app/admin/notification-templates/page.tsx-231-          ])
+app/admin/notification-templates/page.tsx-232-        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx-233-
+app/admin/notification-templates/page.tsx-234-        const defaultMap = Object.fromEntries(
+app/admin/notification-templates/page.tsx-235-          result.defaults.map((template: NotificationTemplate) => [
+app/admin/notification-templates/page.tsx-236-            template.notificationType,
+app/admin/notification-templates/page.tsx-237-            template,
+app/admin/notification-templates/page.tsx-238-          ])
+app/admin/notification-templates/page.tsx-239-        ) as Record<NotificationTemplateType, NotificationTemplate>;
+app/admin/notification-templates/page.tsx-240-
+app/admin/notification-templates/page.tsx-241-        setTemplates(templateMap);
+app/admin/notification-templates/page.tsx-242-        setDefaults(defaultMap);
+app/admin/notification-templates/page.tsx-243-
+app/admin/notification-templates/page.tsx-244-        setDrafts(
+app/admin/notification-templates/page.tsx-245-          Object.fromEntries(
+app/admin/notification-templates/page.tsx-246-            TEMPLATE_ORDER.map((type) => [
+app/admin/notification-templates/page.tsx-247-              type,
+app/admin/notification-templates/page.tsx-248-              {
+app/admin/notification-templates/page.tsx-249-                titleTemplate: templateMap[type].titleTemplate,
+app/admin/notification-templates/page.tsx-250-                bodyTemplate: templateMap[type].bodyTemplate,
+app/admin/notification-templates/page.tsx-251-              },
+app/admin/notification-templates/page.tsx-252-            ])
+app/admin/notification-templates/page.tsx-253-          ) as Record<NotificationTemplateType, EditableTemplate>
+app/admin/notification-templates/page.tsx-254-        );
+app/admin/notification-templates/page.tsx-255-      } catch (error) {
+app/admin/notification-templates/page.tsx-256-        if (
+app/admin/notification-templates/page.tsx-257-          error instanceof DOMException &&
+app/admin/notification-templates/page.tsx-258-          error.name === "AbortError"
+app/admin/notification-templates/page.tsx-259-        ) {
+app/admin/notification-templates/page.tsx-260-          return;
+app/admin/notification-templates/page.tsx-261-        }
+app/admin/notification-templates/page.tsx-262-
+app/admin/notification-templates/page.tsx-263-        console.error(error);
+app/admin/notification-templates/page.tsx-264-        setMessage(
+app/admin/notification-templates/page.tsx-265-          "Something went wrong while loading the templates."
+app/admin/notification-templates/page.tsx-266-        );
+app/admin/notification-templates/page.tsx-267-      } finally {
+app/admin/notification-templates/page.tsx-268-        if (!controller.signal.aborted) {
+app/admin/notification-templates/page.tsx-269-          setIsLoading(false);
+app/admin/notification-templates/page.tsx-270-        }
+app/admin/notification-templates/page.tsx-271-      }
+app/admin/notification-templates/page.tsx-272-    }
+app/admin/notification-templates/page.tsx-273-
+app/admin/notification-templates/page.tsx-274-    void loadTemplates();
+app/admin/notification-templates/page.tsx-275-
+app/admin/notification-templates/page.tsx-276-    return () => {
+app/admin/notification-templates/page.tsx-277-      controller.abort();
+app/admin/notification-templates/page.tsx-278-    };
+app/admin/notification-templates/page.tsx-279-  }, [sport]);
+app/admin/notification-templates/page.tsx-280-
+app/admin/notification-templates/page.tsx-281-  const unsavedChanges = useMemo(() => {
+app/admin/notification-templates/page.tsx-282-    return Object.fromEntries(
+app/admin/notification-templates/page.tsx-283-      TEMPLATE_ORDER.map((type) => [
+app/admin/notification-templates/page.tsx-284-        type,
+app/admin/notification-templates/page.tsx-285-        Boolean(templates) &&
+app/admin/notification-templates/page.tsx-286-          (drafts[type].titleTemplate !== templates?.[type].titleTemplate ||
+app/admin/notification-templates/page.tsx-287-            drafts[type].bodyTemplate !== templates?.[type].bodyTemplate),
+app/admin/notification-templates/page.tsx-288-      ])
+app/admin/notification-templates/page.tsx-289-    ) as Record<NotificationTemplateType, boolean>;
+app/admin/notification-templates/page.tsx-290-  }, [drafts, templates]);
+app/admin/notification-templates/page.tsx-291-
+app/admin/notification-templates/page.tsx-292-  async function saveTemplate(
+app/admin/notification-templates/page.tsx-293-    notificationType: NotificationTemplateType,
+app/admin/notification-templates/page.tsx-294-    resetToDefault = false
+app/admin/notification-templates/page.tsx-295-  ) {
+app/admin/notification-templates/page.tsx-296-    try {
+app/admin/notification-templates/page.tsx-297-      setSavingType(notificationType);
+app/admin/notification-templates/page.tsx-298-      setMessage("");
+app/admin/notification-templates/page.tsx-299-
+app/admin/notification-templates/page.tsx-300-      const draft = drafts[notificationType];
+app/admin/notification-templates/page.tsx-301-
+app/admin/notification-templates/page.tsx-302-      const response = await fetch("/api/admin/notification-templates", {
+app/admin/notification-templates/page.tsx-303-        method: "PUT",
+app/admin/notification-templates/page.tsx-304-        headers: { "Content-Type": "application/json" },
+app/admin/notification-templates/page.tsx-305-        body: JSON.stringify({
+app/admin/notification-templates/page.tsx-306-          notificationType,
+app/admin/notification-templates/page.tsx-307-          sport,
+app/admin/notification-templates/page.tsx-308-          titleTemplate: draft.titleTemplate,
+app/admin/notification-templates/page.tsx-309-          bodyTemplate: draft.bodyTemplate,
+app/admin/notification-templates/page.tsx-310-          resetToDefault,
+app/admin/notification-templates/page.tsx-311-        }),
+app/admin/notification-templates/page.tsx-312-      });
+app/admin/notification-templates/page.tsx-313-
+app/admin/notification-templates/page.tsx-314-      const result = await response.json();
+app/admin/notification-templates/page.tsx-315-
+app/admin/notification-templates/page.tsx-316-      if (!response.ok) {
+app/admin/notification-templates/page.tsx-317-        setMessage(result.error || "Failed to save notification template.");
+app/admin/notification-templates/page.tsx-318-        return;
+app/admin/notification-templates/page.tsx-319-      }
+app/admin/notification-templates/page.tsx-320-
+app/admin/notification-templates/page.tsx-321-      setTemplates((current) =>
+app/admin/notification-templates/page.tsx-322-        current
+app/admin/notification-templates/page.tsx-323-          ? { ...current, [notificationType]: result.template }
+--
+app/admin/notification-templates/page.tsx-339-      );
+app/admin/notification-templates/page.tsx-340-    } catch (error) {
+app/admin/notification-templates/page.tsx-341-      console.error(error);
+app/admin/notification-templates/page.tsx-342-      setMessage("Something went wrong while saving the template.");
+app/admin/notification-templates/page.tsx-343-    } finally {
+app/admin/notification-templates/page.tsx-344-      setSavingType(null);
+app/admin/notification-templates/page.tsx-345-    }
+app/admin/notification-templates/page.tsx-346-  }
+app/admin/notification-templates/page.tsx-347-
+app/admin/notification-templates/page.tsx-348-  function updateDraft(
+app/admin/notification-templates/page.tsx-349-    type: NotificationTemplateType,
+app/admin/notification-templates/page.tsx-350-    patch: Partial<EditableTemplate>
+app/admin/notification-templates/page.tsx-351-  ) {
+app/admin/notification-templates/page.tsx-352-    setDrafts((current) => ({
+app/admin/notification-templates/page.tsx-353-      ...current,
+app/admin/notification-templates/page.tsx-354-      [type]: { ...current[type], ...patch },
+app/admin/notification-templates/page.tsx-355-    }));
+app/admin/notification-templates/page.tsx-356-  }
+app/admin/notification-templates/page.tsx-357-
+app/admin/notification-templates/page.tsx-358-  function appendPlaceholder(placeholder: string) {
+app/admin/notification-templates/page.tsx-359-    const current = drafts[activeTemplateType].bodyTemplate;
+app/admin/notification-templates/page.tsx-360-    const separator = !current || current.endsWith(" ") ? "" : " ";
+app/admin/notification-templates/page.tsx-361-
+app/admin/notification-templates/page.tsx-362-    updateDraft(activeTemplateType, {
+app/admin/notification-templates/page.tsx-363-      bodyTemplate: `${current}${separator}${placeholder}`,
+app/admin/notification-templates/page.tsx-364-    });
+app/admin/notification-templates/page.tsx-365-  }
+app/admin/notification-templates/page.tsx-366-
+app/admin/notification-templates/page.tsx-367-  const activeTemplate = templates?.[activeTemplateType] ?? null;
+app/admin/notification-templates/page.tsx-368-  const activeDefault = defaults?.[activeTemplateType] ?? null;
+app/admin/notification-templates/page.tsx-369-  const activeDraft = drafts[activeTemplateType];
+app/admin/notification-templates/page.tsx-370-  const isSaving = savingType === activeTemplateType;
+app/admin/notification-templates/page.tsx-371-
+app/admin/notification-templates/page.tsx-372-  return (
+app/admin/notification-templates/page.tsx-373-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/admin/notification-templates/page.tsx-374-      <div className="mx-auto max-w-5xl space-y-6">
+app/admin/notification-templates/page.tsx-375-        <AppNav />
+app/admin/notification-templates/page.tsx-376-
+app/admin/notification-templates/page.tsx-377-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+app/admin/notification-templates/page.tsx-378-          <h1 className="text-3xl font-bold tracking-tight">
+app/admin/notification-templates/page.tsx:379:            Notification Templates
+app/admin/notification-templates/page.tsx-380-          </h1>
+app/admin/notification-templates/page.tsx-381-
+app/admin/notification-templates/page.tsx-382-          <p className="mt-2 text-sm leading-6 text-slate-600">
+app/admin/notification-templates/page.tsx-383-            Choose a notification type, edit its wording, and preview the
+app/admin/notification-templates/page.tsx-384-            final message.
+app/admin/notification-templates/page.tsx-385-          </p>
+app/admin/notification-templates/page.tsx-386-        </section>
+app/admin/notification-templates/page.tsx-387-
+app/admin/notification-templates/page.tsx-388-        {message ? (
+app/admin/notification-templates/page.tsx-389-          <div
+app/admin/notification-templates/page.tsx-390-            className={`rounded-2xl border px-4 py-3 text-sm ${
+app/admin/notification-templates/page.tsx-391-              message.toLowerCase().includes("saved") ||
+app/admin/notification-templates/page.tsx-392-              message.toLowerCase().includes("restored")
+app/admin/notification-templates/page.tsx-393-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+app/admin/notification-templates/page.tsx-394-                : "border-red-200 bg-red-50 text-red-700"
+app/admin/notification-templates/page.tsx-395-            }`}
+app/admin/notification-templates/page.tsx-396-          >
+app/admin/notification-templates/page.tsx-397-            {message}
+app/admin/notification-templates/page.tsx-398-          </div>
+app/admin/notification-templates/page.tsx-399-        ) : null}
+app/admin/notification-templates/page.tsx-400-
+app/admin/notification-templates/page.tsx-401-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+app/admin/notification-templates/page.tsx-402-          <label className="text-sm font-semibold text-slate-700">
+app/admin/notification-templates/page.tsx-403-            Notification type
+app/admin/notification-templates/page.tsx-404-          </label>
+app/admin/notification-templates/page.tsx-405-
+app/admin/notification-templates/page.tsx-406-          <select
+app/admin/notification-templates/page.tsx-407-            value={activeTemplateType}
+app/admin/notification-templates/page.tsx-408-            onChange={(event) => {
+app/admin/notification-templates/page.tsx-409-              setActiveTemplateType(
+app/admin/notification-templates/page.tsx-410-                event.target.value as NotificationTemplateType
+app/admin/notification-templates/page.tsx-411-              );
+app/admin/notification-templates/page.tsx-412-              setMessage("");
+app/admin/notification-templates/page.tsx-413-            }}
+app/admin/notification-templates/page.tsx-414-            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm"
+app/admin/notification-templates/page.tsx-415-          >
+app/admin/notification-templates/page.tsx-416-            {TEMPLATE_ORDER.map((type) => (
+app/admin/notification-templates/page.tsx-417-              <option key={type} value={type}>
+app/admin/notification-templates/page.tsx-418-                {TEMPLATE_LABELS[type]}
+app/admin/notification-templates/page.tsx-419-                {unsavedChanges[type] ? " • Unsaved" : ""}
+app/admin/notification-templates/page.tsx-420-              </option>
+app/admin/notification-templates/page.tsx-421-            ))}
+app/admin/notification-templates/page.tsx-422-          </select>
+app/admin/notification-templates/page.tsx-423-        </section>
+app/admin/notification-templates/page.tsx-424-
+app/admin/notification-templates/page.tsx-425-        {isLoading || !activeTemplate || !activeDefault ? (
+app/admin/notification-templates/page.tsx-426-          <section className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+app/admin/notification-templates/page.tsx-427-            Loading notification template…
+app/admin/notification-templates/page.tsx-428-          </section>
+app/admin/notification-templates/page.tsx-429-        ) : (
+app/admin/notification-templates/page.tsx-430-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+app/admin/notification-templates/page.tsx-431-            <h2 className="text-xl font-semibold">
+app/admin/notification-templates/page.tsx-432-              {TEMPLATE_LABELS[activeTemplateType]}
+app/admin/notification-templates/page.tsx-433-            </h2>
+app/admin/notification-templates/page.tsx-434-
+app/admin/notification-templates/page.tsx-435-            <p className="mt-1 text-sm leading-6 text-slate-600">
+app/admin/notification-templates/page.tsx-436-              {getTemplateDescription(
+app/admin/notification-templates/page.tsx-437-                sport,
+app/admin/notification-templates/page.tsx-438-                activeTemplateType,
+app/admin/notification-templates/page.tsx-439-                activeTemplate.description
+app/admin/notification-templates/page.tsx-440-              )}
+app/admin/notification-templates/page.tsx-441-            </p>
+app/admin/notification-templates/page.tsx-442-
+app/admin/notification-templates/page.tsx-443-            <div className="mt-6 space-y-6">
+app/admin/notification-templates/page.tsx-444-              <div>
+app/admin/notification-templates/page.tsx-445-                <label className="text-sm font-semibold">
+app/admin/notification-templates/page.tsx-446-                  Notification title
+app/admin/notification-templates/page.tsx-447-                </label>
+app/admin/notification-templates/page.tsx-448-
+app/admin/notification-templates/page.tsx-449-                <input
+app/admin/notification-templates/page.tsx-450-                  value={activeDraft.titleTemplate}
+app/admin/notification-templates/page.tsx-451-                  onChange={(event) =>
+app/admin/notification-templates/page.tsx-452-                    updateDraft(activeTemplateType, {
+app/admin/notification-templates/page.tsx-453-                      titleTemplate: event.target.value,
+app/admin/notification-templates/page.tsx-454-                    })
+app/admin/notification-templates/page.tsx-455-                  }
+app/admin/notification-templates/page.tsx-456-                  maxLength={100}
+app/admin/notification-templates/page.tsx-457-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+app/admin/notification-templates/page.tsx-458-                />
+app/admin/notification-templates/page.tsx-459-              </div>
+app/admin/notification-templates/page.tsx-460-
+app/admin/notification-templates/page.tsx-461-              <div>
+app/admin/notification-templates/page.tsx-462-                <label className="text-sm font-semibold">
+app/admin/notification-templates/page.tsx-463-                  Notification message
+app/admin/notification-templates/page.tsx-464-                </label>
+app/admin/notification-templates/page.tsx-465-
+app/admin/notification-templates/page.tsx-466-                <textarea
+app/admin/notification-templates/page.tsx-467-                  value={activeDraft.bodyTemplate}
+app/admin/notification-templates/page.tsx-468-                  onChange={(event) =>
+app/admin/notification-templates/page.tsx-469-                    updateDraft(activeTemplateType, {
+app/admin/notification-templates/page.tsx-470-                      bodyTemplate: event.target.value,
+app/admin/notification-templates/page.tsx-471-                    })
+app/admin/notification-templates/page.tsx-472-                  }
+app/admin/notification-templates/page.tsx-473-                  maxLength={240}
+app/admin/notification-templates/page.tsx-474-                  rows={4}
+app/admin/notification-templates/page.tsx-475-                  className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+app/admin/notification-templates/page.tsx-476-                />
+app/admin/notification-templates/page.tsx-477-              </div>
+app/admin/notification-templates/page.tsx-478-
+app/admin/notification-templates/page.tsx-479-              <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+--
+app/admin/notification-history/page.tsx-317-    try {
+app/admin/notification-history/page.tsx-318-      setIsLoading(true);
+app/admin/notification-history/page.tsx-319-      setMessage("");
+app/admin/notification-history/page.tsx-320-
+app/admin/notification-history/page.tsx-321-      const params = new URLSearchParams();
+app/admin/notification-history/page.tsx-322-
+app/admin/notification-history/page.tsx-323-      const range =
+app/admin/notification-history/page.tsx-324-        dateRangeForKey(selectedDate);
+app/admin/notification-history/page.tsx-325-
+app/admin/notification-history/page.tsx-326-      params.set("start", range.start);
+app/admin/notification-history/page.tsx-327-      params.set("end", range.end);
+app/admin/notification-history/page.tsx-328-      params.set("date", selectedDate);
+app/admin/notification-history/page.tsx-329-
+app/admin/notification-history/page.tsx-330-      if (typeFilter) {
+app/admin/notification-history/page.tsx-331-        params.set("type", typeFilter);
+app/admin/notification-history/page.tsx-332-      }
+app/admin/notification-history/page.tsx-333-
+app/admin/notification-history/page.tsx-334-      if (statusFilter) {
+app/admin/notification-history/page.tsx-335-        params.set("status", statusFilter);
+app/admin/notification-history/page.tsx-336-      }
+app/admin/notification-history/page.tsx-337-
+app/admin/notification-history/page.tsx-338-      if (
+app/admin/notification-history/page.tsx-339-        sportFilter &&
+app/admin/notification-history/page.tsx-340-        sportFilter !== "all"
+app/admin/notification-history/page.tsx-341-      ) {
+app/admin/notification-history/page.tsx-342-        params.set("sport", sportFilter);
+app/admin/notification-history/page.tsx-343-      }
+app/admin/notification-history/page.tsx-344-
+app/admin/notification-history/page.tsx-345-      const response = await fetch(
+app/admin/notification-history/page.tsx-346-        `/api/admin/notification-history?${params.toString()}`,
+app/admin/notification-history/page.tsx-347-        {
+app/admin/notification-history/page.tsx-348-          cache: "no-store",
+app/admin/notification-history/page.tsx-349-        }
+app/admin/notification-history/page.tsx-350-      );
+app/admin/notification-history/page.tsx-351-
+app/admin/notification-history/page.tsx-352-      const result = await response.json();
+app/admin/notification-history/page.tsx-353-
+app/admin/notification-history/page.tsx-354-      if (!response.ok) {
+app/admin/notification-history/page.tsx-355-        setMessage(
+app/admin/notification-history/page.tsx-356-          result.error ||
+app/admin/notification-history/page.tsx:357:            "Failed to load notification history."
+app/admin/notification-history/page.tsx-358-        );
+app/admin/notification-history/page.tsx-359-        return;
+app/admin/notification-history/page.tsx-360-      }
+app/admin/notification-history/page.tsx-361-
+app/admin/notification-history/page.tsx-362-      setHistory(result.history ?? []);
+app/admin/notification-history/page.tsx-363-      setSummary(
+app/admin/notification-history/page.tsx-364-        result.summary ?? EMPTY_SUMMARY
+app/admin/notification-history/page.tsx-365-      );
+app/admin/notification-history/page.tsx-366-      setExpandedRows(new Set());
+app/admin/notification-history/page.tsx-367-    } catch (error) {
+app/admin/notification-history/page.tsx-368-      console.error(error);
+app/admin/notification-history/page.tsx-369-
+app/admin/notification-history/page.tsx-370-      setMessage(
+app/admin/notification-history/page.tsx:371:        "Something went wrong while loading notification history."
+app/admin/notification-history/page.tsx-372-      );
+app/admin/notification-history/page.tsx-373-    } finally {
+app/admin/notification-history/page.tsx-374-      setIsLoading(false);
+app/admin/notification-history/page.tsx-375-    }
+app/admin/notification-history/page.tsx-376-  }, [
+app/admin/notification-history/page.tsx-377-    selectedDate,
+app/admin/notification-history/page.tsx-378-    statusFilter,
+app/admin/notification-history/page.tsx-379-    typeFilter,
+app/admin/notification-history/page.tsx-380-    sportFilter,
+app/admin/notification-history/page.tsx-381-  ]);
+app/admin/notification-history/page.tsx-382-
+app/admin/notification-history/page.tsx-383-  useEffect(() => {
+app/admin/notification-history/page.tsx-384-    void loadHistory();
+app/admin/notification-history/page.tsx-385-  }, [loadHistory]);
+app/admin/notification-history/page.tsx-386-
+app/admin/notification-history/page.tsx-387-  const visibleHistory = useMemo(() => {
+app/admin/notification-history/page.tsx-388-    const search =
+app/admin/notification-history/page.tsx-389-      searchFilter.trim().toLowerCase();
+app/admin/notification-history/page.tsx-390-
+app/admin/notification-history/page.tsx-391-    if (!search) return history;
+app/admin/notification-history/page.tsx-392-
+app/admin/notification-history/page.tsx-393-    return history.filter((row) => {
+app/admin/notification-history/page.tsx-394-      const deviceNames =
+app/admin/notification-history/page.tsx-395-        row.metadata?.devices?.map(
+app/admin/notification-history/page.tsx-396-          (device) => device.deviceName
+app/admin/notification-history/page.tsx-397-        ) ?? [];
+app/admin/notification-history/page.tsx-398-
+app/admin/notification-history/page.tsx-399-      return [
+app/admin/notification-history/page.tsx-400-        row.recipientName,
+app/admin/notification-history/page.tsx-401-        row.teamName,
+app/admin/notification-history/page.tsx-402-        row.playerName,
+app/admin/notification-history/page.tsx-403-        row.slateLabel,
+app/admin/notification-history/page.tsx-404-        row.title,
+app/admin/notification-history/page.tsx-405-        row.body,
+app/admin/notification-history/page.tsx-406-        row.event_key,
+app/admin/notification-history/page.tsx-407-        row.reason,
+app/admin/notification-history/page.tsx-408-        ...deviceNames,
+app/admin/notification-history/page.tsx-409-      ]
+app/admin/notification-history/page.tsx-410-        .filter(Boolean)
+app/admin/notification-history/page.tsx-411-        .some((value) =>
+app/admin/notification-history/page.tsx-412-          String(value)
+app/admin/notification-history/page.tsx-413-            .toLowerCase()
+app/admin/notification-history/page.tsx-414-            .includes(search)
+app/admin/notification-history/page.tsx-415-        );
+app/admin/notification-history/page.tsx-416-    });
+app/admin/notification-history/page.tsx-417-  }, [history, searchFilter]);
+app/admin/notification-history/page.tsx-418-
+app/admin/notification-history/page.tsx-419-  async function runRecoveryAction(
+app/admin/notification-history/page.tsx-420-    row: HistoryRow,
+app/admin/notification-history/page.tsx-421-    action: "send" | "retry"
+app/admin/notification-history/page.tsx-422-  ) {
+app/admin/notification-history/page.tsx-423-    if (actionRowId) {
+app/admin/notification-history/page.tsx-424-      return;
+app/admin/notification-history/page.tsx-425-    }
+app/admin/notification-history/page.tsx-426-
+app/admin/notification-history/page.tsx-427-    try {
+app/admin/notification-history/page.tsx-428-      setActionRowId(row.id);
+app/admin/notification-history/page.tsx-429-      setMessage("");
+app/admin/notification-history/page.tsx-430-
+app/admin/notification-history/page.tsx-431-      const response = await fetch(
+app/admin/notification-history/page.tsx-432-        "/api/admin/notification-history/action",
+app/admin/notification-history/page.tsx-433-        {
+app/admin/notification-history/page.tsx-434-          method: "POST",
+app/admin/notification-history/page.tsx-435-          headers: {
+app/admin/notification-history/page.tsx-436-            "Content-Type":
+app/admin/notification-history/page.tsx-437-              "application/json",
+app/admin/notification-history/page.tsx-438-          },
+app/admin/notification-history/page.tsx-439-          body: JSON.stringify({
+app/admin/notification-history/page.tsx-440-            action,
+app/admin/notification-history/page.tsx-441-            historyId:
+app/admin/notification-history/page.tsx-442-              row.id.startsWith(
+app/admin/notification-history/page.tsx-443-                "expected:"
+app/admin/notification-history/page.tsx-444-              )
+app/admin/notification-history/page.tsx-445-                ? null
+app/admin/notification-history/page.tsx-446-                : row.id,
+app/admin/notification-history/page.tsx-447-            eventKey:
+app/admin/notification-history/page.tsx-448-              row.event_key,
+app/admin/notification-history/page.tsx-449-          }),
+app/admin/notification-history/page.tsx-450-        }
+app/admin/notification-history/page.tsx-451-      );
+app/admin/notification-history/page.tsx-452-
+app/admin/notification-history/page.tsx-453-      const result = await response.json();
+app/admin/notification-history/page.tsx-454-
+app/admin/notification-history/page.tsx-455-      if (!response.ok) {
+app/admin/notification-history/page.tsx-456-        setMessage(
+app/admin/notification-history/page.tsx-457-          result.error ||
+app/admin/notification-history/page.tsx-458-            "Notification recovery failed."
+app/admin/notification-history/page.tsx-459-        );
+app/admin/notification-history/page.tsx-460-        return;
+app/admin/notification-history/page.tsx-461-      }
+app/admin/notification-history/page.tsx-462-
+app/admin/notification-history/page.tsx-463-      await loadHistory();
+app/admin/notification-history/page.tsx-464-    } catch (error) {
+app/admin/notification-history/page.tsx-465-      console.error(error);
+app/admin/notification-history/page.tsx-466-
+app/admin/notification-history/page.tsx-467-      setMessage(
+app/admin/notification-history/page.tsx-468-        "Something went wrong while recovering the notification."
+app/admin/notification-history/page.tsx-469-      );
+app/admin/notification-history/page.tsx-470-    } finally {
+app/admin/notification-history/page.tsx-471-      setActionRowId(null);
+app/admin/notification-history/page.tsx-472-    }
+app/admin/notification-history/page.tsx-473-  }
+app/admin/notification-history/page.tsx-474-
+app/admin/notification-history/page.tsx-475-  function toggleRow(id: string) {
+app/admin/notification-history/page.tsx-476-    setExpandedRows((current) => {
+app/admin/notification-history/page.tsx-477-      const next = new Set(current);
+app/admin/notification-history/page.tsx-478-
+app/admin/notification-history/page.tsx-479-      if (next.has(id)) {
+app/admin/notification-history/page.tsx-480-        next.delete(id);
+app/admin/notification-history/page.tsx-481-      } else {
+app/admin/notification-history/page.tsx-482-        next.add(id);
+app/admin/notification-history/page.tsx-483-      }
+app/admin/notification-history/page.tsx-484-
+app/admin/notification-history/page.tsx-485-      return next;
+app/admin/notification-history/page.tsx-486-    });
+app/admin/notification-history/page.tsx-487-  }
+app/admin/notification-history/page.tsx-488-
+app/admin/notification-history/page.tsx-489-  return (
+app/admin/notification-history/page.tsx-490-    <main className="min-h-screen bg-slate-950 px-3 py-5 text-slate-100 sm:px-4 sm:py-6">
+app/admin/notification-history/page.tsx-491-      <div className="mx-auto max-w-[1500px] space-y-5">
+app/admin/notification-history/page.tsx-492-        <AppNav />
+app/admin/notification-history/page.tsx-493-
+app/admin/notification-history/page.tsx-494-        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm sm:p-6">
+app/admin/notification-history/page.tsx-495-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+app/admin/notification-history/page.tsx-496-            <div>
+app/admin/notification-history/page.tsx-497-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-sky-400">
+app/admin/notification-history/page.tsx-498-                Admin Operations
+app/admin/notification-history/page.tsx-499-              </div>
+app/admin/notification-history/page.tsx-500-
+app/admin/notification-history/page.tsx-501-              <h1 className="mt-1 text-3xl font-black tracking-tight">
+app/admin/notification-history/page.tsx-502-                Notification Monitor
+app/admin/notification-history/page.tsx-503-              </h1>
+app/admin/notification-history/page.tsx-504-
+app/admin/notification-history/page.tsx-505-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+app/admin/notification-history/page.tsx-506-                Expected-event and delivery audit for 111 Sports.
+app/admin/notification-history/page.tsx:507:                Golf round-finished notifications appear here before
+app/admin/notification-history/page.tsx-508-                delivery, making missing triggers visible alongside
+app/admin/notification-history/page.tsx-509-                successful and failed pushes.
+app/admin/notification-history/page.tsx-510-              </p>
+app/admin/notification-history/page.tsx-511-            </div>
+app/admin/notification-history/page.tsx-512-
+app/admin/notification-history/page.tsx-513-            <button
+app/admin/notification-history/page.tsx-514-              type="button"
+app/admin/notification-history/page.tsx-515-              onClick={() => void loadHistory()}
+app/admin/notification-history/page.tsx-516-              disabled={isLoading}
+app/admin/notification-history/page.tsx-517-              className="rounded-xl border border-slate-600 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:opacity-50"
+app/admin/notification-history/page.tsx-518-            >
+app/admin/notification-history/page.tsx-519-              {isLoading
+app/admin/notification-history/page.tsx-520-                ? "Refreshing…"
+app/admin/notification-history/page.tsx-521-                : "Refresh"}
+app/admin/notification-history/page.tsx-522-            </button>
+app/admin/notification-history/page.tsx-523-          </div>
+app/admin/notification-history/page.tsx-524-        </section>
+app/admin/notification-history/page.tsx-525-
+app/admin/notification-history/page.tsx-526-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-9">
+app/admin/notification-history/page.tsx-527-          <SummaryCard
+app/admin/notification-history/page.tsx-528-            label="Expected"
+app/admin/notification-history/page.tsx-529-            value={summary.total}
+app/admin/notification-history/page.tsx-530-          />
+app/admin/notification-history/page.tsx-531-
+app/admin/notification-history/page.tsx-532-          <SummaryCard
+app/admin/notification-history/page.tsx-533-            label="Waiting"
+app/admin/notification-history/page.tsx-534-            value={summary.waiting}
+app/admin/notification-history/page.tsx-535-          />
+app/admin/notification-history/page.tsx-536-
+app/admin/notification-history/page.tsx-537-          <SummaryCard
+app/admin/notification-history/page.tsx-538-            label="Missed"
+app/admin/notification-history/page.tsx-539-            value={summary.missed}
+app/admin/notification-history/page.tsx-540-          />
+app/admin/notification-history/page.tsx-541-
+app/admin/notification-history/page.tsx-542-          <SummaryCard
+app/admin/notification-history/page.tsx-543-            label="Sent"
+app/admin/notification-history/page.tsx-544-            value={summary.sent}
+app/admin/notification-history/page.tsx-545-          />
+app/admin/notification-history/page.tsx-546-
+app/admin/notification-history/page.tsx-547-          <SummaryCard
+app/admin/notification-history/page.tsx-548-            label="Partial"
+app/admin/notification-history/page.tsx-549-            value={summary.partial}
+app/admin/notification-history/page.tsx-550-          />
+app/admin/notification-history/page.tsx-551-
+app/admin/notification-history/page.tsx-552-          <SummaryCard
+app/admin/notification-history/page.tsx-553-            label="Failed"
+app/admin/notification-history/page.tsx-554-            value={summary.failed}
+app/admin/notification-history/page.tsx-555-          />
+app/admin/notification-history/page.tsx-556-
+app/admin/notification-history/page.tsx-557-          <SummaryCard
+app/admin/notification-history/page.tsx-558-            label="Skipped"
+app/admin/notification-history/page.tsx-559-            value={summary.skipped}
+app/admin/notification-history/page.tsx-560-          />
+app/admin/notification-history/page.tsx-561-
+app/admin/notification-history/page.tsx-562-          <SummaryCard
+app/admin/notification-history/page.tsx-563-            label="Pending"
+app/admin/notification-history/page.tsx-564-            value={summary.pending}
+app/admin/notification-history/page.tsx-565-          />
+app/admin/notification-history/page.tsx-566-
+app/admin/notification-history/page.tsx-567-          <SummaryCard
+app/admin/notification-history/page.tsx-568-            label="Devices"
+app/admin/notification-history/page.tsx-569-            value={summary.devicesSent}
+app/admin/notification-history/page.tsx-570-            detail={
+app/admin/notification-history/page.tsx-571-              summary.devicesFailed > 0
+app/admin/notification-history/page.tsx-572-                ? `${summary.devicesFailed} failed`
+app/admin/notification-history/page.tsx-573-                : "0 failed"
+app/admin/notification-history/page.tsx-574-            }
+app/admin/notification-history/page.tsx-575-          />
+app/admin/notification-history/page.tsx-576-        </section>
+app/admin/notification-history/page.tsx-577-
+app/admin/notification-history/page.tsx-578-        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-4 shadow-sm">
+app/admin/notification-history/page.tsx-579-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+app/admin/notification-history/page.tsx-580-            <label className="space-y-1">
+app/admin/notification-history/page.tsx-581-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+app/admin/notification-history/page.tsx-582-                Date
+app/admin/notification-history/page.tsx-583-              </span>
+app/admin/notification-history/page.tsx-584-
+app/admin/notification-history/page.tsx-585-              <select
+app/admin/notification-history/page.tsx-586-                value={selectedDate}
+app/admin/notification-history/page.tsx-587-                onChange={(event) =>
+app/admin/notification-history/page.tsx-588-                  setSelectedDate(
+app/admin/notification-history/page.tsx-589-                    event.target.value
+app/admin/notification-history/page.tsx-590-                  )
+app/admin/notification-history/page.tsx-591-                }
+app/admin/notification-history/page.tsx-592-                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+app/admin/notification-history/page.tsx-593-              >
+app/admin/notification-history/page.tsx-594-                {dateOptions.map((option) => (
+app/admin/notification-history/page.tsx-595-                  <option
+app/admin/notification-history/page.tsx-596-                    key={option.key}
+app/admin/notification-history/page.tsx-597-                    value={option.key}
+app/admin/notification-history/page.tsx-598-                  >
+app/admin/notification-history/page.tsx-599-                    {option.label}
+app/admin/notification-history/page.tsx-600-                  </option>
+app/admin/notification-history/page.tsx-601-                ))}
+app/admin/notification-history/page.tsx-602-              </select>
+app/admin/notification-history/page.tsx-603-            </label>
+app/admin/notification-history/page.tsx-604-
+app/admin/notification-history/page.tsx-605-            <label className="space-y-1">
+app/admin/notification-history/page.tsx-606-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+app/admin/notification-history/page.tsx-607-                Sport
+--
+app/admin/notification-history/page.tsx-1108-                                            </div>
+app/admin/notification-history/page.tsx-1109-                                          </div>
+app/admin/notification-history/page.tsx-1110-                                        )
+app/admin/notification-history/page.tsx-1111-                                      )}
+app/admin/notification-history/page.tsx-1112-                                    </div>
+app/admin/notification-history/page.tsx-1113-                                  )}
+app/admin/notification-history/page.tsx-1114-                                </div>
+app/admin/notification-history/page.tsx-1115-                              </div>
+app/admin/notification-history/page.tsx-1116-
+app/admin/notification-history/page.tsx-1117-                              {row.metadata ? (
+app/admin/notification-history/page.tsx-1118-                                <details className="mt-4">
+app/admin/notification-history/page.tsx-1119-                                  <summary className="cursor-pointer text-xs font-semibold text-slate-400 hover:text-slate-200">
+app/admin/notification-history/page.tsx-1120-                                    Raw metadata
+app/admin/notification-history/page.tsx-1121-                                  </summary>
+app/admin/notification-history/page.tsx-1122-
+app/admin/notification-history/page.tsx-1123-                                  <pre className="mt-2 max-h-72 overflow-auto rounded-xl border border-slate-800 bg-black/30 p-3 text-[10px] leading-4 text-slate-400">
+app/admin/notification-history/page.tsx-1124-                                    {JSON.stringify(
+app/admin/notification-history/page.tsx-1125-                                      row.metadata,
+app/admin/notification-history/page.tsx-1126-                                      null,
+app/admin/notification-history/page.tsx-1127-                                      2
+app/admin/notification-history/page.tsx-1128-                                    )}
+app/admin/notification-history/page.tsx-1129-                                  </pre>
+app/admin/notification-history/page.tsx-1130-                                </details>
+app/admin/notification-history/page.tsx-1131-                              ) : null}
+app/admin/notification-history/page.tsx-1132-                            </td>
+app/admin/notification-history/page.tsx-1133-                          </tr>
+app/admin/notification-history/page.tsx-1134-                        ) : null}
+app/admin/notification-history/page.tsx-1135-                      </Fragment>
+app/admin/notification-history/page.tsx-1136-                    );
+app/admin/notification-history/page.tsx-1137-                  })}
+app/admin/notification-history/page.tsx-1138-                </tbody>
+app/admin/notification-history/page.tsx-1139-              </table>
+app/admin/notification-history/page.tsx-1140-            </div>
+app/admin/notification-history/page.tsx-1141-          )}
+app/admin/notification-history/page.tsx-1142-        </section>
+app/admin/notification-history/page.tsx-1143-
+app/admin/notification-history/page.tsx-1144-        <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-4 py-3 text-xs leading-5 text-slate-400">
+app/admin/notification-history/page.tsx-1145-          <span className="font-bold text-slate-300">
+app/admin/notification-history/page.tsx-1146-            Expected-event ledger:
+app/admin/notification-history/page.tsx-1147-          </span>{" "}
+app/admin/notification-history/page.tsx:1148:          Golf round-finished notifications now appear before delivery.
+app/admin/notification-history/page.tsx-1149-          Waiting means the drafted golfer has not completed that round.
+app/admin/notification-history/page.tsx-1150-          Missed means the persisted round is complete but no matching
+app/admin/notification-history/page.tsx-1151-          notification event reached the delivery pipeline. Delivery
+app/admin/notification-history/page.tsx-1152-          records remain authoritative once an event is created.
+app/admin/notification-history/page.tsx-1153-        </div>
+app/admin/notification-history/page.tsx-1154-      </div>
+app/admin/notification-history/page.tsx-1155-    </main>
+app/admin/notification-history/page.tsx-1156-  );
+app/admin/notification-history/page.tsx-1157-}
+--
+components/lineups/LineupBuilder.tsx-1674-      selectedSlateId={selectedSlateId}
+components/lineups/LineupBuilder.tsx-1675-      setSelectedSlateId={setSelectedSlateId}
+components/lineups/LineupBuilder.tsx-1676-      slates={filteredSlates}
+components/lineups/LineupBuilder.tsx-1677-      selectedSlate={selectedSlate}
+components/lineups/LineupBuilder.tsx-1678-      selectedSlateDisplay={selectedSlateDisplay}
+components/lineups/LineupBuilder.tsx-1679-      selectedSlateIdNumber={selectedSlateIdNumber}
+components/lineups/LineupBuilder.tsx-1680-      isRefreshingStats={isRefreshingStats}
+components/lineups/LineupBuilder.tsx-1681-      refreshStatsForSelectedSlate={
+components/lineups/LineupBuilder.tsx-1682-        refreshStatsForSelectedSlate
+components/lineups/LineupBuilder.tsx-1683-      }
+components/lineups/LineupBuilder.tsx-1684-      autoRefreshEnabled={autoRefreshEnabled}
+components/lineups/LineupBuilder.tsx-1685-      setAutoRefreshEnabled={
+components/lineups/LineupBuilder.tsx-1686-        setAutoRefreshEnabled
+components/lineups/LineupBuilder.tsx-1687-      }
+components/lineups/LineupBuilder.tsx-1688-      compactView={compactView}
+components/lineups/LineupBuilder.tsx-1689-      setCompactView={setCompactView}
+components/lineups/LineupBuilder.tsx-1690-      hasMounted={hasMounted}
+components/lineups/LineupBuilder.tsx-1691-      isSlateLoading={isSlateLoading}
+components/lineups/LineupBuilder.tsx-1692-      lastUpdatedAt={lastUpdatedAt}
+components/lineups/LineupBuilder.tsx-1693-      seasons={seasons}
+components/lineups/LineupBuilder.tsx-1694-      selectedSeason={selectedSeason}
+components/lineups/LineupBuilder.tsx-1695-      setSelectedSeason={setSelectedSeason}
+components/lineups/LineupBuilder.tsx-1696-    />
+components/lineups/LineupBuilder.tsx-1697-  );
+components/lineups/LineupBuilder.tsx-1698-
+components/lineups/LineupBuilder.tsx-1699-  return (
+components/lineups/LineupBuilder.tsx-1700-    <div className="space-y-6">
+components/lineups/LineupBuilder.tsx-1701-      {viewMode === "draft"
+components/lineups/LineupBuilder.tsx-1702-        ? lineupControls
+components/lineups/LineupBuilder.tsx-1703-        : null}
+components/lineups/LineupBuilder.tsx-1704-
+components/lineups/LineupBuilder.tsx-1705-      {message ? (
+components/lineups/LineupBuilder.tsx-1706-        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+components/lineups/LineupBuilder.tsx-1707-          {message}
+components/lineups/LineupBuilder.tsx-1708-        </div>
+components/lineups/LineupBuilder.tsx-1709-      ) : null}
+components/lineups/LineupBuilder.tsx-1710-
+components/lineups/LineupBuilder.tsx-1711-      {currentUser?.role === "admin" && viewMode === "draft" ? (
+components/lineups/LineupBuilder.tsx-1712-        <section className="draft-admin-toggle">
+components/lineups/LineupBuilder.tsx-1713-          <div>
+components/lineups/LineupBuilder.tsx:1714:            <strong>Proxy Pick Notifications</strong>
+components/lineups/LineupBuilder.tsx-1715-            <span>
+components/lineups/LineupBuilder.tsx-1716-              Notify the next drafter after an admin-entered pick.
+components/lineups/LineupBuilder.tsx-1717-            </span>
+components/lineups/LineupBuilder.tsx-1718-          </div>
+components/lineups/LineupBuilder.tsx-1719-
+components/lineups/LineupBuilder.tsx-1720-          <label className="draft-admin-switch">
+components/lineups/LineupBuilder.tsx-1721-            <input
+components/lineups/LineupBuilder.tsx-1722-              type="checkbox"
+components/lineups/LineupBuilder.tsx-1723-              checked={notifyNextDrafterForProxyPicks}
+components/lineups/LineupBuilder.tsx-1724-              onChange={(event) =>
+components/lineups/LineupBuilder.tsx-1725-                setNotifyNextDrafterForProxyPicks(
+components/lineups/LineupBuilder.tsx-1726-                  event.target.checked
+components/lineups/LineupBuilder.tsx-1727-                )
+components/lineups/LineupBuilder.tsx-1728-              }
+components/lineups/LineupBuilder.tsx-1729-            />
+components/lineups/LineupBuilder.tsx-1730-
+components/lineups/LineupBuilder.tsx-1731-            <span aria-hidden="true" />
+components/lineups/LineupBuilder.tsx-1732-
+components/lineups/LineupBuilder.tsx-1733-            <em>
+components/lineups/LineupBuilder.tsx-1734-              {notifyNextDrafterForProxyPicks
+components/lineups/LineupBuilder.tsx-1735-                ? "On"
+components/lineups/LineupBuilder.tsx-1736-                : "Off"}
+components/lineups/LineupBuilder.tsx-1737-            </em>
+components/lineups/LineupBuilder.tsx-1738-          </label>
+components/lineups/LineupBuilder.tsx-1739-        </section>
+components/lineups/LineupBuilder.tsx-1740-      ) : null}
+components/lineups/LineupBuilder.tsx-1741-
+components/lineups/LineupBuilder.tsx-1742-      {saveMessage ? (
+components/lineups/LineupBuilder.tsx-1743-        <div
+components/lineups/LineupBuilder.tsx-1744-          className={`rounded-2xl px-4 py-3 text-sm ${
+components/lineups/LineupBuilder.tsx-1745-            saveMessage.toLowerCase().includes("success") ||
+components/lineups/LineupBuilder.tsx-1746-            saveMessage.toLowerCase().includes("loaded") ||
+components/lineups/LineupBuilder.tsx-1747-            saveMessage.toLowerCase().includes("drafted") ||
+components/lineups/LineupBuilder.tsx-1748-            saveMessage.toLowerCase().includes("removed") ||
+components/lineups/LineupBuilder.tsx-1749-            saveMessage.toLowerCase().includes("refreshed")
+components/lineups/LineupBuilder.tsx-1750-              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+components/lineups/LineupBuilder.tsx-1751-              : "border border-red-200 bg-red-50 text-red-700"
+components/lineups/LineupBuilder.tsx-1752-          }`}
+components/lineups/LineupBuilder.tsx-1753-        >
+components/lineups/LineupBuilder.tsx-1754-          {saveMessage}
+components/lineups/LineupBuilder.tsx-1755-        </div>
+components/lineups/LineupBuilder.tsx-1756-      ) : null}
+components/lineups/LineupBuilder.tsx-1757-
+components/lineups/LineupBuilder.tsx-1758-      {viewMode === "draft" ? (
+components/lineups/LineupBuilder.tsx-1759-        <>
+components/lineups/LineupBuilder.tsx-1760-          <section className="draft-page-tabs">
+components/lineups/LineupBuilder.tsx-1761-            <button
+components/lineups/LineupBuilder.tsx-1762-              type="button"
+components/lineups/LineupBuilder.tsx-1763-              onClick={() => setDraftPageTab("lineup")}
+components/lineups/LineupBuilder.tsx-1764-              className={`draft-page-tab ${
+components/lineups/LineupBuilder.tsx-1765-                draftPageTab === "lineup"
+components/lineups/LineupBuilder.tsx-1766-                  ? "draft-page-tab--active"
+components/lineups/LineupBuilder.tsx-1767-                  : ""
+components/lineups/LineupBuilder.tsx-1768-              }`}
+components/lineups/LineupBuilder.tsx-1769-            >
+components/lineups/LineupBuilder.tsx-1770-              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
+components/lineups/LineupBuilder.tsx-1771-              <span>Lineup</span>
+components/lineups/LineupBuilder.tsx-1772-
+components/lineups/LineupBuilder.tsx-1773-              {currentUser?.teamId ? (
+components/lineups/LineupBuilder.tsx-1774-                <span className="draft-page-tab-count">
+components/lineups/LineupBuilder.tsx-1775-                  {getPlayersForTeam(currentUser.teamId).length}/{getRosterTotalSlots()}
+components/lineups/LineupBuilder.tsx-1776-                </span>
+components/lineups/LineupBuilder.tsx-1777-              ) : null}
+components/lineups/LineupBuilder.tsx-1778-            </button>
+components/lineups/LineupBuilder.tsx-1779-
+components/lineups/LineupBuilder.tsx-1780-            <button
+components/lineups/LineupBuilder.tsx-1781-              type="button"
+components/lineups/LineupBuilder.tsx-1782-              onClick={() => setDraftPageTab("players")}
+components/lineups/LineupBuilder.tsx-1783-              className={`draft-page-tab ${
+components/lineups/LineupBuilder.tsx-1784-                draftPageTab === "players"
+components/lineups/LineupBuilder.tsx-1785-                  ? "draft-page-tab--active"
+components/lineups/LineupBuilder.tsx-1786-                  : ""
+components/lineups/LineupBuilder.tsx-1787-              }`}
+components/lineups/LineupBuilder.tsx-1788-            >
+components/lineups/LineupBuilder.tsx-1789-              <span aria-hidden="true">🔎</span>
+components/lineups/LineupBuilder.tsx-1790-              <span>Players</span>
+components/lineups/LineupBuilder.tsx-1791-            </button>
+components/lineups/LineupBuilder.tsx-1792-          </section>
+components/lineups/LineupBuilder.tsx-1793-
+components/lineups/LineupBuilder.tsx-1794-          {draftPageTab === "lineup" ? (
+components/lineups/LineupBuilder.tsx-1795-            <DraftRosterCourt
+components/lineups/LineupBuilder.tsx-1796-              teamId={currentUser?.teamId ?? null}
+components/lineups/LineupBuilder.tsx-1797-              teamName={currentUser?.displayName ?? null}
+components/lineups/LineupBuilder.tsx-1798-              players={
+components/lineups/LineupBuilder.tsx-1799-                currentUser?.teamId
+components/lineups/LineupBuilder.tsx-1800-                  ? getPlayersForTeam(currentUser.teamId)
+components/lineups/LineupBuilder.tsx-1801-                  : []
+components/lineups/LineupBuilder.tsx-1802-              }
+components/lineups/LineupBuilder.tsx-1803-              rosterSlots={rosterSlots}
+components/lineups/LineupBuilder.tsx-1804-              isLocked={Boolean(selectedSlate?.is_locked)}
+components/lineups/LineupBuilder.tsx-1805-              setDraftingPlayer={setLeagueResearchPlayer}
+components/lineups/LineupBuilder.tsx-1806-              setTargetDraftSlot={setTargetDraftSlot}
+components/lineups/LineupBuilder.tsx-1807-            />
+components/lineups/LineupBuilder.tsx-1808-          ) : (
+components/lineups/LineupBuilder.tsx-1809-            <PlayerPool
+components/lineups/LineupBuilder.tsx-1810-              players={players}
+
+===== 6. PUSH SUBSCRIPTION DATABASE REFERENCES =====
+app/api/push-subscriptions/route.ts-6-  endpoint?: string;
+app/api/push-subscriptions/route.ts-7-  keys?: {
+app/api/push-subscriptions/route.ts-8-    p256dh?: string;
+app/api/push-subscriptions/route.ts-9-    auth?: string;
+app/api/push-subscriptions/route.ts-10-  };
+app/api/push-subscriptions/route.ts-11-  deviceName?: string;
+app/api/push-subscriptions/route.ts-12-};
+app/api/push-subscriptions/route.ts-13-
+app/api/push-subscriptions/route.ts-14-export async function GET() {
+app/api/push-subscriptions/route.ts-15-  try {
+app/api/push-subscriptions/route.ts-16-    const user = await getCurrentUser();
+app/api/push-subscriptions/route.ts-17-
+app/api/push-subscriptions/route.ts-18-    if (!user) {
+app/api/push-subscriptions/route.ts-19-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-20-        { error: "Login required." },
+app/api/push-subscriptions/route.ts-21-        { status: 401 }
+app/api/push-subscriptions/route.ts-22-      );
+app/api/push-subscriptions/route.ts-23-    }
+app/api/push-subscriptions/route.ts-24-
+app/api/push-subscriptions/route.ts-25-    const { data, error } = await supabaseAdmin
+app/api/push-subscriptions/route.ts:26:      .from("push_subscriptions")
+app/api/push-subscriptions/route.ts:27:      .select("id, endpoint, device_name, is_active, created_at, last_used_at")
+app/api/push-subscriptions/route.ts-28-      .eq("user_id", user.id)
+app/api/push-subscriptions/route.ts-29-      .eq("is_active", true)
+app/api/push-subscriptions/route.ts-30-      .order("created_at", { ascending: false });
+app/api/push-subscriptions/route.ts-31-
+app/api/push-subscriptions/route.ts-32-    if (error) {
+app/api/push-subscriptions/route.ts-33-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-34-        { error: `Failed to load devices: ${error.message}` },
+app/api/push-subscriptions/route.ts-35-        { status: 500 }
+app/api/push-subscriptions/route.ts-36-      );
+app/api/push-subscriptions/route.ts-37-    }
+app/api/push-subscriptions/route.ts-38-
+app/api/push-subscriptions/route.ts-39-    return NextResponse.json({
+app/api/push-subscriptions/route.ts-40-      success: true,
+app/api/push-subscriptions/route.ts-41-      subscriptions: data ?? [],
+app/api/push-subscriptions/route.ts-42-    });
+app/api/push-subscriptions/route.ts-43-  } catch (error) {
+app/api/push-subscriptions/route.ts-44-    console.error("Failed to load push subscriptions", error);
+app/api/push-subscriptions/route.ts-45-
+app/api/push-subscriptions/route.ts-46-    return NextResponse.json(
+app/api/push-subscriptions/route.ts-47-      { error: "Unable to load registered devices." },
+app/api/push-subscriptions/route.ts-48-      { status: 500 }
+app/api/push-subscriptions/route.ts-49-    );
+app/api/push-subscriptions/route.ts-50-  }
+app/api/push-subscriptions/route.ts-51-}
+app/api/push-subscriptions/route.ts-52-
+app/api/push-subscriptions/route.ts-53-export async function POST(request: Request) {
+app/api/push-subscriptions/route.ts-54-  try {
+app/api/push-subscriptions/route.ts-55-    const user = await getCurrentUser();
+app/api/push-subscriptions/route.ts-56-
+app/api/push-subscriptions/route.ts-57-    if (!user) {
+app/api/push-subscriptions/route.ts-58-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-59-        { error: "Login required." },
+app/api/push-subscriptions/route.ts-60-        { status: 401 }
+app/api/push-subscriptions/route.ts-61-      );
+app/api/push-subscriptions/route.ts-62-    }
+app/api/push-subscriptions/route.ts-63-
+app/api/push-subscriptions/route.ts-64-    const body = (await request.json()) as SubscriptionBody;
+app/api/push-subscriptions/route.ts-65-
+app/api/push-subscriptions/route.ts-66-    const endpoint = String(body.endpoint ?? "").trim();
+app/api/push-subscriptions/route.ts-67-    const p256dhKey = String(body.keys?.p256dh ?? "").trim();
+app/api/push-subscriptions/route.ts-68-    const authKey = String(body.keys?.auth ?? "").trim();
+app/api/push-subscriptions/route.ts-69-
+app/api/push-subscriptions/route.ts-70-    if (!endpoint || !p256dhKey || !authKey) {
+app/api/push-subscriptions/route.ts-71-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-72-        { error: "Invalid push subscription." },
+app/api/push-subscriptions/route.ts-73-        { status: 400 }
+app/api/push-subscriptions/route.ts-74-      );
+app/api/push-subscriptions/route.ts-75-    }
+app/api/push-subscriptions/route.ts-76-
+app/api/push-subscriptions/route.ts-77-    const userAgent = request.headers.get("user-agent");
+app/api/push-subscriptions/route.ts-78-
+app/api/push-subscriptions/route.ts-79-    const { data, error } = await supabaseAdmin
+app/api/push-subscriptions/route.ts:80:      .from("push_subscriptions")
+app/api/push-subscriptions/route.ts-81-      .upsert(
+app/api/push-subscriptions/route.ts-82-        {
+app/api/push-subscriptions/route.ts-83-          user_id: user.id,
+app/api/push-subscriptions/route.ts-84-          endpoint,
+app/api/push-subscriptions/route.ts-85-          p256dh_key: p256dhKey,
+app/api/push-subscriptions/route.ts-86-          auth_key: authKey,
+app/api/push-subscriptions/route.ts:87:          user_agent: userAgent,
+app/api/push-subscriptions/route.ts:88:          device_name: body.deviceName?.trim() || "Web browser",
+app/api/push-subscriptions/route.ts-89-          is_active: true,
+app/api/push-subscriptions/route.ts-90-          updated_at: new Date().toISOString(),
+app/api/push-subscriptions/route.ts:91:          last_used_at: new Date().toISOString(),
+app/api/push-subscriptions/route.ts-92-        },
+app/api/push-subscriptions/route.ts-93-        {
+app/api/push-subscriptions/route.ts-94-          onConflict: "endpoint",
+app/api/push-subscriptions/route.ts-95-        }
+app/api/push-subscriptions/route.ts-96-      )
+app/api/push-subscriptions/route.ts:97:      .select("id, device_name, is_active")
+app/api/push-subscriptions/route.ts-98-      .single();
+app/api/push-subscriptions/route.ts-99-
+app/api/push-subscriptions/route.ts-100-    if (error || !data) {
+app/api/push-subscriptions/route.ts-101-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-102-        {
+app/api/push-subscriptions/route.ts-103-          error:
+app/api/push-subscriptions/route.ts-104-            error?.message ??
+app/api/push-subscriptions/route.ts-105-            "Failed to register this device.",
+app/api/push-subscriptions/route.ts-106-        },
+app/api/push-subscriptions/route.ts-107-        { status: 500 }
+app/api/push-subscriptions/route.ts-108-      );
+app/api/push-subscriptions/route.ts-109-    }
+app/api/push-subscriptions/route.ts-110-
+app/api/push-subscriptions/route.ts-111-    return NextResponse.json({
+app/api/push-subscriptions/route.ts-112-      success: true,
+app/api/push-subscriptions/route.ts-113-      subscription: data,
+app/api/push-subscriptions/route.ts-114-    });
+app/api/push-subscriptions/route.ts-115-  } catch (error) {
+app/api/push-subscriptions/route.ts-116-    console.error("Failed to register push subscription", error);
+app/api/push-subscriptions/route.ts-117-
+app/api/push-subscriptions/route.ts-118-    return NextResponse.json(
+app/api/push-subscriptions/route.ts-119-      { error: "Unable to register this device." },
+app/api/push-subscriptions/route.ts-120-      { status: 500 }
+app/api/push-subscriptions/route.ts-121-    );
+app/api/push-subscriptions/route.ts-122-  }
+app/api/push-subscriptions/route.ts-123-}
+app/api/push-subscriptions/route.ts-124-
+app/api/push-subscriptions/route.ts-125-export async function DELETE(request: Request) {
+app/api/push-subscriptions/route.ts-126-  try {
+app/api/push-subscriptions/route.ts-127-    const user = await getCurrentUser();
+app/api/push-subscriptions/route.ts-128-
+app/api/push-subscriptions/route.ts-129-    if (!user) {
+app/api/push-subscriptions/route.ts-130-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-131-        { error: "Login required." },
+app/api/push-subscriptions/route.ts-132-        { status: 401 }
+app/api/push-subscriptions/route.ts-133-      );
+app/api/push-subscriptions/route.ts-134-    }
+app/api/push-subscriptions/route.ts-135-
+app/api/push-subscriptions/route.ts-136-    const body = (await request.json()) as {
+app/api/push-subscriptions/route.ts-137-      endpoint?: string;
+app/api/push-subscriptions/route.ts-138-    };
+app/api/push-subscriptions/route.ts-139-
+app/api/push-subscriptions/route.ts-140-    const endpoint = String(body.endpoint ?? "").trim();
+app/api/push-subscriptions/route.ts-141-
+app/api/push-subscriptions/route.ts-142-    if (!endpoint) {
+app/api/push-subscriptions/route.ts-143-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-144-        { error: "Missing subscription endpoint." },
+app/api/push-subscriptions/route.ts-145-        { status: 400 }
+app/api/push-subscriptions/route.ts-146-      );
+app/api/push-subscriptions/route.ts-147-    }
+app/api/push-subscriptions/route.ts-148-
+app/api/push-subscriptions/route.ts-149-    const { error } = await supabaseAdmin
+app/api/push-subscriptions/route.ts:150:      .from("push_subscriptions")
+app/api/push-subscriptions/route.ts-151-      .update({
+app/api/push-subscriptions/route.ts-152-        is_active: false,
+app/api/push-subscriptions/route.ts-153-        updated_at: new Date().toISOString(),
+app/api/push-subscriptions/route.ts-154-      })
+app/api/push-subscriptions/route.ts-155-      .eq("user_id", user.id)
+app/api/push-subscriptions/route.ts-156-      .eq("endpoint", endpoint);
+app/api/push-subscriptions/route.ts-157-
+app/api/push-subscriptions/route.ts-158-    if (error) {
+app/api/push-subscriptions/route.ts-159-      return NextResponse.json(
+app/api/push-subscriptions/route.ts-160-        { error: `Failed to disable device: ${error.message}` },
+app/api/push-subscriptions/route.ts-161-        { status: 500 }
+app/api/push-subscriptions/route.ts-162-      );
+app/api/push-subscriptions/route.ts-163-    }
+app/api/push-subscriptions/route.ts-164-
+app/api/push-subscriptions/route.ts-165-    return NextResponse.json({
+app/api/push-subscriptions/route.ts-166-      success: true,
+app/api/push-subscriptions/route.ts-167-    });
+app/api/push-subscriptions/route.ts-168-  } catch (error) {
+app/api/push-subscriptions/route.ts-169-    console.error("Failed to disable push subscription", error);
+app/api/push-subscriptions/route.ts-170-
+app/api/push-subscriptions/route.ts-171-    return NextResponse.json(
+app/api/push-subscriptions/route.ts-172-      { error: "Unable to disable this device." },
+app/api/push-subscriptions/route.ts-173-      { status: 500 }
+app/api/push-subscriptions/route.ts-174-    );
+app/api/push-subscriptions/route.ts-175-  }
+app/api/push-subscriptions/route.ts-176-}
+--
+lib/auth.ts-169-  const session = data as unknown as SessionRow;
+lib/auth.ts-170-
+lib/auth.ts-171-  if (new Date(session.expires_at).getTime() <= Date.now()) {
+lib/auth.ts-172-    await supabaseAdmin
+lib/auth.ts-173-      .from("user_sessions")
+lib/auth.ts-174-      .delete()
+lib/auth.ts-175-      .eq("id", session.id);
+lib/auth.ts-176-
+lib/auth.ts-177-    cookieStore.delete(SESSION_COOKIE_NAME);
+lib/auth.ts-178-    return null;
+lib/auth.ts-179-  }
+lib/auth.ts-180-
+lib/auth.ts-181-  const relatedUser = Array.isArray(session.app_users)
+lib/auth.ts-182-    ? session.app_users[0]
+lib/auth.ts-183-    : session.app_users;
+lib/auth.ts-184-
+lib/auth.ts-185-  if (!relatedUser?.is_active) return null;
+lib/auth.ts-186-
+lib/auth.ts-187-  void supabaseAdmin
+lib/auth.ts-188-    .from("user_sessions")
+lib/auth.ts:189:    .update({ last_used_at: new Date().toISOString() })
+lib/auth.ts-190-    .eq("id", session.id);
+lib/auth.ts-191-
+lib/auth.ts-192-  return {
+lib/auth.ts-193-    id: relatedUser.id,
+lib/auth.ts-194-    teamId: Number(relatedUser.team_id),
+lib/auth.ts-195-    displayName: relatedUser.display_name,
+lib/auth.ts-196-    role: relatedUser.role,
+lib/auth.ts-197-    avatarUrl: relatedUser.avatar_url ?? null,
+lib/auth.ts-198-  };
+lib/auth.ts-199-}
+lib/auth.ts-200-
+lib/auth.ts-201-export async function requireAdmin() {
+lib/auth.ts-202-  const user = await getCurrentUser();
+lib/auth.ts-203-
+lib/auth.ts-204-  if (!user || user.role !== "admin") {
+lib/auth.ts-205-    return null;
+lib/auth.ts-206-  }
+lib/auth.ts-207-
+lib/auth.ts-208-  return user;
+lib/auth.ts-209-}
+--
+lib/push.ts-1-import webpush from "web-push";
+lib/push.ts-2-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+lib/push.ts-3-
+lib/push.ts-4-export const runtime = "nodejs";
+lib/push.ts-5-
+lib/push.ts-6-type PushPayload = {
+lib/push.ts-7-  title: string;
+lib/push.ts-8-  body: string;
+lib/push.ts-9-  url: string;
+lib/push.ts-10-  tag: string;
+lib/push.ts-11-};
+lib/push.ts-12-
+lib/push.ts-13-type SubscriptionRow = {
+lib/push.ts-14-  id: string;
+lib/push.ts-15-  endpoint: string;
+lib/push.ts-16-  p256dh_key: string;
+lib/push.ts-17-  auth_key: string;
+lib/push.ts:18:  device_name: string | null;
+lib/push.ts:19:  user_agent: string | null;
+lib/push.ts-20-};
+lib/push.ts-21-
+lib/push.ts-22-export type PushDeviceResult = {
+lib/push.ts-23-  subscriptionId: string;
+lib/push.ts-24-  deviceName: string;
+lib/push.ts-25-  status: "sent" | "failed";
+lib/push.ts-26-  reason?: string;
+lib/push.ts-27-  statusCode?: number | null;
+lib/push.ts-28-};
+lib/push.ts-29-
+lib/push.ts-30-export type PushResult = {
+lib/push.ts-31-  sent: number;
+lib/push.ts-32-  failed: number;
+lib/push.ts-33-  skipped: boolean;
+lib/push.ts-34-  reason?: string;
+lib/push.ts-35-  devices: PushDeviceResult[];
+lib/push.ts-36-};
+lib/push.ts-37-
+lib/push.ts-38-function configureWebPush() {
+lib/push.ts-39-  const subject = process.env.VAPID_SUBJECT;
+lib/push.ts-40-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+lib/push.ts-41-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+lib/push.ts-42-
+lib/push.ts-43-  if (!subject || !publicKey || !privateKey) {
+lib/push.ts-44-    throw new Error("VAPID configuration is incomplete.");
+lib/push.ts-45-  }
+lib/push.ts-46-
+lib/push.ts-47-  webpush.setVapidDetails(subject, publicKey, privateKey);
+lib/push.ts-48-}
+lib/push.ts-49-
+lib/push.ts-50-function getPushStatusCode(error: unknown) {
+lib/push.ts-51-  if (
+lib/push.ts-52-    typeof error === "object" &&
+lib/push.ts-53-    error !== null &&
+lib/push.ts-54-    "statusCode" in error
+lib/push.ts-55-  ) {
+lib/push.ts-56-    return Number(error.statusCode);
+lib/push.ts-57-  }
+lib/push.ts-58-
+lib/push.ts-59-  return null;
+lib/push.ts-60-}
+lib/push.ts-61-
+lib/push.ts-62-function getPushErrorMessage(error: unknown) {
+lib/push.ts-63-  if (error instanceof Error && error.message) {
+lib/push.ts-64-    return error.message;
+--
+lib/push.ts-121-  else if (isIPad) platform = "iPad";
+lib/push.ts-122-  else if (isAndroid) platform = "Android";
+lib/push.ts-123-  else if (isChromeOS) platform = "Chromebook";
+lib/push.ts-124-  else if (isWindows) platform = "Windows";
+lib/push.ts-125-  else if (isMac) platform = "Mac";
+lib/push.ts-126-
+lib/push.ts-127-  if (isIPhone || isIPad) {
+lib/push.ts-128-    return `${browser} / Home Screen App on ${platform}`;
+lib/push.ts-129-  }
+lib/push.ts-130-
+lib/push.ts-131-  return `${browser} on ${platform}`;
+lib/push.ts-132-}
+lib/push.ts-133-
+lib/push.ts-134-export async function sendPushToUser(
+lib/push.ts-135-  userId: string,
+lib/push.ts-136-  payload: PushPayload
+lib/push.ts-137-): Promise<PushResult> {
+lib/push.ts-138-  configureWebPush();
+lib/push.ts-139-
+lib/push.ts-140-  const { data, error } = await supabaseAdmin
+lib/push.ts:141:    .from("push_subscriptions")
+lib/push.ts-142-    .select(
+lib/push.ts-143-      `
+lib/push.ts-144-        id,
+lib/push.ts-145-        endpoint,
+lib/push.ts-146-        p256dh_key,
+lib/push.ts-147-        auth_key,
+lib/push.ts:148:        device_name,
+lib/push.ts:149:        user_agent
+lib/push.ts-150-      `
+lib/push.ts-151-    )
+lib/push.ts-152-    .eq("user_id", userId)
+lib/push.ts-153-    .eq("is_active", true);
+lib/push.ts-154-
+lib/push.ts-155-  if (error) {
+lib/push.ts-156-    throw new Error(`Failed to load push subscriptions: ${error.message}`);
+lib/push.ts-157-  }
+lib/push.ts-158-
+lib/push.ts-159-  const subscriptions = (data ?? []) as SubscriptionRow[];
+lib/push.ts-160-
+lib/push.ts-161-  if (subscriptions.length === 0) {
+lib/push.ts-162-    return {
+lib/push.ts-163-      sent: 0,
+lib/push.ts-164-      failed: 0,
+lib/push.ts-165-      skipped: true,
+lib/push.ts-166-      reason: "No active push-enabled devices found.",
+lib/push.ts-167-      devices: [],
+lib/push.ts-168-    };
+lib/push.ts-169-  }
+lib/push.ts-170-
+lib/push.ts-171-  let sent = 0;
+lib/push.ts-172-  let failed = 0;
+lib/push.ts-173-  const devices: PushDeviceResult[] = [];
+lib/push.ts-174-  const encodedPayload = JSON.stringify(payload);
+lib/push.ts-175-
+lib/push.ts-176-  for (const subscription of subscriptions) {
+lib/push.ts-177-    const deviceName = describeDevice(
+lib/push.ts:178:      subscription.device_name,
+lib/push.ts:179:      subscription.user_agent
+lib/push.ts-180-    );
+lib/push.ts-181-
+lib/push.ts-182-    try {
+lib/push.ts-183-      await webpush.sendNotification(
+lib/push.ts-184-        {
+lib/push.ts-185-          endpoint: subscription.endpoint,
+lib/push.ts-186-          keys: {
+lib/push.ts-187-            p256dh: subscription.p256dh_key,
+lib/push.ts-188-            auth: subscription.auth_key,
+lib/push.ts-189-          },
+lib/push.ts-190-        },
+lib/push.ts-191-        encodedPayload
+lib/push.ts-192-      );
+lib/push.ts-193-
+lib/push.ts-194-      sent += 1;
+lib/push.ts-195-
+lib/push.ts-196-      devices.push({
+lib/push.ts-197-        subscriptionId: subscription.id,
+lib/push.ts-198-        deviceName,
+lib/push.ts-199-        status: "sent",
+lib/push.ts-200-      });
+lib/push.ts-201-
+lib/push.ts-202-      await supabaseAdmin
+lib/push.ts:203:        .from("push_subscriptions")
+lib/push.ts-204-        .update({
+lib/push.ts:205:          last_used_at: new Date().toISOString(),
+lib/push.ts-206-          updated_at: new Date().toISOString(),
+lib/push.ts-207-        })
+lib/push.ts-208-        .eq("id", subscription.id);
+lib/push.ts-209-    } catch (error) {
+lib/push.ts-210-      failed += 1;
+lib/push.ts-211-
+lib/push.ts-212-      const statusCode = getPushStatusCode(error);
+lib/push.ts-213-      const reason = getPushErrorMessage(error);
+lib/push.ts-214-
+lib/push.ts-215-      devices.push({
+lib/push.ts-216-        subscriptionId: subscription.id,
+lib/push.ts-217-        deviceName,
+lib/push.ts-218-        status: "failed",
+lib/push.ts-219-        reason,
+lib/push.ts-220-        statusCode,
+lib/push.ts-221-      });
+lib/push.ts-222-
+lib/push.ts-223-      if (statusCode === 404 || statusCode === 410) {
+lib/push.ts-224-        await supabaseAdmin
+lib/push.ts:225:          .from("push_subscriptions")
+lib/push.ts-226-          .update({
+lib/push.ts-227-            is_active: false,
+lib/push.ts-228-            updated_at: new Date().toISOString(),
+lib/push.ts-229-          })
+lib/push.ts-230-          .eq("id", subscription.id);
+lib/push.ts-231-      }
+lib/push.ts-232-
+lib/push.ts-233-      console.error("Push notification failed", {
+lib/push.ts-234-        subscriptionId: subscription.id,
+lib/push.ts-235-        deviceName,
+lib/push.ts-236-        statusCode,
+lib/push.ts-237-        error,
+lib/push.ts-238-      });
+lib/push.ts-239-    }
+lib/push.ts-240-  }
+lib/push.ts-241-
+lib/push.ts-242-  return {
+lib/push.ts-243-    sent,
+lib/push.ts-244-    failed,
+lib/push.ts-245-    skipped: sent === 0,
+lib/push.ts-246-    reason:
+lib/push.ts-247-      sent === 0
+lib/push.ts-248-        ? failed > 0
+lib/push.ts-249-          ? "No notifications were delivered."
+lib/push.ts-250-          : "No active push-enabled devices found."
+lib/push.ts-251-        : undefined,
+lib/push.ts-252-    devices,
+lib/push.ts-253-  };
+lib/push.ts-254-}
+--
+components/profile/PushDeviceControls.tsx-1-"use client";
+components/profile/PushDeviceControls.tsx-2-
+components/profile/PushDeviceControls.tsx-3-import { useEffect, useState } from "react";
+components/profile/PushDeviceControls.tsx-4-
+components/profile/PushDeviceControls.tsx-5-type RegisteredDevice = {
+components/profile/PushDeviceControls.tsx-6-  id: string;
+components/profile/PushDeviceControls.tsx-7-  endpoint: string;
+components/profile/PushDeviceControls.tsx:8:  device_name: string | null;
+components/profile/PushDeviceControls.tsx-9-  is_active: boolean;
+components/profile/PushDeviceControls.tsx-10-  created_at: string | null;
+components/profile/PushDeviceControls.tsx:11:  last_used_at: string | null;
+components/profile/PushDeviceControls.tsx-12-};
+components/profile/PushDeviceControls.tsx-13-
+components/profile/PushDeviceControls.tsx-14-function urlBase64ToUint8Array(base64String: string) {
+components/profile/PushDeviceControls.tsx-15-  const padding = "=".repeat(
+components/profile/PushDeviceControls.tsx-16-    (4 - (base64String.length % 4)) % 4,
+components/profile/PushDeviceControls.tsx-17-  );
+components/profile/PushDeviceControls.tsx-18-
+components/profile/PushDeviceControls.tsx-19-  const base64 = (base64String + padding)
+components/profile/PushDeviceControls.tsx-20-    .replace(/-/g, "+")
+components/profile/PushDeviceControls.tsx-21-    .replace(/_/g, "/");
+components/profile/PushDeviceControls.tsx-22-
+components/profile/PushDeviceControls.tsx-23-  const rawData = window.atob(base64);
+components/profile/PushDeviceControls.tsx-24-
+components/profile/PushDeviceControls.tsx-25-  return Uint8Array.from(
+components/profile/PushDeviceControls.tsx-26-    [...rawData].map((character) =>
+components/profile/PushDeviceControls.tsx-27-      character.charCodeAt(0),
+components/profile/PushDeviceControls.tsx-28-    ),
+components/profile/PushDeviceControls.tsx-29-  );
+components/profile/PushDeviceControls.tsx-30-}
+components/profile/PushDeviceControls.tsx-31-
+components/profile/PushDeviceControls.tsx-32-function getDeviceName() {
+components/profile/PushDeviceControls.tsx-33-  const userAgent = navigator.userAgent;
+components/profile/PushDeviceControls.tsx-34-
+components/profile/PushDeviceControls.tsx-35-  if (/iPhone/i.test(userAgent)) {
+components/profile/PushDeviceControls.tsx-36-    return "iPhone";
+components/profile/PushDeviceControls.tsx-37-  }
+components/profile/PushDeviceControls.tsx-38-
+components/profile/PushDeviceControls.tsx-39-  if (/iPad/i.test(userAgent)) {
+components/profile/PushDeviceControls.tsx-40-    return "iPad";
+components/profile/PushDeviceControls.tsx-41-  }
+components/profile/PushDeviceControls.tsx-42-
+components/profile/PushDeviceControls.tsx-43-  if (/Android/i.test(userAgent)) {
+components/profile/PushDeviceControls.tsx-44-    return "Android device";
+components/profile/PushDeviceControls.tsx-45-  }
+components/profile/PushDeviceControls.tsx-46-
+components/profile/PushDeviceControls.tsx-47-  if (/CrOS/i.test(userAgent)) {
+components/profile/PushDeviceControls.tsx-48-    return "Chromebook";
+components/profile/PushDeviceControls.tsx-49-  }
+components/profile/PushDeviceControls.tsx-50-
+components/profile/PushDeviceControls.tsx-51-  if (/Macintosh/i.test(userAgent)) {
+components/profile/PushDeviceControls.tsx-52-    return "Mac";
+components/profile/PushDeviceControls.tsx-53-  }
+components/profile/PushDeviceControls.tsx-54-
+components/profile/PushDeviceControls.tsx-55-  if (/Windows/i.test(userAgent)) {
+components/profile/PushDeviceControls.tsx-56-    return "Windows computer";
+--
+components/profile/PushDeviceControls.tsx-553-          await registration?.pushManager.getSubscription();
+components/profile/PushDeviceControls.tsx-554-
+components/profile/PushDeviceControls.tsx-555-        if (
+components/profile/PushDeviceControls.tsx-556-          subscription?.endpoint ===
+components/profile/PushDeviceControls.tsx-557-          device.endpoint
+components/profile/PushDeviceControls.tsx-558-        ) {
+components/profile/PushDeviceControls.tsx-559-          try {
+components/profile/PushDeviceControls.tsx-560-            await subscription.unsubscribe();
+components/profile/PushDeviceControls.tsx-561-          } catch (error) {
+components/profile/PushDeviceControls.tsx-562-            console.warn(
+components/profile/PushDeviceControls.tsx-563-              "Registered device removed server-side, but browser unsubscribe failed",
+components/profile/PushDeviceControls.tsx-564-              error,
+components/profile/PushDeviceControls.tsx-565-            );
+components/profile/PushDeviceControls.tsx-566-          }
+components/profile/PushDeviceControls.tsx-567-        }
+components/profile/PushDeviceControls.tsx-568-      }
+components/profile/PushDeviceControls.tsx-569-
+components/profile/PushDeviceControls.tsx-570-      await refreshDeviceState();
+components/profile/PushDeviceControls.tsx-571-
+components/profile/PushDeviceControls.tsx-572-      setMessage(
+components/profile/PushDeviceControls.tsx:573:        `${device.device_name || "Device"} removed from push notifications.`,
+components/profile/PushDeviceControls.tsx-574-      );
+components/profile/PushDeviceControls.tsx-575-    } catch (error) {
+components/profile/PushDeviceControls.tsx-576-      console.error(
+components/profile/PushDeviceControls.tsx-577-        "Failed to remove registered device",
+components/profile/PushDeviceControls.tsx-578-        error,
+components/profile/PushDeviceControls.tsx-579-      );
+components/profile/PushDeviceControls.tsx-580-
+components/profile/PushDeviceControls.tsx-581-      setMessage(
+components/profile/PushDeviceControls.tsx-582-        error instanceof Error
+components/profile/PushDeviceControls.tsx-583-          ? error.message
+components/profile/PushDeviceControls.tsx-584-          : "Unable to remove this device.",
+components/profile/PushDeviceControls.tsx-585-      );
+components/profile/PushDeviceControls.tsx-586-    } finally {
+components/profile/PushDeviceControls.tsx-587-      setRemovingEndpoint(null);
+components/profile/PushDeviceControls.tsx-588-    }
+components/profile/PushDeviceControls.tsx-589-  }
+components/profile/PushDeviceControls.tsx-590-
+components/profile/PushDeviceControls.tsx-591-  async function sendTestPush() {
+components/profile/PushDeviceControls.tsx-592-    try {
+components/profile/PushDeviceControls.tsx-593-      setIsWorking(true);
+components/profile/PushDeviceControls.tsx-594-      setMessage("");
+components/profile/PushDeviceControls.tsx-595-
+components/profile/PushDeviceControls.tsx-596-      const response = await fetch(
+components/profile/PushDeviceControls.tsx-597-        "/api/push/test",
+components/profile/PushDeviceControls.tsx-598-        {
+components/profile/PushDeviceControls.tsx-599-          method: "POST",
+components/profile/PushDeviceControls.tsx-600-        },
+components/profile/PushDeviceControls.tsx-601-      );
+components/profile/PushDeviceControls.tsx-602-
+components/profile/PushDeviceControls.tsx-603-      const result =
+components/profile/PushDeviceControls.tsx-604-        await response.json();
+components/profile/PushDeviceControls.tsx-605-
+components/profile/PushDeviceControls.tsx-606-      if (
+components/profile/PushDeviceControls.tsx-607-        !response.ok ||
+components/profile/PushDeviceControls.tsx-608-        !result.success
+components/profile/PushDeviceControls.tsx-609-      ) {
+components/profile/PushDeviceControls.tsx-610-        setMessage(
+components/profile/PushDeviceControls.tsx-611-          result.error ||
+components/profile/PushDeviceControls.tsx-612-            "The test notification could not be sent.",
+components/profile/PushDeviceControls.tsx-613-        );
+components/profile/PushDeviceControls.tsx-614-
+components/profile/PushDeviceControls.tsx-615-        return;
+components/profile/PushDeviceControls.tsx-616-      }
+components/profile/PushDeviceControls.tsx-617-
+components/profile/PushDeviceControls.tsx-618-      setMessage(
+--
+components/profile/PushDeviceControls.tsx-746-            No devices are currently registered.
+components/profile/PushDeviceControls.tsx-747-          </div>
+components/profile/PushDeviceControls.tsx-748-        ) : (
+components/profile/PushDeviceControls.tsx-749-          <div className="mt-4 space-y-2">
+components/profile/PushDeviceControls.tsx-750-            {registeredDevices.map(
+components/profile/PushDeviceControls.tsx-751-              (device) => {
+components/profile/PushDeviceControls.tsx-752-                const isCurrentDevice =
+components/profile/PushDeviceControls.tsx-753-                  Boolean(
+components/profile/PushDeviceControls.tsx-754-                    currentEndpoint &&
+components/profile/PushDeviceControls.tsx-755-                      device.endpoint ===
+components/profile/PushDeviceControls.tsx-756-                        currentEndpoint,
+components/profile/PushDeviceControls.tsx-757-                  );
+components/profile/PushDeviceControls.tsx-758-
+components/profile/PushDeviceControls.tsx-759-                const registeredDate =
+components/profile/PushDeviceControls.tsx-760-                  formatDeviceDate(
+components/profile/PushDeviceControls.tsx-761-                    device.created_at,
+components/profile/PushDeviceControls.tsx-762-                  );
+components/profile/PushDeviceControls.tsx-763-
+components/profile/PushDeviceControls.tsx-764-                const lastUsedDate =
+components/profile/PushDeviceControls.tsx-765-                  formatDeviceDate(
+components/profile/PushDeviceControls.tsx:766:                    device.last_used_at,
+components/profile/PushDeviceControls.tsx-767-                  );
+components/profile/PushDeviceControls.tsx-768-
+components/profile/PushDeviceControls.tsx-769-                return (
+components/profile/PushDeviceControls.tsx-770-                  <div
+components/profile/PushDeviceControls.tsx-771-                    key={device.id}
+components/profile/PushDeviceControls.tsx-772-                    className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+components/profile/PushDeviceControls.tsx-773-                  >
+components/profile/PushDeviceControls.tsx-774-                    <div className="min-w-0">
+components/profile/PushDeviceControls.tsx-775-                      <div className="flex flex-wrap items-center gap-2">
+components/profile/PushDeviceControls.tsx-776-                        <span className="font-semibold text-slate-900">
+components/profile/PushDeviceControls.tsx:777:                          {device.device_name ||
+components/profile/PushDeviceControls.tsx-778-                            "Web browser"}
+components/profile/PushDeviceControls.tsx-779-                        </span>
+components/profile/PushDeviceControls.tsx-780-
+components/profile/PushDeviceControls.tsx-781-                        {isCurrentDevice ? (
+components/profile/PushDeviceControls.tsx-782-                          <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700">
+components/profile/PushDeviceControls.tsx-783-                            This device
+components/profile/PushDeviceControls.tsx-784-                          </span>
+components/profile/PushDeviceControls.tsx-785-                        ) : null}
+components/profile/PushDeviceControls.tsx-786-                      </div>
+components/profile/PushDeviceControls.tsx-787-
+components/profile/PushDeviceControls.tsx-788-                      <div className="mt-1 text-xs text-slate-500">
+components/profile/PushDeviceControls.tsx-789-                        {registeredDate
+components/profile/PushDeviceControls.tsx-790-                          ? `Registered ${registeredDate}`
+components/profile/PushDeviceControls.tsx-791-                          : "Registered device"}
+components/profile/PushDeviceControls.tsx-792-
+components/profile/PushDeviceControls.tsx-793-                        {lastUsedDate
+components/profile/PushDeviceControls.tsx-794-                          ? ` · Last used ${lastUsedDate}`
+components/profile/PushDeviceControls.tsx-795-                          : ""}
+components/profile/PushDeviceControls.tsx-796-                      </div>
+components/profile/PushDeviceControls.tsx-797-                    </div>
+components/profile/PushDeviceControls.tsx-798-
+components/profile/PushDeviceControls.tsx-799-                    <button
+components/profile/PushDeviceControls.tsx-800-                      type="button"
+components/profile/PushDeviceControls.tsx-801-                      onClick={() =>
+components/profile/PushDeviceControls.tsx-802-                        void removeRegisteredDevice(
+components/profile/PushDeviceControls.tsx-803-                          device,
+components/profile/PushDeviceControls.tsx-804-                        )
+components/profile/PushDeviceControls.tsx-805-                      }
+components/profile/PushDeviceControls.tsx-806-                      disabled={
+components/profile/PushDeviceControls.tsx-807-                        removingEndpoint ===
+components/profile/PushDeviceControls.tsx-808-                          device.endpoint ||
+components/profile/PushDeviceControls.tsx-809-                        isWorking
+components/profile/PushDeviceControls.tsx-810-                      }
+components/profile/PushDeviceControls.tsx-811-                      className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
+components/profile/PushDeviceControls.tsx-812-                    >
+components/profile/PushDeviceControls.tsx-813-                      {removingEndpoint ===
+components/profile/PushDeviceControls.tsx-814-                      device.endpoint
+components/profile/PushDeviceControls.tsx-815-                        ? "Removing..."
+components/profile/PushDeviceControls.tsx-816-                        : isCurrentDevice
+components/profile/PushDeviceControls.tsx-817-                          ? "Disable"
+components/profile/PushDeviceControls.tsx-818-                          : "Remove"}
+components/profile/PushDeviceControls.tsx-819-                    </button>
+components/profile/PushDeviceControls.tsx-820-                  </div>
+components/profile/PushDeviceControls.tsx-821-                );
+components/profile/PushDeviceControls.tsx-822-              },
+
+===== 7. APP USER / TEAM ASSOCIATION REFERENCES =====

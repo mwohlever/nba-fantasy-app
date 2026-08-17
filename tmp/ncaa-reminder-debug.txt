@@ -1,0 +1,326 @@
+============================================================
+NCAA PICK'EM REMINDER DEBUG
+============================================================
+
+===== CRON ROUTE =====
+import {
+  NextResponse,
+} from "next/server";
+
+import {
+  sendLoggedNotification,
+} from "@/lib/notifications";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+export const runtime =
+  "nodejs";
+
+export const dynamic =
+  "force-dynamic";
+
+export const maxDuration =
+  60;
+
+/*
+ * We deliberately use the existing Golf cron secret rather
+ * than introduce another production secret just for this
+ * tiny scheduled check.
+ *
+ * The route itself is completely independent from Golf.
+ */
+function isAuthorized(
+  request: Request,
+) {
+  const secret =
+    process.env
+      .GOLF_CRON_SECRET
+      ?.trim();
+
+  if (!secret) {
+    console.error(
+      "GOLF_CRON_SECRET is not configured.",
+    );
+
+    return false;
+  }
+
+  return (
+    request.headers.get(
+      "authorization",
+    ) ===
+    `Bearer ${secret}`
+  );
+}
+
+function formatLockTime(
+  value: string,
+) {
+  const date =
+    new Date(value);
+
+  return new Intl.DateTimeFormat(
+    "en-US",
+    {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone:
+        "America/New_York",
+      timeZoneName:
+        "short",
+    },
+  ).format(date);
+}
+
+export async function GET(
+  request: Request,
+) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json(
+      {
+        error:
+          "Unauthorized.",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  try {
+    const now =
+      Date.now();
+
+    /*
+     * The external scheduler can call this every five minutes.
+     *
+     * A 55–65 minute window means one of those executions
+     * should catch the week very close to the one-hour mark.
+     *
+     * sendLoggedNotification() + our event key makes this
+     * safe to evaluate repeatedly.
+     */
+    const windowStart =
+      new Date(
+        now +
+          55 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const windowEnd =
+      new Date(
+        now +
+          65 *
+            60 *
+            1000,
+      ).toISOString();
+
+    const {
+      data: weeks,
+      error: weeksError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ncaa_pickem_weeks",
+        )
+        .select(
+          "id, season, week_number, label, lock_at, status",
+        )
+        .eq(
+          "status",
+          "open",
+        )
+        .not(
+          "lock_at",
+          "is",
+          null,
+        )
+        .gte(
+          "lock_at",
+          windowStart,
+        )
+        .lte(
+          "lock_at",
+          windowEnd,
+        );
+
+    if (weeksError) {
+      throw new Error(
+        `Failed to load Pick 'Em weeks: ${weeksError.message}`,
+      );
+    }
+
+    if (
+      !weeks ||
+      weeks.length === 0
+    ) {
+      return NextResponse.json({
+        success: true,
+        checkedWeeks: 0,
+        remindersSent: 0,
+        remindersSkipped: 0,
+        message:
+          "No Pick 'Em week is currently within the one-hour reminder window.",
+      });
+    }
+
+    const {
+      data: users,
+      error: usersError,
+    } =
+      await supabaseAdmin
+        .from(
+          "app_users",
+        )
+        .select(
+          "id, team_id, display_name",
+        )
+        .eq(
+          "is_active",
+          true,
+        );
+
+    if (usersError) {
+      throw new Error(
+        `Failed to load active users: ${usersError.message}`,
+      );
+    }
+
+    const activeUsers =
+      (
+        users ??
+        []
+      ).filter(
+        (user) =>
+          user.team_id !==
+            null &&
+          user.team_id !==
+            undefined,
+      );
+
+    const userIds =
+      activeUsers.map(
+        (user) =>
+          String(
+            user.id,
+          ),
+      );
+
+    const {
+      data: preferences,
+      error:
+        preferencesError,
+    } =
+      userIds.length >
+      0
+        ? await supabaseAdmin
+            .from(
+              "notification_preferences",
+            )
+            .select(
+              "user_id, notifications_enabled, pickem_reminder_enabled",
+            )
+            .in(
+              "user_id",
+              userIds,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (
+      preferencesError
+    ) {
+      throw new Error(
+        `Failed to load notification preferences: ${preferencesError.message}`,
+      );
+    }
+
+    const preferenceByUser =
+      new Map(
+        (
+          preferences ??
+          []
+        ).map(
+          (row) => [
+            String(
+              row.user_id,
+            ),
+            row,
+          ],
+        ),
+      );
+
+    let remindersSent =
+      0;
+
+    let remindersSkipped =
+      0;
+
+    let duplicateEvents =
+
+===== WEEK SCHEMA / TYPES REFERENCES =====
+app/api/cron/ncaa-pickem-reminders/route.ts:123:          "ncaa_pickem_weeks",
+app/api/cron/ncaa-pickem-reminders/route.ts:126:          "id, season, week_number, label, lock_at, status",
+app/api/cron/ncaa-pickem-reminders/route.ts:133:          "lock_at",
+app/api/cron/ncaa-pickem-reminders/route.ts:138:          "lock_at",
+app/api/cron/ncaa-pickem-reminders/route.ts:142:          "lock_at",
+app/api/cron/ncaa-pickem-reminders/route.ts:159:        remindersSent: 0,
+app/api/cron/ncaa-pickem-reminders/route.ts:160:        remindersSkipped: 0,
+app/api/cron/ncaa-pickem-reminders/route.ts:162:          "No Pick 'Em week is currently within the one-hour reminder window.",
+app/api/cron/ncaa-pickem-reminders/route.ts:220:              "user_id, notifications_enabled, pickem_reminder_enabled",
+app/api/cron/ncaa-pickem-reminders/route.ts:254:    let remindersSent =
+app/api/cron/ncaa-pickem-reminders/route.ts:257:    let remindersSkipped =
+app/api/cron/ncaa-pickem-reminders/route.ts:431:        const reminderEnabled =
+app/api/cron/ncaa-pickem-reminders/route.ts:433:            ?.pickem_reminder_enabled ??
+app/api/cron/ncaa-pickem-reminders/route.ts:456:          remindersSkipped +=
+app/api/cron/ncaa-pickem-reminders/route.ts:479:          !reminderEnabled
+app/api/cron/ncaa-pickem-reminders/route.ts:481:          remindersSkipped +=
+app/api/cron/ncaa-pickem-reminders/route.ts:498:                : "Pick 'Em reminders are disabled.",
+app/api/cron/ncaa-pickem-reminders/route.ts:515:              `ncaa_pickem_lock_reminder:${weekId}:${userId}`,
+app/api/cron/ncaa-pickem-reminders/route.ts:518:              "ncaa_pickem_lock_reminder",
+app/api/cron/ncaa-pickem-reminders/route.ts:547:                week.lock_at,
+app/api/cron/ncaa-pickem-reminders/route.ts:549:                week.lock_at
+app/api/cron/ncaa-pickem-reminders/route.ts:551:                      week.lock_at,
+app/api/cron/ncaa-pickem-reminders/route.ts:589:          remindersSent +=
+app/api/cron/ncaa-pickem-reminders/route.ts:605:          remindersSkipped +=
+app/api/cron/ncaa-pickem-reminders/route.ts:632:      remindersSent,
+app/api/cron/ncaa-pickem-reminders/route.ts:633:      remindersSkipped,
+app/api/cron/ncaa-pickem-reminders/route.ts:639:      "NCAA Pick 'Em reminder cron failed",
+app/api/cron/ncaa-pickem-reminders/route.ts:648:            : "Unable to process NCAA Pick 'Em reminders.",
+app/api/ncaa-pickem/week/route.ts:19:  lock_at: string | null;
+app/api/ncaa-pickem/week/route.ts:46:  if (!week.lock_at) {
+app/api/ncaa-pickem/week/route.ts:52:      week.lock_at,
+app/api/ncaa-pickem/week/route.ts:99:      .from("ncaa_pickem_weeks")
+app/api/ncaa-pickem/week/route.ts:101:        "id, season, week_number, label, lock_at, status, analysis, show_analysis",
+app/api/ncaa-pickem/picks/route.ts:93:      .from("ncaa_pickem_weeks")
+app/api/ncaa-pickem/picks/route.ts:95:        "id, lock_at, status",
+app/api/ncaa-pickem/picks/route.ts:112:      week.lock_at
+app/api/ncaa-pickem/picks/route.ts:114:            week.lock_at,
+app/api/admin/ncaa-pickem/import-week/route.ts:203:          "ncaa_pickem_weeks",
+app/api/admin/ncaa-pickem/import-week/route.ts:206:          "id, season, week_number, label, lock_at, status, analysis, show_analysis",
+app/api/admin/ncaa-pickem/import-week/route.ts:271:            "ncaa_pickem_weeks",
+app/api/admin/ncaa-pickem/import-week/route.ts:498:          "ncaa_pickem_weeks",
+app/api/admin/ncaa-pickem/import-week/route.ts:504:          lock_at:
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:135:      .from("ncaa_pickem_weeks")
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:137:        "id, season, week_number, label, lock_at, status",
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:177:        .from("ncaa_pickem_weeks")
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:334:      .from("ncaa_pickem_weeks")
+app/api/admin/ncaa-pickem/import-week/route.ts.before-ranked-selector:339:        lock_at:
+app/api/admin/ncaa-pickem/week-control/route.ts:149:        "ncaa_pickem_weeks",
+app/api/admin/ncaa-pickem/week-control/route.ts:159:        "id, season, week_number, label, lock_at, status, analysis, show_analysis",
+
+===== ENV NAMES ONLY — NO SECRETS =====
+GOLF_CRON_SECRET
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_VAPID_PUBLIC_KEY
+SUPABASE_SERVICE_ROLE_KEY
+VAPID_PRIVATE_KEY
+VAPID_SUBJECT
+

@@ -1,0 +1,1464 @@
+================================================
+GolfGreen3D.tsx
+================================================
+"use client";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import * as THREE from "three";
+
+import {
+  GLTFLoader,
+} from "three/examples/jsm/loaders/GLTFLoader.js";
+
+import {
+  OrbitControls,
+} from "three/examples/jsm/controls/OrbitControls.js";
+
+type Props = {
+  modelUrl: string;
+  title: string;
+};
+
+type StoredMesh = {
+  mesh: THREE.Mesh;
+  originalMaterial:
+    | THREE.Material
+    | THREE.Material[];
+  slopeMaterial:
+    THREE.MeshStandardMaterial;
+};
+
+type CameraSnapshot = {
+  position: THREE.Vector3;
+  target: THREE.Vector3;
+};
+
+function disposeMaterial(
+  material:
+    | THREE.Material
+    | THREE.Material[],
+) {
+  if (
+    Array.isArray(material)
+  ) {
+    material.forEach(
+      (item) =>
+        item.dispose(),
+    );
+
+    return;
+  }
+
+  material.dispose();
+}
+
+export default function GolfGreen3D({
+  modelUrl,
+  title,
+}: Props) {
+  const hostRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const meshesRef =
+    useRef<StoredMesh[]>([]);
+
+  const controlsRef =
+    useRef<OrbitControls | null>(
+      null,
+    );
+
+  const cameraRef =
+    useRef<
+      THREE.PerspectiveCamera | null
+    >(null);
+
+  const homeCameraRef =
+    useRef<CameraSnapshot | null>(
+      null,
+    );
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    mode,
+    setMode,
+  ] = useState<
+    "surface" | "slope"
+  >("surface");
+
+  const [
+    meshStats,
+    setMeshStats,
+  ] = useState<{
+    vertices: number;
+    meshes: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const host =
+      hostRef.current;
+
+    if (!host) {
+      return;
+    }
+
+    let disposed = false;
+    let frame = 0;
+
+    setIsLoading(true);
+    setError(null);
+    setMeshStats(null);
+
+    meshesRef.current = [];
+
+    const scene =
+      new THREE.Scene();
+
+    scene.background =
+      new THREE.Color(
+        0x07110c,
+      );
+
+    const camera =
+      new THREE.PerspectiveCamera(
+        34,
+        1,
+        0.01,
+        100000,
+      );
+
+    cameraRef.current =
+      camera;
+
+    const renderer =
+      new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference:
+          "high-performance",
+      });
+
+    renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio,
+        2,
+      ),
+    );
+
+    renderer.outputColorSpace =
+      THREE.SRGBColorSpace;
+
+    renderer.shadowMap.enabled =
+      true;
+
+    renderer.shadowMap.type =
+      THREE.PCFSoftShadowMap;
+
+    host.appendChild(
+      renderer.domElement,
+    );
+
+    const controls =
+      new OrbitControls(
+        camera,
+        renderer.domElement,
+      );
+
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = true;
+    controls.minDistance = 0.01;
+    controls.maxPolarAngle =
+      Math.PI * 0.49;
+
+    controlsRef.current =
+      controls;
+
+    /*
+     * Deliberately directional lighting:
+     * hills/valleys should be visible even before
+     * the explicit slope visualization is enabled.
+     */
+    const hemisphere =
+      new THREE.HemisphereLight(
+        0xe8fff2,
+        0x21341f,
+        2.1,
+      );
+
+    scene.add(hemisphere);
+
+    const keyLight =
+      new THREE.DirectionalLight(
+        0xffffff,
+        3.2,
+      );
+
+    keyLight.position.set(
+      6,
+      10,
+      4,
+    );
+
+    keyLight.castShadow = true;
+
+    scene.add(keyLight);
+
+    const fillLight =
+      new THREE.DirectionalLight(
+        0xb9d8ff,
+        1.3,
+      );
+
+    fillLight.position.set(
+      -5,
+      4,
+      -6,
+    );
+
+    scene.add(fillLight);
+
+    function resize() {
+      if (disposed) {
+        return;
+      }
+
+      const currentHost =
+        hostRef.current;
+
+      if (!currentHost) {
+        return;
+      }
+
+      const width =
+        Math.max(
+          currentHost.clientWidth,
+          1,
+        );
+
+      const height =
+        Math.max(
+          currentHost.clientHeight,
+          1,
+        );
+
+      renderer.setSize(
+        width,
+        height,
+        false,
+      );
+
+      camera.aspect =
+        width / height;
+
+      camera.updateProjectionMatrix();
+    }
+
+    const observer =
+      new ResizeObserver(
+        resize,
+      );
+
+    observer.observe(host);
+    resize();
+
+    function animate() {
+      if (disposed) {
+        return;
+      }
+
+      controls.update();
+
+      renderer.render(
+        scene,
+        camera,
+      );
+
+      frame =
+        window.requestAnimationFrame(
+          animate,
+        );
+    }
+
+    animate();
+
+    const loader =
+      new GLTFLoader();
+
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        if (disposed) {
+          return;
+        }
+
+        const model =
+          gltf.scene;
+
+        scene.add(model);
+
+        model.updateMatrixWorld(true);
+
+        const bounds =
+          new THREE.Box3()
+            .setFromObject(model);
+
+        if (bounds.isEmpty()) {
+          setError(
+            "The PGA green model contained no renderable geometry.",
+          );
+
+          setIsLoading(false);
+          return;
+        }
+
+        const center =
+          bounds.getCenter(
+            new THREE.Vector3(),
+          );
+
+        /*
+         * Center PGA geometry at our scene origin.
+         * This changes only display placement, not
+         * the mesh's internal slope/elevation.
+         */
+        model.position.sub(
+          center,
+        );
+
+        model.updateMatrixWorld(true);
+
+        const centeredBounds =
+          new THREE.Box3()
+            .setFromObject(model);
+
+        const size =
+          centeredBounds.getSize(
+            new THREE.Vector3(),
+          );
+
+        const maxDimension =
+          Math.max(
+            size.x,
+            size.y,
+            size.z,
+            0.01,
+          );
+
+        let vertexCount = 0;
+        let meshCount = 0;
+
+        model.traverse(
+          (object) => {
+            if (
+              !(object instanceof THREE.Mesh)
+            ) {
+              return;
+            }
+
+            meshCount += 1;
+
+            const mesh =
+              object;
+
+            const geometry =
+              mesh.geometry.clone();
+
+            if (
+              !geometry.attributes
+                .normal
+            ) {
+              geometry.computeVertexNormals();
+            }
+
+            mesh.geometry =
+              geometry;
+
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            vertexCount +=
+              geometry.attributes
+                .position?.count ??
+              0;
+
+            const originalMaterial =
+              mesh.material;
+
+            /*
+             * Compute a genuine slope-intensity color
+             * from PGA's surface normals.
+             *
+             * 0°   = flat
+             * ~20° = very steep for a putting surface
+             *
+             * This does NOT invent elevation. It is
+             * derived directly from GreenXX.glb.
+             */
+            const normalAttribute =
+              geometry.attributes
+                .normal;
+
+            const positionAttribute =
+              geometry.attributes
+                .position;
+
+            const colors =
+              new Float32Array(
+                positionAttribute.count *
+                  3,
+              );
+
+            const normal =
+              new THREE.Vector3();
+
+            const color =
+              new THREE.Color();
+
+            const normalMatrix =
+              new THREE.Matrix3()
+                .getNormalMatrix(
+                  mesh.matrixWorld,
+                );
+
+            for (
+              let index = 0;
+              index <
+              positionAttribute.count;
+              index += 1
+            ) {
+              normal.fromBufferAttribute(
+                normalAttribute,
+                index,
+              );
+
+              normal
+                .applyMatrix3(
+                  normalMatrix,
+                )
+                .normalize();
+
+              const upComponent =
+                THREE.MathUtils.clamp(
+                  Math.abs(
+                    normal.y,
+                  ),
+                  0,
+                  1,
+                );
+
+              const slopeRadians =
+                Math.acos(
+                  upComponent,
+                );
+
+              const slopeDegrees =
+                THREE.MathUtils
+                  .radToDeg(
+                    slopeRadians,
+                  );
+
+              const intensity =
+                THREE.MathUtils.clamp(
+                  slopeDegrees /
+                    20,
+                  0,
+                  1,
+                );
+
+              /*
+               * Green -> yellow -> orange/red
+               * as actual surface slope increases.
+               */
+              color.setHSL(
+                0.34 *
+                  (1 - intensity),
+                0.78,
+                0.46,
+              );
+
+              colors[
+                index * 3
+              ] = color.r;
+
+              colors[
+                index * 3 + 1
+              ] = color.g;
+
+              colors[
+                index * 3 + 2
+              ] = color.b;
+            }
+
+            geometry.setAttribute(
+              "color",
+              new THREE.BufferAttribute(
+                colors,
+                3,
+              ),
+            );
+
+            const slopeMaterial =
+              new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.96,
+                metalness: 0,
+                side:
+                  THREE.DoubleSide,
+              });
+
+            meshesRef.current.push({
+              mesh,
+              originalMaterial,
+              slopeMaterial,
+            });
+          },
+        );
+
+        /*
+         * Camera looks across the green at an angle
+         * rather than directly overhead so elevation
+         * changes are immediately visible.
+         */
+        const cameraDistance =
+          maxDimension * 1.45;
+
+        const cameraPosition =
+          new THREE.Vector3(
+            maxDimension * 0.72,
+            maxDimension * 0.88,
+            cameraDistance,
+          );
+
+        camera.position.copy(
+          cameraPosition,
+        );
+
+        controls.target.set(
+          0,
+          0,
+          0,
+        );
+
+        camera.near =
+          Math.max(
+            maxDimension / 1000,
+            0.001,
+          );
+
+        camera.far =
+          maxDimension * 100;
+
+        camera.updateProjectionMatrix();
+
+        controls.minDistance =
+          maxDimension * 0.15;
+
+        controls.maxDistance =
+          maxDimension * 4;
+
+        controls.update();
+
+        homeCameraRef.current = {
+          position:
+            cameraPosition.clone(),
+          target:
+            controls.target.clone(),
+        };
+
+        setMeshStats({
+          vertices:
+            vertexCount,
+          meshes:
+            meshCount,
+        });
+
+        setIsLoading(false);
+      },
+      undefined,
+      (loadError) => {
+        console.error(
+          "[ShotCast 3D] Unable to load green GLB",
+          loadError,
+        );
+
+        if (!disposed) {
+          setError(
+            "Unable to load the PGA 3D green.",
+          );
+
+          setIsLoading(false);
+        }
+      },
+    );
+
+    return () => {
+      disposed = true;
+
+      window.cancelAnimationFrame(
+        frame,
+      );
+
+      observer.disconnect();
+      controls.dispose();
+
+      meshesRef.current.forEach(
+        ({
+          mesh,
+          originalMaterial,
+          slopeMaterial,
+        }) => {
+          mesh.geometry.dispose();
+
+          /*
+           * Original GLTF materials/textures belong
+           * to this loaded scene and can be released.
+           */
+          disposeMaterial(
+            originalMaterial,
+          );
+
+          slopeMaterial.dispose();
+        },
+      );
+
+      renderer.dispose();
+
+      renderer.domElement.remove();
+
+      meshesRef.current = [];
+
+      controlsRef.current =
+        null;
+
+      cameraRef.current =
+        null;
+
+      homeCameraRef.current =
+        null;
+    };
+  }, [modelUrl]);
+
+  useEffect(() => {
+    meshesRef.current.forEach(
+      ({
+        mesh,
+        originalMaterial,
+        slopeMaterial,
+      }) => {
+        mesh.material =
+          mode === "slope"
+            ? slopeMaterial
+            : originalMaterial;
+      },
+    );
+  }, [mode]);
+
+  function resetCamera() {
+    const camera =
+      cameraRef.current;
+
+    const controls =
+      controlsRef.current;
+
+    const home =
+      homeCameraRef.current;
+
+    if (
+      !camera ||
+      !controls ||
+      !home
+    ) {
+      return;
+    }
+
+    camera.position.copy(
+      home.position,
+    );
+
+    controls.target.copy(
+      home.target,
+    );
+
+    controls.update();
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
+            PGA 3D Green
+          </div>
+
+          <div className="mt-0.5 text-[10px] text-slate-500">
+            Actual TOURCAST green geometry
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <div className="flex overflow-hidden rounded-lg border border-slate-700 bg-slate-900">
+            <button
+              type="button"
+              onClick={() =>
+                setMode(
+                  "surface",
+                )
+              }
+              className={`px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] ${
+                mode === "surface"
+                  ? "bg-slate-700 text-white"
+                  : "text-slate-500"
+              }`}
+            >
+              Surface
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setMode(
+                  "slope",
+                )
+              }
+              className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] ${
+                mode === "slope"
+                  ? "bg-emerald-900 text-emerald-200"
+                  : "text-slate-500"
+              }`}
+            >
+              Slope
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              resetCamera
+            }
+            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[9px] font-bold text-slate-300"
+          >
+            Reset view
+          </button>
+        </div>
+      </div>
+
+      <div className="relative aspect-square">
+        <div
+          ref={hostRef}
+          className="absolute inset-0"
+          aria-label={`${title} 3D green`}
+        />
+
+        {isLoading ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/80">
+            <div className="text-center">
+              <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400" />
+
+              <div className="mt-3 text-xs font-bold text-slate-300">
+                Loading PGA 3D green…
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950 p-5 text-center text-xs leading-5 text-rose-300">
+            {error}
+          </div>
+        ) : null}
+
+        {!isLoading &&
+        !error ? (
+          <>
+            <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              Drag to orbit · Scroll/pinch to zoom
+            </div>
+
+            {meshStats ? (
+              <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[8px] text-slate-400 backdrop-blur">
+                {meshStats.vertices.toLocaleString()} vertices
+              </div>
+            ) : null}
+          </>
+        ) : null}
+
+        {mode === "slope" &&
+        !isLoading &&
+        !error ? (
+          <div className="pointer-events-none absolute bottom-2 right-2 rounded-lg border border-white/10 bg-slate-950/90 px-2.5 py-1.5 backdrop-blur">
+            <div className="text-[8px] font-black uppercase tracking-[0.1em] text-slate-400">
+              Slope intensity
+            </div>
+
+            <div className="mt-1 text-[8px] text-slate-500">
+              flatter → steeper
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+
+================================================
+SHOTCAST GREEN MODEL ROUTE
+================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const TOURCAST_BASE =
+  "https://tourcast.pgatour.com";
+
+function validTournamentId(
+  value: string,
+) {
+  return /^R\d{7}$/.test(value);
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  const tournamentId =
+    request.nextUrl.searchParams
+      .get("tournamentId")
+      ?.trim() ?? "";
+
+  const hole = Number(
+    request.nextUrl.searchParams.get(
+      "hole",
+    ),
+  );
+
+  if (
+    !validTournamentId(
+      tournamentId,
+    ) ||
+    !Number.isInteger(hole) ||
+    hole < 1 ||
+    hole > 18
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Valid tournamentId and hole are required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  const holeToken =
+    String(hole).padStart(
+      2,
+      "0",
+    );
+
+  const assetUrl =
+    `${TOURCAST_BASE}` +
+    `/models/${encodeURIComponent(
+      tournamentId,
+    )}` +
+    `/3D_Assets/terrain/greens/` +
+    `Green${holeToken}.glb`;
+
+  try {
+    const response =
+      await fetch(assetUrl, {
+        headers: {
+          Accept:
+            "model/gltf-binary,application/octet-stream,*/*",
+          Referer:
+            `${TOURCAST_BASE}/tourcast.html?id=${encodeURIComponent(
+              tournamentId,
+            )}`,
+          "User-Agent":
+            "Mozilla/5.0 111-Sports-ShotCast",
+        },
+        cache: "force-cache",
+      });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        {
+          error:
+            "PGA green model unavailable.",
+          status:
+            response.status,
+        },
+        {
+          status:
+            response.status === 404
+              ? 404
+              : 502,
+        },
+      );
+    }
+
+    const bytes =
+      await response.arrayBuffer();
+
+    return new Response(
+      bytes,
+      {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "model/gltf-binary",
+          "Content-Length":
+            String(
+              bytes.byteLength,
+            ),
+          "Cache-Control":
+            "public, max-age=3600, s-maxage=43200, stale-while-revalidate=86400",
+        },
+      },
+    );
+  } catch (error) {
+    console.error(
+      "[ShotCast 3D] Green model fetch failed",
+      {
+        tournamentId,
+        hole,
+        error,
+      },
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load PGA green model.",
+      },
+      {
+        status: 502,
+      },
+    );
+  }
+}
+
+
+================================================
+GOLF HOLE MAP 2D - 3D RELATED
+================================================
+1-"use client";
+2-
+3-import {
+4-  useCallback,
+5-  useEffect,
+6-  useMemo,
+7-  useRef,
+8-  useState,
+9-} from "react";
+10-
+11:import GolfGreen3D from "./GolfGreen3D";
+12-
+13-type Coordinate = {
+14-  x: number | null;
+15-  y: number | null;
+16-  tourcastX?: number | null;
+17-  tourcastY?: number | null;
+18-  tourcastZ?: number | null;
+19-};
+20-
+21-type CoordinateSet = {
+22-  from: Coordinate;
+23-  to: Coordinate;
+24-};
+25-
+26-type WorldPoint = {
+27-  x: number;
+28-  y: number;
+29-  z?: number | null;
+30-};
+31-
+32-type ShotRadarData = {
+33-  apexHeight: number | null;
+34-  clubSpeed: number | null;
+35-  ballSpeed: number | null;
+36-  smashFactor: number | null;
+37-  launchSpin: number | null;
+38-  spinAxis: number | null;
+39-  verticalLaunchAngle: number | null;
+40-  horizontalLaunchAngle: number | null;
+41-  actualFlightTime: number | null;
+42-  carry: number | null;
+43-  carrySide: number | null;
+44-};
+45-
+46-type BallPathPoint = {
+47-  x: number;
+48-  y: number;
+49-  z: number | null;
+50-  secondsSinceStart: number;
+51-};
+--
+62-  distance: string | null;
+63-  distanceRemaining: string | null;
+64-  fromLocation: string | null;
+65-  toLocation: string | null;
+66-  finalStroke: boolean;
+67-
+68-  videoId?: string | null;
+69-  radarData?: ShotRadarData | null;
+70-  ballPath?: BallPath | null;
+71-
+72-  worldFrom?: WorldPoint | null;
+73-  worldTo?: WorldPoint | null;
+74-
+75-  bottomToTop: CoordinateSet | null;
+76-
+77-  /*
+78-   * Coordinates on PGA's dedicated Green View image.
+79-   */
+80-  greenBottomToTop?: CoordinateSet | null;
+81-};
+82-
+83-type Props = {
+84-  title: string;
+85-  imageUrl: string;
+86-  greenImageUrl?: string | null;
+87:  greenModelUrl?: string | null;
+88-  shots: MapShot[];
+89-  selectedStrokeNumber: number | null;
+90-  onSelectStroke: (
+91-    strokeNumber: number,
+92-  ) => void;
+93-  calibration: MapCalibration;
+94-  showShotOverlay?: boolean;
+95-  imageFit?: "fill" | "contain";
+96-  emptyStateLabel?: string;
+97-};
+98-
+99-type PlotPoint = {
+100-  x: number;
+101-  y: number;
+102-};
+103-
+104-type PlotShot = {
+105-  strokeNumber: number;
+106-  from: PlotPoint;
+107-  to: PlotPoint;
+108-  finalStroke: boolean;
+109-  videoId: string | null;
+110-  radarData: ShotRadarData | null;
+111-  ballPath: BallPath | null;
+112-  distance: string | null;
+113-  distanceRemaining: string | null;
+114-  fromLocation: string | null;
+115-  toLocation: string | null;
+116-};
+117-
+118-type TransformState = {
+119-  scale: number;
+120-  x: number;
+121-  y: number;
+122-  rotation: number;
+123-};
+124-
+125-type PointerPosition = {
+126-  x: number;
+127-  y: number;
+--
+804-  second: PointerPosition,
+805-) {
+806-  return (
+807-    Math.atan2(
+808-      second.y - first.y,
+809-      second.x - first.x,
+810-    ) *
+811-    (180 / Math.PI)
+812-  );
+813-}
+814-
+815-function pointerMidpoint(
+816-  first: PointerPosition,
+817-  second: PointerPosition,
+818-): PointerPosition {
+819-  return {
+820-    x: (first.x + second.x) / 2,
+821-    y: (first.y + second.y) / 2,
+822-  };
+823-}
+824-
+825-export default function GolfHoleMap2D({
+826-  title,
+827-  imageUrl,
+828-  greenImageUrl = null,
+829:  greenModelUrl = null,
+830-  shots,
+831-  selectedStrokeNumber,
+832-  onSelectStroke,
+833-  calibration,
+834-  showShotOverlay = true,
+835-  imageFit = "fill",
+836-  emptyStateLabel = "No shot data is available yet.",
+837-}: Props) {
+838-  const viewportRef =
+839-    useRef<HTMLDivElement | null>(
+840-      null,
+841-    );
+842-
+843-  const pointersRef =
+844-    useRef(
+845-      new Map<number, PointerPosition>(),
+846-    );
+847-
+848-  const dragStartRef =
+849-    useRef<{
+850-      pointer: PointerPosition;
+851-      transform: TransformState;
+852-    } | null>(null);
+853-
+854-  const gestureStartRef =
+855-    useRef<GestureSnapshot | null>(
+856-      null,
+857-    );
+858-
+859-  const [transform, setTransform] =
+860-    useState<TransformState>(
+861-      DEFAULT_TRANSFORM,
+862-    );
+863-
+864-  const [isInteracting, setIsInteracting] =
+865-    useState(false);
+866-
+867-  const [isPlaying, setIsPlaying] =
+868-    useState(false);
+869-
+870-  const [viewMode, setViewMode] =
+871-    useState<
+872-      "course" |
+873-      "green" |
+874:      "green3d"
+875-    >(
+876-      "course",
+877-    );
+878-
+879-  /*
+880-   * Video playback will replace only the right-side contextual
+881-   * panel. The map remains visible so the shot's location stays
+882-   * in context.
+883-   *
+884-   * We intentionally do not invent a playback URL from PGA's
+885-   * videoId. Once the actual PGA player source is verified, it
+886-   * can plug directly into this state.
+887-   */
+888-  const [
+889-    videoStrokeNumber,
+890-    setVideoStrokeNumber,
+891-  ] = useState<number | null>(null);
+892-
+893-  const [
+894-    animatedStrokeNumber,
+895-    setAnimatedStrokeNumber,
+896-  ] = useState<number | null>(null);
+897-
+898-  const [
+899-    animationProgress,
+900-    setAnimationProgress,
+901-  ] = useState(1);
+902-
+903-  const [
+904-    revealedStrokeCount,
+905-    setRevealedStrokeCount,
+906-  ] = useState<number | null>(null);
+907-
+908-  const animationFrameRef =
+909-    useRef<number | null>(null);
+910-
+911-  const animationResolveRef =
+912-    useRef<(() => void) | null>(null);
+913-
+914-  /*
+--
+1144-            },
+1145-          )
+1146-          .filter(
+1147-            (
+1148-              shot,
+1149-            ): shot is PlotShot =>
+1150-              shot !== null,
+1151-          );
+1152-      },
+1153-      [
+1154-        greenImageUrl,
+1155-        shots,
+1156-        showShotOverlay,
+1157-      ],
+1158-    );
+1159-
+1160-  const greenViewAvailable =
+1161-    Boolean(
+1162-      greenImageUrl &&
+1163-      greenPlottedShots.length > 0,
+1164-    );
+1165-
+1166-  const isAnyGreenView =
+1167-    (
+1168-      viewMode === "green" ||
+1169:      viewMode === "green3d"
+1170-    ) &&
+1171-    greenViewAvailable;
+1172-
+1173-  const plottedShots =
+1174-    isAnyGreenView
+1175-      ? greenPlottedShots
+1176-      : coursePlottedShots;
+1177-
+1178-  const activeImageUrl =
+1179-    isAnyGreenView &&
+1180-    greenImageUrl
+1181-      ? greenImageUrl
+1182-      : imageUrl;
+1183-
+1184:  const green3dAvailable =
+1185-    Boolean(
+1186:      greenModelUrl,
+1187-    );
+1188-
+1189-  const selectedShot =
+1190-    plottedShots.find(
+1191-      (shot) =>
+1192-        shot.strokeNumber ===
+1193-        selectedStrokeNumber,
+1194-    ) ??
+1195-    plottedShots[0] ??
+1196-    null;
+1197-
+1198-  /*
+1199-   * Navigation always follows the complete hole sequence,
+1200-   * regardless of whether the current camera is using the
+1201-   * Course View or Green View coordinate frame.
+1202-   */
+1203-  const selectedCourseShotIndex =
+1204-    coursePlottedShots.findIndex(
+1205-      (shot) =>
+1206-        shot.strokeNumber ===
+1207-        selectedStrokeNumber,
+1208-    );
+1209-
+1210-  const previousShot =
+1211-    selectedCourseShotIndex > 0
+1212-      ? coursePlottedShots[
+1213-          selectedCourseShotIndex - 1
+1214-        ]
+1215-      : null;
+1216-
+1217-  const nextShot =
+1218-    selectedCourseShotIndex >= 0 &&
+1219-    selectedCourseShotIndex <
+1220-      coursePlottedShots.length - 1
+1221-      ? coursePlottedShots[
+1222-          selectedCourseShotIndex + 1
+1223-        ]
+1224-      : null;
+1225-
+1226-  const constrainTransform =
+--
+2182-    selectedShot !== null &&
+2183-    videoStrokeNumber ===
+2184-      selectedShot.strokeNumber &&
+2185-    Boolean(
+2186-      selectedShot.videoId,
+2187-    );
+2188-
+2189-  return (
+2190-    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+2191-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-3 py-2.5">
+2192-        <div>
+2193-          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+2194-            ShotCast replay
+2195-          </div>
+2196-
+2197-          <div className="mt-0.5 flex items-center gap-2 text-xs font-bold text-slate-200">
+2198-            <span>{title}</span>
+2199-
+2200-            {viewMode === "green" &&
+2201-            greenViewAvailable ? (
+2202-              <span className="rounded-full border border-emerald-700 bg-emerald-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-emerald-300">
+2203-                Green View
+2204-              </span>
+2205-            ) : null}
+2206-
+2207:            {viewMode === "green3d" &&
+2208:            green3dAvailable ? (
+2209-              <span className="rounded-full border border-cyan-700 bg-cyan-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-cyan-300">
+2210-                3D Green
+2211-              </span>
+2212-            ) : null}
+2213-          </div>
+2214-        </div>
+2215-
+2216-        <div className="flex flex-wrap items-center justify-end gap-1.5">
+2217-          {greenViewAvailable ? (
+2218-            <div className="mr-1 flex overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
+2219-              <button
+2220-                type="button"
+2221-                onClick={() => {
+2222-                  setIsPlaying(false);
+2223-                  cancelShotAnimation();
+2224-                  setViewMode("course");
+2225-                  setTransform(
+2226-                    DEFAULT_TRANSFORM,
+2227-                  );
+2228-                }}
+2229-                className={`px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+2230-                  viewMode === "course"
+2231-                    ? "bg-slate-700 text-white"
+2232-                    : "text-slate-500 hover:text-slate-300"
+2233-                }`}
+2234-              >
+2235-                Course
+2236-              </button>
+2237-
+2238-              <button
+2239-                type="button"
+2240-                onClick={() => {
+2241-                  setIsPlaying(false);
+2242-                  cancelShotAnimation();
+2243-                  setViewMode("green");
+2244-                  setTransform(
+2245-                    DEFAULT_TRANSFORM,
+2246-                  );
+2247-                }}
+2248-                className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+2249-                  viewMode === "green"
+2250-                    ? "bg-emerald-900 text-emerald-200"
+2251-                    : "text-slate-500 hover:text-slate-300"
+2252-                }`}
+2253-              >
+2254-                Green
+2255-              </button>
+2256-
+2257:              {green3dAvailable ? (
+2258-                <button
+2259-                  type="button"
+2260-                  onClick={() => {
+2261-                    setIsPlaying(false);
+2262-                    cancelShotAnimation();
+2263-                    setViewMode(
+2264:                      "green3d",
+2265-                    );
+2266-                  }}
+2267-                  className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+2268:                    viewMode === "green3d"
+2269-                      ? "bg-cyan-900 text-cyan-200"
+2270-                      : "text-slate-500 hover:text-slate-300"
+2271-                  }`}
+2272-                >
+2273-                  3D
+2274-                </button>
+2275-              ) : null}
+2276-            </div>
+2277-          ) : null}
+2278-
+2279-          {plottedShots.length > 0 ? (
+2280-            <>
+2281:              {viewMode !== "green3d" ? (
+2282-                <button
+2283-                  type="button"
+2284-                  onClick={() =>
+2285-                    focusShot(
+2286-                      selectedShot,
+2287-                    )
+2288-                  }
+2289-                  className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+2290-                >
+2291-                  Recenter shot
+2292-                </button>
+2293-              ) : null}
+2294-
+2295-              <button
+2296-                type="button"
+2297-                onClick={startPlayback}
+2298-                disabled={isPlaying}
+2299-                className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+2300-              >
+2301-                {isPlaying
+2302-                  ? "Playing hole…"
+2303-                  : "▶ Play Hole"}
+2304-              </button>
+2305-            </>
+2306-          ) : null}
+2307-
+2308-          <button
+2309-            type="button"
+2310-            onClick={resetView}
+2311-            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-[10px] font-bold text-slate-400"
+2312-          >
+2313-            Reset
+2314-          </button>
+2315-        </div>
+2316-      </header>
+2317-
+2318-      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(260px,430px)_1fr]">
+2319-        <div className="mx-auto w-full max-w-[430px]">
+2320:          {viewMode === "green3d" &&
+2321:          greenModelUrl ? (
+2322:            <GolfGreen3D
+2323-              modelUrl={
+2324:                greenModelUrl
+2325-              }
+2326-              title={title}
+2327-            />
+2328-          ) : (
+2329-          <div
+2330-            ref={viewportRef}
+2331-            className={`relative aspect-square overflow-hidden rounded-xl border border-slate-700 bg-slate-950 select-none ${
+2332-              isInteracting
+2333-                ? "cursor-grabbing"
+2334-                : "cursor-grab"
+2335-            }`}
+2336-            style={{
+2337-              touchAction: "none",
+2338-            }}
+2339-            onWheel={handleWheel}
+2340-            onDoubleClick={
+2341-              handleDoubleClick
+2342-            }
+2343-            onPointerDown={
+2344-              handlePointerDown
+2345-            }
+2346-            onPointerMove={
+2347-              handlePointerMove
+2348-            }
+2349-            onPointerUp={
+2350-              releasePointer
+2351-            }
+2352-            onPointerCancel={
+2353-              releasePointer
+2354-            }
+2355-          >
+2356-            <div
+2357-              className="absolute inset-0 will-change-transform"
+2358-              style={{
+2359-                transform: [
+2360-                  `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+2361-                  `scale(${transform.scale})`,
+2362-                  `rotate(${transform.rotation}deg)`,
+2363-                ].join(" "),
+2364-                transformOrigin:

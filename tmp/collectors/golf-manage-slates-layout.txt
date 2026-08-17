@@ -1,0 +1,356 @@
+============================================================
+GOLF MANAGE SLATES — CURRENT UI
+============================================================
+
+===== ADMIN SLATES PAGE =====
+"use client";
+
+import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import AppNav from "@/components/AppNav";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+type SlateListRow = {
+  id: number;
+  date: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  label: string;
+  sport?: SportKey;
+  display_name?: string | null;
+  external_event_id?: string | null;
+  cut_penalty_per_round?: number | null;
+  has_cut?: boolean;
+  tournament_analysis?: string | null;
+  show_tournament_analysis?: boolean;
+  nba_team_abbreviations?: string[] | null;
+};
+
+type SlateTeamRow = {
+  team_id: number;
+  team_name: string;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+type GolfFieldSummary = {
+  golferCount: number;
+  lastRefreshedAt: string | null;
+};
+
+type ShotCastSummary = {
+  tournamentId: string;
+  generatedAt: string | null;
+  updatedAt: string | null;
+  summary: {
+    holesRequested?: number;
+    holesAvailable?: number;
+    localImages?: number;
+    alignedMaps?: number;
+    alignedGreens?: number;
+    holesFailed?: number;
+  } | null;
+  course: {
+    id?: string;
+    name?: string | null;
+  } | null;
+};
+
+type SlateDetailResponse = {
+  success: boolean;
+  slate: SlateListRow;
+  teams: SlateTeamRow[];
+  golfField?: GolfFieldSummary | null;
+};
+
+type SelectedSlateState = SlateListRow & {
+  nbaTeamsInput: string;
+};
+
+function normalizeTeamOrder(rows: SlateTeamRow[]) {
+  const participating = rows
+    .filter((team) => team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  const inactive = rows
+    .filter((team) => !team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  return [...participating, ...inactive].map((team, index) => ({
+    ...team,
+    draft_order: index + 1,
+  }));
+}
+
+function formatDateRange(
+  startDate: string | null,
+  endDate: string | null,
+) {
+  if (!startDate) return "Dates unavailable";
+  if (!endDate || startDate === endDate) return startDate;
+  return `${startDate} – ${endDate}`;
+}
+
+function formatRefreshTime(value: string | null) {
+  if (!value) return "Not loaded yet";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export default function AdminSlatesPage() {
+  const { selectedSport } = useSelectedSport();
+
+  const [slates, setSlates] = useState<SlateListRow[]>([]);
+  const [selectedSlateId, setSelectedSlateId] =
+    useState<number | "">("");
+  const [selectedSlate, setSelectedSlate] =
+    useState<SelectedSlateState | null>(null);
+  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+  const [golfField, setGolfField] =
+    useState<GolfFieldSummary | null>(null);
+
+  const [
+    shotCast,
+    setShotCast,
+  ] = useState<ShotCastSummary | null>(
+    null,
+  );
+
+  const [
+    shotCastTournamentId,
+    setShotCastTournamentId,
+  ] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isReseeding, setIsReseeding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+    useState(false);
+  const [isImportingGolfField, setIsImportingGolfField] =
+    useState(false);
+  const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
+    useState(false);
+
+  const [
+    isRefreshingShotCast,
+    setIsRefreshingShotCast,
+  ] = useState(false);
+
+  const [message, setMessage] = useState("");
+
+  const isBusy =
+    isSaving ||
+    isReseeding ||
+    isDeleting ||
+    isRefreshingGolfField ||
+    isImportingGolfField ||
+    isSyncingGolfRankings ||
+    isRefreshingShotCast;
+
+  useEffect(() => {
+    setSelectedSlateId("");
+    setSelectedSlate(null);
+    setTeams([]);
+    setGolfField(null);
+    setShotCast(null);
+    setShotCastTournamentId("");
+    void loadSlates();
+  }, [selectedSport]);
+
+  useEffect(() => {
+    if (!selectedSlateId) return;
+    void loadSlateDetail(Number(selectedSlateId));
+  }, [selectedSlateId]);
+
+  async function loadSlates() {
+    try {
+      setIsLoading(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates?sport=${encodeURIComponent(selectedSport)}`,
+        { cache: "no-store" },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to load slates.");
+        return;
+      }
+
+      const nextSlates = (result.slates ?? []) as SlateListRow[];
+      setSlates(nextSlates);
+
+      if (nextSlates.length > 0) {
+        setSelectedSlateId((current) => {
+          if (
+            current &&
+            nextSlates.some((slate) => slate.id === Number(current))
+          ) {
+            return current;
+          }
+
+          return nextSlates[0].id;
+        });
+      } else {
+        setSelectedSlateId("");
+        setSelectedSlate(null);
+        setTeams([]);
+        setGolfField(null);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong while loading slates.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function loadSlateDetail(slateId: number) {
+    try {
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${slateId}`,
+        { cache: "no-store" },
+      );
+
+      const result = (await response.json()) as
+        | SlateDetailResponse
+        | { error?: string };
+
+      if (!response.ok) {
+        setMessage(
+          "error" in result
+            ? result.error || "Failed to load slate."
+            : "Failed to load slate.",
+        );
+        return;
+      }
+
+      const safeResult = result as SlateDetailResponse;
+
+      setSelectedSlate({
+        ...safeResult.slate,
+        nbaTeamsInput: (
+          safeResult.slate.nba_team_abbreviations ?? []
+        ).join(", "),
+      });
+
+
+===== ADMIN SLATES COMPONENT FILES =====
+components/profile/SlateDetailModal.tsx
+
+===== SLATES PAGE IMPORTS / COMPONENTS =====
+3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+5:import { useEffect, useMemo, useState } from "react";
+6:import Link from "next/link";
+7:import AppNav from "@/components/AppNav";
+8:import { useSelectedSport } from "@/components/providers/SportProvider";
+36:type GolfFieldSummary = {
+41:type ShotCastSummary = {
+63:  golfField?: GolfFieldSummary | null;
+128:  const [golfField, setGolfField] =
+129:    useState<GolfFieldSummary | null>(null);
+133:    setShotCast,
+134:  ] = useState<ShotCastSummary | null>(
+139:    shotCastTournamentId,
+140:    setShotCastTournamentId,
+147:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+149:  const [isImportingGolfField, setIsImportingGolfField] =
+155:    isRefreshingShotCast,
+156:    setIsRefreshingShotCast,
+165:    isRefreshingGolfField ||
+166:    isImportingGolfField ||
+168:    isRefreshingShotCast;
+174:    setGolfField(null);
+175:    setShotCast(null);
+176:    setShotCastTournamentId("");
+220:        setGolfField(null);
+262:      setGolfField(safeResult.golfField ?? null);
+265:        void loadShotCastStatus(
+269:        setShotCast(null);
+270:        setShotCastTournamentId("");
+280:  async function loadShotCastStatus(
+295:        setShotCast(null);
+299:      const nextShotCast =
+301:          | ShotCastSummary
+304:      setShotCast(nextShotCast);
+307:        nextShotCast
+310:        setShotCastTournamentId(
+311:          nextShotCast
+317:      setShotCast(null);
+321:  async function handleRefreshShotCast() {
+327:      shotCastTournamentId
+344:      setIsRefreshingShotCast(true);
+373:            "Failed to refresh ShotCast assets.",
+379:      await loadShotCastStatus(
+384:        `ShotCast refreshed: ${
+399:        "Something went wrong while refreshing ShotCast.",
+402:      setIsRefreshingShotCast(false);
+487:        "Cut penalty must be a whole number from 0 through 100.",
+564:  async function handleRefreshGolfField() {
+568:      setIsRefreshingGolfField(true);
+578:        "Tournament field, scores, rounds, and hole data refreshed successfully.",
+586:      const isWaitingForField =
+593:      if (isWaitingForField) {
+595:          "Tournament found. ESPN has not published the field yet. Automatic refresh will keep checking.",
+604:      setIsRefreshingGolfField(false);
+608:  async function handleImportPgaTourField() {
+612:      setIsImportingGolfField(true);
+662:      setIsImportingGolfField(false);
+771:      setGolfField(null);
+1005:                      Tournament Field
+1009:                      {golfField?.golferCount ?? 0}
+1022:                      Cut Penalty
+1061:                      Tournament Cut
+1086:                      CUT statuses, and cut penalties will be disabled.
+1092:                      Last Field Refresh
+1097:                        golfField?.lastRefreshedAt ?? null,
+1104:                      ShotCast Assets
+1166:                        Tournament Analysis
+1247:                    ShotCast Course Importer
+1256:                        PGA Tournament ID
+1263:                          shotCastTournamentId
+1266:                          setShotCastTournamentId(
+1280:                        void handleRefreshShotCast()
+1285:                      {isRefreshingShotCast
+1286:                        ? "Refreshing ShotCast..."
+1288:                          ? "Refresh ShotCast"
+1289:                          : "Import ShotCast"}
+1308:                          Participating
+1311:                          Draft Order
+1361:                        void handleRefreshGolfField()
+1373:                      {isRefreshingGolfField
+1374:                        ? "Refreshing Field..."
+1375:                        : "Refresh Tournament Field"}
+1381:                        void handleImportPgaTourField()
+1393:                      {isImportingGolfField
+1394:                        ? "Importing PGA Field..."
+1395:                        : "Import PGA Tour Field"}

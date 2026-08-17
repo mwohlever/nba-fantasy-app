@@ -215,7 +215,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json(
         {
           error:
-            "Tournament Analysis must be 4,000 characters or fewer.",
+            "MW Analysis must be 4,000 characters or fewer.",
         },
         { status: 400 },
       );
@@ -282,17 +282,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (typeof hasCut === "boolean") {
         slateUpdatePayload.has_cut = hasCut;
       }
+    }
 
-      slateUpdatePayload.tournament_analysis =
-        tournamentAnalysis || null;
+    slateUpdatePayload.tournament_analysis =
+      tournamentAnalysis || null;
 
-      if (
-        typeof showTournamentAnalysis ===
-        "boolean"
-      ) {
-        slateUpdatePayload.show_tournament_analysis =
-          showTournamentAnalysis;
-      }
+    if (
+      typeof showTournamentAnalysis ===
+      "boolean"
+    ) {
+      slateUpdatePayload.show_tournament_analysis =
+        showTournamentAnalysis;
     }
 
     if (typeof isLocked === "boolean") {

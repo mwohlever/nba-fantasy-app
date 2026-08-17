@@ -1,0 +1,3792 @@
+================================================================================
+111 SPORTS — NCAA PICK 'EM NEXT-PHASE TARGETED COLLECTOR
+================================================================================
+
+
+================================================================================
+CURRENT NCAA CODE
+================================================================================
+
+
+################################################################################
+FILE: lib/providers/ncaa.ts
+################################################################################
+const ESPN_CFB_BASE =
+  "https://site.api.espn.com/apis/site/v2/sports/football/college-football";
+
+export type NcaaEspnTeam = {
+  id: string;
+  displayName: string;
+  abbreviation: string | null;
+  logo: string | null;
+  rank: number | null;
+  record: string | null;
+  score: number | null;
+  winner: boolean;
+};
+
+export type NcaaEspnGame = {
+  espnEventId: string;
+  name: string;
+  shortName: string | null;
+  kickoffAt: string;
+
+  awayTeam: NcaaEspnTeam;
+  homeTeam: NcaaEspnTeam;
+
+  status: string;
+  statusDetail: string | null;
+  completed: boolean;
+
+  winnerTeamId: string | null;
+};
+
+export type NcaaEspnWeek = {
+  season: number;
+  week: number;
+  label: string;
+
+  scheduleGames: NcaaEspnGame[];
+  eligibleGames: NcaaEspnGame[];
+
+  diagnostics: {
+    totalEvents: number;
+    mappedEvents: number;
+    rankedVsRankedEvents: number;
+  };
+};
+
+function finiteInteger(
+  value: unknown,
+): number | null {
+  const number = Number(value);
+
+  return Number.isInteger(number)
+    ? number
+    : null;
+}
+
+function positiveRank(
+  value: unknown,
+): number | null {
+  const rank = finiteInteger(value);
+
+  return rank !== null &&
+    rank >= 1 &&
+    rank <= 25
+    ? rank
+    : null;
+}
+
+function scoreValue(
+  value: unknown,
+): number | null {
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
+
+function competitorRecord(
+  competitor: any,
+): string | null {
+  const records =
+    Array.isArray(competitor?.records)
+      ? competitor.records
+      : [];
+
+  const preferred =
+    records.find(
+      (record: any) =>
+        record?.type === "total",
+    ) ??
+    records[0];
+
+  return typeof preferred?.summary === "string"
+    ? preferred.summary
+    : null;
+}
+
+function competitorLogo(
+  competitor: any,
+): string | null {
+  const logos =
+    Array.isArray(competitor?.team?.logos)
+      ? competitor.team.logos
+      : [];
+
+  return typeof logos[0]?.href === "string"
+    ? logos[0].href
+    : null;
+}
+
+function mapTeam(
+  competitor: any,
+): NcaaEspnTeam | null {
+  const id =
+    competitor?.team?.id != null
+      ? String(competitor.team.id)
+      : null;
+
+  const displayName =
+    typeof competitor?.team?.displayName ===
+    "string"
+      ? competitor.team.displayName
+      : null;
+
+  if (!id || !displayName) {
+    return null;
+  }
+
+  return {
+    id,
+    displayName,
+
+    abbreviation:
+      typeof competitor?.team?.abbreviation ===
+      "string"
+        ? competitor.team.abbreviation
+        : null,
+
+    logo:
+      competitorLogo(competitor),
+
+    /*
+     * During the current 2026 preseason ESPN is returning
+     * curatedRank.current = 99 for every team.
+     *
+     * 99 therefore becomes null here rather than pretending
+     * it is an actual ranking.
+     */
+    rank:
+      positiveRank(
+        competitor?.curatedRank?.current,
+      ),
+
+    record:
+      competitorRecord(competitor),
+
+    score:
+      scoreValue(competitor?.score),
+
+    winner:
+      competitor?.winner === true,
+  };
+}
+
+function mapEvent(
+  event: any,
+): NcaaEspnGame | null {
+  const competition =
+    event?.competitions?.[0];
+
+  if (!competition) {
+    return null;
+  }
+
+  const competitors =
+    Array.isArray(competition.competitors)
+      ? competition.competitors
+      : [];
+
+  const awayRaw =
+    competitors.find(
+      (competitor: any) =>
+        competitor?.homeAway === "away",
+    );
+
+  const homeRaw =
+    competitors.find(
+      (competitor: any) =>
+        competitor?.homeAway === "home",
+    );
+
+  const awayTeam =
+    mapTeam(awayRaw);
+
+  const homeTeam =
+    mapTeam(homeRaw);
+
+  if (!awayTeam || !homeTeam) {
+    return null;
+  }
+
+  const espnEventId =
+    event?.id != null
+      ? String(event.id)
+      : null;
+
+  const kickoffAt =
+    typeof event?.date === "string"
+      ? event.date
+      : typeof competition?.date === "string"
+        ? competition.date
+        : null;
+
+  if (!espnEventId || !kickoffAt) {
+    return null;
+  }
+
+  const statusType =
+    competition?.status?.type ??
+    event?.status?.type ??
+    {};
+
+  const status =
+    typeof statusType?.state === "string"
+      ? statusType.state
+      : statusType?.completed === true
+        ? "post"
+        : "pre";
+
+  const statusDetail =
+    typeof competition?.status?.type?.detail ===
+    "string"
+      ? competition.status.type.detail
+      : typeof competition?.status?.type?.shortDetail ===
+          "string"
+        ? competition.status.type.shortDetail
+        : typeof event?.status?.type?.detail ===
+            "string"
+          ? event.status.type.detail
+          : null;
+
+  const winnerTeamId =
+    awayTeam.winner
+      ? awayTeam.id
+      : homeTeam.winner
+        ? homeTeam.id
+        : null;
+
+  return {
+    espnEventId,
+
+    name:
+      typeof event?.name === "string"
+        ? event.name
+        : `${awayTeam.displayName} at ${homeTeam.displayName}`,
+
+    shortName:
+      typeof event?.shortName === "string"
+        ? event.shortName
+        : null,
+
+    kickoffAt,
+
+    awayTeam,
+    homeTeam,
+
+    status,
+    statusDetail,
+
+    completed:
+      statusType?.completed === true,
+
+    winnerTeamId,
+  };
+}
+
+function isRankedVsRanked(
+  game: NcaaEspnGame,
+) {
+  return (
+    game.awayTeam.rank !== null &&
+    game.homeTeam.rank !== null
+  );
+}
+
+export async function fetchNcaaPickEmWeek({
+  season,
+  week,
+}: {
+  season: number;
+  week: number;
+}): Promise<NcaaEspnWeek> {
+  const params =
+    new URLSearchParams({
+      dates: String(season),
+      seasontype: "2",
+      week: String(week),
+      limit: "200",
+      groups: "80",
+    });
+
+  const response =
+    await fetch(
+      `${ESPN_CFB_BASE}/scoreboard?${params.toString()}`,
+      {
+        cache: "no-store",
+
+        headers: {
+          Accept: "application/json",
+          "User-Agent":
+            "Mozilla/5.0 (compatible; 111-Sports/1.0)",
+        },
+      },
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      `ESPN NCAA scoreboard failed: ${response.status}`,
+    );
+  }
+
+  const payload =
+    await response.json();
+
+  const events =
+    Array.isArray(payload?.events)
+      ? payload.events
+      : [];
+
+  const scheduleGames =
+    (events.map(mapEvent) as Array<NcaaEspnGame | null>)
+      .filter(
+        (
+          game: NcaaEspnGame | null,
+        ): game is NcaaEspnGame =>
+          Boolean(game),
+      )
+      .sort(
+        (a, b) =>
+          new Date(a.kickoffAt).getTime() -
+          new Date(b.kickoffAt).getTime(),
+      );
+
+  const eligibleGames =
+    scheduleGames.filter(
+      isRankedVsRanked,
+    );
+
+  return {
+    season,
+    week,
+    label: `Week ${week}`,
+
+    scheduleGames,
+    eligibleGames,
+
+    diagnostics: {
+      totalEvents: events.length,
+      mappedEvents:
+        scheduleGames.length,
+      rankedVsRankedEvents:
+        eligibleGames.length,
+    },
+  };
+}
+
+
+################################################################################
+FILE: app/api/admin/ncaa-pickem/import-week/route.ts
+################################################################################
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { requireAdmin } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+import {
+  fetchNcaaPickEmWeek,
+  type NcaaEspnGame,
+} from "@/lib/providers/ncaa";
+
+function positiveInteger(
+  value: unknown,
+): number | null {
+  const number = Number(value);
+
+  return Number.isInteger(number) &&
+    number > 0
+    ? number
+    : null;
+}
+
+function stringArray(
+  value: unknown,
+): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) =>
+      String(entry ?? "").trim(),
+    )
+    .filter(Boolean);
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  try {
+    const admin =
+      await requireAdmin();
+
+    if (!admin) {
+      return NextResponse.json(
+        {
+          error:
+            "Admin access required.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const body =
+      await request.json();
+
+    const season =
+      positiveInteger(body?.season);
+
+    const week =
+      positiveInteger(body?.week);
+
+    const forceEventIds =
+      new Set(
+        stringArray(
+          body?.forceEventIds,
+        ),
+      );
+
+    if (!season || !week) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid season and week are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const espnWeek =
+      await fetchNcaaPickEmWeek({
+        season,
+        week,
+      });
+
+    const forcedGames =
+      espnWeek.scheduleGames.filter(
+        (game) =>
+          forceEventIds.has(
+            game.espnEventId,
+          ),
+      );
+
+    const selectedById =
+      new Map<
+        string,
+        NcaaEspnGame
+      >();
+
+    for (
+      const game
+      of espnWeek.eligibleGames
+    ) {
+      selectedById.set(
+        game.espnEventId,
+        game,
+      );
+    }
+
+    for (
+      const game
+      of forcedGames
+    ) {
+      selectedById.set(
+        game.espnEventId,
+        game,
+      );
+    }
+
+    const selectedGames =
+      Array.from(
+        selectedById.values(),
+      ).sort(
+        (a, b) =>
+          new Date(a.kickoffAt).getTime() -
+          new Date(b.kickoffAt).getTime(),
+      );
+
+    const {
+      data: existingWeek,
+      error: existingWeekError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .select(
+        "id, season, week_number, label, lock_at, status",
+      )
+      .eq("season", season)
+      .eq("week_number", week)
+      .maybeSingle();
+
+    if (existingWeekError) {
+      return NextResponse.json(
+        {
+          error:
+            existingWeekError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    let weekId: number;
+
+    let preservedStatus:
+      | "open"
+      | "locked"
+      | "final" =
+      "open";
+
+    if (existingWeek) {
+      weekId =
+        Number(existingWeek.id);
+
+      preservedStatus =
+        existingWeek.status ===
+          "locked" ||
+        existingWeek.status ===
+          "final"
+          ? existingWeek.status
+          : "open";
+    } else {
+      const {
+        data: createdWeek,
+        error: createWeekError,
+      } = await supabaseAdmin
+        .from("ncaa_pickem_weeks")
+        .insert({
+          season,
+          week_number: week,
+          label: espnWeek.label,
+          status: "open",
+        })
+        .select(
+          "id, status",
+        )
+        .single();
+
+      if (
+        createWeekError ||
+        !createdWeek
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              createWeekError?.message ??
+              "Failed to create NCAA Pick 'Em week.",
+          },
+          { status: 500 },
+        );
+      }
+
+      weekId =
+        Number(createdWeek.id);
+    }
+
+    /*
+     * Existing games stay in history but are removed from
+     * the active weekly card unless selected by this refresh.
+     */
+    const {
+      error: clearIncludedError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_games")
+      .update({
+        included: false,
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq("week_id", weekId);
+
+    if (clearIncludedError) {
+      return NextResponse.json(
+        {
+          error:
+            clearIncludedError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const gameRows =
+      selectedGames.map(
+        (game) => ({
+          week_id: weekId,
+
+          espn_event_id:
+            game.espnEventId,
+
+          kickoff_at:
+            game.kickoffAt,
+
+          away_team_id:
+            game.awayTeam.id,
+
+          away_team_name:
+            game.awayTeam.displayName,
+
+          away_team_abbreviation:
+            game.awayTeam.abbreviation,
+
+          away_team_logo_url:
+            game.awayTeam.logo,
+
+          away_rank:
+            game.awayTeam.rank,
+
+          away_record:
+            game.awayTeam.record,
+
+          away_score:
+            game.awayTeam.score,
+
+          home_team_id:
+            game.homeTeam.id,
+
+          home_team_name:
+            game.homeTeam.displayName,
+
+          home_team_abbreviation:
+            game.homeTeam.abbreviation,
+
+          home_team_logo_url:
+            game.homeTeam.logo,
+
+          home_rank:
+            game.homeTeam.rank,
+
+          home_record:
+            game.homeTeam.record,
+
+          home_score:
+            game.homeTeam.score,
+
+          status:
+            game.status,
+
+          status_detail:
+            game.statusDetail,
+
+          winner_team_id:
+            game.winnerTeamId,
+
+          included: true,
+
+          updated_at:
+            new Date().toISOString(),
+        }),
+      );
+
+    if (gameRows.length > 0) {
+      const {
+        error: gamesError,
+      } = await supabaseAdmin
+        .from("ncaa_pickem_games")
+        .upsert(
+          gameRows,
+          {
+            onConflict:
+              "espn_event_id",
+          },
+        );
+
+      if (gamesError) {
+        return NextResponse.json(
+          {
+            error:
+              gamesError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    const lockAt =
+      selectedGames.length > 0
+        ? selectedGames[0]
+            .kickoffAt
+        : null;
+
+    const {
+      error: weekUpdateError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .update({
+        label:
+          espnWeek.label,
+
+        lock_at:
+          lockAt,
+
+        status:
+          preservedStatus,
+
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq("id", weekId);
+
+    if (weekUpdateError) {
+      return NextResponse.json(
+        {
+          error:
+            weekUpdateError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const missingForcedIds =
+      Array.from(forceEventIds)
+        .filter(
+          (id) =>
+            !espnWeek.scheduleGames.some(
+              (game) =>
+                game.espnEventId === id,
+            ),
+        );
+
+    return NextResponse.json({
+      success: true,
+
+      season,
+      week,
+      weekId,
+
+      label:
+        espnWeek.label,
+
+      lockAt,
+
+      importedGames:
+        gameRows.length,
+
+      normalEligibleGames:
+        espnWeek.eligibleGames.length,
+
+      forcedGames:
+        forcedGames.length,
+
+      missingForcedIds,
+
+      diagnostics:
+        espnWeek.diagnostics,
+
+      games:
+        selectedGames.map(
+          (game) => ({
+            espnEventId:
+              game.espnEventId,
+
+            forced:
+              forceEventIds.has(
+                game.espnEventId,
+              ),
+
+            kickoffAt:
+              game.kickoffAt,
+
+            away: {
+              name:
+                game.awayTeam
+                  .displayName,
+
+              rank:
+                game.awayTeam
+                  .rank,
+
+              record:
+                game.awayTeam
+                  .record,
+            },
+
+            home: {
+              name:
+                game.homeTeam
+                  .displayName,
+
+              rank:
+                game.homeTeam
+                  .rank,
+
+              record:
+                game.homeTeam
+                  .record,
+            },
+
+            status:
+              game.status,
+
+            statusDetail:
+              game.statusDetail,
+          }),
+        ),
+    });
+  } catch (error) {
+    console.error(
+      "Failed to import NCAA Pick 'Em week",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to import NCAA Pick 'Em week.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+################################################################################
+FILE: app/api/admin/ncaa-pickem/week-control/route.ts
+################################################################################
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  requireAdmin,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+const VALID_STATUSES =
+  new Set([
+    "open",
+    "locked",
+    "final",
+  ]);
+
+export async function POST(
+  request: NextRequest,
+) {
+  try {
+    const admin =
+      await requireAdmin();
+
+    if (!admin) {
+      return NextResponse.json(
+        {
+          error:
+            "Admin access required.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const body =
+      await request.json();
+
+    const weekId =
+      Number(body?.weekId);
+
+    const status =
+      String(
+        body?.status ?? "",
+      );
+
+    if (
+      !Number.isInteger(
+        weekId,
+      ) ||
+      weekId <= 0 ||
+      !VALID_STATUSES.has(
+        status,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid weekId and status are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data,
+      error,
+    } = await supabaseAdmin
+      .from(
+        "ncaa_pickem_weeks",
+      )
+      .update({
+        status,
+
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq(
+        "id",
+        weekId,
+      )
+      .select(
+        "id, season, week_number, label, lock_at, status",
+      )
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          error:
+            error?.message ??
+            "Failed to update week.",
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      week: data,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to control NCAA Pick 'Em week",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Unable to update NCAA Pick 'Em week.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+################################################################################
+FILE: app/api/ncaa-pickem/week/route.ts
+################################################################################
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+type PickEmWeekRow = {
+  id: number;
+  season: number;
+  week_number: number;
+  label: string;
+  lock_at: string | null;
+  status: "open" | "locked" | "final";
+};
+
+function numericParam(
+  value: string | null,
+): number | null {
+  if (!value) return null;
+
+  const number =
+    Number(value);
+
+  return Number.isInteger(number) &&
+    number > 0
+    ? number
+    : null;
+}
+
+function isWeekLocked(
+  week: PickEmWeekRow,
+) {
+  if (week.status !== "open") {
+    return true;
+  }
+
+  if (!week.lock_at) {
+    return false;
+  }
+
+  const lockTime =
+    new Date(
+      week.lock_at,
+    ).getTime();
+
+  return (
+    Number.isFinite(lockTime) &&
+    Date.now() >= lockTime
+  );
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } =
+      new URL(request.url);
+
+    const requestedSeason =
+      numericParam(
+        searchParams.get(
+          "season",
+        ),
+      );
+
+    const requestedWeek =
+      numericParam(
+        searchParams.get(
+          "week",
+        ),
+      );
+
+    const {
+      data: weeksData,
+      error: weeksError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .select(
+        "id, season, week_number, label, lock_at, status",
+      )
+      .order(
+        "season",
+        {
+          ascending: false,
+        },
+      )
+      .order(
+        "week_number",
+        {
+          ascending: false,
+        },
+      );
+
+    if (weeksError) {
+      return NextResponse.json(
+        {
+          error:
+            weeksError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const weeks =
+      (weeksData ??
+        []) as PickEmWeekRow[];
+
+    let selectedWeek:
+      | PickEmWeekRow
+      | null =
+      null;
+
+    if (
+      requestedSeason !== null &&
+      requestedWeek !== null
+    ) {
+      selectedWeek =
+        weeks.find(
+          (week) =>
+            Number(
+              week.season,
+            ) ===
+              requestedSeason &&
+            Number(
+              week.week_number,
+            ) ===
+              requestedWeek,
+        ) ?? null;
+    }
+
+    if (!selectedWeek) {
+      selectedWeek =
+        weeks[0] ?? null;
+    }
+
+    if (!selectedWeek) {
+      return NextResponse.json({
+        success: true,
+
+        viewer: {
+          teamId:
+            user.teamId,
+
+          displayName:
+            user.displayName,
+
+          avatarUrl:
+            user.avatarUrl,
+        },
+
+        weeks,
+        week: null,
+        games: [],
+        picks: [],
+        groupPicks: [],
+        locked: false,
+      });
+    }
+
+    const locked =
+      isWeekLocked(
+        selectedWeek,
+      );
+
+    const [
+      gamesResult,
+      viewerPicksResult,
+      teamsResult,
+    ] =
+      await Promise.all([
+        supabaseAdmin
+          .from(
+            "ncaa_pickem_games",
+          )
+          .select("*")
+          .eq(
+            "week_id",
+            selectedWeek.id,
+          )
+          .eq(
+            "included",
+            true,
+          )
+          .order(
+            "kickoff_at",
+            {
+              ascending: true,
+            },
+          ),
+
+        supabaseAdmin
+          .from(
+            "ncaa_pickem_picks",
+          )
+          .select(
+            "id, week_id, game_id, team_id, picked_team_id, is_correct",
+          )
+          .eq(
+            "week_id",
+            selectedWeek.id,
+          )
+          .eq(
+            "team_id",
+            user.teamId,
+          ),
+
+        supabaseAdmin
+          .from("teams")
+          .select(
+            "id, name",
+          )
+          .order(
+            "id",
+            {
+              ascending: true,
+            },
+          ),
+      ]);
+
+    if (gamesResult.error) {
+      return NextResponse.json(
+        {
+          error:
+            gamesResult.error.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    if (
+      viewerPicksResult.error
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            viewerPicksResult.error.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    if (teamsResult.error) {
+      return NextResponse.json(
+        {
+          error:
+            teamsResult.error.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const {
+      data: appUsers,
+      error: usersError,
+    } = await supabaseAdmin
+      .from("app_users")
+      .select(
+        "team_id, display_name, avatar_url",
+      )
+      .eq(
+        "is_active",
+        true,
+      );
+
+    if (usersError) {
+      return NextResponse.json(
+        {
+          error:
+            usersError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const userByTeamId =
+      new Map<
+        number,
+        {
+          displayName:
+            string;
+          avatarUrl:
+            string | null;
+        }
+      >();
+
+    for (
+      const appUser
+      of appUsers ?? []
+    ) {
+      userByTeamId.set(
+        Number(
+          appUser.team_id,
+        ),
+        {
+          displayName:
+            String(
+              appUser.display_name ??
+                "",
+            ),
+
+          avatarUrl:
+            appUser.avatar_url ??
+            null,
+        },
+      );
+    }
+
+    const participants =
+      (teamsResult.data ??
+        []).map(
+        (team) => {
+          const teamId =
+            Number(team.id);
+
+          const appUser =
+            userByTeamId.get(
+              teamId,
+            );
+
+          return {
+            teamId,
+
+            name:
+              appUser?.displayName ||
+              String(
+                team.name,
+              ),
+
+            avatarUrl:
+              appUser?.avatarUrl ??
+              null,
+          };
+        },
+      );
+
+    let groupPicks:
+      Array<{
+        game_id: number;
+        team_id: number;
+        picked_team_id:
+          string;
+        is_correct:
+          boolean | null;
+      }> = [];
+
+    /*
+     * CRITICAL:
+     * Other players' picked_team_id values are not queried
+     * at all until the weekly card is locked.
+     *
+     * This is server-side secrecy, not UI hiding.
+     */
+    if (locked) {
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from(
+          "ncaa_pickem_picks",
+        )
+        .select(
+          "game_id, team_id, picked_team_id, is_correct",
+        )
+        .eq(
+          "week_id",
+          selectedWeek.id,
+        );
+
+      if (error) {
+        return NextResponse.json(
+          {
+            error:
+              error.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      groupPicks =
+        (data ?? []).map(
+          (row) => ({
+            game_id:
+              Number(
+                row.game_id,
+              ),
+
+            team_id:
+              Number(
+                row.team_id,
+              ),
+
+            picked_team_id:
+              String(
+                row.picked_team_id,
+              ),
+
+            is_correct:
+              row.is_correct ??
+              null,
+          }),
+        );
+    }
+
+    return NextResponse.json({
+      success: true,
+
+      viewer: {
+        teamId:
+          user.teamId,
+
+        displayName:
+          user.displayName,
+
+        avatarUrl:
+          user.avatarUrl,
+      },
+
+      participants,
+      weeks,
+
+      week:
+        selectedWeek,
+
+      games:
+        gamesResult.data ??
+        [],
+
+      picks:
+        viewerPicksResult.data ??
+        [],
+
+      groupPicks,
+
+      locked,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to load NCAA Pick 'Em week",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load NCAA Pick 'Em.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+################################################################################
+FILE: app/api/ncaa-pickem/picks/route.ts
+################################################################################
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+type SubmittedPick = {
+  gameId: number;
+  pickedTeamId: string;
+};
+
+function submittedPicks(
+  value: unknown,
+): SubmittedPick[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry: any) => ({
+      gameId:
+        Number(entry?.gameId),
+
+      pickedTeamId:
+        String(
+          entry?.pickedTeamId ??
+            "",
+        ).trim(),
+    }))
+    .filter(
+      (entry) =>
+        Number.isInteger(
+          entry.gameId,
+        ) &&
+        entry.gameId > 0 &&
+        entry.pickedTeamId.length >
+          0,
+    );
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  try {
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const body =
+      await request.json();
+
+    const weekId =
+      Number(body?.weekId);
+
+    const picks =
+      submittedPicks(
+        body?.picks,
+      );
+
+    if (
+      !Number.isInteger(weekId) ||
+      weekId <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid weekId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: week,
+      error: weekError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .select(
+        "id, lock_at, status",
+      )
+      .eq("id", weekId)
+      .maybeSingle();
+
+    if (weekError || !week) {
+      return NextResponse.json(
+        {
+          error:
+            weekError?.message ??
+            "Pick 'Em week not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const lockTime =
+      week.lock_at
+        ? new Date(
+            week.lock_at,
+          ).getTime()
+        : null;
+
+    const locked =
+      week.status !== "open" ||
+      (
+        lockTime !== null &&
+        Number.isFinite(lockTime) &&
+        Date.now() >= lockTime
+      );
+
+    if (locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This week's picks are locked.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const {
+      data: games,
+      error: gamesError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_games")
+      .select(
+        "id, away_team_id, home_team_id",
+      )
+      .eq("week_id", weekId)
+      .eq("included", true);
+
+    if (gamesError) {
+      return NextResponse.json(
+        {
+          error:
+            gamesError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const gameById =
+      new Map(
+        (games ?? []).map(
+          (game) => [
+            Number(game.id),
+            game,
+          ],
+        ),
+      );
+
+    if (
+      picks.length !==
+      gameById.size
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Please make a pick for every game before saving.",
+        },
+        { status: 400 },
+      );
+    }
+
+    for (const pick of picks) {
+      const game =
+        gameById.get(
+          pick.gameId,
+        );
+
+      if (!game) {
+        return NextResponse.json(
+          {
+            error:
+              "One of the submitted games is not part of this week's card.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const validTeamIds =
+        new Set([
+          String(
+            game.away_team_id,
+          ),
+          String(
+            game.home_team_id,
+          ),
+        ]);
+
+      if (
+        !validTeamIds.has(
+          pick.pickedTeamId,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "One of the submitted picks does not belong to that matchup.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const rows =
+      picks.map(
+        (pick) => ({
+          week_id: weekId,
+
+          game_id:
+            pick.gameId,
+
+          team_id:
+            user.teamId,
+
+          picked_team_id:
+            pick.pickedTeamId,
+
+          updated_at:
+            new Date().toISOString(),
+        }),
+      );
+
+    const {
+      error: saveError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_picks")
+      .upsert(
+        rows,
+        {
+          onConflict:
+            "game_id,team_id",
+        },
+      );
+
+    if (saveError) {
+      return NextResponse.json(
+        {
+          error:
+            saveError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      saved:
+        rows.length,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to save NCAA Pick 'Em picks",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Unable to save NCAA Pick 'Em picks.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+
+################################################################################
+FILE: app/ncaa-pickem/page.tsx
+################################################################################
+"use client";
+
+import AppNav from "@/components/AppNav";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  useSelectedSport,
+} from "@/components/providers/SportProvider";
+
+type PickEmWeek = {
+  id: number;
+  season: number;
+  week_number: number;
+  label: string;
+  lock_at: string | null;
+  status:
+    | "open"
+    | "locked"
+    | "final";
+};
+
+type PickEmGame = {
+  id: number;
+  espn_event_id: string;
+  kickoff_at: string;
+
+  away_team_id: string;
+  away_team_name: string;
+  away_team_abbreviation:
+    string | null;
+  away_team_logo_url:
+    string | null;
+  away_rank: number | null;
+  away_record: string | null;
+  away_score: number | null;
+  away_stats:
+    Record<string, unknown>;
+
+  home_team_id: string;
+  home_team_name: string;
+  home_team_abbreviation:
+    string | null;
+  home_team_logo_url:
+    string | null;
+  home_rank: number | null;
+  home_record: string | null;
+  home_score: number | null;
+  home_stats:
+    Record<string, unknown>;
+
+  status: string;
+  status_detail: string | null;
+  winner_team_id:
+    string | null;
+};
+
+type Participant = {
+  teamId: number;
+  name: string;
+  avatarUrl: string | null;
+};
+
+type GroupPick = {
+  game_id: number;
+  team_id: number;
+  picked_team_id: string;
+  is_correct:
+    boolean | null;
+};
+
+type WeekResponse = {
+  success: boolean;
+
+  viewer?: {
+    teamId: number;
+    displayName: string;
+    avatarUrl: string | null;
+  };
+
+  participants:
+    Participant[];
+
+  weeks: PickEmWeek[];
+  week: PickEmWeek | null;
+  games: PickEmGame[];
+
+  picks: Array<{
+    game_id: number;
+    picked_team_id: string;
+    is_correct?: boolean | null;
+  }>;
+
+  groupPicks:
+    GroupPick[];
+
+  locked: boolean;
+
+  error?: string;
+};
+
+function formatKickoff(
+  value: string,
+) {
+  return new Date(
+    value,
+  ).toLocaleString(
+    "en-US",
+    {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone:
+        "America/New_York",
+    },
+  );
+}
+
+function teamLabel(
+  rank: number | null,
+  name: string,
+) {
+  return rank
+    ? `#${rank} ${name}`
+    : name;
+}
+
+function gameStatus(
+  game: PickEmGame,
+) {
+  if (
+    game.status_detail
+  ) {
+    return game.status_detail;
+  }
+
+  if (
+    game.status === "post"
+  ) {
+    return "Final";
+  }
+
+  if (
+    game.status === "in"
+  ) {
+    return "Live";
+  }
+
+  return formatKickoff(
+    game.kickoff_at,
+  );
+}
+
+function avatarFallback(
+  name: string,
+) {
+  return (
+    name.trim()[0]?.toUpperCase() ??
+    "?"
+  );
+}
+
+export default function NcaaPickEmHome() {
+  const {
+    selectedSport,
+    setSelectedSport,
+  } = useSelectedSport();
+
+  const [data, setData] =
+    useState<WeekResponse | null>(
+      null,
+    );
+
+  const [
+    selections,
+    setSelections,
+  ] =
+    useState<
+      Record<number, string>
+    >({});
+
+  const [
+    expandedGameId,
+    setExpandedGameId,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    selectedSeason,
+    setSelectedSeason,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    selectedWeek,
+    setSelectedWeek,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
+    useState(true);
+
+  const [
+    isSaving,
+    setIsSaving,
+  ] =
+    useState(false);
+
+  const [
+    message,
+    setMessage,
+  ] =
+    useState("");
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  useEffect(() => {
+    if (
+      selectedSport !==
+      "ncaa"
+    ) {
+      setSelectedSport(
+        "ncaa",
+      );
+    }
+  }, [
+    selectedSport,
+    setSelectedSport,
+  ]);
+
+  async function loadWeek() {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const params =
+        new URLSearchParams();
+
+      if (
+        selectedSeason !==
+        null
+      ) {
+        params.set(
+          "season",
+          String(
+            selectedSeason,
+          ),
+        );
+      }
+
+      if (
+        selectedWeek !== null
+      ) {
+        params.set(
+          "week",
+          String(
+            selectedWeek,
+          ),
+        );
+      }
+
+      const suffix =
+        params.toString()
+          ? `?${params.toString()}`
+          : "";
+
+      const response =
+        await fetch(
+          `/api/ncaa-pickem/week${suffix}`,
+          {
+            cache:
+              "no-store",
+          },
+        );
+
+      const result =
+        (await response.json()) as WeekResponse;
+
+      if (!response.ok) {
+        setError(
+          result.error ||
+            "Failed to load NCAA Pick 'Em.",
+        );
+
+        setData(null);
+        return;
+      }
+
+      setData(result);
+
+      const saved:
+        Record<number, string> =
+        {};
+
+      for (
+        const pick
+        of result.picks ?? []
+      ) {
+        saved[
+          Number(
+            pick.game_id,
+          )
+        ] =
+          String(
+            pick.picked_team_id,
+          );
+      }
+
+      setSelections(
+        saved,
+      );
+
+      if (
+        selectedSeason ===
+          null &&
+        result.week
+      ) {
+        setSelectedSeason(
+          result.week.season,
+        );
+      }
+
+      if (
+        selectedWeek ===
+          null &&
+        result.week
+      ) {
+        setSelectedWeek(
+          result.week.week_number,
+        );
+      }
+    } catch (loadError) {
+      console.error(
+        loadError,
+      );
+
+      setError(
+        "Unable to load NCAA Pick 'Em.",
+      );
+
+      setData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadWeek();
+  }, [
+    selectedSeason,
+    selectedWeek,
+  ]);
+
+  const seasons =
+    useMemo(
+      () =>
+        Array.from(
+          new Set(
+            (data?.weeks ??
+              []).map(
+              (week) =>
+                week.season,
+            ),
+          ),
+        ).sort(
+          (a, b) =>
+            b - a,
+        ),
+      [data?.weeks],
+    );
+
+  const weeksForSeason =
+    useMemo(
+      () =>
+        (data?.weeks ?? [])
+          .filter(
+            (week) =>
+              selectedSeason ===
+                null ||
+              week.season ===
+                selectedSeason,
+          )
+          .sort(
+            (a, b) =>
+              a.week_number -
+              b.week_number,
+          ),
+      [
+        data?.weeks,
+        selectedSeason,
+      ],
+    );
+
+  const participantById =
+    useMemo(
+      () =>
+        new Map(
+          (
+            data?.participants ??
+            []
+          ).map(
+            (participant) => [
+              participant.teamId,
+              participant,
+            ],
+          ),
+        ),
+      [data?.participants],
+    );
+
+  const allGamesPicked =
+    Boolean(
+      data?.games.length,
+    ) &&
+    data!.games.every(
+      (game) =>
+        Boolean(
+          selections[
+            game.id
+          ],
+        ),
+    );
+
+  function picksForTeam(
+    game: PickEmGame,
+    pickedTeamId: string,
+  ) {
+    if (!data?.locked) {
+      return [];
+    }
+
+    return (
+      data.groupPicks ??
+      []
+    )
+      .filter(
+        (pick) =>
+          pick.game_id ===
+            game.id &&
+          pick.picked_team_id ===
+            pickedTeamId,
+      )
+      .map(
+        (pick) =>
+          participantById.get(
+            pick.team_id,
+          ),
+      )
+      .filter(
+        (
+          participant,
+        ): participant is Participant =>
+          Boolean(
+            participant,
+          ),
+      );
+  }
+
+  async function savePicks() {
+    if (
+      !data?.week ||
+      data.locked ||
+      !allGamesPicked
+    ) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setMessage("");
+      setError("");
+
+      const response =
+        await fetch(
+          "/api/ncaa-pickem/picks",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                weekId:
+                  data.week.id,
+
+                picks:
+                  data.games.map(
+                    (game) => ({
+                      gameId:
+                        game.id,
+
+                      pickedTeamId:
+                        selections[
+                          game.id
+                        ],
+                    }),
+                  ),
+              }),
+          },
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        setError(
+          result.error ||
+            "Unable to save picks.",
+        );
+
+        return;
+      }
+
+      setMessage(
+        "✓ Picks saved.",
+      );
+
+      await loadWeek();
+    } catch (saveError) {
+      console.error(
+        saveError,
+      );
+
+      setError(
+        "Unable to save picks.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
+
+        <section className="overflow-hidden rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 shadow-xl">
+          <div className="border-b border-slate-700/80 px-5 py-6 sm:px-7">
+            <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+              111 Sports
+            </div>
+
+            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+                  NCAA Pick &apos;Em
+                </h1>
+
+                <p className="mt-2 max-w-2xl text-sm text-slate-300 sm:text-base">
+                  Pick the winner of every Top-25-vs-Top-25 matchup. The entire weekly card locks when the first eligible game kicks off.
+                </p>
+              </div>
+
+              {data?.week ? (
+                <div className="rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Card status
+                  </div>
+
+                  <div className="mt-1 font-bold">
+                    {data.locked
+                      ? "🔒 Locked"
+                      : "🟢 Open"}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-3 px-5 py-4 sm:grid-cols-2 sm:px-7">
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Season
+              </span>
+
+              <select
+                value={
+                  selectedSeason ??
+                  ""
+                }
+                onChange={(
+                  event,
+                ) => {
+                  const value =
+                    Number(
+                      event.target
+                        .value,
+                    );
+
+                  setSelectedSeason(
+                    Number.isFinite(
+                      value,
+                    )
+                      ? value
+                      : null,
+                  );
+
+                  setSelectedWeek(
+                    null,
+                  );
+
+                  setMessage("");
+                }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100"
+              >
+                {seasons.length ===
+                0 ? (
+                  <option value="">
+                    No seasons yet
+                  </option>
+                ) : null}
+
+                {seasons.map(
+                  (season) => (
+                    <option
+                      key={season}
+                      value={season}
+                    >
+                      {season}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Week
+              </span>
+
+              <select
+                value={
+                  selectedWeek ??
+                  ""
+                }
+                onChange={(
+                  event,
+                ) => {
+                  const value =
+                    Number(
+                      event.target
+                        .value,
+                    );
+
+                  setSelectedWeek(
+                    Number.isFinite(
+                      value,
+                    )
+                      ? value
+                      : null,
+                  );
+
+                  setMessage("");
+                }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100"
+              >
+                {weeksForSeason.length ===
+                0 ? (
+                  <option value="">
+                    No weeks yet
+                  </option>
+                ) : null}
+
+                {weeksForSeason.map(
+                  (week) => (
+                    <option
+                      key={
+                        week.id
+                      }
+                      value={
+                        week.week_number
+                      }
+                    >
+                      {week.label}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+          </div>
+        </section>
+
+        {error ? (
+          <div className="rounded-2xl border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+            {error}
+          </div>
+        ) : null}
+
+        {message ? (
+          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/30 px-4 py-3 text-sm font-semibold text-emerald-300">
+            {message}
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
+            Loading NCAA Pick &apos;Em…
+          </section>
+        ) : null}
+
+        {!isLoading &&
+        !error &&
+        !data?.week ? (
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center">
+            <div className="text-4xl">
+              🏈
+            </div>
+
+            <h2 className="mt-3 text-xl font-bold">
+              NCAA Pick &apos;Em is ready
+            </h2>
+
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
+              No weekly games have been imported yet.
+            </p>
+          </section>
+        ) : null}
+
+        {!isLoading &&
+        data?.week ? (
+          <>
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">
+                    {data.week.season}
+                  </div>
+
+                  <h2 className="mt-1 text-2xl font-black">
+                    {data.week.label}
+                  </h2>
+                </div>
+
+                {data.week.lock_at ? (
+                  <div className="text-sm text-slate-400">
+                    {data.locked
+                      ? "Locked "
+                      : "Locks "}
+
+                    {formatKickoff(
+                      data.week
+                        .lock_at,
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {data.games.length ===
+              0 ? (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
+                  No eligible Top 25 matchups are loaded for this week.
+                </div>
+              ) : null}
+
+              {data.games.map(
+                (game) => {
+                  const awayPicked =
+                    selections[
+                      game.id
+                    ] ===
+                    String(
+                      game.away_team_id,
+                    );
+
+                  const homePicked =
+                    selections[
+                      game.id
+                    ] ===
+                    String(
+                      game.home_team_id,
+                    );
+
+                  const awayPeople =
+                    picksForTeam(
+                      game,
+                      String(
+                        game.away_team_id,
+                      ),
+                    );
+
+                  const homePeople =
+                    picksForTeam(
+                      game,
+                      String(
+                        game.home_team_id,
+                      ),
+                    );
+
+                  const expanded =
+                    expandedGameId ===
+                    game.id;
+
+                  return (
+                    <article
+                      key={
+                        game.id
+                      }
+                      className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          {gameStatus(
+                            game,
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedGameId(
+                              expanded
+                                ? null
+                                : game.id,
+                            )
+                          }
+                          className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                        >
+                          {expanded
+                            ? "▴"
+                            : "▾"}
+                        </button>
+                      </div>
+
+                      <div className="grid gap-2 p-4 sm:grid-cols-2">
+                        {[
+                          {
+                            side:
+                              "away",
+
+                            id:
+                              String(
+                                game.away_team_id,
+                              ),
+
+                            name:
+                              game.away_team_name,
+
+                            logo:
+                              game.away_team_logo_url,
+
+                            rank:
+                              game.away_rank,
+
+                            record:
+                              game.away_record,
+
+                            score:
+                              game.away_score,
+
+                            selected:
+                              awayPicked,
+
+                            people:
+                              awayPeople,
+                          },
+
+                          {
+                            side:
+                              "home",
+
+                            id:
+                              String(
+                                game.home_team_id,
+                              ),
+
+                            name:
+                              game.home_team_name,
+
+                            logo:
+                              game.home_team_logo_url,
+
+                            rank:
+                              game.home_rank,
+
+                            record:
+                              game.home_record,
+
+                            score:
+                              game.home_score,
+
+                            selected:
+                              homePicked,
+
+                            people:
+                              homePeople,
+                          },
+                        ].map(
+                          (
+                            team,
+                          ) => (
+                            <label
+                              key={
+                                team.id
+                              }
+                              className={`relative flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition ${
+                                team.selected
+                                  ? "border-blue-400 bg-blue-950/50 ring-1 ring-blue-400/30"
+                                  : "border-slate-700 bg-slate-950/70 hover:border-slate-600"
+                              } ${
+                                data.locked
+                                  ? "cursor-default"
+                                  : ""
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`game-${game.id}`}
+                                value={
+                                  team.id
+                                }
+                                checked={
+                                  team.selected
+                                }
+                                disabled={
+                                  data.locked
+                                }
+                                onChange={() => {
+                                  if (
+                                    data.locked
+                                  ) {
+                                    return;
+                                  }
+
+                                  setSelections(
+                                    (
+                                      current,
+                                    ) => ({
+                                      ...current,
+                                      [
+                                        game.id
+                                      ]:
+                                        team.id,
+                                    }),
+                                  );
+
+                                  setMessage(
+                                    "",
+                                  );
+                                }}
+                                className="h-4 w-4 shrink-0 accent-sky-400"
+                              />
+
+                              {team.logo ? (
+                                <img
+                                  src={
+                                    team.logo
+                                  }
+                                  alt=""
+                                  className="h-10 w-10 shrink-0 object-contain"
+                                />
+                              ) : (
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-black text-slate-400">
+                                  {team.name[0]}
+                                </div>
+                              )}
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="truncate font-bold">
+                                    {teamLabel(
+                                      team.rank,
+                                      team.name,
+                                    )}
+                                  </div>
+
+                                  {team.score !==
+                                  null ? (
+                                    <div className="ml-auto text-xl font-black">
+                                      {
+                                        team.score
+                                      }
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <div className="mt-1 text-xs text-slate-500">
+                                  {team.side ===
+                                  "away"
+                                    ? "Away"
+                                    : "Home"}
+
+                                  {team.record
+                                    ? ` · ${team.record}`
+                                    : ""}
+                                </div>
+
+                                {data.locked ? (
+                                  <div className="mt-3 flex flex-wrap gap-1.5">
+                                    {team.people.length >
+                                    0 ? (
+                                      team.people.map(
+                                        (
+                                          participant,
+                                        ) => (
+                                          <span
+                                            key={
+                                              participant.teamId
+                                            }
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] font-semibold text-slate-300"
+                                          >
+                                            {participant.avatarUrl ? (
+                                              <img
+                                                src={
+                                                  participant.avatarUrl
+                                                }
+                                                alt=""
+                                                className="h-5 w-5 rounded-full object-cover"
+                                              />
+                                            ) : (
+                                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[10px]">
+                                                {avatarFallback(
+                                                  participant.name,
+                                                )}
+                                              </span>
+                                            )}
+
+                                            {
+                                              participant.name
+                                            }
+                                          </span>
+                                        ),
+                                      )
+                                    ) : (
+                                      <span className="text-[11px] text-slate-600">
+                                        No picks
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </label>
+                          ),
+                        )}
+                      </div>
+
+                      {expanded ? (
+                        <div className="border-t border-slate-800 bg-slate-950/50 px-4 py-4">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                {teamLabel(
+                                  game.away_rank,
+                                  game.away_team_name,
+                                )}
+                              </div>
+
+                              <div className="mt-2 text-sm text-slate-300">
+                                Record:{" "}
+                                <strong>
+                                  {game.away_record ??
+                                    "—"}
+                                </strong>
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                {teamLabel(
+                                  game.home_rank,
+                                  game.home_team_name,
+                                )}
+                              </div>
+
+                              <div className="mt-2 text-sm text-slate-300">
+                                Record:{" "}
+                                <strong>
+                                  {game.home_record ??
+                                    "—"}
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 text-xs text-slate-500">
+                            Passing, rushing, scoring and defensive averages will populate here once the team-stat feed is connected.
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                },
+              )}
+            </section>
+
+            {data.games.length >
+            0 ? (
+              <div className="sticky bottom-16 z-20 rounded-2xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl backdrop-blur sm:static">
+                {data.locked ? (
+                  <div className="text-center text-sm font-semibold text-slate-400">
+                    🔒 Picks are locked. Everyone&apos;s selections are now visible.
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={
+                      !allGamesPicked ||
+                      isSaving
+                    }
+                    onClick={() =>
+                      void savePicks()
+                    }
+                    className="w-full rounded-xl bg-blue-600 px-5 py-3 font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {isSaving
+                      ? "Saving…"
+                      : allGamesPicked
+                        ? "Save Picks"
+                        : `Pick all ${data.games.length} game${data.games.length === 1 ? "" : "s"} to save`}
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+    </main>
+  );
+}
+
+
+################################################################################
+FILE: app/admin/ncaa-pickem/page.tsx
+################################################################################
+"use client";
+
+import AppNav from "@/components/AppNav";
+
+import {
+  useState,
+} from "react";
+
+type ImportResult = {
+  success?: boolean;
+  error?: string;
+  weekId?: number;
+  season?: number;
+  week?: number;
+  lockAt?: string | null;
+  importedGames?: number;
+  normalEligibleGames?: number;
+  forcedGames?: number;
+  missingForcedIds?: string[];
+  diagnostics?: {
+    totalEvents?: number;
+    mappedEvents?: number;
+    rankedVsRankedEvents?: number;
+  };
+  games?: Array<{
+    espnEventId: string;
+    forced: boolean;
+    kickoffAt: string;
+    away: {
+      name: string;
+      rank: number | null;
+      record: string | null;
+    };
+    home: {
+      name: string;
+      rank: number | null;
+      record: string | null;
+    };
+  }>;
+};
+
+export default function NcaaPickEmAdminPage() {
+  const [
+    season,
+    setSeason,
+  ] =
+    useState("2026");
+
+  const [
+    week,
+    setWeek,
+  ] =
+    useState("1");
+
+  const [
+    forceIds,
+    setForceIds,
+  ] =
+    useState("");
+
+  const [
+    result,
+    setResult,
+  ] =
+    useState<ImportResult | null>(
+      null,
+    );
+
+  const [
+    message,
+    setMessage,
+  ] =
+    useState("");
+
+  const [
+    isWorking,
+    setIsWorking,
+  ] =
+    useState(false);
+
+  async function importWeek(
+    forced:
+      string[] = [],
+  ) {
+    try {
+      setIsWorking(true);
+      setMessage("");
+
+      const manualIds =
+        forceIds
+          .split(/[\s,]+/)
+          .map(
+            (value) =>
+              value.trim(),
+          )
+          .filter(Boolean);
+
+      const response =
+        await fetch(
+          "/api/admin/ncaa-pickem/import-week",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                season:
+                  Number(season),
+
+                week:
+                  Number(week),
+
+                forceEventIds:
+                  Array.from(
+                    new Set([
+                      ...manualIds,
+                      ...forced,
+                    ]),
+                  ),
+              }),
+          },
+        );
+
+      const data =
+        (await response.json()) as ImportResult;
+
+      setResult(data);
+
+      if (!response.ok) {
+        setMessage(
+          data.error ||
+            "Import failed.",
+        );
+
+        return;
+      }
+
+      setMessage(
+        `✓ Week ${week} refreshed. ${data.importedGames ?? 0} active game(s).`,
+      );
+    } catch (error) {
+      console.error(
+        error,
+      );
+
+      setMessage(
+        "Import failed.",
+      );
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  async function setStatus(
+    status:
+      | "open"
+      | "locked"
+      | "final",
+  ) {
+    if (
+      !result?.weekId
+    ) {
+      setMessage(
+        "Refresh/import the week first.",
+      );
+
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+
+      const response =
+        await fetch(
+          "/api/admin/ncaa-pickem/week-control",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                weekId:
+                  result.weekId,
+                status,
+              }),
+          },
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          data.error ||
+            "Unable to update status.",
+        );
+
+        return;
+      }
+
+      setMessage(
+        `✓ Week is now ${status}.`,
+      );
+    } catch (error) {
+      console.error(
+        error,
+      );
+
+      setMessage(
+        "Unable to update status.",
+      );
+    } finally {
+      setIsWorking(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-6">
+          <div className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">
+            Commissioner
+          </div>
+
+          <h1 className="mt-2 text-3xl font-black">
+            NCAA Pick &apos;Em
+          </h1>
+
+          <p className="mt-2 text-sm text-slate-400">
+            Refresh weekly ESPN games, temporarily force a game into the card for testing, and control the weekly lock.
+          </p>
+        </section>
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Season
+              </div>
+
+              <input
+                value={season}
+                onChange={(
+                  event,
+                ) =>
+                  setSeason(
+                    event.target
+                      .value,
+                  )
+                }
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2"
+              />
+            </label>
+
+            <label className="space-y-1">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Week
+              </div>
+
+              <input
+                value={week}
+                onChange={(
+                  event,
+                ) =>
+                  setWeek(
+                    event.target
+                      .value,
+                  )
+                }
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2"
+              />
+            </label>
+          </div>
+
+          <label className="mt-4 block space-y-1">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              Force ESPN event IDs
+            </div>
+
+            <input
+              value={forceIds}
+              onChange={(
+                event,
+              ) =>
+                setForceIds(
+                  event.target
+                    .value,
+                )
+              }
+              placeholder="401856660"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2"
+            />
+
+            <div className="text-xs text-slate-500">
+              Testing only. Normally the importer includes only Top-25-vs-Top-25 games.
+            </div>
+          </label>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={
+                isWorking
+              }
+              onClick={() =>
+                void importWeek()
+              }
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
+            >
+              Refresh Week
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                isWorking
+              }
+              onClick={() =>
+                void importWeek([
+                  "401856660",
+                ])
+              }
+              className="rounded-xl border border-amber-500/40 bg-amber-950/30 px-4 py-2 text-sm font-bold text-amber-200 disabled:opacity-40"
+            >
+              Test Week 1 with Clemson–LSU
+            </button>
+          </div>
+
+          {message ? (
+            <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
+              {message}
+            </div>
+          ) : null}
+        </section>
+
+        {result?.success ? (
+          <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5">
+            <h2 className="text-lg font-bold">
+              Week Control
+            </h2>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-4">
+              <div className="rounded-xl bg-slate-950 p-3">
+                <div className="text-xs text-slate-500">
+                  ESPN events
+                </div>
+
+                <div className="mt-1 text-xl font-black">
+                  {result.diagnostics?.totalEvents ??
+                    "—"}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-950 p-3">
+                <div className="text-xs text-slate-500">
+                  Ranked games
+                </div>
+
+                <div className="mt-1 text-xl font-black">
+                  {result.normalEligibleGames ??
+                    0}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-950 p-3">
+                <div className="text-xs text-slate-500">
+                  Forced games
+                </div>
+
+                <div className="mt-1 text-xl font-black">
+                  {result.forcedGames ??
+                    0}
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-slate-950 p-3">
+                <div className="text-xs text-slate-500">
+                  Active card
+                </div>
+
+                <div className="mt-1 text-xl font-black">
+                  {result.importedGames ??
+                    0}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={
+                  isWorking
+                }
+                onClick={() =>
+                  void setStatus(
+                    "open",
+                  )
+                }
+                className="rounded-xl border border-emerald-500/40 bg-emerald-950/30 px-4 py-2 text-sm font-bold text-emerald-300"
+              >
+                Reopen Picks
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  isWorking
+                }
+                onClick={() =>
+                  void setStatus(
+                    "locked",
+                  )
+                }
+                className="rounded-xl border border-amber-500/40 bg-amber-950/30 px-4 py-2 text-sm font-bold text-amber-300"
+              >
+                Lock Picks
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  isWorking
+                }
+                onClick={() =>
+                  void setStatus(
+                    "final",
+                  )
+                }
+                className="rounded-xl border border-blue-500/40 bg-blue-950/30 px-4 py-2 text-sm font-bold text-blue-300"
+              >
+                Mark Final
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              {(result.games ??
+                []).map(
+                (game) => (
+                  <div
+                    key={
+                      game.espnEventId
+                    }
+                    className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm"
+                  >
+                    <div className="font-bold">
+                      {game.away.rank
+                        ? `#${game.away.rank} `
+                        : ""}
+
+                      {
+                        game.away.name
+                      }
+
+                      {" at "}
+
+                      {game.home.rank
+                        ? `#${game.home.rank} `
+                        : ""}
+
+                      {
+                        game.home.name
+                      }
+                    </div>
+
+                    <div className="mt-1 text-xs text-slate-500">
+                      ESPN{" "}
+                      {
+                        game.espnEventId
+                      }
+
+                      {game.forced
+                        ? " · forced for testing"
+                        : ""}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        ) : null}
+      </div>
+    </main>
+  );
+}
+
+
+################################################################################
+FILE: app/admin/page.tsx
+################################################################################
+"use client";
+
+import Link from "next/link";
+import AppNav from "@/components/AppNav";
+
+const adminGroups = [
+  {
+    title: "Slates & Draft",
+    description: "Create, configure, and maintain fantasy slates.",
+    cards: [
+      {
+        href: "/slates/new",
+        title: "Create Slate",
+        description:
+          "Choose dates, participating teams, and the initial draft order.",
+      },
+      {
+        href: "/admin/slates",
+        title: "Manage Slates",
+        description:
+          "Edit slate settings, participation, order, lock status, and reseeding.",
+      },
+      {
+        href: "/admin/slate-games",
+        title: "Slate NBA Games",
+        description:
+          "Attach exact NBA game IDs for reliable multi-day refreshes.",
+      },
+      {
+        href: "/admin/corrections",
+        title: "Corrections",
+        description:
+          "Fix historical rosters, stats, totals, and finish positions.",
+      },
+    ],
+  },
+  {
+    title: "Notifications",
+    description:
+      "Control push notification wording and review delivery results.",
+    cards: [
+      {
+        href: "/admin/notification-templates",
+        title: "Notification Templates",
+        description:
+          "Edit draft-turn, final-pick, and player-finished messages.",
+      },
+      {
+        href: "/admin/notification-history",
+        title: "Notification Monitor",
+        description:
+          "Audit delivery results, failures, recipients, devices, and notification diagnostics.",
+      },
+    ],
+  },
+  {
+    title: "Players & League",
+    description: "Maintain player records and future league settings.",
+    cards: [
+      {
+        href: "/admin/players",
+        title: "Manage NBA Players",
+        description:
+          "Edit names, NBA IDs, teams, active status, and availability.",
+      },
+      {
+        href: "/admin/players-nfl",
+        title: "Manage NFL Players",
+        description:
+          "Edit positions, teams, and active status for NFL players.",
+      },
+      {
+        href: "/admin/ncaa-pickem",
+        title: "NCAA Pick 'Em",
+        description:
+          "Refresh weekly games, test matchups, and control the Pick 'Em weekly lock.",
+      },
+      {
+        href: "/admin/league-awards",
+        title: "League Awards",
+        description:
+          "Create and manage custom seasonal awards for each league member.",
+      },
+    ],
+  },
+];
+
+export default function AdminPage() {
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+      <div className="mx-auto max-w-[1600px] space-y-6">
+        <AppNav />
+
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Commissioner Control Center
+          </h1>
+
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            Manage slates, players, notifications, corrections, and league
+            operations.
+          </p>
+        </section>
+
+        {adminGroups.map((group) => (
+          <section
+            key={group.title}
+            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+          >
+            <h2 className="text-xl font-semibold">{group.title}</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {group.description}
+            </p>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              {group.cards.map((card) => (
+                <Link
+                  key={card.href}
+                  href={card.href}
+                  className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-sky-300 hover:bg-sky-50"
+                >
+                  <h3 className="font-semibold text-slate-950">
+                    {card.title}
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {card.description}
+                  </p>
+
+                  <div className="mt-4 text-sm font-semibold text-sky-700">
+                    Open →
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+    </main>
+  );
+}
+
+
+################################################################################
+FILE: supabase/migrations/20260817_ncaa_pickem_foundation.sql
+################################################################################
+begin;
+
+create table if not exists public.ncaa_pickem_weeks (
+  id bigint generated by default as identity primary key,
+  season integer not null,
+  week_number integer not null,
+  label text not null,
+  lock_at timestamptz,
+  status text not null default 'open'
+    check (status in ('open', 'locked', 'final')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint ncaa_pickem_weeks_season_week_key
+    unique (season, week_number)
+);
+
+create table if not exists public.ncaa_pickem_games (
+  id bigint generated by default as identity primary key,
+  week_id bigint not null
+    references public.ncaa_pickem_weeks(id)
+    on delete cascade,
+
+  espn_event_id text not null unique,
+  kickoff_at timestamptz not null,
+
+  away_team_id text not null,
+  away_team_name text not null,
+  away_team_abbreviation text,
+  away_team_logo_url text,
+  away_rank integer,
+  away_record text,
+  away_score integer,
+
+  home_team_id text not null,
+  home_team_name text not null,
+  home_team_abbreviation text,
+  home_team_logo_url text,
+  home_rank integer,
+  home_record text,
+  home_score integer,
+
+  status text not null default 'scheduled',
+  status_detail text,
+  winner_team_id text,
+
+  away_stats jsonb not null default '{}'::jsonb,
+  home_stats jsonb not null default '{}'::jsonb,
+
+  included boolean not null default true,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists
+  ncaa_pickem_games_week_id_idx
+on public.ncaa_pickem_games (week_id);
+
+create index if not exists
+  ncaa_pickem_games_kickoff_at_idx
+on public.ncaa_pickem_games (kickoff_at);
+
+create table if not exists public.ncaa_pickem_picks (
+  id bigint generated by default as identity primary key,
+
+  week_id bigint not null
+    references public.ncaa_pickem_weeks(id)
+    on delete cascade,
+
+  game_id bigint not null
+    references public.ncaa_pickem_games(id)
+    on delete cascade,
+
+  team_id bigint not null
+    references public.teams(id)
+    on delete cascade,
+
+  picked_team_id text not null,
+
+  is_correct boolean,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint ncaa_pickem_picks_game_team_key
+    unique (game_id, team_id)
+);
+
+create index if not exists
+  ncaa_pickem_picks_week_team_idx
+on public.ncaa_pickem_picks (week_id, team_id);
+
+commit;
+
+
+================================================================================
+ESPN 2026 RANKINGS PROBES
+================================================================================
+
+
+################################################################################
+SITE RANKINGS — DEFAULT
+https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings
+################################################################################
+HTTP STATUS: 200
+Ranking groups: 1
+
+----------------------------------------------------------------------
+POLL #1
+----------------------------------------------------------------------
+name: 'AFCA Coaches Poll'
+shortName: 'AFCA Coaches Poll'
+headline: '2026 NCAA Football Rankings - AFCA Coaches Poll Preseason'
+type: 'usa'
+date: '2026-08-04T07:00Z'
+lastUpdated: '2026-08-04T19:21Z'
+ranks: 25
+1 | previous=0 | team_id='194' | 'Buckeyes' | record='0-0'
+2 | previous=0 | team_id='2483' | 'Ducks' | record='0-0'
+3 | previous=0 | team_id='61' | 'Bulldogs' | record='0-0'
+4 | previous=0 | team_id='251' | 'Longhorns' | record='0-0'
+5 | previous=0 | team_id='87' | 'Fighting Irish' | record='0-0'
+6 | previous=0 | team_id='84' | 'Hoosiers' | record='0-0'
+7 | previous=0 | team_id='2390' | 'Hurricanes' | record='0-0'
+8 | previous=0 | team_id='245' | 'Aggies' | record='0-0'
+9 | previous=0 | team_id='201' | 'Sooners' | record='0-0'
+10 | previous=0 | team_id='145' | 'Rebels' | record='0-0'
+11 | previous=0 | team_id='333' | 'Crimson Tide' | record='0-0'
+12 | previous=0 | team_id='2641' | 'Red Raiders' | record='0-0'
+13 | previous=0 | team_id='99' | 'Tigers' | record='0-0'
+14 | previous=0 | team_id='30' | 'Trojans' | record='0-0'
+15 | previous=0 | team_id='252' | 'Cougars' | record='0-0'
+16 | previous=0 | team_id='130' | 'Wolverines' | record='0-0'
+17 | previous=0 | team_id='213' | 'Nittany Lions' | record='0-0'
+18 | previous=0 | team_id='2633' | 'Volunteers' | record='0-0'
+19 | previous=0 | team_id='264' | 'Huskies' | record='0-0'
+20 | previous=0 | team_id='2567' | 'Mustangs' | record='0-0'
+21 | previous=0 | team_id='254' | 'Utes' | record='0-0'
+22 | previous=0 | team_id='2294' | 'Hawkeyes' | record='0-0'
+23 | previous=0 | team_id='228' | 'Tigers' | record='0-0'
+24 | previous=0 | team_id='248' | 'Cougars' | record='0-0'
+25 | previous=0 | team_id='142' | 'Tigers' | record='0-0'
+
+
+################################################################################
+SITE RANKINGS — 2026
+https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings?season=2026
+################################################################################
+HTTP STATUS: 200
+Ranking groups: 1
+
+----------------------------------------------------------------------
+POLL #1
+----------------------------------------------------------------------
+name: 'AFCA Coaches Poll'
+shortName: 'AFCA Coaches Poll'
+headline: '2026 NCAA Football Rankings - AFCA Coaches Poll Preseason'
+type: 'usa'
+date: '2026-08-04T07:00Z'
+lastUpdated: '2026-08-04T19:21Z'
+ranks: 25
+1 | previous=0 | team_id='194' | 'Buckeyes' | record='0-0'
+2 | previous=0 | team_id='2483' | 'Ducks' | record='0-0'
+3 | previous=0 | team_id='61' | 'Bulldogs' | record='0-0'
+4 | previous=0 | team_id='251' | 'Longhorns' | record='0-0'
+5 | previous=0 | team_id='87' | 'Fighting Irish' | record='0-0'
+6 | previous=0 | team_id='84' | 'Hoosiers' | record='0-0'
+7 | previous=0 | team_id='2390' | 'Hurricanes' | record='0-0'
+8 | previous=0 | team_id='245' | 'Aggies' | record='0-0'
+9 | previous=0 | team_id='201' | 'Sooners' | record='0-0'
+10 | previous=0 | team_id='145' | 'Rebels' | record='0-0'
+11 | previous=0 | team_id='333' | 'Crimson Tide' | record='0-0'
+12 | previous=0 | team_id='2641' | 'Red Raiders' | record='0-0'
+13 | previous=0 | team_id='99' | 'Tigers' | record='0-0'
+14 | previous=0 | team_id='30' | 'Trojans' | record='0-0'
+15 | previous=0 | team_id='252' | 'Cougars' | record='0-0'
+16 | previous=0 | team_id='130' | 'Wolverines' | record='0-0'
+17 | previous=0 | team_id='213' | 'Nittany Lions' | record='0-0'
+18 | previous=0 | team_id='2633' | 'Volunteers' | record='0-0'
+19 | previous=0 | team_id='264' | 'Huskies' | record='0-0'
+20 | previous=0 | team_id='2567' | 'Mustangs' | record='0-0'
+21 | previous=0 | team_id='254' | 'Utes' | record='0-0'
+22 | previous=0 | team_id='2294' | 'Hawkeyes' | record='0-0'
+23 | previous=0 | team_id='228' | 'Tigers' | record='0-0'
+24 | previous=0 | team_id='248' | 'Cougars' | record='0-0'
+25 | previous=0 | team_id='142' | 'Tigers' | record='0-0'
+
+
+################################################################################
+SITE RANKINGS — 2026 WEEK 1
+https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings?season=2026&week=1
+################################################################################
+HTTP STATUS: 200
+Ranking groups: 1
+
+----------------------------------------------------------------------
+POLL #1
+----------------------------------------------------------------------
+name: 'AFCA Coaches Poll'
+shortName: 'AFCA Coaches Poll'
+headline: '2026 NCAA Football Rankings - AFCA Coaches Poll Preseason'
+type: 'usa'
+date: '2026-08-04T07:00Z'
+lastUpdated: '2026-08-04T19:21Z'
+ranks: 25
+1 | previous=0 | team_id='194' | 'Buckeyes' | record='0-0'
+2 | previous=0 | team_id='2483' | 'Ducks' | record='0-0'
+3 | previous=0 | team_id='61' | 'Bulldogs' | record='0-0'
+4 | previous=0 | team_id='251' | 'Longhorns' | record='0-0'
+5 | previous=0 | team_id='87' | 'Fighting Irish' | record='0-0'
+6 | previous=0 | team_id='84' | 'Hoosiers' | record='0-0'
+7 | previous=0 | team_id='2390' | 'Hurricanes' | record='0-0'
+8 | previous=0 | team_id='245' | 'Aggies' | record='0-0'
+9 | previous=0 | team_id='201' | 'Sooners' | record='0-0'
+10 | previous=0 | team_id='145' | 'Rebels' | record='0-0'
+11 | previous=0 | team_id='333' | 'Crimson Tide' | record='0-0'
+12 | previous=0 | team_id='2641' | 'Red Raiders' | record='0-0'
+13 | previous=0 | team_id='99' | 'Tigers' | record='0-0'
+14 | previous=0 | team_id='30' | 'Trojans' | record='0-0'
+15 | previous=0 | team_id='252' | 'Cougars' | record='0-0'
+16 | previous=0 | team_id='130' | 'Wolverines' | record='0-0'
+17 | previous=0 | team_id='213' | 'Nittany Lions' | record='0-0'
+18 | previous=0 | team_id='2633' | 'Volunteers' | record='0-0'
+19 | previous=0 | team_id='264' | 'Huskies' | record='0-0'
+20 | previous=0 | team_id='2567' | 'Mustangs' | record='0-0'
+21 | previous=0 | team_id='254' | 'Utes' | record='0-0'
+22 | previous=0 | team_id='2294' | 'Hawkeyes' | record='0-0'
+23 | previous=0 | team_id='228' | 'Tigers' | record='0-0'
+24 | previous=0 | team_id='248' | 'Cougars' | record='0-0'
+25 | previous=0 | team_id='142' | 'Tigers' | record='0-0'
+
+
+################################################################################
+CORE — SEASON TYPE 1
+https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/1/rankings
+################################################################################
+HTTP STATUS: 404
+ROOT KEYS: ['error']
+$ref count: 0
+
+CORE PAYLOAD SAMPLE:
+{
+  "error": "{\"error\":{\"message\":\"application error\",\"code\":404}}"
+}
+
+
+################################################################################
+CORE — SEASON TYPE 2
+https://sports.core.api.espn.com/v2/sports/football/leagues/college-football/seasons/2026/types/2/rankings
+################################################################################
+HTTP STATUS: 404
+ROOT KEYS: ['error']
+$ref count: 0
+
+CORE PAYLOAD SAMPLE:
+{
+  "error": "{\"error\":{\"message\":\"application error\",\"code\":404}}"
+}
+
+
+================================================================================
+WEEK 1 TARGET — CLEMSON / LSU
+================================================================================
+HTTP STATUS: 200
+Found ESPN event 401856660.
+home | team_id=99 | LSU Tigers | curatedRank={'current': 99} | records=[{'name': 'overall', 'abbreviation': 'overall', 'type': 'total', 'summary': '0-0'}, {'name': 'Home', 'abbreviation': 'Home', 'type': 'homerecord', 'summary': '0-0'}, {'name': 'Away', 'abbreviation': 'Away', 'type': 'awayrecord', 'summary': '0-0'}, {'name': 'vs. Conf.', 'abbreviation': 'CONF', 'type': 'vsconf', 'summary': '0-0'}]
+away | team_id=228 | Clemson Tigers | curatedRank={'current': 99} | records=[{'name': 'overall', 'abbreviation': 'overall', 'type': 'total', 'summary': '0-0'}, {'name': 'Home', 'abbreviation': 'Home', 'type': 'homerecord', 'summary': '0-0'}, {'name': 'Away', 'abbreviation': 'Away', 'type': 'awayrecord', 'summary': '0-0'}, {'name': 'vs. Conf.', 'abbreviation': 'CONF', 'type': 'vsconf', 'summary': '0-0'}]

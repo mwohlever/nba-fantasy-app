@@ -1,0 +1,1085 @@
+============================================================
+PGA GREEN PIN — FINAL PLUMBING
+============================================================
+
+============================================================
+1. ALL greenPin REFERENCES
+============================================================
+components/lineups/GolfHoleReplayPanel.tsx:821:  const authoritativeGreenPin =
+components/lineups/GolfHoleReplayPanel.tsx:1286:                    greenPin={
+components/lineups/GolfHoleReplayPanel.tsx:1287:                      authoritativeGreenPin
+components/lineups/GolfHoleMap2D.tsx:104:  greenPin?: {
+components/lineups/GolfHoleMap2D.tsx:1566:  greenPin = null,
+components/lineups/GolfHoleMap2D.tsx:3279:  const authoritativeGreenPinPoint =
+components/lineups/GolfHoleMap2D.tsx:3281:    greenPin
+components/lineups/GolfHoleMap2D.tsx:3284:            greenPin.x *
+components/lineups/GolfHoleMap2D.tsx:3287:            greenPin.y *
+components/lineups/GolfHoleMap2D.tsx:3293:    authoritativeGreenPinPoint ??
+
+============================================================
+2. ALL pinWorld REFERENCES
+============================================================
+components/lineups/GolfHoleReplayPanel.tsx:124:  pinWorld: {
+components/lineups/GolfHoleReplayPanel.tsx:192:  pinWorldByRound?: Array<
+components/lineups/GolfHoleReplayPanel.tsx:563:              pinWorld:
+components/lineups/GolfHoleReplayPanel.tsx:564:                result.replay.pinWorld,
+components/lineups/GolfHoleReplayPanel.tsx:802:  const authoritativePinWorld =
+components/lineups/GolfHoleReplayPanel.tsx:804:      ?.pinWorldByRound?.[
+components/lineups/GolfHoleReplayPanel.tsx:811:      ?.pinWorldByRound?.[0] ??
+components/lineups/GolfHoleReplayPanel.tsx:1283:                    pinWorld={
+components/lineups/GolfHoleReplayPanel.tsx:1284:                      authoritativePinWorld
+components/lineups/GolfHoleMap2D.tsx:103:  pinWorld?: WorldPoint | null;
+components/lineups/GolfHoleMap2D.tsx:1565:  pinWorld = null,
+components/lineups/GolfHoleMap2D.tsx:3251:   * pinWorld comes from PGA courseData.pinsTees.
+components/lineups/GolfHoleMap2D.tsx:3259:    pinWorld
+components/lineups/GolfHoleMap2D.tsx:3261:          pinWorld,
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:124:  pinWorld: {
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:192:  pinWorldByRound?: Array<
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:519:              pinWorld:
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:520:                result.replay.pinWorld,
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:748:  const authoritativePinWorld =
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:750:      ?.pinWorldByRound?.[
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:772:          authoritativePinWorld &&
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:1224:                    pinWorld={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:1225:                      authoritativePinWorld
+components/lineups/GolfHoleMap2D.tsx.before-always-green-view:103:  pinWorld?: WorldPoint | null;
+components/lineups/GolfHoleMap2D.tsx.before-always-green-view:1561:  pinWorld = null,
+components/lineups/GolfHoleMap2D.tsx.before-always-green-view:3194:   * pinWorld comes from PGA courseData.pinsTees.
+components/lineups/GolfHoleMap2D.tsx.before-always-green-view:3202:    pinWorld
+components/lineups/GolfHoleMap2D.tsx.before-always-green-view:3204:          pinWorld,
+lib/providers/pgaTourShots.ts:284:  pinWorld: GolfWorldPoint | null;
+lib/providers/pgaTourShots.ts:1201:    pinWorld:
+lib/shotcast/importShotCastManifest.ts:350:type TourcastPinWorld = {
+lib/shotcast/importShotCastManifest.ts:435:function pinWorldByRoundForHole(
+lib/shotcast/importShotCastManifest.ts:441:  TourcastPinWorld | null
+lib/shotcast/importShotCastManifest.ts:1242:        pinWorldByRound:
+lib/shotcast/importShotCastManifest.ts:1243:          pinWorldByRoundForHole(
+
+============================================================
+3. GolfHoleMap2D CALL SITES
+============================================================
+components/lineups/GolfHoleReplayPanel.tsx-1254-            Try again
+components/lineups/GolfHoleReplayPanel.tsx-1255-          </button>
+components/lineups/GolfHoleReplayPanel.tsx-1256-        </div>
+components/lineups/GolfHoleReplayPanel.tsx-1257-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx-1258-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx-1259-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx-1260-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx-1261-              {message}
+components/lineups/GolfHoleReplayPanel.tsx-1262-            </div>
+components/lineups/GolfHoleReplayPanel.tsx-1263-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-1264-
+components/lineups/GolfHoleReplayPanel.tsx-1265-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx-1266-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx-1267-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx-1268-                <>
+components/lineups/GolfHoleReplayPanel.tsx:1269:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx-1270-                    title={
+components/lineups/GolfHoleReplayPanel.tsx-1271-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1272-                        .title
+components/lineups/GolfHoleReplayPanel.tsx-1273-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1274-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx-1275-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1276-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx-1277-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1278-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx-1279-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx-1280-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx-1281-                      null
+components/lineups/GolfHoleReplayPanel.tsx-1282-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1283-                    pinWorld={
+components/lineups/GolfHoleReplayPanel.tsx-1284-                      authoritativePinWorld
+components/lineups/GolfHoleReplayPanel.tsx-1285-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1286-                    greenPin={
+components/lineups/GolfHoleReplayPanel.tsx-1287-                      authoritativeGreenPin
+components/lineups/GolfHoleReplayPanel.tsx-1288-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1289-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx-1290-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1291-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx-1292-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1293-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx-1294-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1295-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx-1296-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1297-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx-1298-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1299-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-1300-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1301-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx-1302-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx-1303-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx-1304-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1305-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-1306-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx-1307-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx-1308-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1309-                    shots={replay.shots}
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-466-            className="mt-4 rounded-xl border border-emerald-700 bg-emerald-950 px-4 py-2 text-xs font-bold text-emerald-200 disabled:opacity-60"
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-467-          >
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-468-            Try again
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-469-          </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-470-        </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-471-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-472-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-473-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-474-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-475-              {message}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-476-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-477-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-478-
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-479-          {slateId === 161 &&
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-480-          holeNumber === 8 ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle:481:            <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-482-              title="Detroit Golf Club · Hole 8"
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-483-              imageUrl="/tourcast/rocket-classic/hole-8/terrain08-web.jpg"
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-484-              shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-485-              selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-486-                selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-487-              }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-488-              onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-489-                setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-490-              }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-491-            />
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-492-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-493-
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-494-          <div className="overflow-hidden rounded-xl border border-slate-800">
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-495-            {replay.shots.map(
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-496-              (shot, index) => {
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-497-                const summary =
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-498-                  shotSummary(
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-499-                    shot,
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-500-                    completedResult,
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-501-                  );
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-502-
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-503-                const isCurrentBall =
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-504-                  !isHoleComplete &&
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-505-                  index ===
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-506-                    replay.shots.length - 1;
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-507-
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-508-                const isSelectedShot =
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-509-                  shot.strokeNumber ===
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-510-                  selectedStrokeNumber;
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-511-
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-512-                return (
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-513-                  <button
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-514-                    type="button"
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-515-                    key={shot.strokeNumber}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-516-                    onClick={() =>
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-517-                      setSelectedStrokeNumber(
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-518-                        shot.strokeNumber,
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-519-                      )
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-520-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle-521-                    className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-523-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-524-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-525-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-526-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-527-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-528-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-529-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-530-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-531-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-532-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-533-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-534-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-535-
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-536-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-537-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest:538:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-539-                    title="Detroit Golf Club · Hole 8"
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-540-                    imageUrl="/tourcast/rocket-classic/hole-8/terrain08-web.jpg"
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-541-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-542-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-543-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-544-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-545-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-546-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-547-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-548-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-549-                </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-550-              ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-551-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-552-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-553-
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-554-          <div className="overflow-hidden rounded-xl border border-slate-800">
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-555-            {replay.shots.map(
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-556-              (shot, index) => {
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-557-                const summary =
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-558-                  shotSummary(
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-559-                    shot,
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-560-                    completedResult,
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-561-                  );
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-562-
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-563-                const isCurrentBall =
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-564-                  !isHoleComplete &&
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-565-                  index ===
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-566-                    replay.shots.length - 1;
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-567-
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-568-                const isSelectedShot =
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-569-                  shot.strokeNumber ===
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-570-                  selectedStrokeNumber;
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-571-
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-572-                return (
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-573-                  <button
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-574-                    type="button"
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-575-                    key={shot.strokeNumber}
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-576-                    onClick={() =>
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-577-                      setSelectedStrokeNumber(
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest-578-                        shot.strokeNumber,
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-766-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-767-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-768-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-769-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-770-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-771-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-772-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-773-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-774-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-775-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-776-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-777-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-778-
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-779-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-780-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix:781:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-782-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-783-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-784-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-785-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-786-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-787-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-788-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-789-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-790-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-791-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-792-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-793-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-794-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-795-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-796-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-797-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-798-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-799-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-800-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-801-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-802-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-803-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-804-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-805-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-806-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-807-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-808-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-809-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-810-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-811-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-812-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-813-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-814-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-815-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-816-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-817-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-818-
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-819-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-820-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix-821-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-766-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-767-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-768-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-769-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-770-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-771-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-772-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-773-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-774-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-775-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-776-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-777-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-778-
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-779-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-780-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest:781:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-782-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-783-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-784-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-785-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-786-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-787-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-788-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-789-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-790-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-791-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-792-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-793-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-794-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-795-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-796-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-797-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-798-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-799-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-800-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-801-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-802-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-803-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-804-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-805-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-806-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-807-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-808-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-809-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-810-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-811-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-812-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-813-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-814-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-815-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-816-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-817-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-818-
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-819-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-820-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest-821-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-837-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-838-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-839-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-840-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-841-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-842-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-843-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-844-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-845-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-846-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-847-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-848-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-849-
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-850-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-851-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones:852:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-853-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-854-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-855-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-856-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-857-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-858-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-859-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-860-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-861-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-862-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-863-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-864-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-865-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-866-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-867-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-868-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-869-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-870-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-871-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-872-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-873-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-874-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-875-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-876-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-877-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-878-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-879-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-880-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-881-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-882-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-883-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-884-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-885-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-886-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-887-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-888-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-889-
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-890-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-891-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones-892-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-919-                  }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-920-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-921-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-922-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-923-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-924-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-925-                >
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-926-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-927-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-928-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-929-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-930-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-931-
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-932-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-933-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain:934:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-935-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-936-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-937-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-938-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-939-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-940-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-941-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-942-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-943-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-944-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-945-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-946-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-947-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-948-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-949-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-950-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-951-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-952-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-953-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-954-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-955-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-956-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-957-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-958-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-959-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-960-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-961-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-962-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-963-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-964-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-965-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-966-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-967-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-968-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-969-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-970-                  />
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-971-
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-972-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-973-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain-974-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-919-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-920-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-921-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-922-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-923-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-924-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-925-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-926-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-927-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-928-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-929-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-930-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-931-
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-932-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-933-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final:934:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-935-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-936-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-937-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-938-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-939-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-940-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-941-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-942-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-943-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-944-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-945-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-946-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-947-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-948-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-949-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-950-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-951-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-952-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-953-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-954-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-955-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-956-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-957-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-958-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-959-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-960-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-961-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-962-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-963-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-964-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-965-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-966-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-967-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-968-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-969-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-970-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-971-
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-972-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-973-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final-974-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-930-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-931-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-932-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-933-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-934-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-935-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-936-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-937-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-938-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-939-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-940-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-941-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-942-
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-943-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-944-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3:945:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-946-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-947-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-948-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-949-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-950-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-951-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-952-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-953-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-954-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-955-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-956-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-957-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-958-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-959-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-960-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-961-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-962-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-963-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-964-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-965-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-966-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-967-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-968-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-969-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-970-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-971-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-972-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-973-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-974-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-975-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-976-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-977-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-978-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-979-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-980-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-981-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-982-
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-983-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-984-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3-985-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-985-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-986-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-987-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-988-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-989-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-990-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-991-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-992-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-993-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-994-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-995-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-996-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-997-
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-998-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-999-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1:1000:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1001-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1002-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1003-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1004-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1005-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1006-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1007-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1008-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1009-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1010-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1011-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1012-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1013-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1014-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1015-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1016-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1017-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1018-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1019-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1020-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1021-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1022-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1023-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1024-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1025-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1026-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1027-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1028-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1029-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1030-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1031-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1032-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1033-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1034-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1035-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1036-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1037-
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1038-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1039-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1-1040-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1051-                  }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1052-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1053-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1054-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1055-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1056-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1057-                >
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1058-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1059-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1060-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1061-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1062-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1063-
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1064-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1065-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view:1066:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1067-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1068-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1069-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1070-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1071-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1072-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1073-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1074-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1075-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1076-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1077-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1078-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1079-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1080-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1081-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1082-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1083-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1084-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1085-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1086-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1087-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1088-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1089-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1090-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1091-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1092-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1093-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1094-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1095-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1096-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1097-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1098-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1099-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1100-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1101-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1102-                  />
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1103-
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1104-                  {activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1105-                    .aboutThisHole ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view-1106-                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+--
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1053-                  }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1054-                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1055-                    isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1056-                      ? "border-slate-600 bg-slate-950 text-slate-300"
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1057-                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1058-                  }`}
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1059-                >
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1060-                  {isShotCastOpen
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1061-                    ? "Hide ShotCast"
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1062-                    : "Open ShotCast"}
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1063-                </button>
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1064-              </div>
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1065-
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1066-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1067-                <div className="mt-3">
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified:1068:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1069-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1070-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1071-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1072-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1073-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1074-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1075-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1076-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1077-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1078-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1079-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1080-                      null
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1081-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1082-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1083-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1084-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1085-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1086-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1087-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1088-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1089-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1090-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1091-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1092-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1093-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1094-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1095-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1096-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1097-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1098-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1099-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1100-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1101-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1102-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1103-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1104-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1105-                    }
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1106-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1107-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified-1108-                    }
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1012-            Try again
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1013-          </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1014-        </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1015-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1016-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1017-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1018-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1019-              {message}
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1020-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1021-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1022-
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1023-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1024-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1025-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1026-                <>
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data:1027:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1028-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1029-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1030-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1031-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1032-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1033-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1034-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1035-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1036-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1037-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1038-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1039-                      null
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1040-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1041-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1042-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1043-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1044-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1045-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1046-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1047-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1048-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1049-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1050-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1051-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1052-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1053-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1054-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1055-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1056-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1057-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1058-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1059-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1060-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1061-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1062-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1063-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1064-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1065-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1066-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data-1067-                    }
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1044-            Try again
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1045-          </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1046-        </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1047-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1048-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1049-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1050-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1051-              {message}
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1052-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1053-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1054-
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1055-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1056-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1057-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1058-                <>
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green:1059:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1060-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1061-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1062-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1063-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1064-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1065-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1066-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1067-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1068-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1069-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1070-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1071-                      null
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1072-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1073-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1074-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1075-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1076-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1077-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1078-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1079-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1080-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1081-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1082-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1083-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1084-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1085-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1086-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1087-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1088-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1089-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1090-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1091-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1092-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1093-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1094-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1095-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1096-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1097-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1098-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green-1099-                    }
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1044-            Try again
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1045-          </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1046-        </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1047-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1048-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1049-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1050-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1051-              {message}
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1052-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1053-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1054-
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1055-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1056-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1057-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1058-                <>
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking:1059:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1060-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1061-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1062-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1063-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1064-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1065-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1066-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1067-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1068-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1069-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1070-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1071-                      null
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1072-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1073-                    greenModelUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1074-                      replay.tournamentId
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1075-                        ? `/api/golf/shotcast-green-model?tournamentId=${encodeURIComponent(
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1076-                            replay.tournamentId,
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1077-                          )}&hole=${holeNumber}`
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1078-                        : null
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1079-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1080-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1081-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1082-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1083-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1084-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1085-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1086-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1087-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1088-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1089-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1090-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1091-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1092-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1093-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1094-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1095-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1096-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1097-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1098-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking-1099-                    }
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1055-            Try again
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1056-          </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1057-        </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1058-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1059-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1060-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1061-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1062-              {message}
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1063-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1064-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1065-
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1066-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1067-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1068-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1069-                <>
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip:1070:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1071-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1072-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1073-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1074-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1075-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1076-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1077-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1078-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1079-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1080-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1081-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1082-                      null
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1083-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1084-                    greenModelUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1085-                      replay.tournamentId
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1086-                        ? `/api/golf/shotcast-green-model?tournamentId=${encodeURIComponent(
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1087-                            replay.tournamentId,
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1088-                          )}&hole=${holeNumber}`
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1089-                        : null
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1090-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1091-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1092-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1093-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1094-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1095-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1096-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1097-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1098-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1099-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1100-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1101-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1102-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1103-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1104-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1105-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1106-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1107-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1108-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1109-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip-1110-                    }
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1055-            Try again
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1056-          </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1057-        </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1058-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1059-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1060-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1061-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1062-              {message}
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1063-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1064-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1065-
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1066-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1067-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1068-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1069-                <>
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941:1070:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1071-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1072-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1073-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1074-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1075-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1076-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1077-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1078-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1079-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1080-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1081-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1082-                      null
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1083-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1084-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1085-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1086-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1087-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1088-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1089-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1090-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1091-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1092-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1093-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1094-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1095-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1096-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1097-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1098-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1099-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1100-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1101-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1102-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1103-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1104-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1105-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1106-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1107-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1108-                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1109-                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-fresh-open-20260814-104941-1110-                    }
+--
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1195-            Try again
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1196-          </button>
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1197-        </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1198-      ) : replay ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1199-        <div className="p-3 sm:p-4">
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1200-          {message ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1201-            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1202-              {message}
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1203-            </div>
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1204-          ) : null}
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1205-
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1206-          {activeShotCastConfig ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1207-            <div className="mb-3">
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1208-              {isShotCastOpen ? (
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1209-                <>
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set:1210:                  <GolfHoleMap2D
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1211-                    title={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1212-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1213-                        .title
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1214-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1215-                    imageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1216-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1217-                        .imageUrl
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1218-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1219-                    greenImageUrl={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1220-                      replay.shotcast
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1221-                        ?.greenImageUrl ??
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1222-                      null
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1223-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1224-                    pinWorld={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1225-                      authoritativePinWorld
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1226-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1227-                    imageFit={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1228-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1229-                        .imageFit
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1230-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1231-                    calibration={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1232-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1233-                        .calibration
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1234-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1235-                    showShotOverlay={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1236-                      activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1237-                        .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1238-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1239-                    emptyStateLabel={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1240-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1241-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1242-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1243-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1244-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1245-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1246-                    }
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1247-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1248-                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1249-                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx.before-single-pga-pin-set-1250-                    }

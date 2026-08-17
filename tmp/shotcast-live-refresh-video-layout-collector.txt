@@ -1,0 +1,6423 @@
+============================================================
+SHOTCAST LIVE REFRESH + VIDEO LAYOUT COLLECTOR
+Generated: Wed Aug 12 07:03:24 AM EDT 2026
+Repo: /home/markwohlever/nba-fantasy-app
+============================================================
+
+================ GolfHoleReplayPanel.tsx ====================
+"use client";
+
+import dynamic from "next/dynamic";
+const GolfHoleMap2D = dynamic(
+  () =>
+    import(
+      "@/components/lineups/GolfHoleMap2D"
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-xs font-semibold text-slate-400">
+        Loading ShotCast…
+      </div>
+    ),
+  },
+);
+
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type ShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+type BallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+type ShotFlightTrajectory = {
+  kind: string | null;
+  type: string | null;
+  xFit: number[];
+  yFit: number[];
+  zFit: number[];
+  timeStart: number;
+  timeEnd: number;
+};
+
+type BallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: BallPathPoint[];
+};
+
+type ReplayShot = {
+  strokeNumber: number;
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+
+  videoId: string | null;
+  radarData: ShotRadarData | null;
+  flightTrajectory: ShotFlightTrajectory | null;
+  ballPath: BallPath | null;
+
+  worldFrom?: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
+  worldTo?: {
+    x: number;
+    y: number;
+    z?: number | null;
+  } | null;
+
+  leftToRight: CoordinateSet | null;
+  bottomToTop: CoordinateSet | null;
+  greenBottomToTop: CoordinateSet | null;
+};
+
+type Replay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+
+  shotcast: {
+    imageUrl: string;
+    greenImageUrl: string | null;
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
+  shots: ReplayShot[];
+};
+
+type ReconciledHole = {
+  hole_number: number;
+  strokes: number;
+  relative_to_par: number;
+  score_display: string;
+  holes_completed: number;
+  round_score_to_par: number;
+  round_strokes: number;
+};
+
+type ResponseBody = {
+  success?: boolean;
+  available?: boolean;
+  message?: string;
+  replay?: Replay | null;
+  reconciledHole?: ReconciledHole | null;
+  error?: string;
+};
+
+type ShotCastCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+  verified?: boolean;
+  source?: string;
+  affine?: {
+    pxX: number;
+    rotX: number;
+    rotY: number;
+    pxY: number;
+    coordX: number;
+    coordY: number;
+    dimX: number;
+    dimY: number;
+  };
+};
+
+type ShotCastManifestHole = {
+  holeNumber: number;
+  available: boolean;
+  par: number | null;
+  yards: number | null;
+  aboutThisHole: string | null;
+  localImageUrl: string | null;
+  alignedMapUrl?: string | null;
+  localAlignedMapUrl?: string | null;
+  calibration?: ShotCastCalibration | null;
+};
+
+type ShotCastManifest = {
+  tournament: {
+    id: string;
+    name: string | null;
+  };
+  course: {
+    id: string;
+    name: string | null;
+  };
+  holes: ShotCastManifestHole[];
+};
+
+type ActiveShotCastConfig = {
+  title: string;
+  imageUrl: string;
+  imageFit: "fill" | "contain";
+  calibration: ShotCastCalibration;
+  calibrationVerified: boolean;
+  aboutThisHole: string | null;
+};
+
+type Props = {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  fallbackPar: number | null;
+  fallbackYardage: number | null;
+  fallbackResult: string;
+  onClose: () => void;
+  onReconciled?: (
+    hole: ReconciledHole,
+  ) => void;
+};
+
+const IDENTITY_CALIBRATION: ShotCastCalibration = {
+  xScale: 1,
+  xOffset: 0,
+  yScale: 1,
+  yOffset: 0,
+  verified: false,
+};
+
+const DETROIT_HOLE_8_CALIBRATION: ShotCastCalibration = {
+  xScale: 2.488624,
+  xOffset: -0.748272,
+  yScale: 0.974452,
+  yOffset: 0.127478,
+  verified: true,
+};
+
+function titleCase(
+  value: string | null | undefined,
+) {
+  if (!value) return "";
+
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
+}
+
+function locationLabel(
+  value: string | null | undefined,
+) {
+  return value?.trim() || "Unknown lie";
+}
+
+function resultToneClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle") ||
+    normalized.includes("birdie")
+  ) {
+    return "text-emerald-300";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "text-red-400";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "text-red-300";
+  }
+
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "text-slate-200";
+  }
+
+  return "text-slate-300";
+}
+
+function resultBadgeClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle")
+  ) {
+    return "border-emerald-500 bg-emerald-700 text-white";
+  }
+
+  if (normalized.includes("birdie")) {
+    return "border-emerald-400 bg-emerald-600 text-white";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "border-red-500 bg-red-700 text-white";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "border-red-400 bg-red-600 text-white";
+  }
+
+  return "border-slate-500 bg-slate-700 text-white";
+}
+
+function shotSummary(
+  shot: ReplayShot,
+  holeResult: string,
+) {
+  const pieces: string[] = [];
+
+  if (shot.distance) {
+    pieces.push(shot.distance);
+  }
+
+  if (shot.finalStroke) {
+    pieces.push("In the hole");
+
+    if (holeResult) {
+      pieces.push(holeResult);
+    }
+  } else if (shot.distanceRemaining) {
+    pieces.push(
+      `${shot.distanceRemaining} remaining`,
+    );
+  }
+
+  return pieces.join(" · ");
+}
+
+export default function GolfHoleReplayPanel({
+  slateId,
+  playerId,
+  roundNumber,
+  holeNumber,
+  fallbackPar,
+  fallbackYardage,
+  fallbackResult,
+  onClose,
+  onReconciled,
+}: Props) {
+  const [replay, setReplay] =
+    useState<Replay | null>(null);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const [lastUpdatedAt, setLastUpdatedAt] =
+    useState<Date | null>(null);
+
+  const [
+    selectedStrokeNumber,
+    setSelectedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    isShotCastOpen,
+    setIsShotCastOpen,
+  ] = useState(true);
+
+  const [
+    isAllShotsOpen,
+    setIsAllShotsOpen,
+  ] = useState(false);
+
+  /*
+   * Keep the latest reconciliation callback without making the replay
+   * fetch depend on the callback's identity.
+   *
+   * GolfPlayerModal passes onReconciled inline, so its function identity
+   * changes whenever the scorecard rerenders. If loadReplay depends on it,
+   * the loading effect restarts and creates a request loop.
+   */
+  const onReconciledRef =
+    useRef(onReconciled);
+
+  useEffect(() => {
+    onReconciledRef.current =
+      onReconciled;
+  }, [onReconciled]);
+
+  const [
+    shotCastManifest,
+    setShotCastManifest,
+  ] = useState<ShotCastManifest | null>(
+    null,
+  );
+
+  const [
+    isManifestLoading,
+    setIsManifestLoading,
+  ] = useState(false);
+
+  const loadReplay = useCallback(
+    async ({
+      forceRefresh = false,
+      signal,
+    }: {
+      forceRefresh?: boolean;
+      signal?: AbortSignal;
+    } = {}) => {
+      try {
+        if (forceRefresh) {
+          setIsRefreshing(true);
+        } else {
+          setIsLoading(true);
+          setReplay(null);
+        }
+
+        setMessage("");
+
+        const query =
+          new URLSearchParams({
+            slateId: String(slateId),
+            playerId: String(playerId),
+            round: String(roundNumber),
+            hole: String(holeNumber),
+          });
+
+        if (forceRefresh) {
+          query.set(
+            "refresh",
+            String(Date.now()),
+          );
+        }
+
+        const response = await fetch(
+          `/api/golf/hole-replay?${query}`,
+          {
+            cache: "no-store",
+            signal,
+          },
+        );
+
+        const result =
+          (await response.json()) as ResponseBody;
+
+        if (!response.ok) {
+          setMessage(
+            result.error ||
+              "Unable to load shot tracking.",
+          );
+          return;
+        }
+
+        if (!result.replay) {
+          setMessage(
+            result.message ||
+              "Shot tracking is not available for this hole yet.",
+          );
+          return;
+        }
+
+        setReplay(result.replay);
+
+        if (
+          result.reconciledHole &&
+          onReconciledRef.current
+        ) {
+          onReconciledRef.current(
+            result.reconciledHole,
+          );
+        }
+
+        if (!result.available) {
+          setMessage(
+            result.message ||
+              "This hole has not started yet.",
+          );
+        }
+
+        setSelectedStrokeNumber(
+          (current) => {
+            if (
+              current !== null &&
+              result.replay?.shots.some(
+                (shot) =>
+                  shot.strokeNumber ===
+                  current,
+              )
+            ) {
+              return current;
+            }
+
+            return (
+              result.replay?.shots[0]
+                ?.strokeNumber ??
+              null
+            );
+          },
+        );
+
+        setLastUpdatedAt(new Date());
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.error(
+          "Unable to load Golf hole replay",
+          error,
+        );
+
+        setMessage(
+          "Unable to load shot tracking.",
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [
+      slateId,
+      playerId,
+      roundNumber,
+      holeNumber,
+    ],
+  );
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    void loadReplay({
+      signal: controller.signal,
+    });
+
+    return () => controller.abort();
+  }, [loadReplay]);
+
+  useEffect(() => {
+    const tournamentId =
+      replay?.tournamentId?.trim() ?? "";
+
+    if (!tournamentId) {
+      setShotCastManifest(null);
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    async function loadManifest() {
+      try {
+        setIsManifestLoading(true);
+
+        const databaseResponse =
+          await fetch(
+            `/api/golf/shotcast-manifest?tournamentId=${encodeURIComponent(
+              tournamentId,
+            )}`,
+            {
+              cache: "no-store",
+              signal:
+                controller.signal,
+            },
+          );
+
+        if (databaseResponse.ok) {
+          const manifest =
+            (await databaseResponse.json()) as ShotCastManifest;
+
+          setShotCastManifest(
+            manifest,
+          );
+
+          return;
+        }
+
+        /*
+         * Preserve previously committed static manifests,
+         * including the current Wyndham checkpoint.
+         */
+        const staticResponse =
+          await fetch(
+            `/shotcast/${encodeURIComponent(
+              tournamentId,
+            )}/manifest.json`,
+            {
+              cache: "no-store",
+              signal:
+                controller.signal,
+            },
+          );
+
+        if (!staticResponse.ok) {
+          setShotCastManifest(null);
+          return;
+        }
+
+        const manifest =
+          (await staticResponse.json()) as ShotCastManifest;
+
+        setShotCastManifest(manifest);
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.warn(
+          "Unable to load ShotCast manifest",
+          error,
+        );
+
+        setShotCastManifest(null);
+      } finally {
+        setIsManifestLoading(false);
+      }
+    }
+
+    void loadManifest();
+
+    return () => controller.abort();
+  }, [replay?.tournamentId]);
+
+  const activeShotCastConfig =
+    useMemo<ActiveShotCastConfig | null>(
+      () => {
+        /*
+         * PRIMARY PATH:
+         *
+         * PGA TOURCAST V3 already supplies the exact
+         * bottom-to-top image and normalized coordinates.
+         *
+         * No terrain image, TFW, manual calibration, or
+         * admin import is required.
+         */
+        if (
+          replay?.shotcast?.verified ===
+            true &&
+          replay.shotcast.imageUrl
+        ) {
+          return {
+            title: `ShotCast · Hole ${holeNumber}`,
+            imageUrl:
+              replay.shotcast.imageUrl,
+            imageFit: "fill",
+            calibration: {
+              ...IDENTITY_CALIBRATION,
+              verified: true,
+              source:
+                replay.shotcast.source,
+            },
+            calibrationVerified: true,
+            aboutThisHole:
+              null,
+          };
+        }
+
+        /*
+         * FALLBACK:
+         *
+         * Preserve the verified Rocket Classic proof of
+         * concept until all historical events use V3.
+         */
+        if (
+          slateId === 161 &&
+          holeNumber === 8
+        ) {
+          return {
+            title:
+              "Detroit Golf Club · Hole 8",
+            imageUrl:
+              "/tourcast/rocket-classic/hole-8/terrain08-web.jpg",
+            imageFit: "fill",
+            calibration:
+              DETROIT_HOLE_8_CALIBRATION,
+            calibrationVerified: true,
+            aboutThisHole: null,
+          };
+        }
+
+        const manifestHole =
+          shotCastManifest?.holes.find(
+            (hole) =>
+              Number(
+                hole.holeNumber,
+              ) === holeNumber,
+          ) ?? null;
+
+        const imageUrl =
+          manifestHole
+            ?.localAlignedMapUrl ||
+          manifestHole
+            ?.localImageUrl ||
+          null;
+
+        if (!imageUrl) {
+          return null;
+        }
+
+        const calibration =
+          manifestHole?.calibration &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xOffset,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yOffset,
+          )
+            ? manifestHole.calibration
+            : IDENTITY_CALIBRATION;
+
+        return {
+          title: `${
+            shotCastManifest?.course
+              .name ||
+            "Golf course"
+          } · Hole ${holeNumber}`,
+
+          imageUrl,
+
+          imageFit:
+            manifestHole
+              ?.localAlignedMapUrl
+              ? "fill"
+              : "contain",
+
+          calibration,
+
+          calibrationVerified:
+            calibration.verified ===
+            true,
+
+          aboutThisHole:
+            manifestHole
+              ?.aboutThisHole ??
+            null,
+        };
+      },
+      [
+        holeNumber,
+        replay,
+        shotCastManifest,
+        slateId,
+      ],
+    );
+
+  const isHoleComplete = useMemo(
+    () =>
+      Boolean(
+        replay?.shots.some(
+          (shot) => shot.finalStroke,
+        ),
+      ),
+    [replay],
+  );
+
+  /*
+   * While a live ShotCast is actually open, refresh PGA
+   * shot data every 30 seconds.
+   *
+   * Stop polling when:
+   * - ShotCast closes
+   * - the hole is complete
+   * - this component unmounts
+   *
+   * Also skip requests while the browser tab is hidden.
+   */
+  useEffect(() => {
+    if (
+      !isShotCastOpen ||
+      isHoleComplete
+    ) {
+      return;
+    }
+
+    const refreshLiveShotCast = () => {
+      if (
+        document.visibilityState !==
+        "visible"
+      ) {
+        return;
+      }
+
+      void loadReplay({
+        forceRefresh: true,
+      });
+    };
+
+    const intervalId =
+      window.setInterval(
+        refreshLiveShotCast,
+        30_000,
+      );
+
+    return () => {
+      window.clearInterval(
+        intervalId,
+      );
+    };
+  }, [
+    isHoleComplete,
+    isShotCastOpen,
+    loadReplay,
+  ]);
+
+  /*
+   * PGA's holeStatus can occasionally collapse exceptional
+   * scores into a broader label (for example, reporting a
+   * 2 on a par 5 as "Eagle").
+   *
+   * Once the hole is complete we have enough authoritative
+   * information to derive the result ourselves from strokes
+   * and par. Prefer that calculation over the provider label.
+   */
+  const completedResult = useMemo(() => {
+    if (!isHoleComplete) {
+      return "";
+    }
+
+    const completedStrokes =
+      replay?.shots.length
+        ? Math.max(
+            ...replay.shots.map(
+              (shot) =>
+                Number(
+                  shot.strokeNumber ?? 0,
+                ),
+            ),
+          )
+        : null;
+
+    const holePar =
+      replay?.par ?? fallbackPar;
+
+    if (
+      completedStrokes !== null &&
+      Number.isFinite(completedStrokes) &&
+      completedStrokes > 0 &&
+      holePar !== null &&
+      holePar !== undefined &&
+      Number.isFinite(Number(holePar))
+    ) {
+      const relative =
+        completedStrokes -
+        Number(holePar);
+
+      if (relative <= -4) {
+        return "Condor";
+      }
+
+      if (relative === -3) {
+        return "Albatross";
+      }
+
+      if (relative === -2) {
+        return "Eagle";
+      }
+
+      if (relative === -1) {
+        return "Birdie";
+      }
+
+      if (relative === 0) {
+        return "Par";
+      }
+
+      if (relative === 1) {
+        return "Bogey";
+      }
+
+      if (relative === 2) {
+        return "Double Bogey";
+      }
+
+      if (relative === 3) {
+        return "Triple Bogey";
+      }
+
+      return `+${relative}`;
+    }
+
+    return (
+      fallbackResult ||
+      titleCase(replay?.holeStatus) ||
+      "Complete"
+    );
+  }, [
+    fallbackPar,
+    fallbackResult,
+    isHoleComplete,
+    replay,
+  ]);
+
+  const displayStatus =
+    isHoleComplete
+      ? completedResult || "Complete"
+      : replay?.shots.length
+        ? "In progress"
+        : replay
+          ? "Not started"
+          : "";
+
+  const par =
+    replay?.par ?? fallbackPar;
+
+  const yardage =
+    replay?.yardage ??
+    fallbackYardage;
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-xl">
+      <header className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-400">
+              Hole replay
+            </div>
+
+            {!isHoleComplete &&
+            replay?.shots.length ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-red-300">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+                Live
+              </span>
+            ) : null}
+          </div>
+
+          <h4 className="mt-1 text-lg font-black">
+            Hole {holeNumber}
+          </h4>
+
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-400">
+            <span>
+              {par === null
+                ? "Par —"
+                : `Par ${par}`}
+            </span>
+
+            {yardage !== null ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{yardage} yards</span>
+              </>
+            ) : null}
+
+            {displayStatus ? (
+              <>
+                <span aria-hidden="true">·</span>
+
+                <strong
+                  className={
+                    isHoleComplete
+                      ? resultToneClass(
+                          completedResult,
+                        )
+                      : "text-amber-300"
+                  }
+                >
+                  {displayStatus}
+                </strong>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              void loadReplay({
+                forceRefresh: true,
+              })
+            }
+            disabled={isRefreshing}
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-700 bg-emerald-950 px-3 text-[11px] font-bold text-emerald-200 transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Refresh this hole's shot tracking"
+          >
+            {isRefreshing
+              ? "Refreshing…"
+              : "↻ Refresh hole"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800"
+            aria-label="Close hole replay"
+          >
+            ×
+          </button>
+        </div>
+      </header>
+
+      {isLoading ? (
+        <div className="px-4 py-7 text-center">
+          <div className="text-sm font-bold text-emerald-300">
+            Loading shot tracking…
+          </div>
+
+          <div className="mt-1 text-xs text-slate-500">
+            Loaded only when you open a hole.
+          </div>
+        </div>
+      ) : message && !replay ? (
+        <div className="px-4 py-6 text-center">
+          <div className="text-sm font-bold text-slate-200">
+            Shot tracking unavailable
+          </div>
+
+          <div className="mt-1 text-xs leading-5 text-slate-500">
+            {message}
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              void loadReplay({
+                forceRefresh: true,
+              })
+            }
+            disabled={isRefreshing}
+            className="mt-4 rounded-xl border border-emerald-700 bg-emerald-950 px-4 py-2 text-xs font-bold text-emerald-200 disabled:opacity-60"
+          >
+            Try again
+          </button>
+        </div>
+      ) : replay ? (
+        <div className="p-3 sm:p-4">
+          {message ? (
+            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+              {message}
+            </div>
+          ) : null}
+
+          {activeShotCastConfig ? (
+            <div className="mb-3">
+              {isShotCastOpen ? (
+                <>
+                  <GolfHoleMap2D
+                    title={
+                      activeShotCastConfig
+                        .title
+                    }
+                    imageUrl={
+                      activeShotCastConfig
+                        .imageUrl
+                    }
+                    greenImageUrl={
+                      replay.shotcast
+                        ?.greenImageUrl ??
+                      null
+                    }
+                    greenModelUrl={
+                      replay.tournamentId
+                        ? `/api/golf/shotcast-green-model?tournamentId=${encodeURIComponent(
+                            replay.tournamentId,
+                          )}&hole=${holeNumber}`
+                        : null
+                    }
+                    imageFit={
+                      activeShotCastConfig
+                        .imageFit
+                    }
+                    calibration={
+                      activeShotCastConfig
+                        .calibration
+                    }
+                    showShotOverlay={
+                      activeShotCastConfig
+                        .calibrationVerified
+                    }
+                    emptyStateLabel={
+                      replay.shots.length === 0
+                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+                        : activeShotCastConfig
+                              .calibrationVerified
+                          ? "No plottable shot coordinates were returned."
+                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+                    }
+                    shots={replay.shots}
+                    selectedStrokeNumber={
+                      selectedStrokeNumber
+                    }
+                    onSelectStroke={
+                      setSelectedStrokeNumber
+                    }
+                  />
+
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {!activeShotCastConfig
+                        .calibrationVerified ? (
+                        <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-amber-300">
+                          Layout preview
+                        </span>
+                      ) : null}
+
+                      {!isHoleComplete &&
+                      replay.shots.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                          Auto-refreshing every 30 sec
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {replay.shots.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setIsAllShotsOpen(
+                            (current) =>
+                              !current,
+                          )
+                        }
+                        aria-expanded={
+                          isAllShotsOpen
+                        }
+                        className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800"
+                      >
+                        {isAllShotsOpen
+                          ? "Hide all shots"
+                          : `All shots (${replay.shots.length})`}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {activeShotCastConfig
+                    .aboutThisHole ? (
+                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                        About this hole
+                      </div>
+
+                      <div className="mt-1 text-xs leading-5 text-slate-400">
+                        {
+                          activeShotCastConfig
+                            .aboutThisHole
+                        }
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          ) : isManifestLoading ? (
+            <div className="mb-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-3 text-xs text-slate-500">
+              Checking for ShotCast course assets…
+            </div>
+          ) : null}
+
+          {replay.shots.length > 0 &&
+          (!activeShotCastConfig ||
+            isAllShotsOpen) ? (
+            <div className="overflow-hidden rounded-xl border border-slate-800">
+              {replay.shots.map(
+                (shot, index) => {
+                  const summary =
+                    shotSummary(
+                      shot,
+                      completedResult,
+                    );
+
+                  const isCurrentBall =
+                    !isHoleComplete &&
+                    index ===
+                      replay.shots.length - 1;
+
+                  const isSelectedShot =
+                    shot.strokeNumber ===
+                    selectedStrokeNumber;
+
+                  return (
+                    <button
+                      type="button"
+                      key={shot.strokeNumber}
+                      onClick={() => {
+                        setSelectedStrokeNumber(
+                          shot.strokeNumber,
+                        );
+
+                        if (
+                          activeShotCastConfig
+                        ) {
+                          setIsAllShotsOpen(
+                            false,
+                          );
+                        }
+                      }}
+                      className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+                        index > 0
+                          ? "border-t border-slate-800"
+                          : ""
+                      } ${
+                        isSelectedShot
+                          ? "bg-emerald-500/10"
+                          : isCurrentBall
+                            ? "bg-amber-500/5"
+                            : "hover:bg-slate-900/70"
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        <span
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                            shot.finalStroke
+                              ? resultBadgeClass(
+                                  completedResult,
+                                )
+                              : isCurrentBall
+                                ? "border-amber-500 bg-amber-950 text-amber-200"
+                                : "border-slate-600 bg-slate-800 text-slate-200"
+                          }`}
+                        >
+                          {shot.strokeNumber}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <strong className="text-sm text-white">
+                              Shot {shot.strokeNumber}
+                            </strong>
+
+                            {summary ? (
+                              <>
+                                <span
+                                  aria-hidden="true"
+                                  className="text-slate-600"
+                                >
+                                  ·
+                                </span>
+
+                                <span
+                                  className={`text-sm font-bold ${
+                                    shot.finalStroke
+                                      ? resultToneClass(
+                                          completedResult,
+                                        )
+                                      : "text-slate-200"
+                                  }`}
+                                >
+                                  {summary}
+                                </span>
+                              </>
+                            ) : null}
+
+                            {isCurrentBall ? (
+                              <span className="rounded-full border border-amber-700/60 bg-amber-950 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                                Current ball
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-1 text-xs text-slate-400">
+                            {locationLabel(
+                              shot.fromLocation,
+                            )}
+
+                            <span
+                              aria-hidden="true"
+                              className="mx-2 text-slate-600"
+                            >
+                              →
+                            </span>
+
+                            {shot.finalStroke
+                              ? "Hole"
+                              : locationLabel(
+                                  shot.toLocation,
+                                )}
+                          </div>
+
+                          {shot.playByPlay ? (
+                            <div className="mt-1.5 text-[11px] leading-4 text-slate-600">
+                              {shot.playByPlay}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          ) : null}
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-600">
+            <span>
+              Shot data provided on demand from PGA TOUR tracking.
+            </span>
+
+            {lastUpdatedAt ? (
+              <span>
+                Updated{" "}
+                {lastUpdatedAt.toLocaleTimeString(
+                  [],
+                  {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  },
+                )}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+================ GolfHoleMap2D.tsx ==========================
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+import GolfGreen3D from "./GolfGreen3D";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type WorldPoint = {
+  x: number;
+  y: number;
+  z?: number | null;
+};
+
+type ShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+type BallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+type ShotFlightTrajectory = {
+  kind: string | null;
+  type: string | null;
+  xFit: number[];
+  yFit: number[];
+  zFit: number[];
+  timeStart: number;
+  timeEnd: number;
+};
+
+type BallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: BallPathPoint[];
+};
+
+type MapShot = {
+  strokeNumber: number;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  finalStroke: boolean;
+
+  videoId?: string | null;
+  radarData?: ShotRadarData | null;
+  flightTrajectory?: ShotFlightTrajectory | null;
+  ballPath?: BallPath | null;
+
+  worldFrom?: WorldPoint | null;
+  worldTo?: WorldPoint | null;
+
+  bottomToTop: CoordinateSet | null;
+
+  /*
+   * Coordinates on PGA's dedicated Green View image.
+   */
+  greenBottomToTop?: CoordinateSet | null;
+};
+
+type Props = {
+  title: string;
+  imageUrl: string;
+  greenImageUrl?: string | null;
+  greenModelUrl?: string | null;
+  shots: MapShot[];
+  selectedStrokeNumber: number | null;
+  onSelectStroke: (
+    strokeNumber: number,
+  ) => void;
+  calibration: MapCalibration;
+  showShotOverlay?: boolean;
+  imageFit?: "fill" | "contain";
+  emptyStateLabel?: string;
+};
+
+type PlotPoint = {
+  x: number;
+  y: number;
+};
+
+type PlotShot = {
+  strokeNumber: number;
+  from: PlotPoint;
+  to: PlotPoint;
+  finalStroke: boolean;
+  videoId: string | null;
+  radarData: ShotRadarData | null;
+  flightTrajectory: ShotFlightTrajectory | null;
+  ballPath: BallPath | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+};
+
+type TransformState = {
+  scale: number;
+  x: number;
+  y: number;
+  rotation: number;
+};
+
+type PointerPosition = {
+  x: number;
+  y: number;
+};
+
+type GestureSnapshot = {
+  distance: number;
+  angle: number;
+  midpoint: PointerPosition;
+  transform: TransformState;
+};
+
+export type MapCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+  verified?: boolean;
+  source?: string;
+  affine?: {
+    pxX: number;
+    rotX: number;
+    rotY: number;
+    pxY: number;
+    coordX: number;
+    coordY: number;
+    dimX: number;
+    dimY: number;
+  };
+};
+
+const VIEWBOX_SIZE = 1000;
+const MIN_SCALE = 1;
+const MAX_SCALE = 5;
+
+/*
+ * Calibration is supplied by the tournament/hole configuration.
+ * The map engine itself is no longer tied to one course.
+ */
+
+const DEFAULT_TRANSFORM: TransformState = {
+  scale: 1,
+  x: 0,
+  y: 0,
+  rotation: 0,
+};
+
+function clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
+) {
+  return Math.min(
+    maximum,
+    Math.max(minimum, value),
+  );
+}
+
+function clampNormalized(
+  value: number,
+) {
+  return clamp(value, 0, 1);
+}
+
+function validPoint(
+  coordinate: Coordinate | null | undefined,
+): coordinate is {
+  x: number;
+  y: number;
+} {
+  return (
+    coordinate?.x !== null &&
+    coordinate?.x !== undefined &&
+    coordinate?.y !== null &&
+    coordinate?.y !== undefined &&
+    Number.isFinite(coordinate.x) &&
+    Number.isFinite(coordinate.y)
+  );
+}
+
+function clampNormalizedPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): (Coordinate & {
+  x: number;
+  y: number;
+}) | null {
+  if (
+    !coordinate ||
+    typeof coordinate.x !== "number" ||
+    typeof coordinate.y !== "number" ||
+    !Number.isFinite(coordinate.x) ||
+    !Number.isFinite(coordinate.y)
+  ) {
+    return null;
+  }
+
+  /*
+   * Approach shots often begin outside PGA's dedicated
+   * Green View crop. Preserve the incoming direction by
+   * projecting that endpoint onto the edge of the crop.
+   */
+  return {
+    ...coordinate,
+    x: Math.max(
+      0,
+      Math.min(1, coordinate.x),
+    ),
+    y: Math.max(
+      0,
+      Math.min(1, coordinate.y),
+    ),
+  };
+}
+
+function validNormalizedPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): coordinate is Coordinate & {
+  x: number;
+  y: number;
+} {
+  return (
+    validPoint(coordinate) &&
+    coordinate.x >= 0 &&
+    coordinate.x <= 1 &&
+    coordinate.y >= 0 &&
+    coordinate.y <= 1
+  );
+}
+
+function validTourcastPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): coordinate is Coordinate & {
+  tourcastX: number;
+  tourcastY: number;
+} {
+  return (
+    coordinate?.tourcastX !== null &&
+    coordinate?.tourcastX !== undefined &&
+    coordinate?.tourcastY !== null &&
+    coordinate?.tourcastY !== undefined &&
+    Number.isFinite(
+      coordinate.tourcastX,
+    ) &&
+    Number.isFinite(
+      coordinate.tourcastY,
+    )
+  );
+}
+
+function canPlotPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+  calibration: MapCalibration,
+) {
+  if (
+    calibration.affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    return true;
+  }
+
+  return validPoint(coordinate);
+}
+
+function worldToPlotPoint(
+  world: WorldPoint,
+  calibration: MapCalibration,
+): PlotPoint | null {
+  const affine =
+    calibration.affine;
+
+  if (!affine) {
+    return null;
+  }
+
+  const {
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  } = affine;
+
+  /*
+   * This is the same hole-texture UV conversion used by
+   * PGA TOURCAST's Golf Engine.
+   *
+   * Their source:
+   *
+   *   j = rotX * rotY - pxX * pxY
+   *   pixelY =
+   *     (rotX*(x-coordX) -
+   *      pxX*(y-coordY)) / j
+   *
+   *   v = pixelY / dimY
+   *
+   *   pixelX =
+   *     (x - rotY*pixelY - coordX) / pxX
+   *
+   *   u = pixelX / dimX
+   */
+  const determinant =
+    rotX * rotY -
+    pxX * pxY;
+
+  if (
+    Math.abs(determinant) < 1e-12 ||
+    Math.abs(pxX) < 1e-12 ||
+    dimX <= 0 ||
+    dimY <= 0
+  ) {
+    return null;
+  }
+
+  const pixelY =
+    (
+      rotX *
+        (world.x - coordX) -
+      pxX *
+        (world.y - coordY)
+    ) /
+    determinant;
+
+  const pixelX =
+    (
+      world.x -
+      rotY * pixelY -
+      coordX
+    ) /
+    pxX;
+
+  const normalizedX =
+    pixelX / dimX;
+
+  const normalizedY =
+    pixelY / dimY;
+
+  /*
+   * Do NOT clamp invalid native coordinates to an edge.
+   * If PGA did not supply coordinates in this TFW frame,
+   * return null so we fall back to the visible normalized
+   * bottomToTop placement.
+   */
+  if (
+    !Number.isFinite(normalizedX) ||
+    !Number.isFinite(normalizedY) ||
+    normalizedX < 0 ||
+    normalizedX > 1 ||
+    normalizedY < 0 ||
+    normalizedY > 1
+  ) {
+    return null;
+  }
+
+  return {
+    x:
+      normalizedX *
+      VIEWBOX_SIZE,
+    y:
+      normalizedY *
+      VIEWBOX_SIZE,
+  };
+}
+
+function toPlotPoint(
+  coordinate: Coordinate,
+  calibration: MapCalibration,
+): PlotPoint {
+  /*
+   * PGA already supplies normalized bottomToTop x/y
+   * coordinates for every shot.
+   *
+   * These map directly onto the vertical TOURCAST
+   * terrain image:
+   *
+   *   0,0 = top-left
+   *   1,1 = bottom-right
+   *
+   * Prefer these authoritative placement coordinates
+   * whenever they are available.
+   */
+  if (validPoint(coordinate)) {
+    return {
+      x:
+        clampNormalized(
+          coordinate.x,
+        ) * VIEWBOX_SIZE,
+      y:
+        clampNormalized(
+          coordinate.y,
+        ) * VIEWBOX_SIZE,
+    };
+  }
+
+  /*
+   * Fallback for future PGA payloads that provide only
+   * TOURCAST world coordinates.
+   */
+  const affine =
+    calibration.affine;
+
+  if (
+    affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    const {
+      pxX,
+      rotX,
+      rotY,
+      pxY,
+      coordX,
+      coordY,
+      dimX,
+      dimY,
+    } = affine;
+
+    const determinant =
+      pxX * pxY -
+      rotY * rotX;
+
+    if (
+      Math.abs(determinant) > 1e-12 &&
+      dimX > 0 &&
+      dimY > 0
+    ) {
+      const deltaX =
+        coordinate.tourcastX -
+        coordX;
+
+      const deltaY =
+        coordinate.tourcastY -
+        coordY;
+
+      const pixelX =
+        (
+          pxY * deltaX -
+          rotY * deltaY
+        ) /
+        determinant;
+
+      const pixelY =
+        (
+          -rotX * deltaX +
+          pxX * deltaY
+        ) /
+        determinant;
+
+      return {
+        x:
+          clampNormalized(
+            pixelX / dimX,
+          ) * VIEWBOX_SIZE,
+        y:
+          clampNormalized(
+            pixelY / dimY,
+          ) * VIEWBOX_SIZE,
+      };
+    }
+  }
+
+  return {
+    x: 0,
+    y: 0,
+  };
+}
+
+function curveControlPoint(
+  from: PlotPoint,
+  to: PlotPoint,
+): PlotPoint {
+  const midpointX =
+    (from.x + to.x) / 2;
+
+  const midpointY =
+    (from.y + to.y) / 2;
+
+  const distance = Math.hypot(
+    to.x - from.x,
+    to.y - from.y,
+  );
+
+  const curveAmount =
+    Math.min(42, distance * 0.075);
+
+  return {
+    x: midpointX + curveAmount,
+    y: midpointY,
+  };
+}
+
+function curvePath(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  const control =
+    curveControlPoint(from, to);
+
+  return [
+    `M ${from.x} ${from.y}`,
+    `Q ${control.x} ${control.y}`,
+    `${to.x} ${to.y}`,
+  ].join(" ");
+}
+
+function pointOnQuadraticCurve(
+  from: PlotPoint,
+  to: PlotPoint,
+  progress: number,
+): PlotPoint {
+  const control =
+    curveControlPoint(from, to);
+
+  const t = clamp(progress, 0, 1);
+  const inverse = 1 - t;
+
+  return {
+    x:
+      inverse * inverse * from.x +
+      2 * inverse * t * control.x +
+      t * t * to.x,
+    y:
+      inverse * inverse * from.y +
+      2 * inverse * t * control.y +
+      t * t * to.y,
+  };
+}
+
+function approximateCurveLength(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  let length = 0;
+  let previous = from;
+
+  for (
+    let index = 1;
+    index <= 24;
+    index += 1
+  ) {
+    const point =
+      pointOnQuadraticCurve(
+        from,
+        to,
+        index / 24,
+      );
+
+    length += Math.hypot(
+      point.x - previous.x,
+      point.y - previous.y,
+    );
+
+    previous = point;
+  }
+
+  return Math.max(length, 1);
+}
+
+type TrackedPlotPoint = PlotPoint & {
+  t: number;
+  altitude: number;
+};
+
+type LocalTrackPoint = {
+  x: number;
+  y: number;
+  t: number;
+  altitude: number;
+};
+
+function evaluatePolynomial(
+  coefficients: number[],
+  time: number,
+) {
+  let result = 0;
+  let power = 1;
+
+  for (
+    const coefficient
+      of coefficients
+  ) {
+    result +=
+      coefficient * power;
+
+    power *= time;
+  }
+
+  return result;
+}
+
+function mapLocalTrackToPlot(
+  from: PlotPoint,
+  to: PlotPoint,
+  localPoints: LocalTrackPoint[],
+): TrackedPlotPoint[] | null {
+  if (localPoints.length < 2) {
+    return null;
+  }
+
+  const first =
+    localPoints[0];
+
+  const last =
+    localPoints[
+      localPoints.length - 1
+    ];
+
+  const localDx =
+    last.x - first.x;
+
+  const localDy =
+    last.y - first.y;
+
+  const localLength =
+    Math.hypot(
+      localDx,
+      localDy,
+    );
+
+  const screenDx =
+    to.x - from.x;
+
+  const screenDy =
+    to.y - from.y;
+
+  const screenLength =
+    Math.hypot(
+      screenDx,
+      screenDy,
+    );
+
+  if (
+    localLength < 1e-6 ||
+    screenLength < 1e-6
+  ) {
+    return null;
+  }
+
+  const localLengthSq =
+    localLength *
+    localLength;
+
+  const perpendicularX =
+    -screenDy /
+    screenLength;
+
+  const perpendicularY =
+    screenDx /
+    screenLength;
+
+  const lateralScale =
+    screenLength /
+    localLength;
+
+  return localPoints.map(
+    (point) => {
+      const dx =
+        point.x -
+        first.x;
+
+      const dy =
+        point.y -
+        first.y;
+
+      /*
+       * Position along the shot's local start→finish axis.
+       */
+      const along =
+        (
+          dx * localDx +
+          dy * localDy
+        ) /
+        localLengthSq;
+
+      /*
+       * Signed distance away from the straight start→finish
+       * line. This is what preserves PGA's actual curve/break
+       * when we rotate the tracking data onto our map.
+       */
+      const lateral =
+        (
+          localDx * dy -
+          localDy * dx
+        ) /
+        localLength;
+
+      return {
+        x:
+          from.x +
+          screenDx * along +
+          perpendicularX *
+            lateral *
+            lateralScale,
+
+        y:
+          from.y +
+          screenDy * along +
+          perpendicularY *
+            lateral *
+            lateralScale,
+
+        t:
+          point.t,
+
+        altitude:
+          point.altitude,
+      };
+    },
+  );
+}
+
+function flightTrackPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] | null {
+  const trajectory =
+    shot.flightTrajectory;
+
+  if (
+    !trajectory ||
+    trajectory.timeEnd <=
+      trajectory.timeStart
+  ) {
+    return null;
+  }
+
+  const sampleCount = 64;
+
+  const raw: {
+    x: number;
+    y: number;
+    z: number;
+    t: number;
+  }[] = [];
+
+  for (
+    let index = 0;
+    index < sampleCount;
+    index += 1
+  ) {
+    const normalizedTime =
+      index /
+      (sampleCount - 1);
+
+    const time =
+      trajectory.timeStart +
+      (
+        trajectory.timeEnd -
+        trajectory.timeStart
+      ) *
+        normalizedTime;
+
+    raw.push({
+      x: evaluatePolynomial(
+        trajectory.xFit,
+        time,
+      ),
+
+      /*
+       * PGA radar Y is height for the payload we've
+       * verified from TOURCAST.
+       */
+      y: evaluatePolynomial(
+        trajectory.yFit,
+        time,
+      ),
+
+      /*
+       * PGA radar Z carries the horizontal side component.
+       */
+      z: evaluatePolynomial(
+        trajectory.zFit,
+        time,
+      ),
+
+      t:
+        normalizedTime,
+    });
+  }
+
+  /*
+   * Remove the start→finish height baseline so altitude is
+   * the ball's height ABOVE its straight ground-level path.
+   */
+  const firstHeight =
+    raw[0].y;
+
+  const lastHeight =
+    raw[
+      raw.length - 1
+    ].y;
+
+  const altitudeValues =
+    raw.map((point) => {
+      const baseline =
+        firstHeight +
+        (
+          lastHeight -
+          firstHeight
+        ) *
+          point.t;
+
+      return Math.max(
+        0,
+        point.y -
+          baseline,
+      );
+    });
+
+  const maximumAltitude =
+    Math.max(
+      ...altitudeValues,
+      0.0001,
+    );
+
+  const localPoints:
+    LocalTrackPoint[] =
+    raw.map(
+      (
+        point,
+        index,
+      ) => ({
+        /*
+         * X = downrange
+         * Z = lateral movement
+         */
+        x:
+          point.x,
+
+        y:
+          point.z,
+
+        t:
+          point.t,
+
+        altitude:
+          clamp(
+            altitudeValues[index] /
+              maximumAltitude,
+            0,
+            1,
+          ),
+      }),
+    );
+
+  return mapLocalTrackToPlot(
+    shot.from,
+    shot.to,
+    localPoints,
+  );
+}
+
+function ballRollTrackPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] | null {
+  const path =
+    shot.ballPath?.path;
+
+  if (!path || path.length < 2) {
+    return null;
+  }
+
+  const ordered =
+    [...path].sort(
+      (
+        first,
+        second,
+      ) =>
+        first.secondsSinceStart -
+        second.secondsSinceStart,
+    );
+
+  const startTime =
+    ordered[0]
+      .secondsSinceStart;
+
+  const endTime =
+    ordered[
+      ordered.length - 1
+    ].secondsSinceStart;
+
+  const duration =
+    Math.max(
+      endTime - startTime,
+      0.001,
+    );
+
+  const localPoints:
+    LocalTrackPoint[] =
+    ordered.map(
+      (point) => ({
+        x:
+          point.x,
+
+        y:
+          point.y,
+
+        t:
+          clamp(
+            (
+              point.secondsSinceStart -
+              startTime
+            ) /
+              duration,
+            0,
+            1,
+          ),
+
+        altitude: 0,
+      }),
+    );
+
+  return mapLocalTrackToPlot(
+    shot.from,
+    shot.to,
+    localPoints,
+  );
+}
+
+function fallbackTrackPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] {
+  const result:
+    TrackedPlotPoint[] = [];
+
+  const samples = 32;
+
+  for (
+    let index = 0;
+    index < samples;
+    index += 1
+  ) {
+    const t =
+      index /
+      (samples - 1);
+
+    const point =
+      pointOnQuadraticCurve(
+        shot.from,
+        shot.to,
+        t,
+      );
+
+    result.push({
+      ...point,
+      t,
+      altitude: 0,
+    });
+  }
+
+  return result;
+}
+
+function hasRealTrackingPath(
+  shot: PlotShot,
+) {
+  return Boolean(
+    (
+      isGreenLocation(
+        shot.fromLocation,
+      ) &&
+      shot.ballPath?.path.length
+    ) ||
+      shot.flightTrajectory ||
+      shot.ballPath?.path.length,
+  );
+}
+
+function trackedPathPoints(
+  shot: PlotShot,
+): TrackedPlotPoint[] {
+  /*
+   * Once the ball is already on the green, PGA's BallPath is
+   * authoritative: it contains the actual sampled roll/break.
+   */
+  if (
+    isGreenLocation(
+      shot.fromLocation,
+    )
+  ) {
+    const roll =
+      ballRollTrackPoints(
+        shot,
+      );
+
+    if (roll) {
+      return roll;
+    }
+  }
+
+  /*
+   * For full shots, use the actual radar polynomial.
+   */
+  const flight =
+    flightTrackPoints(
+      shot,
+    );
+
+  if (flight) {
+    return flight;
+  }
+
+  /*
+   * Some PGA shots expose a sampled BallPath even without
+   * radar. Use that before falling back.
+   */
+  const roll =
+    ballRollTrackPoints(
+      shot,
+    );
+
+  if (roll) {
+    return roll;
+  }
+
+  /*
+   * Last-resort legacy behavior.
+   */
+  return fallbackTrackPoints(
+    shot,
+  );
+}
+
+function trackedPathLength(
+  points: TrackedPlotPoint[],
+) {
+  let length = 0;
+
+  for (
+    let index = 1;
+    index < points.length;
+    index += 1
+  ) {
+    length +=
+      Math.hypot(
+        points[index].x -
+          points[index - 1].x,
+
+        points[index].y -
+          points[index - 1].y,
+      );
+  }
+
+  return Math.max(
+    length,
+    1,
+  );
+}
+
+function trackedPathD(
+  points: TrackedPlotPoint[],
+) {
+  if (!points.length) {
+    return "";
+  }
+
+  return [
+    `M ${points[0].x} ${points[0].y}`,
+    ...points
+      .slice(1)
+      .map(
+        (point) =>
+          `L ${point.x} ${point.y}`,
+      ),
+  ].join(" ");
+}
+
+function pointOnTrackedPath(
+  points: TrackedPlotPoint[],
+  progress: number,
+): TrackedPlotPoint | null {
+  if (!points.length) {
+    return null;
+  }
+
+  if (points.length === 1) {
+    return points[0];
+  }
+
+  const target =
+    clamp(
+      progress,
+      0,
+      1,
+    );
+
+  if (
+    target <=
+    points[0].t
+  ) {
+    return points[0];
+  }
+
+  for (
+    let index = 1;
+    index < points.length;
+    index += 1
+  ) {
+    const previous =
+      points[index - 1];
+
+    const current =
+      points[index];
+
+    if (
+      target >
+      current.t
+    ) {
+      continue;
+    }
+
+    const interval =
+      Math.max(
+        current.t -
+          previous.t,
+        0.000001,
+      );
+
+    const localProgress =
+      clamp(
+        (
+          target -
+          previous.t
+        ) /
+          interval,
+        0,
+        1,
+      );
+
+    return {
+      x:
+        previous.x +
+        (
+          current.x -
+          previous.x
+        ) *
+          localProgress,
+
+      y:
+        previous.y +
+        (
+          current.y -
+          previous.y
+        ) *
+          localProgress,
+
+      t:
+        target,
+
+      altitude:
+        previous.altitude +
+        (
+          current.altitude -
+          previous.altitude
+        ) *
+          localProgress,
+    };
+  }
+
+  return points[
+    points.length - 1
+  ];
+}
+
+function trackingAnimationDuration(
+  shot: PlotShot,
+) {
+  if (
+    isGreenLocation(
+      shot.fromLocation,
+    ) &&
+    shot.ballPath?.path.length
+  ) {
+    const path =
+      shot.ballPath.path;
+
+    const first =
+      path[0]
+        .secondsSinceStart;
+
+    const last =
+      path[
+        path.length - 1
+      ].secondsSinceStart;
+
+    const realDuration =
+      Math.max(
+        0,
+        last - first,
+      );
+
+    if (realDuration > 0) {
+      return clamp(
+        realDuration * 1000,
+        800,
+        3600,
+      );
+    }
+  }
+
+  const trajectory =
+    shot.flightTrajectory;
+
+  if (trajectory) {
+    const realDuration =
+      trajectory.timeEnd -
+      trajectory.timeStart;
+
+    /*
+     * TOURCAST-style replay is intentionally a little faster
+     * than real-time flight while still respecting PGA timing.
+     */
+    return clamp(
+      realDuration *
+        1000 *
+        0.62,
+      1400,
+      4300,
+    );
+  }
+
+  if (
+    shot.ballPath?.path.length
+  ) {
+    const path =
+      shot.ballPath.path;
+
+    const first =
+      path[0]
+        .secondsSinceStart;
+
+    const last =
+      path[
+        path.length - 1
+      ].secondsSinceStart;
+
+    return clamp(
+      (
+        last -
+        first
+      ) * 1000,
+      800,
+      3600,
+    );
+  }
+
+  return shot.finalStroke
+    ? 1150
+    : shot.strokeNumber === 1
+      ? 2200
+      : 1550;
+}
+
+function easeInOutCubic(
+  value: number,
+) {
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 -
+        Math.pow(
+          -2 * value + 2,
+          3,
+        ) /
+          2;
+}
+
+function isGreenLocation(
+  value: string | null | undefined,
+) {
+  return (
+    value
+      ?.trim()
+      .toLowerCase()
+      .includes("green") ??
+    false
+  );
+}
+
+function usefulPositiveNumber(
+  value: number | null | undefined,
+) {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value) &&
+    value > 0
+  );
+}
+
+function usefulNumber(
+  value: number | null | undefined,
+) {
+  return (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  );
+}
+
+function radarMetrics(
+  shot: PlotShot,
+) {
+  const radar =
+    shot.radarData;
+
+  if (!radar) {
+    return [];
+  }
+
+  const metrics: {
+    label: string;
+    value: string;
+  }[] = [];
+
+  if (
+    usefulPositiveNumber(
+      radar.ballSpeed,
+    )
+  ) {
+    metrics.push({
+      label: "Ball speed",
+      value:
+        `${radar.ballSpeed!.toFixed(1)} mph`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.clubSpeed,
+    )
+  ) {
+    metrics.push({
+      label: "Club speed",
+      value:
+        `${radar.clubSpeed!.toFixed(1)} mph`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.apexHeight,
+    )
+  ) {
+    metrics.push({
+      label: "Apex",
+      value:
+        `${radar.apexHeight!.toFixed(1)} ft`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.carry,
+    )
+  ) {
+    metrics.push({
+      label: "Carry",
+      value:
+        `${radar.carry!.toFixed(0)} yds`,
+    });
+  }
+
+  if (
+    usefulNumber(
+      radar.verticalLaunchAngle,
+    ) &&
+    radar.verticalLaunchAngle !== 0
+  ) {
+    metrics.push({
+      label: "Launch",
+      value:
+        `${radar.verticalLaunchAngle!.toFixed(1)}°`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.launchSpin,
+    )
+  ) {
+    metrics.push({
+      label: "Spin",
+      value:
+        `${Math.round(radar.launchSpin!)} rpm`,
+    });
+  }
+
+  if (
+    usefulNumber(
+      radar.spinAxis,
+    ) &&
+    radar.spinAxis !== 0
+  ) {
+    metrics.push({
+      label: "Spin axis",
+      value:
+        `${radar.spinAxis!.toFixed(1)}°`,
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.smashFactor,
+    )
+  ) {
+    metrics.push({
+      label: "Smash",
+      value:
+        radar.smashFactor!.toFixed(2),
+    });
+  }
+
+  if (
+    usefulPositiveNumber(
+      radar.actualFlightTime,
+    )
+  ) {
+    metrics.push({
+      label: "Flight",
+      value:
+        `${radar.actualFlightTime!.toFixed(1)} sec`,
+    });
+  }
+
+  const headlineMetrics = new Set([
+    "Ball speed",
+    "Apex",
+    "Carry",
+    "Spin",
+  ]);
+
+  return metrics.filter((metric) =>
+    headlineMetrics.has(metric.label),
+  );
+}
+
+function shotDescription(
+  shot: PlotShot,
+) {
+  return [
+    shot.distance,
+    shot.finalStroke
+      ? "In the hole"
+      : shot.distanceRemaining
+        ? `${shot.distanceRemaining} remaining`
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function pointerDistance(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return Math.hypot(
+    second.x - first.x,
+    second.y - first.y,
+  );
+}
+
+function pointerAngle(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return (
+    Math.atan2(
+      second.y - first.y,
+      second.x - first.x,
+    ) *
+    (180 / Math.PI)
+  );
+}
+
+function pointerMidpoint(
+  first: PointerPosition,
+  second: PointerPosition,
+): PointerPosition {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+}
+
+export default function GolfHoleMap2D({
+  title,
+  imageUrl,
+  greenImageUrl = null,
+  greenModelUrl = null,
+  shots,
+  selectedStrokeNumber,
+  onSelectStroke,
+  calibration,
+  showShotOverlay = true,
+  imageFit = "fill",
+  emptyStateLabel = "No shot data is available yet.",
+}: Props) {
+  const viewportRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const pointersRef =
+    useRef(
+      new Map<number, PointerPosition>(),
+    );
+
+  const dragStartRef =
+    useRef<{
+      pointer: PointerPosition;
+      transform: TransformState;
+    } | null>(null);
+
+  const gestureStartRef =
+    useRef<GestureSnapshot | null>(
+      null,
+    );
+
+  const [transform, setTransform] =
+    useState<TransformState>(
+      DEFAULT_TRANSFORM,
+    );
+
+  const [isInteracting, setIsInteracting] =
+    useState(false);
+
+  const [isPlaying, setIsPlaying] =
+    useState(false);
+
+  const [viewMode, setViewMode] =
+    useState<
+      "course" |
+      "green" |
+      "green3d"
+    >(
+      "course",
+    );
+
+  /*
+   * Video playback will replace only the right-side contextual
+   * panel. The map remains visible so the shot's location stays
+   * in context.
+   *
+   * We intentionally do not invent a playback URL from PGA's
+   * videoId. Once the actual PGA player source is verified, it
+   * can plug directly into this state.
+   */
+  const [
+    videoStrokeNumber,
+    setVideoStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animatedStrokeNumber,
+    setAnimatedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animationProgress,
+    setAnimationProgress,
+  ] = useState(1);
+
+  const [
+    revealedStrokeCount,
+    setRevealedStrokeCount,
+  ] = useState<number | null>(null);
+
+  const animationFrameRef =
+    useRef<number | null>(null);
+
+  const animationResolveRef =
+    useRef<(() => void) | null>(null);
+
+  /*
+   * Load PGA's dedicated Green View as soon as ShotCast
+   * mounts instead of waiting until the approach lands.
+   *
+   * By the time playback reaches the green, the browser
+   * should already have the image decoded/cached.
+   */
+  useEffect(() => {
+    if (!greenImageUrl) {
+      return;
+    }
+
+    const image = new Image();
+
+    image.decoding = "async";
+    image.src = greenImageUrl;
+
+    /*
+     * decode() encourages the browser to finish decoding
+     * before we actually switch views. Some browsers may
+     * reject decode() even though the image still loads,
+     * so deliberately ignore that rejection.
+     */
+    void image
+      .decode()
+      .catch(() => undefined);
+  }, [greenImageUrl]);
+
+  const coursePlottedShots =
+    useMemo(
+      () => {
+        if (!showShotOverlay) {
+          return [];
+        }
+
+        return shots
+          .map(
+            (
+              shot,
+            ): PlotShot | null => {
+              if (
+                !shot.bottomToTop ||
+                !canPlotPoint(
+                  shot.bottomToTop.from,
+                  calibration,
+                ) ||
+                !canPlotPoint(
+                  shot.bottomToTop.to,
+                  calibration,
+                )
+              ) {
+                return null;
+              }
+
+              const nativeFrom =
+                shot.worldFrom
+                  ? worldToPlotPoint(
+                      shot.worldFrom,
+                      calibration,
+                    )
+                  : null;
+
+              const nativeTo =
+                shot.worldTo
+                  ? worldToPlotPoint(
+                      shot.worldTo,
+                      calibration,
+                    )
+                  : null;
+
+              const useNativeWorld =
+                nativeFrom !== null &&
+                nativeTo !== null;
+
+              return {
+                strokeNumber:
+                  shot.strokeNumber,
+                from:
+                  useNativeWorld
+                    ? nativeFrom
+                    : toPlotPoint(
+                        shot.bottomToTop
+                          .from,
+                        calibration,
+                      ),
+                to:
+                  useNativeWorld
+                    ? nativeTo
+                    : toPlotPoint(
+                        shot.bottomToTop
+                          .to,
+                        calibration,
+                      ),
+                finalStroke:
+                  shot.finalStroke,
+                videoId:
+                  shot.videoId ?? null,
+                radarData:
+                  shot.radarData ?? null,
+                flightTrajectory:
+                  shot.flightTrajectory ??
+                  null,
+                ballPath:
+                  shot.ballPath ?? null,
+                distance:
+                  shot.distance,
+                distanceRemaining:
+                  shot.distanceRemaining,
+                fromLocation:
+                  shot.fromLocation,
+                toLocation:
+                  shot.toLocation,
+              };
+            },
+          )
+          .filter(
+            (
+              shot,
+            ): shot is PlotShot =>
+              shot !== null,
+          );
+      },
+      [
+        calibration,
+        shots,
+        showShotOverlay,
+      ],
+    );
+
+  const greenPlottedShots =
+    useMemo(
+      () => {
+        if (
+          !showShotOverlay ||
+          !greenImageUrl
+        ) {
+          return [];
+        }
+
+        return shots
+          .map(
+            (
+              shot,
+            ): PlotShot | null => {
+              const coordinates =
+                shot.greenBottomToTop;
+
+              /*
+               * PGA often returns Green View coordinates for
+               * every stroke, including shots that originate
+               * several hundred yards outside the crop.
+               *
+               * Keep only endpoints that genuinely belong
+               * inside the Green View image.
+               */
+              if (!coordinates) {
+                return null;
+              }
+
+              const to =
+                coordinates.to;
+
+              /*
+               * A stroke is useful in Green View whenever
+               * its LANDING point belongs to the green crop.
+               *
+               * Keep the actual point in a local variable so
+               * TypeScript preserves the validity narrowing.
+               *
+               * For putts, both endpoints are naturally
+               * inside the crop.
+               *
+               * For the approach, PGA may report a starting
+               * coordinate outside the crop. Keep that shot
+               * and clamp its starting point to the image
+               * edge so Green View retains the incoming
+               * approach trail and landing marker.
+               */
+              if (
+                !validNormalizedPoint(to)
+              ) {
+                return null;
+              }
+
+              const from =
+                validNormalizedPoint(
+                  coordinates.from,
+                )
+                  ? coordinates.from
+                  : clampNormalizedPoint(
+                      coordinates.from,
+                    );
+
+              if (!from) {
+                return null;
+              }
+
+              return {
+                strokeNumber:
+                  shot.strokeNumber,
+                from: {
+                  x:
+                    from.x *
+                    VIEWBOX_SIZE,
+                  y:
+                    from.y *
+                    VIEWBOX_SIZE,
+                },
+                to: {
+                  x:
+                    to.x *
+                    VIEWBOX_SIZE,
+                  y:
+                    to.y *
+                    VIEWBOX_SIZE,
+                },
+                finalStroke:
+                  shot.finalStroke,
+                videoId:
+                  shot.videoId ?? null,
+                radarData:
+                  shot.radarData ?? null,
+                flightTrajectory:
+                  shot.flightTrajectory ??
+                  null,
+                ballPath:
+                  shot.ballPath ?? null,
+                distance:
+                  shot.distance,
+                distanceRemaining:
+                  shot.distanceRemaining,
+                fromLocation:
+                  shot.fromLocation,
+                toLocation:
+                  shot.toLocation,
+              };
+            },
+          )
+          .filter(
+            (
+              shot,
+            ): shot is PlotShot =>
+              shot !== null,
+          );
+      },
+      [
+        greenImageUrl,
+        shots,
+        showShotOverlay,
+      ],
+    );
+
+  const greenViewAvailable =
+    Boolean(
+      greenImageUrl &&
+      greenPlottedShots.length > 0,
+    );
+
+  const isAnyGreenView =
+    (
+      viewMode === "green" ||
+      viewMode === "green3d"
+    ) &&
+    greenViewAvailable;
+
+  const plottedShots =
+    isAnyGreenView
+      ? greenPlottedShots
+      : coursePlottedShots;
+
+  const activeImageUrl =
+    isAnyGreenView &&
+    greenImageUrl
+      ? greenImageUrl
+      : imageUrl;
+
+  const green3dAvailable =
+    Boolean(
+      greenModelUrl,
+    );
+
+  const selectedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    ) ??
+    plottedShots[0] ??
+    null;
+
+  /*
+   * The final stroke's destination is PGA's cup location
+   * in the normalized Green View coordinate system.
+   */
+  const greenHolePoint =
+    greenPlottedShots.find(
+      (shot) =>
+        shot.finalStroke,
+    )?.to ?? null;
+
+  /*
+   * Navigation always follows the complete hole sequence,
+   * regardless of whether the current camera is using the
+   * Course View or Green View coordinate frame.
+   */
+  const selectedCourseShotIndex =
+    coursePlottedShots.findIndex(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    );
+
+  const previousShot =
+    selectedCourseShotIndex > 0
+      ? coursePlottedShots[
+          selectedCourseShotIndex - 1
+        ]
+      : null;
+
+  const nextShot =
+    selectedCourseShotIndex >= 0 &&
+    selectedCourseShotIndex <
+      coursePlottedShots.length - 1
+      ? coursePlottedShots[
+          selectedCourseShotIndex + 1
+        ]
+      : null;
+
+  const constrainTransform =
+    useCallback(
+      (
+        next: TransformState,
+      ): TransformState => {
+        const viewport =
+          viewportRef.current;
+
+        const width =
+          viewport?.clientWidth ?? 400;
+
+        const height =
+          viewport?.clientHeight ?? 400;
+
+        const scale =
+          clamp(
+            next.scale,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        /*
+         * Keep the transformed course image covering the
+         * viewport instead of allowing it to be dragged
+         * completely away and exposing a large black void.
+         *
+         * At 1×:
+         *   no translation is allowed.
+         *
+         * At higher zoom:
+         *   translation is limited to the extra image area
+         *   created by scaling around the center.
+         */
+        const maxX =
+          ((scale - 1) * width) / 2;
+
+        const maxY =
+          ((scale - 1) * height) / 2;
+
+        return {
+          scale,
+          x: clamp(
+            next.x,
+            -maxX,
+            maxX,
+          ),
+          y: clamp(
+            next.y,
+            -maxY,
+            maxY,
+          ),
+          rotation:
+            ((next.rotation + 180) %
+              360) -
+            180,
+        };
+      },
+      [],
+    );
+
+  const updateTransform =
+    useCallback(
+      (
+        updater:
+          | TransformState
+          | ((
+              current: TransformState,
+            ) => TransformState),
+      ) => {
+        setTransform((current) => {
+          const next =
+            typeof updater ===
+            "function"
+              ? updater(current)
+              : updater;
+
+          return constrainTransform(
+            next,
+          );
+        });
+      },
+      [constrainTransform],
+    );
+
+  const cancelShotAnimation =
+    useCallback(() => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+
+        animationFrameRef.current =
+          null;
+      }
+
+      animationResolveRef.current?.();
+      animationResolveRef.current =
+        null;
+
+      setAnimatedStrokeNumber(null);
+      setAnimationProgress(1);
+    }, []);
+
+  const animateShot =
+    useCallback(
+      (
+        shot: PlotShot,
+      ) =>
+        new Promise<void>((resolve) => {
+          cancelShotAnimation();
+
+          const prefersReducedMotion =
+            window.matchMedia(
+              "(prefers-reduced-motion: reduce)",
+            ).matches;
+
+          if (prefersReducedMotion) {
+            setAnimatedStrokeNumber(
+              shot.strokeNumber,
+            );
+            setAnimationProgress(1);
+
+            window.setTimeout(() => {
+              setAnimatedStrokeNumber(
+                null,
+              );
+              resolve();
+            }, 150);
+
+            return;
+          }
+
+          const duration =
+            trackingAnimationDuration(
+              shot,
+            );
+
+          const startedAt =
+            performance.now();
+
+          setAnimatedStrokeNumber(
+            shot.strokeNumber,
+          );
+          setAnimationProgress(0);
+
+          animationResolveRef.current =
+            resolve;
+
+          const tick = (
+            now: number,
+          ) => {
+            const rawProgress =
+              clamp(
+                (now - startedAt) /
+                  duration,
+                0,
+                1,
+              );
+
+            setAnimationProgress(
+              hasRealTrackingPath(
+                shot,
+              )
+                ? rawProgress
+                : easeInOutCubic(
+                    rawProgress,
+                  ),
+            );
+
+            if (rawProgress >= 1) {
+              animationFrameRef.current =
+                null;
+
+              animationResolveRef.current =
+                null;
+
+              window.setTimeout(() => {
+                setAnimatedStrokeNumber(
+                  null,
+                );
+                resolve();
+              }, 300);
+
+              return;
+            }
+
+            animationFrameRef.current =
+              window.requestAnimationFrame(
+                tick,
+              );
+          };
+
+          animationFrameRef.current =
+            window.requestAnimationFrame(
+              tick,
+            );
+        }),
+      [cancelShotAnimation],
+    );
+
+  const resetView =
+    useCallback(() => {
+      cancelShotAnimation();
+      setIsPlaying(false);
+      /*
+       * Reset restores the complete static replay.
+       * Progressive hiding is used only while Play runs.
+       */
+      setRevealedStrokeCount(null);
+      setViewMode("course");
+      setTransform(
+        DEFAULT_TRANSFORM,
+      );
+    }, [cancelShotAnimation]);
+
+  const focusShot =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        if (!shot) {
+          resetView();
+          return;
+        }
+
+        const viewport =
+          viewportRef.current;
+
+        if (!viewport) {
+          return;
+        }
+
+        const width =
+          viewport.clientWidth;
+
+        const height =
+          viewport.clientHeight;
+
+        const targetScale =
+          shot.strokeNumber === 1
+            ? 1.55
+            : shot.finalStroke
+              ? 3.75
+              : 3;
+
+        const targetX =
+          (shot.to.x /
+            VIEWBOX_SIZE) *
+          width;
+
+        const targetY =
+          (shot.to.y /
+            VIEWBOX_SIZE) *
+          height;
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        updateTransform({
+          scale: targetScale,
+          x:
+            (centerX - targetX) *
+            targetScale,
+          y:
+            (centerY - targetY) *
+            targetScale,
+          rotation: 0,
+        });
+      },
+      [
+        resetView,
+        updateTransform,
+      ],
+    );
+
+  function zoomAroundPoint(
+    clientX: number,
+    clientY: number,
+    scaleMultiplier: number,
+  ) {
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+    const localX =
+      clientX - rect.left;
+
+    const localY =
+      clientY - rect.top;
+
+    updateTransform(
+      (current) => {
+        const nextScale =
+          clamp(
+            current.scale *
+              scaleMultiplier,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        const ratio =
+          nextScale /
+          current.scale;
+
+        const centerX =
+          rect.width / 2;
+
+        const centerY =
+          rect.height / 2;
+
+        return {
+          ...current,
+          scale: nextScale,
+          x:
+            localX -
+            centerX -
+            (localX -
+              centerX -
+              current.x) *
+              ratio,
+          y:
+            localY -
+            centerY -
+            (localY -
+              centerY -
+              current.y) *
+              ratio,
+        };
+      },
+    );
+  }
+
+  function handleWheel(
+    event: React.WheelEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      event.deltaY < 0
+        ? 1.12
+        : 0.89,
+    );
+  }
+
+  function handleDoubleClick(
+    event: React.MouseEvent<HTMLDivElement>,
+  ) {
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      transform.scale >= 2.5
+        ? 0.5
+        : 1.75,
+    );
+  }
+
+  function handlePointerDown(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    const target =
+      event.target as Element | null;
+
+    /*
+     * Shot markers control replay selection. Do not let the
+     * pan/zoom layer capture those presses as drag gestures.
+     */
+    if (
+      target?.closest(
+        '[data-shotcast-marker="true"]',
+      )
+    ) {
+      return;
+    }
+
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    viewport.setPointerCapture(
+      event.pointerId,
+    );
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    setIsInteracting(true);
+    setIsPlaying(false);
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 1) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    } else if (
+      pointers.length >= 2
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      gestureStartRef.current = {
+        distance:
+          pointerDistance(
+            first,
+            second,
+          ),
+        angle:
+          pointerAngle(
+            first,
+            second,
+          ),
+        midpoint:
+          pointerMidpoint(
+            first,
+            second,
+          ),
+        transform: {
+          ...transform,
+        },
+      };
+
+      dragStartRef.current =
+        null;
+    }
+  }
+
+  function handlePointerMove(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    if (
+      !pointersRef.current.has(
+        event.pointerId,
+      )
+    ) {
+      return;
+    }
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (
+      pointers.length === 1 &&
+      dragStartRef.current
+    ) {
+      const pointer =
+        pointers[0];
+
+      const start =
+        dragStartRef.current;
+
+      updateTransform({
+        ...start.transform,
+        x:
+          start.transform.x +
+          pointer.x -
+          start.pointer.x,
+        y:
+          start.transform.y +
+          pointer.y -
+          start.pointer.y,
+      });
+
+      return;
+    }
+
+    if (
+      pointers.length >= 2 &&
+      gestureStartRef.current
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      const distance =
+        pointerDistance(
+          first,
+          second,
+        );
+
+      const angle =
+        pointerAngle(
+          first,
+          second,
+        );
+
+      const midpoint =
+        pointerMidpoint(
+          first,
+          second,
+        );
+
+      const start =
+        gestureStartRef.current;
+
+      const distanceRatio =
+        start.distance > 0
+          ? distance /
+            start.distance
+          : 1;
+
+      updateTransform({
+        scale:
+          start.transform.scale *
+          distanceRatio,
+        rotation:
+          start.transform.rotation +
+          angle -
+          start.angle,
+        x:
+          start.transform.x +
+          midpoint.x -
+          start.midpoint.x,
+        y:
+          start.transform.y +
+          midpoint.y -
+          start.midpoint.y,
+      });
+    }
+  }
+
+  function releasePointer(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    pointersRef.current.delete(
+      event.pointerId,
+    );
+
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId,
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId,
+      );
+    }
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 0) {
+      dragStartRef.current =
+        null;
+
+      gestureStartRef.current =
+        null;
+
+      setIsInteracting(false);
+    } else if (
+      pointers.length === 1
+    ) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+      }
+
+      animationResolveRef.current?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function runReplay() {
+      if (
+        coursePlottedShots.length === 0
+      ) {
+        setIsPlaying(false);
+        return;
+      }
+
+      for (
+        const courseShot
+        of coursePlottedShots
+      ) {
+        if (cancelled) {
+          return;
+        }
+
+        onSelectStroke(
+          courseShot.strokeNumber,
+        );
+
+        const greenShot =
+          greenPlottedShots.find(
+            (candidate) =>
+              candidate.strokeNumber ===
+              courseShot.strokeNumber,
+          ) ?? null;
+
+        const startsOnGreen =
+          isGreenLocation(
+            courseShot.fromLocation,
+          );
+
+        const finishesOnGreen =
+          courseShot.finalStroke ||
+          isGreenLocation(
+            courseShot.toLocation,
+          );
+
+        const useGreenShot =
+          startsOnGreen &&
+          greenViewAvailable &&
+          greenShot !== null;
+
+        const animationShot =
+          useGreenShot
+            ? greenShot
+            : courseShot;
+
+        /*
+         * Drives and approaches play on Course View.
+         * Putts play on PGA's dedicated Green View.
+         */
+        if (useGreenShot) {
+          setViewMode("green");
+
+          /*
+           * The Green View image itself is already a tight
+           * crop. Start at 1× rather than magnifying another
+           * 3–4× and destroying image clarity.
+           */
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+        } else {
+          setViewMode("course");
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+        }
+
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              useGreenShot
+                ? 500
+                : 200,
+            );
+          },
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        await animateShot(
+          animationShot,
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        /*
+         * Strokes are sequential, so using the actual stroke
+         * number works in BOTH Course View and Green View,
+         * even though Green View may omit drives entirely.
+         */
+        setRevealedStrokeCount(
+          courseShot.strokeNumber,
+        );
+
+        /*
+         * Let the approach finish on Course View, then switch
+         * to the dedicated Green View before the first putt.
+         */
+        if (
+          finishesOnGreen &&
+          !startsOnGreen &&
+          greenViewAvailable
+        ) {
+          setViewMode("green");
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+
+          await new Promise<void>(
+            (resolve) => {
+              window.setTimeout(
+                resolve,
+                750,
+              );
+            },
+          );
+        } else {
+          await new Promise<void>(
+            (resolve) => {
+              window.setTimeout(
+                resolve,
+                500,
+              );
+            },
+          );
+        }
+      }
+
+      if (!cancelled) {
+        setRevealedStrokeCount(null);
+        setIsPlaying(false);
+      }
+    }
+
+    void runReplay();
+
+    return () => {
+      cancelled = true;
+      cancelShotAnimation();
+    };
+  }, [
+    animateShot,
+    cancelShotAnimation,
+    coursePlottedShots,
+    greenPlottedShots,
+    greenViewAvailable,
+    isPlaying,
+    onSelectStroke,
+  ]);
+
+  function startPlayback() {
+    if (!coursePlottedShots[0]) {
+      return;
+    }
+
+    cancelShotAnimation();
+    setViewMode("course");
+
+    /*
+     * Playback always begins from the complete hole.
+     * Manual Recenter Shot remains available separately.
+     */
+    setTransform(
+      DEFAULT_TRANSFORM,
+    );
+
+    setRevealedStrokeCount(0);
+
+    onSelectStroke(
+      coursePlottedShots[0]
+        .strokeNumber,
+    );
+
+    setIsPlaying(true);
+  }
+
+  async function selectShot(
+    strokeNumber: number,
+  ) {
+    setIsPlaying(false);
+    setVideoStrokeNumber(null);
+
+    /*
+     * Individual-shot replay represents the state of the
+     * hole AT that moment.
+     *
+     * Keep earlier shots visible, hide all later shots,
+     * and let the selected shot reveal itself again during
+     * its animation.
+     */
+    setRevealedStrokeCount(
+      Math.max(0, strokeNumber - 1),
+    );
+
+    cancelShotAnimation();
+
+    const courseShot =
+      coursePlottedShots.find(
+        (candidate) =>
+          candidate.strokeNumber ===
+          strokeNumber,
+      ) ?? null;
+
+    const greenShot =
+      greenPlottedShots.find(
+        (candidate) =>
+          candidate.strokeNumber ===
+          strokeNumber,
+      ) ?? null;
+
+    if (!courseShot) {
+      return;
+    }
+
+    onSelectStroke(
+      strokeNumber,
+    );
+
+    const shouldUseGreen =
+      greenViewAvailable &&
+      greenShot !== null &&
+      isGreenLocation(
+        courseShot.fromLocation,
+      );
+
+    if (shouldUseGreen) {
+      setViewMode("green");
+      setTransform(
+        DEFAULT_TRANSFORM,
+      );
+
+      await new Promise<void>(
+        (resolve) => {
+          window.setTimeout(
+            resolve,
+            450,
+          );
+        },
+      );
+
+      await animateShot(
+        greenShot,
+      );
+
+      setRevealedStrokeCount(
+        strokeNumber,
+      );
+
+      return;
+    }
+
+    setViewMode("course");
+
+    focusShot(
+      courseShot,
+    );
+
+    await new Promise<void>(
+      (resolve) => {
+        window.setTimeout(
+          resolve,
+          500,
+        );
+      },
+    );
+
+    await animateShot(
+      courseShot,
+    );
+
+    setRevealedStrokeCount(
+      strokeNumber,
+    );
+  }
+
+  const cupPoint =
+    [...plottedShots]
+      .reverse()
+      .find(
+        (shot) =>
+          shot.finalStroke,
+      )?.to ??
+    plottedShots[
+      plottedShots.length - 1
+    ]?.to ??
+    null;
+
+  const animatedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        animatedStrokeNumber,
+    ) ?? null;
+
+  const animatedTrackedPath =
+    animatedShot
+      ? trackedPathPoints(
+          animatedShot,
+        )
+      : null;
+
+  const animatedBallPoint =
+    animatedTrackedPath
+      ? pointOnTrackedPath(
+          animatedTrackedPath,
+          animationProgress,
+        )
+      : null;
+
+  const animatedAltitude =
+    animatedBallPoint
+      ?.altitude ?? 0;
+
+  const inverseScale =
+    1 / transform.scale;
+
+  const markerRadius =
+    25 * inverseScale;
+
+  const markerStroke =
+    Math.max(
+      3,
+      7 * inverseScale,
+    );
+
+  const markerFontSize =
+    Math.max(
+      12,
+      29 * inverseScale,
+    );
+
+  const selectedRadarMetrics =
+    selectedShot
+      ? radarMetrics(
+          selectedShot,
+        )
+      : [];
+
+  const isVideoPanelOpen =
+    selectedShot !== null &&
+    videoStrokeNumber ===
+      selectedShot.strokeNumber &&
+    Boolean(
+      selectedShot.videoId,
+    );
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-3 py-2.5">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+            ShotCast replay
+          </div>
+
+          <div className="mt-0.5 flex items-center gap-2 text-xs font-bold text-slate-200">
+            <span>{title}</span>
+
+            {viewMode === "green" &&
+            greenViewAvailable ? (
+              <span className="rounded-full border border-emerald-700 bg-emerald-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-emerald-300">
+                Green View
+              </span>
+            ) : null}
+
+            {viewMode === "green3d" &&
+            green3dAvailable ? (
+              <span className="rounded-full border border-cyan-700 bg-cyan-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-cyan-300">
+                3D Green
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          {greenViewAvailable ? (
+            <div className="mr-1 flex overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPlaying(false);
+                  cancelShotAnimation();
+                  setViewMode("course");
+                  setTransform(
+                    DEFAULT_TRANSFORM,
+                  );
+                }}
+                className={`px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+                  viewMode === "course"
+                    ? "bg-slate-700 text-white"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Course
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPlaying(false);
+                  cancelShotAnimation();
+                  setViewMode("green");
+                  setTransform(
+                    DEFAULT_TRANSFORM,
+                  );
+                }}
+                className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+                  viewMode === "green"
+                    ? "bg-emerald-900 text-emerald-200"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                Green
+              </button>
+
+              {green3dAvailable ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPlaying(false);
+                    cancelShotAnimation();
+                    setViewMode(
+                      "green3d",
+                    );
+                  }}
+                  className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+                    viewMode === "green3d"
+                      ? "bg-cyan-900 text-cyan-200"
+                      : "text-slate-500 hover:text-slate-300"
+                  }`}
+                >
+                  3D
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {plottedShots.length > 0 ? (
+            <>
+              {viewMode !== "green3d" ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    focusShot(
+                      selectedShot,
+                    )
+                  }
+                  className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+                >
+                  Recenter shot
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={startPlayback}
+                disabled={isPlaying}
+                className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+              >
+                {isPlaying
+                  ? "Playing hole…"
+                  : "▶ Play Hole"}
+              </button>
+            </>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={resetView}
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-[10px] font-bold text-slate-400"
+          >
+            Reset
+          </button>
+        </div>
+      </header>
+
+      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(260px,430px)_1fr]">
+        <div className="mx-auto w-full max-w-[430px]">
+          {viewMode === "green3d" &&
+          greenModelUrl ? (
+            <GolfGreen3D
+              modelUrl={
+                greenModelUrl
+              }
+              title={title}
+              selectedShot={
+                selectedShot
+                  ? {
+                      strokeNumber:
+                        selectedShot.strokeNumber,
+                      from:
+                        selectedShot.from,
+                      to:
+                        selectedShot.to,
+                      finalStroke:
+                        selectedShot.finalStroke,
+                    }
+                  : null
+              }
+              holePoint={
+                greenHolePoint
+              }
+            />
+          ) : (
+          <div
+            ref={viewportRef}
+            className={`relative aspect-square overflow-hidden rounded-xl border border-slate-700 bg-slate-950 select-none ${
+              isInteracting
+                ? "cursor-grabbing"
+                : "cursor-grab"
+            }`}
+            style={{
+              touchAction: "none",
+            }}
+            onWheel={handleWheel}
+            onDoubleClick={
+              handleDoubleClick
+            }
+            onPointerDown={
+              handlePointerDown
+            }
+            onPointerMove={
+              handlePointerMove
+            }
+            onPointerUp={
+              releasePointer
+            }
+            onPointerCancel={
+              releasePointer
+            }
+          >
+            <div
+              className="absolute inset-0 will-change-transform"
+              style={{
+                transform: [
+                  `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+                  `scale(${transform.scale})`,
+                  `rotate(${transform.rotation}deg)`,
+                ].join(" "),
+                transformOrigin:
+                  "50% 50%",
+                transition:
+                  isInteracting
+                    ? "none"
+                    : "transform 650ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            >
+              <img
+                key={activeImageUrl}
+                src={activeImageUrl}
+                alt={
+                  viewMode === "green"
+                    ? `${title} green view`
+                    : `${title} aerial hole layout`
+                }
+                draggable={false}
+                className={`absolute inset-0 h-full w-full ${
+                  imageFit === "contain"
+                    ? "object-contain"
+                    : "object-fill"
+                }`}
+              />
+
+              <svg
+                viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full"
+                role="img"
+                aria-label={`${title} shot paths`}
+              >
+                <defs>
+                  <filter
+                    id="shot-path-shadow"
+                    x="-40%"
+                    y="-40%"
+                    width="180%"
+                    height="180%"
+                  >
+                    <feDropShadow
+                      dx="0"
+                      dy="2"
+                      stdDeviation={
+                        3 *
+                        inverseScale
+                      }
+                      floodColor="#020617"
+                      floodOpacity="0.95"
+                    />
+                  </filter>
+                </defs>
+
+                {plottedShots.map(
+                  (shot) => {
+                    const isSelected =
+                      shot.strokeNumber ===
+                      selectedShot
+                        ?.strokeNumber;
+
+                    const isAnimating =
+                      shot.strokeNumber ===
+                      animatedStrokeNumber;
+
+                    const isRevealMode =
+                      revealedStrokeCount !==
+                      null;
+
+                    const wasRevealed =
+                      !isRevealMode ||
+                      shot.strokeNumber <=
+                        revealedStrokeCount;
+
+                    const showPath =
+                      wasRevealed ||
+                      isAnimating;
+
+                    const actualPath =
+                      trackedPathPoints(
+                        shot,
+                      );
+
+                    const pathLength =
+                      trackedPathLength(
+                        actualPath,
+                      );
+
+                    const pathD =
+                      trackedPathD(
+                        actualPath,
+                      );
+
+                    const showLandingMarker =
+                      wasRevealed ||
+                      (isAnimating &&
+                        animationProgress >=
+                          0.98);
+
+                    return (
+                      <g
+                        key={`path-${shot.strokeNumber}`}
+                        data-shotcast-marker="true"
+                        className={
+                          showLandingMarker
+                            ? "cursor-pointer"
+                            : "pointer-events-none"
+                        }
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => {
+                          event.stopPropagation();
+
+                          selectShot(
+                            shot.strokeNumber,
+                          );
+                        }}
+                      >
+                        <circle
+                          cx={shot.to.x}
+                          cy={shot.to.y}
+                          r={
+                            markerRadius *
+                            1.85
+                          }
+                          fill="transparent"
+                          stroke="transparent"
+                          pointerEvents="all"
+                        />
+
+                        <path
+                          d={
+                            pathD
+                          }
+                          fill="none"
+                          visibility={
+                            showPath
+                              ? "visible"
+                              : "hidden"
+                          }
+                          stroke={
+                            isSelected
+                              ? "#facc15"
+                              : "#f8fafc"
+                          }
+                          strokeWidth={
+                            (isSelected
+                              ? 11
+                              : 7) *
+                            inverseScale
+                          }
+                          strokeLinecap="round"
+                          strokeDasharray={
+                            isAnimating
+                              ? `${pathLength} ${pathLength}`
+                              : isSelected
+                                ? "0"
+                                : `${18 * inverseScale} ${13 * inverseScale}`
+                          }
+                          strokeDashoffset={
+                            isAnimating
+                              ? pathLength *
+                                (1 -
+                                  animationProgress)
+                              : 0
+                          }
+                          opacity={
+                            isSelected
+                              ? 1
+                              : 0.75
+                          }
+                          filter="url(#shot-path-shadow)"
+                        />
+
+                        {showLandingMarker ? (
+                          <>
+                            <circle
+                              cx={shot.to.x}
+                              cy={shot.to.y}
+                              r={
+                                isSelected
+                                  ? markerRadius *
+                                    1.2
+                                  : markerRadius
+                              }
+                              fill={
+                                shot.finalStroke
+                                  ? "#10b981"
+                                  : isSelected
+                                    ? "#facc15"
+                                    : "#0f172a"
+                              }
+                              stroke="#ffffff"
+                              strokeWidth={
+                                markerStroke
+                              }
+                              filter="url(#shot-path-shadow)"
+                            />
+
+                            <text
+                              x={shot.to.x}
+                              y={
+                                shot.to.y +
+                                markerFontSize *
+                                  0.34
+                              }
+                              textAnchor="middle"
+                              fontSize={
+                                markerFontSize
+                              }
+                              fontWeight="900"
+                              fill={
+                                isSelected &&
+                                !shot.finalStroke
+                                  ? "#111827"
+                                  : "#ffffff"
+                              }
+                              className="pointer-events-none select-none"
+                            >
+                              {
+                                shot.strokeNumber
+                              }
+                            </text>
+                          </>
+                        ) : null}
+                      </g>
+                    );
+                  },
+                )}
+
+                {cupPoint ? (
+                  <g className="pointer-events-none">
+                    <line
+                      x1={cupPoint.x}
+                      y1={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      x2={cupPoint.x}
+                      y2={
+                        cupPoint.y -
+                        48 * inverseScale
+                      }
+                      stroke="#f8fafc"
+                      strokeWidth={
+                        5 * inverseScale
+                      }
+                      strokeLinecap="round"
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <path
+                      d={[
+                        `M ${cupPoint.x} ${
+                          cupPoint.y -
+                          48 * inverseScale
+                        }`,
+                        `L ${
+                          cupPoint.x +
+                          35 * inverseScale
+                        } ${
+                          cupPoint.y -
+                          36 * inverseScale
+                        }`,
+                        `L ${cupPoint.x} ${
+                          cupPoint.y -
+                          24 * inverseScale
+                        }`,
+                        "Z",
+                      ].join(" ")}
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        2.5 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <ellipse
+                      cx={cupPoint.x}
+                      cy={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      rx={
+                        10 *
+                        inverseScale
+                      }
+                      ry={
+                        4 *
+                        inverseScale
+                      }
+                      fill="#020617"
+                      opacity="0.85"
+                    />
+                  </g>
+                ) : null}
+
+                {animatedBallPoint ? (
+                  <g className="pointer-events-none">
+                    {animatedAltitude >
+                    0.02 ? (
+                      <circle
+                        cx={
+                          animatedBallPoint.x
+                        }
+                        cy={
+                          animatedBallPoint.y
+                        }
+                        r={
+                          (
+                            19 +
+                            animatedAltitude *
+                              18
+                          ) *
+                          inverseScale
+                        }
+                        fill="none"
+                        stroke="#38bdf8"
+                        strokeWidth={
+                          3 *
+                          inverseScale
+                        }
+                        opacity={
+                          0.22 +
+                          animatedAltitude *
+                            0.28
+                        }
+                      />
+                    ) : null}
+
+                    <circle
+                      cx={
+                        animatedBallPoint.x
+                      }
+                      cy={
+                        animatedBallPoint.y
+                      }
+                      r={
+                        (
+                          13 +
+                          animatedAltitude *
+                            5
+                        ) *
+                        inverseScale
+                      }
+                      fill="#ffffff"
+                      stroke="#0f172a"
+                      strokeWidth={
+                        4 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <circle
+                      cx={
+                        animatedBallPoint.x -
+                        3 *
+                          inverseScale
+                      }
+                      cy={
+                        animatedBallPoint.y -
+                        3 *
+                          inverseScale
+                      }
+                      r={
+                        2.2 *
+                        inverseScale
+                      }
+                      fill="#94a3b8"
+                    />
+                  </g>
+                ) : null}
+
+                {viewMode === "course" &&
+                plottedShots[0] ? (
+                  <g>
+                    <circle
+                      cx={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      cy={
+                        plottedShots[0]
+                          .from.y
+                      }
+                      r={
+                        21 *
+                        inverseScale
+                      }
+                      fill="#0f172a"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        markerStroke
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <text
+                      x={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      y={
+                        plottedShots[0]
+                          .from.y +
+                        markerFontSize *
+                          0.3
+                      }
+                      textAnchor="middle"
+                      fontSize={
+                        markerFontSize *
+                        0.86
+                      }
+                      fontWeight="900"
+                      fill="#ffffff"
+                      className="pointer-events-none select-none"
+                    >
+                      T
+                    </text>
+                  </g>
+                ) : null}
+              </svg>
+            </div>
+
+            <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              Drag · Pinch · Twist · Scroll
+            </div>
+
+            <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              {transform.scale.toFixed(
+                1,
+              )}
+              × ·{" "}
+              {Math.round(
+                transform.rotation,
+              )}
+              °
+            </div>
+          </div>
+          )}
+        </div>
+
+        <div className="min-w-0">
+          {coursePlottedShots.length > 0 ? (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
+                    Shot navigator
+                  </div>
+
+                  <div className="mt-0.5 text-[10px] text-slate-500">
+                    Tap any number to replay that exact shot
+                  </div>
+                </div>
+
+
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!previousShot}
+                  onClick={() => {
+                    if (!previousShot) {
+                      return;
+                    }
+
+                    void selectShot(
+                      previousShot.strokeNumber,
+                    );
+                  }}
+                  aria-label="Previous shot"
+                  className="flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-25"
+                >
+                  ← Prev
+                </button>
+
+                <div
+                  className="relative grid min-w-0 flex-1 items-center"
+                  style={{
+                    gridTemplateColumns:
+                      `repeat(${coursePlottedShots.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {coursePlottedShots.length >
+                  1 ? (
+                    <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-1/2 h-px -translate-y-1/2 bg-slate-700" />
+                  ) : null}
+
+                  {coursePlottedShots.map(
+                    (shot) => {
+                      const selected =
+                        shot.strokeNumber ===
+                        selectedStrokeNumber;
+
+                      const revealed =
+                        selectedStrokeNumber !==
+                          null &&
+                        shot.strokeNumber <=
+                          selectedStrokeNumber;
+
+                      return (
+                        <div
+                          key={`navigator-${shot.strokeNumber}`}
+                          className="relative z-10 flex justify-center"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void selectShot(
+                                shot.strokeNumber,
+                              );
+                            }}
+                            aria-label={`Replay shot ${shot.strokeNumber}`}
+                            aria-current={
+                              selected
+                                ? "step"
+                                : undefined
+                            }
+                            className={`flex h-9 w-9 items-center justify-center rounded-full border text-[11px] font-black transition ${
+                              selected
+                                ? shot.finalStroke
+                                  ? "border-emerald-300 bg-emerald-500 text-white ring-2 ring-emerald-400/25"
+                                  : "border-yellow-300 bg-yellow-300 text-slate-950 ring-2 ring-yellow-300/25"
+                                : revealed
+                                  ? "border-emerald-600 bg-slate-950 text-emerald-300 hover:bg-emerald-950"
+                                  : "border-slate-600 bg-slate-950 text-slate-400 hover:border-slate-500 hover:text-white"
+                            }`}
+                          >
+                            {
+                              shot.strokeNumber
+                            }
+                          </button>
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!nextShot}
+                  onClick={() => {
+                    if (!nextShot) {
+                      return;
+                    }
+
+                    void selectShot(
+                      nextShot.strokeNumber,
+                    );
+                  }}
+                  aria-label="Next shot"
+                  className="flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 px-2.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-25"
+                >
+                  Next →
+                </button>
+              </div>
+
+              {selectedShot ? (
+                <div className="mt-3 text-center text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">
+                  Shot{" "}
+                  {
+                    selectedShot.strokeNumber
+                  }{" "}
+                  of{" "}
+                  {
+                    coursePlottedShots.length
+                  }
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+
+          <div className="mt-3">
+          {selectedShot ? (
+            isVideoPanelOpen ? (
+              <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-2.5">
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
+                      Shot {selectedShot.strokeNumber} replay
+                    </div>
+
+                    <div className="mt-0.5 text-xs font-bold text-slate-300">
+                      PGA TOUR video available
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVideoStrokeNumber(
+                        null,
+                      )
+                    }
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800"
+                  >
+                    × Back to shot
+                  </button>
+                </div>
+
+                <div className="bg-black">
+                  <div className="relative aspect-video w-full overflow-hidden bg-black">
+                    <iframe
+                      key={
+                        selectedShot.videoId
+                      }
+                      src={`https://players.brightcove.net/6116716431001/ZNwBVBwf_default/index.html?videoId=${encodeURIComponent(
+                        selectedShot.videoId ?? "",
+                      )}&autoplay=true`}
+                      title={`PGA TOUR Shot ${selectedShot.strokeNumber} video replay`}
+                      className="absolute inset-0 h-full w-full border-0"
+                      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 border-t border-slate-800 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-400">
+                        PGA TOUR replay
+                      </div>
+
+                      <div className="mt-0.5 text-[10px] text-slate-500">
+                        Shot {selectedShot.strokeNumber}
+                        {selectedShot.distance
+                          ? ` · ${selectedShot.distance}`
+                          : ""}
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-[9px] font-semibold text-slate-600">
+                      Video provided by PGA TOUR
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black ${
+                      selectedShot.finalStroke
+                        ? "border-emerald-400 bg-emerald-700 text-white"
+                        : "border-yellow-400 bg-yellow-300 text-slate-950"
+                    }`}
+                  >
+                    {
+                      selectedShot.strokeNumber
+                    }
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-white">
+                      Shot{" "}
+                      {
+                        selectedShot.strokeNumber
+                      }
+                    </div>
+
+                    <div className="mt-0.5 text-xs font-bold text-slate-300">
+                      {shotDescription(
+                        selectedShot,
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+                  {selectedShot.fromLocation ||
+                    "Unknown lie"}
+
+                  <span className="mx-2 text-slate-600">
+                    →
+                  </span>
+
+                  {selectedShot.finalStroke
+                    ? "Hole"
+                    : selectedShot.toLocation ||
+                      "Unknown lie"}
+                </div>
+
+                {selectedRadarMetrics.length >
+                0 ? (
+                  <div className="mt-3">
+                    <div className="mb-2 text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                      Shot data
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedRadarMetrics.map(
+                        (metric) => (
+                          <div
+                            key={metric.label}
+                            className="rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-2"
+                          >
+                            <div className="text-[8px] font-black uppercase tracking-[0.1em] text-slate-600">
+                              {metric.label}
+                            </div>
+
+                            <div className="mt-0.5 text-sm font-black text-slate-100">
+                              {metric.value}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedShot.ballPath
+                  ?.path.length ? (
+                  <div className="mt-3 rounded-lg border border-emerald-900/70 bg-emerald-950/30 px-3 py-2 text-[10px] text-emerald-300">
+                    ✓ Real PGA ball path available
+                    <span className="ml-1 text-emerald-500">
+                      ·{" "}
+                      {
+                        selectedShot.ballPath
+                          .path.length
+                      }{" "}
+                      samples
+                    </span>
+                  </div>
+                ) : null}
+
+                {selectedShot.videoId ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVideoStrokeNumber(
+                        selectedShot.strokeNumber,
+                      )
+                    }
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-700 bg-emerald-950 px-3 py-2.5 text-xs font-black text-emerald-200 transition hover:bg-emerald-900"
+                  >
+                    <span aria-hidden="true">
+                      🎥
+                    </span>
+
+                    Video replay available
+                  </button>
+                ) : null}
+              </div>
+            )
+          ) : (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="text-sm font-black text-slate-200">
+                Hole layout
+              </div>
+
+              <div className="mt-1 text-xs leading-5 text-slate-500">
+                {emptyStateLabel}
+              </div>
+            </div>
+          )}
+          </div>
+
+          <div className="mt-3 text-[10px] leading-4 text-slate-500">
+            {plottedShots.length > 0
+              ? "Drag or pinch for a closer view, and twist with two fingers to rotate the course."
+              : "Drag or pinch for a closer view, and twist with two fingers to rotate the course."}
+          </div>
+        </div>
+      </div>
+
+    </section>
+  );
+}
+
+================ HOLE REPLAY API ============================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+};
+
+type PlayerRow = {
+  id: number;
+  display_name: string;
+};
+
+function positiveInteger(value: string | null) {
+  if (!value) return null;
+
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "private, no-store, max-age=0",
+  };
+}
+
+function relativeScoreDisplay(
+  relativeToPar: number,
+) {
+  if (relativeToPar === 0) {
+    return "E";
+  }
+
+  return relativeToPar > 0
+    ? `+${relativeToPar}`
+    : String(relativeToPar);
+}
+
+async function reconcileCompletedReplayHole(input: {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  replay: {
+    par: number | null;
+    shots: Array<{
+      strokeNumber: number;
+      finalStroke: boolean;
+    }>;
+  };
+}) {
+  /*
+   * Only persist a hole when PGA explicitly identifies a final
+   * stroke. A live/current-ball hole must never be promoted to
+   * a completed scorecard result.
+   */
+  const finalShot =
+    input.replay.shots.find(
+      (shot) => shot.finalStroke,
+    ) ?? null;
+
+  if (!finalShot) {
+    return null;
+  }
+
+  const strokes = Math.max(
+    ...input.replay.shots.map(
+      (shot) => Number(shot.strokeNumber ?? 0),
+    ),
+  );
+
+  if (
+    !Number.isFinite(strokes) ||
+    strokes <= 0 ||
+    input.replay.par === null ||
+    !Number.isFinite(Number(input.replay.par))
+  ) {
+    return null;
+  }
+
+  const par = Number(input.replay.par);
+  const relativeToPar =
+    strokes - par;
+
+  const {
+    data: eventPlayer,
+    error: eventPlayerError,
+  } = await supabaseAdmin
+    .from("golf_event_players")
+    .select(
+      "id, status, rounds_completed",
+    )
+    .eq("slate_id", input.slateId)
+    .eq("player_id", input.playerId)
+    .maybeSingle();
+
+  if (
+    eventPlayerError ||
+    !eventPlayer
+  ) {
+    if (eventPlayerError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve event player",
+        eventPlayerError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const {
+    data: round,
+    error: roundError,
+  } = await supabaseAdmin
+    .from("golf_rounds")
+    .select("id")
+    .eq(
+      "event_player_id",
+      Number(eventPlayer.id),
+    )
+    .eq(
+      "round_number",
+      input.roundNumber,
+    )
+    .maybeSingle();
+
+  if (
+    roundError ||
+    !round
+  ) {
+    if (roundError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve Golf round",
+        roundError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const roundId =
+    Number(round.id);
+
+  const {
+    data: existingHole,
+    error: existingHoleError,
+  } = await supabaseAdmin
+    .from("golf_holes")
+    .select("round_id, hole_number")
+    .eq("round_id", roundId)
+    .eq(
+      "hole_number",
+      input.holeNumber,
+    )
+    .maybeSingle();
+
+  if (existingHoleError) {
+    console.warn(
+      "ShotCast reconciliation could not inspect existing hole",
+      existingHoleError.message,
+    );
+
+    return null;
+  }
+
+  const holeRow = {
+    round_id: roundId,
+    hole_number:
+      input.holeNumber,
+    strokes,
+    relative_to_par:
+      relativeToPar,
+    score_display:
+      relativeScoreDisplay(
+        relativeToPar,
+      ),
+    updated_at:
+      new Date().toISOString(),
+  };
+
+  /*
+   * Use one idempotent write for both the initial insert and later
+   * refreshes. Hole Replay can issue overlapping requests while a
+   * hole is live; upsert prevents two completed-hole requests from
+   * racing into the golf_holes unique constraint.
+   */
+  const holeMutation =
+    await supabaseAdmin
+      .from("golf_holes")
+      .upsert(
+        holeRow,
+        {
+          onConflict:
+            "round_id,hole_number",
+        },
+      );
+
+  if (holeMutation.error) {
+    console.warn(
+      "ShotCast reconciliation could not persist completed hole",
+      holeMutation.error.message,
+    );
+
+    return null;
+  }
+
+  /*
+   * Recalculate the round from every persisted completed hole.
+   * This lets the scorecard immediately advance from ESPN's
+   * stale "Thru 7" to PGA's authoritative Hole 8 result.
+   */
+  const {
+    data: roundHoles,
+    error: roundHolesError,
+  } = await supabaseAdmin
+    .from("golf_holes")
+    .select(
+      "hole_number, strokes, relative_to_par",
+    )
+    .eq("round_id", roundId);
+
+  if (roundHolesError) {
+    console.warn(
+      "ShotCast reconciliation could not recalculate round",
+      roundHolesError.message,
+    );
+
+    return null;
+  }
+
+  const completedHoles =
+    (roundHoles ?? []).filter(
+      (hole) =>
+        hole.strokes !== null &&
+        hole.strokes !== undefined,
+    );
+
+  const holesCompleted =
+    completedHoles.length;
+
+  const roundStrokes =
+    completedHoles.reduce(
+      (sum, hole) =>
+        sum +
+        Number(
+          hole.strokes ?? 0,
+        ),
+      0,
+    );
+
+  const roundToPar =
+    completedHoles.reduce(
+      (sum, hole) =>
+        sum +
+        Number(
+          hole.relative_to_par ?? 0,
+        ),
+      0,
+    );
+
+  const roundFinished =
+    holesCompleted >= 18;
+
+  const {
+    error: roundUpdateError,
+  } = await supabaseAdmin
+    .from("golf_rounds")
+    .update({
+      strokes:
+        holesCompleted > 0
+          ? roundStrokes
+          : null,
+      score_to_par:
+        holesCompleted > 0
+          ? roundToPar
+          : null,
+      score_display:
+        holesCompleted > 0
+          ? relativeScoreDisplay(
+              roundToPar,
+            )
+          : null,
+      holes_completed:
+        holesCompleted,
+      status:
+        roundFinished
+          ? "finished"
+          : "active",
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq("id", roundId);
+
+  if (roundUpdateError) {
+    console.warn(
+      "ShotCast reconciliation could not update Golf round",
+      roundUpdateError.message,
+    );
+  }
+
+  const terminalStatuses =
+    new Set([
+      "finished",
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  if (
+    !terminalStatuses.has(
+      String(
+        eventPlayer.status ?? "",
+      ).toLowerCase(),
+    )
+  ) {
+    const {
+      data: allRounds,
+      error: allRoundsError,
+    } = await supabaseAdmin
+      .from("golf_rounds")
+      .select(
+        "round_number, holes_completed",
+      )
+      .eq(
+        "event_player_id",
+        Number(eventPlayer.id),
+      );
+
+    if (!allRoundsError) {
+      const totalHoles =
+        (allRounds ?? []).reduce(
+          (sum, row) =>
+            sum +
+            Number(
+              row.holes_completed ?? 0,
+            ),
+          0,
+        );
+
+      const roundsCompleted =
+        (allRounds ?? []).filter(
+          (row) =>
+            Number(
+              row.holes_completed ?? 0,
+            ) >= 18,
+        ).length;
+
+      await supabaseAdmin
+        .from("golf_event_players")
+        .update({
+          holes_completed:
+            totalHoles,
+          rounds_completed:
+            Math.max(
+              roundsCompleted,
+              Number(
+                eventPlayer.rounds_completed ??
+                  0,
+              ),
+            ),
+          current_round:
+            input.roundNumber,
+          last_hole:
+            input.holeNumber,
+          status:
+            roundFinished
+              ? "round_complete"
+              : "active",
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "id",
+          Number(
+            eventPlayer.id,
+          ),
+        );
+    }
+  }
+
+  console.log(
+    "ShotCast completed-hole reconciliation",
+    {
+      slateId:
+        input.slateId,
+      playerId:
+        input.playerId,
+      round:
+        input.roundNumber,
+      hole:
+        input.holeNumber,
+      strokes,
+      relativeToPar,
+      holesCompleted,
+    },
+  );
+
+  return {
+    hole_number:
+      input.holeNumber,
+    strokes,
+    relative_to_par:
+      relativeToPar,
+    score_display:
+      relativeScoreDisplay(
+        relativeToPar,
+      ),
+    holes_completed:
+      holesCompleted,
+    round_score_to_par:
+      roundToPar,
+    round_strokes:
+      roundStrokes,
+  };
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const slateId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+    const playerId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "playerId",
+      ),
+    );
+
+    const roundNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "round",
+      ),
+    );
+
+    const holeNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "hole",
+      ),
+    );
+
+    if (
+      !slateId ||
+      !playerId ||
+      !roundNumber ||
+      roundNumber > 4 ||
+      !holeNumber ||
+      holeNumber > 18
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid slateId, playerId, round, and hole parameters are required.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const [
+      {
+        data: slateData,
+        error: slateError,
+      },
+      {
+        data: playerData,
+        error: playerError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select(
+          "id, sport, display_name, start_date",
+        )
+        .eq("id", slateId)
+        .single(),
+
+      supabaseAdmin
+        .from("golf_players")
+        .select("id, display_name")
+        .eq("id", playerId)
+        .single(),
+    ]);
+
+    if (
+      slateError ||
+      !slateData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf slate was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    if (
+      playerError ||
+      !playerData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf player was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const slate =
+      slateData as SlateRow;
+
+    const player =
+      playerData as PlayerRow;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "Hole replay is only available for Golf slates.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const tournamentName =
+      slate.display_name?.trim();
+
+    if (!tournamentName) {
+      return NextResponse.json(
+        {
+          error:
+            "This Golf slate does not have a tournament name.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const year = Number(
+      slate.start_date.slice(0, 4),
+    );
+
+    const refreshToken =
+      request.nextUrl.searchParams.get(
+        "refresh",
+      );
+
+    const replay =
+      await fetchGolfHoleReplay({
+        year,
+        tournamentName,
+        playerName:
+          player.display_name,
+        roundNumber,
+        holeNumber,
+        cacheBust:
+          refreshToken?.trim() || null,
+      });
+
+    if (!replay) {
+      return NextResponse.json(
+        {
+          success: true,
+          available: false,
+          message:
+            "Shot tracking is not available for this hole yet.",
+          replay: null,
+        },
+        {
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const reconciledHole =
+      await reconcileCompletedReplayHole({
+        slateId,
+        playerId,
+        roundNumber,
+        holeNumber,
+        replay,
+      });
+
+    return NextResponse.json(
+      {
+        success: true,
+        available:
+          replay.shots.length > 0,
+        replay,
+        reconciledHole,
+      },
+      {
+        headers: noStoreHeaders(),
+      },
+    );
+  } catch (error) {
+    console.error(
+      "Unable to load Golf hole replay",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load hole replay.",
+      },
+      {
+        status: 502,
+        headers: noStoreHeaders(),
+      },
+    );
+  }
+}
+
+================ REFRESH / POLLING SEARCH ===================
+app/lineups/draft/page.tsx:301:              {sport !== "golf" ? <RefreshPlayersButton /> : null}
+app/lineups/draft/page.tsx:489:          {sport !== "golf" ? <RefreshPlayersButton /> : null}
+app/api/slates/route.ts:212:  const timeout = setTimeout(() => controller.abort(), 4500);
+app/api/slates/route.ts:249:  const timeout = setTimeout(() => controller.abort(), 4500);
+app/api/admin/golf/import-field/route.ts:344:             * ESPN ID by refresh-stats-golf once ESPN publishes
+app/api/refresh-stats-golf/route.ts:925:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts:1664:              "Existing Golf holes could not be read before refresh: " +
+app/api/refresh-stats-golf/route.ts:2213:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts:2406:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts:2655:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts:2874:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts:2881:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:324:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:644:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:681:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:929:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:985:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:992:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:324:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:644:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:681:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:929:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:985:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:992:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:324:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:644:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:681:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:929:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:985:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:992:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:325:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:701:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:880:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:1129:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:1186:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:1193:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:325:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:701:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:880:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:1129:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:1186:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:1193:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:325:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:701:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:894:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:1143:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:1200:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:1207:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:326:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:702:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:895:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:1144:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:1324:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:1331:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:327:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:920:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:1113:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:1362:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:1542:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:1549:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:327:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:957:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:1150:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:1399:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:1579:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:1586:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:327:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:957:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:1150:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:1399:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:1579:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:1586:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:386:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:1016:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:1209:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:1458:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:1638:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:1645:            : "Unexpected server error while refreshing Golf data.",
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:925:        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1664:              "Existing Golf holes could not be read before refresh: " +
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:2213:            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:2406:            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:2655:              "Golf data was refreshed, but fantasy team totals could not be saved: " +
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:2852:    console.error("Unexpected Golf refresh error:", error);
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:2859:            : "Unexpected server error while refreshing Golf data.",
+app/api/cron/refresh-golf/route.ts.before-slate-row-type-fix:4:  POST as refreshGolfStats,
+app/api/cron/refresh-golf/route.ts.before-slate-row-type-fix:5:} from "@/app/api/refresh-stats-golf/route";
+app/api/cron/refresh-golf/route.ts.before-slate-row-type-fix:149:        "http://internal/api/refresh-stats-golf",
+app/api/cron/refresh-golf/route.ts.before-slate-row-type-fix:164:        await refreshGolfStats(
+app/api/cron/refresh-golf/route.ts.before-slate-row-type-fix:201:              : "Unexpected Golf refresh error.",
+app/api/cron/refresh-golf/route.ts.before-generic-string-error-fix:4:  POST as refreshGolfStats,
+app/api/cron/refresh-golf/route.ts.before-generic-string-error-fix:5:} from "@/app/api/refresh-stats-golf/route";
+app/api/cron/refresh-golf/route.ts.before-generic-string-error-fix:187:        "http://internal/api/refresh-stats-golf",
+app/api/cron/refresh-golf/route.ts.before-generic-string-error-fix:202:        await refreshGolfStats(
+app/api/cron/refresh-golf/route.ts.before-generic-string-error-fix:239:              : "Unexpected Golf refresh error.",
+app/api/cron/refresh-golf/route.ts.before-waiting-status-fix:4:  POST as refreshGolfStats,
+app/api/cron/refresh-golf/route.ts.before-waiting-status-fix:5:} from "@/app/api/refresh-stats-golf/route";
+app/api/cron/refresh-golf/route.ts.before-waiting-status-fix:197:        "http://internal/api/refresh-stats-golf",
+app/api/cron/refresh-golf/route.ts.before-waiting-status-fix:212:        await refreshGolfStats(
+app/api/cron/refresh-golf/route.ts.before-waiting-status-fix:249:              : "Unexpected Golf refresh error.",
+app/api/cron/refresh-golf/route.ts:4:  POST as refreshGolfStats,
+app/api/cron/refresh-golf/route.ts:5:} from "@/app/api/refresh-stats-golf/route";
+app/api/cron/refresh-golf/route.ts:201:        "http://internal/api/refresh-stats-golf",
+app/api/cron/refresh-golf/route.ts:216:        await refreshGolfStats(
+app/api/cron/refresh-golf/route.ts:296:              : "Unexpected Golf refresh error.",
+app/slates/new/page.tsx:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/slates/new/page.tsx:426:            "The Golf slate was created, but its slate ID was not returned. Open Manage Slates to refresh the tournament field."
+app/slates/new/page.tsx:436:          await refreshGolfFromBrowser(
+app/slates/new/page.tsx:464:           * slate creation. The Golf refresh job will retry it.
+app/slates/new/page.tsx.before-browser-golf-refresh:424:            "The Golf slate was created, but its slate ID was not returned. Open Manage Slates to refresh the tournament field."
+app/slates/new/page.tsx.before-browser-golf-refresh:433:        const fieldResponse = await fetch("/api/refresh-stats-golf", {
+app/slates/new/page.tsx.before-golf-field-waiting-fix:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/slates/new/page.tsx.before-golf-field-waiting-fix:426:            "The Golf slate was created, but its slate ID was not returned. Open Manage Slates to refresh the tournament field."
+app/slates/new/page.tsx.before-golf-field-waiting-fix:436:          await refreshGolfFromBrowser(
+app/admin/slates/page.tsx:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/admin/slates/page.tsx:144:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx:162:    isRefreshingGolfField ||
+app/admin/slates/page.tsx:549:  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx:553:      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx:556:      await refreshGolfFromBrowser(
+app/admin/slates/page.tsx:589:      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx:1051:                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx:1232:                        void handleRefreshGolfField()
+app/admin/slates/page.tsx:1244:                      {isRefreshingGolfField
+app/admin/slates/page.tsx.before-shotcast-admin:112:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx.before-shotcast-admin:123:    isRefreshingGolfField ||
+app/admin/slates/page.tsx.before-shotcast-admin:371:  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx.before-shotcast-admin:375:      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx.before-shotcast-admin:379:        "/api/refresh-stats-golf",
+app/admin/slates/page.tsx.before-shotcast-admin:413:      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx.before-shotcast-admin:817:                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx.before-shotcast-admin:917:                        void handleRefreshGolfField()
+app/admin/slates/page.tsx.before-shotcast-admin:929:                      {isRefreshingGolfField
+app/admin/slates/page.tsx.before-browser-golf-refresh:142:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx.before-browser-golf-refresh:158:    isRefreshingGolfField ||
+app/admin/slates/page.tsx.before-browser-golf-refresh:544:  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx.before-browser-golf-refresh:548:      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx.before-browser-golf-refresh:552:        "/api/refresh-stats-golf",
+app/admin/slates/page.tsx.before-browser-golf-refresh:586:      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx.before-browser-golf-refresh:990:                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx.before-browser-golf-refresh:1171:                        void handleRefreshGolfField()
+app/admin/slates/page.tsx.before-browser-golf-refresh:1183:                      {isRefreshingGolfField
+app/admin/slates/page.tsx.before-field-waiting-fix:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/admin/slates/page.tsx.before-field-waiting-fix:144:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx.before-field-waiting-fix:160:    isRefreshingGolfField ||
+app/admin/slates/page.tsx.before-field-waiting-fix:546:  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx.before-field-waiting-fix:550:      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx.before-field-waiting-fix:553:      await refreshGolfFromBrowser(
+app/admin/slates/page.tsx.before-field-waiting-fix:568:      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx.before-field-waiting-fix:972:                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx.before-field-waiting-fix:1153:                        void handleRefreshGolfField()
+app/admin/slates/page.tsx.before-field-waiting-fix:1165:                      {isRefreshingGolfField
+app/admin/slates/page.tsx.before-pga-field-import-button:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/admin/slates/page.tsx.before-pga-field-import-button:144:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx.before-pga-field-import-button:160:    isRefreshingGolfField ||
+app/admin/slates/page.tsx.before-pga-field-import-button:546:  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx.before-pga-field-import-button:550:      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx.before-pga-field-import-button:553:      await refreshGolfFromBrowser(
+app/admin/slates/page.tsx.before-pga-field-import-button:586:      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx.before-pga-field-import-button:990:                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx.before-pga-field-import-button:1171:                        void handleRefreshGolfField()
+app/admin/slates/page.tsx.before-pga-field-import-button:1183:                      {isRefreshingGolfField
+app/admin/slates/page.tsx.before-pga-field-fallback-final:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/admin/slates/page.tsx.before-pga-field-fallback-final:144:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx.before-pga-field-fallback-final:160:    isRefreshingGolfField ||
+app/admin/slates/page.tsx.before-pga-field-fallback-final:546:  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx.before-pga-field-fallback-final:550:      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx.before-pga-field-fallback-final:553:      await refreshGolfFromBrowser(
+app/admin/slates/page.tsx.before-pga-field-fallback-final:586:      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx.before-pga-field-fallback-final:990:                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx.before-pga-field-fallback-final:1171:                        void handleRefreshGolfField()
+app/admin/slates/page.tsx.before-pga-field-fallback-final:1183:                      {isRefreshingGolfField
+app/admin/slates/page.tsx.before-pga-field-button-final:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/admin/slates/page.tsx.before-pga-field-button-final:144:  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx.before-pga-field-button-final:160:    isRefreshingGolfField ||
+app/admin/slates/page.tsx.before-pga-field-button-final:546:  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx.before-pga-field-button-final:550:      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx.before-pga-field-button-final:553:      await refreshGolfFromBrowser(
+app/admin/slates/page.tsx.before-pga-field-button-final:586:      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx.before-pga-field-button-final:990:                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx.before-pga-field-button-final:1171:                        void handleRefreshGolfField()
+app/admin/slates/page.tsx.before-pga-field-button-final:1183:                      {isRefreshingGolfField
+app/page.tsx:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/page.tsx:453:  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+app/page.tsx:456:  const homeGolfRefreshInFlightRef = useRef(false);
+app/page.tsx:457:  const lastHomeGolfAutoRefreshRef = useRef(0);
+app/page.tsx:460:    if (homeGolfRefreshInFlightRef.current) return;
+app/page.tsx:462:    homeGolfRefreshInFlightRef.current = true;
+app/page.tsx:469:        await refreshGolfFromBrowser(
+app/page.tsx:510:      homeGolfRefreshInFlightRef.current = false;
+app/page.tsx:766:        lastHomeGolfAutoRefreshRef.current &&
+app/page.tsx:767:        now - lastHomeGolfAutoRefreshRef.current < minimumGapMs
+app/page.tsx:772:      lastHomeGolfAutoRefreshRef.current = now;
+app/page.tsx:780:    const interval = window.setInterval(
+app/page.tsx:821:    autoRefreshTimerRef.current = setTimeout(() => {
+app/page.tsx.broken-compact-golf-hero:428:  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+app/page.tsx.broken-compact-golf-hero:439:          ? "/api/refresh-stats-golf"
+app/page.tsx.broken-compact-golf-hero:698:    autoRefreshTimerRef.current = setTimeout(() => {
+app/page.tsx.before-browser-golf-refresh:428:  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+app/page.tsx.before-browser-golf-refresh:439:          ? "/api/refresh-stats-golf"
+app/page.tsx.before-browser-golf-refresh:698:    autoRefreshTimerRef.current = setTimeout(() => {
+app/page.tsx.bak-golf-auto-refresh:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+app/page.tsx.bak-golf-auto-refresh:453:  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+app/page.tsx.bak-golf-auto-refresh:463:        await refreshGolfFromBrowser(
+app/page.tsx.bak-golf-auto-refresh:759:    autoRefreshTimerRef.current = setTimeout(() => {
+components/lineups/LineupBuilder.tsx:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+components/lineups/LineupBuilder.tsx:89:  const lastGolfAutoRefreshRef = useRef(0);
+components/lineups/LineupBuilder.tsx:309:    const shouldAutoRefresh = isGolf || autoRefreshEnabled;
+components/lineups/LineupBuilder.tsx:321:        lastGolfAutoRefreshRef.current &&
+components/lineups/LineupBuilder.tsx:322:        now - lastGolfAutoRefreshRef.current < minimumGapMs
+components/lineups/LineupBuilder.tsx:327:      lastGolfAutoRefreshRef.current = now;
+components/lineups/LineupBuilder.tsx:335:    const interval = window.setInterval(refreshIfVisible, intervalMs);
+components/lineups/LineupBuilder.tsx:1056:          await refreshGolfFromBrowser(
+components/lineups/LineupBuilder.tsx:1169:       * the player field. For silent Golf auto-refreshes,
+components/lineups/GolfScoresDashboard.tsx:637:            ✓ Latest Golf refresh complete
+components/lineups/GolfHoleReplayPanel.tsx.before-live-hole-refresh:226:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-real-hole-map-phase1:242:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-real-hole-map-phase1:413:              : "↻ Refresh hole"}
+components/lineups/GolfHoleReplayPanel.tsx:452:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx:792:   * Stop polling when:
+components/lineups/GolfHoleReplayPanel.tsx:821:      window.setInterval(
+components/lineups/GolfHoleReplayPanel.tsx:1011:              : "↻ Refresh hole"}
+components/lineups/GolfHoleReplayPanel.tsx.before-2d-hole-map:242:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-2d-hole-map:413:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx:2073:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx:2127:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx:2641:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx:2687:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx:2696:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx:2810:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx:2836:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-coordinate-calibration:229:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-coordinate-calibration:240:      window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-interactive-map:269:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-interactive-map:280:      window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:827:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:838:      window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:848:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:859:      window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:1062:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:1073:      window.setTimeout(() => {
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle:249:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle:424:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:822:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:833:      window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:837:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:848:      window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:837:        window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:848:      window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:550:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:602:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:1065:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:1084:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:1151:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:555:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:607:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:1074:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:1101:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:1173:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:555:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:607:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:1074:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:1101:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:1173:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:555:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:607:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:1074:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:1101:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:1176:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest:269:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest:444:              : "↻ Refresh hole"}
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix:337:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix:676:              : "↻ Refresh hole"}
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest:337:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest:676:              : "↻ Refresh hole"}
+components/lineups/GolfScoresDashboard.tsx.before-upcoming-inline-hole-details:705:            ✓ Latest Golf refresh complete
+components/lineups/LineupBuilder.tsx.before-browser-golf-refresh:301:    const interval = window.setInterval(() => {
+components/lineups/LineupBuilder.tsx.before-browser-golf-refresh:998:            ? "/api/refresh-stats-golf"
+components/lineups/LineupBuilder.tsx.before-refresh-summary-number-fix:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+components/lineups/LineupBuilder.tsx.before-refresh-summary-number-fix:303:    const interval = window.setInterval(() => {
+components/lineups/LineupBuilder.tsx.before-refresh-summary-number-fix:1004:          await refreshGolfFromBrowser(
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones:370:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones:747:              : "↻ Refresh hole"}
+components/lineups/LineupBuilder.tsx.bak-golf-auto-refresh:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+components/lineups/LineupBuilder.tsx.bak-golf-auto-refresh:303:    const interval = window.setInterval(() => {
+components/lineups/LineupBuilder.tsx.bak-golf-auto-refresh:1004:          await refreshGolfFromBrowser(
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:88:  const lastGolfAutoRefreshRef = useRef(0);
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:306:    const shouldAutoRefresh = isGolf || autoRefreshEnabled;
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:318:        lastGolfAutoRefreshRef.current &&
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:319:        now - lastGolfAutoRefreshRef.current < minimumGapMs
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:324:      lastGolfAutoRefreshRef.current = now;
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:332:    const interval = window.setInterval(refreshIfVisible, intervalMs);
+components/lineups/LineupBuilder.tsx.before-slot-research-cards:1053:          await refreshGolfFromBrowser(
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:88:  const lastGolfAutoRefreshRef = useRef(0);
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:306:    const shouldAutoRefresh = isGolf || autoRefreshEnabled;
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:318:        lastGolfAutoRefreshRef.current &&
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:319:        now - lastGolfAutoRefreshRef.current < minimumGapMs
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:324:      lastGolfAutoRefreshRef.current = now;
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:332:    const interval = window.setInterval(refreshIfVisible, intervalMs);
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:1053:          await refreshGolfFromBrowser(
+components/lineups/LineupBuilder.tsx.before-shared-slot-browser:1166:       * the player field. For silent Golf auto-refreshes,
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:3:import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:88:  const lastGolfAutoRefreshRef = useRef(0);
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:306:    const shouldAutoRefresh = isGolf || autoRefreshEnabled;
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:318:        lastGolfAutoRefreshRef.current &&
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:319:        now - lastGolfAutoRefreshRef.current < minimumGapMs
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:324:      lastGolfAutoRefreshRef.current = now;
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:332:    const interval = window.setInterval(refreshIfVisible, intervalMs);
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:1053:          await refreshGolfFromBrowser(
+components/lineups/LineupBuilder.tsx.bak-league-research-profile:1166:       * the player field. For silent Golf auto-refreshes,
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain:370:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain:829:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:565:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:617:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:1084:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:1111:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:1186:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final:370:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final:829:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:565:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:617:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:1084:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:1111:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:1186:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:704:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:756:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:1223:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:1250:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:1325:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:704:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:756:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:1230:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:1257:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:1332:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:697:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:749:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:1218:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:1245:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:1329:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-native-world-coordinates:697:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-native-world-coordinates:749:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-native-world-coordinates:1218:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-native-world-coordinates:1245:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-native-world-coordinates:1329:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3:381:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3:840:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-reset-fix:842:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-reset-fix:894:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-reset-fix:1363:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-reset-fix:1390:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-reset-fix:1474:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1:402:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1:895:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-awesome-phase1:842:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-awesome-phase1:894:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-awesome-phase1:1367:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-awesome-phase1:1394:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-awesome-phase1:1478:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-green-view:854:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-real-green-view:906:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-real-green-view:1396:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-green-view:1438:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-green-view:1447:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-green-view:1532:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view:402:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view:742:   * Stop polling when:
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view:771:      window.setInterval(
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view:961:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-green-polish:989:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-green-polish:1041:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-green-polish:1555:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-polish:1601:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-polish:1610:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-polish:1711:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-polish:1733:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail:1017:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail:1069:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail:1583:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail:1629:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail:1638:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail:1739:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail:1761:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified:404:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified:744:   * Stop polling when:
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified:773:      window.setInterval(
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified:963:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-shot-timeline:1084:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shot-timeline:1136:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shot-timeline:1650:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-timeline:1696:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-timeline:1705:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-timeline:1806:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-timeline:1828:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2:1116:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2:1168:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2:1682:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2:1728:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2:1737:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2:1838:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2:1860:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data:409:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data:749:   * Stop polling when:
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data:778:      window.setInterval(
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data:968:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-radar-data:1116:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-radar-data:1168:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-radar-data:1682:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-radar-data:1728:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-radar-data:1737:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-radar-data:1850:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-radar-data:1876:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout:1324:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout:1376:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout:1890:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout:1936:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout:1945:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout:2059:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout:2085:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-green:1333:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-3d-green:1385:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-3d-green:1899:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-green:1945:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-green:1954:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-green:2068:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-green:2094:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green:441:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green:781:   * Stop polling when:
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green:810:      window.setInterval(
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green:1000:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix:1335:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix:1387:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix:1901:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix:1947:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix:1956:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix:2070:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix:2096:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers:1351:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers:1403:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers:1917:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers:1963:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers:1972:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers:2086:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers:2112:        window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-tracking:1361:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-real-tracking:1413:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-real-tracking:1927:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-tracking:1973:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-tracking:1982:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-tracking:2096:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-tracking:2122:        window.setTimeout(
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking:441:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking:781:   * Stop polling when:
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking:810:      window.setInterval(
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking:1000:              : "↻ Refresh hole"}
+components/lineups/GolfHoleMap2D.tsx.before-real-video-player:2073:            window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-real-video-player:2127:              window.setTimeout(() => {
+components/lineups/GolfHoleMap2D.tsx.before-real-video-player:2641:            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-video-player:2687:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-video-player:2696:              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-video-player:2810:          window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx.before-real-video-player:2836:        window.setTimeout(
+lib/providers/pgaTourShots.ts:324:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts:342:    const timeout = setTimeout(
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:134:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:152:    const timeout = setTimeout(
+lib/providers/pgaTourField.ts:225:  const timeout = setTimeout(
+lib/providers/pgaTourTeeTimes.ts:105:    setTimeout(
+lib/providers/pgaTourShots.ts.before-native-world-coordinates:134:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-native-world-coordinates:152:    const timeout = setTimeout(
+lib/providers/pgaTourShots.ts.before-tourcast-v3:180:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-tourcast-v3:198:    const timeout = setTimeout(
+lib/providers/pgaTourShots.ts.before-shotcast-awesome-phase1:210:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-shotcast-awesome-phase1:228:    const timeout = setTimeout(
+lib/providers/pgaTourShots.ts.before-real-green-view:210:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-real-green-view:228:    const timeout = setTimeout(
+lib/providers/pgaTourShots.ts.before-radar-data:233:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-radar-data:251:    const timeout = setTimeout(
+lib/providers/pgaTourShots.ts.before-real-tracking:324:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-real-tracking:342:    const timeout = setTimeout(
+lib/providers/pgaTourShots.ts.before-shot-dedupe:324:    setTimeout(resolve, milliseconds),
+lib/providers/pgaTourShots.ts.before-shot-dedupe:342:    const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts:118:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts:273:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts:352:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:118:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:184:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:118:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:184:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:118:  const timeout = setTimeout(
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:184:  const timeout = setTimeout(
+lib/client/refreshGolfFromBrowser.ts:6:type GolfRefreshConfig = {
+lib/client/refreshGolfFromBrowser.ts:13:export type GolfRefreshResult = {
+lib/client/refreshGolfFromBrowser.ts:488:export async function refreshGolfFromBrowser(
+lib/client/refreshGolfFromBrowser.ts:490:): Promise<GolfRefreshResult> {
+lib/client/refreshGolfFromBrowser.ts:502:      `/api/golf/refresh-config?slateId=${encodeURIComponent(
+lib/client/refreshGolfFromBrowser.ts:521:          "Unable to load the Golf refresh configuration.",
+lib/client/refreshGolfFromBrowser.ts:527:    configResult as unknown as GolfRefreshConfig;
+lib/client/refreshGolfFromBrowser.ts:592:      "/api/refresh-stats-golf",
+lib/client/refreshGolfFromBrowser.ts:615:          `Golf refresh failed with HTTP ${ingestionResponse.status}.`,
+lib/client/refreshGolfFromBrowser.ts:620:  return ingestionResult as GolfRefreshResult;
+
+================ SHOTCAST FILE LIST =========================
+app/admin/slates/page.tsx.before-shotcast-admin
+components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-awesome-phase1
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization
+components/lineups/GolfHoleReplayPanel.tsx
+components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain
+components/lineups/GolfHoleReplayPanel.tsx.before-2d-hole-map
+components/lineups/GolfHoleReplayPanel.tsx.before-3d-green
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest
+components/lineups/GolfHoleReplayPanel.tsx.before-live-hole-refresh
+components/lineups/GolfHoleReplayPanel.tsx.before-radar-data
+components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view
+components/lineups/GolfHoleReplayPanel.tsx.before-real-hole-map-phase1
+components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix
+components/lineups/GolfInlineHoleReplayModal.tsx
+lib/providers/pgaTourShots.ts.before-shotcast-awesome-phase1
+lib/shotcast/importShotCastManifest.ts
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final
+
+============================================================
+END COLLECTOR
+============================================================

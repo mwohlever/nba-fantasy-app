@@ -1,0 +1,1686 @@
+
+============================================================
+FILE: lib/notifications.ts
+============================================================
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendPushToUser, type PushResult } from "@/lib/push";
+
+type LoggedNotificationInput = {
+  eventKey?: string | null;
+  notificationType: string;
+
+  userId?: string | null;
+  teamId?: number | null;
+  slateId?: number | null;
+  playerId?: number | null;
+
+  title: string;
+  body: string;
+  url: string;
+  tag: string;
+
+  metadata?: Record<string, unknown>;
+  skipReason?: string | null;
+};
+
+export type LoggedNotificationResult = PushResult & {
+  duplicate?: boolean;
+  historyId?: string | null;
+};
+
+function getStatus(result: PushResult) {
+  if (result.skipped) return "skipped";
+  if (result.sent > 0 && result.failed > 0) return "partial";
+  if (result.sent > 0) return "sent";
+  return "failed";
+}
+
+export async function sendLoggedNotification(
+  input: LoggedNotificationInput
+): Promise<LoggedNotificationResult> {
+  const initialMetadata = input.metadata ?? {};
+
+  const { data: historyRow, error: historyError } = await supabaseAdmin
+    .from("notification_history")
+    .insert({
+      event_key: input.eventKey ?? null,
+      notification_type: input.notificationType,
+      user_id: input.userId ?? null,
+      team_id: input.teamId ?? null,
+      slate_id: input.slateId ?? null,
+      player_id: input.playerId ?? null,
+      title: input.title,
+      body: input.body,
+      status: "pending",
+      metadata: initialMetadata,
+    })
+    .select("id")
+    .single();
+
+  if (historyError) {
+    if (historyError.code === "23505" && input.eventKey) {
+      return {
+        sent: 0,
+        failed: 0,
+        skipped: true,
+        duplicate: true,
+        reason: "This notification event was already processed.",
+        historyId: null,
+        devices: [],
+      };
+    }
+
+    console.error("Failed to create notification history record", historyError);
+  }
+
+  const historyId = historyRow?.id ?? null;
+
+  if (input.skipReason) {
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: "skipped",
+          skipped: true,
+          reason: input.skipReason,
+          metadata: {
+            ...initialMetadata,
+            devices: [],
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: input.skipReason,
+      historyId,
+      devices: [],
+    };
+  }
+
+  if (!input.userId) {
+    const reason = "No recipient account was available.";
+
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: "skipped",
+          skipped: true,
+          reason,
+          metadata: {
+            ...initialMetadata,
+            devices: [],
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason,
+      historyId,
+      devices: [],
+    };
+  }
+
+  try {
+    const result = await sendPushToUser(input.userId, {
+      title: input.title,
+      body: input.body,
+      url: input.url,
+      tag: input.tag,
+    });
+
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: getStatus(result),
+          sent_count: result.sent,
+          failed_count: result.failed,
+          skipped: result.skipped,
+          reason: result.reason ?? null,
+          metadata: {
+            ...initialMetadata,
+            devices: result.devices,
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    return {
+      ...result,
+      historyId,
+    };
+  } catch (error) {
+    const reason =
+      error instanceof Error
+        ? error.message
+        : "Unexpected push notification error.";
+
+    if (historyId) {
+      await supabaseAdmin
+        .from("notification_history")
+        .update({
+          status: "failed",
+          sent_count: 0,
+          failed_count: 1,
+          skipped: false,
+          reason,
+          metadata: {
+            ...initialMetadata,
+            devices: [],
+          },
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", historyId);
+    }
+
+    console.error("Logged notification failed", error);
+
+    return {
+      sent: 0,
+      failed: 1,
+      skipped: false,
+      reason,
+      historyId,
+      devices: [],
+    };
+  }
+}
+
+============================================================
+FILE: lib/push.ts
+============================================================
+import webpush from "web-push";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export const runtime = "nodejs";
+
+type PushPayload = {
+  title: string;
+  body: string;
+  url: string;
+  tag: string;
+};
+
+type SubscriptionRow = {
+  id: string;
+  endpoint: string;
+  p256dh_key: string;
+  auth_key: string;
+  device_name: string | null;
+  user_agent: string | null;
+};
+
+export type PushDeviceResult = {
+  subscriptionId: string;
+  deviceName: string;
+  status: "sent" | "failed";
+  reason?: string;
+  statusCode?: number | null;
+};
+
+export type PushResult = {
+  sent: number;
+  failed: number;
+  skipped: boolean;
+  reason?: string;
+  devices: PushDeviceResult[];
+};
+
+function configureWebPush() {
+  const subject = process.env.VAPID_SUBJECT;
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+
+  if (!subject || !publicKey || !privateKey) {
+    throw new Error("VAPID configuration is incomplete.");
+  }
+
+  webpush.setVapidDetails(subject, publicKey, privateKey);
+}
+
+function getPushStatusCode(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error
+  ) {
+    return Number(error.statusCode);
+  }
+
+  return null;
+}
+
+function getPushErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "body" in error &&
+    typeof error.body === "string" &&
+    error.body.trim()
+  ) {
+    return error.body;
+  }
+
+  return "Push delivery failed.";
+}
+
+function describeDevice(
+  deviceName: string | null,
+  userAgent: string | null
+) {
+  const savedName = String(deviceName ?? "").trim();
+  const ua = String(userAgent ?? "");
+
+  if (savedName && savedName.toLowerCase() !== "web browser") {
+    return savedName;
+  }
+
+  const isIPhone = /iPhone/i.test(ua);
+  const isIPad = /iPad/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isChromeOS = /CrOS/i.test(ua);
+  const isWindows = /Windows/i.test(ua);
+  const isMac = /Macintosh|Mac OS X/i.test(ua);
+
+  const isEdge = /Edg\//i.test(ua);
+  const isFirefox = /Firefox\//i.test(ua);
+  const isChrome =
+    /Chrome\//i.test(ua) &&
+    !isEdge &&
+    !/OPR\//i.test(ua);
+  const isSafari =
+    /Safari\//i.test(ua) &&
+    !isChrome &&
+    !isEdge &&
+    !/CriOS\//i.test(ua) &&
+    !/FxiOS\//i.test(ua);
+
+  let browser = "Browser";
+
+  if (isEdge) browser = "Edge";
+  else if (isFirefox || /FxiOS\//i.test(ua)) browser = "Firefox";
+  else if (isChrome || /CriOS\//i.test(ua)) browser = "Chrome";
+  else if (isSafari) browser = "Safari";
+
+  let platform = "device";
+
+  if (isIPhone) platform = "iPhone";
+  else if (isIPad) platform = "iPad";
+  else if (isAndroid) platform = "Android";
+  else if (isChromeOS) platform = "Chromebook";
+  else if (isWindows) platform = "Windows";
+  else if (isMac) platform = "Mac";
+
+  if (isIPhone || isIPad) {
+    return `${browser} / Home Screen App on ${platform}`;
+  }
+
+  return `${browser} on ${platform}`;
+}
+
+export async function sendPushToUser(
+  userId: string,
+  payload: PushPayload
+): Promise<PushResult> {
+  configureWebPush();
+
+  const { data, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select(
+      `
+        id,
+        endpoint,
+        p256dh_key,
+        auth_key,
+        device_name,
+        user_agent
+      `
+    )
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (error) {
+    throw new Error(`Failed to load push subscriptions: ${error.message}`);
+  }
+
+  const subscriptions = (data ?? []) as SubscriptionRow[];
+
+  if (subscriptions.length === 0) {
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "No active push-enabled devices found.",
+      devices: [],
+    };
+  }
+
+  let sent = 0;
+  let failed = 0;
+  const devices: PushDeviceResult[] = [];
+  const encodedPayload = JSON.stringify(payload);
+
+  for (const subscription of subscriptions) {
+    const deviceName = describeDevice(
+      subscription.device_name,
+      subscription.user_agent
+    );
+
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.p256dh_key,
+            auth: subscription.auth_key,
+          },
+        },
+        encodedPayload
+      );
+
+      sent += 1;
+
+      devices.push({
+        subscriptionId: subscription.id,
+        deviceName,
+        status: "sent",
+      });
+
+      await supabaseAdmin
+        .from("push_subscriptions")
+        .update({
+          last_used_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", subscription.id);
+    } catch (error) {
+      failed += 1;
+
+      const statusCode = getPushStatusCode(error);
+      const reason = getPushErrorMessage(error);
+
+      devices.push({
+        subscriptionId: subscription.id,
+        deviceName,
+        status: "failed",
+        reason,
+        statusCode,
+      });
+
+      if (statusCode === 404 || statusCode === 410) {
+        await supabaseAdmin
+          .from("push_subscriptions")
+          .update({
+            is_active: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", subscription.id);
+      }
+
+      console.error("Push notification failed", {
+        subscriptionId: subscription.id,
+        deviceName,
+        statusCode,
+        error,
+      });
+    }
+  }
+
+  return {
+    sent,
+    failed,
+    skipped: sent === 0,
+    reason:
+      sent === 0
+        ? failed > 0
+          ? "No notifications were delivered."
+          : "No active push-enabled devices found."
+        : undefined,
+    devices,
+  };
+}
+
+============================================================
+FILE: app/api/admin/notification-history/route.ts
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+function normalizeSport(value: unknown): SportKey {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const type =
+      request.nextUrl.searchParams.get("type")?.trim() ?? "";
+
+    const status =
+      request.nextUrl.searchParams.get("status")?.trim() ?? "";
+
+    const sport =
+      request.nextUrl.searchParams.get("sport")?.trim() ?? "";
+
+    let sportSlateIds: number[] | null = null;
+
+    if (sport && sport !== "all") {
+      const normalizedSport = normalizeSport(sport);
+
+      const { data: sportSlates, error: sportSlatesError } =
+        await supabaseAdmin
+          .from("slates")
+          .select("id")
+          .eq("sport", normalizedSport);
+
+      if (sportSlatesError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to filter by sport: ` +
+              sportSlatesError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      sportSlateIds = (sportSlates ?? []).map((row) =>
+        Number(row.id)
+      );
+    }
+
+    let query = supabaseAdmin
+      .from("notification_history")
+      .select(
+        `
+          id,
+          event_key,
+          notification_type,
+          user_id,
+          team_id,
+          slate_id,
+          player_id,
+          title,
+          body,
+          status,
+          sent_count,
+          failed_count,
+          skipped,
+          reason,
+          metadata,
+          created_at,
+          completed_at
+        `
+      )
+      .order("created_at", { ascending: false })
+      .limit(250);
+
+    if (type) {
+      query = query.eq("notification_type", type);
+    }
+
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    if (sportSlateIds !== null) {
+      query =
+        sportSlateIds.length > 0
+          ? query.in("slate_id", sportSlateIds)
+          : query.is("slate_id", null);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load notification history: ` +
+            error.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    const rows = data ?? [];
+
+    const userIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.user_id)
+          .filter(Boolean)
+          .map(String)
+      )
+    );
+
+    const teamIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.team_id)
+          .filter(Boolean)
+          .map(Number)
+      )
+    );
+
+    const slateIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.slate_id)
+          .filter(Boolean)
+          .map(Number)
+      )
+    );
+
+    const [
+      { data: users },
+      { data: teams },
+      { data: slates },
+    ] = await Promise.all([
+      userIds.length
+        ? supabaseAdmin
+            .from("app_users")
+            .select("id, display_name")
+            .in("id", userIds)
+        : Promise.resolve({ data: [] }),
+
+      teamIds.length
+        ? supabaseAdmin
+            .from("teams")
+            .select("id, name")
+            .in("id", teamIds)
+        : Promise.resolve({ data: [] }),
+
+      slateIds.length
+        ? supabaseAdmin
+            .from("slates")
+            .select(
+              "id, date, start_date, end_date, sport, display_name"
+            )
+            .in("id", slateIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const userMap = new Map(
+      (users ?? []).map((row) => [
+        String(row.id),
+        row.display_name,
+      ])
+    );
+
+    const teamMap = new Map(
+      (teams ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const slateSportMap = new Map<number, SportKey>(
+      (slates ?? []).map((row) => [
+        Number(row.id),
+        normalizeSport(row.sport),
+      ])
+    );
+
+    const slateMap = new Map(
+      (slates ?? []).map((row) => {
+        const startDate = row.start_date ?? row.date;
+        const endDate = row.end_date ?? row.date;
+
+        const dateLabel =
+          startDate === endDate
+            ? startDate
+            : `${startDate} - ${endDate}`;
+
+        return [
+          Number(row.id),
+          row.display_name?.trim() || dateLabel,
+        ];
+      })
+    );
+
+    const nbaPlayerIds = new Set<number>();
+    const nflPlayerIds = new Set<number>();
+    const golfPlayerIds = new Set<number>();
+
+    for (const row of rows) {
+      if (!row.player_id) continue;
+
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : "nba";
+
+      const playerId = Number(row.player_id);
+
+      if (rowSport === "nfl") {
+        nflPlayerIds.add(playerId);
+      } else if (rowSport === "golf") {
+        golfPlayerIds.add(playerId);
+      } else {
+        nbaPlayerIds.add(playerId);
+      }
+    }
+
+    const [
+      { data: nbaPlayers },
+      { data: nflPlayers },
+      { data: golfPlayers },
+    ] = await Promise.all([
+      nbaPlayerIds.size
+        ? supabaseAdmin
+            .from("players")
+            .select("id, name")
+            .in("id", [...nbaPlayerIds])
+        : Promise.resolve({ data: [] }),
+
+      nflPlayerIds.size
+        ? supabaseAdmin
+            .from("players_nfl")
+            .select("id, name")
+            .in("id", [...nflPlayerIds])
+        : Promise.resolve({ data: [] }),
+
+      golfPlayerIds.size
+        ? supabaseAdmin
+            .from("golf_players")
+            .select("id, display_name")
+            .in("id", [...golfPlayerIds])
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const nbaPlayerMap = new Map(
+      (nbaPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const nflPlayerMap = new Map(
+      (nflPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const golfPlayerMap = new Map(
+      (golfPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.display_name,
+      ])
+    );
+
+    function resolvePlayerName(
+      row: (typeof rows)[number]
+    ) {
+      if (!row.player_id) return null;
+
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : "nba";
+
+      const playerId = Number(row.player_id);
+
+      if (rowSport === "golf") {
+        return (
+          golfPlayerMap.get(playerId) ??
+          `Golfer ${playerId}`
+        );
+      }
+
+      if (rowSport === "nfl") {
+        return (
+          nflPlayerMap.get(playerId) ??
+          `Player ${playerId}`
+        );
+      }
+
+      return (
+        nbaPlayerMap.get(playerId) ??
+        `Player ${playerId}`
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      history: rows.map((row) => {
+        const rowSport = row.slate_id
+          ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+          : null;
+
+        return {
+          ...row,
+          sport: rowSport,
+          recipientName: row.user_id
+            ? userMap.get(String(row.user_id)) ??
+              "Unknown user"
+            : "No recipient",
+          teamName: row.team_id
+            ? teamMap.get(Number(row.team_id)) ??
+              `Team ${row.team_id}`
+            : null,
+          playerName: resolvePlayerName(row),
+          slateLabel: row.slate_id
+            ? slateMap.get(Number(row.slate_id)) ??
+              `Slate ${row.slate_id}`
+            : null,
+        };
+      }),
+    });
+  } catch (error) {
+    console.error(
+      "Failed to load notification history",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error: "Unable to load notification history.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+FILE: app/admin/notification-history/page.tsx
+============================================================
+"use client";
+
+import AppNav from "@/components/AppNav";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+type DeviceResult = {
+  subscriptionId?: string;
+  deviceName?: string;
+  status?: "sent" | "failed";
+  reason?: string;
+  statusCode?: number | null;
+};
+
+type HistoryRow = {
+  id: string;
+  notification_type: string;
+  sport: SportKey | null;
+  title: string;
+  body: string;
+  status:
+    | "pending"
+    | "sent"
+    | "partial"
+    | "failed"
+    | "skipped";
+  sent_count: number;
+  failed_count: number;
+  reason: string | null;
+  created_at: string;
+  recipientName: string;
+  teamName: string | null;
+  playerName: string | null;
+  slateLabel: string | null;
+  metadata: {
+    devices?: DeviceResult[];
+    [key: string]: unknown;
+  } | null;
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  sent:
+    "border-emerald-700 bg-emerald-950/50 text-emerald-300",
+  partial:
+    "border-amber-700 bg-amber-950/50 text-amber-300",
+  failed:
+    "border-red-700 bg-red-950/50 text-red-300",
+  skipped:
+    "border-slate-600 bg-slate-800 text-slate-300",
+  pending:
+    "border-sky-700 bg-sky-950/50 text-sky-300",
+};
+
+function getTypeLabel(row: HistoryRow) {
+  if (row.notification_type === "draft_turn") {
+    return "Draft Turn";
+  }
+
+  if (row.notification_type === "draft_final_pick") {
+    return row.sport === "golf"
+      ? "Last Draft Pick"
+      : "Final Draft Pick";
+  }
+
+  if (row.notification_type === "player_finished") {
+    return row.sport === "golf"
+      ? "Golfer Finished Round"
+      : "Player Finished";
+  }
+
+  if (row.notification_type === "slate_complete") {
+    return row.sport === "golf"
+      ? "Tournament Complete"
+      : "Slate Complete";
+  }
+
+  if (
+    row.notification_type === "slate_complete_winner"
+  ) {
+    return row.sport === "golf"
+      ? "Tournament Winner"
+      : "Slate Winner";
+  }
+
+  if (row.notification_type === "push_test") {
+    return "Push Test";
+  }
+
+  return row.notification_type;
+}
+
+function getSportLabel(sport: SportKey | null) {
+  if (sport === "golf") return "⛳ Golf";
+  if (sport === "nfl") return "🏈 NFL";
+  if (sport === "nba") return "🏀 NBA";
+  return "General";
+}
+
+export default function NotificationHistoryPage() {
+  const [history, setHistory] = useState<HistoryRow[]>(
+    []
+  );
+
+  const [typeFilter, setTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sportFilter, setSportFilter] =
+    useState("all");
+  const [recipientFilter, setRecipientFilter] =
+    useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const loadHistory = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setMessage("");
+
+      const params = new URLSearchParams();
+
+      if (typeFilter) {
+        params.set("type", typeFilter);
+      }
+
+      if (statusFilter) {
+        params.set("status", statusFilter);
+      }
+
+      if (
+        sportFilter &&
+        sportFilter !== "all"
+      ) {
+        params.set("sport", sportFilter);
+      }
+
+      const response = await fetch(
+        `/api/admin/notification-history?${params.toString()}`,
+        { cache: "no-store" }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ||
+            "Failed to load notification history."
+        );
+        return;
+      }
+
+      setHistory(result.history ?? []);
+    } catch (error) {
+      console.error(error);
+      setMessage(
+        "Something went wrong while loading notification history."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    statusFilter,
+    typeFilter,
+    sportFilter,
+  ]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
+
+  const visibleHistory = useMemo(() => {
+    const search = recipientFilter
+      .trim()
+      .toLowerCase();
+
+    if (!search) return history;
+
+    return history.filter((row) => {
+      const deviceNames =
+        row.metadata?.devices?.map(
+          (device) => device.deviceName
+        ) ?? [];
+
+      return [
+        row.recipientName,
+        row.teamName,
+        row.playerName,
+        row.slateLabel,
+        ...deviceNames,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value)
+            .toLowerCase()
+            .includes(search)
+        );
+    });
+  }, [history, recipientFilter]);
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <AppNav />
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Notification History
+              </h1>
+
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Review recipients, sports, delivery
+                results, skips, failures, and device
+                delivery.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void loadHistory()}
+              disabled={isLoading}
+              className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:opacity-50"
+            >
+              {isLoading
+                ? "Refreshing…"
+                : "Refresh"}
+            </button>
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-4">
+            <select
+              value={sportFilter}
+              onChange={(event) =>
+                setSportFilter(event.target.value)
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-sm text-slate-100"
+            >
+              <option value="all">All sports</option>
+              <option value="nba">NBA</option>
+              <option value="nfl">NFL</option>
+              <option value="golf">Golf</option>
+            </select>
+
+            <select
+              value={typeFilter}
+              onChange={(event) =>
+                setTypeFilter(event.target.value)
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-sm text-slate-100"
+            >
+              <option value="">
+                All notification types
+              </option>
+              <option value="draft_turn">
+                Draft Turn
+              </option>
+              <option value="draft_final_pick">
+                Final / Last Draft Pick
+              </option>
+              <option value="player_finished">
+                Athlete Finished
+              </option>
+              <option value="slate_complete">
+                Slate / Tournament Complete
+              </option>
+              <option value="slate_complete_winner">
+                Slate / Tournament Winner
+              </option>
+              <option value="push_test">
+                Push Test
+              </option>
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value)
+              }
+              className="rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-sm text-slate-100"
+            >
+              <option value="">All statuses</option>
+              <option value="sent">Sent</option>
+              <option value="partial">Partial</option>
+              <option value="failed">Failed</option>
+              <option value="skipped">Skipped</option>
+              <option value="pending">Pending</option>
+            </select>
+
+            <input
+              type="search"
+              value={recipientFilter}
+              onChange={(event) =>
+                setRecipientFilter(
+                  event.target.value
+                )
+              }
+              placeholder="Recipient, athlete, slate, or device…"
+              className="rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500"
+            />
+          </div>
+        </section>
+
+        {message ? (
+          <div className="rounded-2xl border border-red-700 bg-red-950/60 px-4 py-3 text-sm text-red-200">
+            {message}
+          </div>
+        ) : null}
+
+        <section className="space-y-4">
+          {isLoading ? (
+            <div className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-sm text-slate-400">
+              Loading notification history…
+            </div>
+          ) : visibleHistory.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-600 bg-slate-900 p-8 text-center text-sm text-slate-400">
+              No notification records match these
+              filters.
+            </div>
+          ) : (
+            visibleHistory.map((row) => {
+              const devices =
+                row.metadata?.devices ?? [];
+
+              return (
+                <article
+                  key={row.id}
+                  className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-slate-300">
+                          {getTypeLabel(row)}
+                        </span>
+
+                        <span className="rounded-full border border-slate-600 bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300">
+                          {getSportLabel(row.sport)}
+                        </span>
+
+                        <span
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                            STATUS_STYLES[
+                              row.status
+                            ] ??
+                            STATUS_STYLES.pending
+                          }`}
+                        >
+                          {row.status}
+                        </span>
+                      </div>
+
+                      <h2 className="mt-3 text-lg font-semibold text-white">
+                        {row.title}
+                      </h2>
+
+                      <p className="mt-1 text-sm leading-6 text-slate-300">
+                        {row.body}
+                      </p>
+                    </div>
+
+                    <time className="text-xs text-slate-500">
+                      {new Date(
+                        row.created_at
+                      ).toLocaleString()}
+                    </time>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 rounded-2xl border border-slate-700 bg-slate-950/50 p-4 text-sm text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <span className="font-semibold text-slate-100">
+                        Recipient:
+                      </span>{" "}
+                      {row.recipientName}
+                    </div>
+
+                    <div>
+                      <span className="font-semibold text-slate-100">
+                        Team:
+                      </span>{" "}
+                      {row.teamName ?? "—"}
+                    </div>
+
+                    <div>
+                      <span className="font-semibold text-slate-100">
+                        Athlete:
+                      </span>{" "}
+                      {row.playerName ?? "—"}
+                    </div>
+
+                    <div>
+                      <span className="font-semibold text-slate-100">
+                        Slate:
+                      </span>{" "}
+                      {row.slateLabel ?? "—"}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-white">
+                        Device delivery
+                      </h3>
+
+                      <div className="text-xs text-slate-400">
+                        {row.sent_count} sent ·{" "}
+                        {row.failed_count} failed
+                      </div>
+                    </div>
+
+                    {devices.length === 0 ? (
+                      <p className="mt-3 text-sm text-slate-400">
+                        No individual device details
+                        were recorded.
+                      </p>
+                    ) : (
+                      <div className="mt-3 space-y-2">
+                        {devices.map(
+                          (device, index) => {
+                            const wasSent =
+                              device.status === "sent";
+
+                            return (
+                              <div
+                                key={
+                                  device.subscriptionId ??
+                                  `${row.id}-device-${index}`
+                                }
+                                className="flex flex-col gap-1 rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    aria-hidden="true"
+                                    className={
+                                      wasSent
+                                        ? "text-emerald-400"
+                                        : "text-red-400"
+                                    }
+                                  >
+                                    {wasSent
+                                      ? "✓"
+                                      : "✕"}
+                                  </span>
+
+                                  <span className="text-sm font-medium text-slate-200">
+                                    {device.deviceName ??
+                                      "Unknown device"}
+                                  </span>
+                                </div>
+
+                                <div
+                                  className={`text-xs font-semibold ${
+                                    wasSent
+                                      ? "text-emerald-400"
+                                      : "text-red-400"
+                                  }`}
+                                >
+                                  {wasSent
+                                    ? "Sent"
+                                    : "Failed"}
+                                </div>
+
+                                {!wasSent &&
+                                device.reason ? (
+                                  <div className="text-xs text-red-300 sm:max-w-sm sm:text-right">
+                                    {device.reason}
+                                    {device.statusCode
+                                      ? ` (${device.statusCode})`
+                                      : ""}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {row.reason ? (
+                    <div className="mt-3 text-xs text-slate-400">
+                      Overall result: {row.reason}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+============================================================
+FILE: app/api/notification-preferences/route.ts
+============================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type PreferencesBody = {
+  notificationsEnabled?: boolean;
+  draftTurnEnabled?: boolean;
+  playerFinishedEnabled?: boolean;
+  slateFinalEnabled?: boolean;
+};
+
+const defaultPreferences = {
+  notifications_enabled: true,
+  draft_turn_enabled: true,
+  player_finished_enabled: true,
+  slate_final_enabled: false,
+};
+
+function formatPreferences(row: {
+  notifications_enabled: boolean;
+  draft_turn_enabled: boolean;
+  player_finished_enabled: boolean;
+  slate_final_enabled: boolean;
+}) {
+  return {
+    notificationsEnabled: row.notifications_enabled,
+    draftTurnEnabled: row.draft_turn_enabled,
+    playerFinishedEnabled: row.player_finished_enabled,
+    slateFinalEnabled: row.slate_final_enabled,
+  };
+}
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("notification_preferences")
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+      )
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load preferences: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (data) {
+      return NextResponse.json({
+        success: true,
+        preferences: formatPreferences(data),
+      });
+    }
+
+    const { data: created, error: createError } = await supabaseAdmin
+      .from("notification_preferences")
+      .insert({
+        user_id: user.id,
+        ...defaultPreferences,
+      })
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+      )
+      .single();
+
+    if (createError || !created) {
+      return NextResponse.json(
+        {
+          error:
+            createError?.message ??
+            "Failed to create notification preferences.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      preferences: formatPreferences(created),
+    });
+  } catch (error) {
+    console.error("Failed to load notification preferences", error);
+
+    return NextResponse.json(
+      { error: "Unable to load notification preferences." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json()) as PreferencesBody;
+
+    const update = {
+      notifications_enabled:
+        typeof body.notificationsEnabled === "boolean"
+          ? body.notificationsEnabled
+          : defaultPreferences.notifications_enabled,
+      draft_turn_enabled:
+        typeof body.draftTurnEnabled === "boolean"
+          ? body.draftTurnEnabled
+          : defaultPreferences.draft_turn_enabled,
+      player_finished_enabled:
+        typeof body.playerFinishedEnabled === "boolean"
+          ? body.playerFinishedEnabled
+          : defaultPreferences.player_finished_enabled,
+      slate_final_enabled:
+        typeof body.slateFinalEnabled === "boolean"
+          ? body.slateFinalEnabled
+          : defaultPreferences.slate_final_enabled,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabaseAdmin
+      .from("notification_preferences")
+      .upsert(
+        {
+          user_id: user.id,
+          ...update,
+        },
+        {
+          onConflict: "user_id",
+        }
+      )
+      .select(
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+      )
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          error:
+            error?.message ??
+            "Failed to update notification preferences.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      preferences: formatPreferences(data),
+    });
+  } catch (error) {
+    console.error("Failed to update notification preferences", error);
+
+    return NextResponse.json(
+      { error: "Unable to update notification preferences." },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+FILE: app/api/push-subscriptions/route.ts
+============================================================
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SubscriptionBody = {
+  endpoint?: string;
+  keys?: {
+    p256dh?: string;
+    auth?: string;
+  };
+  deviceName?: string;
+};
+
+export async function GET() {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .select("id, endpoint, device_name, is_active, created_at, last_used_at")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to load devices: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      subscriptions: data ?? [],
+    });
+  } catch (error) {
+    console.error("Failed to load push subscriptions", error);
+
+    return NextResponse.json(
+      { error: "Unable to load registered devices." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json()) as SubscriptionBody;
+
+    const endpoint = String(body.endpoint ?? "").trim();
+    const p256dhKey = String(body.keys?.p256dh ?? "").trim();
+    const authKey = String(body.keys?.auth ?? "").trim();
+
+    if (!endpoint || !p256dhKey || !authKey) {
+      return NextResponse.json(
+        { error: "Invalid push subscription." },
+        { status: 400 }
+      );
+    }
+
+    const userAgent = request.headers.get("user-agent");
+
+    const { data, error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .upsert(
+        {
+          user_id: user.id,
+          endpoint,
+          p256dh_key: p256dhKey,
+          auth_key: authKey,
+          user_agent: userAgent,
+          device_name: body.deviceName?.trim() || "Web browser",
+          is_active: true,
+          updated_at: new Date().toISOString(),
+          last_used_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "endpoint",
+        }
+      )
+      .select("id, device_name, is_active")
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json(
+        {
+          error:
+            error?.message ??
+            "Failed to register this device.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      subscription: data,
+    });
+  } catch (error) {
+    console.error("Failed to register push subscription", error);
+
+    return NextResponse.json(
+      { error: "Unable to register this device." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 }
+      );
+    }
+
+    const body = (await request.json()) as {
+      endpoint?: string;
+    };
+
+    const endpoint = String(body.endpoint ?? "").trim();
+
+    if (!endpoint) {
+      return NextResponse.json(
+        { error: "Missing subscription endpoint." },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabaseAdmin
+      .from("push_subscriptions")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", user.id)
+      .eq("endpoint", endpoint);
+
+    if (error) {
+      return NextResponse.json(
+        { error: `Failed to disable device: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+  } catch (error) {
+    console.error("Failed to disable push subscription", error);
+
+    return NextResponse.json(
+      { error: "Unable to disable this device." },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+NOTIFICATION MIGRATIONS / SCHEMA REFERENCES
+============================================================
+supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+supabase/push-subscriptions.sql:1:create table if not exists public.push_subscriptions (
+supabase/push-subscriptions.sql:16:  on public.push_subscriptions(user_id);
+supabase/push-subscriptions.sql:19:  on public.push_subscriptions(user_id, is_active);
+./supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./supabase/push-subscriptions.sql:1:create table if not exists public.push_subscriptions (
+./supabase/push-subscriptions.sql:16:  on public.push_subscriptions(user_id);
+./supabase/push-subscriptions.sql:19:  on public.push_subscriptions(user_id, is_active);
+./golf-final-notification-collector.txt:25942:supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./golf-final-notification-collector.txt:25947:supabase/push-subscriptions.sql:1:create table if not exists public.push_subscriptions (
+./golf-final-notification-collector.txt:25949:supabase/push-subscriptions.sql:16:  on public.push_subscriptions(user_id);
+./golf-final-notification-collector.txt:25951:supabase/push-subscriptions.sql:19:  on public.push_subscriptions(user_id, is_active);
+./golf-final-notification-collector.txt:26523:./supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./golf-final-notification-collector.txt:26528:./supabase/push-subscriptions.sql:1:create table if not exists public.push_subscriptions (
+./golf-final-notification-collector.txt:26530:./supabase/push-subscriptions.sql:16:  on public.push_subscriptions(user_id);
+./golf-final-notification-collector.txt:26532:./supabase/push-subscriptions.sql:19:  on public.push_subscriptions(user_id, is_active);

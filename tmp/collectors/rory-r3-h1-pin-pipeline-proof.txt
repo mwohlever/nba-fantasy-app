@@ -1,0 +1,1100 @@
+
+================================================================================
+1. PGA ENGINE — getTeeAndPinFromEventData
+================================================================================
+NO MATCHES FOR: getTeeAndPinFromEventData
+
+
+================================================================================
+2. PGA ENGINE — getPinFromPlayerShotSequence
+================================================================================
+NO MATCHES FOR: getPinFromPlayerShotSequence
+
+
+================================================================================
+3. PGA WEB/ENGINE — shotDetailsCompressedV3
+================================================================================
+NO MATCHES FOR: shotDetailsCompressedV3
+
+
+================================================================================
+4. PGA WEB/ENGINE — ShotDetailsCompressedV3
+================================================================================
+NO MATCHES FOR: ShotDetailsCompressedV3
+
+
+================================================================================
+5. PGA ENGINE — shotData
+================================================================================
+NO MATCHES FOR: shotData
+
+
+================================================================================
+6. PGA DATA — pinGreen
+================================================================================
+FILE: tmp/pgatour-tourcast-js/008-_app-113c6dfb4ed0c65b.js
+TERM: pinGreen
+OFFSET: 1204179
+
+   __typename\n            position\n            rankLogoLight\n            rankLogoDark\n            movement\n            movementDirection\n            id\n            name\n            playerCountry\n            totals {\n              display\n              value\n            }\n            total\n            winner\n            tourBound\n            pointsDelta\n          }\n          ... on CupRankingPlayerInfoRow {\n            __typename\n            text\n            image\n            imageDark\n          }\n        }\n        partner\n        partnerLink\n        winner {\n          id\n          name\n          playerCountry\n          totalLabel\n          totalValue\n        }\n        bannerMessage {\n          messageText\n          messageIcon\n          messageLink\n          webViewLink\n          externalLink\n          platforms\n          timing\n        }\n      }\n    }\n  }\n"]);return C=function(){return e},e}function A(){let e=(0,n._)(["\n  fragment PaceOfPlayFragment on CourseHoleStatsPaceData {\n    puttingRank\n    puttingTime\n    offTeeRank\n    offTeeTime\n    overallRank\n    overallTime\n    approachRank\n    approachTime\n    averageHoleRank\n    averageHoleTime\n  }\n"]);return A=function(){return e},e}function k(){let e=(0,n._)(["\n  fragment CourseStatsFragment on TournamentHoleStats {\n    tournamentId\n    courses {\n      tournamentId\n      courseId\n      courseName\n      courseCode\n      holeDetailsAvailability\n      par\n      yardage\n      hostCourse\n      courseImage\n      roundHoleStats {\n        roundHeader\n        roundNum\n        live\n        enablePaceOfPlay\n        paceOfPlayLabelTitle\n        paceOfPlayDescription\n        paceOfPlayHeader\n        scoringHeader\n        holeStats {\n          ... on CourseHoleStats {\n            __typename\n            paceOfPlay {\n              ...PaceOfPlayFragment\n            }\n            averagePaceOfPlay\n            courseHoleNum\n            parValue\n            yards\n            scoringAverage\n            scoringAverageDiff\n            scoringDiffTendency\n            eagles\n            birdies\n            pars\n            bogeys\n            doubleBogey\n            rank\n            holeImage\n            live\n            holePickleGreenLeftToRight\n            holePickle {\n              greenLeftToRight\n            }\n            pinGreen {\n              leftToRightCoords {\n                x\n                y\n                z\n                enhancedX\n                enhancedY\n              }\n              bottomToTopCoords {\n                x\n                y\n                z\n                enhancedX\n                enhancedY\n              }\n            }\n          }\n          ... on SummaryRow {\n            __typename\n            paceOfPlay {\n              ...PaceOfPlayFragment\n            }\n            rowType\n            par\n            scoringAverageDiff\n            scoringDiffTendency\n            yardage\n            scoringAverage\n            eagles\n            birdies\n            pars\n            bogeys\n            doubleBogey\n            averagePaceOfPlay\n          }\n        }\n      }\n      courseOverview {\n        id\n        image\n        name\n        city\n        state\n        country\n        overview {\n          label\n          value\n          detail\n          secondaryDetail\n          wide\n          smallCopy\n        }\n      }\n      shotlinkLogo\n    }\n  }\n  ","\n"]);return k=function(){return e},e}function E(){let e=(0,n._)(["\n  fragment CupPlayOverviewLeaderboardFragment on CupTournamentStatus {\n    id\n    tournamentId\n    teams {\n      teamId\n      teamLogo\n      displayName\n      shortName\n      projected\n      projectedValue\n      projectedProgress\n      toWin\n      total\n      totalValue\n      totalProgress\n      color\n      badgeText\n      textColor\n      projectedColor\n    }\n    messages {\n      messageText\n      messageIcon\n      messageLink\n      externalLink\n    }\n    type\n    stickyBanner\n    heroImage\n    miniLeaderboardOverride\n    scorecardEnabled\n  }\n"]);return E=function(){return e},e}function P(){let e=(0,n._)(["\n  fragment CupScorecardFields on CupScorecard {\n    id\n    currentHole\n    matchHoleScores {\n      courseHoleNumber\n      holeNumberColor\n      holeNumber\n      holePlayedStatus\n      matchScore\n      matchScoreColor\n      parValue\n      matchHolePlayers {\n        holeScore\n        holeScoreStatus\n        playerId\n        holeScores {\n          holeScore\n          holeScoreStatus\n          playerId\n        }\n        holePoints\n      }\n    }\n    matchName\n    scorecardTitle\n    tourcastUrlWeb\n    teams {\n      teamId\n      players {\n 
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/008-_app-113c6dfb4ed0c65b.js
+TERM: pinGreen
+OFFSET: 1209761
+
+{return e},e}function O(){let e=(0,n._)(["\n  fragment ExpertPicksComment on TourSponsorDescription {\n    ... on NewsArticleParagraph {\n      __typename\n      segments {\n        type\n        value\n        data\n        format {\n          variants\n        }\n        imageOrientation\n      }\n    }\n    ... on NewsArticleText {\n      __typename\n      value\n    }\n    ... on NewsArticleLink {\n      __typename\n      segments {\n        type\n        value\n        data\n        format {\n          variants\n        }\n        imageOrientation\n      }\n    }\n    ... on NewsArticleLineBreak {\n      __typename\n      breakValue\n    }\n    ... on NewsArticleImage {\n      __typename\n      segments {\n        type\n        value\n        data\n        format {\n          variants\n        }\n        imageOrientation\n      }\n    }\n  }\n"]);return O=function(){return e},e}function I(){let e=(0,n._)(["\n  fragment GroupCourseFragment on GroupLocationCourse {\n    tournamentAndCourseId\n    tournamentId\n    courseId\n    round\n    courseName\n    holes {\n      holeNumber\n      par\n      yardage\n      groups {\n        groupSort\n        groupNum\n        round\n        location\n        color\n        playerData {\n          addressingBall\n          nextToHit\n        }\n      }\n    }\n  }\n"]);return I=function(){return e},e}function N(){let e=(0,n._)(["\n  fragment HoleDetailFragment on HoleDetail {\n    id\n    tournamentId\n    statsAvailability\n    holeNum\n    courseId\n    holeImage\n    holeImageLandscape\n    tourcastURI\n    tourcastURL\n    tourcastURLWeb\n    statsSummary {\n      tournamentId\n      courseId\n      holeNum\n      eagles\n      eaglesPercent\n      birdies\n      birdiesPercent\n      pars\n      parsPercent\n      bogeys\n      bogeysPercent\n      doubleBogeys\n      doubleBogeysPercent\n    }\n    holeInfo {\n      holePickleLeftToRightAsset {\n        imageOrg\n        imagePath\n      }\n      holePickleBottomToTopAsset {\n        imageOrg\n        imagePath\n      }\n      holePickleGreenLeftToRightAsset {\n        imageOrg\n        imagePath\n      }\n      holePickleGreenBottomToTopAsset {\n        imageOrg\n        imagePath\n      }\n      holeNum\n      par\n      yards\n      scoringAverageDiff\n      holePickle\n      holePickleBottomToTop\n      holePickleGreenBottomToTop\n      greenPickle\n      pinGreen {\n        leftToRightCoords {\n          x\n          y\n          z\n          tourcastX\n          tourcastY\n          tourcastZ\n        }\n        bottomToTopCoords {\n          x\n          y\n          z\n          tourcastX\n          tourcastY\n          tourcastZ\n        }\n      }\n      aboutThisHole\n      rounds\n      rank\n    }\n    rounds {\n      roundNum\n      groups {\n        groupNumber\n        groupLocation\n        groupLocationCode\n        tourcastURL\n        tourcastURLWeb\n        players {\n          playerId\n          firstName\n          lastName\n          countryFlag\n          headshot\n          position\n          total\n          roundScore\n          country\n        }\n      }\n      teamGroups {\n        groupNumber\n        groupLocation\n        groupLocationCode\n        tourcastURL\n        tourcastURLWeb\n        teams {\n          players {\n            playerId\n            firstName\n            lastName\n            countryFlag\n            headshot\n            position\n            total\n            roundScore\n            country\n          }\n        }\n      }\n      matches {\n        match {\n          matchId\n          players {\n            playerId\n            headshot\n            firstName\n            lastName\n            shortName\n            displayName\n            displayColor\n            tournamentSeed\n            bracketSeed\n            matchStatus\n            record\n            countryFlag\n            countryName\n            isAmateur\n            activeInPlayoff\n          }\n          bracketPlayerSwap\n          teeTime\n          matchScore\n          matchScoreColor\n          matchScoreColorDark\n          thru\n          thruNumberOfHoles\n          matchStatus\n        }\n        groupName\n        matchLocation\n        matchLocationCode\n        tourcastURL\n        tourcastURLWeb\n      }\n    }\n  }\n"]);return N=function(){return e},e}function L(){let e=(0,n._)(["\n  fragment SupportValues on LeaderboardStatItem {\n    supportValues {\n      ... on LeaderboardOddsSwing {\n        __typename\n        swing\n      }\n      ... on LeaderboardSupportingString {\n        __typename\n        data\n      }\n    }\n  }\n"]);return L=function(){return e},e}function D(){let e=(0,n._)(["\n  fragment NewsArticleFragment on NewsArticle {\n    id\n    analyticsTags\n    c
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/040-6810-f5e6977e78d36738.js
+TERM: pinGreen
+OFFSET: 3973
+
+wTee:h,teamsHoleShotInfo:m,width:p,isPresCup:y,isEnhancedView:v}=e,[g]=(0,d.r)([a.A.mobileOnly]),x=g?"bottomToTopCoords":"leftToRightCoords",b="green"==u?"green":v?"enhanced":"overview",f=(0,o.useMemo)(()=>m.map(e=>{var l;return null==e||null==(l=e.hole)?void 0:l.strokes.map((l,o)=>{var a;if(!l)return null;let{pointACoords:d,pointBCoords:c,isPenalty:h}=(0,n.Cd)(l,u,x,p,t);return(0,r.jsx)("path",{d:"M".concat(d.x," ").concat(d.y," L").concat(c.x," ").concat(c.y),stroke:h?n.jr.penaltyColor:(null==(a=l.player)?void 0:a.color)||s.A.black,strokeDasharray:l.strokeType==i.vI.Drop||l.strokeType==i.vI.Provisional?(0,n.TK)(n.jr.dottedLineSize[b],g):void 0,strokeWidth:(0,n.TK)(n.jr.lineWidth[b],g)},"stroke-line-".concat(e.teamId,"-").concat(o))})}),[t,u,g,x,m,p,b]),j=(0,o.useMemo)(()=>m.map((e,l)=>{var o;return null==e||null==(o=e.hole)?void 0:o.strokes.map((o,a)=>{var i;if(!o||!o.groupShowMarker)return null;let{pointACoords:d,pointBCoords:c,isPenalty:h}=(0,n.Cd)(o,u,x,p,t),y=(l+1)*(1/(m.length+1)),v=(0,n.GC)(y,d,c);return(0,r.jsx)(n.nM,{x:v.x,y:v.y,strokeColor:h?n.jr.penaltyColor:(null==(i=o.player)?void 0:i.color)||s.A.black,yardage:o.markerText,isMobile:g,viewType:b},"yard-marker-".concat(e.teamId,"-").concat(a))})}),[t,u,g,x,m,b,p]),S=(0,o.useMemo)(()=>m.map(e=>{var l;return null==e||null==(l=e.hole)?void 0:l.strokes.map((l,a)=>{var d,c,h,m;if(!l)return null;let{pointBCoords:v,isPenalty:f}=(0,n.Cd)(l,u,x,p,t);return(0,r.jsxs)(o.Fragment,{children:[(0,r.jsx)("circle",{cx:v.x,cy:v.y,r:(0,n.TK)(n.jr.circleRadius[b],g),stroke:l.finalStroke?n.jr.finalStrokeColor:f?(null==(d=l.player)?void 0:d.color)||s.A.black:void 0,strokeWidth:l.finalStroke||f?(0,n.TK)(n.jr.finalStrokeCircleBorderSize[b],g):void 0,fill:f?y?s.A.dark_grey:n.jr.penaltyColor:(null==(c=l.player)?void 0:c.color)||s.A.black}),(0,r.jsx)("text",{textAnchor:"middle",x:v.x,y:v.y,dy:".35em",fontWeight:"600",fontSize:(0,n.TK)(n.jr.numberFontSize[b],g),fill:((null==(h=l.player)?void 0:h.color)!==s.A.yellow||f)&&((null==(m=l.player)?void 0:m.color)!==s.A.gold||f)?"white":"black",children:l.strokeType==i.vI.Provisional?"P":l.strokeNumber})]},"stroke-circle-".concat(e.teamId,"-").concat(a))})}),[m,u,x,p,t,b,g,y]),I=(0,o.useMemo)(()=>{let e="green"==u?l.teeGreen[x]:l.teeOverview[x];return(0,r.jsx)(n.fN,{radius:(0,n.TK)(n.jr.tee[b],g),x:e.x*p,y:e.y*t})},[u,l.teeGreen,l.teeOverview,x,b,g,p,t]),k=(0,o.useMemo)(()=>{if(!l.pinGreen||!l.pinOverview)return(0,r.jsx)(r.Fragment,{});let e="green"==u?l.pinGreen[x]:l.pinOverview[x];return(0,r.jsx)(n.yU,{x:e.x*p,y:e.y*t,width:(0,n.TK)(n.jr.pin[b].width,g),height:(0,n.TK)(n.jr.pin[b].height,g)},"pin")},[l.pinGreen,l.pinOverview,u,x,p,t,b,g]);return m?(0,r.jsxs)("svg",{className:"group-shot-trails",style:{position:"absolute"},viewBox:"0 0 ".concat(p," ").concat(t),"aria-label":"group-shot-trails",children:[c&&k,f,h&&I,j,S]}):null}},17280:(e,l,t)=>{"use strict";t.d(l,{A:()=>j});var r=t(37876),o=t(11790),n=t(67532),a=t(23309),s=t(73650),i=t(6994),d=t(59454),u=t(54337),c=t(9578),h=t(58880),m=t(69488),p=t(8995),y=t(90714),v=t(51653),g=t(24180),x=t(69993),b=t(30701),f=t(50490);let j=function(e){var l,t,j,S,I,k,A,C;let{match:T,isWithinModal:w,round:N}=e,M=(0,d.WD)(),E=(0,x.A)(),P=(0,s.ET)(),B=(0,s.__)(),H=(0,b.a)(E.config.id,T.matchId),[D]=(0,p.r)([h.A.laptop]),_=(0,f.B)(null!=(j=null==(l=E.queryResults.data)?void 0:l.id)?j:""),L=(0,s.ZU)(),z=E.queryResults.data?(0,g.cY)(E.queryResults.data,_,L):v.a.Unavailable;return H&&B?z==v.a.TournamentComplete?(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{size:[32,null,null,40]}),(0,r.jsx)(i.A,{title:(null==(S=H.message)?void 0:S.header)||M.get("tournamentCompleteOddsTitle"),body:(null==(I=H.message)?void 0:I.body)||M.get("tournamentCompleteOddsBody")})]}):z!=v.a.Unavailable&&(null==H||null==(t=H.availableMarkets)?void 0:t.length)?(0,r.jsxs)(c.A,{headerSlot:null,children:[D?null:(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{mt:["0.4rem","0.8rem"]}),(0,r.jsx)(u.default,{match:T,round:N,divider:!0,showStatusTag:!0,isModal:!0})]}),(0,r.jsxs)(o.az,{paddingTop:D?"0.8rem":void 0,marginBottom:w?"5rem":"unset",children:[(0,r.jsx)(o.M6,{size:[16,24]}),(0,r.jsx)(n.E,{textStyle:"headline_xxs_sans",color:m.A.dark_grey,fontSize:"1.5rem",children:null!=(C=null==P?void 0:P.oddsDisclaimer)?C:M.get("oddsDisclaimer")}),(0,r.jsx)(o.M6,{size:[16,40]})]}),D?(0,r.jsx)(o.az,{position:"absolute",left:"-3.2rem",right:"-3.2rem",bottom:"-3.2rem",children:(0,r.jsx)(y.A,{isWithinModal:w})}):(0,r.jsx)(y.A,{isWithinModal:w})]}):(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{size:[32,null,null,40]}),(0,r.jsx)(i.A,{title:(null==(k=H.message)?void 0:k.header)||M.get("unavailableOddsTitle"),body:(null==(A=H.message)?void 0:A.body)||M.get("unavailableTeamStrokePlayOddsBody")})]}):(0,r.jsx)(a.A,{})}},33455:(e,l,t)=>{"use strict";t.d(l,{D:()
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/040-6810-f5e6977e78d36738.js
+TERM: pinGreen
+OFFSET: 4048
+
+.r)([a.A.mobileOnly]),x=g?"bottomToTopCoords":"leftToRightCoords",b="green"==u?"green":v?"enhanced":"overview",f=(0,o.useMemo)(()=>m.map(e=>{var l;return null==e||null==(l=e.hole)?void 0:l.strokes.map((l,o)=>{var a;if(!l)return null;let{pointACoords:d,pointBCoords:c,isPenalty:h}=(0,n.Cd)(l,u,x,p,t);return(0,r.jsx)("path",{d:"M".concat(d.x," ").concat(d.y," L").concat(c.x," ").concat(c.y),stroke:h?n.jr.penaltyColor:(null==(a=l.player)?void 0:a.color)||s.A.black,strokeDasharray:l.strokeType==i.vI.Drop||l.strokeType==i.vI.Provisional?(0,n.TK)(n.jr.dottedLineSize[b],g):void 0,strokeWidth:(0,n.TK)(n.jr.lineWidth[b],g)},"stroke-line-".concat(e.teamId,"-").concat(o))})}),[t,u,g,x,m,p,b]),j=(0,o.useMemo)(()=>m.map((e,l)=>{var o;return null==e||null==(o=e.hole)?void 0:o.strokes.map((o,a)=>{var i;if(!o||!o.groupShowMarker)return null;let{pointACoords:d,pointBCoords:c,isPenalty:h}=(0,n.Cd)(o,u,x,p,t),y=(l+1)*(1/(m.length+1)),v=(0,n.GC)(y,d,c);return(0,r.jsx)(n.nM,{x:v.x,y:v.y,strokeColor:h?n.jr.penaltyColor:(null==(i=o.player)?void 0:i.color)||s.A.black,yardage:o.markerText,isMobile:g,viewType:b},"yard-marker-".concat(e.teamId,"-").concat(a))})}),[t,u,g,x,m,b,p]),S=(0,o.useMemo)(()=>m.map(e=>{var l;return null==e||null==(l=e.hole)?void 0:l.strokes.map((l,a)=>{var d,c,h,m;if(!l)return null;let{pointBCoords:v,isPenalty:f}=(0,n.Cd)(l,u,x,p,t);return(0,r.jsxs)(o.Fragment,{children:[(0,r.jsx)("circle",{cx:v.x,cy:v.y,r:(0,n.TK)(n.jr.circleRadius[b],g),stroke:l.finalStroke?n.jr.finalStrokeColor:f?(null==(d=l.player)?void 0:d.color)||s.A.black:void 0,strokeWidth:l.finalStroke||f?(0,n.TK)(n.jr.finalStrokeCircleBorderSize[b],g):void 0,fill:f?y?s.A.dark_grey:n.jr.penaltyColor:(null==(c=l.player)?void 0:c.color)||s.A.black}),(0,r.jsx)("text",{textAnchor:"middle",x:v.x,y:v.y,dy:".35em",fontWeight:"600",fontSize:(0,n.TK)(n.jr.numberFontSize[b],g),fill:((null==(h=l.player)?void 0:h.color)!==s.A.yellow||f)&&((null==(m=l.player)?void 0:m.color)!==s.A.gold||f)?"white":"black",children:l.strokeType==i.vI.Provisional?"P":l.strokeNumber})]},"stroke-circle-".concat(e.teamId,"-").concat(a))})}),[m,u,x,p,t,b,g,y]),I=(0,o.useMemo)(()=>{let e="green"==u?l.teeGreen[x]:l.teeOverview[x];return(0,r.jsx)(n.fN,{radius:(0,n.TK)(n.jr.tee[b],g),x:e.x*p,y:e.y*t})},[u,l.teeGreen,l.teeOverview,x,b,g,p,t]),k=(0,o.useMemo)(()=>{if(!l.pinGreen||!l.pinOverview)return(0,r.jsx)(r.Fragment,{});let e="green"==u?l.pinGreen[x]:l.pinOverview[x];return(0,r.jsx)(n.yU,{x:e.x*p,y:e.y*t,width:(0,n.TK)(n.jr.pin[b].width,g),height:(0,n.TK)(n.jr.pin[b].height,g)},"pin")},[l.pinGreen,l.pinOverview,u,x,p,t,b,g]);return m?(0,r.jsxs)("svg",{className:"group-shot-trails",style:{position:"absolute"},viewBox:"0 0 ".concat(p," ").concat(t),"aria-label":"group-shot-trails",children:[c&&k,f,h&&I,j,S]}):null}},17280:(e,l,t)=>{"use strict";t.d(l,{A:()=>j});var r=t(37876),o=t(11790),n=t(67532),a=t(23309),s=t(73650),i=t(6994),d=t(59454),u=t(54337),c=t(9578),h=t(58880),m=t(69488),p=t(8995),y=t(90714),v=t(51653),g=t(24180),x=t(69993),b=t(30701),f=t(50490);let j=function(e){var l,t,j,S,I,k,A,C;let{match:T,isWithinModal:w,round:N}=e,M=(0,d.WD)(),E=(0,x.A)(),P=(0,s.ET)(),B=(0,s.__)(),H=(0,b.a)(E.config.id,T.matchId),[D]=(0,p.r)([h.A.laptop]),_=(0,f.B)(null!=(j=null==(l=E.queryResults.data)?void 0:l.id)?j:""),L=(0,s.ZU)(),z=E.queryResults.data?(0,g.cY)(E.queryResults.data,_,L):v.a.Unavailable;return H&&B?z==v.a.TournamentComplete?(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{size:[32,null,null,40]}),(0,r.jsx)(i.A,{title:(null==(S=H.message)?void 0:S.header)||M.get("tournamentCompleteOddsTitle"),body:(null==(I=H.message)?void 0:I.body)||M.get("tournamentCompleteOddsBody")})]}):z!=v.a.Unavailable&&(null==H||null==(t=H.availableMarkets)?void 0:t.length)?(0,r.jsxs)(c.A,{headerSlot:null,children:[D?null:(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{mt:["0.4rem","0.8rem"]}),(0,r.jsx)(u.default,{match:T,round:N,divider:!0,showStatusTag:!0,isModal:!0})]}),(0,r.jsxs)(o.az,{paddingTop:D?"0.8rem":void 0,marginBottom:w?"5rem":"unset",children:[(0,r.jsx)(o.M6,{size:[16,24]}),(0,r.jsx)(n.E,{textStyle:"headline_xxs_sans",color:m.A.dark_grey,fontSize:"1.5rem",children:null!=(C=null==P?void 0:P.oddsDisclaimer)?C:M.get("oddsDisclaimer")}),(0,r.jsx)(o.M6,{size:[16,40]})]}),D?(0,r.jsx)(o.az,{position:"absolute",left:"-3.2rem",right:"-3.2rem",bottom:"-3.2rem",children:(0,r.jsx)(y.A,{isWithinModal:w})}):(0,r.jsx)(y.A,{isWithinModal:w})]}):(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{size:[32,null,null,40]}),(0,r.jsx)(i.A,{title:(null==(k=H.message)?void 0:k.header)||M.get("unavailableOddsTitle"),body:(null==(A=H.message)?void 0:A.body)||M.get("unavailableTeamStrokePlayOddsBody")})]}):(0,r.jsx)(a.A,{})}},33455:(e,l,t)=>{"use strict";t.d(l,{D:()=>h});var r=t(37876),o=t(27888),n=t(79365),a=t(85665),s=t(67532),i=t(99001)
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/040-6810-f5e6977e78d36738.js
+TERM: pinGreen
+OFFSET: 4201
+
+ null==e||null==(l=e.hole)?void 0:l.strokes.map((l,o)=>{var a;if(!l)return null;let{pointACoords:d,pointBCoords:c,isPenalty:h}=(0,n.Cd)(l,u,x,p,t);return(0,r.jsx)("path",{d:"M".concat(d.x," ").concat(d.y," L").concat(c.x," ").concat(c.y),stroke:h?n.jr.penaltyColor:(null==(a=l.player)?void 0:a.color)||s.A.black,strokeDasharray:l.strokeType==i.vI.Drop||l.strokeType==i.vI.Provisional?(0,n.TK)(n.jr.dottedLineSize[b],g):void 0,strokeWidth:(0,n.TK)(n.jr.lineWidth[b],g)},"stroke-line-".concat(e.teamId,"-").concat(o))})}),[t,u,g,x,m,p,b]),j=(0,o.useMemo)(()=>m.map((e,l)=>{var o;return null==e||null==(o=e.hole)?void 0:o.strokes.map((o,a)=>{var i;if(!o||!o.groupShowMarker)return null;let{pointACoords:d,pointBCoords:c,isPenalty:h}=(0,n.Cd)(o,u,x,p,t),y=(l+1)*(1/(m.length+1)),v=(0,n.GC)(y,d,c);return(0,r.jsx)(n.nM,{x:v.x,y:v.y,strokeColor:h?n.jr.penaltyColor:(null==(i=o.player)?void 0:i.color)||s.A.black,yardage:o.markerText,isMobile:g,viewType:b},"yard-marker-".concat(e.teamId,"-").concat(a))})}),[t,u,g,x,m,b,p]),S=(0,o.useMemo)(()=>m.map(e=>{var l;return null==e||null==(l=e.hole)?void 0:l.strokes.map((l,a)=>{var d,c,h,m;if(!l)return null;let{pointBCoords:v,isPenalty:f}=(0,n.Cd)(l,u,x,p,t);return(0,r.jsxs)(o.Fragment,{children:[(0,r.jsx)("circle",{cx:v.x,cy:v.y,r:(0,n.TK)(n.jr.circleRadius[b],g),stroke:l.finalStroke?n.jr.finalStrokeColor:f?(null==(d=l.player)?void 0:d.color)||s.A.black:void 0,strokeWidth:l.finalStroke||f?(0,n.TK)(n.jr.finalStrokeCircleBorderSize[b],g):void 0,fill:f?y?s.A.dark_grey:n.jr.penaltyColor:(null==(c=l.player)?void 0:c.color)||s.A.black}),(0,r.jsx)("text",{textAnchor:"middle",x:v.x,y:v.y,dy:".35em",fontWeight:"600",fontSize:(0,n.TK)(n.jr.numberFontSize[b],g),fill:((null==(h=l.player)?void 0:h.color)!==s.A.yellow||f)&&((null==(m=l.player)?void 0:m.color)!==s.A.gold||f)?"white":"black",children:l.strokeType==i.vI.Provisional?"P":l.strokeNumber})]},"stroke-circle-".concat(e.teamId,"-").concat(a))})}),[m,u,x,p,t,b,g,y]),I=(0,o.useMemo)(()=>{let e="green"==u?l.teeGreen[x]:l.teeOverview[x];return(0,r.jsx)(n.fN,{radius:(0,n.TK)(n.jr.tee[b],g),x:e.x*p,y:e.y*t})},[u,l.teeGreen,l.teeOverview,x,b,g,p,t]),k=(0,o.useMemo)(()=>{if(!l.pinGreen||!l.pinOverview)return(0,r.jsx)(r.Fragment,{});let e="green"==u?l.pinGreen[x]:l.pinOverview[x];return(0,r.jsx)(n.yU,{x:e.x*p,y:e.y*t,width:(0,n.TK)(n.jr.pin[b].width,g),height:(0,n.TK)(n.jr.pin[b].height,g)},"pin")},[l.pinGreen,l.pinOverview,u,x,p,t,b,g]);return m?(0,r.jsxs)("svg",{className:"group-shot-trails",style:{position:"absolute"},viewBox:"0 0 ".concat(p," ").concat(t),"aria-label":"group-shot-trails",children:[c&&k,f,h&&I,j,S]}):null}},17280:(e,l,t)=>{"use strict";t.d(l,{A:()=>j});var r=t(37876),o=t(11790),n=t(67532),a=t(23309),s=t(73650),i=t(6994),d=t(59454),u=t(54337),c=t(9578),h=t(58880),m=t(69488),p=t(8995),y=t(90714),v=t(51653),g=t(24180),x=t(69993),b=t(30701),f=t(50490);let j=function(e){var l,t,j,S,I,k,A,C;let{match:T,isWithinModal:w,round:N}=e,M=(0,d.WD)(),E=(0,x.A)(),P=(0,s.ET)(),B=(0,s.__)(),H=(0,b.a)(E.config.id,T.matchId),[D]=(0,p.r)([h.A.laptop]),_=(0,f.B)(null!=(j=null==(l=E.queryResults.data)?void 0:l.id)?j:""),L=(0,s.ZU)(),z=E.queryResults.data?(0,g.cY)(E.queryResults.data,_,L):v.a.Unavailable;return H&&B?z==v.a.TournamentComplete?(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{size:[32,null,null,40]}),(0,r.jsx)(i.A,{title:(null==(S=H.message)?void 0:S.header)||M.get("tournamentCompleteOddsTitle"),body:(null==(I=H.message)?void 0:I.body)||M.get("tournamentCompleteOddsBody")})]}):z!=v.a.Unavailable&&(null==H||null==(t=H.availableMarkets)?void 0:t.length)?(0,r.jsxs)(c.A,{headerSlot:null,children:[D?null:(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{mt:["0.4rem","0.8rem"]}),(0,r.jsx)(u.default,{match:T,round:N,divider:!0,showStatusTag:!0,isModal:!0})]}),(0,r.jsxs)(o.az,{paddingTop:D?"0.8rem":void 0,marginBottom:w?"5rem":"unset",children:[(0,r.jsx)(o.M6,{size:[16,24]}),(0,r.jsx)(n.E,{textStyle:"headline_xxs_sans",color:m.A.dark_grey,fontSize:"1.5rem",children:null!=(C=null==P?void 0:P.oddsDisclaimer)?C:M.get("oddsDisclaimer")}),(0,r.jsx)(o.M6,{size:[16,40]})]}),D?(0,r.jsx)(o.az,{position:"absolute",left:"-3.2rem",right:"-3.2rem",bottom:"-3.2rem",children:(0,r.jsx)(y.A,{isWithinModal:w})}):(0,r.jsx)(y.A,{isWithinModal:w})]}):(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.M6,{size:[32,null,null,40]}),(0,r.jsx)(i.A,{title:(null==(k=H.message)?void 0:k.header)||M.get("unavailableOddsTitle"),body:(null==(A=H.message)?void 0:A.body)||M.get("unavailableTeamStrokePlayOddsBody")})]}):(0,r.jsx)(a.A,{})}},33455:(e,l,t)=>{"use strict";t.d(l,{D:()=>h});var r=t(37876),o=t(27888),n=t(79365),a=t(85665),s=t(67532),i=t(99001),d=t(91281),u=t(14232),c=t(36661);let h=e=>{let{videos:l,onSlideChange:t,selectedHole:h,groupPlayerIds:m,groupRound:p}=e,y=(0,u.useRef)(null),v=l.length-
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/043-501-9992a094be1208ba.js
+TERM: pinGreen
+OFFSET: 196557
+
+gle:return"var(--hole-score-status-eagle)";case g.vT.Birdie:return"var(--hole-score-status-birdie)";case g.vT.Par:return"var(--hole-score-status-par)";case g.vT.Bogey:return"var(--hole-score-status-bogey)";case g.vT.DoubleBogey:return"var(--hole-score-status-double-bogey)";default:return"var(--hole-score-status-default)"}}function S(e,t,l){var r;if(!e)return{};let n=t===(null!=(r=null==l?void 0:l.get("all"))?r:x.A.all)?e.rounds:e.rounds.find(e=>e.display===t);return(Array.isArray(n)?n:n?[n]:[]).reduce((e,t)=>{var l;let{strokes:r,num:n}=t,o=null==(l=r.find(e=>1===e.strokeNumber))?void 0:l.playerShots.reduce((e,t)=>(e.push({...t,roundNumber:n,strokeNumber:1}),e),[]);return o&&e.push(...o),e},[]).reduce((e,t)=>{let l=j(t.result);return e[l]=(e[l]||0)+1,e},{})}function A(e,t){var l,o,i;let m=arguments.length>2&&void 0!==arguments[2]?arguments[2]:"landscape",v=(0,p.WD)(),[f,b]=(0,r.useState)(v.get("all")),[S,A]=(0,r.useState)("1"),[C,k]=(0,r.useState)(v.get("all")),w=function(e){var t;let{tournamentId:l,course:r,hole:o,enabled:i}=e,{queryResults:m}=(0,h.A)(),p=(e=>{let{tournamentId:t,course:l,hole:r,tournamentStatus:n,enabled:o}=e;return(0,s.jX)(u,(0,a.j)({queryKey:(e=>{let{tournamentId:t,course:l,hole:r}=e;return[u,{tournamentId:t,course:l,hole:r}]})({tournamentId:t,course:l,hole:r}),queryFn:()=>c({tournamentId:t,course:l,hole:r}),refetchInterval:(0,d.ah)(n),enabled:o,refetchOnWindowFocus:!0}))})({tournamentId:l,course:r,hole:o,tournamentStatus:null==(t=m.data)?void 0:t.tournamentStatus,enabled:i});return(0,n.I)(p).data}({tournamentId:null!=(l=null==e?void 0:e.tournamentId)?l:"",course:parseInt(null!=(o=null==e?void 0:e.courseId)?o:""),hole:null!=(i=null==e?void 0:e.holeNum)?i:0,enabled:!!e}),T=function(e,t,l,r){var n;if(!e)return[];let o=t===(null!=(n=null==r?void 0:r.get("all"))?n:x.A.all)?e.rounds:e.rounds.find(e=>e.display===t),a=Array.isArray(o)?o:o?[o]:[],s=parseInt(l);return a.reduce((e,t)=>{var l;let{strokes:r,num:n}=t,o=null==(l=r.find(e=>e.strokeNumber===s))?void 0:l.playerShots.reduce((e,t)=>(e.push({...t,roundNumber:n,strokeNumber:s}),e),[]);return o&&e.push(...o),e},[]).sort((e,t)=>{let l=j(e.result),r=j(t.result);return r===l?e.player.name.localeCompare(t.player.name):r-l})}(w,f,S,v),_=(null==T?void 0:T.length)>0&&(null==e?void 0:e.statsAvailability)===g.E5.ShotDetails,I=(0,r.useMemo)(()=>{if(f===v.get("all"))return;let l=null==e?void 0:e.holeInfo.pinGreen["portrait"===m?"bottomToTopCoords":"leftToRightCoords"],r=null==w?void 0:w.rounds.find(e=>e.display===f);return(null==r?void 0:r.pinCoords[t?"green":"overview"]["portrait"===m?"portraitCoords":"landscapeCoords"])||(t?l:void 0)},[null==e?void 0:e.holeInfo.pinGreen,m,f,null==w?void 0:w.rounds,t,v]),N=(0,r.useMemo)(()=>(null==w?void 0:w.rounds.reduce((e,t)=>(t.display&&e.push(t.display),e),[v.get("all")]))||[],[null==w?void 0:w.rounds,v]),P=(0,r.useMemo)(()=>{if(!w)return[];if(f===v.get("all")){let e=new Set;return w.rounds.forEach(t=>{t.strokes.forEach(t=>{let l=t.strokeNumber.toString();t.playerShots.length&&!e.has(l)&&e.add(l)})}),Array.from(e)}let e=w.rounds.find(e=>e.display==f);return(null==e?void 0:e.strokes.reduce((e,t)=>(t.playerShots.length&&e.push(t.strokeNumber.toString()),e),[]))||[]},[f,w,v]),M=(0,r.useMemo)(()=>{if(!T)return[v.get("all")];let e=new Set(T.map(e=>e.result));return[g.vT.Eagle,g.vT.Birdie,g.vT.Par,g.vT.Bogey,g.vT.DoubleBogey].reduce((t,l)=>(e.has(l)&&t.push(y(l)),t),[x.A.all])},[T,v]);return(0,r.useEffect)(()=>{b((null==N?void 0:N.at(-1))||v.get("all"))},[N,v]),(0,r.useEffect)(()=>{A(P.at(0)||"1")},[P,f]),(0,r.useEffect)(()=>{M.includes(C)||k(M.at(0)||v.get("all"))},[M,C,v]),{showScatterPlot:_,scatterData:w,parsedScatterData:T,pinPos:I,availableRounds:N,round:f,setRound:b,availableShots:P,shot:S,setShot:A,availableScores:M,score:C,setScore:k}}},32882:(e,t,l)=>{"use strict";l.d(t,{d:()=>c});var r=l(37876),n=l(14232),o=l(85665),a=l(49296),s=l(16212),i=l(70231),d=l(59912),u=l(59454);function c(e){let{isHidden:t,shotDetails:l,isGroupView:c,selectedRound:h}=e,m=(0,u.WD)(),[p,g]=(0,n.useState)(0),x=(0,n.useMemo)(()=>(null==l?void 0:l.players.length)?[(0,r.jsx)(s.A,{children:m.get("all")},"all"),...l.players.map(e=>(0,r.jsx)(s.A,{children:c&&e.superShortName?e.superShortName:e.shortName},e.id))]:[],[c,l.players,m]),y=0===p?void 0:l.players[p-1].id;return(0,r.jsx)(r.Fragment,{children:t?null:(0,r.jsxs)(o.s,{direction:"column",gap:"12",children:[(0,r.jsx)(i.A,{title:m.get("playByPlay")}),(0,r.jsx)(d.A,{onChange:e=>{g(e)},selectedIndex:p,tabList:x,tabsProps:{padding:"0 0",gap:0,sx:{".chakra-tabs__tablist":{padding:0}}},autoScroll:!1}),(0,r.jsx)(a.A,{shotDetails:l,playerId:y,ids:l.players.map(e=>e.id),round:h})]})})}},33887:e=>{e.exports={highlightsSkeleton:"HighlightsSkeleton_highlightsSkeleton__XSxkD",clock:"HighlightsSkeleton_clock__VFmfd",
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/043-501-9992a094be1208ba.js
+TERM: pinGreen
+OFFSET: 196821
+
+e-bogey)";default:return"var(--hole-score-status-default)"}}function S(e,t,l){var r;if(!e)return{};let n=t===(null!=(r=null==l?void 0:l.get("all"))?r:x.A.all)?e.rounds:e.rounds.find(e=>e.display===t);return(Array.isArray(n)?n:n?[n]:[]).reduce((e,t)=>{var l;let{strokes:r,num:n}=t,o=null==(l=r.find(e=>1===e.strokeNumber))?void 0:l.playerShots.reduce((e,t)=>(e.push({...t,roundNumber:n,strokeNumber:1}),e),[]);return o&&e.push(...o),e},[]).reduce((e,t)=>{let l=j(t.result);return e[l]=(e[l]||0)+1,e},{})}function A(e,t){var l,o,i;let m=arguments.length>2&&void 0!==arguments[2]?arguments[2]:"landscape",v=(0,p.WD)(),[f,b]=(0,r.useState)(v.get("all")),[S,A]=(0,r.useState)("1"),[C,k]=(0,r.useState)(v.get("all")),w=function(e){var t;let{tournamentId:l,course:r,hole:o,enabled:i}=e,{queryResults:m}=(0,h.A)(),p=(e=>{let{tournamentId:t,course:l,hole:r,tournamentStatus:n,enabled:o}=e;return(0,s.jX)(u,(0,a.j)({queryKey:(e=>{let{tournamentId:t,course:l,hole:r}=e;return[u,{tournamentId:t,course:l,hole:r}]})({tournamentId:t,course:l,hole:r}),queryFn:()=>c({tournamentId:t,course:l,hole:r}),refetchInterval:(0,d.ah)(n),enabled:o,refetchOnWindowFocus:!0}))})({tournamentId:l,course:r,hole:o,tournamentStatus:null==(t=m.data)?void 0:t.tournamentStatus,enabled:i});return(0,n.I)(p).data}({tournamentId:null!=(l=null==e?void 0:e.tournamentId)?l:"",course:parseInt(null!=(o=null==e?void 0:e.courseId)?o:""),hole:null!=(i=null==e?void 0:e.holeNum)?i:0,enabled:!!e}),T=function(e,t,l,r){var n;if(!e)return[];let o=t===(null!=(n=null==r?void 0:r.get("all"))?n:x.A.all)?e.rounds:e.rounds.find(e=>e.display===t),a=Array.isArray(o)?o:o?[o]:[],s=parseInt(l);return a.reduce((e,t)=>{var l;let{strokes:r,num:n}=t,o=null==(l=r.find(e=>e.strokeNumber===s))?void 0:l.playerShots.reduce((e,t)=>(e.push({...t,roundNumber:n,strokeNumber:s}),e),[]);return o&&e.push(...o),e},[]).sort((e,t)=>{let l=j(e.result),r=j(t.result);return r===l?e.player.name.localeCompare(t.player.name):r-l})}(w,f,S,v),_=(null==T?void 0:T.length)>0&&(null==e?void 0:e.statsAvailability)===g.E5.ShotDetails,I=(0,r.useMemo)(()=>{if(f===v.get("all"))return;let l=null==e?void 0:e.holeInfo.pinGreen["portrait"===m?"bottomToTopCoords":"leftToRightCoords"],r=null==w?void 0:w.rounds.find(e=>e.display===f);return(null==r?void 0:r.pinCoords[t?"green":"overview"]["portrait"===m?"portraitCoords":"landscapeCoords"])||(t?l:void 0)},[null==e?void 0:e.holeInfo.pinGreen,m,f,null==w?void 0:w.rounds,t,v]),N=(0,r.useMemo)(()=>(null==w?void 0:w.rounds.reduce((e,t)=>(t.display&&e.push(t.display),e),[v.get("all")]))||[],[null==w?void 0:w.rounds,v]),P=(0,r.useMemo)(()=>{if(!w)return[];if(f===v.get("all")){let e=new Set;return w.rounds.forEach(t=>{t.strokes.forEach(t=>{let l=t.strokeNumber.toString();t.playerShots.length&&!e.has(l)&&e.add(l)})}),Array.from(e)}let e=w.rounds.find(e=>e.display==f);return(null==e?void 0:e.strokes.reduce((e,t)=>(t.playerShots.length&&e.push(t.strokeNumber.toString()),e),[]))||[]},[f,w,v]),M=(0,r.useMemo)(()=>{if(!T)return[v.get("all")];let e=new Set(T.map(e=>e.result));return[g.vT.Eagle,g.vT.Birdie,g.vT.Par,g.vT.Bogey,g.vT.DoubleBogey].reduce((t,l)=>(e.has(l)&&t.push(y(l)),t),[x.A.all])},[T,v]);return(0,r.useEffect)(()=>{b((null==N?void 0:N.at(-1))||v.get("all"))},[N,v]),(0,r.useEffect)(()=>{A(P.at(0)||"1")},[P,f]),(0,r.useEffect)(()=>{M.includes(C)||k(M.at(0)||v.get("all"))},[M,C,v]),{showScatterPlot:_,scatterData:w,parsedScatterData:T,pinPos:I,availableRounds:N,round:f,setRound:b,availableShots:P,shot:S,setShot:A,availableScores:M,score:C,setScore:k}}},32882:(e,t,l)=>{"use strict";l.d(t,{d:()=>c});var r=l(37876),n=l(14232),o=l(85665),a=l(49296),s=l(16212),i=l(70231),d=l(59912),u=l(59454);function c(e){let{isHidden:t,shotDetails:l,isGroupView:c,selectedRound:h}=e,m=(0,u.WD)(),[p,g]=(0,n.useState)(0),x=(0,n.useMemo)(()=>(null==l?void 0:l.players.length)?[(0,r.jsx)(s.A,{children:m.get("all")},"all"),...l.players.map(e=>(0,r.jsx)(s.A,{children:c&&e.superShortName?e.superShortName:e.shortName},e.id))]:[],[c,l.players,m]),y=0===p?void 0:l.players[p-1].id;return(0,r.jsx)(r.Fragment,{children:t?null:(0,r.jsxs)(o.s,{direction:"column",gap:"12",children:[(0,r.jsx)(i.A,{title:m.get("playByPlay")}),(0,r.jsx)(d.A,{onChange:e=>{g(e)},selectedIndex:p,tabList:x,tabsProps:{padding:"0 0",gap:0,sx:{".chakra-tabs__tablist":{padding:0}}},autoScroll:!1}),(0,r.jsx)(a.A,{shotDetails:l,playerId:y,ids:l.players.map(e=>e.id),round:h})]})})}},33887:e=>{e.exports={highlightsSkeleton:"HighlightsSkeleton_highlightsSkeleton__XSxkD",clock:"HighlightsSkeleton_clock__VFmfd",scorecard:"HighlightsSkeleton_scorecard__nLI9I",previewContainer:"HighlightsSkeleton_previewContainer__BHWkB",mainContentItem:"HighlightsSkeleton_mainContentItem__IbJz4",subContent:"HighlightsSkeleton_subContent__bTSu5",subContentItem:"HighlightsSkeleton_subConten
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/043-501-9992a094be1208ba.js
+TERM: pinGreen
+OFFSET: 247297
+
+oords.fromCoords.y,tourcastX:e.leftToRightCoords.fromCoords.tourcastX,tourcastY:e.leftToRightCoords.fromCoords.tourcastY,tourcastZ:e.leftToRightCoords.fromCoords.tourcastZ},toCoords:{x:e.leftToRightCoords.toCoords.x,y:e.leftToRightCoords.toCoords.y,z:-1,enhancedX:e.leftToRightCoords.toCoords.x,enhancedY:e.leftToRightCoords.toCoords.y,tourcastX:e.leftToRightCoords.toCoords.tourcastX,tourcastY:e.leftToRightCoords.toCoords.tourcastY,tourcastZ:e.leftToRightCoords.toCoords.tourcastZ}}}}function A(e,t,l){var n,o;let a=(0,c.Wm)().id,s=(0,p.useMemo)(()=>null==e?void 0:e.group.players.map(e=>e.id),[null==e?void 0:e.group.players])||[],i=(0,x.P)({playerIds:s,round:(null==e||null==(n=e.round)?void 0:n.roundInt)||0,primaryPlayerId:t}),{data:d}=(0,j.h)({playerIds:s,round:(null==e||null==(o=e.round)?void 0:o.roundInt)||-1});return(0,p.useMemo)(()=>{var n;if(!e)return;let{group:o,round:s,leaderboardRows:u}=e,c=null==i?void 0:i[0];if(!c)return;let h=c.holes.map(e=>{let t=[],l=i.filter(e=>e.displayType==r.h.All).map(e=>e.playerId);return o.players.forEach(l=>{let{id:n,displayName:o,shortName:a}=l,s=i.find(e=>e.playerId===n),d=null==s?void 0:s.holes.find(t=>t.holeNumber==e.holeNumber);s&&d&&d.strokes.forEach(e=>{let{playByPlay:l,playByPlayLabel:s,strokeNumber:i,finalStroke:u,showMarker:c,markerText:h,strokeType:m,green:p,overview:g,videoId:x,distance:y,distanceRemaining:v,fromLocation:j,fromLocationCode:f,radarData:b,toLocation:A,toLocationCode:C}=e,k=i-1,w=t[k];w||(w={playByPlayLabel:s||"Shot ".concat(i),strokeNumber:i,players:[]},t[k]=w);let T={playerId:n,displayName:o,shortName:a,playByPlay:l,score:"",finalShot:u,showMarker:c&&1===i&&!!s,markerText:h,status:u?d.status:r.vT.None,strokeType:m,green:S(p),overview:S(g),videoId:x,distance:y,distanceRemaining:v,fromLocation:j,fromLocationCode:f,radarData:b,toLocation:A,toLocationCode:C};w.players.push(T)})}),{activePlayers:o.players.filter(e=>l.includes(e.id)).map(e=>e.id),displayHoleNumber:e.displayHoleNumber,enhancedPickle:e.enhancedPickle,green:e.green,holeNumber:e.holeNumber,holePickleBottomToTop:(0,v.FK)({imageAsset:e.holePickleBottomToTopAsset}),holePickleGreenBottomToTop:(0,v.FK)({imageAsset:e.holePickleGreenBottomToTopAsset}),holePickleLeftToRight:(0,v.FK)({imageAsset:e.holePickleLeftToRightAsset}),holePickleGreenLeftToRight:(0,v.FK)({imageAsset:e.holePickleGreenLeftToRightAsset}),par:e.par,yardage:e.yardage,rank:e.rank,pinGreen:e.pinGreen,pinOverview:e.pinOverview,strokes:t,teeGreen:e.teeGreen,teeOverview:e.teeOverview,fairwayCenter:e.fairwayCenter}}),m=w({players:structuredClone(u.flatMap(e=>{let t=o.players.find(t=>t.id==e.id);return t?{id:t.id,displayName:t.displayName,shortName:t.shortName,firstName:t.firstName,lastName:t.lastName,lineColor:t.lineColor}:[]})),primaryPlayerId:t,primaryPlayerColor:l}),p=(null==(n=i.find(e=>e.message))?void 0:n.message)||"",g={[r.h.None]:1,[r.h.PlayByPlay]:2,[r.h.All]:3},x=i.reduce((e,t)=>{let l=t.displayType;return g[l]>g[e]?l:e},r.h.None);return{id:o.groupNumber.toString(),tournamentId:a,round:s.roundInt,displayType:x,groupNumber:o.groupNumber,holes:h,players:m,message:p,shotVideos:d,defaultHolePickle:c.holePickleType}},[e,i,t,l,a,d])}function C(){let{groupDetails:e}=(0,u.S)(),[t,l]=(0,p.useState)(!1);return(0,p.useMemo)(()=>e||{show:t,toggleGroupDetails:l},[e,t])}function k(e,t){var l;let r=(0,c.A)().queryResults.data,n=(0,y.PN)({round:e,courseId:(null==r||null==(l=r.courses[0])?void 0:l.id)||""}),o=(0,p.useMemo)(()=>{if(n)return n.rounds.find(t=>t.roundInt==e)},[e,n]),a=(0,p.useMemo)(()=>{if(o&&void 0!==t)return o.groups.find(e=>e.groupNumber==t)},[t,o]),s=(0,h.Ne)({group:a}),i=(0,p.useMemo)(()=>(null==a?void 0:a.players.map(e=>e.id))||[],[a]),d=(0,p.useRef)(!0),u=(0,g.OJ)({playerIds:i});return(0,p.useMemo)(()=>{if(o&&a&&s&&u)return d.current=!1,{group:a,round:o,leaderboardRows:s,playerScorecards:u}},[o,a,s,u])}let w=e=>{let{players:t,primaryPlayerId:l,primaryPlayerColor:r,tournamentId:n,isEvolutionStyle:o}=e;if(!l||!r||o&&(null==n?void 0:n.startsWith("U"))&&t.some(e=>["61412","50675"].includes(e.id)))return t;let a=t.find(e=>e.id===l);if(!a||a.lineColor===r)return t;let s=t.find(e=>e.lineColor===r);if(!s)return a.lineColor=r,t;let i=a.lineColor;return a.lineColor=r,s.lineColor=i,t}},39134:(e,t,l)=>{"use strict";l.d(t,{z:()=>h,A:()=>m});var r=l(37876),n=l(11790),o=l(62371),a=l(64530),s=l(66683),i=l(10202),d=l(85665),u=l(66617);let c=e=>(0,r.jsxs)(u.I,{boxSize:"2.4rem",viewBox:"0 0 24 24",fill:"none","aria-label":"Eyedropper",...e,children:[(0,r.jsx)("mask",{id:"path-1-inside-1_2758_13098",fill:"white",children:(0,r.jsx)("path",{d:"M12.8787 5.53546C14.4408 3.97336 16.9735 3.97336 18.5356 5.53546C20.0977 7.09756 20.0977 9.63022 18.5356 11.1923L15 14.7278C14.6095 15.1184 13.9764 15.1184 13.5858 14.7278L9.34319 10.4852C8.95267 10.0947 8.95267 9.4
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/043-501-9992a094be1208ba.js
+TERM: pinGreen
+OFFSET: 247308
+
+oords.y,tourcastX:e.leftToRightCoords.fromCoords.tourcastX,tourcastY:e.leftToRightCoords.fromCoords.tourcastY,tourcastZ:e.leftToRightCoords.fromCoords.tourcastZ},toCoords:{x:e.leftToRightCoords.toCoords.x,y:e.leftToRightCoords.toCoords.y,z:-1,enhancedX:e.leftToRightCoords.toCoords.x,enhancedY:e.leftToRightCoords.toCoords.y,tourcastX:e.leftToRightCoords.toCoords.tourcastX,tourcastY:e.leftToRightCoords.toCoords.tourcastY,tourcastZ:e.leftToRightCoords.toCoords.tourcastZ}}}}function A(e,t,l){var n,o;let a=(0,c.Wm)().id,s=(0,p.useMemo)(()=>null==e?void 0:e.group.players.map(e=>e.id),[null==e?void 0:e.group.players])||[],i=(0,x.P)({playerIds:s,round:(null==e||null==(n=e.round)?void 0:n.roundInt)||0,primaryPlayerId:t}),{data:d}=(0,j.h)({playerIds:s,round:(null==e||null==(o=e.round)?void 0:o.roundInt)||-1});return(0,p.useMemo)(()=>{var n;if(!e)return;let{group:o,round:s,leaderboardRows:u}=e,c=null==i?void 0:i[0];if(!c)return;let h=c.holes.map(e=>{let t=[],l=i.filter(e=>e.displayType==r.h.All).map(e=>e.playerId);return o.players.forEach(l=>{let{id:n,displayName:o,shortName:a}=l,s=i.find(e=>e.playerId===n),d=null==s?void 0:s.holes.find(t=>t.holeNumber==e.holeNumber);s&&d&&d.strokes.forEach(e=>{let{playByPlay:l,playByPlayLabel:s,strokeNumber:i,finalStroke:u,showMarker:c,markerText:h,strokeType:m,green:p,overview:g,videoId:x,distance:y,distanceRemaining:v,fromLocation:j,fromLocationCode:f,radarData:b,toLocation:A,toLocationCode:C}=e,k=i-1,w=t[k];w||(w={playByPlayLabel:s||"Shot ".concat(i),strokeNumber:i,players:[]},t[k]=w);let T={playerId:n,displayName:o,shortName:a,playByPlay:l,score:"",finalShot:u,showMarker:c&&1===i&&!!s,markerText:h,status:u?d.status:r.vT.None,strokeType:m,green:S(p),overview:S(g),videoId:x,distance:y,distanceRemaining:v,fromLocation:j,fromLocationCode:f,radarData:b,toLocation:A,toLocationCode:C};w.players.push(T)})}),{activePlayers:o.players.filter(e=>l.includes(e.id)).map(e=>e.id),displayHoleNumber:e.displayHoleNumber,enhancedPickle:e.enhancedPickle,green:e.green,holeNumber:e.holeNumber,holePickleBottomToTop:(0,v.FK)({imageAsset:e.holePickleBottomToTopAsset}),holePickleGreenBottomToTop:(0,v.FK)({imageAsset:e.holePickleGreenBottomToTopAsset}),holePickleLeftToRight:(0,v.FK)({imageAsset:e.holePickleLeftToRightAsset}),holePickleGreenLeftToRight:(0,v.FK)({imageAsset:e.holePickleGreenLeftToRightAsset}),par:e.par,yardage:e.yardage,rank:e.rank,pinGreen:e.pinGreen,pinOverview:e.pinOverview,strokes:t,teeGreen:e.teeGreen,teeOverview:e.teeOverview,fairwayCenter:e.fairwayCenter}}),m=w({players:structuredClone(u.flatMap(e=>{let t=o.players.find(t=>t.id==e.id);return t?{id:t.id,displayName:t.displayName,shortName:t.shortName,firstName:t.firstName,lastName:t.lastName,lineColor:t.lineColor}:[]})),primaryPlayerId:t,primaryPlayerColor:l}),p=(null==(n=i.find(e=>e.message))?void 0:n.message)||"",g={[r.h.None]:1,[r.h.PlayByPlay]:2,[r.h.All]:3},x=i.reduce((e,t)=>{let l=t.displayType;return g[l]>g[e]?l:e},r.h.None);return{id:o.groupNumber.toString(),tournamentId:a,round:s.roundInt,displayType:x,groupNumber:o.groupNumber,holes:h,players:m,message:p,shotVideos:d,defaultHolePickle:c.holePickleType}},[e,i,t,l,a,d])}function C(){let{groupDetails:e}=(0,u.S)(),[t,l]=(0,p.useState)(!1);return(0,p.useMemo)(()=>e||{show:t,toggleGroupDetails:l},[e,t])}function k(e,t){var l;let r=(0,c.A)().queryResults.data,n=(0,y.PN)({round:e,courseId:(null==r||null==(l=r.courses[0])?void 0:l.id)||""}),o=(0,p.useMemo)(()=>{if(n)return n.rounds.find(t=>t.roundInt==e)},[e,n]),a=(0,p.useMemo)(()=>{if(o&&void 0!==t)return o.groups.find(e=>e.groupNumber==t)},[t,o]),s=(0,h.Ne)({group:a}),i=(0,p.useMemo)(()=>(null==a?void 0:a.players.map(e=>e.id))||[],[a]),d=(0,p.useRef)(!0),u=(0,g.OJ)({playerIds:i});return(0,p.useMemo)(()=>{if(o&&a&&s&&u)return d.current=!1,{group:a,round:o,leaderboardRows:s,playerScorecards:u}},[o,a,s,u])}let w=e=>{let{players:t,primaryPlayerId:l,primaryPlayerColor:r,tournamentId:n,isEvolutionStyle:o}=e;if(!l||!r||o&&(null==n?void 0:n.startsWith("U"))&&t.some(e=>["61412","50675"].includes(e.id)))return t;let a=t.find(e=>e.id===l);if(!a||a.lineColor===r)return t;let s=t.find(e=>e.lineColor===r);if(!s)return a.lineColor=r,t;let i=a.lineColor;return a.lineColor=r,s.lineColor=i,t}},39134:(e,t,l)=>{"use strict";l.d(t,{z:()=>h,A:()=>m});var r=l(37876),n=l(11790),o=l(62371),a=l(64530),s=l(66683),i=l(10202),d=l(85665),u=l(66617);let c=e=>(0,r.jsxs)(u.I,{boxSize:"2.4rem",viewBox:"0 0 24 24",fill:"none","aria-label":"Eyedropper",...e,children:[(0,r.jsx)("mask",{id:"path-1-inside-1_2758_13098",fill:"white",children:(0,r.jsx)("path",{d:"M12.8787 5.53546C14.4408 3.97336 16.9735 3.97336 18.5356 5.53546C20.0977 7.09756 20.0977 9.63022 18.5356 11.1923L15 14.7278C14.6095 15.1184 13.9764 15.1184 13.5858 14.7278L9.34319 10.4852C8.95267 10.0947 8.95267 9.46152 9.3431
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/043-501-9992a094be1208ba.js
+TERM: pinGreen
+OFFSET: 396535
+
+troke:a,strokeWidth:u(d.yardMarker[i].strokeWidth,s)}),(0,r.jsx)("text",{textAnchor:"middle",x:t-c,y:l-h,dx:u(d.yardMarker[i].textDx,s),dy:u(d.yardMarker[i].textDy,s),fontWeight:d.yardMarker[i].textFontWeight,fontSize:u(d.yardMarker[i].fontSize,s),fill:a===n.A.yellow||a===n.A.gold?n.A.black:n.A.white,children:o})]})}function p(e){let{isMobile:t,isEnhancedView:l}=e;return(0,i.useMemo)(()=>l?t?{width:1600,height:2400}:{width:3072,height:1314}:t?{width:1361,height:3e3}:{width:3e3,height:1361},[l,t])}function g(e,t,l,r,n){let o=y(e[t][l].fromCoords),a=y(e[t][l].toCoords),i={x:o.x*r,y:o.y*n};return{pointACoords:i,pointBCoords:{x:a.x*r,y:a.y*n},isPenalty:e.strokeType==s.vI.Penalty}}function x(e,t,l){let r=[1-e,e];return{x:t.x*r[0]+l.x*r[1],y:t.y*r[0]+l.y*r[1]}}function y(e){var t,l;return{x:"enhancedX"in e&&-1!=e.enhancedX&&null!=(t=e.enhancedX)?t:e.x,y:"enhancedY"in e&&-1!=e.enhancedY&&null!=(l=e.enhancedY)?l:e.y}}function v(e){let{firstStrokeCoords:t,teeOverview:l}=e,r=y(null!=t?t:l);return{x:r.x,y:r.y}}let j=e=>{let{imageWidth:t,imageHeight:l,holeDetails:n,showPin:p,showTee:y,holeType:j,lineColor:f,isEnhancedView:b}=e,[S]=(0,a.r)([o.A.mobileOnly]),A=S?"bottomToTopCoords":"leftToRightCoords",C="green"==j?"green":b?"enhanced":"overview";return(0,r.jsxs)("svg",{className:"shot-trails",style:{position:"absolute"},viewBox:"0 0 ".concat(t," ").concat(l),"aria-label":"shot-trails",children:[n.strokes.map(e=>{let{pointACoords:n,pointBCoords:o,isPenalty:a}=g(e,j,A,t,l);return(0,r.jsx)("path",{d:"M".concat(n.x," ").concat(n.y," L").concat(o.x," ").concat(o.y),stroke:a?d.penaltyColor:f,strokeDasharray:e.strokeType==s.vI.Drop||e.strokeType==s.vI.Provisional?u(d.dottedLineSize[C],S):void 0,strokeWidth:u(d.lineWidth[C],S)},"stroke-"+e.strokeNumber+e.distance)}),y?function(){var e,o;let{x:a,y:s}=v({teeOverview:"green"==j?n.teeGreen[A]:n.teeOverview[A],firstStrokeCoords:"green"==j?null==(e=n.strokes[0])?void 0:e.green[A].fromCoords:null==(o=n.strokes[0])?void 0:o.overview[A].fromCoords,isEnhancedView:b});return(0,r.jsx)(h,{radius:u(d.tee[C],S),x:a*t,y:s*l})}():void 0,n.strokes.map(e=>{if(!e.showMarker)return;let{pointACoords:n,pointBCoords:o,isPenalty:a}=g(e,j,A,t,l),s=x(.5,n,o);return(0,r.jsx)(m,{x:s.x,y:s.y,strokeColor:a?d.penaltyColor:f,yardage:e.markerText,isMobile:S,viewType:C},"yardMarker-".concat(e.strokeNumber,"-").concat(e.distance))}),p?function(){let e="green"==j?n.pinGreen[A]:n.pinOverview[A];return(0,r.jsx)(c,{x:e.x*t,y:e.y*l,width:u(d.pin[C].width,S),height:u(d.pin[C].height,S)},"pin")}():void 0,n.strokes.map(e=>{let{pointBCoords:n,isPenalty:o}=g(e,j,A,t,l);return(0,r.jsxs)(i.Fragment,{children:[(0,r.jsx)("circle",{cx:n.x,cy:n.y,r:u(d.circleRadius[C],S),stroke:e.finalStroke?d.finalStrokeColor:o?f:void 0,strokeWidth:e.finalStroke||o?u(d.finalStrokeCircleBorderSize[C],S):void 0,fill:o?d.penaltyColor:f}),(0,r.jsx)("text",{textAnchor:"middle",x:n.x,y:n.y,dy:".35em",fontWeight:"600",fontSize:u(d.numberFontSize[C],S),fill:"white",children:e.strokeType==s.vI.Provisional?"P":e.strokeNumber})]},"stroke-number-"+e.strokeNumber+e.distance+o)})]})}},57182:(e,t,l)=>{"use strict";l.d(t,{A:()=>g});var r=l(37876),n=l(16444),o=l(70231),a=l(58880),s=l(59454),i=l(99707),d=l(85665),u=l(67532),c=l(11790),h=l(30551),m=l(14232),p=l(8995);let g=function(e){let{holeDetails:t,displayHoleNumber:l}=e;l||(l=t.displayHoleNumber);let[g]=(0,p.r)([a.A.tablet]),x=(0,s.WD)(),y=(0,m.useMemo)(()=>{let{par:e,yardage:l,rank:r}=t;return[{label:x.get("par"),value:e},{label:x.get("yards"),value:l},{label:x.get("rank"),value:r||"-"}]},[t,x]);return(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(o.A,{title:x.get("holeNumber",{number:l}),hasBorder:!0}),g?(0,r.jsx)(n.A,{borderBottom:"1px solid",borderColor:"black_20",gap:"unset",children:y.map(e=>{let{label:t,value:n}=e;return(0,r.jsx)(i.E,{colSpan:4,borderBottom:["1px solid","none"],borderColor:["black_20","none"],paddingTop:20,paddingBottom:20,children:(0,r.jsxs)(d.s,{flexDirection:"column",children:[(0,r.jsx)(u.E,{textStyle:"label_l",color:"dark_grey",children:t}),(0,r.jsx)(c.M6,{size:"12"}),(0,r.jsx)(u.E,{textStyle:"headline_s_sans",children:n})]})},"".concat(t).concat(n).concat(l))})}):(0,r.jsxs)(r.Fragment,{children:[(0,r.jsx)(c.az,{boxSize:20}),(0,r.jsx)(d.s,{w:"100%",justifyContent:"space-between",alignItems:"flex-end",children:y.map(e=>{let{label:t,value:n}=e;return(0,r.jsxs)(d.s,{flexDirection:"column",children:[(0,r.jsx)(u.E,{textStyle:"label_l",color:"dark_grey",children:t}),(0,r.jsx)(c.M6,{size:"12"}),(0,r.jsx)(u.E,{textStyle:"headline_s_sans",children:n})]},"".concat(t).concat(n).concat(l))})}),(0,r.jsx)(c.az,{boxSize:20}),(0,r.jsx)(h.A,{})]})]})}},57876:(e,t,l)=>{"use strict";l.d(t,{A:()=>i});var r=l(37876),n=l(53435),o=l(44333),a=l(4186),s=l.n(a);let i=()=>(0,r.jsxs)("div",{className:s().cupLeaderboardConten
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/043-501-9992a094be1208ba.js
+TERM: pinGreen
+OFFSET: 491953
+
+let d=o()(()=>Promise.all([l.e(8193),l.e(6680),l.e(6433)]).then(l.bind(l,46433)),{loadableGenerated:{webpack:()=>[46433]},ssr:!1}),u=function(e){let{defaultOddsMarket:t,defaultTabTag:l,initialSelectedHole:n,isOpen:o,playerId:u,onClose:c}=e,h=(0,i.xs)({playerId:u});return h?(0,r.jsx)(s.Z,{scorecard:h,initialSelectedHole:n,children:(0,r.jsx)(d,{defaultOddsMarket:t,defaultTabTag:l,isOpen:o,scorecard:h,onClose:c})}):(0,r.jsx)(a.V,{})}},74507:(e,t,l)=>{"use strict";l.d(t,{A:()=>M});var r=l(37876),n=l(78643),o=l(59454),a=l(45553),s=l(85665),i=l(14232),d=l(57117),u=l(58880),c=l(8995);function h(e,t){return e.players.filter(e=>e.playerId==t)}let m=e=>{let{imageWidth:t,imageHeight:l,groupHoleDetails:o,showPin:a,showTee:s,holeType:m,playerColorMap:p,isEnhancedView:g}=e,[x]=(0,c.r)([u.A.mobileOnly]),y=x?"bottomToTopCoords":"leftToRightCoords",v="green"==m?"green":g?"enhanced":"overview";return(0,r.jsx)("svg",{className:"group-shot-trails",style:{position:"absolute"},viewBox:"0 0 ".concat(t," ").concat(l),"aria-label":"group-shot-trails",children:(0,r.jsxs)(r.Fragment,{children:[o.activePlayers.map(e=>o.strokes.map(o=>{let a=h(o,e);return a.length?a.map((o,a)=>{let{pointACoords:s,pointBCoords:i,isPenalty:u}=(0,d.Cd)(o,m,y,t,l);return(0,r.jsx)("path",{d:"M".concat(s.x," ").concat(s.y," L").concat(i.x," ").concat(i.y),stroke:u?d.jr.penaltyColor:p[e],strokeDasharray:o.strokeType==n.vI.Drop||o.strokeType==n.vI.Provisional?(0,d.TK)(d.jr.dottedLineSize[v],x):void 0,strokeWidth:(0,d.TK)(d.jr.lineWidth[v],x)},"stroke-line-".concat(o.playerId,"-").concat(a))}):null})),s?function(){var e;let n="green"==m?o.teeGreen[y]:o.teeOverview[y],a=null==(e=o.strokes[0])?void 0:e.players.map(e=>"green"===m?e.green[y].fromCoords:e.overview[y].fromCoords);return null==a?void 0:a.map((e,o)=>{let{x:a,y:s}=(0,d.lN)({teeOverview:n,firstStrokeCoords:e,isEnhancedView:g});return(0,r.jsx)(d.fN,{radius:(0,d.TK)(d.jr.tee[v],x),x:a*t,y:s*l},"tee-".concat(o))})}():void 0,o.activePlayers.map((e,n)=>o.strokes.map(a=>{let s=h(a,e);return s.length?s.map((a,s)=>{if(!a.showMarker)return;let{pointACoords:i,pointBCoords:u,isPenalty:c}=(0,d.Cd)(a,m,y,t,l),h=(n+1)*(1/(o.activePlayers.length+1)),g=(0,d.GC)(h,i,u);return(0,r.jsx)(d.nM,{x:g.x,y:g.y,strokeColor:c?d.jr.penaltyColor:p[e],yardage:a.markerText,isMobile:x,viewType:v},"yard-marker-".concat(e,"-").concat(s))}):null})),a?function(){let e=(0,d.qV)("green"==m?o.pinGreen[y]:o.pinOverview[y]);return(0,r.jsx)(d.yU,{x:e.x*t,y:e.y*l,width:(0,d.TK)(d.jr.pin[v].width,x),height:(0,d.TK)(d.jr.pin[v].height,x)},"pin")}():null,o.activePlayers.map((e,a)=>o.strokes.map(o=>{let a=h(o,e);return a.length?a.map((a,s)=>{let{pointBCoords:u,isPenalty:c}=(0,d.Cd)(a,m,y,t,l);return(0,r.jsxs)(i.Fragment,{children:[(0,r.jsx)("circle",{cx:u.x,cy:u.y,r:(0,d.TK)(d.jr.circleRadius[v],x),stroke:a.finalShot?d.jr.finalStrokeColor:c?p[e]:void 0,strokeWidth:a.finalShot||c?(0,d.TK)(d.jr.finalStrokeCircleBorderSize[v],x):void 0,fill:c?d.jr.penaltyColor:p[e]}),(0,r.jsx)("text",{textAnchor:"middle",x:u.x,y:u.y,dy:".35em",fontWeight:"600",fontSize:(0,d.TK)(d.jr.numberFontSize[v],x),fill:"white",children:a.strokeType==n.vI.Provisional?"P":o.strokeNumber})]},"stroke-circle-".concat(a.playerId,"-").concat(s))}):null}))]})})};var p=l(56623),g=l(17098),x=l(37775),y=l(11790),v=l(67532);let j=function(e){let{colorScheme:t,color:l,player:n}=e;return(0,r.jsx)(x.A,{colorScheme:t,children:(0,r.jsxs)(s.s,{gap:"12",alignItems:"center",children:[(0,r.jsxs)(s.s,{gap:"8",alignItems:"center",children:[(0,r.jsx)(y.jl,{size:"8",bg:l}),(0,r.jsx)(v.E,{as:"span",textStyle:"headline_xxs_sans",whiteSpace:"nowrap",children:n.displayName})]}),(0,r.jsx)(v.E,{as:"span",textStyle:"body_m_regular",children:n.playByPlay})]})})};var f=l(25016),b=l(99812);let S=function(e){let{isShowingGreen:t,onClick:l,colorScheme:n}=e,a=(0,o.WD)(),s=t?f.Ee.LIGHT:f.Ee.DARK;return(0,r.jsx)(b.A,{labels:[a.get("hole"),a.get("green")],defaultSelectedValue:t?a.get("green"):a.get("hole"),onChangeValue:e=>{l(e!=a.get("hole"))},colorScheme:n||s})};var A=l(18725),C=l(36661),k=l(7008),w=l(69488),T=l(40024),_=l(82869),I=l(33961),N=l(60019),P=l(29755);let M=function(e){let{currentHole:t,hideRank:l,isTeamStrokePlay:h,message:x,playerColorMap:y,tourCastUrl:v,showGroupDetailsState:b,selectedHole:M,shotVideos:E,onLeaderboardEvent:R,isTeeTimeDrawer:D,toggleGroupView:L,defaultHolePickle:O,fromModal:z=!1,round:H,playerHotStreak:W}=e,[B,F,V,U]=(0,c.r)([u.A.mobileOnly,u.A.tabletOnly,u.A.tablet,u.A.laptop]),{greenHoleMap:G,toggleGreenHole:q}=(0,P.Z)(),K=t.holeNumber&&M?G[t.holeNumber]:G.default,Q=(0,i.useCallback)(e=>{M?q(M,e):q("default",e)},[q,M]),Y=(0,o.WD)(),X=(0,C.B4)(),{isOpen:Z,onOpen:J,onClose:$}=(0,a.j)(),[ee,et]=(0,i.useMemo)(()=>{let e=t.strokes.slice(-1)[0],l=null==e?void 0:e.players.slice(-1)[0];return[e,l]},[t]),el=
+
+--------------------------------------------------------------------------------
+
+FILE: tmp/pgatour-tourcast-js/043-501-9992a094be1208ba.js
+TERM: pinGreen
+OFFSET: 558691
+
+nter",justifyContent:"center",marginBottom:[25,20],paddingTop:"0.4rem",children:(0,r.jsx)(j.A,{headerTextProps:{fontSize:"2.4rem"},title:"".concat(_.get("match",{number:m.matchId}))})});return(0,r.jsx)(i.w,{zIndex:d.w4.zIndices.modal-100,children:(0,r.jsx)(u.az,{children:(0,r.jsx)(R.A,{isOpen:b,onClose:x,headerSlot:W,hasStickyHeader:!0,modalHeaderProps:{position:"absolute",top:"0",paddingBottom:"0.5rem"},modalBodySlot:l?(0,r.jsx)(E.A,{items:H.items,defaultIndex:H.defaultIndex,negateMargin:!0,isTabListSticky:!0,innerFlexStylesProps:{width:"120%"},onTabChange:y}):(0,r.jsx)(v.A,{})})})})}},83170:(e,t,l)=>{"use strict";l.d(t,{A:()=>t8});var r=l(37876),n=l(11790),o=l(85665),a=l(14232),s=l(30551),i=l(59454),d=l(6623),u=l(57117);function c(e){let{pinPos:t,imageWidth:l=1811,imageHeight:n=821,isEnhancedImageAvailable:o}=e;return(0,r.jsx)("svg",{style:{position:"absolute"},viewBox:"0 0 ".concat(l," ").concat(n),"aria-label":"pin",children:(0,r.jsx)(u.yU,{x:o&&t.enhancedX?t.enhancedX*l:t.x*l,y:o&&t.enhancedY?t.enhancedY*n:t.y*n,width:70,height:117},"pin")})}var h=l(71150),m=l(67532),p=l(12864);let g=e=>{let{holeLocation:t,imageSlot:l,statRow:n}=e;return(0,r.jsxs)(o.s,{flexDir:"column",gap:"24",position:"relative",children:[(0,r.jsx)(o.s,{borderRadius:"8",overflow:"hidden",width:"100%",position:"relative",children:l}),(0,r.jsx)(m.E,{as:"span",textStyle:"headline_xl_sans",color:"white",position:"absolute",top:"16",left:"16",children:t}),(0,r.jsx)(p.A,{children:n})]})};var x=l(65956),y=l(54700),v=l(27855),j=l(63362),f=l(58880),b=l(80468),S=l(8995);let A=e=>{let{children:t,headingLevel:l="h2",isExpanded:a=!1,onClick:s,title:i,gutters:d,sliderProps:u,numHoles:c}=e,[h]=(0,S.r)([f.A.laptop]);return(0,r.jsxs)(o.s,{flexDir:"column",gap:"16",children:[(0,r.jsxs)(o.s,{as:h?"button":"div",alignItems:"center",gap:"4",onClick:s,marginX:d,children:[(0,r.jsx)(m.E,{as:l,textStyle:"headline_m_sans",children:i}),h&&(a?(0,r.jsx)(j.$,{}):(0,r.jsx)(v.C,{}))]}),a&&h?(0,r.jsx)(n.az,{marginX:d,children:(0,r.jsx)(y.A,{colCount:[3],divider:"space",children:t})}):(0,r.jsx)(b.A,{...u,totalSlidesOverride:c,children:t})]})};var C=l(79620);let k=e=>{let{holes:t}=e,[l]=(0,S.r)([f.A.laptop]),o=(0,i.WD)(),[u,m]=(0,a.useState)(!1),p=(0,a.useCallback)(()=>{l&&m(!u)},[u,l]),y=(0,a.useMemo)(()=>t.map((e,t)=>{let l=e.courseHoleNum,o=e.holePickle?e.holePickle.greenLeftToRight:e.holePickleGreenLeftToRight,a=e.pinGreen.leftToRightCoords,s=!!e.holePickle;return(0,r.jsx)(g,{statRow:["Par",e.parValue,"YDS",e.yards],holeLocation:"".concat(l),imageSlot:(0,r.jsx)(n.az,{width:"100%",children:(0,r.jsx)(x.fN,{ratio:s?C.A.enhanced_scatter_plot_landscape:2373/1076,zIndex:"auto",imageProps:{alt:"hole location ".concat(l),src:o,loading:"lazy",decoding:"async"},overlay:(0,r.jsx)(c,{pinPos:a,isEnhancedImageAvailable:s}),overlayBg:s?"linear-gradient(to right, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.0) 20%)":void 0,hideOverlayBg:!s})})},"".concat(l,"-").concat(o))}),[t]);return(0,r.jsxs)(n.az,{children:[(0,r.jsx)(A,{title:o.get("holeLocations"),onClick:p,isExpanded:u,gutters:d.kT,sliderProps:{...h.Hf,mediaRatio:7.3},numHoles:y.length,children:y}),l&&u?(0,r.jsx)(s.A,{containerStyle:{margin:"2.5rem 0"}}):void 0]})};var w=l(45553),T=l(18578),_=l(69278),I=l(1063),N=l(94471),P=l(99707),M=l(16444);let E=e=>{let{stats:t,gridItemProps:l,divider:a}=e,[s]=(0,S.r)([f.A.laptop]);return(0,r.jsx)(M.A,{borderBottom:["none","1px solid"],borderColor:["none","black_20"],gap:"unset",children:t.map((e,t)=>{let{title:i,label:d,headerLevel:u="h3"}=e;return(0,r.jsx)(P.E,{colSpan:[4,6],borderBottom:["1px solid","none"],borderColor:["black_20","none"],paddingTop:20,paddingBottom:20,...l,children:(0,r.jsxs)(o.s,{flexDirection:"column",borderRight:s&&a&&0==t?"1px solid":"none",borderColor:s&&a&&0==t?"black_20":"none",children:[(0,r.jsx)(m.E,{textStyle:"label_l",color:"dark_grey",as:u,children:i}),(0,r.jsx)(n.M6,{size:"12"}),"string"==typeof d?(0,r.jsx)(m.E,{textStyle:"headline_s_sans",children:d}):d]})},i)})})};var R=l(66617);let D=e=>(0,r.jsxs)(R.I,{boxSize:"1.3rem",fill:"none",viewBox:"0 0 13 13","aria-label":"Humidity",...e,children:[(0,r.jsx)("path",{stroke:"currentColor",strokeWidth:"0.813",d:"M3.978 5.664L6.5 2.302l2.522 3.362a3.152 3.152 0 11-5.044 0z"}),(0,r.jsx)("path",{fill:"currentColor",d:"M9.75 7.313a3.25 3.25 0 11-6.5 0h6.5z"})]}),L=e=>(0,r.jsxs)(R.I,{boxSize:"1.6rem",viewBox:"0 0 14 14",fill:"none","aria-label":"Umbrella",...e,children:[(0,r.jsx)("path",{xmlns:"http://www.w3.org/2000/svg",fillRule:"evenodd",clipRule:"evenodd",d:"M1 5.25C1 4.90753 1.03443 4.57311 1.10002 4.25C1.56329 1.96776 3.58104 0.25 6 0.25C8.41896 0.25 10.4367 1.96776 10.9 4.25C10.9656 4.57311 11 4.90753 11 5.25H1ZM2.12602 4.25H9.87398C9.42994 2.52477 7.86384 1.25 6 1.25C4.13616 1.25 2.57006 2.52477 2.12602 4.25Z",fill:"#757575",s
+
+
+================================================================================
+7. RAW SHOTDETAILSCOMPRESSEDV3 TOP-LEVEL KEYS
+================================================================================
+[
+  "__typename",
+  "displayType",
+  "id",
+  "tournamentId",
+  "playerId",
+  "groupPlayers",
+  "round",
+  "lineColor",
+  "message",
+  "holes",
+  "shotVideo",
+  "shotVideos",
+  "defaultHolePickle"
+]
+
+
+================================================================================
+8. RAW RORY R3 H1 OBJECT KEYS
+================================================================================
+[
+  "__typename",
+  "holeNumber",
+  "displayHoleNumber",
+  "par",
+  "yardage",
+  "status",
+  "score",
+  "green",
+  "rank",
+  "fairwayCenter",
+  "teeOverview",
+  "teeGreen",
+  "pinOverview",
+  "pinGreen",
+  "holePickleBottomToTop",
+  "holePickleLeftToRight",
+  "holePickleGreenBottomToTop",
+  "holePickleGreenLeftToRight",
+  "holePickleBottomToTopAsset",
+  "holePickleLeftToRightAsset",
+  "holePickleGreenBottomToTopAsset",
+  "holePickleGreenLeftToRightAsset",
+  "strokes",
+  "enhancedPickle"
+]
+
+
+================================================================================
+9. RAW RORY R3 H1 — PIN/TEE/GREEN/COORDINATE PATHS
+================================================================================
+green = true
+fairwayCenter.tourcastX = 9543.47
+fairwayCenter.tourcastY = 10760.57
+fairwayCenter.tourcastZ = 348.42
+fairwayCenter.enhancedX = 9543.47
+fairwayCenter.enhancedY = 10760.57
+teeOverview = {"__typename":"PointOfInterestCoords","leftToRightCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":10125.23,"tourcastY":11418.84,"tourcastZ":348.98,"enhancedX":0.14993270842281967,"enhancedY":0.4138632045852947},"bottomToTopCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":10125.23,"tourcastY":11418.84,"tourcastZ":348.98,"enhancedX":0.4358551838144733,"enhancedY":0.7786616609844289}}
+teeOverview.leftToRightCoords.tourcastX = 10125.23
+teeOverview.leftToRightCoords.tourcastY = 11418.84
+teeOverview.leftToRightCoords.tourcastZ = 348.98
+teeOverview.leftToRightCoords.enhancedX = 0.14993270842281967
+teeOverview.leftToRightCoords.enhancedY = 0.4138632045852947
+teeOverview.bottomToTopCoords.tourcastX = 10125.23
+teeOverview.bottomToTopCoords.tourcastY = 11418.84
+teeOverview.bottomToTopCoords.tourcastZ = 348.98
+teeOverview.bottomToTopCoords.enhancedX = 0.4358551838144733
+teeOverview.bottomToTopCoords.enhancedY = 0.7786616609844289
+teeGreen = {"__typename":"PointOfInterestCoords","leftToRightCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":10125.23,"tourcastY":11418.84,"tourcastZ":348.98,"enhancedX":-5.455465055387003,"enhancedY":0.3064323228644721},"bottomToTopCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":10125.23,"tourcastY":11418.84,"tourcastZ":348.98,"enhancedX":0.4427410668805215,"enhancedY":6.6133124338624985}}
+teeGreen.leftToRightCoords.tourcastX = 10125.23
+teeGreen.leftToRightCoords.tourcastY = 11418.84
+teeGreen.leftToRightCoords.tourcastZ = 348.98
+teeGreen.leftToRightCoords.enhancedX = -5.455465055387003
+teeGreen.leftToRightCoords.enhancedY = 0.3064323228644721
+teeGreen.bottomToTopCoords.tourcastX = 10125.23
+teeGreen.bottomToTopCoords.tourcastY = 11418.84
+teeGreen.bottomToTopCoords.tourcastZ = 348.98
+teeGreen.bottomToTopCoords.enhancedX = 0.4427410668805215
+teeGreen.bottomToTopCoords.enhancedY = 6.6133124338624985
+pinOverview = {"__typename":"PointOfInterestCoords","leftToRightCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9448.22,"tourcastY":10352.07,"tourcastZ":350.34,"enhancedX":0.7667095754960344,"enhancedY":0.43470390267574566},"bottomToTopCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9448.22,"tourcastY":10352.07,"tourcastZ":350.34,"enhancedX":0.45139858767327345,"enhancedY":0.061866961537900944}}
+pinOverview.leftToRightCoords.tourcastX = 9448.22
+pinOverview.leftToRightCoords.tourcastY = 10352.07
+pinOverview.leftToRightCoords.tourcastZ = 350.34
+pinOverview.leftToRightCoords.enhancedX = 0.7667095754960344
+pinOverview.leftToRightCoords.enhancedY = 0.43470390267574566
+pinOverview.bottomToTopCoords.tourcastX = 9448.22
+pinOverview.bottomToTopCoords.tourcastY = 10352.07
+pinOverview.bottomToTopCoords.tourcastZ = 350.34
+pinOverview.bottomToTopCoords.enhancedX = 0.45139858767327345
+pinOverview.bottomToTopCoords.enhancedY = 0.061866961537900944
+pinGreen = {"__typename":"PointOfInterestCoords","leftToRightCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9448.22,"tourcastY":10352.07,"tourcastZ":350.34,"enhancedX":0.6642619037864488,"enhancedY":0.5132149919862918},"bottomToTopCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9448.22,"tourcastY":10352.07,"tourcastZ":350.34,"enhancedX":0.5789748033415338,"enhancedY":0.3307977671657636}}
+pinGreen.leftToRightCoords.tourcastX = 9448.22
+pinGreen.leftToRightCoords.tourcastY = 10352.07
+pinGreen.leftToRightCoords.tourcastZ = 350.34
+pinGreen.leftToRightCoords.enhancedX = 0.6642619037864488
+pinGreen.leftToRightCoords.enhancedY = 0.5132149919862918
+pinGreen.bottomToTopCoords.tourcastX = 9448.22
+pinGreen.bottomToTopCoords.tourcastY = 10352.07
+pinGreen.bottomToTopCoords.tourcastZ = 350.34
+pinGreen.bottomToTopCoords.enhancedX = 0.5789748033415338
+pinGreen.bottomToTopCoords.enhancedY = 0.3307977671657636
+holePickleGreenBottomToTop = "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_027_513_overhead_green_1.jpg"
+holePickleGreenLeftToRight = "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_027_513_overhead_green_1.jpg"
+holePickleGreenBottomToTopAsset = {"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/holes_2026_r_027_513_overhead_green_1","assetType":"image"}
+holePickleGreenLeftToRightAsset = {"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/holes_2026_r_027_513_overhead_green_1","assetType":"image"}
+strokes[0].overview.leftToRightCoords.fromCoords.tourcastX = 10125.229
+strokes[0].overview.leftToRightCoords.fromCoords.tourcastY = 11418.841
+strokes[0].overview.leftToRightCoords.fromCoords.tourcastZ = 348.982
+strokes[0].overview.leftToRightCoords.fromCoords.enhancedX = 0.14993254809166306
+strokes[0].overview.leftToRightCoords.fromCoords.enhancedY = 0.41386477426893287
+strokes[0].overview.leftToRightCoords.toCoords.tourcastX = 9507.334
+strokes[0].overview.leftToRightCoords.toCoords.tourcastY = 10738.222
+strokes[0].overview.leftToRightCoords.toCoords.tourcastZ = 349.757
+strokes[0].overview.leftToRightCoords.toCoords.enhancedX = 0.5909796697443058
+strokes[0].overview.leftToRightCoords.toCoords.enhancedY = 0.6079453183678079
+strokes[0].overview.bottomToTopCoords.fromCoords.tourcastX = 10125.229
+strokes[0].overview.bottomToTopCoords.fromCoords.tourcastY = 11418.841
+strokes[0].overview.bottomToTopCoords.fromCoords.tourcastZ = 348.982
+strokes[0].overview.bottomToTopCoords.fromCoords.enhancedX = 0.43585635451693294
+strokes[0].overview.bottomToTopCoords.fromCoords.enhancedY = 0.7786618473152082
+strokes[0].overview.bottomToTopCoords.toCoords.tourcastX = 9507.334
+strokes[0].overview.bottomToTopCoords.toCoords.tourcastY = 10738.222
+strokes[0].overview.bottomToTopCoords.toCoords.tourcastZ = 349.757
+strokes[0].overview.bottomToTopCoords.toCoords.enhancedX = 0.580605616607882
+strokes[0].overview.bottomToTopCoords.toCoords.enhancedY = 0.26609359637802155
+strokes[0].green = {"__typename":"ShotLinkCoordWrapper","leftToRightCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":10125.229,"tourcastY":11418.841,"tourcastZ":348.982,"enhancedX":-5.455466646209612,"enhancedY":0.30644789744185574},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9507.334,"tourcastY":10738.222,"tourcastZ":349.757,"enhancedX":-1.0793492203171335,"enhancedY":2.232136053305018}},"bottomToTopCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":10125.229,"tourcastY":11418.841,"tourcastZ":348.982,"enhancedX":0.44275132777692644,"enhancedY":6.613314067002098},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9507.334,"tourcastY":10738.222,"tourcastZ":349.757,"enhancedX":1.7114401438990412,"enhancedY":2.1207898323155163}}}
+strokes[0].green.leftToRightCoords.fromCoords.tourcastX = 10125.229
+strokes[0].green.leftToRightCoords.fromCoords.tourcastY = 11418.841
+strokes[0].green.leftToRightCoords.fromCoords.tourcastZ = 348.982
+strokes[0].green.leftToRightCoords.fromCoords.enhancedX = -5.455466646209612
+strokes[0].green.leftToRightCoords.fromCoords.enhancedY = 0.30644789744185574
+strokes[0].green.leftToRightCoords.toCoords.tourcastX = 9507.334
+strokes[0].green.leftToRightCoords.toCoords.tourcastY = 10738.222
+strokes[0].green.leftToRightCoords.toCoords.tourcastZ = 349.757
+strokes[0].green.leftToRightCoords.toCoords.enhancedX = -1.0793492203171335
+strokes[0].green.leftToRightCoords.toCoords.enhancedY = 2.232136053305018
+strokes[0].green.bottomToTopCoords.fromCoords.tourcastX = 10125.229
+strokes[0].green.bottomToTopCoords.fromCoords.tourcastY = 11418.841
+strokes[0].green.bottomToTopCoords.fromCoords.tourcastZ = 348.982
+strokes[0].green.bottomToTopCoords.fromCoords.enhancedX = 0.44275132777692644
+strokes[0].green.bottomToTopCoords.fromCoords.enhancedY = 6.613314067002098
+strokes[0].green.bottomToTopCoords.toCoords.tourcastX = 9507.334
+strokes[0].green.bottomToTopCoords.toCoords.tourcastY = 10738.222
+strokes[0].green.bottomToTopCoords.toCoords.tourcastZ = 349.757
+strokes[0].green.bottomToTopCoords.toCoords.enhancedX = 1.7114401438990412
+strokes[0].green.bottomToTopCoords.toCoords.enhancedY = 2.1207898323155163
+strokes[0].radarData.launchSpin = 3063.03
+strokes[0].radarData.spinAxis = 3.32
+strokes[0].radarData.ballTrajectory[0].spinRateFit = [3063.025602,-91.798332,1.319366,-0.010594]
+strokes[0].radarData.normalizedTrajectory[0].spinAxis = 3.32
+strokes[0].radarData.normalizedTrajectoryV2[0].spinAxis = 3.32
+strokes[1].overview.leftToRightCoords.fromCoords.tourcastX = 9507.334
+strokes[1].overview.leftToRightCoords.fromCoords.tourcastY = 10738.222
+strokes[1].overview.leftToRightCoords.fromCoords.tourcastZ = 349.757
+strokes[1].overview.leftToRightCoords.fromCoords.enhancedX = 0.5909796697443058
+strokes[1].overview.leftToRightCoords.fromCoords.enhancedY = 0.6079453183678079
+strokes[1].overview.leftToRightCoords.toCoords.tourcastX = 9470.635
+strokes[1].overview.leftToRightCoords.toCoords.tourcastY = 10365.716
+strokes[1].overview.leftToRightCoords.toCoords.tourcastZ = 349.896
+strokes[1].overview.leftToRightCoords.toCoords.enhancedX = 0.7553038797584467
+strokes[1].overview.leftToRightCoords.toCoords.enhancedY = 0.42106469762595033
+strokes[1].overview.bottomToTopCoords.fromCoords.tourcastX = 9507.334
+strokes[1].overview.bottomToTopCoords.fromCoords.tourcastY = 10738.222
+strokes[1].overview.bottomToTopCoords.fromCoords.tourcastZ = 349.757
+strokes[1].overview.bottomToTopCoords.fromCoords.enhancedX = 0.580605616607882
+strokes[1].overview.bottomToTopCoords.fromCoords.enhancedY = 0.26609359637802155
+strokes[1].overview.bottomToTopCoords.toCoords.tourcastX = 9470.635
+strokes[1].overview.bottomToTopCoords.toCoords.tourcastY = 10365.716
+strokes[1].overview.bottomToTopCoords.toCoords.tourcastZ = 349.896
+strokes[1].overview.bottomToTopCoords.toCoords.enhancedX = 0.44122618738284525
+strokes[1].overview.bottomToTopCoords.toCoords.enhancedY = 0.07512222897126586
+strokes[1].green = {"__typename":"ShotLinkCoordWrapper","leftToRightCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9507.334,"tourcastY":10738.222,"tourcastZ":349.757,"enhancedX":-1.0793492203171335,"enhancedY":2.232136053305018},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9470.635,"tourcastY":10365.716,"tourcastZ":349.896,"enhancedX":0.5510933496031565,"enhancedY":0.37788528974560986}},"bottomToTopCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9507.334,"tourcastY":10738.222,"tourcastZ":349.757,"enhancedX":1.7114401438990412,"enhancedY":2.1207898323155163},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9470.635,"tourcastY":10365.716,"tourcastZ":349.896,"enhancedX":0.4898164157073917,"enhancedY":0.4469766569484198}}}
+strokes[1].green.leftToRightCoords.fromCoords.tourcastX = 9507.334
+strokes[1].green.leftToRightCoords.fromCoords.tourcastY = 10738.222
+strokes[1].green.leftToRightCoords.fromCoords.tourcastZ = 349.757
+strokes[1].green.leftToRightCoords.fromCoords.enhancedX = -1.0793492203171335
+strokes[1].green.leftToRightCoords.fromCoords.enhancedY = 2.232136053305018
+strokes[1].green.leftToRightCoords.toCoords.tourcastX = 9470.635
+strokes[1].green.leftToRightCoords.toCoords.tourcastY = 10365.716
+strokes[1].green.leftToRightCoords.toCoords.tourcastZ = 349.896
+strokes[1].green.leftToRightCoords.toCoords.enhancedX = 0.5510933496031565
+strokes[1].green.leftToRightCoords.toCoords.enhancedY = 0.37788528974560986
+strokes[1].green.bottomToTopCoords.fromCoords.tourcastX = 9507.334
+strokes[1].green.bottomToTopCoords.fromCoords.tourcastY = 10738.222
+strokes[1].green.bottomToTopCoords.fromCoords.tourcastZ = 349.757
+strokes[1].green.bottomToTopCoords.fromCoords.enhancedX = 1.7114401438990412
+strokes[1].green.bottomToTopCoords.fromCoords.enhancedY = 2.1207898323155163
+strokes[1].green.bottomToTopCoords.toCoords.tourcastX = 9470.635
+strokes[1].green.bottomToTopCoords.toCoords.tourcastY = 10365.716
+strokes[1].green.bottomToTopCoords.toCoords.tourcastZ = 349.896
+strokes[1].green.bottomToTopCoords.toCoords.enhancedX = 0.4898164157073917
+strokes[1].green.bottomToTopCoords.toCoords.enhancedY = 0.4469766569484198
+strokes[1].radarData.launchSpin = 0
+strokes[1].radarData.spinAxis = -9.09
+strokes[1].radarData.ballTrajectory[0].spinRateFit = [4570.645318,-134.581269,1.868834,-0.014291]
+strokes[2].overview.leftToRightCoords.fromCoords.tourcastX = 9470.635
+strokes[2].overview.leftToRightCoords.fromCoords.tourcastY = 10365.716
+strokes[2].overview.leftToRightCoords.fromCoords.tourcastZ = 349.896
+strokes[2].overview.leftToRightCoords.fromCoords.enhancedX = 0.7553038797584467
+strokes[2].overview.leftToRightCoords.fromCoords.enhancedY = 0.42106469762595033
+strokes[2].overview.leftToRightCoords.toCoords.tourcastX = 9443.79
+strokes[2].overview.leftToRightCoords.toCoords.tourcastY = 10350.434
+strokes[2].overview.leftToRightCoords.toCoords.tourcastZ = 350.261
+strokes[2].overview.leftToRightCoords.toCoords.enhancedX = 0.7685224520320355
+strokes[2].overview.leftToRightCoords.toCoords.enhancedY = 0.4380333670073573
+strokes[2].overview.bottomToTopCoords.fromCoords.tourcastX = 9470.635
+strokes[2].overview.bottomToTopCoords.fromCoords.tourcastY = 10365.716
+strokes[2].overview.bottomToTopCoords.fromCoords.tourcastZ = 349.896
+strokes[2].overview.bottomToTopCoords.fromCoords.enhancedX = 0.44122618738284525
+strokes[2].overview.bottomToTopCoords.fromCoords.enhancedY = 0.07512222897126586
+strokes[2].overview.bottomToTopCoords.toCoords.tourcastX = 9443.79
+strokes[2].overview.bottomToTopCoords.toCoords.tourcastY = 10350.434
+strokes[2].overview.bottomToTopCoords.toCoords.tourcastZ = 350.261
+strokes[2].overview.bottomToTopCoords.toCoords.enhancedX = 0.45388177083657766
+strokes[2].overview.bottomToTopCoords.toCoords.enhancedY = 0.05976010510606278
+strokes[2].green = {"__typename":"ShotLinkCoordWrapper","leftToRightCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9470.635,"tourcastY":10365.716,"tourcastZ":349.896,"enhancedX":0.5510933496031565,"enhancedY":0.37788528974560986},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9443.79,"tourcastY":10350.434,"tourcastZ":350.261,"enhancedX":0.6822494624095429,"enhancedY":0.5462503073184677}},"bottomToTopCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9470.635,"tourcastY":10365.716,"tourcastZ":349.896,"enhancedX":0.4898164157073917,"enhancedY":0.4469766569484198},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9443.79,"tourcastY":10350.434,"tourcastZ":350.261,"enhancedX":0.6007392445644676,"enhancedY":0.3123317314606374}}}
+strokes[2].green.leftToRightCoords.fromCoords.tourcastX = 9470.635
+strokes[2].green.leftToRightCoords.fromCoords.tourcastY = 10365.716
+strokes[2].green.leftToRightCoords.fromCoords.tourcastZ = 349.896
+strokes[2].green.leftToRightCoords.fromCoords.enhancedX = 0.5510933496031565
+strokes[2].green.leftToRightCoords.fromCoords.enhancedY = 0.37788528974560986
+strokes[2].green.leftToRightCoords.toCoords.tourcastX = 9443.79
+strokes[2].green.leftToRightCoords.toCoords.tourcastY = 10350.434
+strokes[2].green.leftToRightCoords.toCoords.tourcastZ = 350.261
+strokes[2].green.leftToRightCoords.toCoords.enhancedX = 0.6822494624095429
+strokes[2].green.leftToRightCoords.toCoords.enhancedY = 0.5462503073184677
+strokes[2].green.bottomToTopCoords.fromCoords.tourcastX = 9470.635
+strokes[2].green.bottomToTopCoords.fromCoords.tourcastY = 10365.716
+strokes[2].green.bottomToTopCoords.fromCoords.tourcastZ = 349.896
+strokes[2].green.bottomToTopCoords.fromCoords.enhancedX = 0.4898164157073917
+strokes[2].green.bottomToTopCoords.fromCoords.enhancedY = 0.4469766569484198
+strokes[2].green.bottomToTopCoords.toCoords.tourcastX = 9443.79
+strokes[2].green.bottomToTopCoords.toCoords.tourcastY = 10350.434
+strokes[2].green.bottomToTopCoords.toCoords.tourcastZ = 350.261
+strokes[2].green.bottomToTopCoords.toCoords.enhancedX = 0.6007392445644676
+strokes[2].green.bottomToTopCoords.toCoords.enhancedY = 0.3123317314606374
+strokes[3].overview.leftToRightCoords.fromCoords.tourcastX = 9443.79
+strokes[3].overview.leftToRightCoords.fromCoords.tourcastY = 10350.434
+strokes[3].overview.leftToRightCoords.fromCoords.tourcastZ = 350.261
+strokes[3].overview.leftToRightCoords.fromCoords.enhancedX = 0.7685224520320355
+strokes[3].overview.leftToRightCoords.fromCoords.enhancedY = 0.4380333670073573
+strokes[3].overview.leftToRightCoords.toCoords.tourcastX = 9448.22
+strokes[3].overview.leftToRightCoords.toCoords.tourcastY = 10352.07
+strokes[3].overview.leftToRightCoords.toCoords.tourcastZ = 350.34
+strokes[3].overview.leftToRightCoords.toCoords.enhancedX = 0.7667095754960344
+strokes[3].overview.leftToRightCoords.toCoords.enhancedY = 0.43470390267574566
+strokes[3].overview.bottomToTopCoords.fromCoords.tourcastX = 9443.79
+strokes[3].overview.bottomToTopCoords.fromCoords.tourcastY = 10350.434
+strokes[3].overview.bottomToTopCoords.fromCoords.tourcastZ = 350.261
+strokes[3].overview.bottomToTopCoords.fromCoords.enhancedX = 0.45388177083657766
+strokes[3].overview.bottomToTopCoords.fromCoords.enhancedY = 0.05976010510606278
+strokes[3].overview.bottomToTopCoords.toCoords.tourcastX = 9448.22
+strokes[3].overview.bottomToTopCoords.toCoords.tourcastY = 10352.07
+strokes[3].overview.bottomToTopCoords.toCoords.tourcastZ = 350.34
+strokes[3].overview.bottomToTopCoords.toCoords.enhancedX = 0.45139858767327345
+strokes[3].overview.bottomToTopCoords.toCoords.enhancedY = 0.061866961537900944
+strokes[3].green = {"__typename":"ShotLinkCoordWrapper","leftToRightCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9443.79,"tourcastY":10350.434,"tourcastZ":350.261,"enhancedX":0.6822494624095429,"enhancedY":0.5462503073184677},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9448.22,"tourcastY":10352.07,"tourcastZ":350.34,"enhancedX":0.6642619037864488,"enhancedY":0.5132149919862918}},"bottomToTopCoords":{"__typename":"ShotLinkCoordinates","fromCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9443.79,"tourcastY":10350.434,"tourcastZ":350.261,"enhancedX":0.6007392445644676,"enhancedY":0.3123317314606374},"toCoords":{"__typename":"StrokeCoordinates","x":-1,"y":-1,"z":-1,"tourcastX":9448.22,"tourcastY":10352.07,"tourcastZ":350.34,"enhancedX":0.5789748033415338,"enhancedY":0.3307977671657636}}}
+strokes[3].green.leftToRightCoords.fromCoords.tourcastX = 9443.79
+strokes[3].green.leftToRightCoords.fromCoords.tourcastY = 10350.434
+strokes[3].green.leftToRightCoords.fromCoords.tourcastZ = 350.261
+strokes[3].green.leftToRightCoords.fromCoords.enhancedX = 0.6822494624095429
+strokes[3].green.leftToRightCoords.fromCoords.enhancedY = 0.5462503073184677
+strokes[3].green.leftToRightCoords.toCoords.tourcastX = 9448.22
+strokes[3].green.leftToRightCoords.toCoords.tourcastY = 10352.07
+strokes[3].green.leftToRightCoords.toCoords.tourcastZ = 350.34
+strokes[3].green.leftToRightCoords.toCoords.enhancedX = 0.6642619037864488
+strokes[3].green.leftToRightCoords.toCoords.enhancedY = 0.5132149919862918
+strokes[3].green.bottomToTopCoords.fromCoords.tourcastX = 9443.79
+strokes[3].green.bottomToTopCoords.fromCoords.tourcastY = 10350.434
+strokes[3].green.bottomToTopCoords.fromCoords.tourcastZ = 350.261
+strokes[3].green.bottomToTopCoords.fromCoords.enhancedX = 0.6007392445644676
+strokes[3].green.bottomToTopCoords.fromCoords.enhancedY = 0.3123317314606374
+strokes[3].green.bottomToTopCoords.toCoords.tourcastX = 9448.22
+strokes[3].green.bottomToTopCoords.toCoords.tourcastY = 10352.07
+strokes[3].green.bottomToTopCoords.toCoords.tourcastZ = 350.34
+strokes[3].green.bottomToTopCoords.toCoords.enhancedX = 0.5789748033415338
+strokes[3].green.bottomToTopCoords.toCoords.enhancedY = 0.3307977671657636
+enhancedPickle = {"__typename":"HolePickle","leftToRight":"https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_full_1_land.png","bottomToTop":"https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_full_1_port.png","greenLeftToRight":"https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land.png","greenBottomToTop":"https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port.png","leftToRightAsset":{"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/tourcastPickle/holes_2026_r_027_513_overhead_full_1_land","assetType":"image"},"bottomToTopAsset":{"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/tourcastPickle/holes_2026_r_027_513_overhead_full_1_port","assetType":"image"},"greenLeftToRightAsset":{"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land","assetType":"image"},"greenBottomToTopAsset":{"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port","assetType":"image"}}
+enhancedPickle.greenLeftToRight = "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land.png"
+enhancedPickle.greenBottomToTop = "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port.png"
+enhancedPickle.greenLeftToRightAsset = {"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land","assetType":"image"}
+enhancedPickle.greenBottomToTopAsset = {"__typename":"ImageAsset","imageOrg":"pga-tour","imagePath":"/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port","assetType":"image"}
+
+
+================================================================================
+10. RAW RORY R3 H1 — COMPACT STRUCTURE
+================================================================================
+{
+  "__typename": "ShotDetailHole",
+  "holeNumber": 1,
+  "displayHoleNumber": "1",
+  "par": 4,
+  "yardage": 433,
+  "status": "PAR",
+  "score": "4",
+  "green": true,
+  "rank": "17",
+  "fairwayCenter": {
+    "__typename": "StrokeCoordinates",
+    "x": 9543.47,
+    "y": 10760.57,
+    "z": 348.42,
+    "tourcastX": 9543.47,
+    "tourcastY": 10760.57,
+    "tourcastZ": 348.42,
+    "enhancedX": 9543.47,
+    "enhancedY": 10760.57
+  },
+  "teeOverview": {
+    "__typename": "PointOfInterestCoords",
+    "leftToRightCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10125.23,
+      "tourcastY": 11418.84,
+      "tourcastZ": 348.98,
+      "enhancedX": 0.14993270842281967,
+      "enhancedY": 0.4138632045852947
+    },
+    "bottomToTopCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10125.23,
+      "tourcastY": 11418.84,
+      "tourcastZ": 348.98,
+      "enhancedX": 0.4358551838144733,
+      "enhancedY": 0.7786616609844289
+    }
+  },
+  "teeGreen": {
+    "__typename": "PointOfInterestCoords",
+    "leftToRightCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10125.23,
+      "tourcastY": 11418.84,
+      "tourcastZ": 348.98,
+      "enhancedX": -5.455465055387003,
+      "enhancedY": 0.3064323228644721
+    },
+    "bottomToTopCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10125.23,
+      "tourcastY": 11418.84,
+      "tourcastZ": 348.98,
+      "enhancedX": 0.4427410668805215,
+      "enhancedY": 6.6133124338624985
+    }
+  },
+  "pinOverview": {
+    "__typename": "PointOfInterestCoords",
+    "leftToRightCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9448.22,
+      "tourcastY": 10352.07,
+      "tourcastZ": 350.34,
+      "enhancedX": 0.7667095754960344,
+      "enhancedY": 0.43470390267574566
+    },
+    "bottomToTopCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9448.22,
+      "tourcastY": 10352.07,
+      "tourcastZ": 350.34,
+      "enhancedX": 0.45139858767327345,
+      "enhancedY": 0.061866961537900944
+    }
+  },
+  "pinGreen": {
+    "__typename": "PointOfInterestCoords",
+    "leftToRightCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9448.22,
+      "tourcastY": 10352.07,
+      "tourcastZ": 350.34,
+      "enhancedX": 0.6642619037864488,
+      "enhancedY": 0.5132149919862918
+    },
+    "bottomToTopCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9448.22,
+      "tourcastY": 10352.07,
+      "tourcastZ": 350.34,
+      "enhancedX": 0.5789748033415338,
+      "enhancedY": 0.3307977671657636
+    }
+  },
+  "holePickleBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_027_513_overhead_full_1.jpg",
+  "holePickleLeftToRight": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_027_513_overhead_full_1.jpg",
+  "holePickleGreenBottomToTop": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_027_513_overhead_green_1.jpg",
+  "holePickleGreenLeftToRight": "https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_027_513_overhead_green_1.jpg",
+  "holePickleBottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/holes_2026_r_027_513_overhead_full_1",
+    "assetType": "image"
+  },
+  "holePickleLeftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/holes_2026_r_027_513_overhead_full_1",
+    "assetType": "image"
+  },
+  "holePickleGreenBottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/holes_2026_r_027_513_overhead_green_1",
+    "assetType": "image"
+  },
+  "holePickleGreenLeftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/holes_2026_r_027_513_overhead_green_1",
+    "assetType": "image"
+  },
+  "strokes": [
+    {
+      "__typename": "HoleStroke",
+      "showMarker": true,
+      "groupShowMarker": true,
+      "markerText": "306",
+      "strokeNumber": 1,
+      "finalStroke": false,
+      "distance": "306 yds",
+      "distanceRemaining": "130 yds",
+      "strokeType": "STROKE",
+      "overview": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 10125.229,
+            "tourcastY": 11418.841,
+            "tourcastZ": 348.982,
+            "enhancedX": 0.14993254809166306,
+            "enhancedY": 0.41386477426893287
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": 0.5909796697443058,
+            "enhancedY": 0.6079453183678079
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 10125.229,
+            "tourcastY": 11418.841,
+            "tourcastZ": 348.982,
+            "enhancedX": 0.43585635451693294,
+            "enhancedY": 0.7786618473152082
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": 0.580605616607882,
+            "enhancedY": 0.26609359637802155
+          }
+        }
+      },
+      "green": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 10125.229,
+            "tourcastY": 11418.841,
+            "tourcastZ": 348.982,
+            "enhancedX": -5.455466646209612,
+            "enhancedY": 0.30644789744185574
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": -1.0793492203171335,
+            "enhancedY": 2.232136053305018
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 10125.229,
+            "tourcastY": 11418.841,
+            "tourcastZ": 348.982,
+            "enhancedX": 0.44275132777692644,
+            "enhancedY": 6.613314067002098
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": 1.7114401438990412,
+            "enhancedY": 2.1207898323155163
+          }
+        }
+      },
+      "playByPlay": "306 yds to right intermediate, 130 yds to hole",
+      "playByPlayLabel": "Shot 1",
+      "toLocationCode": "ERI",
+      "fromLocationCode": "OTB",
+      "toLocation": "Right Intermediate",
+      "fromLocation": "Tee Box",
+      "radarData": "[PRESENT — OMITTED]"
+    },
+    {
+      "__typename": "HoleStroke",
+      "showMarker": true,
+      "groupShowMarker": false,
+      "markerText": "125",
+      "strokeNumber": 2,
+      "finalStroke": false,
+      "distance": "125 yds",
+      "distanceRemaining": "26 ft 0 in.",
+      "strokeType": "STROKE",
+      "overview": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": 0.5909796697443058,
+            "enhancedY": 0.6079453183678079
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.7553038797584467,
+            "enhancedY": 0.42106469762595033
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": 0.580605616607882,
+            "enhancedY": 0.26609359637802155
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.44122618738284525,
+            "enhancedY": 0.07512222897126586
+          }
+        }
+      },
+      "green": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": -1.0793492203171335,
+            "enhancedY": 2.232136053305018
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.5510933496031565,
+            "enhancedY": 0.37788528974560986
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9507.334,
+            "tourcastY": 10738.222,
+            "tourcastZ": 349.757,
+            "enhancedX": 1.7114401438990412,
+            "enhancedY": 2.1207898323155163
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.4898164157073917,
+            "enhancedY": 0.4469766569484198
+          }
+        }
+      },
+      "playByPlay": "125 yds to right green, 26 ft 0 in. to hole",
+      "playByPlayLabel": "Shot 2",
+      "videoId": "6403451241112",
+      "toLocationCode": "ERG",
+      "fromLocationCode": "OIR",
+      "toLocation": "Right Green",
+      "fromLocation": "Intermediate Rough",
+      "radarData": "[PRESENT — OMITTED]"
+    },
+    {
+      "__typename": "HoleStroke",
+      "showMarker": false,
+      "groupShowMarker": false,
+      "markerText": "10",
+      "strokeNumber": 3,
+      "finalStroke": false,
+      "distance": "30 ft 10 in.",
+      "distanceRemaining": "4 ft 6 in.",
+      "strokeType": "STROKE",
+      "overview": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.7553038797584467,
+            "enhancedY": 0.42106469762595033
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.7685224520320355,
+            "enhancedY": 0.4380333670073573
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.44122618738284525,
+            "enhancedY": 0.07512222897126586
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.45388177083657766,
+            "enhancedY": 0.05976010510606278
+          }
+        }
+      },
+      "green": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.5510933496031565,
+            "enhancedY": 0.37788528974560986
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.6822494624095429,
+            "enhancedY": 0.5462503073184677
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9470.635,
+            "tourcastY": 10365.716,
+            "tourcastZ": 349.896,
+            "enhancedX": 0.4898164157073917,
+            "enhancedY": 0.4469766569484198
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.6007392445644676,
+            "enhancedY": 0.3123317314606374
+          }
+        }
+      },
+      "playByPlay": "Putt 30 ft 10 in., 4 ft 6 in. to hole",
+      "playByPlayLabel": "Shot 3",
+      "toLocationCode": "ERG",
+      "fromLocationCode": "OGR",
+      "toLocation": "Right Green",
+      "fromLocation": "Green",
+      "ballPath": "[PRESENT — OMITTED]"
+    },
+    {
+      "__typename": "HoleStroke",
+      "showMarker": false,
+      "groupShowMarker": false,
+      "markerText": "2",
+      "strokeNumber": 4,
+      "finalStroke": true,
+      "distance": "4 ft 6 in.",
+      "distanceRemaining": "",
+      "strokeType": "STROKE",
+      "overview": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.7685224520320355,
+            "enhancedY": 0.4380333670073573
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9448.22,
+            "tourcastY": 10352.07,
+            "tourcastZ": 350.34,
+            "enhancedX": 0.7667095754960344,
+            "enhancedY": 0.43470390267574566
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.45388177083657766,
+            "enhancedY": 0.05976010510606278
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9448.22,
+            "tourcastY": 10352.07,
+            "tourcastZ": 350.34,
+            "enhancedX": 0.45139858767327345,
+            "enhancedY": 0.061866961537900944
+          }
+        }
+      },
+      "green": {
+        "__typename": "ShotLinkCoordWrapper",
+        "leftToRightCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.6822494624095429,
+            "enhancedY": 0.5462503073184677
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9448.22,
+            "tourcastY": 10352.07,
+            "tourcastZ": 350.34,
+            "enhancedX": 0.6642619037864488,
+            "enhancedY": 0.5132149919862918
+          }
+        },
+        "bottomToTopCoords": {
+          "__typename": "ShotLinkCoordinates",
+          "fromCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9443.79,
+            "tourcastY": 10350.434,
+            "tourcastZ": 350.261,
+            "enhancedX": 0.6007392445644676,
+            "enhancedY": 0.3123317314606374
+          },
+          "toCoords": {
+            "__typename": "StrokeCoordinates",
+            "x": -1,
+            "y": -1,
+            "z": -1,
+            "tourcastX": 9448.22,
+            "tourcastY": 10352.07,
+            "tourcastZ": 350.34,
+            "enhancedX": 0.5789748033415338,
+            "enhancedY": 0.3307977671657636
+          }
+        }
+      },
+      "playByPlay": "In the hole",
+      "playByPlayLabel": "Shot 4",
+      "videoId": "6403451647112",
+      "toLocationCode": "OGR",
+      "fromLocationCode": "OGR",
+      "toLocation": "Green",
+      "fromLocation": "Green",
+      "ballPath": "[PRESENT — OMITTED]"
+    }
+  ],
+  "enhancedPickle": {
+    "__typename": "HolePickle",
+    "leftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_full_1_land.png",
+    "bottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_full_1_port.png",
+    "greenLeftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land.png",
+    "greenBottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port.png",
+    "leftToRightAsset": {
+      "__typename": "ImageAsset",
+      "imageOrg": "pga-tour",
+      "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_full_1_land",
+      "assetType": "image"
+    },
+    "bottomToTopAsset": {
+      "__typename": "ImageAsset",
+      "imageOrg": "pga-tour",
+      "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_full_1_port",
+      "assetType": "image"
+    },
+    "greenLeftToRightAsset": {
+      "__typename": "ImageAsset",
+      "imageOrg": "pga-tour",
+      "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_green_1_land",
+      "assetType": "image"
+    },
+    "greenBottomToTopAsset": {
+      "__typename": "ImageAsset",
+      "imageOrg": "pga-tour",
+      "imagePath": "/tourcastPickle/holes_2026_r_027_513_overhead_green_1_port",
+      "assetType": "image"
+    }
+  }
+}

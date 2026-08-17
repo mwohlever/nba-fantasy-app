@@ -1,0 +1,5499 @@
+============================================================
+CURRENT TWO-BUG AUDIT
+============================================================
+
+============================================================
+1. NOTIFICATION HISTORY ROUTE — FULL CURRENT FILE
+============================================================
+import { NextRequest, NextResponse } from "next/server";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+function normalizeSport(value: unknown): SportKey {
+  if (value === "nfl") return "nfl";
+  if (value === "golf") return "golf";
+  return "nba";
+}
+
+function validIsoDateTime(value: string) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  return Number.isFinite(parsed.getTime())
+    ? parsed.toISOString()
+    : null;
+}
+
+export async function GET(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const type =
+      request.nextUrl.searchParams.get("type")?.trim() ?? "";
+
+    const status =
+      request.nextUrl.searchParams.get("status")?.trim() ?? "";
+
+    const sport =
+      request.nextUrl.searchParams.get("sport")?.trim() ?? "";
+
+    const start =
+      validIsoDateTime(
+        request.nextUrl.searchParams.get("start")?.trim() ?? ""
+      );
+
+    const end =
+      validIsoDateTime(
+        request.nextUrl.searchParams.get("end")?.trim() ?? ""
+      );
+
+    let sportSlateIds: number[] | null = null;
+
+    if (sport && sport !== "all") {
+      const normalizedSport = normalizeSport(sport);
+
+      const { data: sportSlates, error: sportSlatesError } =
+        await supabaseAdmin
+          .from("slates")
+          .select("id")
+          .eq("sport", normalizedSport);
+
+      if (sportSlatesError) {
+        return NextResponse.json(
+          {
+            error:
+              `Failed to filter by sport: ` +
+              sportSlatesError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      sportSlateIds = (sportSlates ?? []).map((row) =>
+        Number(row.id)
+      );
+    }
+
+    let query = supabaseAdmin
+      .from("notification_history")
+      .select(
+        `
+          id,
+          event_key,
+          notification_type,
+          user_id,
+          team_id,
+          slate_id,
+          player_id,
+          title,
+          body,
+          status,
+          sent_count,
+          failed_count,
+          skipped,
+          reason,
+          metadata,
+          created_at,
+          completed_at
+        `
+      )
+      .order("created_at", { ascending: false })
+      .limit(1000);
+
+    if (type) {
+      query = query.eq("notification_type", type);
+    }
+
+    if (start) {
+      query = query.gte("created_at", start);
+    }
+
+    if (end) {
+      query = query.lt("created_at", end);
+    }
+
+    if (sportSlateIds !== null) {
+      query =
+        sportSlateIds.length > 0
+          ? query.in("slate_id", sportSlateIds)
+          : query.is("slate_id", null);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json(
+        {
+          error:
+            `Failed to load notification history: ` +
+            error.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    const rows = data ?? [];
+
+    const userIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.user_id)
+          .filter(Boolean)
+          .map(String)
+      )
+    );
+
+    const teamIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.team_id)
+          .filter(Boolean)
+          .map(Number)
+      )
+    );
+
+    const slateIds = Array.from(
+      new Set(
+        rows
+          .map((row) => row.slate_id)
+          .filter(Boolean)
+          .map(Number)
+      )
+    );
+
+    const [
+      { data: users },
+      { data: teams },
+      { data: slates },
+    ] = await Promise.all([
+      userIds.length
+        ? supabaseAdmin
+            .from("app_users")
+            .select("id, display_name")
+            .in("id", userIds)
+        : Promise.resolve({ data: [] }),
+
+      teamIds.length
+        ? supabaseAdmin
+            .from("teams")
+            .select("id, name")
+            .in("id", teamIds)
+        : Promise.resolve({ data: [] }),
+
+      slateIds.length
+        ? supabaseAdmin
+            .from("slates")
+            .select(
+              "id, date, start_date, end_date, sport, display_name"
+            )
+            .in("id", slateIds)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const userMap = new Map(
+      (users ?? []).map((row) => [
+        String(row.id),
+        row.display_name,
+      ])
+    );
+
+    const teamMap = new Map(
+      (teams ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const slateSportMap = new Map<number, SportKey>(
+      (slates ?? []).map((row) => [
+        Number(row.id),
+        normalizeSport(row.sport),
+      ])
+    );
+
+    const slateMap = new Map(
+      (slates ?? []).map((row) => {
+        const startDate = row.start_date ?? row.date;
+        const endDate = row.end_date ?? row.date;
+
+        const dateLabel =
+          startDate === endDate
+            ? startDate
+            : `${startDate} - ${endDate}`;
+
+        return [
+          Number(row.id),
+          row.display_name?.trim() || dateLabel,
+        ];
+      })
+    );
+
+    const nbaPlayerIds = new Set<number>();
+    const nflPlayerIds = new Set<number>();
+    const golfPlayerIds = new Set<number>();
+
+    for (const row of rows) {
+      if (!row.player_id) continue;
+
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : "nba";
+
+      const playerId = Number(row.player_id);
+
+      if (rowSport === "nfl") {
+        nflPlayerIds.add(playerId);
+      } else if (rowSport === "golf") {
+        golfPlayerIds.add(playerId);
+      } else {
+        nbaPlayerIds.add(playerId);
+      }
+    }
+
+    const [
+      { data: nbaPlayers },
+      { data: nflPlayers },
+      { data: golfPlayers },
+    ] = await Promise.all([
+      nbaPlayerIds.size
+        ? supabaseAdmin
+            .from("players")
+            .select("id, name")
+            .in("id", [...nbaPlayerIds])
+        : Promise.resolve({ data: [] }),
+
+      nflPlayerIds.size
+        ? supabaseAdmin
+            .from("players_nfl")
+            .select("id, name")
+            .in("id", [...nflPlayerIds])
+        : Promise.resolve({ data: [] }),
+
+      golfPlayerIds.size
+        ? supabaseAdmin
+            .from("golf_players")
+            .select("id, display_name")
+            .in("id", [...golfPlayerIds])
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const nbaPlayerMap = new Map(
+      (nbaPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const nflPlayerMap = new Map(
+      (nflPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.name,
+      ])
+    );
+
+    const golfPlayerMap = new Map(
+      (golfPlayers ?? []).map((row) => [
+        Number(row.id),
+        row.display_name,
+      ])
+    );
+
+    function resolvePlayerName(
+      row: (typeof rows)[number]
+    ) {
+      if (!row.player_id) return null;
+
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : "nba";
+
+      const playerId = Number(row.player_id);
+
+      if (rowSport === "golf") {
+        return (
+          golfPlayerMap.get(playerId) ??
+          `Golfer ${playerId}`
+        );
+      }
+
+      if (rowSport === "nfl") {
+        return (
+          nflPlayerMap.get(playerId) ??
+          `Player ${playerId}`
+        );
+      }
+
+      return (
+        nbaPlayerMap.get(playerId) ??
+        `Player ${playerId}`
+      );
+    }
+
+
+    /*
+     * Expected Golf notification ledger.
+     *
+     * notification_history only contains events that actually reached
+     * sendLoggedNotification(). For Golf round-complete notifications we
+     * also want to see events that SHOULD exist before delivery.
+     *
+     * Expected event key:
+     *   player_finished:<slateId>:<playerId>:round-<roundNumber>
+     *
+     * If a matching notification_history row exists, that real delivery
+     * row remains authoritative. Otherwise:
+     *
+     *   incomplete round -> waiting
+     *   completed round  -> missed
+     *
+     * This is intentionally monitoring-only. It does not send pushes,
+     * modify notification preferences, or alter the live completion
+     * trigger.
+     */
+    type ExpectedLedgerRow = {
+      id: string;
+      event_key: string;
+      notification_type: string;
+      user_id: string | null;
+      team_id: number | null;
+      slate_id: number | null;
+      player_id: number | null;
+      title: string;
+      body: string;
+      status: "waiting" | "missed";
+      sent_count: number;
+      failed_count: number;
+      skipped: boolean;
+      reason: string | null;
+      metadata: Record<string, unknown>;
+      created_at: string;
+      completed_at: string | null;
+      sport: SportKey | null;
+      recipientName: string;
+      teamName: string | null;
+      playerName: string | null;
+      slateLabel: string | null;
+    };
+
+    const realEventKeys = new Set(
+      rows
+        .map((row) => row.event_key)
+        .filter(Boolean)
+        .map(String)
+    );
+
+    const expectedLedgerRows: ExpectedLedgerRow[] = [];
+
+    /*
+     * Only synthesize Golf expectations when Golf is included in the
+     * selected filter. NBA/NFL can adopt the same ledger model later
+     * without changing their current monitor behavior today.
+     */
+    if (!sport || sport === "all" || sport === "golf") {
+      const { data: golfSlates, error: golfSlatesError } =
+        await supabaseAdmin
+          .from("slates")
+          .select(
+            "id, date, start_date, end_date, sport, display_name"
+          )
+          .eq("sport", "golf");
+
+      if (golfSlatesError) {
+        return NextResponse.json(
+          {
+            error:
+              "Failed to build expected Golf notifications: " +
+              golfSlatesError.message,
+          },
+          { status: 500 }
+        );
+      }
+
+      const relevantGolfSlates = (golfSlates ?? []).filter((slate) => {
+        const rawStartDate =
+          slate.start_date ??
+          slate.date;
+
+        if (!rawStartDate) return false;
+
+        const rawEndDate =
+          slate.end_date ??
+          slate.date ??
+          rawStartDate;
+
+        /*
+         * A Golf tournament spans multiple calendar days.
+         *
+         * Include the slate whenever its date range overlaps the
+         * Notification Monitor's selected day:
+         *
+         *   slateEnd >= rangeStart
+         *   slateStart < rangeEnd
+         *
+         * Do NOT require the tournament itself to start on the selected
+         * day; Round 2/3/4 naturally occur after start_date.
+         */
+        const slateStart =
+          new Date(`${rawStartDate}T00:00:00Z`);
+
+        const slateEnd =
+          new Date(`${rawEndDate}T23:59:59.999Z`);
+
+        if (
+          start &&
+          slateEnd < new Date(start)
+        ) {
+          return false;
+        }
+
+        if (
+          end &&
+          slateStart >= new Date(end)
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+      const golfSlateIds =
+        relevantGolfSlates.map((slate) =>
+          Number(slate.id)
+        );
+
+      if (golfSlateIds.length > 0) {
+        /*
+         * Visible notification history is filtered to the selected day,
+         * but deduplication/reconciliation must use the entire tournament
+         * history. Otherwise a Round 1 notification sent yesterday would
+         * incorrectly appear MISSED while viewing Round 2 today.
+         */
+        const {
+          data: tournamentNotificationHistory,
+          error: tournamentNotificationHistoryError,
+        } = await supabaseAdmin
+          .from("notification_history")
+          .select("event_key")
+          .in("slate_id", golfSlateIds)
+          .eq("notification_type", "player_finished")
+          .not("event_key", "is", null);
+
+        if (tournamentNotificationHistoryError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to reconcile expected Golf notifications: " +
+                tournamentNotificationHistoryError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        for (
+          const row of tournamentNotificationHistory ?? []
+        ) {
+          if (row.event_key) {
+            realEventKeys.add(
+              String(row.event_key)
+            );
+          }
+        }
+
+        const [
+          { data: golfLineups, error: golfLineupsError },
+          { data: eventPlayers, error: eventPlayersError },
+        ] = await Promise.all([
+          supabaseAdmin
+            .from("lineups")
+            .select(
+              `
+                id,
+                slate_id,
+                team_id,
+                lineup_players (
+                  player_id
+                )
+              `
+            )
+            .in("slate_id", golfSlateIds),
+
+          supabaseAdmin
+            .from("golf_event_players")
+            .select(
+              `
+                id,
+                slate_id,
+                player_id,
+                current_round,
+                rounds_completed,
+                status
+              `
+            )
+            .in("slate_id", golfSlateIds),
+        ]);
+
+        if (golfLineupsError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from lineups: " +
+                golfLineupsError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        if (eventPlayersError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from event players: " +
+                eventPlayersError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        const safeGolfLineups =
+          (golfLineups ?? []) as Array<{
+            id: number;
+            slate_id: number;
+            team_id: number;
+            lineup_players:
+              | Array<{ player_id: number }>
+              | null;
+          }>;
+
+        const safeEventPlayers =
+          (eventPlayers ?? []) as Array<{
+            id: number;
+            slate_id: number;
+            player_id: number;
+            current_round: number | null;
+            rounds_completed: number | null;
+            status: string | null;
+          }>;
+
+        const eventPlayerIds =
+          safeEventPlayers.map((row) =>
+            Number(row.id)
+          );
+
+        const { data: golfRounds, error: golfRoundsError } =
+          eventPlayerIds.length > 0
+            ? await supabaseAdmin
+                .from("golf_rounds")
+                .select(
+                  "event_player_id, round_number, holes_completed"
+                )
+                .in("event_player_id", eventPlayerIds)
+            : { data: [], error: null };
+
+        if (golfRoundsError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from rounds: " +
+                golfRoundsError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        const teamIdsForLedger = Array.from(
+          new Set(
+            safeGolfLineups.map((row) =>
+              Number(row.team_id)
+            )
+          )
+        );
+
+        const { data: ledgerUsers, error: ledgerUsersError } =
+          teamIdsForLedger.length > 0
+            ? await supabaseAdmin
+                .from("app_users")
+                .select(
+                  "id, team_id, display_name"
+                )
+                .in(
+                  "team_id",
+                  teamIdsForLedger
+                )
+                .eq("is_active", true)
+            : { data: [], error: null };
+
+        if (ledgerUsersError) {
+          return NextResponse.json(
+            {
+              error:
+                "Failed to build expected Golf notifications from users: " +
+                ledgerUsersError.message,
+            },
+            { status: 500 }
+          );
+        }
+
+        const ledgerUserIds =
+          (ledgerUsers ?? []).map((row) =>
+            String(row.id)
+          );
+
+        const { data: ledgerPreferences } =
+          ledgerUserIds.length > 0
+            ? await supabaseAdmin
+                .from("notification_preferences")
+                .select(
+                  "user_id, notifications_enabled, player_finished_enabled"
+                )
+                .in(
+                  "user_id",
+                  ledgerUserIds
+                )
+            : { data: [] };
+
+        const ledgerUserByTeamId =
+          new Map(
+            (ledgerUsers ?? []).map((row) => [
+              Number(row.team_id),
+              row,
+            ])
+          );
+
+        const ledgerPreferenceByUserId =
+          new Map(
+            (ledgerPreferences ?? []).map((row) => [
+              String(row.user_id),
+              row,
+            ])
+          );
+
+        const ledgerSlateById =
+          new Map(
+            relevantGolfSlates.map((slate) => [
+              Number(slate.id),
+              slate,
+            ])
+          );
+
+        const ledgerEventPlayerBySlatePlayer =
+          new Map(
+            safeEventPlayers.map((row) => [
+              `${Number(row.slate_id)}:${Number(row.player_id)}`,
+              row,
+            ])
+          );
+
+        const ledgerRoundsByEventPlayer =
+          new Map<
+            number,
+            Array<{
+              round_number: number;
+              holes_completed: number | null;
+            }>
+          >();
+
+        for (const round of golfRounds ?? []) {
+          const eventPlayerId =
+            Number(round.event_player_id);
+
+          const existing =
+            ledgerRoundsByEventPlayer.get(
+              eventPlayerId
+            ) ?? [];
+
+          existing.push({
+            round_number:
+              Number(round.round_number),
+            holes_completed:
+              round.holes_completed === null
+                ? null
+                : Number(round.holes_completed),
+          });
+
+          ledgerRoundsByEventPlayer.set(
+            eventPlayerId,
+            existing
+          );
+        }
+
+        /*
+         * Expected Golf notification rounds are determined per golfer.
+         *
+         * Golfers do not all complete a round at the same time. Using
+         * the field-wide maximum rounds_completed advances every golfer
+         * to the next round as soon as the first golfer finishes.
+         *
+         * Instead, each golfer's own rounds_completed determines the
+         * round whose completion notification should currently exist.
+         */
+
+        const ledgerPlayerIds =
+          Array.from(
+            new Set(
+              safeGolfLineups.flatMap((lineup) =>
+                (lineup.lineup_players ?? []).map(
+                  (row) => Number(row.player_id)
+                )
+              )
+            )
+          );
+
+        const { data: ledgerGolfPlayers } =
+          ledgerPlayerIds.length > 0
+            ? await supabaseAdmin
+                .from("golf_players")
+                .select("id, display_name")
+                .in("id", ledgerPlayerIds)
+            : { data: [] };
+
+        const ledgerPlayerNameById =
+          new Map(
+            (ledgerGolfPlayers ?? []).map((row) => [
+              Number(row.id),
+              String(row.display_name),
+            ])
+          );
+
+        for (const lineup of safeGolfLineups) {
+          const slateId =
+            Number(lineup.slate_id);
+
+          const teamId =
+            Number(lineup.team_id);
+
+          const slate =
+            ledgerSlateById.get(slateId);
+
+          if (!slate) continue;
+
+          const user =
+            ledgerUserByTeamId.get(teamId) ??
+            null;
+
+          const preference =
+            user
+              ? ledgerPreferenceByUserId.get(
+                  String(user.id)
+                ) ?? null
+              : null;
+
+          /*
+           * Do not create expected rows for users who have explicitly
+           * disabled player-finished notifications. The monitor should
+           * represent notifications the system is actually expected to
+           * deliver.
+           *
+           * Missing preference rows use the app default: enabled.
+           */
+          if (
+            preference &&
+            (
+              preference.notifications_enabled === false ||
+              preference.player_finished_enabled === false
+            )
+          ) {
+            continue;
+          }
+
+          const slateLabel =
+            String(
+              slate.display_name?.trim() ||
+                slate.start_date ||
+                slate.date ||
+                `Slate ${slateId}`
+            );
+
+          const expectedCreatedAt =
+            `${String(
+              slate.start_date ??
+                slate.date
+            )}T00:00:00.000Z`;
+
+          for (
+            const lineupPlayer of
+              lineup.lineup_players ?? []
+          ) {
+            const playerId =
+              Number(
+                lineupPlayer.player_id
+              );
+
+            const eventPlayer =
+              ledgerEventPlayerBySlatePlayer.get(
+                `${slateId}:${playerId}`
+              );
+
+            if (!eventPlayer) {
+              continue;
+            }
+
+            const rounds =
+              ledgerRoundsByEventPlayer.get(
+                Number(eventPlayer.id)
+              ) ?? [];
+
+            const roundsCompleted =
+              Number(
+                eventPlayer.rounds_completed ?? 0
+              );
+
+            const roundNumber =
+              Math.min(
+                4,
+                Math.max(
+                  1,
+                  roundsCompleted + 1
+                )
+              );
+
+            /*
+             * Do not show tomorrow's expected notification
+             * immediately after today's round is completed.
+             *
+             * Example:
+             *   rounds_completed = 2
+             *   current_round = 2
+             *
+             * Round 2 is done, but Round 3 has not started yet.
+             * The Round 3 WAITING row appears only after the live
+             * provider advances this golfer to current_round = 3.
+             */
+            const currentRound =
+              Number(
+                eventPlayer.current_round ??
+                  0
+              );
+
+            if (
+              roundsCompleted > 0 &&
+              currentRound <= roundsCompleted
+            ) {
+              continue;
+            }
+
+            const eventKey =
+              `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
+
+            /*
+             * If the delivery pipeline already processed this exact
+             * current-round event, the real notification_history row is
+             * authoritative and no synthetic row is needed.
+             */
+            if (
+              realEventKeys.has(eventKey)
+            ) {
+              continue;
+            }
+
+            const persistedRound =
+              rounds.find(
+                (round) =>
+                  Number(
+                    round.round_number
+                  ) === roundNumber
+              ) ?? null;
+
+            /*
+             * A current-round notification becomes MISSED only after
+             * that exact round is genuinely complete.
+             *
+             * Future placeholder round rows do not matter.
+             */
+            const roundComplete =
+              Number(
+                eventPlayer.rounds_completed ??
+                  0
+              ) >= roundNumber ||
+              Number(
+                persistedRound
+                  ?.holes_completed ?? 0
+              ) >= 18;
+
+            const playerName =
+              ledgerPlayerNameById.get(
+                playerId
+              ) ??
+              `Golfer ${playerId}`;
+
+            expectedLedgerRows.push({
+              id:
+                `expected:${eventKey}`,
+              event_key:
+                eventKey,
+              notification_type:
+                "player_finished",
+              user_id:
+                user
+                  ? String(user.id)
+                  : null,
+              team_id:
+                teamId,
+              slate_id:
+                slateId,
+              player_id:
+                playerId,
+              title:
+                `⛳ ${playerName} finished!`,
+              body:
+                roundComplete
+                  ? `${playerName} completed Round ${roundNumber}, but no notification event was recorded.`
+                  : `Waiting for ${playerName} to complete Round ${roundNumber}.`,
+              status:
+                roundComplete
+                  ? "missed"
+                  : "waiting",
+              sent_count: 0,
+              failed_count: 0,
+              skipped: false,
+              reason:
+                roundComplete
+                  ? `Round ${roundNumber} is complete, but no matching notification event reached the delivery pipeline.`
+                  : `Waiting for Round ${roundNumber} completion.`,
+              metadata: {
+                expected: true,
+                roundNumber,
+                roundsCompleted,
+                playerStatus:
+                  eventPlayer.status ??
+                  null,
+                holesCompleted:
+                  persistedRound
+                    ?.holes_completed ??
+                  null,
+                devices: [],
+              },
+              created_at:
+                expectedCreatedAt,
+              completed_at:
+                roundComplete
+                  ? new Date().toISOString()
+                  : null,
+              sport:
+                "golf",
+              recipientName:
+                user?.display_name ??
+                "No recipient",
+              teamName:
+                teamMap.get(teamId) ??
+                `Team ${teamId}`,
+              playerName,
+              slateLabel,
+            });
+          }
+        }
+      }
+    }
+
+    const history = rows.map((row) => {
+      const rowSport = row.slate_id
+        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+        : null;
+
+      return {
+        ...row,
+        sport: rowSport,
+        recipientName: row.user_id
+          ? userMap.get(String(row.user_id)) ??
+            "Unknown user"
+          : "No recipient",
+        teamName: row.team_id
+          ? teamMap.get(Number(row.team_id)) ??
+            `Team ${row.team_id}`
+          : null,
+        playerName: resolvePlayerName(row),
+        slateLabel: row.slate_id
+          ? slateMap.get(Number(row.slate_id)) ??
+            `Slate ${row.slate_id}`
+          : null,
+      };
+    });
+
+    const combinedHistory = [
+      ...history,
+      ...expectedLedgerRows,
+    ].sort(
+      (a, b) =>
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+    );
+
+    const filteredHistory =
+      status
+        ? combinedHistory.filter(
+            (row) =>
+              row.status === status
+          )
+        : combinedHistory;
+
+    const summary = {
+      total: combinedHistory.length,
+      sent: combinedHistory.filter(
+        (row) => row.status === "sent"
+      ).length,
+      partial: combinedHistory.filter(
+        (row) => row.status === "partial"
+      ).length,
+      failed: combinedHistory.filter(
+        (row) => row.status === "failed"
+      ).length,
+      skipped: combinedHistory.filter(
+        (row) => row.status === "skipped"
+      ).length,
+      pending: combinedHistory.filter(
+        (row) => row.status === "pending"
+      ).length,
+      waiting: combinedHistory.filter(
+        (row) => row.status === "waiting"
+      ).length,
+      missed: combinedHistory.filter(
+        (row) => row.status === "missed"
+      ).length,
+      devicesSent: combinedHistory.reduce(
+        (sum, row) =>
+          sum + Number(row.sent_count ?? 0),
+        0
+      ),
+      devicesFailed: combinedHistory.reduce(
+        (sum, row) =>
+          sum + Number(row.failed_count ?? 0),
+        0
+      ),
+    };
+
+    return NextResponse.json({
+      success: true,
+      history: filteredHistory,
+      summary,
+      range: {
+        start,
+        end,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Failed to load notification history",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        error: "Unable to load notification history.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+2. NOTIFICATION HISTORY PAGE — FULL CURRENT FILE
+============================================================
+"use client";
+
+import AppNav from "@/components/AppNav";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+type DeliveryStatus =
+  | "waiting"
+  | "missed"
+  | "pending"
+  | "sent"
+  | "partial"
+  | "failed"
+  | "skipped";
+
+type DeviceResult = {
+  subscriptionId?: string;
+  deviceName?: string;
+  status?: "sent" | "failed";
+  reason?: string;
+  statusCode?: number | null;
+};
+
+type HistoryRow = {
+  id: string;
+  event_key: string;
+  notification_type: string;
+  user_id: string | null;
+  team_id: number | null;
+  slate_id: number | null;
+  player_id: number | null;
+  sport: SportKey | null;
+  title: string;
+  body: string;
+  status: DeliveryStatus;
+  sent_count: number;
+  failed_count: number;
+  skipped?: boolean;
+  reason: string | null;
+  created_at: string;
+  completed_at: string | null;
+  recipientName: string;
+  teamName: string | null;
+  playerName: string | null;
+  slateLabel: string | null;
+  metadata: {
+    devices?: DeviceResult[];
+    [key: string]: unknown;
+  } | null;
+};
+
+type Summary = {
+  total: number;
+  sent: number;
+  partial: number;
+  failed: number;
+  skipped: number;
+  pending: number;
+  waiting: number;
+  missed: number;
+  devicesSent: number;
+  devicesFailed: number;
+};
+
+const EMPTY_SUMMARY: Summary = {
+  total: 0,
+  sent: 0,
+  partial: 0,
+  failed: 0,
+  skipped: 0,
+  pending: 0,
+  waiting: 0,
+  missed: 0,
+  devicesSent: 0,
+  devicesFailed: 0,
+};
+
+const STATUS_STYLES: Record<
+  DeliveryStatus,
+  string
+> = {
+  waiting:
+    "border-sky-700 bg-sky-950/50 text-sky-300",
+  missed:
+    "border-red-700 bg-red-950/60 text-red-200",
+  sent:
+    "border-emerald-700 bg-emerald-950/50 text-emerald-300",
+  partial:
+    "border-amber-700 bg-amber-950/50 text-amber-300",
+  failed:
+    "border-red-700 bg-red-950/50 text-red-300",
+  skipped:
+    "border-slate-600 bg-slate-800 text-slate-300",
+  pending:
+    "border-sky-700 bg-sky-950/50 text-sky-300",
+};
+
+function getTypeLabel(row: HistoryRow) {
+  if (row.notification_type === "draft_turn") {
+    return "Draft Turn";
+  }
+
+  if (row.notification_type === "draft_final_pick") {
+    return row.sport === "golf"
+      ? "Last Draft Pick"
+      : "Final Draft Pick";
+  }
+
+  if (row.notification_type === "player_finished") {
+    return row.sport === "golf"
+      ? "Golfer Finished"
+      : "Player Finished";
+  }
+
+  if (row.notification_type === "slate_complete") {
+    return row.sport === "golf"
+      ? "Tournament Complete"
+      : "Slate Complete";
+  }
+
+  if (
+    row.notification_type === "slate_complete_winner"
+  ) {
+    return row.sport === "golf"
+      ? "Tournament Winner"
+      : "Slate Winner";
+  }
+
+  if (row.notification_type === "push_test") {
+    return "Push Test";
+  }
+
+  return row.notification_type;
+}
+
+function getSportLabel(sport: SportKey | null) {
+  if (sport === "golf") return "⛳ Golf";
+  if (sport === "nfl") return "🏈 NFL";
+  if (sport === "nba") return "🏀 NBA";
+  return "General";
+}
+
+function localDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function dateRangeForKey(dateKey: string) {
+  const [year, month, day] = dateKey
+    .split("-")
+    .map(Number);
+
+  const start = new Date(
+    year,
+    month - 1,
+    day,
+    0,
+    0,
+    0,
+    0
+  );
+
+  const end = new Date(
+    year,
+    month - 1,
+    day + 1,
+    0,
+    0,
+    0,
+    0
+  );
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+}
+
+function buildDateOptions() {
+  const today = new Date();
+
+  return Array.from(
+    { length: 1 },
+    (_, index) => {
+      const date = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() - index
+      );
+
+      const key = localDateKey(date);
+
+      let label = date.toLocaleDateString(
+        undefined,
+        {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year:
+            date.getFullYear() !==
+            today.getFullYear()
+              ? "numeric"
+              : undefined,
+        }
+      );
+
+      if (index === 0) {
+        label = `Today · ${label}`;
+      } else if (index === 1) {
+        label = `Yesterday · ${label}`;
+      }
+
+      return {
+        key,
+        label,
+      };
+    }
+  );
+}
+
+function formatTime(
+  value: string,
+  isExpected = false
+) {
+  if (isExpected) {
+    return "—";
+  }
+
+  return new Date(value).toLocaleTimeString(
+    undefined,
+    {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+    }
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: number;
+  detail?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+
+      <div className="mt-1 text-2xl font-black text-white">
+        {value}
+      </div>
+
+      {detail ? (
+        <div className="mt-1 text-xs text-slate-400">
+          {detail}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default function NotificationHistoryPage() {
+  const dateOptions = useMemo(
+    () => buildDateOptions(),
+    []
+  );
+
+  const [selectedDate, setSelectedDate] =
+    useState(() => localDateKey(new Date()));
+
+  const [history, setHistory] = useState<
+    HistoryRow[]
+  >([]);
+
+  const [summary, setSummary] =
+    useState<Summary>(EMPTY_SUMMARY);
+
+  const [typeFilter, setTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState("");
+  const [sportFilter, setSportFilter] =
+    useState("all");
+  const [searchFilter, setSearchFilter] =
+    useState("");
+
+  const [expandedRows, setExpandedRows] =
+    useState<Set<string>>(new Set());
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const [
+    actionRowId,
+    setActionRowId,
+  ] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setMessage("");
+
+      const params = new URLSearchParams();
+
+      const range =
+        dateRangeForKey(selectedDate);
+
+      params.set("start", range.start);
+      params.set("end", range.end);
+
+      if (typeFilter) {
+        params.set("type", typeFilter);
+      }
+
+      if (statusFilter) {
+        params.set("status", statusFilter);
+      }
+
+      if (
+        sportFilter &&
+        sportFilter !== "all"
+      ) {
+        params.set("sport", sportFilter);
+      }
+
+      const response = await fetch(
+        `/api/admin/notification-history?${params.toString()}`,
+        {
+          cache: "no-store",
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ||
+            "Failed to load notification history."
+        );
+        return;
+      }
+
+      setHistory(result.history ?? []);
+      setSummary(
+        result.summary ?? EMPTY_SUMMARY
+      );
+      setExpandedRows(new Set());
+    } catch (error) {
+      console.error(error);
+
+      setMessage(
+        "Something went wrong while loading notification history."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [
+    selectedDate,
+    statusFilter,
+    typeFilter,
+    sportFilter,
+  ]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
+
+  const visibleHistory = useMemo(() => {
+    const search =
+      searchFilter.trim().toLowerCase();
+
+    if (!search) return history;
+
+    return history.filter((row) => {
+      const deviceNames =
+        row.metadata?.devices?.map(
+          (device) => device.deviceName
+        ) ?? [];
+
+      return [
+        row.recipientName,
+        row.teamName,
+        row.playerName,
+        row.slateLabel,
+        row.title,
+        row.body,
+        row.event_key,
+        row.reason,
+        ...deviceNames,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value)
+            .toLowerCase()
+            .includes(search)
+        );
+    });
+  }, [history, searchFilter]);
+
+  async function runRecoveryAction(
+    row: HistoryRow,
+    action: "send" | "retry"
+  ) {
+    if (actionRowId) {
+      return;
+    }
+
+    try {
+      setActionRowId(row.id);
+      setMessage("");
+
+      const response = await fetch(
+        "/api/admin/notification-history/action",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            action,
+            historyId:
+              row.id.startsWith(
+                "expected:"
+              )
+                ? null
+                : row.id,
+            eventKey:
+              row.event_key,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error ||
+            "Notification recovery failed."
+        );
+        return;
+      }
+
+      await loadHistory();
+    } catch (error) {
+      console.error(error);
+
+      setMessage(
+        "Something went wrong while recovering the notification."
+      );
+    } finally {
+      setActionRowId(null);
+    }
+  }
+
+  function toggleRow(id: string) {
+    setExpandedRows((current) => {
+      const next = new Set(current);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-3 py-5 text-slate-100 sm:px-4 sm:py-6">
+      <div className="mx-auto max-w-[1500px] space-y-5">
+        <AppNav />
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-sky-400">
+                Admin Operations
+              </div>
+
+              <h1 className="mt-1 text-3xl font-black tracking-tight">
+                Notification Monitor
+              </h1>
+
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                Expected-event and delivery audit for 111 Sports.
+                Golf round-finished notifications appear here before
+                delivery, making missing triggers visible alongside
+                successful and failed pushes.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void loadHistory()}
+              disabled={isLoading}
+              className="rounded-xl border border-slate-600 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:opacity-50"
+            >
+              {isLoading
+                ? "Refreshing…"
+                : "Refresh"}
+            </button>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-9">
+          <SummaryCard
+            label="Expected"
+            value={summary.total}
+          />
+
+          <SummaryCard
+            label="Waiting"
+            value={summary.waiting}
+          />
+
+          <SummaryCard
+            label="Missed"
+            value={summary.missed}
+          />
+
+          <SummaryCard
+            label="Sent"
+            value={summary.sent}
+          />
+
+          <SummaryCard
+            label="Partial"
+            value={summary.partial}
+          />
+
+          <SummaryCard
+            label="Failed"
+            value={summary.failed}
+          />
+
+          <SummaryCard
+            label="Skipped"
+            value={summary.skipped}
+          />
+
+          <SummaryCard
+            label="Pending"
+            value={summary.pending}
+          />
+
+          <SummaryCard
+            label="Devices"
+            value={summary.devicesSent}
+            detail={
+              summary.devicesFailed > 0
+                ? `${summary.devicesFailed} failed`
+                : "0 failed"
+            }
+          />
+        </section>
+
+        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+            <label className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                Date
+              </span>
+
+              <select
+                value={selectedDate}
+                onChange={(event) =>
+                  setSelectedDate(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+              >
+                {dateOptions.map((option) => (
+                  <option
+                    key={option.key}
+                    value={option.key}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                Sport
+              </span>
+
+              <select
+                value={sportFilter}
+                onChange={(event) =>
+                  setSportFilter(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+              >
+                <option value="all">
+                  All sports
+                </option>
+                <option value="nba">NBA</option>
+                <option value="nfl">NFL</option>
+                <option value="golf">Golf</option>
+              </select>
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                Type
+              </span>
+
+              <select
+                value={typeFilter}
+                onChange={(event) =>
+                  setTypeFilter(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+              >
+                <option value="">
+                  All notification types
+                </option>
+                <option value="draft_turn">
+                  Draft Turn
+                </option>
+                <option value="draft_final_pick">
+                  Final / Last Draft Pick
+                </option>
+                <option value="player_finished">
+                  Athlete Finished
+                </option>
+                <option value="slate_complete">
+                  Slate / Tournament Complete
+                </option>
+                <option value="slate_complete_winner">
+                  Slate / Tournament Winner
+                </option>
+                <option value="push_test">
+                  Push Test
+                </option>
+              </select>
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                Status
+              </span>
+
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+              >
+                <option value="">
+                  All statuses
+                </option>
+                <option value="waiting">
+                  Waiting
+                </option>
+                <option value="missed">
+                  Missed
+                </option>
+                <option value="sent">
+                  Sent
+                </option>
+                <option value="partial">
+                  Partial
+                </option>
+                <option value="failed">
+                  Failed
+                </option>
+                <option value="skipped">
+                  Skipped
+                </option>
+                <option value="pending">
+                  Pending
+                </option>
+              </select>
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                Search
+              </span>
+
+              <input
+                type="search"
+                value={searchFilter}
+                onChange={(event) =>
+                  setSearchFilter(
+                    event.target.value
+                  )
+                }
+                placeholder="Person, athlete, event…"
+                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600"
+              />
+            </label>
+          </div>
+        </section>
+
+        {message ? (
+          <div className="rounded-2xl border border-red-700 bg-red-950/60 px-4 py-3 text-sm text-red-200">
+            {message}
+          </div>
+        ) : null}
+
+        <section className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 shadow-sm">
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-slate-400">
+              Loading notification monitor…
+            </div>
+          ) : visibleHistory.length === 0 ? (
+            <div className="p-10 text-center text-sm text-slate-400">
+              No notification records match
+              this date and filter set.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-[1200px] w-full border-collapse text-left text-xs">
+                <thead className="bg-slate-950 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-3 py-3">
+                      Time
+                    </th>
+                    <th className="px-3 py-3">
+                      Sport
+                    </th>
+                    <th className="px-3 py-3">
+                      Type
+                    </th>
+                    <th className="px-3 py-3">
+                      Recipient
+                    </th>
+                    <th className="px-3 py-3">
+                      Athlete
+                    </th>
+                    <th className="px-3 py-3">
+                      Event
+                    </th>
+                    <th className="px-3 py-3">
+                      Status
+                    </th>
+                    <th className="px-3 py-3 text-center">
+                      Sent
+                    </th>
+                    <th className="px-3 py-3 text-center">
+                      Failed
+                    </th>
+                    <th className="px-3 py-3">
+                      Result
+                    </th>
+                    <th className="px-3 py-3 text-right">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {visibleHistory.map((row) => {
+                    const expanded =
+                      expandedRows.has(row.id);
+
+                    const devices =
+                      row.metadata?.devices ?? [];
+
+                    return (
+                      <Fragment key={row.id}>
+                        <tr
+                          className="border-t border-slate-800 align-top hover:bg-slate-800/50"
+                        >
+                          <td className="whitespace-nowrap px-3 py-3 font-mono text-slate-300">
+                            {formatTime(
+                              row.created_at,
+                              row.id.startsWith(
+                                "expected:"
+                              )
+                            )}
+                          </td>
+
+                          <td className="whitespace-nowrap px-3 py-3">
+                            {getSportLabel(
+                              row.sport
+                            )}
+                          </td>
+
+                          <td className="whitespace-nowrap px-3 py-3 font-semibold text-slate-200">
+                            {getTypeLabel(row)}
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <div className="font-semibold text-white">
+                              {
+                                row.recipientName
+                              }
+                            </div>
+
+                            {row.teamName &&
+                            row.teamName !==
+                              row.recipientName ? (
+                              <div className="mt-0.5 text-[10px] text-slate-500">
+                                {row.teamName}
+                              </div>
+                            ) : null}
+                          </td>
+
+                          <td className="px-3 py-3 text-slate-300">
+                            {row.playerName ??
+                              "—"}
+                          </td>
+
+                          <td className="max-w-[220px] px-3 py-3 text-slate-300">
+                            <div className="truncate">
+                              {row.slateLabel ??
+                                "—"}
+                            </div>
+                          </td>
+
+                          <td className="px-3 py-3">
+                            <span
+                              className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${
+                                STATUS_STYLES[
+                                  row.status
+                                ]
+                              }`}
+                            >
+                              {row.status}
+                            </span>
+                          </td>
+
+                          <td className="px-3 py-3 text-center font-mono text-emerald-300">
+                            {row.sent_count}
+                          </td>
+
+                          <td className="px-3 py-3 text-center font-mono text-red-300">
+                            {row.failed_count}
+                          </td>
+
+                          <td className="max-w-[260px] px-3 py-3 text-slate-400">
+                            <div className="truncate">
+                              {row.reason ??
+                                (row.status ===
+                                "sent"
+                                  ? "Delivered"
+                                  : row.status ===
+                                      "waiting"
+                                    ? "Awaiting event"
+                                    : row.status ===
+                                        "missed"
+                                      ? "Expected event missing"
+                                      : "—")}
+                            </div>
+                          </td>
+
+                          <td className="px-3 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {row.status ===
+                              "missed" ? (
+                                <button
+                                  type="button"
+                                  disabled={
+                                    actionRowId !==
+                                    null
+                                  }
+                                  onClick={() =>
+                                    void runRecoveryAction(
+                                      row,
+                                      "send"
+                                    )
+                                  }
+                                  className="rounded-lg border border-emerald-700 bg-emerald-950/40 px-2.5 py-1.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-950 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {actionRowId ===
+                                  row.id
+                                    ? "Sending…"
+                                    : "Send"}
+                                </button>
+                              ) : null}
+
+                              {row.status ===
+                              "failed" ? (
+                                <button
+                                  type="button"
+                                  disabled={
+                                    actionRowId !==
+                                    null
+                                  }
+                                  onClick={() =>
+                                    void runRecoveryAction(
+                                      row,
+                                      "retry"
+                                    )
+                                  }
+                                  className="rounded-lg border border-amber-700 bg-amber-950/40 px-2.5 py-1.5 text-[11px] font-bold text-amber-300 hover:bg-amber-950 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                  {actionRowId ===
+                                  row.id
+                                    ? "Retrying…"
+                                    : "Retry"}
+                                </button>
+                              ) : null}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  toggleRow(
+                                    row.id
+                                  )
+                                }
+                                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[11px] font-semibold text-sky-300 hover:border-sky-600"
+                              >
+                                {expanded
+                                  ? "Hide"
+                                  : "Details"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {expanded ? (
+                          <tr
+                            key={`${row.id}-detail`}
+                            className="border-t border-slate-800 bg-slate-950/70"
+                          >
+                            <td
+                              colSpan={11}
+                              className="px-4 py-4"
+                            >
+                              <div className="grid gap-4 lg:grid-cols-3">
+                                <div>
+                                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                    Notification
+                                  </div>
+
+                                  <div className="mt-2 font-semibold text-white">
+                                    {row.title}
+                                  </div>
+
+                                  <div className="mt-1 text-sm leading-5 text-slate-300">
+                                    {row.body}
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1 font-mono text-[11px] text-slate-400">
+                                  <div>
+                                    Event key:{" "}
+                                    <span className="text-slate-200">
+                                      {
+                                        row.event_key
+                                      }
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    History ID:{" "}
+                                    <span className="text-slate-200">
+                                      {row.id}
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    User ID:{" "}
+                                    <span className="text-slate-200">
+                                      {row.user_id ??
+                                        "—"}
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    Team ID:{" "}
+                                    <span className="text-slate-200">
+                                      {row.team_id ??
+                                        "—"}
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    Player ID:{" "}
+                                    <span className="text-slate-200">
+                                      {row.player_id ??
+                                        "—"}
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    Slate ID:{" "}
+                                    <span className="text-slate-200">
+                                      {row.slate_id ??
+                                        "—"}
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    Created:{" "}
+                                    <span className="text-slate-200">
+                                      {new Date(
+                                        row.created_at
+                                      ).toLocaleString()}
+                                    </span>
+                                  </div>
+
+                                  <div>
+                                    Completed:{" "}
+                                    <span className="text-slate-200">
+                                      {row.completed_at
+                                        ? new Date(
+                                            row.completed_at
+                                          ).toLocaleString()
+                                        : "—"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                                      Device delivery
+                                    </div>
+
+                                    <div className="text-[10px] text-slate-500">
+                                      {row.sent_count} sent
+                                      ·{" "}
+                                      {
+                                        row.failed_count
+                                      }{" "}
+                                      failed
+                                    </div>
+                                  </div>
+
+                                  {devices.length ===
+                                  0 ? (
+                                    <div className="mt-2 text-xs text-slate-500">
+                                      No individual
+                                      device details
+                                      recorded.
+                                    </div>
+                                  ) : (
+                                    <div className="mt-2 space-y-1.5">
+                                      {devices.map(
+                                        (
+                                          device,
+                                          index
+                                        ) => (
+                                          <div
+                                            key={
+                                              device.subscriptionId ??
+                                              `${row.id}-${index}`
+                                            }
+                                            className="flex items-start justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-2 text-xs"
+                                          >
+                                            <div>
+                                              <div className="font-semibold text-slate-200">
+                                                {device.deviceName ??
+                                                  "Unknown device"}
+                                              </div>
+
+                                              {device.reason ? (
+                                                <div className="mt-0.5 text-[10px] text-red-300">
+                                                  {
+                                                    device.reason
+                                                  }
+                                                  {device.statusCode
+                                                    ? ` (${device.statusCode})`
+                                                    : ""}
+                                                </div>
+                                              ) : null}
+                                            </div>
+
+                                            <div
+                                              className={
+                                                device.status ===
+                                                "sent"
+                                                  ? "font-bold text-emerald-400"
+                                                  : "font-bold text-red-400"
+                                              }
+                                            >
+                                              {device.status ===
+                                              "sent"
+                                                ? "✓ SENT"
+                                                : "✕ FAILED"}
+                                            </div>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {row.metadata ? (
+                                <details className="mt-4">
+                                  <summary className="cursor-pointer text-xs font-semibold text-slate-400 hover:text-slate-200">
+                                    Raw metadata
+                                  </summary>
+
+                                  <pre className="mt-2 max-h-72 overflow-auto rounded-xl border border-slate-800 bg-black/30 p-3 text-[10px] leading-4 text-slate-400">
+                                    {JSON.stringify(
+                                      row.metadata,
+                                      null,
+                                      2
+                                    )}
+                                  </pre>
+                                </details>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-4 py-3 text-xs leading-5 text-slate-400">
+          <span className="font-bold text-slate-300">
+            Expected-event ledger:
+          </span>{" "}
+          Golf round-finished notifications now appear before delivery.
+          Waiting means the drafted golfer has not completed that round.
+          Missed means the persisted round is complete but no matching
+          notification event reached the delivery pipeline. Delivery
+          records remain authoritative once an event is created.
+        </div>
+      </div>
+    </main>
+  );
+}
+
+============================================================
+3. SHOTCAST REPLAY PANEL — STATE/EFFECTS
+============================================================
+}
+
+export default function GolfHoleReplayPanel({
+  slateId,
+  playerId,
+  roundNumber,
+  holeNumber,
+  fallbackPar,
+  fallbackYardage,
+  fallbackResult,
+  onClose,
+  onReconciled,
+}: Props) {
+  const [replay, setReplay] =
+    useState<Replay | null>(null);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const [lastUpdatedAt, setLastUpdatedAt] =
+    useState<Date | null>(null);
+
+  const [
+    selectedStrokeNumber,
+    setSelectedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    isShotCastOpen,
+    setIsShotCastOpen,
+  ] = useState(true);
+
+  /*
+   * A new golfer / round / hole is a new replay.
+   *
+   * Do not allow a stroke number from the previous replay to
+   * survive merely because the next hole also has (for example)
+   * a Stroke 2.
+   */
+  useEffect(() => {
+    setSelectedStrokeNumber(null);
+    setReplay(null);
+    setMessage("");
+  }, [
+    slateId,
+    playerId,
+    roundNumber,
+    holeNumber,
+  ]);
+
+  const [
+    isAllShotsOpen,
+    setIsAllShotsOpen,
+  ] = useState(false);
+
+  /*
+   * Keep the latest reconciliation callback without making the replay
+   * fetch depend on the callback's identity.
+   *
+   * GolfPlayerModal passes onReconciled inline, so its function identity
+   * changes whenever the scorecard rerenders. If loadReplay depends on it,
+   * the loading effect restarts and creates a request loop.
+   */
+  const onReconciledRef =
+    useRef(onReconciled);
+
+  useEffect(() => {
+    onReconciledRef.current =
+      onReconciled;
+  }, [onReconciled]);
+
+  const [
+    shotCastManifest,
+    setShotCastManifest,
+  ] = useState<ShotCastManifest | null>(
+    null,
+  );
+
+  const [
+    isManifestLoading,
+    setIsManifestLoading,
+  ] = useState(false);
+
+  const loadReplay = useCallback(
+    async ({
+      forceRefresh = false,
+      signal,
+    }: {
+      forceRefresh?: boolean;
+      signal?: AbortSignal;
+    } = {}) => {
+      try {
+        if (forceRefresh) {
+          setIsRefreshing(true);
+        } else {
+          setIsLoading(true);
+          setReplay(null);
+        }
+
+        setMessage("");
+
+        const query =
+          new URLSearchParams({
+            slateId: String(slateId),
+            playerId: String(playerId),
+            round: String(roundNumber),
+            hole: String(holeNumber),
+          });
+
+        if (forceRefresh) {
+          query.set(
+            "refresh",
+            String(Date.now()),
+          );
+        }
+
+        const response = await fetch(
+          `/api/golf/hole-replay?${query}`,
+          {
+            cache: "no-store",
+            signal,
+          },
+        );
+
+        const result =
+          (await response.json()) as ResponseBody;
+
+        if (!response.ok) {
+          setMessage(
+            result.error ||
+              "Unable to load shot tracking.",
+          );
+          return;
+        }
+
+        if (!result.replay) {
+          setMessage(
+            result.message ||
+              "Shot tracking is not available for this hole yet.",
+          );
+          return;
+        }
+
+        setReplay(result.replay);
+
+        /*
+         * Temporary PGA pin-coordinate audit.
+         *
+         * Compare the authoritative hole pin with the latest
+         * live shot in every coordinate frame we currently have.
+         */
+        {
+          const latestShot =
+            result.replay.shots.length > 0
+              ? result.replay.shots[
+                  result.replay.shots.length - 1
+                ]
+              : null;
+
+          console.log(
+            "[PGA LIVE PIN AUDIT]",
+            {
+              tournamentId:
+                result.replay.tournamentId,
+              hole:
+                result.replay.holeNumber,
+
+              pinWorld:
+                result.replay.pinWorld,
+
+              shotCount:
+                result.replay.shots.length,
+
+              latestStroke:
+                latestShot?.strokeNumber ??
+                null,
+
+              latestWorldTo:
+                latestShot?.worldTo ??
+                null,
+
+              latestBottomToTop:
+                latestShot?.bottomToTop ??
+                null,
+
+              latestGreenBottomToTop:
+                latestShot?.greenBottomToTop ??
+                null,
+            },
+          );
+        }
+
+        if (
+          result.reconciledHole &&
+          onReconciledRef.current
+        ) {
+          onReconciledRef.current(
+            result.reconciledHole,
+          );
+        }
+
+        if (!result.available) {
+          setMessage(
+            result.message ||
+              "This hole has not started yet.",
+          );
+        }
+
+        setSelectedStrokeNumber(
+          (current) => {
+            const shots =
+              result.replay?.shots ?? [];
+
+            if (forceRefresh) {
+              return (
+                shots.at(-1)
+                  ?.strokeNumber ??
+                null
+              );
+            }
+
+            if (
+              current !== null &&
+              shots.some(
+                (shot) =>
+                  shot.strokeNumber ===
+                  current,
+              )
+            ) {
+              return current;
+            }
+
+            return (
+              shots[0]
+                ?.strokeNumber ??
+              null
+            );
+          },
+        );
+
+        setLastUpdatedAt(new Date());
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.error(
+          "Unable to load Golf hole replay",
+          error,
+        );
+
+        setMessage(
+          "Unable to load shot tracking.",
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [
+      slateId,
+      playerId,
+      roundNumber,
+      holeNumber,
+    ],
+  );
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    void loadReplay({
+      forceRefresh: true,
+      signal: controller.signal,
+    });
+
+    return () => controller.abort();
+  }, [loadReplay]);
+
+  useEffect(() => {
+    const tournamentId =
+      replay?.tournamentId?.trim() ?? "";
+
+    if (!tournamentId) {
+      setShotCastManifest(null);
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    async function loadManifest() {
+      try {
+        setIsManifestLoading(true);
+
+        const databaseResponse =
+          await fetch(
+            `/api/golf/shotcast-manifest?tournamentId=${encodeURIComponent(
+              tournamentId,
+            )}`,
+            {
+              cache: "no-store",
+              signal:
+                controller.signal,
+            },
+          );
+
+        if (databaseResponse.ok) {
+          const manifest =
+            (await databaseResponse.json()) as ShotCastManifest;
+
+          setShotCastManifest(
+            manifest,
+          );
+
+          return;
+        }
+
+        /*
+         * Preserve previously committed static manifests,
+         * including the current Wyndham checkpoint.
+         */
+        const staticResponse =
+          await fetch(
+            `/shotcast/${encodeURIComponent(
+              tournamentId,
+            )}/manifest.json`,
+            {
+              cache: "no-store",
+              signal:
+                controller.signal,
+            },
+          );
+
+        if (!staticResponse.ok) {
+          setShotCastManifest(null);
+          return;
+        }
+
+        const manifest =
+          (await staticResponse.json()) as ShotCastManifest;
+
+        setShotCastManifest(manifest);
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.warn(
+          "Unable to load ShotCast manifest",
+          error,
+        );
+
+        setShotCastManifest(null);
+      } finally {
+        setIsManifestLoading(false);
+      }
+    }
+
+    void loadManifest();
+
+    return () => controller.abort();
+  }, [replay?.tournamentId]);
+
+  /*
+   * Hole-level PGA metadata is independent of the golfer's
+   * ShotDetails payload.
+   */
+  const manifestHole =
+    useMemo(
+      () =>
+        shotCastManifest
+          ?.holes.find(
+            (hole) =>
+              Number(
+                hole.holeNumber,
+              ) ===
+              holeNumber,
+          ) ??
+        null,
+      [
+        holeNumber,
+        shotCastManifest,
+      ],
+    );
+
+  /*
+   * PGA getTeeAndPinFromEventData() selects pinsTees by round.
+   * Match that behavior rather than hardcoding Round 1.
+   */
+  /*
+   * TOURCAST courseData may publish either:
+   *
+   * - multiple pin/tee sets, or
+   * - one authoritative set at pinsTees[0].
+   *
+   * St. Jude publishes one set. Prefer a round-specific
+   * value when PGA actually provides one, otherwise use
+   * PGA's sole authoritative set rather than returning null.
+   */
+  const authoritativePinWorld =
+    manifestHole
+      ?.pinWorldByRound?.[
+        Math.max(
+          0,
+          roundNumber - 1,
+        )
+      ] ??
+    manifestHole
+      ?.pinWorldByRound?.[0] ??
+    null;
+
+  /*
+   * PGA's dedicated Green View pin is already normalized
+   * against the enhanced bottom-to-top green image.
+   *
+   * The ordinary x/y values may be -1 sentinels here.
+   * enhancedX/enhancedY are the coordinates we want.
+   */
+  const authoritativeGreenPin =
+    (() => {
+      const pin =
+        manifestHole
+          ?.pinGreen
+          ?.bottomToTop;
+
+      const x =
+        pin?.enhancedX;
+
+      const y =
+        pin?.enhancedY;
+
+      if (
+        typeof x !== "number" ||
+        typeof y !== "number" ||
+        !Number.isFinite(x) ||
+        !Number.isFinite(y) ||
+        x < 0 ||
+        x > 1 ||
+        y < 0 ||
+        y > 1
+      ) {
+        return null;
+      }
+
+      return {
+        x,
+        y,
+      };
+    })();
+
+  const activeShotCastConfig =
+    useMemo<ActiveShotCastConfig | null>(
+      () => {
+        /*
+         * AUTHORITATIVE COURSE VIEW
+         * -------------------------
+         *
+         * PGA pinsTees and terrainNN.tfw share the same raw
+         * TOURCAST coordinate system.
+         *
+         * Never project pinsTees onto the V3 enhanced pickle:
+         * that image uses a different normalized frame.
+         */
+        if (
+          authoritativePinWorld &&
+          manifestHole
+            ?.localAlignedMapUrl &&
+          manifestHole
+            ?.calibration
+            ?.affine
+        ) {
+          return {
+            title:
+              `ShotCast · Hole ${holeNumber}`,
+            imageUrl:
+              manifestHole
+                .localAlignedMapUrl,
+            imageFit: "fill",
+            calibration:
+              manifestHole.calibration,
+            calibrationVerified:
+              true,
+            aboutThisHole:
+              manifestHole
+                .aboutThisHole ??
+              null,
+          };
+        }
+
+        /*
+         * PRIMARY PATH:
+         *
+         * PGA TOURCAST V3 already supplies the exact
+         * bottom-to-top image and normalized coordinates.
+         *
+         * No terrain image, TFW, manual calibration, or
+         * admin import is required.
+         */
+        if (
+          replay?.shotcast?.verified ===
+            true &&
+          replay.shotcast.imageUrl
+        ) {
+          return {
+            title: `ShotCast · Hole ${holeNumber}`,
+            imageUrl:
+              replay.shotcast.imageUrl,
+            imageFit: "fill",
+            calibration: {
+              ...IDENTITY_CALIBRATION,
+              verified: true,
+              source:
+                replay.shotcast.source,
+            },
+            calibrationVerified: true,
+            aboutThisHole:
+              null,
+          };
+        }
+
+        /*
+         * FALLBACK:
+         *
+         * Preserve the verified Rocket Classic proof of
+         * concept until all historical events use V3.
+         */
+        if (
+          slateId === 161 &&
+          holeNumber === 8
+        ) {
+          return {
+            title:
+              "Detroit Golf Club · Hole 8",
+            imageUrl:
+              "/tourcast/rocket-classic/hole-8/terrain08-web.jpg",
+            imageFit: "fill",
+            calibration:
+              DETROIT_HOLE_8_CALIBRATION,
+            calibrationVerified: true,
+            aboutThisHole: null,
+          };
+        }
+
+        const imageUrl =
+          manifestHole
+            ?.localAlignedMapUrl ||
+          manifestHole
+            ?.localImageUrl ||
+          null;
+
+        if (!imageUrl) {
+          return null;
+        }
+
+        const calibration =
+          manifestHole?.calibration &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xOffset,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yOffset,
+          )
+            ? manifestHole.calibration
+            : IDENTITY_CALIBRATION;
+
+        return {
+          title: `${
+            shotCastManifest?.course
+              .name ||
+            "Golf course"
+          } · Hole ${holeNumber}`,
+
+          imageUrl,
+
+          imageFit:
+            manifestHole
+              ?.localAlignedMapUrl
+              ? "fill"
+              : "contain",
+
+          calibration,
+
+          calibrationVerified:
+            calibration.verified ===
+            true,
+
+          aboutThisHole:
+            manifestHole
+              ?.aboutThisHole ??
+            null,
+        };
+      },
+      [
+        holeNumber,
+        replay,
+        shotCastManifest,
+        slateId,
+      ],
+    );
+
+  const isHoleComplete = useMemo(
+    () =>
+      Boolean(
+        replay?.shots.some(
+          (shot) => shot.finalStroke,
+        ),
+      ),
+    [replay],
+  );
+
+  /*
+   * While a live ShotCast is actually open, refresh PGA
+   * shot data every 30 seconds.
+   *
+   * Stop polling when:
+   * - ShotCast closes
+   * - the hole is complete
+   * - this component unmounts
+   *
+   * Also skip requests while the browser tab is hidden.
+   */
+  useEffect(() => {
+    if (
+      !isShotCastOpen ||
+      isHoleComplete
+    ) {
+      return;
+    }
+
+    const refreshLiveShotCast = () => {
+      if (
+        document.visibilityState !==
+        "visible"
+      ) {
+        return;
+      }
+
+      void loadReplay({
+        forceRefresh: true,
+      });
+    };
+
+    const intervalId =
+      window.setInterval(
+        refreshLiveShotCast,
+        30_000,
+      );
+
+    return () => {
+      window.clearInterval(
+        intervalId,
+      );
+    };
+  }, [
+    isHoleComplete,
+    isShotCastOpen,
+    loadReplay,
+  ]);
+
+  /*
+   * PGA's holeStatus can occasionally collapse exceptional
+   * scores into a broader label (for example, reporting a
+   * 2 on a par 5 as "Eagle").
+   *
+   * Once the hole is complete we have enough authoritative
+   * information to derive the result ourselves from strokes
+   * and par. Prefer that calculation over the provider label.
+   */
+  const completedResult = useMemo(() => {
+    if (!isHoleComplete) {
+      return "";
+    }
+
+    const completedStrokes =
+      replay?.shots.length
+        ? Math.max(
+            ...replay.shots.map(
+              (shot) =>
+                Number(
+                  shot.strokeNumber ?? 0,
+                ),
+            ),
+          )
+        : null;
+
+    const holePar =
+      replay?.par ?? fallbackPar;
+
+    if (
+      completedStrokes !== null &&
+      Number.isFinite(completedStrokes) &&
+      completedStrokes > 0 &&
+      holePar !== null &&
+      holePar !== undefined &&
+      Number.isFinite(Number(holePar))
+    ) {
+      const relative =
+        completedStrokes -
+        Number(holePar);
+
+      if (relative <= -4) {
+        return "Condor";
+      }
+
+      if (relative === -3) {
+        return "Albatross";
+      }
+
+      if (relative === -2) {
+        return "Eagle";
+      }
+
+      if (relative === -1) {
+        return "Birdie";
+      }
+
+      if (relative === 0) {
+        return "Par";
+      }
+
+      if (relative === 1) {
+        return "Bogey";
+      }
+
+      if (relative === 2) {
+        return "Double Bogey";
+      }
+
+      if (relative === 3) {
+        return "Triple Bogey";
+      }
+
+      return `+${relative}`;
+    }
+
+    return (
+      fallbackResult ||
+      titleCase(replay?.holeStatus) ||
+
+============================================================
+4. SHOTCAST MAP — ALL STATE/EFFECT/CAMERA LOGIC
+============================================================
+export default function GolfHoleMap2D({
+  title,
+  imageUrl,
+  greenImageUrl = null,
+  greenModelUrl = null,
+  pinWorld = null,
+  greenPin = null,
+  shots,
+  selectedStrokeNumber,
+  onSelectStroke,
+  calibration,
+  showShotOverlay = true,
+  imageFit = "fill",
+  emptyStateLabel = "No shot data is available yet.",
+}: Props) {
+  const viewportRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const videoPanelRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const pointersRef =
+    useRef(
+      new Map<number, PointerPosition>(),
+    );
+
+  const dragStartRef =
+    useRef<{
+      pointer: PointerPosition;
+      transform: TransformState;
+    } | null>(null);
+
+  const gestureStartRef =
+    useRef<GestureSnapshot | null>(
+      null,
+    );
+
+  const [transform, setTransform] =
+    useState<TransformState>(
+      DEFAULT_TRANSFORM,
+    );
+
+  const [isInteracting, setIsInteracting] =
+    useState(false);
+
+  const [isPlaying, setIsPlaying] =
+    useState(false);
+
+  const [viewMode, setViewMode] =
+    useState<
+      "course" |
+      "green" |
+      "green3d"
+    >(
+      "course",
+    );
+
+  /*
+   * Video playback will replace only the right-side contextual
+   * panel. The map remains visible so the shot's location stays
+   * in context.
+   *
+   * We intentionally do not invent a playback URL from PGA's
+   * videoId. Once the actual PGA player source is verified, it
+   * can plug directly into this state.
+   */
+  const [
+    videoStrokeNumber,
+    setVideoStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animatedStrokeNumber,
+    setAnimatedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animationProgress,
+    setAnimationProgress,
+  ] = useState(1);
+
+  const [
+    revealedStrokeCount,
+    setRevealedStrokeCount,
+  ] = useState<number | null>(null);
+
+  const animationFrameRef =
+    useRef<number | null>(null);
+
+  const animationResolveRef =
+    useRef<(() => void) | null>(null);
+
+  /*
+   * A different authoritative ShotCast asset must start from
+   * a clean presentation state.
+   *
+   * Zoom, pan, Course/Green View, playback reveal state, and
+   * video state are UI-only. None of them should leak from a
+   * previously viewed hole into the next one.
+   *
+   * Do NOT reset on shot-array refreshes: live holes poll every
+   * 30 seconds and should keep the user's current view.
+   */
+  useEffect(() => {
+    if (
+      animationFrameRef.current !== null
+    ) {
+      window.cancelAnimationFrame(
+        animationFrameRef.current,
+      );
+
+      animationFrameRef.current = null;
+    }
+
+    if (animationResolveRef.current) {
+      animationResolveRef.current();
+      animationResolveRef.current = null;
+    }
+
+    pointersRef.current.clear();
+    dragStartRef.current = null;
+    gestureStartRef.current = null;
+
+    setTransform(DEFAULT_TRANSFORM);
+    setIsInteracting(false);
+    setIsPlaying(false);
+    setViewMode("course");
+
+    setVideoStrokeNumber(null);
+    setAnimatedStrokeNumber(null);
+    setAnimationProgress(1);
+    setRevealedStrokeCount(null);
+  }, [
+    imageUrl,
+    greenImageUrl,
+  ]);
+
+  /*
+   * Load PGA's dedicated Green View as soon as ShotCast
+   * mounts instead of waiting until the approach lands.
+   *
+   * By the time playback reaches the green, the browser
+   * should already have the image decoded/cached.
+   */
+  useEffect(() => {
+    if (!greenImageUrl) {
+      return;
+    }
+
+    const image = new Image();
+
+    image.decoding = "async";
+    image.src = greenImageUrl;
+
+    /*
+     * decode() encourages the browser to finish decoding
+     * before we actually switch views. Some browsers may
+     * reject decode() even though the image still loads,
+     * so deliberately ignore that rejection.
+     */
+    void image
+      .decode()
+      .catch(() => undefined);
+  }, [greenImageUrl]);
+
+  const coursePlottedShots =
+    useMemo(
+      () => {
+        if (!showShotOverlay) {
+          return [];
+        }
+
+        return shots
+          .map(
+            (
+              shot,
+            ): PlotShot | null => {
+              if (
+                !shot.bottomToTop ||
+                !canPlotPoint(
+                  shot.bottomToTop.from,
+                  calibration,
+                ) ||
+                !canPlotPoint(
+                  shot.bottomToTop.to,
+                  calibration,
+                )
+              ) {
+                return null;
+              }
+
+              const nativeFrom =
+                shot.worldFrom
+                  ? worldToPlotPoint(
+                      shot.worldFrom,
+                      calibration,
+                    )
+                  : null;
+
+              const nativeTo =
+                shot.worldTo
+                  ? worldToPlotPoint(
+                      shot.worldTo,
+                      calibration,
+                    )
+                  : null;
+
+              const useNativeWorld =
+                nativeFrom !== null &&
+                nativeTo !== null;
+
+              return {
+                strokeNumber:
+                  shot.strokeNumber,
+                from:
+                  useNativeWorld
+                    ? nativeFrom
+                    : toPlotPoint(
+                        shot.bottomToTop
+                          .from,
+                        calibration,
+                      ),
+                to:
+                  useNativeWorld
+                    ? nativeTo
+                    : toPlotPoint(
+                        shot.bottomToTop
+                          .to,
+                        calibration,
+                      ),
+                finalStroke:
+                  shot.finalStroke,
+                videoId:
+                  shot.videoId ?? null,
+                radarData:
+                  shot.radarData ?? null,
+                flightTrajectory:
+                  shot.flightTrajectory ??
+                  null,
+                ballPath:
+                  shot.ballPath ?? null,
+                distance:
+                  shot.distance,
+                distanceRemaining:
+                  shot.distanceRemaining,
+                fromLocation:
+                  shot.fromLocation,
+                toLocation:
+                  shot.toLocation,
+              };
+            },
+          )
+          .filter(
+            (
+              shot,
+            ): shot is PlotShot =>
+              shot !== null,
+          );
+      },
+      [
+        calibration,
+        shots,
+        showShotOverlay,
+      ],
+    );
+
+  const greenPlottedShots =
+    useMemo(
+      () => {
+        if (
+          !showShotOverlay ||
+          !greenImageUrl
+        ) {
+          return [];
+        }
+
+        return shots
+          .map(
+            (
+              shot,
+            ): PlotShot | null => {
+              const coordinates =
+                shot.greenBottomToTop;
+
+              /*
+               * PGA often returns Green View coordinates for
+               * every stroke, including shots that originate
+               * several hundred yards outside the crop.
+               *
+               * Keep only endpoints that genuinely belong
+               * inside the Green View image.
+               */
+              if (!coordinates) {
+                return null;
+              }
+
+              const to =
+                coordinates.to;
+
+              /*
+               * A stroke is useful in Green View whenever
+               * its LANDING point belongs to the green crop.
+               *
+               * Keep the actual point in a local variable so
+               * TypeScript preserves the validity narrowing.
+               *
+               * For putts, both endpoints are naturally
+               * inside the crop.
+               *
+               * For the approach, PGA may report a starting
+               * coordinate outside the crop. Keep that shot
+               * and clamp its starting point to the image
+               * edge so Green View retains the incoming
+               * approach trail and landing marker.
+               */
+              if (
+                !validNormalizedPoint(to)
+              ) {
+                return null;
+              }
+
+              const from =
+                validNormalizedPoint(
+                  coordinates.from,
+                )
+                  ? coordinates.from
+                  : clampNormalizedPoint(
+                      coordinates.from,
+                    );
+
+              if (!from) {
+                return null;
+              }
+
+              return {
+                strokeNumber:
+                  shot.strokeNumber,
+                from: {
+                  x:
+                    from.x *
+                    VIEWBOX_SIZE,
+                  y:
+                    from.y *
+                    VIEWBOX_SIZE,
+                },
+                to: {
+                  x:
+                    to.x *
+                    VIEWBOX_SIZE,
+                  y:
+                    to.y *
+                    VIEWBOX_SIZE,
+                },
+                finalStroke:
+                  shot.finalStroke,
+                videoId:
+                  shot.videoId ?? null,
+                radarData:
+                  shot.radarData ?? null,
+                flightTrajectory:
+                  shot.flightTrajectory ??
+                  null,
+                ballPath:
+                  shot.ballPath ?? null,
+                distance:
+                  shot.distance,
+                distanceRemaining:
+                  shot.distanceRemaining,
+                fromLocation:
+                  shot.fromLocation,
+                toLocation:
+                  shot.toLocation,
+              };
+            },
+          )
+          .filter(
+            (
+              shot,
+            ): shot is PlotShot =>
+              shot !== null,
+          );
+      },
+      [
+        greenImageUrl,
+        shots,
+        showShotOverlay,
+      ],
+    );
+
+  /*
+   * PGA's dedicated Green View is a hole-level asset.
+   *
+   * Make it available whenever the image exists, even before
+   * the golfer has a shot whose Green View coordinates fall
+   * inside the crop.
+   *
+   * Shot availability and image availability are separate
+   * concerns.
+   */
+  const greenViewAvailable =
+    Boolean(greenImageUrl);
+
+  const isAnyGreenView =
+    (
+      viewMode === "green" ||
+      viewMode === "green3d"
+    ) &&
+    greenViewAvailable;
+
+  const plottedShots =
+    isAnyGreenView
+      ? greenPlottedShots
+      : coursePlottedShots;
+
+  const activeImageUrl =
+    isAnyGreenView &&
+    greenImageUrl
+      ? greenImageUrl
+      : imageUrl;
+
+  const green3dAvailable =
+    Boolean(
+      greenModelUrl,
+    );
+
+  const selectedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    ) ??
+    plottedShots[0] ??
+    null;
+
+  /*
+   * The final stroke's destination is PGA's cup location
+   * in the normalized Green View coordinate system.
+   */
+  const greenHolePoint =
+    greenPlottedShots.find(
+      (shot) =>
+        shot.finalStroke,
+    )?.to ?? null;
+
+  /*
+   * Navigation always follows the complete hole sequence,
+   * regardless of whether the current camera is using the
+   * Course View or Green View coordinate frame.
+   */
+  const selectedCourseShotIndex =
+    coursePlottedShots.findIndex(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    );
+
+  const previousShot =
+    selectedCourseShotIndex > 0
+      ? coursePlottedShots[
+          selectedCourseShotIndex - 1
+        ]
+      : null;
+
+  const nextShot =
+    selectedCourseShotIndex >= 0 &&
+    selectedCourseShotIndex <
+      coursePlottedShots.length - 1
+      ? coursePlottedShots[
+          selectedCourseShotIndex + 1
+        ]
+      : null;
+
+  const constrainTransform =
+    useCallback(
+      (
+        next: TransformState,
+      ): TransformState => {
+        const viewport =
+          viewportRef.current;
+
+        const width =
+          viewport?.clientWidth ?? 400;
+
+        const height =
+          viewport?.clientHeight ?? 400;
+
+        const scale =
+          clamp(
+            next.scale,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        /*
+         * Keep the transformed course image covering the
+         * viewport instead of allowing it to be dragged
+         * completely away and exposing a large black void.
+         *
+         * At 1×:
+         *   no translation is allowed.
+         *
+         * At higher zoom:
+         *   translation is limited to the extra image area
+         *   created by scaling around the center.
+         */
+        const maxX =
+          ((scale - 1) * width) / 2;
+
+        const maxY =
+          ((scale - 1) * height) / 2;
+
+        return {
+          scale,
+          x: clamp(
+            next.x,
+            -maxX,
+            maxX,
+          ),
+          y: clamp(
+            next.y,
+            -maxY,
+            maxY,
+          ),
+          rotation:
+            ((next.rotation + 180) %
+              360) -
+            180,
+        };
+      },
+      [],
+    );
+
+  const updateTransform =
+    useCallback(
+      (
+        updater:
+          | TransformState
+          | ((
+              current: TransformState,
+            ) => TransformState),
+      ) => {
+        setTransform((current) => {
+          const next =
+            typeof updater ===
+            "function"
+              ? updater(current)
+              : updater;
+
+          return constrainTransform(
+            next,
+          );
+        });
+      },
+      [constrainTransform],
+    );
+
+  const cancelShotAnimation =
+    useCallback(() => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+
+        animationFrameRef.current =
+          null;
+      }
+
+      animationResolveRef.current?.();
+      animationResolveRef.current =
+        null;
+
+      setAnimatedStrokeNumber(null);
+      setAnimationProgress(1);
+    }, []);
+
+  const animateShot =
+    useCallback(
+      (
+        shot: PlotShot,
+      ) =>
+        new Promise<void>((resolve) => {
+          cancelShotAnimation();
+
+          const prefersReducedMotion =
+            window.matchMedia(
+              "(prefers-reduced-motion: reduce)",
+            ).matches;
+
+          if (prefersReducedMotion) {
+            setAnimatedStrokeNumber(
+              shot.strokeNumber,
+            );
+            setAnimationProgress(1);
+
+            window.setTimeout(() => {
+              setAnimatedStrokeNumber(
+                null,
+              );
+              resolve();
+            }, 150);
+
+            return;
+          }
+
+          const duration =
+            trackingAnimationDuration(
+              shot,
+            );
+
+          const startedAt =
+            performance.now();
+
+          setAnimatedStrokeNumber(
+            shot.strokeNumber,
+          );
+          setAnimationProgress(0);
+
+          animationResolveRef.current =
+            resolve;
+
+          const tick = (
+            now: number,
+          ) => {
+            const rawProgress =
+              clamp(
+                (now - startedAt) /
+                  duration,
+                0,
+                1,
+              );
+
+            setAnimationProgress(
+              hasRealTrackingPath(
+                shot,
+              )
+                ? rawProgress
+                : easeInOutCubic(
+                    rawProgress,
+                  ),
+            );
+
+            if (rawProgress >= 1) {
+              animationFrameRef.current =
+                null;
+
+              animationResolveRef.current =
+                null;
+
+              /*
+               * Keep the completed shot mounted briefly so the
+               * mobile info overlay can fade away naturally before
+               * playback advances to the next stroke.
+               */
+              window.setTimeout(() => {
+                setAnimatedStrokeNumber(
+                  null,
+                );
+                resolve();
+              }, 650);
+
+              return;
+            }
+
+            animationFrameRef.current =
+              window.requestAnimationFrame(
+                tick,
+              );
+          };
+
+          animationFrameRef.current =
+            window.requestAnimationFrame(
+              tick,
+            );
+        }),
+      [cancelShotAnimation],
+    );
+
+  const resetView =
+    useCallback(() => {
+      cancelShotAnimation();
+      setIsPlaying(false);
+      /*
+       * Reset restores the complete static replay.
+       * Progressive hiding is used only while Play runs.
+       */
+      setRevealedStrokeCount(null);
+      setViewMode("course");
+      setTransform(
+        DEFAULT_TRANSFORM,
+      );
+    }, [cancelShotAnimation]);
+
+  const focusShot =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        if (!shot) {
+          resetView();
+          return;
+        }
+
+        const viewport =
+          viewportRef.current;
+
+        if (!viewport) {
+          return;
+        }
+
+        const width =
+          viewport.clientWidth;
+
+        const height =
+          viewport.clientHeight;
+
+        const targetScale =
+          shot.strokeNumber === 1
+            ? 1.55
+            : shot.finalStroke
+              ? 3.75
+              : 3;
+
+        const targetX =
+          (shot.to.x /
+            VIEWBOX_SIZE) *
+          width;
+
+        const targetY =
+          (shot.to.y /
+            VIEWBOX_SIZE) *
+          height;
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        updateTransform({
+          scale: targetScale,
+          x:
+            (centerX - targetX) *
+            targetScale,
+          y:
+            (centerY - targetY) *
+            targetScale,
+          rotation: 0,
+        });
+      },
+      [
+        resetView,
+        updateTransform,
+      ],
+    );
+
+  /*
+   * Frame a genuine PGA putt rather than using a fixed Green View
+   * zoom.
+   *
+   * The fit is based on:
+   *   - PGA's actual sampled BallPath when available
+   *   - the shot endpoints as a safe geometry fallback
+   *   - PGA's confirmed cup point when available
+   *
+   * This changes only the viewport. It does not alter shot data.
+   */
+  const focusGreenPutt =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        const viewport =
+          viewportRef.current;
+
+        if (
+          !viewport ||
+          !shot
+        ) {
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
+          return;
+        }
+
+        const width =
+          Math.max(
+            viewport.clientWidth,
+
+============================================================
+5. EVERY MAP TRANSFORM WRITE
+============================================================
+components/lineups/GolfHoleMap2D.tsx-102-   */
+components/lineups/GolfHoleMap2D.tsx-103-  pinWorld?: WorldPoint | null;
+components/lineups/GolfHoleMap2D.tsx-104-  greenPin?: {
+components/lineups/GolfHoleMap2D.tsx-105-    x: number;
+components/lineups/GolfHoleMap2D.tsx-106-    y: number;
+components/lineups/GolfHoleMap2D.tsx-107-  } | null;
+components/lineups/GolfHoleMap2D.tsx-108-
+components/lineups/GolfHoleMap2D.tsx-109-  shots: MapShot[];
+components/lineups/GolfHoleMap2D.tsx:110:  selectedStrokeNumber: number | null;
+components/lineups/GolfHoleMap2D.tsx:111:  onSelectStroke: (
+components/lineups/GolfHoleMap2D.tsx-112-    strokeNumber: number,
+components/lineups/GolfHoleMap2D.tsx-113-  ) => void;
+components/lineups/GolfHoleMap2D.tsx-114-  calibration: MapCalibration;
+components/lineups/GolfHoleMap2D.tsx-115-  showShotOverlay?: boolean;
+components/lineups/GolfHoleMap2D.tsx-116-  imageFit?: "fill" | "contain";
+components/lineups/GolfHoleMap2D.tsx-117-  emptyStateLabel?: string;
+components/lineups/GolfHoleMap2D.tsx-118-};
+components/lineups/GolfHoleMap2D.tsx-119-
+components/lineups/GolfHoleMap2D.tsx-120-type PlotPoint = {
+components/lineups/GolfHoleMap2D.tsx-121-  x: number;
+components/lineups/GolfHoleMap2D.tsx-122-  y: number;
+components/lineups/GolfHoleMap2D.tsx-123-};
+components/lineups/GolfHoleMap2D.tsx-124-
+components/lineups/GolfHoleMap2D.tsx-125-type PlotShot = {
+components/lineups/GolfHoleMap2D.tsx-126-  strokeNumber: number;
+components/lineups/GolfHoleMap2D.tsx-127-  from: PlotPoint;
+--
+components/lineups/GolfHoleMap2D.tsx-133-  ballPath: BallPath | null;
+components/lineups/GolfHoleMap2D.tsx-134-  distance: string | null;
+components/lineups/GolfHoleMap2D.tsx-135-  distanceRemaining: string | null;
+components/lineups/GolfHoleMap2D.tsx-136-  fromLocation: string | null;
+components/lineups/GolfHoleMap2D.tsx-137-  toLocation: string | null;
+components/lineups/GolfHoleMap2D.tsx-138-};
+components/lineups/GolfHoleMap2D.tsx-139-
+components/lineups/GolfHoleMap2D.tsx-140-type TransformState = {
+components/lineups/GolfHoleMap2D.tsx:141:  scale: number;
+components/lineups/GolfHoleMap2D.tsx-142-  x: number;
+components/lineups/GolfHoleMap2D.tsx-143-  y: number;
+components/lineups/GolfHoleMap2D.tsx-144-  rotation: number;
+components/lineups/GolfHoleMap2D.tsx-145-};
+components/lineups/GolfHoleMap2D.tsx-146-
+components/lineups/GolfHoleMap2D.tsx-147-type PointerPosition = {
+components/lineups/GolfHoleMap2D.tsx-148-  x: number;
+components/lineups/GolfHoleMap2D.tsx-149-  y: number;
+components/lineups/GolfHoleMap2D.tsx-150-};
+components/lineups/GolfHoleMap2D.tsx-151-
+components/lineups/GolfHoleMap2D.tsx-152-type GestureSnapshot = {
+components/lineups/GolfHoleMap2D.tsx-153-  distance: number;
+components/lineups/GolfHoleMap2D.tsx-154-  angle: number;
+components/lineups/GolfHoleMap2D.tsx-155-  midpoint: PointerPosition;
+components/lineups/GolfHoleMap2D.tsx-156-  transform: TransformState;
+components/lineups/GolfHoleMap2D.tsx-157-};
+--
+components/lineups/GolfHoleMap2D.tsx-189- */
+components/lineups/GolfHoleMap2D.tsx-190-const PUTT_PLAYBACK_SLOWDOWN = 1.35;
+components/lineups/GolfHoleMap2D.tsx-191-
+components/lineups/GolfHoleMap2D.tsx-192-/*
+components/lineups/GolfHoleMap2D.tsx-193- * Calibration is supplied by the tournament/hole configuration.
+components/lineups/GolfHoleMap2D.tsx-194- * The map engine itself is no longer tied to one course.
+components/lineups/GolfHoleMap2D.tsx-195- */
+components/lineups/GolfHoleMap2D.tsx-196-
+components/lineups/GolfHoleMap2D.tsx:197:const DEFAULT_TRANSFORM: TransformState = {
+components/lineups/GolfHoleMap2D.tsx:198:  scale: 1,
+components/lineups/GolfHoleMap2D.tsx-199-  x: 0,
+components/lineups/GolfHoleMap2D.tsx-200-  y: 0,
+components/lineups/GolfHoleMap2D.tsx-201-  rotation: 0,
+components/lineups/GolfHoleMap2D.tsx-202-};
+components/lineups/GolfHoleMap2D.tsx-203-
+components/lineups/GolfHoleMap2D.tsx-204-function clamp(
+components/lineups/GolfHoleMap2D.tsx-205-  value: number,
+components/lineups/GolfHoleMap2D.tsx-206-  minimum: number,
+components/lineups/GolfHoleMap2D.tsx-207-  maximum: number,
+components/lineups/GolfHoleMap2D.tsx-208-) {
+components/lineups/GolfHoleMap2D.tsx-209-  return Math.min(
+components/lineups/GolfHoleMap2D.tsx-210-    maximum,
+components/lineups/GolfHoleMap2D.tsx-211-    Math.max(minimum, value),
+components/lineups/GolfHoleMap2D.tsx-212-  );
+components/lineups/GolfHoleMap2D.tsx-213-}
+components/lineups/GolfHoleMap2D.tsx-214-
+--
+components/lineups/GolfHoleMap2D.tsx-1560-export default function GolfHoleMap2D({
+components/lineups/GolfHoleMap2D.tsx-1561-  title,
+components/lineups/GolfHoleMap2D.tsx-1562-  imageUrl,
+components/lineups/GolfHoleMap2D.tsx-1563-  greenImageUrl = null,
+components/lineups/GolfHoleMap2D.tsx-1564-  greenModelUrl = null,
+components/lineups/GolfHoleMap2D.tsx-1565-  pinWorld = null,
+components/lineups/GolfHoleMap2D.tsx-1566-  greenPin = null,
+components/lineups/GolfHoleMap2D.tsx-1567-  shots,
+components/lineups/GolfHoleMap2D.tsx:1568:  selectedStrokeNumber,
+components/lineups/GolfHoleMap2D.tsx:1569:  onSelectStroke,
+components/lineups/GolfHoleMap2D.tsx-1570-  calibration,
+components/lineups/GolfHoleMap2D.tsx-1571-  showShotOverlay = true,
+components/lineups/GolfHoleMap2D.tsx-1572-  imageFit = "fill",
+components/lineups/GolfHoleMap2D.tsx-1573-  emptyStateLabel = "No shot data is available yet.",
+components/lineups/GolfHoleMap2D.tsx-1574-}: Props) {
+components/lineups/GolfHoleMap2D.tsx-1575-  const viewportRef =
+components/lineups/GolfHoleMap2D.tsx-1576-    useRef<HTMLDivElement | null>(
+components/lineups/GolfHoleMap2D.tsx-1577-      null,
+components/lineups/GolfHoleMap2D.tsx-1578-    );
+components/lineups/GolfHoleMap2D.tsx-1579-
+components/lineups/GolfHoleMap2D.tsx-1580-  const videoPanelRef =
+components/lineups/GolfHoleMap2D.tsx-1581-    useRef<HTMLDivElement | null>(
+components/lineups/GolfHoleMap2D.tsx-1582-      null,
+components/lineups/GolfHoleMap2D.tsx-1583-    );
+components/lineups/GolfHoleMap2D.tsx-1584-
+components/lineups/GolfHoleMap2D.tsx-1585-  const pointersRef =
+--
+components/lineups/GolfHoleMap2D.tsx-1593-      transform: TransformState;
+components/lineups/GolfHoleMap2D.tsx-1594-    } | null>(null);
+components/lineups/GolfHoleMap2D.tsx-1595-
+components/lineups/GolfHoleMap2D.tsx-1596-  const gestureStartRef =
+components/lineups/GolfHoleMap2D.tsx-1597-    useRef<GestureSnapshot | null>(
+components/lineups/GolfHoleMap2D.tsx-1598-      null,
+components/lineups/GolfHoleMap2D.tsx-1599-    );
+components/lineups/GolfHoleMap2D.tsx-1600-
+components/lineups/GolfHoleMap2D.tsx:1601:  const [transform, setTransform] =
+components/lineups/GolfHoleMap2D.tsx-1602-    useState<TransformState>(
+components/lineups/GolfHoleMap2D.tsx:1603:      DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-1604-    );
+components/lineups/GolfHoleMap2D.tsx-1605-
+components/lineups/GolfHoleMap2D.tsx-1606-  const [isInteracting, setIsInteracting] =
+components/lineups/GolfHoleMap2D.tsx-1607-    useState(false);
+components/lineups/GolfHoleMap2D.tsx-1608-
+components/lineups/GolfHoleMap2D.tsx-1609-  const [isPlaying, setIsPlaying] =
+components/lineups/GolfHoleMap2D.tsx-1610-    useState(false);
+components/lineups/GolfHoleMap2D.tsx-1611-
+components/lineups/GolfHoleMap2D.tsx-1612-  const [viewMode, setViewMode] =
+components/lineups/GolfHoleMap2D.tsx-1613-    useState<
+components/lineups/GolfHoleMap2D.tsx-1614-      "course" |
+components/lineups/GolfHoleMap2D.tsx-1615-      "green" |
+components/lineups/GolfHoleMap2D.tsx-1616-      "green3d"
+components/lineups/GolfHoleMap2D.tsx-1617-    >(
+components/lineups/GolfHoleMap2D.tsx-1618-      "course",
+components/lineups/GolfHoleMap2D.tsx-1619-    );
+--
+components/lineups/GolfHoleMap2D.tsx-1679-      animationResolveRef.current();
+components/lineups/GolfHoleMap2D.tsx-1680-      animationResolveRef.current = null;
+components/lineups/GolfHoleMap2D.tsx-1681-    }
+components/lineups/GolfHoleMap2D.tsx-1682-
+components/lineups/GolfHoleMap2D.tsx-1683-    pointersRef.current.clear();
+components/lineups/GolfHoleMap2D.tsx-1684-    dragStartRef.current = null;
+components/lineups/GolfHoleMap2D.tsx-1685-    gestureStartRef.current = null;
+components/lineups/GolfHoleMap2D.tsx-1686-
+components/lineups/GolfHoleMap2D.tsx:1687:    setTransform(DEFAULT_TRANSFORM);
+components/lineups/GolfHoleMap2D.tsx-1688-    setIsInteracting(false);
+components/lineups/GolfHoleMap2D.tsx-1689-    setIsPlaying(false);
+components/lineups/GolfHoleMap2D.tsx-1690-    setViewMode("course");
+components/lineups/GolfHoleMap2D.tsx-1691-
+components/lineups/GolfHoleMap2D.tsx-1692-    setVideoStrokeNumber(null);
+components/lineups/GolfHoleMap2D.tsx-1693-    setAnimatedStrokeNumber(null);
+components/lineups/GolfHoleMap2D.tsx-1694-    setAnimationProgress(1);
+components/lineups/GolfHoleMap2D.tsx-1695-    setRevealedStrokeCount(null);
+components/lineups/GolfHoleMap2D.tsx-1696-  }, [
+components/lineups/GolfHoleMap2D.tsx-1697-    imageUrl,
+components/lineups/GolfHoleMap2D.tsx-1698-    greenImageUrl,
+components/lineups/GolfHoleMap2D.tsx-1699-  ]);
+components/lineups/GolfHoleMap2D.tsx-1700-
+components/lineups/GolfHoleMap2D.tsx-1701-  /*
+components/lineups/GolfHoleMap2D.tsx-1702-   * Load PGA's dedicated Green View as soon as ShotCast
+components/lineups/GolfHoleMap2D.tsx-1703-   * mounts instead of waiting until the approach lands.
+--
+components/lineups/GolfHoleMap2D.tsx-1985-    Boolean(
+components/lineups/GolfHoleMap2D.tsx-1986-      greenModelUrl,
+components/lineups/GolfHoleMap2D.tsx-1987-    );
+components/lineups/GolfHoleMap2D.tsx-1988-
+components/lineups/GolfHoleMap2D.tsx-1989-  const selectedShot =
+components/lineups/GolfHoleMap2D.tsx-1990-    plottedShots.find(
+components/lineups/GolfHoleMap2D.tsx-1991-      (shot) =>
+components/lineups/GolfHoleMap2D.tsx-1992-        shot.strokeNumber ===
+components/lineups/GolfHoleMap2D.tsx:1993:        selectedStrokeNumber,
+components/lineups/GolfHoleMap2D.tsx-1994-    ) ??
+components/lineups/GolfHoleMap2D.tsx-1995-    plottedShots[0] ??
+components/lineups/GolfHoleMap2D.tsx-1996-    null;
+components/lineups/GolfHoleMap2D.tsx-1997-
+components/lineups/GolfHoleMap2D.tsx-1998-  /*
+components/lineups/GolfHoleMap2D.tsx-1999-   * The final stroke's destination is PGA's cup location
+components/lineups/GolfHoleMap2D.tsx-2000-   * in the normalized Green View coordinate system.
+components/lineups/GolfHoleMap2D.tsx-2001-   */
+components/lineups/GolfHoleMap2D.tsx-2002-  const greenHolePoint =
+components/lineups/GolfHoleMap2D.tsx-2003-    greenPlottedShots.find(
+components/lineups/GolfHoleMap2D.tsx-2004-      (shot) =>
+components/lineups/GolfHoleMap2D.tsx-2005-        shot.finalStroke,
+components/lineups/GolfHoleMap2D.tsx-2006-    )?.to ?? null;
+components/lineups/GolfHoleMap2D.tsx-2007-
+components/lineups/GolfHoleMap2D.tsx-2008-  /*
+components/lineups/GolfHoleMap2D.tsx-2009-   * Navigation always follows the complete hole sequence,
+components/lineups/GolfHoleMap2D.tsx-2010-   * regardless of whether the current camera is using the
+components/lineups/GolfHoleMap2D.tsx-2011-   * Course View or Green View coordinate frame.
+components/lineups/GolfHoleMap2D.tsx-2012-   */
+components/lineups/GolfHoleMap2D.tsx-2013-  const selectedCourseShotIndex =
+components/lineups/GolfHoleMap2D.tsx-2014-    coursePlottedShots.findIndex(
+components/lineups/GolfHoleMap2D.tsx-2015-      (shot) =>
+components/lineups/GolfHoleMap2D.tsx-2016-        shot.strokeNumber ===
+components/lineups/GolfHoleMap2D.tsx:2017:        selectedStrokeNumber,
+components/lineups/GolfHoleMap2D.tsx-2018-    );
+components/lineups/GolfHoleMap2D.tsx-2019-
+components/lineups/GolfHoleMap2D.tsx-2020-  const previousShot =
+components/lineups/GolfHoleMap2D.tsx-2021-    selectedCourseShotIndex > 0
+components/lineups/GolfHoleMap2D.tsx-2022-      ? coursePlottedShots[
+components/lineups/GolfHoleMap2D.tsx-2023-          selectedCourseShotIndex - 1
+components/lineups/GolfHoleMap2D.tsx-2024-        ]
+components/lineups/GolfHoleMap2D.tsx-2025-      : null;
+components/lineups/GolfHoleMap2D.tsx-2026-
+components/lineups/GolfHoleMap2D.tsx-2027-  const nextShot =
+components/lineups/GolfHoleMap2D.tsx-2028-    selectedCourseShotIndex >= 0 &&
+components/lineups/GolfHoleMap2D.tsx-2029-    selectedCourseShotIndex <
+components/lineups/GolfHoleMap2D.tsx-2030-      coursePlottedShots.length - 1
+components/lineups/GolfHoleMap2D.tsx-2031-      ? coursePlottedShots[
+components/lineups/GolfHoleMap2D.tsx-2032-          selectedCourseShotIndex + 1
+components/lineups/GolfHoleMap2D.tsx-2033-        ]
+--
+components/lineups/GolfHoleMap2D.tsx-2097-    useCallback(
+components/lineups/GolfHoleMap2D.tsx-2098-      (
+components/lineups/GolfHoleMap2D.tsx-2099-        updater:
+components/lineups/GolfHoleMap2D.tsx-2100-          | TransformState
+components/lineups/GolfHoleMap2D.tsx-2101-          | ((
+components/lineups/GolfHoleMap2D.tsx-2102-              current: TransformState,
+components/lineups/GolfHoleMap2D.tsx-2103-            ) => TransformState),
+components/lineups/GolfHoleMap2D.tsx-2104-      ) => {
+components/lineups/GolfHoleMap2D.tsx:2105:        setTransform((current) => {
+components/lineups/GolfHoleMap2D.tsx-2106-          const next =
+components/lineups/GolfHoleMap2D.tsx-2107-            typeof updater ===
+components/lineups/GolfHoleMap2D.tsx-2108-            "function"
+components/lineups/GolfHoleMap2D.tsx-2109-              ? updater(current)
+components/lineups/GolfHoleMap2D.tsx-2110-              : updater;
+components/lineups/GolfHoleMap2D.tsx-2111-
+components/lineups/GolfHoleMap2D.tsx-2112-          return constrainTransform(
+components/lineups/GolfHoleMap2D.tsx-2113-            next,
+components/lineups/GolfHoleMap2D.tsx-2114-          );
+components/lineups/GolfHoleMap2D.tsx-2115-        });
+components/lineups/GolfHoleMap2D.tsx-2116-      },
+components/lineups/GolfHoleMap2D.tsx-2117-      [constrainTransform],
+components/lineups/GolfHoleMap2D.tsx-2118-    );
+components/lineups/GolfHoleMap2D.tsx-2119-
+components/lineups/GolfHoleMap2D.tsx-2120-  const cancelShotAnimation =
+components/lineups/GolfHoleMap2D.tsx-2121-    useCallback(() => {
+--
+components/lineups/GolfHoleMap2D.tsx-2246-      cancelShotAnimation();
+components/lineups/GolfHoleMap2D.tsx-2247-      setIsPlaying(false);
+components/lineups/GolfHoleMap2D.tsx-2248-      /*
+components/lineups/GolfHoleMap2D.tsx-2249-       * Reset restores the complete static replay.
+components/lineups/GolfHoleMap2D.tsx-2250-       * Progressive hiding is used only while Play runs.
+components/lineups/GolfHoleMap2D.tsx-2251-       */
+components/lineups/GolfHoleMap2D.tsx-2252-      setRevealedStrokeCount(null);
+components/lineups/GolfHoleMap2D.tsx-2253-      setViewMode("course");
+components/lineups/GolfHoleMap2D.tsx:2254:      setTransform(
+components/lineups/GolfHoleMap2D.tsx:2255:        DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-2256-      );
+components/lineups/GolfHoleMap2D.tsx-2257-    }, [cancelShotAnimation]);
+components/lineups/GolfHoleMap2D.tsx-2258-
+components/lineups/GolfHoleMap2D.tsx-2259-  const focusShot =
+components/lineups/GolfHoleMap2D.tsx-2260-    useCallback(
+components/lineups/GolfHoleMap2D.tsx-2261-      (
+components/lineups/GolfHoleMap2D.tsx-2262-        shot: PlotShot | null,
+components/lineups/GolfHoleMap2D.tsx-2263-      ) => {
+components/lineups/GolfHoleMap2D.tsx-2264-        if (!shot) {
+components/lineups/GolfHoleMap2D.tsx-2265-          resetView();
+components/lineups/GolfHoleMap2D.tsx-2266-          return;
+components/lineups/GolfHoleMap2D.tsx-2267-        }
+components/lineups/GolfHoleMap2D.tsx-2268-
+components/lineups/GolfHoleMap2D.tsx-2269-        const viewport =
+components/lineups/GolfHoleMap2D.tsx-2270-          viewportRef.current;
+components/lineups/GolfHoleMap2D.tsx-2271-
+--
+components/lineups/GolfHoleMap2D.tsx-2295-          (shot.to.y /
+components/lineups/GolfHoleMap2D.tsx-2296-            VIEWBOX_SIZE) *
+components/lineups/GolfHoleMap2D.tsx-2297-          height;
+components/lineups/GolfHoleMap2D.tsx-2298-
+components/lineups/GolfHoleMap2D.tsx-2299-        const centerX = width / 2;
+components/lineups/GolfHoleMap2D.tsx-2300-        const centerY = height / 2;
+components/lineups/GolfHoleMap2D.tsx-2301-
+components/lineups/GolfHoleMap2D.tsx-2302-        updateTransform({
+components/lineups/GolfHoleMap2D.tsx:2303:          scale: targetScale,
+components/lineups/GolfHoleMap2D.tsx-2304-          x:
+components/lineups/GolfHoleMap2D.tsx-2305-            (centerX - targetX) *
+components/lineups/GolfHoleMap2D.tsx-2306-            targetScale,
+components/lineups/GolfHoleMap2D.tsx-2307-          y:
+components/lineups/GolfHoleMap2D.tsx-2308-            (centerY - targetY) *
+components/lineups/GolfHoleMap2D.tsx-2309-            targetScale,
+components/lineups/GolfHoleMap2D.tsx-2310-          rotation: 0,
+components/lineups/GolfHoleMap2D.tsx-2311-        });
+components/lineups/GolfHoleMap2D.tsx-2312-      },
+components/lineups/GolfHoleMap2D.tsx-2313-      [
+components/lineups/GolfHoleMap2D.tsx-2314-        resetView,
+components/lineups/GolfHoleMap2D.tsx-2315-        updateTransform,
+components/lineups/GolfHoleMap2D.tsx-2316-      ],
+components/lineups/GolfHoleMap2D.tsx-2317-    );
+components/lineups/GolfHoleMap2D.tsx-2318-
+components/lineups/GolfHoleMap2D.tsx-2319-  /*
+--
+components/lineups/GolfHoleMap2D.tsx-2334-      ) => {
+components/lineups/GolfHoleMap2D.tsx-2335-        const viewport =
+components/lineups/GolfHoleMap2D.tsx-2336-          viewportRef.current;
+components/lineups/GolfHoleMap2D.tsx-2337-
+components/lineups/GolfHoleMap2D.tsx-2338-        if (
+components/lineups/GolfHoleMap2D.tsx-2339-          !viewport ||
+components/lineups/GolfHoleMap2D.tsx-2340-          !shot
+components/lineups/GolfHoleMap2D.tsx-2341-        ) {
+components/lineups/GolfHoleMap2D.tsx:2342:          setTransform(
+components/lineups/GolfHoleMap2D.tsx:2343:            DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-2344-          );
+components/lineups/GolfHoleMap2D.tsx-2345-          return;
+components/lineups/GolfHoleMap2D.tsx-2346-        }
+components/lineups/GolfHoleMap2D.tsx-2347-
+components/lineups/GolfHoleMap2D.tsx-2348-        const width =
+components/lineups/GolfHoleMap2D.tsx-2349-          Math.max(
+components/lineups/GolfHoleMap2D.tsx-2350-            viewport.clientWidth,
+components/lineups/GolfHoleMap2D.tsx-2351-            1,
+components/lineups/GolfHoleMap2D.tsx-2352-          );
+components/lineups/GolfHoleMap2D.tsx-2353-
+components/lineups/GolfHoleMap2D.tsx-2354-        const height =
+components/lineups/GolfHoleMap2D.tsx-2355-          Math.max(
+components/lineups/GolfHoleMap2D.tsx-2356-            viewport.clientHeight,
+components/lineups/GolfHoleMap2D.tsx-2357-            1,
+components/lineups/GolfHoleMap2D.tsx-2358-          );
+components/lineups/GolfHoleMap2D.tsx-2359-
+--
+components/lineups/GolfHoleMap2D.tsx-2432-        }
+components/lineups/GolfHoleMap2D.tsx-2433-
+components/lineups/GolfHoleMap2D.tsx-2434-        if (
+components/lineups/GolfHoleMap2D.tsx-2435-          !Number.isFinite(minX) ||
+components/lineups/GolfHoleMap2D.tsx-2436-          !Number.isFinite(maxX) ||
+components/lineups/GolfHoleMap2D.tsx-2437-          !Number.isFinite(minY) ||
+components/lineups/GolfHoleMap2D.tsx-2438-          !Number.isFinite(maxY)
+components/lineups/GolfHoleMap2D.tsx-2439-        ) {
+components/lineups/GolfHoleMap2D.tsx:2440:          setTransform(
+components/lineups/GolfHoleMap2D.tsx:2441:            DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-2442-          );
+components/lineups/GolfHoleMap2D.tsx-2443-          return;
+components/lineups/GolfHoleMap2D.tsx-2444-        }
+components/lineups/GolfHoleMap2D.tsx-2445-
+components/lineups/GolfHoleMap2D.tsx-2446-        /*
+components/lineups/GolfHoleMap2D.tsx-2447-         * Convert the PGA 1000×1000 plotting frame into the
+components/lineups/GolfHoleMap2D.tsx-2448-         * rendered viewport's pixel dimensions.
+components/lineups/GolfHoleMap2D.tsx-2449-         */
+components/lineups/GolfHoleMap2D.tsx-2450-        const pathWidthPx =
+components/lineups/GolfHoleMap2D.tsx-2451-          Math.max(
+components/lineups/GolfHoleMap2D.tsx-2452-            (
+components/lineups/GolfHoleMap2D.tsx-2453-              maxX -
+components/lineups/GolfHoleMap2D.tsx-2454-              minX
+components/lineups/GolfHoleMap2D.tsx-2455-            ) /
+components/lineups/GolfHoleMap2D.tsx-2456-              VIEWBOX_SIZE *
+components/lineups/GolfHoleMap2D.tsx-2457-              width,
+--
+components/lineups/GolfHoleMap2D.tsx-2540-          width /
+components/lineups/GolfHoleMap2D.tsx-2541-          2;
+components/lineups/GolfHoleMap2D.tsx-2542-
+components/lineups/GolfHoleMap2D.tsx-2543-        const centerY =
+components/lineups/GolfHoleMap2D.tsx-2544-          height /
+components/lineups/GolfHoleMap2D.tsx-2545-          2;
+components/lineups/GolfHoleMap2D.tsx-2546-
+components/lineups/GolfHoleMap2D.tsx-2547-        updateTransform({
+components/lineups/GolfHoleMap2D.tsx:2548:          scale:
+components/lineups/GolfHoleMap2D.tsx-2549-            targetScale,
+components/lineups/GolfHoleMap2D.tsx-2550-
+components/lineups/GolfHoleMap2D.tsx-2551-          x:
+components/lineups/GolfHoleMap2D.tsx-2552-            (
+components/lineups/GolfHoleMap2D.tsx-2553-              centerX -
+components/lineups/GolfHoleMap2D.tsx-2554-              targetX
+components/lineups/GolfHoleMap2D.tsx-2555-            ) *
+components/lineups/GolfHoleMap2D.tsx-2556-            targetScale,
+components/lineups/GolfHoleMap2D.tsx-2557-
+components/lineups/GolfHoleMap2D.tsx-2558-          y:
+components/lineups/GolfHoleMap2D.tsx-2559-            (
+components/lineups/GolfHoleMap2D.tsx-2560-              centerY -
+components/lineups/GolfHoleMap2D.tsx-2561-              targetY
+components/lineups/GolfHoleMap2D.tsx-2562-            ) *
+components/lineups/GolfHoleMap2D.tsx-2563-            targetScale,
+components/lineups/GolfHoleMap2D.tsx-2564-
+--
+components/lineups/GolfHoleMap2D.tsx-2609-        const centerX =
+components/lineups/GolfHoleMap2D.tsx-2610-          rect.width / 2;
+components/lineups/GolfHoleMap2D.tsx-2611-
+components/lineups/GolfHoleMap2D.tsx-2612-        const centerY =
+components/lineups/GolfHoleMap2D.tsx-2613-          rect.height / 2;
+components/lineups/GolfHoleMap2D.tsx-2614-
+components/lineups/GolfHoleMap2D.tsx-2615-        return {
+components/lineups/GolfHoleMap2D.tsx-2616-          ...current,
+components/lineups/GolfHoleMap2D.tsx:2617:          scale: nextScale,
+components/lineups/GolfHoleMap2D.tsx-2618-          x:
+components/lineups/GolfHoleMap2D.tsx-2619-            localX -
+components/lineups/GolfHoleMap2D.tsx-2620-            centerX -
+components/lineups/GolfHoleMap2D.tsx-2621-            (localX -
+components/lineups/GolfHoleMap2D.tsx-2622-              centerX -
+components/lineups/GolfHoleMap2D.tsx-2623-              current.x) *
+components/lineups/GolfHoleMap2D.tsx-2624-              ratio,
+components/lineups/GolfHoleMap2D.tsx-2625-          y:
+components/lineups/GolfHoleMap2D.tsx-2626-            localY -
+components/lineups/GolfHoleMap2D.tsx-2627-            centerY -
+components/lineups/GolfHoleMap2D.tsx-2628-            (localY -
+components/lineups/GolfHoleMap2D.tsx-2629-              centerY -
+components/lineups/GolfHoleMap2D.tsx-2630-              current.y) *
+components/lineups/GolfHoleMap2D.tsx-2631-              ratio,
+components/lineups/GolfHoleMap2D.tsx-2632-        };
+components/lineups/GolfHoleMap2D.tsx-2633-      },
+--
+components/lineups/GolfHoleMap2D.tsx-2824-
+components/lineups/GolfHoleMap2D.tsx-2825-      const distanceRatio =
+components/lineups/GolfHoleMap2D.tsx-2826-        start.distance > 0
+components/lineups/GolfHoleMap2D.tsx-2827-          ? distance /
+components/lineups/GolfHoleMap2D.tsx-2828-            start.distance
+components/lineups/GolfHoleMap2D.tsx-2829-          : 1;
+components/lineups/GolfHoleMap2D.tsx-2830-
+components/lineups/GolfHoleMap2D.tsx-2831-      updateTransform({
+components/lineups/GolfHoleMap2D.tsx:2832:        scale:
+components/lineups/GolfHoleMap2D.tsx-2833-          start.transform.scale *
+components/lineups/GolfHoleMap2D.tsx-2834-          distanceRatio,
+components/lineups/GolfHoleMap2D.tsx-2835-        rotation:
+components/lineups/GolfHoleMap2D.tsx-2836-          start.transform.rotation +
+components/lineups/GolfHoleMap2D.tsx-2837-          angle -
+components/lineups/GolfHoleMap2D.tsx-2838-          start.angle,
+components/lineups/GolfHoleMap2D.tsx-2839-        x:
+components/lineups/GolfHoleMap2D.tsx-2840-          start.transform.x +
+components/lineups/GolfHoleMap2D.tsx-2841-          midpoint.x -
+components/lineups/GolfHoleMap2D.tsx-2842-          start.midpoint.x,
+components/lineups/GolfHoleMap2D.tsx-2843-        y:
+components/lineups/GolfHoleMap2D.tsx-2844-          start.transform.y +
+components/lineups/GolfHoleMap2D.tsx-2845-          midpoint.y -
+components/lineups/GolfHoleMap2D.tsx-2846-          start.midpoint.y,
+components/lineups/GolfHoleMap2D.tsx-2847-      });
+components/lineups/GolfHoleMap2D.tsx-2848-    }
+--
+components/lineups/GolfHoleMap2D.tsx-2925-      for (
+components/lineups/GolfHoleMap2D.tsx-2926-        const courseShot
+components/lineups/GolfHoleMap2D.tsx-2927-        of coursePlottedShots
+components/lineups/GolfHoleMap2D.tsx-2928-      ) {
+components/lineups/GolfHoleMap2D.tsx-2929-        if (cancelled) {
+components/lineups/GolfHoleMap2D.tsx-2930-          return;
+components/lineups/GolfHoleMap2D.tsx-2931-        }
+components/lineups/GolfHoleMap2D.tsx-2932-
+components/lineups/GolfHoleMap2D.tsx:2933:        onSelectStroke(
+components/lineups/GolfHoleMap2D.tsx-2934-          courseShot.strokeNumber,
+components/lineups/GolfHoleMap2D.tsx-2935-        );
+components/lineups/GolfHoleMap2D.tsx-2936-
+components/lineups/GolfHoleMap2D.tsx-2937-        const greenShot =
+components/lineups/GolfHoleMap2D.tsx-2938-          greenPlottedShots.find(
+components/lineups/GolfHoleMap2D.tsx-2939-            (candidate) =>
+components/lineups/GolfHoleMap2D.tsx-2940-              candidate.strokeNumber ===
+components/lineups/GolfHoleMap2D.tsx-2941-              courseShot.strokeNumber,
+components/lineups/GolfHoleMap2D.tsx-2942-          ) ?? null;
+components/lineups/GolfHoleMap2D.tsx-2943-
+components/lineups/GolfHoleMap2D.tsx-2944-        const startsOnGreen =
+components/lineups/GolfHoleMap2D.tsx-2945-          isGreenLocation(
+components/lineups/GolfHoleMap2D.tsx-2946-            courseShot.fromLocation,
+components/lineups/GolfHoleMap2D.tsx-2947-          );
+components/lineups/GolfHoleMap2D.tsx-2948-
+components/lineups/GolfHoleMap2D.tsx-2949-        const finishesOnGreen =
+--
+components/lineups/GolfHoleMap2D.tsx-2973-           * Move into a putt-specific Green View derived from
+components/lineups/GolfHoleMap2D.tsx-2974-           * PGA's actual sampled roll path + cup.
+components/lineups/GolfHoleMap2D.tsx-2975-           */
+components/lineups/GolfHoleMap2D.tsx-2976-          focusGreenPutt(
+components/lineups/GolfHoleMap2D.tsx-2977-            animationShot,
+components/lineups/GolfHoleMap2D.tsx-2978-          );
+components/lineups/GolfHoleMap2D.tsx-2979-        } else {
+components/lineups/GolfHoleMap2D.tsx-2980-          setViewMode("course");
+components/lineups/GolfHoleMap2D.tsx:2981:          setTransform(
+components/lineups/GolfHoleMap2D.tsx:2982:            DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-2983-          );
+components/lineups/GolfHoleMap2D.tsx-2984-        }
+components/lineups/GolfHoleMap2D.tsx-2985-
+components/lineups/GolfHoleMap2D.tsx-2986-        await new Promise<void>(
+components/lineups/GolfHoleMap2D.tsx-2987-          (resolve) => {
+components/lineups/GolfHoleMap2D.tsx-2988-            window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx-2989-              resolve,
+components/lineups/GolfHoleMap2D.tsx-2990-              useGreenShot
+components/lineups/GolfHoleMap2D.tsx-2991-                ? 700
+components/lineups/GolfHoleMap2D.tsx-2992-                : 200,
+components/lineups/GolfHoleMap2D.tsx-2993-            );
+components/lineups/GolfHoleMap2D.tsx-2994-          },
+components/lineups/GolfHoleMap2D.tsx-2995-        );
+components/lineups/GolfHoleMap2D.tsx-2996-
+components/lineups/GolfHoleMap2D.tsx-2997-        if (cancelled) {
+components/lineups/GolfHoleMap2D.tsx-2998-          return;
+--
+components/lineups/GolfHoleMap2D.tsx-3036-                ),
+components/lineups/GolfHoleMap2D.tsx-3037-            ) ?? null;
+components/lineups/GolfHoleMap2D.tsx-3038-
+components/lineups/GolfHoleMap2D.tsx-3039-          if (upcomingGreenShot) {
+components/lineups/GolfHoleMap2D.tsx-3040-            focusGreenPutt(
+components/lineups/GolfHoleMap2D.tsx-3041-              upcomingGreenShot,
+components/lineups/GolfHoleMap2D.tsx-3042-            );
+components/lineups/GolfHoleMap2D.tsx-3043-          } else {
+components/lineups/GolfHoleMap2D.tsx:3044:            setTransform(
+components/lineups/GolfHoleMap2D.tsx:3045:              DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-3046-            );
+components/lineups/GolfHoleMap2D.tsx-3047-          }
+components/lineups/GolfHoleMap2D.tsx-3048-
+components/lineups/GolfHoleMap2D.tsx-3049-          await new Promise<void>(
+components/lineups/GolfHoleMap2D.tsx-3050-            (resolve) => {
+components/lineups/GolfHoleMap2D.tsx-3051-              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx-3052-                resolve,
+components/lineups/GolfHoleMap2D.tsx-3053-                750,
+components/lineups/GolfHoleMap2D.tsx-3054-              );
+components/lineups/GolfHoleMap2D.tsx-3055-            },
+components/lineups/GolfHoleMap2D.tsx-3056-          );
+components/lineups/GolfHoleMap2D.tsx-3057-        } else {
+components/lineups/GolfHoleMap2D.tsx-3058-          await new Promise<void>(
+components/lineups/GolfHoleMap2D.tsx-3059-            (resolve) => {
+components/lineups/GolfHoleMap2D.tsx-3060-              window.setTimeout(
+components/lineups/GolfHoleMap2D.tsx-3061-                resolve,
+--
+components/lineups/GolfHoleMap2D.tsx-3081-  }, [
+components/lineups/GolfHoleMap2D.tsx-3082-    animateShot,
+components/lineups/GolfHoleMap2D.tsx-3083-    cancelShotAnimation,
+components/lineups/GolfHoleMap2D.tsx-3084-    coursePlottedShots,
+components/lineups/GolfHoleMap2D.tsx-3085-    focusGreenPutt,
+components/lineups/GolfHoleMap2D.tsx-3086-    greenPlottedShots,
+components/lineups/GolfHoleMap2D.tsx-3087-    greenViewAvailable,
+components/lineups/GolfHoleMap2D.tsx-3088-    isPlaying,
+components/lineups/GolfHoleMap2D.tsx:3089:    onSelectStroke,
+components/lineups/GolfHoleMap2D.tsx-3090-  ]);
+components/lineups/GolfHoleMap2D.tsx-3091-
+components/lineups/GolfHoleMap2D.tsx-3092-  function startPlayback() {
+components/lineups/GolfHoleMap2D.tsx-3093-    if (!coursePlottedShots[0]) {
+components/lineups/GolfHoleMap2D.tsx-3094-      return;
+components/lineups/GolfHoleMap2D.tsx-3095-    }
+components/lineups/GolfHoleMap2D.tsx-3096-
+components/lineups/GolfHoleMap2D.tsx-3097-    cancelShotAnimation();
+components/lineups/GolfHoleMap2D.tsx-3098-    setViewMode("course");
+components/lineups/GolfHoleMap2D.tsx-3099-
+components/lineups/GolfHoleMap2D.tsx-3100-    /*
+components/lineups/GolfHoleMap2D.tsx-3101-     * Playback always begins from the complete hole.
+components/lineups/GolfHoleMap2D.tsx:3102:     * Manual Recenter Shot remains available separately.
+components/lineups/GolfHoleMap2D.tsx-3103-     */
+components/lineups/GolfHoleMap2D.tsx:3104:    setTransform(
+components/lineups/GolfHoleMap2D.tsx:3105:      DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-3106-    );
+components/lineups/GolfHoleMap2D.tsx-3107-
+components/lineups/GolfHoleMap2D.tsx-3108-    setRevealedStrokeCount(0);
+components/lineups/GolfHoleMap2D.tsx-3109-
+components/lineups/GolfHoleMap2D.tsx:3110:    onSelectStroke(
+components/lineups/GolfHoleMap2D.tsx-3111-      coursePlottedShots[0]
+components/lineups/GolfHoleMap2D.tsx-3112-        .strokeNumber,
+components/lineups/GolfHoleMap2D.tsx-3113-    );
+components/lineups/GolfHoleMap2D.tsx-3114-
+components/lineups/GolfHoleMap2D.tsx-3115-    setIsPlaying(true);
+components/lineups/GolfHoleMap2D.tsx-3116-  }
+components/lineups/GolfHoleMap2D.tsx-3117-
+components/lineups/GolfHoleMap2D.tsx-3118-  function openVideoReplay(
+components/lineups/GolfHoleMap2D.tsx-3119-    strokeNumber: number,
+components/lineups/GolfHoleMap2D.tsx-3120-  ) {
+components/lineups/GolfHoleMap2D.tsx-3121-    setIsPlaying(false);
+components/lineups/GolfHoleMap2D.tsx-3122-    setVideoStrokeNumber(
+components/lineups/GolfHoleMap2D.tsx-3123-      strokeNumber,
+components/lineups/GolfHoleMap2D.tsx-3124-    );
+components/lineups/GolfHoleMap2D.tsx-3125-
+components/lineups/GolfHoleMap2D.tsx-3126-    /*
+--
+components/lineups/GolfHoleMap2D.tsx-3177-          candidate.strokeNumber ===
+components/lineups/GolfHoleMap2D.tsx-3178-          strokeNumber,
+components/lineups/GolfHoleMap2D.tsx-3179-      ) ?? null;
+components/lineups/GolfHoleMap2D.tsx-3180-
+components/lineups/GolfHoleMap2D.tsx-3181-    if (!courseShot) {
+components/lineups/GolfHoleMap2D.tsx-3182-      return;
+components/lineups/GolfHoleMap2D.tsx-3183-    }
+components/lineups/GolfHoleMap2D.tsx-3184-
+components/lineups/GolfHoleMap2D.tsx:3185:    onSelectStroke(
+components/lineups/GolfHoleMap2D.tsx-3186-      strokeNumber,
+components/lineups/GolfHoleMap2D.tsx-3187-    );
+components/lineups/GolfHoleMap2D.tsx-3188-
+components/lineups/GolfHoleMap2D.tsx-3189-    const shouldUseGreen =
+components/lineups/GolfHoleMap2D.tsx-3190-      greenViewAvailable &&
+components/lineups/GolfHoleMap2D.tsx-3191-      greenShot !== null &&
+components/lineups/GolfHoleMap2D.tsx-3192-      isGreenLocation(
+components/lineups/GolfHoleMap2D.tsx-3193-        courseShot.fromLocation,
+components/lineups/GolfHoleMap2D.tsx-3194-      );
+components/lineups/GolfHoleMap2D.tsx-3195-
+components/lineups/GolfHoleMap2D.tsx-3196-    if (shouldUseGreen) {
+components/lineups/GolfHoleMap2D.tsx-3197-      setViewMode("green");
+components/lineups/GolfHoleMap2D.tsx-3198-
+components/lineups/GolfHoleMap2D.tsx-3199-      focusGreenPutt(
+components/lineups/GolfHoleMap2D.tsx-3200-        greenShot,
+components/lineups/GolfHoleMap2D.tsx-3201-      );
+--
+components/lineups/GolfHoleMap2D.tsx-3411-          {greenViewAvailable ? (
+components/lineups/GolfHoleMap2D.tsx-3412-            <div className="mr-1 flex overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
+components/lineups/GolfHoleMap2D.tsx-3413-              <button
+components/lineups/GolfHoleMap2D.tsx-3414-                type="button"
+components/lineups/GolfHoleMap2D.tsx-3415-                onClick={() => {
+components/lineups/GolfHoleMap2D.tsx-3416-                  setIsPlaying(false);
+components/lineups/GolfHoleMap2D.tsx-3417-                  cancelShotAnimation();
+components/lineups/GolfHoleMap2D.tsx-3418-                  setViewMode("course");
+components/lineups/GolfHoleMap2D.tsx:3419:                  setTransform(
+components/lineups/GolfHoleMap2D.tsx:3420:                    DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-3421-                  );
+components/lineups/GolfHoleMap2D.tsx-3422-                }}
+components/lineups/GolfHoleMap2D.tsx-3423-                className={`px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+components/lineups/GolfHoleMap2D.tsx-3424-                  viewMode === "course"
+components/lineups/GolfHoleMap2D.tsx-3425-                    ? "bg-slate-700 text-white"
+components/lineups/GolfHoleMap2D.tsx-3426-                    : "text-slate-500 hover:text-slate-300"
+components/lineups/GolfHoleMap2D.tsx-3427-                }`}
+components/lineups/GolfHoleMap2D.tsx-3428-              >
+components/lineups/GolfHoleMap2D.tsx-3429-                Course
+components/lineups/GolfHoleMap2D.tsx-3430-              </button>
+components/lineups/GolfHoleMap2D.tsx-3431-
+components/lineups/GolfHoleMap2D.tsx-3432-              <button
+components/lineups/GolfHoleMap2D.tsx-3433-                type="button"
+components/lineups/GolfHoleMap2D.tsx-3434-                onClick={() => {
+components/lineups/GolfHoleMap2D.tsx-3435-                  setIsPlaying(false);
+components/lineups/GolfHoleMap2D.tsx-3436-                  cancelShotAnimation();
+components/lineups/GolfHoleMap2D.tsx-3437-                  setViewMode("green");
+components/lineups/GolfHoleMap2D.tsx:3438:                  setTransform(
+components/lineups/GolfHoleMap2D.tsx:3439:                    DEFAULT_TRANSFORM,
+components/lineups/GolfHoleMap2D.tsx-3440-                  );
+components/lineups/GolfHoleMap2D.tsx-3441-                }}
+components/lineups/GolfHoleMap2D.tsx-3442-                className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
+components/lineups/GolfHoleMap2D.tsx-3443-                  viewMode === "green"
+components/lineups/GolfHoleMap2D.tsx-3444-                    ? "bg-emerald-900 text-emerald-200"
+components/lineups/GolfHoleMap2D.tsx-3445-                    : "text-slate-500 hover:text-slate-300"
+components/lineups/GolfHoleMap2D.tsx-3446-                }`}
+components/lineups/GolfHoleMap2D.tsx-3447-              >
+components/lineups/GolfHoleMap2D.tsx-3448-                Green
+components/lineups/GolfHoleMap2D.tsx-3449-              </button>
+components/lineups/GolfHoleMap2D.tsx-3450-
+components/lineups/GolfHoleMap2D.tsx-3451-              {green3dAvailable ? (
+components/lineups/GolfHoleMap2D.tsx-3452-                <button
+components/lineups/GolfHoleMap2D.tsx-3453-                  type="button"
+components/lineups/GolfHoleMap2D.tsx-3454-                  onClick={() => {
+components/lineups/GolfHoleMap2D.tsx-3455-                    setIsPlaying(false);
+--
+components/lineups/GolfHoleMap2D.tsx-3477-                  type="button"
+components/lineups/GolfHoleMap2D.tsx-3478-                  onClick={() =>
+components/lineups/GolfHoleMap2D.tsx-3479-                    focusShot(
+components/lineups/GolfHoleMap2D.tsx-3480-                      selectedShot,
+components/lineups/GolfHoleMap2D.tsx-3481-                    )
+components/lineups/GolfHoleMap2D.tsx-3482-                  }
+components/lineups/GolfHoleMap2D.tsx-3483-                  className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+components/lineups/GolfHoleMap2D.tsx-3484-                >
+components/lineups/GolfHoleMap2D.tsx:3485:                  Recenter shot
+components/lineups/GolfHoleMap2D.tsx-3486-                </button>
+components/lineups/GolfHoleMap2D.tsx-3487-              ) : null}
+components/lineups/GolfHoleMap2D.tsx-3488-
+components/lineups/GolfHoleMap2D.tsx-3489-              <button
+components/lineups/GolfHoleMap2D.tsx-3490-                type="button"
+components/lineups/GolfHoleMap2D.tsx-3491-                onClick={startPlayback}
+components/lineups/GolfHoleMap2D.tsx-3492-                disabled={isPlaying}
+components/lineups/GolfHoleMap2D.tsx-3493-                className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+components/lineups/GolfHoleMap2D.tsx-3494-              >
+components/lineups/GolfHoleMap2D.tsx-3495-                {isPlaying
+components/lineups/GolfHoleMap2D.tsx-3496-                  ? "Playing hole…"
+components/lineups/GolfHoleMap2D.tsx-3497-                  : "▶ Play Hole"}
+components/lineups/GolfHoleMap2D.tsx-3498-              </button>
+components/lineups/GolfHoleMap2D.tsx-3499-            </>
+components/lineups/GolfHoleMap2D.tsx-3500-          ) : null}
+components/lineups/GolfHoleMap2D.tsx-3501-
+--
+components/lineups/GolfHoleMap2D.tsx-4169-                  1 ? (
+components/lineups/GolfHoleMap2D.tsx-4170-                    <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-1/2 h-px -translate-y-1/2 bg-slate-700" />
+components/lineups/GolfHoleMap2D.tsx-4171-                  ) : null}
+components/lineups/GolfHoleMap2D.tsx-4172-
+components/lineups/GolfHoleMap2D.tsx-4173-                  {coursePlottedShots.map(
+components/lineups/GolfHoleMap2D.tsx-4174-                    (shot) => {
+components/lineups/GolfHoleMap2D.tsx-4175-                      const selected =
+components/lineups/GolfHoleMap2D.tsx-4176-                        shot.strokeNumber ===
+components/lineups/GolfHoleMap2D.tsx:4177:                        selectedStrokeNumber;
+components/lineups/GolfHoleMap2D.tsx-4178-
+components/lineups/GolfHoleMap2D.tsx-4179-                      const revealed =
+components/lineups/GolfHoleMap2D.tsx:4180:                        selectedStrokeNumber !==
+components/lineups/GolfHoleMap2D.tsx-4181-                          null &&
+components/lineups/GolfHoleMap2D.tsx-4182-                        shot.strokeNumber <=
+components/lineups/GolfHoleMap2D.tsx:4183:                          selectedStrokeNumber;
+components/lineups/GolfHoleMap2D.tsx-4184-
+components/lineups/GolfHoleMap2D.tsx-4185-                      return (
+components/lineups/GolfHoleMap2D.tsx-4186-                        <div
+components/lineups/GolfHoleMap2D.tsx-4187-                          key={`navigator-${shot.strokeNumber}`}
+components/lineups/GolfHoleMap2D.tsx-4188-                          className="relative z-10 flex justify-center"
+components/lineups/GolfHoleMap2D.tsx-4189-                        >
+components/lineups/GolfHoleMap2D.tsx-4190-                          <button
+components/lineups/GolfHoleMap2D.tsx-4191-                            type="button"
+components/lineups/GolfHoleMap2D.tsx-4192-                            onClick={() => {
+components/lineups/GolfHoleMap2D.tsx-4193-                              void selectShot(
+components/lineups/GolfHoleMap2D.tsx-4194-                                shot.strokeNumber,
+components/lineups/GolfHoleMap2D.tsx-4195-                              );
+components/lineups/GolfHoleMap2D.tsx-4196-                            }}
+components/lineups/GolfHoleMap2D.tsx-4197-                            aria-label={`Replay shot ${shot.strokeNumber}`}
+components/lineups/GolfHoleMap2D.tsx-4198-                            aria-current={
+components/lineups/GolfHoleMap2D.tsx-4199-                              selected
+--
+components/lineups/GolfHoleReplayPanel.tsx-411-
+components/lineups/GolfHoleReplayPanel.tsx-412-  const [isRefreshing, setIsRefreshing] =
+components/lineups/GolfHoleReplayPanel.tsx-413-    useState(false);
+components/lineups/GolfHoleReplayPanel.tsx-414-
+components/lineups/GolfHoleReplayPanel.tsx-415-  const [lastUpdatedAt, setLastUpdatedAt] =
+components/lineups/GolfHoleReplayPanel.tsx-416-    useState<Date | null>(null);
+components/lineups/GolfHoleReplayPanel.tsx-417-
+components/lineups/GolfHoleReplayPanel.tsx-418-  const [
+components/lineups/GolfHoleReplayPanel.tsx:419:    selectedStrokeNumber,
+components/lineups/GolfHoleReplayPanel.tsx:420:    setSelectedStrokeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-421-  ] = useState<number | null>(null);
+components/lineups/GolfHoleReplayPanel.tsx-422-
+components/lineups/GolfHoleReplayPanel.tsx-423-  const [
+components/lineups/GolfHoleReplayPanel.tsx-424-    isShotCastOpen,
+components/lineups/GolfHoleReplayPanel.tsx-425-    setIsShotCastOpen,
+components/lineups/GolfHoleReplayPanel.tsx-426-  ] = useState(true);
+components/lineups/GolfHoleReplayPanel.tsx-427-
+components/lineups/GolfHoleReplayPanel.tsx-428-  /*
+components/lineups/GolfHoleReplayPanel.tsx-429-   * A new golfer / round / hole is a new replay.
+components/lineups/GolfHoleReplayPanel.tsx-430-   *
+components/lineups/GolfHoleReplayPanel.tsx-431-   * Do not allow a stroke number from the previous replay to
+components/lineups/GolfHoleReplayPanel.tsx-432-   * survive merely because the next hole also has (for example)
+components/lineups/GolfHoleReplayPanel.tsx-433-   * a Stroke 2.
+components/lineups/GolfHoleReplayPanel.tsx-434-   */
+components/lineups/GolfHoleReplayPanel.tsx-435-  useEffect(() => {
+components/lineups/GolfHoleReplayPanel.tsx:436:    setSelectedStrokeNumber(null);
+components/lineups/GolfHoleReplayPanel.tsx-437-    setReplay(null);
+components/lineups/GolfHoleReplayPanel.tsx-438-    setMessage("");
+components/lineups/GolfHoleReplayPanel.tsx-439-  }, [
+components/lineups/GolfHoleReplayPanel.tsx-440-    slateId,
+components/lineups/GolfHoleReplayPanel.tsx-441-    playerId,
+components/lineups/GolfHoleReplayPanel.tsx-442-    roundNumber,
+components/lineups/GolfHoleReplayPanel.tsx-443-    holeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-444-  ]);
+components/lineups/GolfHoleReplayPanel.tsx-445-
+components/lineups/GolfHoleReplayPanel.tsx-446-  const [
+components/lineups/GolfHoleReplayPanel.tsx-447-    isAllShotsOpen,
+components/lineups/GolfHoleReplayPanel.tsx-448-    setIsAllShotsOpen,
+components/lineups/GolfHoleReplayPanel.tsx-449-  ] = useState(false);
+components/lineups/GolfHoleReplayPanel.tsx-450-
+components/lineups/GolfHoleReplayPanel.tsx-451-  /*
+components/lineups/GolfHoleReplayPanel.tsx-452-   * Keep the latest reconciliation callback without making the replay
+--
+components/lineups/GolfHoleReplayPanel.tsx-596-
+components/lineups/GolfHoleReplayPanel.tsx-597-        if (!result.available) {
+components/lineups/GolfHoleReplayPanel.tsx-598-          setMessage(
+components/lineups/GolfHoleReplayPanel.tsx-599-            result.message ||
+components/lineups/GolfHoleReplayPanel.tsx-600-              "This hole has not started yet.",
+components/lineups/GolfHoleReplayPanel.tsx-601-          );
+components/lineups/GolfHoleReplayPanel.tsx-602-        }
+components/lineups/GolfHoleReplayPanel.tsx-603-
+components/lineups/GolfHoleReplayPanel.tsx:604:        setSelectedStrokeNumber(
+components/lineups/GolfHoleReplayPanel.tsx-605-          (current) => {
+components/lineups/GolfHoleReplayPanel.tsx-606-            const shots =
+components/lineups/GolfHoleReplayPanel.tsx-607-              result.replay?.shots ?? [];
+components/lineups/GolfHoleReplayPanel.tsx-608-
+components/lineups/GolfHoleReplayPanel.tsx-609-            if (forceRefresh) {
+components/lineups/GolfHoleReplayPanel.tsx-610-              return (
+components/lineups/GolfHoleReplayPanel.tsx-611-                shots.at(-1)
+components/lineups/GolfHoleReplayPanel.tsx-612-                  ?.strokeNumber ??
+components/lineups/GolfHoleReplayPanel.tsx-613-                null
+components/lineups/GolfHoleReplayPanel.tsx-614-              );
+components/lineups/GolfHoleReplayPanel.tsx-615-            }
+components/lineups/GolfHoleReplayPanel.tsx-616-
+components/lineups/GolfHoleReplayPanel.tsx-617-            if (
+components/lineups/GolfHoleReplayPanel.tsx-618-              current !== null &&
+components/lineups/GolfHoleReplayPanel.tsx-619-              shots.some(
+components/lineups/GolfHoleReplayPanel.tsx-620-                (shot) =>
+--
+components/lineups/GolfHoleReplayPanel.tsx-1338-                      replay.shots.length === 0
+components/lineups/GolfHoleReplayPanel.tsx-1339-                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx-1340-                        : activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1341-                              .calibrationVerified
+components/lineups/GolfHoleReplayPanel.tsx-1342-                          ? "No plottable shot coordinates were returned."
+components/lineups/GolfHoleReplayPanel.tsx-1343-                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+components/lineups/GolfHoleReplayPanel.tsx-1344-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1345-                    shots={replay.shots}
+components/lineups/GolfHoleReplayPanel.tsx:1346:                    selectedStrokeNumber={
+components/lineups/GolfHoleReplayPanel.tsx:1347:                      selectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx-1348-                    }
+components/lineups/GolfHoleReplayPanel.tsx:1349:                    onSelectStroke={
+components/lineups/GolfHoleReplayPanel.tsx:1350:                      setSelectedStrokeNumber
+components/lineups/GolfHoleReplayPanel.tsx-1351-                    }
+components/lineups/GolfHoleReplayPanel.tsx-1352-                  />
+components/lineups/GolfHoleReplayPanel.tsx-1353-
+components/lineups/GolfHoleReplayPanel.tsx-1354-                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+components/lineups/GolfHoleReplayPanel.tsx-1355-                    <div className="flex flex-wrap items-center gap-2">
+components/lineups/GolfHoleReplayPanel.tsx-1356-                      {!activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1357-                        .calibrationVerified ? (
+components/lineups/GolfHoleReplayPanel.tsx-1358-                        <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-1 text-[8px] font-black uppercase tracking-wide text-amber-300">
+components/lineups/GolfHoleReplayPanel.tsx-1359-                          Layout preview
+components/lineups/GolfHoleReplayPanel.tsx-1360-                        </span>
+components/lineups/GolfHoleReplayPanel.tsx-1361-                      ) : null}
+components/lineups/GolfHoleReplayPanel.tsx-1362-
+components/lineups/GolfHoleReplayPanel.tsx-1363-                      {!isHoleComplete &&
+components/lineups/GolfHoleReplayPanel.tsx-1364-                      replay.shots.length > 0 ? (
+components/lineups/GolfHoleReplayPanel.tsx-1365-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
+components/lineups/GolfHoleReplayPanel.tsx-1366-                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+--
+components/lineups/GolfHoleReplayPanel.tsx-1428-
+components/lineups/GolfHoleReplayPanel.tsx-1429-                  const isCurrentBall =
+components/lineups/GolfHoleReplayPanel.tsx-1430-                    !isHoleComplete &&
+components/lineups/GolfHoleReplayPanel.tsx-1431-                    index ===
+components/lineups/GolfHoleReplayPanel.tsx-1432-                      replay.shots.length - 1;
+components/lineups/GolfHoleReplayPanel.tsx-1433-
+components/lineups/GolfHoleReplayPanel.tsx-1434-                  const isSelectedShot =
+components/lineups/GolfHoleReplayPanel.tsx-1435-                    shot.strokeNumber ===
+components/lineups/GolfHoleReplayPanel.tsx:1436:                    selectedStrokeNumber;
+components/lineups/GolfHoleReplayPanel.tsx-1437-
+components/lineups/GolfHoleReplayPanel.tsx-1438-                  return (
+components/lineups/GolfHoleReplayPanel.tsx-1439-                    <button
+components/lineups/GolfHoleReplayPanel.tsx-1440-                      type="button"
+components/lineups/GolfHoleReplayPanel.tsx-1441-                      key={shot.strokeNumber}
+components/lineups/GolfHoleReplayPanel.tsx-1442-                      onClick={() => {
+components/lineups/GolfHoleReplayPanel.tsx:1443:                        setSelectedStrokeNumber(
+components/lineups/GolfHoleReplayPanel.tsx-1444-                          shot.strokeNumber,
+components/lineups/GolfHoleReplayPanel.tsx-1445-                        );
+components/lineups/GolfHoleReplayPanel.tsx-1446-
+components/lineups/GolfHoleReplayPanel.tsx-1447-                        if (
+components/lineups/GolfHoleReplayPanel.tsx-1448-                          activeShotCastConfig
+components/lineups/GolfHoleReplayPanel.tsx-1449-                        ) {
+components/lineups/GolfHoleReplayPanel.tsx-1450-                          setIsAllShotsOpen(
+components/lineups/GolfHoleReplayPanel.tsx-1451-                            false,
+components/lineups/GolfHoleReplayPanel.tsx-1452-                          );
+components/lineups/GolfHoleReplayPanel.tsx-1453-                        }
+components/lineups/GolfHoleReplayPanel.tsx-1454-                      }}
+components/lineups/GolfHoleReplayPanel.tsx-1455-                      className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+components/lineups/GolfHoleReplayPanel.tsx-1456-                        index > 0
+components/lineups/GolfHoleReplayPanel.tsx-1457-                          ? "border-t border-slate-800"
+components/lineups/GolfHoleReplayPanel.tsx-1458-                          : ""
+components/lineups/GolfHoleReplayPanel.tsx-1459-                      } ${
+
+============================================================
+6. EXPECTED LEDGER / GOLF FILTER REFERENCES
+============================================================
+1-import { NextRequest, NextResponse } from "next/server";
+2-import { requireAdminApi } from "@/lib/requireAdminApi";
+3-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+4-
+5:type SportKey = "nba" | "nfl" | "golf";
+6-
+7-function normalizeSport(value: unknown): SportKey {
+8-  if (value === "nfl") return "nfl";
+9:  if (value === "golf") return "golf";
+10-  return "nba";
+11-}
+12-
+13-function validIsoDateTime(value: string) {
+14-  if (!value) return null;
+15-
+16-  const parsed = new Date(value);
+17-
+18-  return Number.isFinite(parsed.getTime())
+19-    ? parsed.toISOString()
+20-    : null;
+21-}
+22-
+23-export async function GET(request: NextRequest) {
+24-  const authError = await requireAdminApi();
+25-  if (authError) return authError;
+26-
+27-  try {
+28-    const type =
+29-      request.nextUrl.searchParams.get("type")?.trim() ?? "";
+30-
+31-    const status =
+32-      request.nextUrl.searchParams.get("status")?.trim() ?? "";
+33-
+34-    const sport =
+35-      request.nextUrl.searchParams.get("sport")?.trim() ?? "";
+36-
+37-    const start =
+38-      validIsoDateTime(
+39-        request.nextUrl.searchParams.get("start")?.trim() ?? ""
+--
+218-            ? startDate
+219-            : `${startDate} - ${endDate}`;
+220-
+221-        return [
+222-          Number(row.id),
+223-          row.display_name?.trim() || dateLabel,
+224-        ];
+225-      })
+226-    );
+227-
+228-    const nbaPlayerIds = new Set<number>();
+229-    const nflPlayerIds = new Set<number>();
+230:    const golfPlayerIds = new Set<number>();
+231-
+232-    for (const row of rows) {
+233-      if (!row.player_id) continue;
+234-
+235-      const rowSport = row.slate_id
+236-        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+237-        : "nba";
+238-
+239-      const playerId = Number(row.player_id);
+240-
+241-      if (rowSport === "nfl") {
+242-        nflPlayerIds.add(playerId);
+243:      } else if (rowSport === "golf") {
+244:        golfPlayerIds.add(playerId);
+245-      } else {
+246-        nbaPlayerIds.add(playerId);
+247-      }
+248-    }
+249-
+250-    const [
+251-      { data: nbaPlayers },
+252-      { data: nflPlayers },
+253:      { data: golfPlayers },
+254-    ] = await Promise.all([
+255-      nbaPlayerIds.size
+256-        ? supabaseAdmin
+257-            .from("players")
+258-            .select("id, name")
+259-            .in("id", [...nbaPlayerIds])
+260-        : Promise.resolve({ data: [] }),
+261-
+262-      nflPlayerIds.size
+263-        ? supabaseAdmin
+264-            .from("players_nfl")
+265-            .select("id, name")
+266-            .in("id", [...nflPlayerIds])
+267-        : Promise.resolve({ data: [] }),
+268-
+269:      golfPlayerIds.size
+270-        ? supabaseAdmin
+271:            .from("golf_players")
+272-            .select("id, display_name")
+273:            .in("id", [...golfPlayerIds])
+274-        : Promise.resolve({ data: [] }),
+275-    ]);
+276-
+277-    const nbaPlayerMap = new Map(
+278-      (nbaPlayers ?? []).map((row) => [
+279-        Number(row.id),
+280-        row.name,
+281-      ])
+282-    );
+283-
+284-    const nflPlayerMap = new Map(
+285-      (nflPlayers ?? []).map((row) => [
+286-        Number(row.id),
+287-        row.name,
+288-      ])
+289-    );
+290-
+291:    const golfPlayerMap = new Map(
+292:      (golfPlayers ?? []).map((row) => [
+293-        Number(row.id),
+294-        row.display_name,
+295-      ])
+296-    );
+297-
+298-    function resolvePlayerName(
+299-      row: (typeof rows)[number]
+300-    ) {
+301-      if (!row.player_id) return null;
+302-
+303-      const rowSport = row.slate_id
+304-        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+305-        : "nba";
+306-
+307-      const playerId = Number(row.player_id);
+308-
+309:      if (rowSport === "golf") {
+310-        return (
+311:          golfPlayerMap.get(playerId) ??
+312-          `Golfer ${playerId}`
+313-        );
+314-      }
+315-
+316-      if (rowSport === "nfl") {
+317-        return (
+318-          nflPlayerMap.get(playerId) ??
+319-          `Player ${playerId}`
+320-        );
+321-      }
+322-
+323-      return (
+324-        nbaPlayerMap.get(playerId) ??
+325-        `Player ${playerId}`
+326-      );
+327-    }
+328-
+329-
+330-    /*
+331:     * Expected Golf notification ledger.
+332-     *
+333-     * notification_history only contains events that actually reached
+334-     * sendLoggedNotification(). For Golf round-complete notifications we
+335-     * also want to see events that SHOULD exist before delivery.
+336-     *
+337:     * Expected event key:
+338:     *   player_finished:<slateId>:<playerId>:round-<roundNumber>
+339-     *
+340-     * If a matching notification_history row exists, that real delivery
+341-     * row remains authoritative. Otherwise:
+342-     *
+343:     *   incomplete round -> waiting
+344:     *   completed round  -> missed
+345-     *
+346-     * This is intentionally monitoring-only. It does not send pushes,
+347-     * modify notification preferences, or alter the live completion
+348-     * trigger.
+349-     */
+350:    type ExpectedLedgerRow = {
+351-      id: string;
+352-      event_key: string;
+353-      notification_type: string;
+354-      user_id: string | null;
+355-      team_id: number | null;
+356-      slate_id: number | null;
+357-      player_id: number | null;
+358-      title: string;
+359-      body: string;
+360:      status: "waiting" | "missed";
+361-      sent_count: number;
+362-      failed_count: number;
+363-      skipped: boolean;
+364-      reason: string | null;
+365-      metadata: Record<string, unknown>;
+366-      created_at: string;
+367-      completed_at: string | null;
+368-      sport: SportKey | null;
+369-      recipientName: string;
+370-      teamName: string | null;
+371-      playerName: string | null;
+372-      slateLabel: string | null;
+373-    };
+374-
+375-    const realEventKeys = new Set(
+376-      rows
+377-        .map((row) => row.event_key)
+378-        .filter(Boolean)
+379-        .map(String)
+380-    );
+381-
+382:    const expectedLedgerRows: ExpectedLedgerRow[] = [];
+383-
+384-    /*
+385-     * Only synthesize Golf expectations when Golf is included in the
+386-     * selected filter. NBA/NFL can adopt the same ledger model later
+387-     * without changing their current monitor behavior today.
+388-     */
+389:    if (!sport || sport === "all" || sport === "golf") {
+390:      const { data: golfSlates, error: golfSlatesError } =
+391-        await supabaseAdmin
+392-          .from("slates")
+393-          .select(
+394-            "id, date, start_date, end_date, sport, display_name"
+395-          )
+396:          .eq("sport", "golf");
+397-
+398:      if (golfSlatesError) {
+399-        return NextResponse.json(
+400-          {
+401-            error:
+402:              "Failed to build expected Golf notifications: " +
+403:              golfSlatesError.message,
+404-          },
+405-          { status: 500 }
+406-        );
+407-      }
+408-
+409:      const relevantGolfSlates = (golfSlates ?? []).filter((slate) => {
+410-        const rawStartDate =
+411-          slate.start_date ??
+412-          slate.date;
+413-
+414-        if (!rawStartDate) return false;
+415-
+416-        const rawEndDate =
+417-          slate.end_date ??
+418-          slate.date ??
+419-          rawStartDate;
+420-
+421-        /*
+422-         * A Golf tournament spans multiple calendar days.
+423-         *
+424-         * Include the slate whenever its date range overlaps the
+425-         * Notification Monitor's selected day:
+426-         *
+427-         *   slateEnd >= rangeStart
+428-         *   slateStart < rangeEnd
+429-         *
+430-         * Do NOT require the tournament itself to start on the selected
+431-         * day; Round 2/3/4 naturally occur after start_date.
+432-         */
+433-        const slateStart =
+434-          new Date(`${rawStartDate}T00:00:00Z`);
+435-
+436-        const slateEnd =
+437-          new Date(`${rawEndDate}T23:59:59.999Z`);
+438-
+439-        if (
+--
+444-        }
+445-
+446-        if (
+447-          end &&
+448-          slateStart >= new Date(end)
+449-        ) {
+450-          return false;
+451-        }
+452-
+453-        return true;
+454-      });
+455-
+456:      const golfSlateIds =
+457-        relevantGolfSlates.map((slate) =>
+458-          Number(slate.id)
+459-        );
+460-
+461:      if (golfSlateIds.length > 0) {
+462-        /*
+463-         * Visible notification history is filtered to the selected day,
+464-         * but deduplication/reconciliation must use the entire tournament
+465-         * history. Otherwise a Round 1 notification sent yesterday would
+466-         * incorrectly appear MISSED while viewing Round 2 today.
+467-         */
+468-        const {
+469-          data: tournamentNotificationHistory,
+470-          error: tournamentNotificationHistoryError,
+471-        } = await supabaseAdmin
+472-          .from("notification_history")
+473-          .select("event_key")
+474:          .in("slate_id", golfSlateIds)
+475-          .eq("notification_type", "player_finished")
+476-          .not("event_key", "is", null);
+477-
+478-        if (tournamentNotificationHistoryError) {
+479-          return NextResponse.json(
+480-            {
+481-              error:
+482:                "Failed to reconcile expected Golf notifications: " +
+483-                tournamentNotificationHistoryError.message,
+484-            },
+485-            { status: 500 }
+486-          );
+487-        }
+488-
+489-        for (
+490-          const row of tournamentNotificationHistory ?? []
+491-        ) {
+492-          if (row.event_key) {
+493-            realEventKeys.add(
+494-              String(row.event_key)
+495-            );
+496-          }
+497-        }
+498-
+499-        const [
+500:          { data: golfLineups, error: golfLineupsError },
+501-          { data: eventPlayers, error: eventPlayersError },
+502-        ] = await Promise.all([
+503-          supabaseAdmin
+504-            .from("lineups")
+505-            .select(
+506-              `
+507-                id,
+508-                slate_id,
+509-                team_id,
+510:                lineup_players (
+511-                  player_id
+512-                )
+513-              `
+514-            )
+515:            .in("slate_id", golfSlateIds),
+516-
+517-          supabaseAdmin
+518:            .from("golf_event_players")
+519-            .select(
+520-              `
+521-                id,
+522-                slate_id,
+523-                player_id,
+524-                current_round,
+525:                rounds_completed,
+526-                status
+527-              `
+528-            )
+529:            .in("slate_id", golfSlateIds),
+530-        ]);
+531-
+532:        if (golfLineupsError) {
+533-          return NextResponse.json(
+534-            {
+535-              error:
+536:                "Failed to build expected Golf notifications from lineups: " +
+537:                golfLineupsError.message,
+538-            },
+539-            { status: 500 }
+540-          );
+541-        }
+542-
+543-        if (eventPlayersError) {
+544-          return NextResponse.json(
+545-            {
+546-              error:
+547:                "Failed to build expected Golf notifications from event players: " +
+548-                eventPlayersError.message,
+549-            },
+550-            { status: 500 }
+551-          );
+552-        }
+553-
+554-        const safeGolfLineups =
+555:          (golfLineups ?? []) as Array<{
+556-            id: number;
+557-            slate_id: number;
+558-            team_id: number;
+559:            lineup_players:
+560-              | Array<{ player_id: number }>
+561-              | null;
+562-          }>;
+563-
+564-        const safeEventPlayers =
+565-          (eventPlayers ?? []) as Array<{
+566-            id: number;
+567-            slate_id: number;
+568-            player_id: number;
+569-            current_round: number | null;
+570:            rounds_completed: number | null;
+571-            status: string | null;
+572-          }>;
+573-
+574-        const eventPlayerIds =
+575-          safeEventPlayers.map((row) =>
+576-            Number(row.id)
+577-          );
+578-
+579:        const { data: golfRounds, error: golfRoundsError } =
+580-          eventPlayerIds.length > 0
+581-            ? await supabaseAdmin
+582:                .from("golf_rounds")
+583-                .select(
+584-                  "event_player_id, round_number, holes_completed"
+585-                )
+586-                .in("event_player_id", eventPlayerIds)
+587-            : { data: [], error: null };
+588-
+589:        if (golfRoundsError) {
+590-          return NextResponse.json(
+591-            {
+592-              error:
+593:                "Failed to build expected Golf notifications from rounds: " +
+594:                golfRoundsError.message,
+595-            },
+596-            { status: 500 }
+597-          );
+598-        }
+599-
+600-        const teamIdsForLedger = Array.from(
+601-          new Set(
+602-            safeGolfLineups.map((row) =>
+603-              Number(row.team_id)
+604-            )
+605-          )
+606-        );
+607-
+608-        const { data: ledgerUsers, error: ledgerUsersError } =
+609-          teamIdsForLedger.length > 0
+610-            ? await supabaseAdmin
+611-                .from("app_users")
+612-                .select(
+613-                  "id, team_id, display_name"
+614-                )
+615-                .in(
+616-                  "team_id",
+617-                  teamIdsForLedger
+618-                )
+619-                .eq("is_active", true)
+620-            : { data: [], error: null };
+621-
+622-        if (ledgerUsersError) {
+623-          return NextResponse.json(
+624-            {
+625-              error:
+626:                "Failed to build expected Golf notifications from users: " +
+627-                ledgerUsersError.message,
+628-            },
+629-            { status: 500 }
+630-          );
+631-        }
+632-
+633-        const ledgerUserIds =
+634-          (ledgerUsers ?? []).map((row) =>
+635-            String(row.id)
+636-          );
+637-
+638-        const { data: ledgerPreferences } =
+639-          ledgerUserIds.length > 0
+640-            ? await supabaseAdmin
+641-                .from("notification_preferences")
+642-                .select(
+643-                  "user_id, notifications_enabled, player_finished_enabled"
+644-                )
+645-                .in(
+646-                  "user_id",
+647-                  ledgerUserIds
+648-                )
+649-            : { data: [] };
+650-
+651-        const ledgerUserByTeamId =
+652-          new Map(
+653-            (ledgerUsers ?? []).map((row) => [
+654-              Number(row.team_id),
+655-              row,
+656-            ])
+--
+680-            ])
+681-          );
+682-
+683-        const ledgerRoundsByEventPlayer =
+684-          new Map<
+685-            number,
+686-            Array<{
+687-              round_number: number;
+688-              holes_completed: number | null;
+689-            }>
+690-          >();
+691-
+692:        for (const round of golfRounds ?? []) {
+693-          const eventPlayerId =
+694-            Number(round.event_player_id);
+695-
+696-          const existing =
+697-            ledgerRoundsByEventPlayer.get(
+698-              eventPlayerId
+699-            ) ?? [];
+700-
+701-          existing.push({
+702-            round_number:
+703-              Number(round.round_number),
+704-            holes_completed:
+705-              round.holes_completed === null
+706-                ? null
+707-                : Number(round.holes_completed),
+708-          });
+709-
+710-          ledgerRoundsByEventPlayer.set(
+711-            eventPlayerId,
+712-            existing
+713-          );
+714-        }
+715-
+716-        /*
+717:         * Expected Golf notification rounds are determined per golfer.
+718-         *
+719-         * Golfers do not all complete a round at the same time. Using
+720:         * the field-wide maximum rounds_completed advances every golfer
+721:         * to the next round as soon as the first golfer finishes.
+722-         *
+723:         * Instead, each golfer's own rounds_completed determines the
+724-         * round whose completion notification should currently exist.
+725-         */
+726-
+727-        const ledgerPlayerIds =
+728-          Array.from(
+729-            new Set(
+730-              safeGolfLineups.flatMap((lineup) =>
+731:                (lineup.lineup_players ?? []).map(
+732-                  (row) => Number(row.player_id)
+733-                )
+734-              )
+735-            )
+736-          );
+737-
+738-        const { data: ledgerGolfPlayers } =
+739-          ledgerPlayerIds.length > 0
+740-            ? await supabaseAdmin
+741:                .from("golf_players")
+742-                .select("id, display_name")
+743-                .in("id", ledgerPlayerIds)
+744-            : { data: [] };
+745-
+746-        const ledgerPlayerNameById =
+747-          new Map(
+748-            (ledgerGolfPlayers ?? []).map((row) => [
+749-              Number(row.id),
+750-              String(row.display_name),
+751-            ])
+752-          );
+753-
+754-        for (const lineup of safeGolfLineups) {
+755-          const slateId =
+756-            Number(lineup.slate_id);
+757-
+758-          const teamId =
+759-            Number(lineup.team_id);
+760-
+761-          const slate =
+762-            ledgerSlateById.get(slateId);
+763-
+764-          if (!slate) continue;
+765-
+766-          const user =
+767-            ledgerUserByTeamId.get(teamId) ??
+768-            null;
+769-
+770-          const preference =
+771-            user
+772-              ? ledgerPreferenceByUserId.get(
+773-                  String(user.id)
+774-                ) ?? null
+775-              : null;
+776-
+777-          /*
+778:           * Do not create expected rows for users who have explicitly
+779-           * disabled player-finished notifications. The monitor should
+780:           * represent notifications the system is actually expected to
+781-           * deliver.
+782-           *
+783-           * Missing preference rows use the app default: enabled.
+784-           */
+785-          if (
+786-            preference &&
+787-            (
+788-              preference.notifications_enabled === false ||
+789-              preference.player_finished_enabled === false
+790-            )
+791-          ) {
+792-            continue;
+793-          }
+794-
+795-          const slateLabel =
+796-            String(
+797-              slate.display_name?.trim() ||
+798-                slate.start_date ||
+799-                slate.date ||
+800-                `Slate ${slateId}`
+801-            );
+802-
+803:          const expectedCreatedAt =
+804-            `${String(
+805-              slate.start_date ??
+806-                slate.date
+807-            )}T00:00:00.000Z`;
+808-
+809-          for (
+810-            const lineupPlayer of
+811:              lineup.lineup_players ?? []
+812-          ) {
+813-            const playerId =
+814-              Number(
+815-                lineupPlayer.player_id
+816-              );
+817-
+818-            const eventPlayer =
+819-              ledgerEventPlayerBySlatePlayer.get(
+820-                `${slateId}:${playerId}`
+821-              );
+822-
+823-            if (!eventPlayer) {
+824-              continue;
+825-            }
+826-
+827-            const rounds =
+828-              ledgerRoundsByEventPlayer.get(
+829-                Number(eventPlayer.id)
+830-              ) ?? [];
+831-
+832-            const roundsCompleted =
+833-              Number(
+834:                eventPlayer.rounds_completed ?? 0
+835-              );
+836-
+837:            const roundNumber =
+838-              Math.min(
+839-                4,
+840-                Math.max(
+841-                  1,
+842-                  roundsCompleted + 1
+843-                )
+844-              );
+845-
+846-            /*
+847:             * Do not show tomorrow's expected notification
+848-             * immediately after today's round is completed.
+849-             *
+850-             * Example:
+851:             *   rounds_completed = 2
+852-             *   current_round = 2
+853-             *
+854-             * Round 2 is done, but Round 3 has not started yet.
+855-             * The Round 3 WAITING row appears only after the live
+856:             * provider advances this golfer to current_round = 3.
+857-             */
+858:            const currentRound =
+859-              Number(
+860-                eventPlayer.current_round ??
+861-                  0
+862-              );
+863-
+864-            if (
+865-              roundsCompleted > 0 &&
+866:              currentRound <= roundsCompleted
+867-            ) {
+868-              continue;
+869-            }
+870-
+871-            const eventKey =
+872:              `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
+873-
+874-            /*
+875-             * If the delivery pipeline already processed this exact
+876-             * current-round event, the real notification_history row is
+877-             * authoritative and no synthetic row is needed.
+878-             */
+879-            if (
+880-              realEventKeys.has(eventKey)
+881-            ) {
+882-              continue;
+883-            }
+884-
+885-            const persistedRound =
+886-              rounds.find(
+887-                (round) =>
+888-                  Number(
+889-                    round.round_number
+890:                  ) === roundNumber
+891-              ) ?? null;
+892-
+893-            /*
+894-             * A current-round notification becomes MISSED only after
+895-             * that exact round is genuinely complete.
+896-             *
+897-             * Future placeholder round rows do not matter.
+898-             */
+899-            const roundComplete =
+900-              Number(
+901:                eventPlayer.rounds_completed ??
+902-                  0
+903:              ) >= roundNumber ||
+904-              Number(
+905-                persistedRound
+906-                  ?.holes_completed ?? 0
+907-              ) >= 18;
+908-
+909-            const playerName =
+910-              ledgerPlayerNameById.get(
+911-                playerId
+912-              ) ??
+913-              `Golfer ${playerId}`;
+914-
+915:            expectedLedgerRows.push({
+916-              id:
+917:                `expected:${eventKey}`,
+918-              event_key:
+919-                eventKey,
+920-              notification_type:
+921-                "player_finished",
+922-              user_id:
+923-                user
+924-                  ? String(user.id)
+925-                  : null,
+926-              team_id:
+927-                teamId,
+928-              slate_id:
+929-                slateId,
+930-              player_id:
+931-                playerId,
+932-              title:
+933-                `⛳ ${playerName} finished!`,
+934-              body:
+935-                roundComplete
+936:                  ? `${playerName} completed Round ${roundNumber}, but no notification event was recorded.`
+937:                  : `Waiting for ${playerName} to complete Round ${roundNumber}.`,
+938-              status:
+939-                roundComplete
+940:                  ? "missed"
+941:                  : "waiting",
+942-              sent_count: 0,
+943-              failed_count: 0,
+944-              skipped: false,
+945-              reason:
+946-                roundComplete
+947:                  ? `Round ${roundNumber} is complete, but no matching notification event reached the delivery pipeline.`
+948:                  : `Waiting for Round ${roundNumber} completion.`,
+949-              metadata: {
+950:                expected: true,
+951:                roundNumber,
+952-                roundsCompleted,
+953-                playerStatus:
+954-                  eventPlayer.status ??
+955-                  null,
+956-                holesCompleted:
+957-                  persistedRound
+958-                    ?.holes_completed ??
+959-                  null,
+960-                devices: [],
+961-              },
+962-              created_at:
+963:                expectedCreatedAt,
+964-              completed_at:
+965-                roundComplete
+966-                  ? new Date().toISOString()
+967-                  : null,
+968-              sport:
+969:                "golf",
+970-              recipientName:
+971-                user?.display_name ??
+972-                "No recipient",
+973-              teamName:
+974-                teamMap.get(teamId) ??
+975-                `Team ${teamId}`,
+976-              playerName,
+977-              slateLabel,
+978-            });
+979-          }
+980-        }
+981-      }
+982-    }
+983-
+984-    const history = rows.map((row) => {
+985-      const rowSport = row.slate_id
+986-        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+987-        : null;
+988-
+989-      return {
+990-        ...row,
+991-        sport: rowSport,
+992-        recipientName: row.user_id
+993-          ? userMap.get(String(row.user_id)) ??
+994-            "Unknown user"
+995-          : "No recipient",
+996-        teamName: row.team_id
+997-          ? teamMap.get(Number(row.team_id)) ??
+998-            `Team ${row.team_id}`
+999-          : null,
+1000-        playerName: resolvePlayerName(row),
+1001-        slateLabel: row.slate_id
+1002-          ? slateMap.get(Number(row.slate_id)) ??
+1003-            `Slate ${row.slate_id}`
+1004-          : null,
+1005-      };
+1006-    });
+1007-
+1008-    const combinedHistory = [
+1009-      ...history,
+1010:      ...expectedLedgerRows,
+1011-    ].sort(
+1012-      (a, b) =>
+1013-        new Date(b.created_at).getTime() -
+1014-        new Date(a.created_at).getTime()
+1015-    );
+1016-
+1017-    const filteredHistory =
+1018-      status
+1019-        ? combinedHistory.filter(
+1020-            (row) =>
+1021-              row.status === status
+1022-          )
+1023-        : combinedHistory;
+1024-
+1025-    const summary = {
+1026-      total: combinedHistory.length,
+1027-      sent: combinedHistory.filter(
+1028-        (row) => row.status === "sent"
+1029-      ).length,
+1030-      partial: combinedHistory.filter(
+1031-        (row) => row.status === "partial"
+1032-      ).length,
+1033-      failed: combinedHistory.filter(
+1034-        (row) => row.status === "failed"
+1035-      ).length,
+1036-      skipped: combinedHistory.filter(
+1037-        (row) => row.status === "skipped"
+1038-      ).length,
+1039-      pending: combinedHistory.filter(
+1040-        (row) => row.status === "pending"
+1041-      ).length,
+1042:      waiting: combinedHistory.filter(
+1043:        (row) => row.status === "waiting"
+1044-      ).length,
+1045:      missed: combinedHistory.filter(
+1046:        (row) => row.status === "missed"
+1047-      ).length,
+1048-      devicesSent: combinedHistory.reduce(
+1049-        (sum, row) =>
+1050-          sum + Number(row.sent_count ?? 0),
+1051-        0
+1052-      ),
+1053-      devicesFailed: combinedHistory.reduce(
+1054-        (sum, row) =>
+1055-          sum + Number(row.failed_count ?? 0),
+1056-        0
+1057-      ),
+1058-    };
+1059-
+1060-    return NextResponse.json({
+1061-      success: true,
+1062-      history: filteredHistory,
+1063-      summary,
+1064-      range: {
+1065-        start,
+1066-        end,
+1067-      },
+1068-    });
+1069-  } catch (error) {
+1070-    console.error(
+1071-      "Failed to load notification history",
+1072-      error
+1073-    );
+1074-
+1075-    return NextResponse.json(
+1076-      {

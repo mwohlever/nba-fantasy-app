@@ -14,6 +14,8 @@ import { useSelectedSport } from "@/components/providers/SportProvider";
 import ProfilePictureSettings from "@/components/profile/ProfilePictureSettings";
 import ProfileOverview from "@/components/profile/ProfileOverview";
 import GolfProfileOverview from "@/components/profile/GolfProfileOverview";
+import NcaaPickEmProfileOverview from "@/components/profile/NcaaPickEmProfileOverview";
+import NcaaPickEmTrophyCase from "@/components/profile/NcaaPickEmTrophyCase";
 import TrophyCase, {
   type LeagueAward,
   type TrophyMilestones,
@@ -39,11 +41,12 @@ type NotificationPreferences = {
   draftTurnEnabled: boolean;
   playerFinishedEnabled: boolean;
   slateFinalEnabled: boolean;
+  pickemReminderEnabled: boolean;
 };
 
 type TeamProfile = {
   success: boolean;
-  sport?: "nba" | "nfl" | "golf";
+  sport?: "nba" | "nfl" | "golf" | "ncaa";
   team: {
     id: number;
     name: string;
@@ -131,6 +134,86 @@ type TeamProfile = {
     date: string;
     score: number;
   }>;
+
+  ncaaPickEm?: {
+    selectedSummary: {
+      weeksPlayed: number;
+      correct: number;
+      incorrect: number;
+      total: number;
+      pickPct: number | null;
+      perfectWeeks: number;
+      currentCorrectStreak: number;
+      longestCorrectStreak: number;
+      bestWeek: {
+        weekId: number;
+        season: number;
+        weekNumber: number;
+        label: string;
+        correct: number;
+        total: number;
+        pickPct: number | null;
+      } | null;
+    };
+
+    careerSummary: {
+      weeksPlayed: number;
+      correct: number;
+      incorrect: number;
+      total: number;
+      pickPct: number | null;
+      perfectWeeks: number;
+      currentCorrectStreak: number;
+      longestCorrectStreak: number;
+      bestWeek: {
+        weekId: number;
+        season: number;
+        weekNumber: number;
+        label: string;
+        correct: number;
+        total: number;
+        pickPct: number | null;
+      } | null;
+    };
+
+    recentWeeks: Array<{
+      weekId: number;
+      season: number;
+      weekNumber: number;
+      label: string;
+      correct: number;
+      incorrect: number;
+      total: number;
+      pickPct: number | null;
+      perfect: boolean;
+      complete: boolean;
+    }>;
+
+    milestones: {
+      fiveStraight: boolean;
+      tenStraight: boolean;
+      firstPerfectWeek: boolean;
+      twoPerfectWeeks: boolean;
+      fivePerfectWeeks: boolean;
+      accuracy75: boolean;
+      accuracy75Progress: {
+        correct: number;
+        total: number;
+        pickPct: number | null;
+        minimumPicks: number;
+      };
+    };
+
+    seasonChampionships: Array<{
+      season: number;
+      correct: number;
+      total: number;
+      pickPct: number | null;
+    }>;
+
+    availableSeasons: number[];
+  };
+
   recentSlates: Array<{
     slateId: number;
     slateLabel: string;
@@ -623,7 +706,14 @@ function ProfilePageContent() {
             ) : (
               <>
                 {activeTab === "overview" ? (
-                  selectedSport === "golf" ? (
+                  selectedSport === "ncaa" ? (
+                    <NcaaPickEmProfileOverview
+                      profile={profile}
+                      season={season}
+                      availableSeasons={availableSeasons}
+                      onSeasonChange={setSeason}
+                    />
+                  ) : selectedSport === "golf" ? (
                     <GolfProfileOverview
                       profile={profile}
                       teamId={profile.team.id}
@@ -643,40 +733,47 @@ function ProfilePageContent() {
                 ) : null}
 
                 {activeTab === "awards" ? (
-                  <div
-                    className={
-                      selectedSport === "golf"
-                        ? "golf-trophy-theme"
-                        : ""
-                    }
-                  >
-                    <TrophyCase
-                    teamName={profile.team.name}
-                    sport={
-                      selectedSport === "golf"
-                        ? "golf"
-                        : selectedSport === "nfl"
-                          ? "nfl"
-                          : "nba"
-                    }
-                    career={{
-                      wins: profile.careerSummary.wins,
-                      runnerUps: profile.careerSummary.runnerUps,
-                      podiumFinishes:
-                        profile.careerSummary.podiumFinishes,
-                      bestScore: profile.careerSummary.bestScore,
-                      avgFinish: profile.careerSummary.avgFinish,
-                      longestWinStreak:
-                        profile.careerSummary.longestWinStreak,
-                      slatesPlayed:
-                        profile.careerSummary.slatesPlayed,
-                    }}
-                    milestones={profile.milestones}
-                    leagueAwards={profile.leagueAwards}
-                    tournamentWins={profile.tournamentWins ?? []}
-                    thresholds={profile.milestoneThresholds}
+                  selectedSport === "ncaa" ? (
+                    <NcaaPickEmTrophyCase
+                      teamName={profile.team.name}
+                      profile={profile}
                     />
-                  </div>
+                  ) : (
+                    <div
+                      className={
+                        selectedSport === "golf"
+                          ? "golf-trophy-theme"
+                          : ""
+                      }
+                    >
+                      <TrophyCase
+                        teamName={profile.team.name}
+                        sport={
+                          selectedSport === "golf"
+                            ? "golf"
+                            : selectedSport === "nfl"
+                              ? "nfl"
+                              : "nba"
+                        }
+                        career={{
+                          wins: profile.careerSummary.wins,
+                          runnerUps: profile.careerSummary.runnerUps,
+                          podiumFinishes:
+                            profile.careerSummary.podiumFinishes,
+                          bestScore: profile.careerSummary.bestScore,
+                          avgFinish: profile.careerSummary.avgFinish,
+                          longestWinStreak:
+                            profile.careerSummary.longestWinStreak,
+                          slatesPlayed:
+                            profile.careerSummary.slatesPlayed,
+                        }}
+                        milestones={profile.milestones}
+                        leagueAwards={profile.leagueAwards}
+                        tournamentWins={profile.tournamentWins ?? []}
+                        thresholds={profile.milestoneThresholds}
+                      />
+                    </div>
+                  )
                 ) : null}
 
                 {activeTab === "settings" ? (
@@ -847,6 +944,24 @@ function ProfilePageContent() {
                                 void updateNotificationPreferences({
                                   ...notificationPreferences,
                                   slateFinalEnabled: checked,
+                                })
+                              }
+                            />
+
+                            <SettingToggle
+                              label="NCAA Pick 'Em Lock Reminder"
+                              description="Remind me about one hour before the weekly Pick 'Em card locks if I still have picks left to save."
+                              checked={
+                                notificationPreferences.pickemReminderEnabled
+                              }
+                              disabled={
+                                isSavingPreferences ||
+                                !notificationPreferences.notificationsEnabled
+                              }
+                              onChange={(checked) =>
+                                void updateNotificationPreferences({
+                                  ...notificationPreferences,
+                                  pickemReminderEnabled: checked,
                                 })
                               }
                             />

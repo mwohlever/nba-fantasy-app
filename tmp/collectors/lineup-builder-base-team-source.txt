@@ -1,0 +1,1555 @@
+============================================================
+LINEUP BUILDER — BASE TEAM SOURCE
+============================================================
+
+===== TEAM TYPE =====
+52-
+53-export type PlayerHistoryDetailRow = {
+54-  slateId: number;
+55-  playerId: number;
+56-  date: string | null;
+57-  fantasyPoints: number;
+58-  points: number;
+59-  rebounds: number;
+60-  assists: number;
+61-  steals: number;
+62-  blocks: number;
+63-  turnovers: number;
+64-  isLocked: boolean;
+65-};
+66-
+67:export type Team = {
+68-  id: number;
+69-  name: string;
+70-};
+71-
+72-export type Slate = {
+73-  id: number;
+74-  date: string;
+75-  start_date?: string;
+76-  end_date?: string;
+77-  label?: string;
+78-  is_locked: boolean;
+79-  sport?: string;
+80-  has_cut?: boolean;
+81-};
+82-
+83-export type SavedLineup = {
+84-  team_id: number;
+85-  player_ids: number[];
+86-  pregame_projected_points?: number | null;
+87-};
+88-
+89-export type PlayerStat = {
+90-  player_id: number;
+91-
+92-  points?: number | null;
+93-  rebounds?: number | null;
+94-  assists?: number | null;
+95-  steals?: number | null;
+96-  blocks?: number | null;
+97-  turnovers?: number | null;
+98-
+99-  passing_yards?: number | null;
+100-  passing_tds?: number | null;
+101-  passing_ints?: number | null;
+102-  rushing_yards?: number | null;
+103-  rushing_tds?: number | null;
+104-  receiving_yards?: number | null;
+105-  receiving_tds?: number | null;
+106-  receptions?: number | null;
+107-  fumbles_lost?: number | null;
+--
+115-
+116-  leaderboard_order?: number | null;
+117-  official_score_to_par?: number | null;
+118-  official_score_display?: string | null;
+119-  penalty_strokes?: number | null;
+120-  rounds_completed?: number | null;
+121-  holes_completed?: number | null;
+122-  current_round?: number | null;
+123-  last_hole?: number | null;
+124-  status?: string | null;
+125-  tee_time?: string | null;
+126-  tee_time_raw?: string | null;
+127-  rounds?: GolfRoundStat[];
+128-};
+129-
+130:export type TeamResult = {
+131-  team_id: number;
+132-  fantasy_points: number | null;
+133-  finish_position: number | null;
+134-  games_completed: number | null;
+135-  games_in_progress: number | null;
+136-  games_remaining: number | null;
+137-};
+138-
+139-export type SlateTeamConfig = {
+140-  slate_id: number;
+141-  team_id: number;
+142-  draft_order: number;
+143-  is_participating: boolean;
+144-};
+145-
+146-export type PlayerAverage = {
+147-  player_id: number;
+148-  avg_fantasy_points: number;
+149-};
+150-
+151-export type Props = {
+152-  players: Player[];
+153-  teams: Team[];
+154-  slates: Slate[];
+155-  slateTeamConfigs: SlateTeamConfig[];
+156-  playerAverages: PlayerAverage[];
+157-  initialSelectedSlateId: number | null;
+158-  savedLineupsForInitialSlate: SavedLineup[];
+159-  playerStats: PlayerStat[];
+160-  teamResults: TeamResult[];
+161-  rosterSlots?: RosterSlotConfig[];
+162-  defaultViewMode?: ViewMode;
+163-  sport?: string;
+164-};
+165-
+166-export type PositionFilter = string;
+167-export type ViewMode = "draft" | "scoring";
+168-
+169-export type OrderedTeam = Team & {
+170-  is_participating?: boolean;
+
+===== LINEUPBUILDER CALL SITES =====
+app/lineups/draft/page.tsx-432-          : "player_slate_stats";
+app/lineups/draft/page.tsx-433-
+app/lineups/draft/page.tsx-434-      const { data: statsData, error: statsError } =
+app/lineups/draft/page.tsx-435-        await supabaseAdmin
+app/lineups/draft/page.tsx-436-          .from(statsTable)
+app/lineups/draft/page.tsx-437-          .select("*")
+app/lineups/draft/page.tsx-438-          .eq("slate_id", selectedSlateId);
+app/lineups/draft/page.tsx-439-
+app/lineups/draft/page.tsx-440-      if (statsError) {
+app/lineups/draft/page.tsx-441-        console.error(
+app/lineups/draft/page.tsx-442-          "Failed to load initial player stats:",
+app/lineups/draft/page.tsx-443-          statsError.message,
+app/lineups/draft/page.tsx-444-        );
+app/lineups/draft/page.tsx-445-      }
+app/lineups/draft/page.tsx-446-
+app/lineups/draft/page.tsx-447-      playerStats = statsData ?? [];
+app/lineups/draft/page.tsx-448-    }
+app/lineups/draft/page.tsx-449-
+app/lineups/draft/page.tsx-450-    const { data: teamResultsData, error: teamResultsError } =
+app/lineups/draft/page.tsx-451-      await supabaseAdmin
+app/lineups/draft/page.tsx-452-        .from("team_slate_results")
+app/lineups/draft/page.tsx-453-        .select("*")
+app/lineups/draft/page.tsx-454-        .eq("slate_id", selectedSlateId);
+app/lineups/draft/page.tsx-455-
+app/lineups/draft/page.tsx-456-    if (teamResultsError) {
+app/lineups/draft/page.tsx-457-      console.error(
+app/lineups/draft/page.tsx-458-        "Failed to load initial team results:",
+app/lineups/draft/page.tsx-459-        teamResultsError.message,
+app/lineups/draft/page.tsx-460-      );
+app/lineups/draft/page.tsx-461-    }
+app/lineups/draft/page.tsx-462-
+app/lineups/draft/page.tsx-463-    teamResults = teamResultsData ?? [];
+app/lineups/draft/page.tsx-464-  }
+app/lineups/draft/page.tsx-465-
+app/lineups/draft/page.tsx-466-  const rosterSize =
+app/lineups/draft/page.tsx-467-    rosterSlots.reduce(
+app/lineups/draft/page.tsx-468-      (sum, slot) => sum + Number(slot.slot_count ?? 0),
+app/lineups/draft/page.tsx-469-      0,
+app/lineups/draft/page.tsx-470-    ) || (sport === "golf" ? 4 : sport === "nfl" ? 6 : 5);
+app/lineups/draft/page.tsx-471-
+app/lineups/draft/page.tsx-472-  return (
+app/lineups/draft/page.tsx-473-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/lineups/draft/page.tsx-474-      <div className="mx-auto max-w-[1600px] space-y-6">
+app/lineups/draft/page.tsx-475-        <AppNav />
+app/lineups/draft/page.tsx-476-
+app/lineups/draft/page.tsx-477-        <section className="draft-page-intro">
+app/lineups/draft/page.tsx-478-          <div>
+app/lineups/draft/page.tsx-479-            <div className="draft-page-intro-kicker">111 Sports</div>
+app/lineups/draft/page.tsx-480-
+app/lineups/draft/page.tsx-481-            <h1>Draft</h1>
+app/lineups/draft/page.tsx-482-
+app/lineups/draft/page.tsx-483-            <p>
+app/lineups/draft/page.tsx-484-              Build your {rosterSize}-player{" "}
+app/lineups/draft/page.tsx-485-              {sport === "golf" ? "Golf " : ""}lineup.
+app/lineups/draft/page.tsx-486-            </p>
+app/lineups/draft/page.tsx-487-          </div>
+app/lineups/draft/page.tsx-488-
+app/lineups/draft/page.tsx-489-          {sport !== "golf" ? <RefreshPlayersButton /> : null}
+app/lineups/draft/page.tsx-490-        </section>
+app/lineups/draft/page.tsx-491-
+app/lineups/draft/page.tsx:492:        <LineupBuilder
+app/lineups/draft/page.tsx-493-          players={normalizedPlayers}
+app/lineups/draft/page.tsx-494-          teams={teams ?? []}
+app/lineups/draft/page.tsx-495-          slates={safeSlates}
+app/lineups/draft/page.tsx-496-          slateTeamConfigs={safeSlateTeams}
+app/lineups/draft/page.tsx-497-          playerAverages={playerAverages}
+app/lineups/draft/page.tsx-498-          initialSelectedSlateId={selectedSlateId}
+app/lineups/draft/page.tsx-499-          savedLineupsForInitialSlate={savedLineupsForInitialSlate}
+app/lineups/draft/page.tsx-500-          playerStats={playerStats}
+app/lineups/draft/page.tsx-501-          teamResults={teamResults}
+app/lineups/draft/page.tsx-502-          rosterSlots={rosterSlots}
+app/lineups/draft/page.tsx-503-          defaultViewMode="draft"
+app/lineups/draft/page.tsx-504-          sport={sport}
+app/lineups/draft/page.tsx-505-        />
+app/lineups/draft/page.tsx-506-      </div>
+app/lineups/draft/page.tsx-507-    </main>
+app/lineups/draft/page.tsx-508-  );
+app/lineups/draft/page.tsx-509-}
+--
+app/lineups/scores/page.tsx-429-                : Number(row.fantasy_score),
+app/lineups/scores/page.tsx-430-            rounds_completed: Number(row.rounds_completed ?? 0),
+app/lineups/scores/page.tsx-431-            holes_completed: Number(row.holes_completed ?? 0),
+app/lineups/scores/page.tsx-432-            current_round:
+app/lineups/scores/page.tsx-433-              row.current_round === null
+app/lineups/scores/page.tsx-434-                ? null
+app/lineups/scores/page.tsx-435-                : Number(row.current_round),
+app/lineups/scores/page.tsx-436-            last_hole:
+app/lineups/scores/page.tsx-437-              row.last_hole === null ? null : Number(row.last_hole),
+app/lineups/scores/page.tsx-438-            status: row.status ?? "scheduled",
+app/lineups/scores/page.tsx-439-            tee_time: row.tee_time ?? null,
+app/lineups/scores/page.tsx-440-            tee_time_raw: row.tee_time_raw ?? null,
+app/lineups/scores/page.tsx-441-            rounds: (row.golf_rounds ?? [])
+app/lineups/scores/page.tsx-442-              .map((round: any) => ({
+app/lineups/scores/page.tsx-443-                round_number: Number(round.round_number),
+app/lineups/scores/page.tsx-444-                score_to_par:
+app/lineups/scores/page.tsx-445-                  round.score_to_par === null
+app/lineups/scores/page.tsx-446-                    ? null
+app/lineups/scores/page.tsx-447-                    : Number(round.score_to_par),
+app/lineups/scores/page.tsx-448-                score_display: round.score_display ?? null,
+app/lineups/scores/page.tsx-449-                strokes:
+app/lineups/scores/page.tsx-450-                  round.strokes === null ? null : Number(round.strokes),
+app/lineups/scores/page.tsx-451-                holes_completed: Number(round.holes_completed ?? 0),
+app/lineups/scores/page.tsx-452-                tee_time: round.tee_time ?? null,
+app/lineups/scores/page.tsx-453-                tee_time_raw: round.tee_time_raw ?? null,
+app/lineups/scores/page.tsx-454-                status: round.status ?? "scheduled",
+app/lineups/scores/page.tsx-455-                holes: (round.golf_holes ?? [])
+app/lineups/scores/page.tsx-456-                  .map((hole: any) => ({
+app/lineups/scores/page.tsx-457-                    hole_number: Number(hole.hole_number),
+app/lineups/scores/page.tsx-458-                    strokes:
+app/lineups/scores/page.tsx-459-                      hole.strokes === null ? null : Number(hole.strokes),
+app/lineups/scores/page.tsx-460-                    relative_to_par:
+app/lineups/scores/page.tsx-461-                      hole.relative_to_par === null
+app/lineups/scores/page.tsx-462-                        ? null
+app/lineups/scores/page.tsx-463-                        : Number(hole.relative_to_par),
+app/lineups/scores/page.tsx-464-                    score_display: hole.score_display ?? null,
+app/lineups/scores/page.tsx-465-                  }))
+app/lineups/scores/page.tsx-466-                  .sort(
+app/lineups/scores/page.tsx-467-                    (
+app/lineups/scores/page.tsx-468-                      a: { hole_number: number },
+app/lineups/scores/page.tsx-469-                      b: { hole_number: number },
+app/lineups/scores/page.tsx-470-                    ) => a.hole_number - b.hole_number,
+app/lineups/scores/page.tsx-471-                  ),
+app/lineups/scores/page.tsx-472-              }))
+app/lineups/scores/page.tsx-473-              .sort(
+app/lineups/scores/page.tsx-474-                (
+app/lineups/scores/page.tsx-475-                  a: { round_number: number },
+app/lineups/scores/page.tsx-476-                  b: { round_number: number },
+app/lineups/scores/page.tsx-477-                ) => a.round_number - b.round_number,
+app/lineups/scores/page.tsx-478-              ),
+app/lineups/scores/page.tsx-479-          }))
+app/lineups/scores/page.tsx-480-        : statsData ?? [];
+app/lineups/scores/page.tsx-481-    teamResults = teamResultsData ?? [];
+app/lineups/scores/page.tsx-482-  }
+app/lineups/scores/page.tsx-483-
+app/lineups/scores/page.tsx-484-  return (
+app/lineups/scores/page.tsx-485-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/lineups/scores/page.tsx-486-      <div className="mx-auto max-w-[1600px] space-y-6">
+app/lineups/scores/page.tsx-487-        <AppNav />
+app/lineups/scores/page.tsx-488-
+app/lineups/scores/page.tsx:489:        <LineupBuilder
+app/lineups/scores/page.tsx-490-          players={normalizedPlayers}
+app/lineups/scores/page.tsx-491-          teams={teams ?? []}
+app/lineups/scores/page.tsx-492-          slates={safeSlates}
+app/lineups/scores/page.tsx-493-          slateTeamConfigs={safeSlateTeams}
+app/lineups/scores/page.tsx-494-          playerAverages={playerAverages}
+app/lineups/scores/page.tsx-495-          initialSelectedSlateId={selectedSlateId}
+app/lineups/scores/page.tsx-496-          savedLineupsForInitialSlate={savedLineupsForInitialSlate}
+app/lineups/scores/page.tsx-497-          playerStats={playerStats}
+app/lineups/scores/page.tsx-498-          teamResults={teamResults}
+app/lineups/scores/page.tsx-499-          rosterSlots={rosterSlots}
+app/lineups/scores/page.tsx-500-          defaultViewMode="scoring"
+app/lineups/scores/page.tsx-501-          sport={sport}
+app/lineups/scores/page.tsx-502-        />
+app/lineups/scores/page.tsx-503-      </div>
+app/lineups/scores/page.tsx-504-    </main>
+app/lineups/scores/page.tsx-505-  );
+app/lineups/scores/page.tsx-506-}
+--
+app/lineups/page.tsx-169-    );
+app/lineups/page.tsx-170-  }
+app/lineups/page.tsx-171-
+app/lineups/page.tsx-172-  let savedLineupsForInitialSlate: SavedLineup[] = [];
+app/lineups/page.tsx-173-  let playerStats: any[] = [];
+app/lineups/page.tsx-174-  let teamResults: any[] = [];
+app/lineups/page.tsx-175-
+app/lineups/page.tsx-176-  if (selectedSlateId) {
+app/lineups/page.tsx-177-    const { data: lineupsData } = await supabaseAdmin
+app/lineups/page.tsx-178-      .from("lineups")
+app/lineups/page.tsx-179-      .select(
+app/lineups/page.tsx-180-        `
+app/lineups/page.tsx-181-        id,
+app/lineups/page.tsx-182-        team_id,
+app/lineups/page.tsx-183-        lineup_players (
+app/lineups/page.tsx-184-          player_id
+app/lineups/page.tsx-185-        )
+app/lineups/page.tsx-186-        `
+app/lineups/page.tsx-187-      )
+app/lineups/page.tsx-188-      .eq("slate_id", selectedSlateId);
+app/lineups/page.tsx-189-
+app/lineups/page.tsx-190-    savedLineupsForInitialSlate =
+app/lineups/page.tsx-191-      lineupsData?.map((lineup) => ({
+app/lineups/page.tsx-192-        team_id: lineup.team_id,
+app/lineups/page.tsx-193-        player_ids:
+app/lineups/page.tsx-194-          lineup.lineup_players?.map((lp: { player_id: number }) => lp.player_id) ?? [],
+app/lineups/page.tsx-195-      })) ?? [];
+app/lineups/page.tsx-196-
+app/lineups/page.tsx-197-    const { data: statsData } = await supabaseAdmin
+app/lineups/page.tsx-198-      .from("player_slate_stats")
+app/lineups/page.tsx-199-      .select("*")
+app/lineups/page.tsx-200-      .eq("slate_id", selectedSlateId);
+app/lineups/page.tsx-201-
+app/lineups/page.tsx-202-    const { data: teamResultsData } = await supabaseAdmin
+app/lineups/page.tsx-203-      .from("team_slate_results")
+app/lineups/page.tsx-204-      .select("*")
+app/lineups/page.tsx-205-      .eq("slate_id", selectedSlateId);
+app/lineups/page.tsx-206-
+app/lineups/page.tsx-207-    playerStats = statsData ?? [];
+app/lineups/page.tsx-208-    teamResults = teamResultsData ?? [];
+app/lineups/page.tsx-209-  }
+app/lineups/page.tsx-210-
+app/lineups/page.tsx-211-  return (
+app/lineups/page.tsx-212-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/lineups/page.tsx-213-      <div className="mx-auto max-w-[1600px] space-y-6">
+app/lineups/page.tsx-214-        <AppNav />
+app/lineups/page.tsx-215-
+app/lineups/page.tsx-216-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
+app/lineups/page.tsx-217-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+app/lineups/page.tsx-218-            <div>
+app/lineups/page.tsx-219-              <h1 className="text-3xl font-bold tracking-tight">Lineups</h1>
+app/lineups/page.tsx-220-              <p className="mt-2 text-sm text-slate-600">
+app/lineups/page.tsx-221-                Build lineups, track the live slate, and keep the board mobile-friendly.
+app/lineups/page.tsx-222-              </p>
+app/lineups/page.tsx-223-            </div>
+app/lineups/page.tsx-224-
+app/lineups/page.tsx-225-            <RefreshPlayersButton />
+app/lineups/page.tsx-226-          </div>
+app/lineups/page.tsx-227-        </section>
+app/lineups/page.tsx-228-
+app/lineups/page.tsx:229:        <LineupBuilder
+app/lineups/page.tsx-230-          players={players ?? []}
+app/lineups/page.tsx-231-          teams={teams ?? []}
+app/lineups/page.tsx-232-          slates={safeSlates}
+app/lineups/page.tsx-233-          slateTeamConfigs={safeSlateTeams}
+app/lineups/page.tsx-234-          playerAverages={playerAverages}
+app/lineups/page.tsx-235-          initialSelectedSlateId={selectedSlateId}
+app/lineups/page.tsx-236-          savedLineupsForInitialSlate={savedLineupsForInitialSlate}
+app/lineups/page.tsx-237-          playerStats={playerStats}
+app/lineups/page.tsx-238-          teamResults={teamResults}
+app/lineups/page.tsx-239-        />
+app/lineups/page.tsx-240-      </div>
+app/lineups/page.tsx-241-    </main>
+app/lineups/page.tsx-242-  );
+app/lineups/page.tsx-243-}
+
+===== SERVER TEAM QUERIES =====
+app/lineups/draft/page.tsx-63-    sport === "nfl"
+app/lineups/draft/page.tsx-64-      ? "players_nfl"
+app/lineups/draft/page.tsx-65-      : sport === "golf"
+app/lineups/draft/page.tsx-66-        ? "golf_players"
+app/lineups/draft/page.tsx-67-        : "players";
+app/lineups/draft/page.tsx-68-
+app/lineups/draft/page.tsx-69-  const playersSelect =
+app/lineups/draft/page.tsx-70-    sport === "nfl"
+app/lineups/draft/page.tsx-71-      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+app/lineups/draft/page.tsx-72-      : sport === "golf"
+app/lineups/draft/page.tsx-73-        ? "id, display_name, short_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
+app/lineups/draft/page.tsx-74-        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+app/lineups/draft/page.tsx-75-
+app/lineups/draft/page.tsx-76-  const playerOrderColumn =
+app/lineups/draft/page.tsx-77-    sport === "golf" ? "display_name" : "name";
+app/lineups/draft/page.tsx-78-
+app/lineups/draft/page.tsx-79-  const [
+app/lineups/draft/page.tsx-80-    { data: rawPlayers, error: playersError },
+app/lineups/draft/page.tsx-81-    { data: teams, error: teamsError },
+app/lineups/draft/page.tsx-82-    { data: slates, error: slatesError },
+app/lineups/draft/page.tsx-83-    { data: slateTeams, error: slateTeamsError },
+app/lineups/draft/page.tsx-84-    allPlayerStatsResult,
+app/lineups/draft/page.tsx-85-  ] = await Promise.all([
+app/lineups/draft/page.tsx-86-    supabaseAdmin
+app/lineups/draft/page.tsx-87-      .from(playersTable)
+app/lineups/draft/page.tsx-88-      .select(playersSelect)
+app/lineups/draft/page.tsx-89-      .eq("is_active", true)
+app/lineups/draft/page.tsx-90-      .order(playerOrderColumn, { ascending: true }),
+app/lineups/draft/page.tsx-91-
+app/lineups/draft/page.tsx-92-    supabaseAdmin
+app/lineups/draft/page.tsx:93:      .from("teams")
+app/lineups/draft/page.tsx-94-      .select("id, name")
+app/lineups/draft/page.tsx-95-      .order("name", { ascending: true }),
+app/lineups/draft/page.tsx-96-
+app/lineups/draft/page.tsx-97-    supabaseAdmin
+app/lineups/draft/page.tsx-98-      .from("slates")
+app/lineups/draft/page.tsx-99-      .select(
+app/lineups/draft/page.tsx-100-        "id, date, start_date, end_date, is_locked, sport, display_name",
+app/lineups/draft/page.tsx-101-      )
+app/lineups/draft/page.tsx-102-      .eq("sport", sport)
+app/lineups/draft/page.tsx-103-      .order("start_date", { ascending: false })
+app/lineups/draft/page.tsx-104-      .order("end_date", { ascending: false }),
+app/lineups/draft/page.tsx-105-
+app/lineups/draft/page.tsx-106-    supabaseAdmin
+app/lineups/draft/page.tsx-107-      .from("slate_teams")
+app/lineups/draft/page.tsx-108-      .select("slate_id, team_id, draft_order, is_participating")
+app/lineups/draft/page.tsx-109-      .order("slate_id", { ascending: true })
+app/lineups/draft/page.tsx-110-      .order("draft_order", { ascending: true }),
+app/lineups/draft/page.tsx-111-
+app/lineups/draft/page.tsx-112-    sport === "nba"
+app/lineups/draft/page.tsx-113-      ? supabaseAdmin
+app/lineups/draft/page.tsx-114-          .from("player_slate_stats")
+app/lineups/draft/page.tsx-115-          .select("player_id, fantasy_points")
+app/lineups/draft/page.tsx-116-      : sport === "nfl"
+app/lineups/draft/page.tsx-117-        ? supabaseAdmin
+app/lineups/draft/page.tsx-118-            .from("player_nfl_slate_stats")
+app/lineups/draft/page.tsx-119-            .select("player_id, fantasy_points")
+app/lineups/draft/page.tsx-120-        : Promise.resolve({
+app/lineups/draft/page.tsx-121-            data: [] as Array<{
+app/lineups/draft/page.tsx-122-              player_id: number;
+app/lineups/draft/page.tsx-123-              fantasy_points: number | null;
+app/lineups/draft/page.tsx-124-            }>,
+app/lineups/draft/page.tsx-125-            error: null,
+app/lineups/draft/page.tsx-126-          }),
+app/lineups/draft/page.tsx-127-  ]);
+app/lineups/draft/page.tsx-128-
+app/lineups/draft/page.tsx-129-  const allPlayerStats = allPlayerStatsResult.data;
+app/lineups/draft/page.tsx-130-  const allPlayerStatsError = allPlayerStatsResult.error;
+app/lineups/draft/page.tsx-131-
+app/lineups/draft/page.tsx-132-  if (
+app/lineups/draft/page.tsx-133-    playersError ||
+app/lineups/draft/page.tsx-134-    teamsError ||
+app/lineups/draft/page.tsx-135-    slatesError ||
+app/lineups/draft/page.tsx-136-    slateTeamsError ||
+app/lineups/draft/page.tsx-137-    allPlayerStatsError
+app/lineups/draft/page.tsx-138-  ) {
+app/lineups/draft/page.tsx-139-    return (
+app/lineups/draft/page.tsx-140-      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/lineups/draft/page.tsx-141-        <div className="mx-auto max-w-[1600px] space-y-6">
+app/lineups/draft/page.tsx-142-          <AppNav />
+app/lineups/draft/page.tsx-143-
+app/lineups/draft/page.tsx-144-          <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
+app/lineups/draft/page.tsx-145-            <h1 className="text-3xl font-bold tracking-tight">Draft</h1>
+app/lineups/draft/page.tsx-146-
+app/lineups/draft/page.tsx-147-            <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
+app/lineups/draft/page.tsx-148-              Failed to load page data.
+app/lineups/draft/page.tsx-149-
+app/lineups/draft/page.tsx-150-              <div className="mt-2 text-sm text-red-600">
+app/lineups/draft/page.tsx-151-                {playersError?.message ||
+app/lineups/draft/page.tsx-152-                  teamsError?.message ||
+app/lineups/draft/page.tsx-153-                  slatesError?.message ||
+app/lineups/draft/page.tsx-154-                  slateTeamsError?.message ||
+app/lineups/draft/page.tsx-155-                  allPlayerStatsError?.message}
+app/lineups/draft/page.tsx-156-              </div>
+app/lineups/draft/page.tsx-157-            </div>
+app/lineups/draft/page.tsx-158-          </section>
+app/lineups/draft/page.tsx-159-        </div>
+app/lineups/draft/page.tsx-160-      </main>
+app/lineups/draft/page.tsx-161-    );
+app/lineups/draft/page.tsx-162-  }
+app/lineups/draft/page.tsx-163-
+--
+app/lineups/scores/page.tsx-58-  const playersTable =
+app/lineups/scores/page.tsx-59-    sport === "nfl"
+app/lineups/scores/page.tsx-60-      ? "players_nfl"
+app/lineups/scores/page.tsx-61-      : sport === "golf"
+app/lineups/scores/page.tsx-62-        ? "golf_players"
+app/lineups/scores/page.tsx-63-        : "players";
+app/lineups/scores/page.tsx-64-
+app/lineups/scores/page.tsx-65-  const playersSelect =
+app/lineups/scores/page.tsx-66-    sport === "nfl"
+app/lineups/scores/page.tsx-67-      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+app/lineups/scores/page.tsx-68-      : sport === "golf"
+app/lineups/scores/page.tsx-69-        ? "id, display_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
+app/lineups/scores/page.tsx-70-        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+app/lineups/scores/page.tsx-71-
+app/lineups/scores/page.tsx-72-  const statsTable =
+app/lineups/scores/page.tsx-73-    sport === "nfl"
+app/lineups/scores/page.tsx-74-      ? "player_nfl_slate_stats"
+app/lineups/scores/page.tsx-75-      : "player_slate_stats";
+app/lineups/scores/page.tsx-76-
+app/lineups/scores/page.tsx-77-  const [
+app/lineups/scores/page.tsx-78-    { data: rawPlayers, error: playersError },
+app/lineups/scores/page.tsx-79-    { data: teams, error: teamsError },
+app/lineups/scores/page.tsx-80-    { data: slates, error: slatesError },
+app/lineups/scores/page.tsx-81-    { data: slateTeams, error: slateTeamsError },
+app/lineups/scores/page.tsx-82-    { data: allPlayerStats, error: allPlayerStatsError },
+app/lineups/scores/page.tsx-83-  ] = await Promise.all([
+app/lineups/scores/page.tsx-84-    supabaseAdmin
+app/lineups/scores/page.tsx-85-      .from(playersTable)
+app/lineups/scores/page.tsx-86-      .select(playersSelect)
+app/lineups/scores/page.tsx-87-      .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
+app/lineups/scores/page.tsx:88:    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+app/lineups/scores/page.tsx-89-    supabaseAdmin
+app/lineups/scores/page.tsx-90-      .from("slates")
+app/lineups/scores/page.tsx-91-      .select(
+app/lineups/scores/page.tsx-92-        "id, date, start_date, end_date, is_locked, sport, display_name, has_cut",
+app/lineups/scores/page.tsx-93-      )
+app/lineups/scores/page.tsx-94-      .eq("sport", sport)
+app/lineups/scores/page.tsx-95-      .order("start_date", { ascending: false })
+app/lineups/scores/page.tsx-96-      .order("end_date", { ascending: false }),
+app/lineups/scores/page.tsx-97-    supabaseAdmin
+app/lineups/scores/page.tsx-98-      .from("slate_teams")
+app/lineups/scores/page.tsx-99-      .select("slate_id, team_id, draft_order, is_participating")
+app/lineups/scores/page.tsx-100-      .order("slate_id", { ascending: true })
+app/lineups/scores/page.tsx-101-      .order("draft_order", { ascending: true }),
+app/lineups/scores/page.tsx-102-    sport === "golf"
+app/lineups/scores/page.tsx-103-      ? supabaseAdmin
+app/lineups/scores/page.tsx-104-          .from("golf_event_players")
+app/lineups/scores/page.tsx-105-          .select("player_id, fantasy_score")
+app/lineups/scores/page.tsx-106-      : supabaseAdmin
+app/lineups/scores/page.tsx-107-          .from(statsTable)
+app/lineups/scores/page.tsx-108-          .select("player_id, fantasy_points"),
+app/lineups/scores/page.tsx-109-  ]);
+app/lineups/scores/page.tsx-110-
+app/lineups/scores/page.tsx-111-  if (
+app/lineups/scores/page.tsx-112-    playersError ||
+app/lineups/scores/page.tsx-113-    teamsError ||
+app/lineups/scores/page.tsx-114-    slatesError ||
+app/lineups/scores/page.tsx-115-    slateTeamsError ||
+app/lineups/scores/page.tsx-116-    allPlayerStatsError
+app/lineups/scores/page.tsx-117-  ) {
+app/lineups/scores/page.tsx-118-    return (
+app/lineups/scores/page.tsx-119-      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/lineups/scores/page.tsx-120-        <div className="mx-auto max-w-[1600px] space-y-6">
+app/lineups/scores/page.tsx-121-          <AppNav />
+app/lineups/scores/page.tsx-122-
+app/lineups/scores/page.tsx-123-          <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
+app/lineups/scores/page.tsx-124-            <h1 className="text-3xl font-bold tracking-tight">Live Scores</h1>
+app/lineups/scores/page.tsx-125-            <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
+app/lineups/scores/page.tsx-126-              Failed to load page data.
+app/lineups/scores/page.tsx-127-              <div className="mt-2 text-sm text-red-600">
+app/lineups/scores/page.tsx-128-                {playersError?.message ||
+app/lineups/scores/page.tsx-129-                  teamsError?.message ||
+app/lineups/scores/page.tsx-130-                  slatesError?.message ||
+app/lineups/scores/page.tsx-131-                  slateTeamsError?.message ||
+app/lineups/scores/page.tsx-132-                  allPlayerStatsError?.message}
+app/lineups/scores/page.tsx-133-              </div>
+app/lineups/scores/page.tsx-134-            </div>
+app/lineups/scores/page.tsx-135-          </section>
+app/lineups/scores/page.tsx-136-        </div>
+app/lineups/scores/page.tsx-137-      </main>
+app/lineups/scores/page.tsx-138-    );
+app/lineups/scores/page.tsx-139-  }
+app/lineups/scores/page.tsx-140-
+app/lineups/scores/page.tsx-141-  const normalizedPlayers = (rawPlayers ?? []).map((p: any) => {
+app/lineups/scores/page.tsx-142-    if (sport === "nfl") {
+app/lineups/scores/page.tsx-143-      return {
+app/lineups/scores/page.tsx-144-        id: p.id,
+app/lineups/scores/page.tsx-145-        name: p.name,
+app/lineups/scores/page.tsx-146-        position_group: p.position,
+app/lineups/scores/page.tsx-147-        is_active: p.is_active,
+app/lineups/scores/page.tsx-148-        is_playing_today: p.is_playing_this_week,
+app/lineups/scores/page.tsx-149-        nba_player_id: null,
+app/lineups/scores/page.tsx-150-        nfl_player_id: p.nfl_player_id,
+app/lineups/scores/page.tsx-151-      };
+app/lineups/scores/page.tsx-152-    }
+app/lineups/scores/page.tsx-153-
+app/lineups/scores/page.tsx-154-    if (sport === "golf") {
+app/lineups/scores/page.tsx-155-      return {
+app/lineups/scores/page.tsx-156-        id: p.id,
+app/lineups/scores/page.tsx-157-        name: p.display_name,
+app/lineups/scores/page.tsx-158-        position_group: "GOLFER",
+--
+app/lineups/page.tsx-25-  is_locked: boolean;
+app/lineups/page.tsx-26-};
+app/lineups/page.tsx-27-
+app/lineups/page.tsx-28-type SavedLineup = {
+app/lineups/page.tsx-29-  team_id: number;
+app/lineups/page.tsx-30-  player_ids: number[];
+app/lineups/page.tsx-31-};
+app/lineups/page.tsx-32-
+app/lineups/page.tsx-33-type SlateTeamConfig = {
+app/lineups/page.tsx-34-  slate_id: number;
+app/lineups/page.tsx-35-  team_id: number;
+app/lineups/page.tsx-36-  draft_order: number;
+app/lineups/page.tsx-37-  is_participating: boolean;
+app/lineups/page.tsx-38-};
+app/lineups/page.tsx-39-
+app/lineups/page.tsx-40-export default async function LineupsPage() {
+app/lineups/page.tsx-41-  const today = getTodayDateString();
+app/lineups/page.tsx-42-
+app/lineups/page.tsx-43-  const [
+app/lineups/page.tsx-44-    { data: players, error: playersError },
+app/lineups/page.tsx-45-    { data: teams, error: teamsError },
+app/lineups/page.tsx-46-    { data: slates, error: slatesError },
+app/lineups/page.tsx-47-    { data: slateTeams, error: slateTeamsError },
+app/lineups/page.tsx-48-    { data: allPlayerStats, error: allPlayerStatsError },
+app/lineups/page.tsx-49-  ] = await Promise.all([
+app/lineups/page.tsx-50-    supabaseAdmin
+app/lineups/page.tsx-51-      .from("players")
+app/lineups/page.tsx-52-      .select("id, name, position_group, is_active, is_playing_today, nba_player_id")
+app/lineups/page.tsx-53-      .eq("is_active", true)
+app/lineups/page.tsx-54-      .order("name", { ascending: true }),
+app/lineups/page.tsx:55:    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+app/lineups/page.tsx-56-    supabaseAdmin
+app/lineups/page.tsx-57-      .from("slates")
+app/lineups/page.tsx-58-      .select("id, date, start_date, end_date, is_locked")
+app/lineups/page.tsx-59-      .order("start_date", { ascending: false })
+app/lineups/page.tsx-60-      .order("end_date", { ascending: false }),
+app/lineups/page.tsx-61-    supabaseAdmin
+app/lineups/page.tsx-62-      .from("slate_teams")
+app/lineups/page.tsx-63-      .select("slate_id, team_id, draft_order, is_participating")
+app/lineups/page.tsx-64-      .order("slate_id", { ascending: true })
+app/lineups/page.tsx-65-      .order("draft_order", { ascending: true }),
+app/lineups/page.tsx-66-    supabaseAdmin.from("player_slate_stats").select("player_id, fantasy_points"),
+app/lineups/page.tsx-67-  ]);
+app/lineups/page.tsx-68-
+app/lineups/page.tsx-69-  if (
+app/lineups/page.tsx-70-    playersError ||
+app/lineups/page.tsx-71-    teamsError ||
+app/lineups/page.tsx-72-    slatesError ||
+app/lineups/page.tsx-73-    slateTeamsError ||
+app/lineups/page.tsx-74-    allPlayerStatsError
+app/lineups/page.tsx-75-  ) {
+app/lineups/page.tsx-76-    return (
+app/lineups/page.tsx-77-      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/lineups/page.tsx-78-        <div className="mx-auto max-w-[1600px] space-y-6">
+app/lineups/page.tsx-79-          <AppNav />
+app/lineups/page.tsx-80-
+app/lineups/page.tsx-81-          <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
+app/lineups/page.tsx-82-            <h1 className="text-3xl font-bold tracking-tight">Lineups</h1>
+app/lineups/page.tsx-83-            <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
+app/lineups/page.tsx-84-              Failed to load page data.
+app/lineups/page.tsx-85-              <div className="mt-2 text-sm text-red-600">
+app/lineups/page.tsx-86-                {playersError?.message ||
+app/lineups/page.tsx-87-                  teamsError?.message ||
+app/lineups/page.tsx-88-                  slatesError?.message ||
+app/lineups/page.tsx-89-                  slateTeamsError?.message ||
+app/lineups/page.tsx-90-                  allPlayerStatsError?.message}
+app/lineups/page.tsx-91-              </div>
+app/lineups/page.tsx-92-            </div>
+app/lineups/page.tsx-93-          </section>
+app/lineups/page.tsx-94-        </div>
+app/lineups/page.tsx-95-      </main>
+app/lineups/page.tsx-96-    );
+app/lineups/page.tsx-97-  }
+app/lineups/page.tsx-98-
+app/lineups/page.tsx-99-  const safeSlates: Slate[] =
+app/lineups/page.tsx-100-    (slates ?? []).map((slate) => {
+app/lineups/page.tsx-101-      const startDate = slate.start_date ?? slate.date;
+app/lineups/page.tsx-102-      const endDate = slate.end_date ?? slate.date;
+app/lineups/page.tsx-103-
+app/lineups/page.tsx-104-      return {
+app/lineups/page.tsx-105-        id: slate.id,
+app/lineups/page.tsx-106-        date: slate.date,
+app/lineups/page.tsx-107-        start_date: startDate,
+app/lineups/page.tsx-108-        end_date: endDate,
+app/lineups/page.tsx-109-        label: formatSlateLabel(startDate, endDate),
+app/lineups/page.tsx-110-        is_locked: slate.is_locked,
+app/lineups/page.tsx-111-      };
+app/lineups/page.tsx-112-    }) ?? [];
+app/lineups/page.tsx-113-
+app/lineups/page.tsx-114-  const safeSlateTeams = (slateTeams ?? []) as SlateTeamConfig[];
+app/lineups/page.tsx-115-
+app/lineups/page.tsx-116-  const safeAllPlayerStats = allPlayerStats ?? [];
+app/lineups/page.tsx-117-  const playerAverageMap = new Map<number, { total: number; count: number }>();
+app/lineups/page.tsx-118-
+app/lineups/page.tsx-119-  safeAllPlayerStats.forEach((row) => {
+app/lineups/page.tsx-120-    const playerId = Number(row.player_id);
+app/lineups/page.tsx-121-    const fantasyPoints = Number(row.fantasy_points ?? 0);
+app/lineups/page.tsx-122-
+app/lineups/page.tsx-123-
+app/lineups/page.tsx-124-    if (!Number.isFinite(playerId)) return;
+app/lineups/page.tsx-125-    if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
+--
+app/api/lineups/route.ts-393-            `Failed to load ${sport.toUpperCase()} roster rules: ` +
+app/api/lineups/route.ts-394-            rosterSlotError.message,
+app/api/lineups/route.ts-395-        },
+app/api/lineups/route.ts-396-        { status: 500 },
+app/api/lineups/route.ts-397-      );
+app/api/lineups/route.ts-398-    }
+app/api/lineups/route.ts-399-
+app/api/lineups/route.ts-400-    const rosterSlots =
+app/api/lineups/route.ts-401-      (rosterSlotData ?? []).length > 0
+app/api/lineups/route.ts-402-        ? ((rosterSlotData ?? []) as RosterSlotRow[])
+app/api/lineups/route.ts-403-        : getDefaultRosterSlots(sport);
+app/api/lineups/route.ts-404-
+app/api/lineups/route.ts-405-    const totalRosterSlots = rosterSlots.reduce(
+app/api/lineups/route.ts-406-      (sum, slot) => sum + Number(slot.slot_count),
+app/api/lineups/route.ts-407-      0,
+app/api/lineups/route.ts-408-    );
+app/api/lineups/route.ts-409-
+app/api/lineups/route.ts-410-    if (uniquePlayerIds.length > totalRosterSlots) {
+app/api/lineups/route.ts-411-      return NextResponse.json(
+app/api/lineups/route.ts-412-        {
+app/api/lineups/route.ts-413-          error:
+app/api/lineups/route.ts-414-            `A ${sport.toUpperCase()} lineup can include at most ` +
+app/api/lineups/route.ts-415-            `${totalRosterSlots} players.`,
+app/api/lineups/route.ts-416-        },
+app/api/lineups/route.ts-417-        { status: 400 },
+app/api/lineups/route.ts-418-      );
+app/api/lineups/route.ts-419-    }
+app/api/lineups/route.ts-420-
+app/api/lineups/route.ts-421-    const { data: team, error: teamError } =
+app/api/lineups/route.ts-422-      await supabaseAdmin
+app/api/lineups/route.ts:423:        .from("teams")
+app/api/lineups/route.ts-424-        .select("id, name")
+app/api/lineups/route.ts-425-        .eq("id", teamId)
+app/api/lineups/route.ts-426-        .single();
+app/api/lineups/route.ts-427-
+app/api/lineups/route.ts-428-    if (teamError || !team) {
+app/api/lineups/route.ts-429-      return NextResponse.json(
+app/api/lineups/route.ts-430-        { error: "Selected team not found." },
+app/api/lineups/route.ts-431-        { status: 404 },
+app/api/lineups/route.ts-432-      );
+app/api/lineups/route.ts-433-    }
+app/api/lineups/route.ts-434-
+app/api/lineups/route.ts-435-    const {
+app/api/lineups/route.ts-436-      players,
+app/api/lineups/route.ts-437-      error: playersError,
+app/api/lineups/route.ts-438-    } = await loadPlayersForSport(
+app/api/lineups/route.ts-439-      sport,
+app/api/lineups/route.ts-440-      uniquePlayerIds,
+app/api/lineups/route.ts-441-    );
+app/api/lineups/route.ts-442-
+app/api/lineups/route.ts-443-    if (
+app/api/lineups/route.ts-444-      playersError ||
+app/api/lineups/route.ts-445-      players.length !== uniquePlayerIds.length
+app/api/lineups/route.ts-446-    ) {
+app/api/lineups/route.ts-447-      return NextResponse.json(
+app/api/lineups/route.ts-448-        {
+app/api/lineups/route.ts-449-          error:
+app/api/lineups/route.ts-450-            playersError
+app/api/lineups/route.ts-451-              ? `Failed to validate selected players: ${playersError}`
+app/api/lineups/route.ts-452-              : "One or more selected players were not found.",
+app/api/lineups/route.ts-453-        },
+app/api/lineups/route.ts-454-        { status: 400 },
+app/api/lineups/route.ts-455-      );
+app/api/lineups/route.ts-456-    }
+app/api/lineups/route.ts-457-
+app/api/lineups/route.ts-458-    const inactivePlayers = players.filter(
+app/api/lineups/route.ts-459-      (player) => !player.isActive,
+app/api/lineups/route.ts-460-    );
+app/api/lineups/route.ts-461-
+app/api/lineups/route.ts-462-    if (inactivePlayers.length > 0) {
+app/api/lineups/route.ts-463-      return NextResponse.json(
+app/api/lineups/route.ts-464-        {
+app/api/lineups/route.ts-465-          error:
+app/api/lineups/route.ts-466-            "Inactive players cannot be used in a lineup.",
+app/api/lineups/route.ts-467-        },
+app/api/lineups/route.ts-468-        { status: 400 },
+app/api/lineups/route.ts-469-      );
+app/api/lineups/route.ts-470-    }
+app/api/lineups/route.ts-471-
+app/api/lineups/route.ts-472-    if (sport === "golf" && uniquePlayerIds.length > 0) {
+app/api/lineups/route.ts-473-      const { data: eventPlayers, error: eventPlayersError } =
+app/api/lineups/route.ts-474-        await supabaseAdmin
+app/api/lineups/route.ts-475-          .from("golf_event_players")
+app/api/lineups/route.ts-476-          .select("player_id")
+app/api/lineups/route.ts-477-          .eq("slate_id", slateId)
+app/api/lineups/route.ts-478-          .in("player_id", uniquePlayerIds);
+app/api/lineups/route.ts-479-
+app/api/lineups/route.ts-480-      if (eventPlayersError) {
+app/api/lineups/route.ts-481-        return NextResponse.json(
+app/api/lineups/route.ts-482-          {
+app/api/lineups/route.ts-483-            error:
+app/api/lineups/route.ts-484-              "Failed to validate the tournament field: " +
+app/api/lineups/route.ts-485-              eventPlayersError.message,
+app/api/lineups/route.ts-486-          },
+app/api/lineups/route.ts-487-          { status: 500 },
+app/api/lineups/route.ts-488-        );
+app/api/lineups/route.ts-489-      }
+app/api/lineups/route.ts-490-
+app/api/lineups/route.ts-491-      const tournamentPlayerIds = new Set(
+app/api/lineups/route.ts-492-        (eventPlayers ?? []).map((row) =>
+app/api/lineups/route.ts-493-          Number(row.player_id),
+--
+app/api/slates/route.ts-404-      const aFinish = a.finish_position ?? Number.MAX_SAFE_INTEGER;
+app/api/slates/route.ts-405-      const bFinish = b.finish_position ?? Number.MAX_SAFE_INTEGER;
+app/api/slates/route.ts-406-
+app/api/slates/route.ts-407-      if (aFinish !== bFinish) return aFinish - bFinish;
+app/api/slates/route.ts-408-
+app/api/slates/route.ts-409-      return (b.fantasy_points ?? 0) - (a.fantasy_points ?? 0);
+app/api/slates/route.ts-410-    });
+app/api/slates/route.ts-411-
+app/api/slates/route.ts-412-  const inverseOrderIds = rankedTeams.map((row) => row.team_id).reverse();
+app/api/slates/route.ts-413-
+app/api/slates/route.ts-414-  const teamsMissingFromSlate = safeTeams
+app/api/slates/route.ts-415-    .filter((team) => !inverseOrderIds.includes(team.id))
+app/api/slates/route.ts-416-    .sort((a, b) => a.name.localeCompare(b.name))
+app/api/slates/route.ts-417-    .map((team) => team.id);
+app/api/slates/route.ts-418-
+app/api/slates/route.ts-419-  return [...inverseOrderIds, ...teamsMissingFromSlate];
+app/api/slates/route.ts-420-}
+app/api/slates/route.ts-421-
+app/api/slates/route.ts-422-export async function GET(request: NextRequest) {
+app/api/slates/route.ts-423-  try {
+app/api/slates/route.ts-424-    const { searchParams } = new URL(request.url);
+app/api/slates/route.ts-425-    const sportParam = searchParams.get("sport");
+app/api/slates/route.ts-426-
+app/api/slates/route.ts-427-    const sport: "nba" | "nfl" | "golf" =
+app/api/slates/route.ts-428-      sportParam === "nfl"
+app/api/slates/route.ts-429-        ? "nfl"
+app/api/slates/route.ts-430-        : sportParam === "golf"
+app/api/slates/route.ts-431-          ? "golf"
+app/api/slates/route.ts-432-          : "nba";
+app/api/slates/route.ts-433-    const { data: teams, error: teamsError } = await supabaseAdmin
+app/api/slates/route.ts:434:      .from("teams")
+app/api/slates/route.ts-435-      .select("id, name")
+app/api/slates/route.ts-436-      .order("name", { ascending: true });
+app/api/slates/route.ts-437-
+app/api/slates/route.ts-438-    if (teamsError) {
+app/api/slates/route.ts-439-      return NextResponse.json(
+app/api/slates/route.ts-440-        { error: `Failed to load teams: ${teamsError.message}` },
+app/api/slates/route.ts-441-        { status: 500 }
+app/api/slates/route.ts-442-      );
+app/api/slates/route.ts-443-    }
+app/api/slates/route.ts-444-
+app/api/slates/route.ts-445-    const safeTeams = (teams ?? []) as TeamRow[];
+app/api/slates/route.ts-446-    const previousCompleted =
+app/api/slates/route.ts-447-      await getMostRecentCompletedSlateSetup(sport);
+app/api/slates/route.ts-448-
+app/api/slates/route.ts-449-    const suggestedOrderIds = buildSuggestedOrderIds(
+app/api/slates/route.ts-450-      previousCompleted.results,
+app/api/slates/route.ts-451-      safeTeams
+app/api/slates/route.ts-452-    );
+app/api/slates/route.ts-453-
+app/api/slates/route.ts-454-    const suggestedTeamConfigs = normalizeTeamConfigs(
+app/api/slates/route.ts-455-      safeTeams.map((team) => ({
+app/api/slates/route.ts-456-        team_id: team.id,
+app/api/slates/route.ts-457-        draft_order: 0,
+app/api/slates/route.ts-458-        is_participating: true,
+app/api/slates/route.ts-459-      })),
+app/api/slates/route.ts-460-      safeTeams,
+app/api/slates/route.ts-461-      suggestedOrderIds
+app/api/slates/route.ts-462-    );
+app/api/slates/route.ts-463-
+app/api/slates/route.ts-464-    return NextResponse.json({
+app/api/slates/route.ts-465-      success: true,
+app/api/slates/route.ts-466-      sport,
+app/api/slates/route.ts-467-      teams: safeTeams,
+app/api/slates/route.ts-468-      latestSlate: previousCompleted.slate,
+app/api/slates/route.ts-469-      previousCompletedSlate: previousCompleted.slate,
+app/api/slates/route.ts-470-      suggestedTeamConfigs,
+app/api/slates/route.ts-471-    });
+app/api/slates/route.ts-472-  } catch (error) {
+app/api/slates/route.ts-473-    console.error(error);
+app/api/slates/route.ts-474-    return NextResponse.json(
+app/api/slates/route.ts-475-      { error: "Unexpected server error while loading slate setup." },
+app/api/slates/route.ts-476-      { status: 500 }
+app/api/slates/route.ts-477-    );
+app/api/slates/route.ts-478-  }
+app/api/slates/route.ts-479-}
+app/api/slates/route.ts-480-
+app/api/slates/route.ts-481-export async function POST(request: NextRequest) {
+app/api/slates/route.ts-482-  const authError = await requireAdminApi();
+app/api/slates/route.ts-483-  if (authError) return authError;
+app/api/slates/route.ts-484-
+app/api/slates/route.ts-485-  try {
+app/api/slates/route.ts-486-    const body = await request.json();
+app/api/slates/route.ts-487-
+app/api/slates/route.ts-488-    const startDate = String(body?.startDate ?? "").trim();
+app/api/slates/route.ts-489-    const endDate = String(body?.endDate ?? "").trim();
+app/api/slates/route.ts-490-
+app/api/slates/route.ts-491-    const sport: "nba" | "nfl" | "golf" =
+app/api/slates/route.ts-492-      body?.sport === "nfl"
+app/api/slates/route.ts-493-        ? "nfl"
+app/api/slates/route.ts-494-        : body?.sport === "golf"
+app/api/slates/route.ts-495-          ? "golf"
+app/api/slates/route.ts-496-          : "nba";
+app/api/slates/route.ts-497-
+app/api/slates/route.ts-498-    const displayName =
+app/api/slates/route.ts-499-      typeof body?.displayName === "string"
+app/api/slates/route.ts-500-        ? body.displayName.trim()
+app/api/slates/route.ts-501-        : "";
+app/api/slates/route.ts-502-
+app/api/slates/route.ts-503-    const externalEventId =
+app/api/slates/route.ts-504-      typeof body?.externalEventId === "string"
+--
+app/api/slates/route.ts-541-      if (!displayName) {
+app/api/slates/route.ts-542-        return NextResponse.json(
+app/api/slates/route.ts-543-          { error: "Tournament name is required for a Golf slate." },
+app/api/slates/route.ts-544-          { status: 400 }
+app/api/slates/route.ts-545-        );
+app/api/slates/route.ts-546-      }
+app/api/slates/route.ts-547-
+app/api/slates/route.ts-548-      if (!externalEventId) {
+app/api/slates/route.ts-549-        return NextResponse.json(
+app/api/slates/route.ts-550-          { error: "ESPN event ID is required for a Golf slate." },
+app/api/slates/route.ts-551-          { status: 400 }
+app/api/slates/route.ts-552-        );
+app/api/slates/route.ts-553-      }
+app/api/slates/route.ts-554-
+app/api/slates/route.ts-555-      if (
+app/api/slates/route.ts-556-        cutPenaltyPerRound === null ||
+app/api/slates/route.ts-557-        cutPenaltyPerRound < 0 ||
+app/api/slates/route.ts-558-        cutPenaltyPerRound > 100
+app/api/slates/route.ts-559-      ) {
+app/api/slates/route.ts-560-        return NextResponse.json(
+app/api/slates/route.ts-561-          {
+app/api/slates/route.ts-562-            error:
+app/api/slates/route.ts-563-              "Golf cut penalty must be a whole number from 0 through 100.",
+app/api/slates/route.ts-564-          },
+app/api/slates/route.ts-565-          { status: 400 }
+app/api/slates/route.ts-566-        );
+app/api/slates/route.ts-567-      }
+app/api/slates/route.ts-568-    }
+app/api/slates/route.ts-569-
+app/api/slates/route.ts-570-    const { data: teams, error: teamsError } = await supabaseAdmin
+app/api/slates/route.ts:571:      .from("teams")
+app/api/slates/route.ts-572-      .select("id, name")
+app/api/slates/route.ts-573-      .order("name", { ascending: true });
+app/api/slates/route.ts-574-
+app/api/slates/route.ts-575-    if (teamsError || !teams) {
+app/api/slates/route.ts-576-      return NextResponse.json(
+app/api/slates/route.ts-577-        { error: `Failed to load teams: ${teamsError?.message}` },
+app/api/slates/route.ts-578-        { status: 500 }
+app/api/slates/route.ts-579-      );
+app/api/slates/route.ts-580-    }
+app/api/slates/route.ts-581-
+app/api/slates/route.ts-582-    const safeTeams = teams as TeamRow[];
+app/api/slates/route.ts-583-    const previousCompleted =
+app/api/slates/route.ts-584-      await getMostRecentCompletedSlateSetup(sport);
+app/api/slates/route.ts-585-    const suggestedOrderIds = buildSuggestedOrderIds(
+app/api/slates/route.ts-586-      previousCompleted.results,
+app/api/slates/route.ts-587-      safeTeams
+app/api/slates/route.ts-588-    );
+app/api/slates/route.ts-589-
+app/api/slates/route.ts-590-    const normalizedTeamConfigs =
+app/api/slates/route.ts-591-      teamConfigs.length > 0
+app/api/slates/route.ts-592-        ? (teamConfigs as TeamConfigInput[])
+app/api/slates/route.ts-593-            .map((config) => ({
+app/api/slates/route.ts-594-              team_id: Number(config.team_id),
+app/api/slates/route.ts-595-              draft_order: Number(config.draft_order),
+app/api/slates/route.ts-596-              is_participating: Boolean(config.is_participating),
+app/api/slates/route.ts-597-            }))
+app/api/slates/route.ts-598-            .sort((a, b) => {
+app/api/slates/route.ts-599-              if (a.is_participating !== b.is_participating) {
+app/api/slates/route.ts-600-                return a.is_participating ? -1 : 1;
+app/api/slates/route.ts-601-              }
+app/api/slates/route.ts-602-
+app/api/slates/route.ts-603-              return a.draft_order - b.draft_order;
+app/api/slates/route.ts-604-            })
+app/api/slates/route.ts-605-            .map((config, index) => ({
+app/api/slates/route.ts-606-              ...config,
+app/api/slates/route.ts-607-              draft_order: index + 1,
+app/api/slates/route.ts-608-            }))
+app/api/slates/route.ts-609-        : normalizeTeamConfigs(
+app/api/slates/route.ts-610-            safeTeams.map((team) => ({
+app/api/slates/route.ts-611-              team_id: team.id,
+app/api/slates/route.ts-612-              draft_order: 0,
+app/api/slates/route.ts-613-              is_participating: true,
+app/api/slates/route.ts-614-            })),
+app/api/slates/route.ts-615-            safeTeams,
+app/api/slates/route.ts-616-            suggestedOrderIds
+app/api/slates/route.ts-617-          );
+app/api/slates/route.ts-618-
+app/api/slates/route.ts-619-    const dates = buildDateRange(startDate, endDate);
+app/api/slates/route.ts-620-    const nbaTeamSet = new Set<string>();
+app/api/slates/route.ts-621-    let firstGameStartTime: string | null = null;
+app/api/slates/route.ts-622-    const detectionSources: Array<{
+app/api/slates/route.ts-623-      date: string;
+app/api/slates/route.ts-624-      source: string;
+app/api/slates/route.ts-625-      teamCodes: string[];
+app/api/slates/route.ts-626-      firstGameStartTime: string | null;
+app/api/slates/route.ts-627-    }> = [];
+app/api/slates/route.ts-628-
+app/api/slates/route.ts-629-    if (sport === "nba") {
+app/api/slates/route.ts-630-    for (const date of dates) {
+app/api/slates/route.ts-631-      const detected = await getNbaTeamsAndFirstGameTimeForDate(date);
+app/api/slates/route.ts-632-
+app/api/slates/route.ts-633-      detected.teamCodes.forEach((code) => nbaTeamSet.add(code));
+app/api/slates/route.ts-634-
+app/api/slates/route.ts-635-      if (detected.firstGameStartTime) {
+app/api/slates/route.ts-636-        if (
+app/api/slates/route.ts-637-          !firstGameStartTime ||
+app/api/slates/route.ts-638-          detected.firstGameStartTime < firstGameStartTime
+app/api/slates/route.ts-639-        ) {
+app/api/slates/route.ts-640-          firstGameStartTime = detected.firstGameStartTime;
+app/api/slates/route.ts-641-        }
+--
+app/api/standings/route.ts-33-  team_id: number;
+app/api/standings/route.ts-34-  name: string;
+app/api/standings/route.ts-35-  wins: number;
+app/api/standings/route.ts-36-  runner_ups: number;
+app/api/standings/route.ts-37-  avg_finish: number | null;
+app/api/standings/route.ts-38-  avg_score: number | null;
+app/api/standings/route.ts-39-  high_score: number | null;
+app/api/standings/route.ts-40-  low_score: number | null;
+app/api/standings/route.ts-41-  slates_played: number;
+app/api/standings/route.ts-42-};
+app/api/standings/route.ts-43-
+app/api/standings/route.ts-44-function getSeasonFromDate(dateString: string) {
+app/api/standings/route.ts-45-  return new Date(`${dateString}T00:00:00`).getFullYear();
+app/api/standings/route.ts-46-}
+app/api/standings/route.ts-47-
+app/api/standings/route.ts-48-function roundTo(value: number, digits = 2) {
+app/api/standings/route.ts-49-  return Number(value.toFixed(digits));
+app/api/standings/route.ts-50-}
+app/api/standings/route.ts-51-
+app/api/standings/route.ts-52-export async function GET(request: NextRequest) {
+app/api/standings/route.ts-53-  try {
+app/api/standings/route.ts-54-    const seasonParam = request.nextUrl.searchParams.get("season");
+app/api/standings/route.ts-55-    const sport = request.nextUrl.searchParams.get("sport") ?? DEFAULT_SPORT;
+app/api/standings/route.ts-56-
+app/api/standings/route.ts-57-    const [
+app/api/standings/route.ts-58-      { data: teams, error: teamsError },
+app/api/standings/route.ts-59-      { data: slates, error: slatesError },
+app/api/standings/route.ts-60-      { data: teamSlateResults, error: teamSlateResultsError },
+app/api/standings/route.ts-61-      { data: slateTeams, error: slateTeamsError },
+app/api/standings/route.ts-62-    ] = await Promise.all([
+app/api/standings/route.ts:63:      supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+app/api/standings/route.ts-64-      supabaseAdmin
+app/api/standings/route.ts-65-        .from("slates")
+app/api/standings/route.ts-66-        .select("id, start_date, is_locked, sport")
+app/api/standings/route.ts-67-        .eq("is_locked", true)
+app/api/standings/route.ts-68-        .eq("sport", sport)
+app/api/standings/route.ts-69-        .order("start_date", { ascending: true }),
+app/api/standings/route.ts-70-      supabaseAdmin
+app/api/standings/route.ts-71-        .from("team_slate_results")
+app/api/standings/route.ts-72-        .select("slate_id, team_id, fantasy_points, finish_position"),
+app/api/standings/route.ts-73-      supabaseAdmin
+app/api/standings/route.ts-74-        .from("slate_teams")
+app/api/standings/route.ts-75-        .select("slate_id, team_id, draft_order, is_participating"),
+app/api/standings/route.ts-76-    ]);
+app/api/standings/route.ts-77-
+app/api/standings/route.ts-78-    if (teamsError || slatesError || teamSlateResultsError || slateTeamsError) {
+app/api/standings/route.ts-79-      return NextResponse.json(
+app/api/standings/route.ts-80-        {
+app/api/standings/route.ts-81-          error:
+app/api/standings/route.ts-82-            teamsError?.message ||
+app/api/standings/route.ts-83-            slatesError?.message ||
+app/api/standings/route.ts-84-            teamSlateResultsError?.message ||
+app/api/standings/route.ts-85-            slateTeamsError?.message ||
+app/api/standings/route.ts-86-            "Failed to load standings data.",
+app/api/standings/route.ts-87-        },
+app/api/standings/route.ts-88-        { status: 500 }
+app/api/standings/route.ts-89-      );
+app/api/standings/route.ts-90-    }
+app/api/standings/route.ts-91-
+app/api/standings/route.ts-92-    const safeTeams = (teams ?? []) as TeamRow[];
+app/api/standings/route.ts-93-    const safeSlates = (slates ?? []) as SlateRow[];
+app/api/standings/route.ts-94-    const safeResults = (teamSlateResults ?? []) as TeamSlateResultRow[];
+app/api/standings/route.ts-95-    const safeSlateTeams = (slateTeams ?? []) as SlateTeamRow[];
+app/api/standings/route.ts-96-
+app/api/standings/route.ts-97-    // Only slates matching the requested sport ended up in safeSlates
+app/api/standings/route.ts-98-    // (filtered at the query level above), so this map only contains
+app/api/standings/route.ts-99-    // sport-relevant slate ids.
+app/api/standings/route.ts-100-    const slateSeasonMap = new Map<number, number>();
+app/api/standings/route.ts-101-    safeSlates.forEach((slate) => {
+app/api/standings/route.ts-102-      slateSeasonMap.set(slate.id, getSeasonFromDate(slate.start_date));
+app/api/standings/route.ts-103-    });
+app/api/standings/route.ts-104-
+app/api/standings/route.ts-105-    const relevantSlateIds = new Set(safeSlates.map((slate) => slate.id));
+app/api/standings/route.ts-106-
+app/api/standings/route.ts-107-    const availableSeasons = Array.from(
+app/api/standings/route.ts-108-      new Set(
+app/api/standings/route.ts-109-        safeSlates
+app/api/standings/route.ts-110-          .map((slate) => getSeasonFromDate(slate.start_date))
+app/api/standings/route.ts-111-          .filter((season) => Number.isFinite(season))
+app/api/standings/route.ts-112-      )
+app/api/standings/route.ts-113-    ).sort((a, b) => b - a);
+app/api/standings/route.ts-114-
+app/api/standings/route.ts-115-    const isAllTime = seasonParam === "all";
+app/api/standings/route.ts-116-
+app/api/standings/route.ts-117-    const selectedSeason =
+app/api/standings/route.ts-118-      isAllTime
+app/api/standings/route.ts-119-        ? "all"
+app/api/standings/route.ts-120-        : seasonParam && Number.isFinite(Number(seasonParam))
+app/api/standings/route.ts-121-          ? Number(seasonParam)
+app/api/standings/route.ts-122-          : availableSeasons[0] ?? null;
+app/api/standings/route.ts-123-
+app/api/standings/route.ts-124-    const seasonResults = safeResults.filter((row) => {
+app/api/standings/route.ts-125-      if (!relevantSlateIds.has(row.slate_id)) return false;
+app/api/standings/route.ts-126-
+app/api/standings/route.ts-127-      const slateSeason = slateSeasonMap.get(row.slate_id);
+app/api/standings/route.ts-128-
+app/api/standings/route.ts-129-      if (!slateSeason) return false;
+app/api/standings/route.ts-130-      if (isAllTime) return true;
+app/api/standings/route.ts-131-
+app/api/standings/route.ts-132-      return slateSeason === selectedSeason;
+app/api/standings/route.ts-133-    });
+--
+app/api/home-summary/route.ts-155-      return getGolfHomeSummary();
+app/api/home-summary/route.ts-156-    }
+app/api/home-summary/route.ts-157-
+app/api/home-summary/route.ts-158-    const sport =
+app/api/home-summary/route.ts-159-      sportParam === "nfl"
+app/api/home-summary/route.ts-160-        ? "nfl"
+app/api/home-summary/route.ts-161-        : "nba";
+app/api/home-summary/route.ts-162-
+app/api/home-summary/route.ts-163-    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+app/api/home-summary/route.ts-164-    const playersSelect =
+app/api/home-summary/route.ts-165-      sport === "nfl"
+app/api/home-summary/route.ts-166-        ? "id, name, external_id:nfl_player_id"
+app/api/home-summary/route.ts-167-        : "id, name, external_id:nba_player_id";
+app/api/home-summary/route.ts-168-    const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+app/api/home-summary/route.ts-169-    const statsSelect =
+app/api/home-summary/route.ts-170-      sport === "nfl"
+app/api/home-summary/route.ts-171-        ? "slate_id, player_id, fantasy_points, game_status, game_status_text"
+app/api/home-summary/route.ts-172-        : "slate_id, player_id, fantasy_points, game_status, game_status_text, period, game_clock";
+app/api/home-summary/route.ts-173-    const [
+app/api/home-summary/route.ts-174-      { data: teams, error: teamsError },
+app/api/home-summary/route.ts-175-      { data: slates, error: slatesError },
+app/api/home-summary/route.ts-176-      { data: teamSlateResults, error: teamSlateResultsError },
+app/api/home-summary/route.ts-177-      { data: lineups, error: lineupsError },
+app/api/home-summary/route.ts-178-      { data: lineupPlayers, error: lineupPlayersError },
+app/api/home-summary/route.ts-179-      { data: players, error: playersError },
+app/api/home-summary/route.ts-180-      { data: playerSlateStats, error: playerSlateStatsError },
+app/api/home-summary/route.ts-181-      { data: seasonTeamSummary, error: seasonTeamSummaryError },
+app/api/home-summary/route.ts-182-      { data: slateTeams, error: slateTeamsError },
+app/api/home-summary/route.ts-183-      { data: nbaSeasonAverages, error: nbaSeasonAveragesError },
+app/api/home-summary/route.ts-184-    ] = await Promise.all([
+app/api/home-summary/route.ts:185:      supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+app/api/home-summary/route.ts-186-      supabaseAdmin
+app/api/home-summary/route.ts-187-        .from("slates")
+app/api/home-summary/route.ts-188-        .select(
+app/api/home-summary/route.ts-189-          "id, date, start_date, end_date, is_locked, first_game_start_time, tournament_analysis, show_tournament_analysis"
+app/api/home-summary/route.ts-190-        )
+app/api/home-summary/route.ts-191-        .eq("sport", sport)
+app/api/home-summary/route.ts-192-        .order("start_date", { ascending: false })
+app/api/home-summary/route.ts-193-        .order("end_date", { ascending: false }),
+app/api/home-summary/route.ts-194-      supabaseAdmin
+app/api/home-summary/route.ts-195-        .from("team_slate_results")
+app/api/home-summary/route.ts-196-        .select(
+app/api/home-summary/route.ts-197-          "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining"
+app/api/home-summary/route.ts-198-        ),
+app/api/home-summary/route.ts-199-      supabaseAdmin
+app/api/home-summary/route.ts-200-        .from("lineups")
+app/api/home-summary/route.ts-201-        .select("id, slate_id, team_id")
+app/api/home-summary/route.ts-202-        .range(0, 20000),
+app/api/home-summary/route.ts-203-      supabaseAdmin
+app/api/home-summary/route.ts-204-        .from("lineup_players")
+app/api/home-summary/route.ts-205-        .select("lineup_id, player_id, projected_fantasy_points")
+app/api/home-summary/route.ts-206-        .range(0, 20000),
+app/api/home-summary/route.ts-207-      supabaseAdmin.from(playersTable).select(playersSelect).order("name", { ascending: true }),
+app/api/home-summary/route.ts-208-      supabaseAdmin
+app/api/home-summary/route.ts-209-        .from(statsTable)
+app/api/home-summary/route.ts-210-        .select(statsSelect)
+app/api/home-summary/route.ts-211-        .order("slate_id", { ascending: false })
+app/api/home-summary/route.ts-212-        .range(0, 20000),
+app/api/home-summary/route.ts-213-      supabaseAdmin.from("season_team_summary").select("season, team_id, runner_ups"),
+app/api/home-summary/route.ts-214-      supabaseAdmin
+app/api/home-summary/route.ts-215-        .from("slate_teams")
+app/api/home-summary/route.ts-216-        .select("slate_id, team_id, draft_order, is_participating")
+app/api/home-summary/route.ts-217-        .range(0, 20000),
+app/api/home-summary/route.ts-218-      sport === "nba"
+app/api/home-summary/route.ts-219-        ? supabaseAdmin
+app/api/home-summary/route.ts-220-            .from("player_nba_season_averages")
+app/api/home-summary/route.ts-221-            .select("season, nba_player_id, fantasy_points")
+app/api/home-summary/route.ts-222-            .range(0, 5000)
+app/api/home-summary/route.ts-223-        : Promise.resolve({ data: [], error: null }),
+app/api/home-summary/route.ts-224-    ]);
+app/api/home-summary/route.ts-225-
+app/api/home-summary/route.ts-226-    if (
+app/api/home-summary/route.ts-227-      teamsError ||
+app/api/home-summary/route.ts-228-      slatesError ||
+app/api/home-summary/route.ts-229-      teamSlateResultsError ||
+app/api/home-summary/route.ts-230-      lineupsError ||
+app/api/home-summary/route.ts-231-      lineupPlayersError ||
+app/api/home-summary/route.ts-232-      playersError ||
+app/api/home-summary/route.ts-233-      playerSlateStatsError ||
+app/api/home-summary/route.ts-234-      seasonTeamSummaryError ||
+app/api/home-summary/route.ts-235-      slateTeamsError ||
+app/api/home-summary/route.ts-236-      nbaSeasonAveragesError
+app/api/home-summary/route.ts-237-    ) {
+app/api/home-summary/route.ts-238-      return NextResponse.json(
+app/api/home-summary/route.ts-239-        {
+app/api/home-summary/route.ts-240-          error:
+app/api/home-summary/route.ts-241-            teamsError?.message ||
+app/api/home-summary/route.ts-242-            slatesError?.message ||
+app/api/home-summary/route.ts-243-            teamSlateResultsError?.message ||
+app/api/home-summary/route.ts-244-            lineupsError?.message ||
+app/api/home-summary/route.ts-245-            lineupPlayersError?.message ||
+app/api/home-summary/route.ts-246-            playersError?.message ||
+app/api/home-summary/route.ts-247-            playerSlateStatsError?.message ||
+app/api/home-summary/route.ts-248-            seasonTeamSummaryError?.message ||
+app/api/home-summary/route.ts-249-            slateTeamsError?.message ||
+app/api/home-summary/route.ts-250-            nbaSeasonAveragesError?.message ||
+app/api/home-summary/route.ts-251-            "Failed to load home summary data.",
+app/api/home-summary/route.ts-252-        },
+app/api/home-summary/route.ts-253-        { status: 500 }
+app/api/home-summary/route.ts-254-      );
+app/api/home-summary/route.ts-255-    }
+--
+app/api/admin/slates/[slateId]/reseed/route.ts-40-    const { data: currentSlate, error: currentSlateError } = await supabaseAdmin
+app/api/admin/slates/[slateId]/reseed/route.ts-41-      .from("slates")
+app/api/admin/slates/[slateId]/reseed/route.ts-42-      .select("id, start_date, end_date")
+app/api/admin/slates/[slateId]/reseed/route.ts-43-      .eq("id", slateId)
+app/api/admin/slates/[slateId]/reseed/route.ts-44-      .single();
+app/api/admin/slates/[slateId]/reseed/route.ts-45-
+app/api/admin/slates/[slateId]/reseed/route.ts-46-    if (currentSlateError || !currentSlate) {
+app/api/admin/slates/[slateId]/reseed/route.ts-47-      return NextResponse.json(
+app/api/admin/slates/[slateId]/reseed/route.ts-48-        { error: "Slate not found." },
+app/api/admin/slates/[slateId]/reseed/route.ts-49-        { status: 404 }
+app/api/admin/slates/[slateId]/reseed/route.ts-50-      );
+app/api/admin/slates/[slateId]/reseed/route.ts-51-    }
+app/api/admin/slates/[slateId]/reseed/route.ts-52-
+app/api/admin/slates/[slateId]/reseed/route.ts-53-    const [
+app/api/admin/slates/[slateId]/reseed/route.ts-54-      { data: previousSlates, error: previousSlatesError },
+app/api/admin/slates/[slateId]/reseed/route.ts-55-      { data: slateTeams, error: slateTeamsError },
+app/api/admin/slates/[slateId]/reseed/route.ts-56-      { data: teams, error: teamsError },
+app/api/admin/slates/[slateId]/reseed/route.ts-57-    ] = await Promise.all([
+app/api/admin/slates/[slateId]/reseed/route.ts-58-      supabaseAdmin
+app/api/admin/slates/[slateId]/reseed/route.ts-59-        .from("slates")
+app/api/admin/slates/[slateId]/reseed/route.ts-60-        .select("id, start_date, end_date, is_locked")
+app/api/admin/slates/[slateId]/reseed/route.ts-61-        .lt("start_date", currentSlate.start_date)
+app/api/admin/slates/[slateId]/reseed/route.ts-62-        .eq("is_locked", true)
+app/api/admin/slates/[slateId]/reseed/route.ts-63-        .order("start_date", { ascending: false })
+app/api/admin/slates/[slateId]/reseed/route.ts-64-        .limit(1),
+app/api/admin/slates/[slateId]/reseed/route.ts-65-      supabaseAdmin
+app/api/admin/slates/[slateId]/reseed/route.ts-66-        .from("slate_teams")
+app/api/admin/slates/[slateId]/reseed/route.ts-67-        .select("slate_id, team_id, draft_order, is_participating")
+app/api/admin/slates/[slateId]/reseed/route.ts-68-        .eq("slate_id", slateId),
+app/api/admin/slates/[slateId]/reseed/route.ts-69-      supabaseAdmin
+app/api/admin/slates/[slateId]/reseed/route.ts:70:        .from("teams")
+app/api/admin/slates/[slateId]/reseed/route.ts-71-        .select("id, name")
+app/api/admin/slates/[slateId]/reseed/route.ts-72-        .order("name", { ascending: true }),
+app/api/admin/slates/[slateId]/reseed/route.ts-73-    ]);
+app/api/admin/slates/[slateId]/reseed/route.ts-74-
+app/api/admin/slates/[slateId]/reseed/route.ts-75-    if (previousSlatesError || slateTeamsError || teamsError) {
+app/api/admin/slates/[slateId]/reseed/route.ts-76-      return NextResponse.json(
+app/api/admin/slates/[slateId]/reseed/route.ts-77-        {
+app/api/admin/slates/[slateId]/reseed/route.ts-78-          error:
+app/api/admin/slates/[slateId]/reseed/route.ts-79-            previousSlatesError?.message ||
+app/api/admin/slates/[slateId]/reseed/route.ts-80-            slateTeamsError?.message ||
+app/api/admin/slates/[slateId]/reseed/route.ts-81-            teamsError?.message ||
+app/api/admin/slates/[slateId]/reseed/route.ts-82-            "Failed to prepare reseed.",
+app/api/admin/slates/[slateId]/reseed/route.ts-83-        },
+app/api/admin/slates/[slateId]/reseed/route.ts-84-        { status: 500 }
+app/api/admin/slates/[slateId]/reseed/route.ts-85-      );
+app/api/admin/slates/[slateId]/reseed/route.ts-86-    }
+app/api/admin/slates/[slateId]/reseed/route.ts-87-
+app/api/admin/slates/[slateId]/reseed/route.ts-88-    const previousSlate = previousSlates?.[0];
+app/api/admin/slates/[slateId]/reseed/route.ts-89-
+app/api/admin/slates/[slateId]/reseed/route.ts-90-    if (!previousSlate) {
+app/api/admin/slates/[slateId]/reseed/route.ts-91-      return NextResponse.json(
+app/api/admin/slates/[slateId]/reseed/route.ts-92-        { error: "No previous locked slate found to reseed from." },
+app/api/admin/slates/[slateId]/reseed/route.ts-93-        { status: 400 }
+app/api/admin/slates/[slateId]/reseed/route.ts-94-      );
+app/api/admin/slates/[slateId]/reseed/route.ts-95-    }
+app/api/admin/slates/[slateId]/reseed/route.ts-96-
+app/api/admin/slates/[slateId]/reseed/route.ts-97-    const { data: previousResults, error: previousResultsError } = await supabaseAdmin
+app/api/admin/slates/[slateId]/reseed/route.ts-98-      .from("team_slate_results")
+app/api/admin/slates/[slateId]/reseed/route.ts-99-      .select("slate_id, team_id, finish_position, fantasy_points")
+app/api/admin/slates/[slateId]/reseed/route.ts-100-      .eq("slate_id", previousSlate.id);
+app/api/admin/slates/[slateId]/reseed/route.ts-101-
+app/api/admin/slates/[slateId]/reseed/route.ts-102-    if (previousResultsError) {
+app/api/admin/slates/[slateId]/reseed/route.ts-103-      return NextResponse.json(
+app/api/admin/slates/[slateId]/reseed/route.ts-104-        { error: `Failed to load previous slate results: ${previousResultsError.message}` },
+app/api/admin/slates/[slateId]/reseed/route.ts-105-        { status: 500 }
+app/api/admin/slates/[slateId]/reseed/route.ts-106-      );
+app/api/admin/slates/[slateId]/reseed/route.ts-107-    }
+app/api/admin/slates/[slateId]/reseed/route.ts-108-
+app/api/admin/slates/[slateId]/reseed/route.ts-109-    const safeSlateTeams = (slateTeams ?? []) as SlateTeamRow[];
+app/api/admin/slates/[slateId]/reseed/route.ts-110-    const safePreviousResults = (previousResults ?? []) as TeamResultRow[];
+app/api/admin/slates/[slateId]/reseed/route.ts-111-
+app/api/admin/slates/[slateId]/reseed/route.ts-112-    const configMap = new Map(
+app/api/admin/slates/[slateId]/reseed/route.ts-113-      safeSlateTeams.map((row) => [row.team_id, row])
+app/api/admin/slates/[slateId]/reseed/route.ts-114-    );
+app/api/admin/slates/[slateId]/reseed/route.ts-115-
+app/api/admin/slates/[slateId]/reseed/route.ts-116-    const previousOrderMap = new Map<number, number>();
+app/api/admin/slates/[slateId]/reseed/route.ts-117-    safePreviousResults
+app/api/admin/slates/[slateId]/reseed/route.ts-118-      .filter((row) => row.finish_position !== null)
+app/api/admin/slates/[slateId]/reseed/route.ts-119-      .sort((a, b) => {
+app/api/admin/slates/[slateId]/reseed/route.ts-120-        const aFinish = a.finish_position ?? 999;
+app/api/admin/slates/[slateId]/reseed/route.ts-121-        const bFinish = b.finish_position ?? 999;
+app/api/admin/slates/[slateId]/reseed/route.ts-122-        if (aFinish !== bFinish) return aFinish - bFinish;
+app/api/admin/slates/[slateId]/reseed/route.ts-123-        return Number(a.fantasy_points ?? 0) - Number(b.fantasy_points ?? 0);
+app/api/admin/slates/[slateId]/reseed/route.ts-124-      })
+app/api/admin/slates/[slateId]/reseed/route.ts-125-      .forEach((row) => {
+app/api/admin/slates/[slateId]/reseed/route.ts-126-        previousOrderMap.set(row.team_id, row.finish_position ?? 999);
+app/api/admin/slates/[slateId]/reseed/route.ts-127-      });
+app/api/admin/slates/[slateId]/reseed/route.ts-128-
+app/api/admin/slates/[slateId]/reseed/route.ts-129-    const merged = (teams ?? []).map((team, index) => {
+app/api/admin/slates/[slateId]/reseed/route.ts-130-      const config = configMap.get(team.id);
+app/api/admin/slates/[slateId]/reseed/route.ts-131-      return {
+app/api/admin/slates/[slateId]/reseed/route.ts-132-        team_id: team.id,
+app/api/admin/slates/[slateId]/reseed/route.ts-133-        draft_order: config?.draft_order ?? index + 1,
+app/api/admin/slates/[slateId]/reseed/route.ts-134-        is_participating: config?.is_participating ?? true,
+app/api/admin/slates/[slateId]/reseed/route.ts-135-      };
+app/api/admin/slates/[slateId]/reseed/route.ts-136-    });
+app/api/admin/slates/[slateId]/reseed/route.ts-137-
+app/api/admin/slates/[slateId]/reseed/route.ts-138-    const participating = merged
+app/api/admin/slates/[slateId]/reseed/route.ts-139-      .filter((row) => row.is_participating)
+app/api/admin/slates/[slateId]/reseed/route.ts-140-      .sort((a, b) => {
+--
+app/api/admin/slates/[slateId]/route.ts-38-
+app/api/admin/slates/[slateId]/route.ts-39-  try {
+app/api/admin/slates/[slateId]/route.ts-40-    const { slateId: slateIdParam } = await context.params;
+app/api/admin/slates/[slateId]/route.ts-41-    const slateId = Number(slateIdParam);
+app/api/admin/slates/[slateId]/route.ts-42-
+app/api/admin/slates/[slateId]/route.ts-43-    if (!Number.isFinite(slateId)) {
+app/api/admin/slates/[slateId]/route.ts-44-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-45-        { error: "Invalid slate id." },
+app/api/admin/slates/[slateId]/route.ts-46-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-47-      );
+app/api/admin/slates/[slateId]/route.ts-48-    }
+app/api/admin/slates/[slateId]/route.ts-49-
+app/api/admin/slates/[slateId]/route.ts-50-    const [
+app/api/admin/slates/[slateId]/route.ts-51-      { data: slate, error: slateError },
+app/api/admin/slates/[slateId]/route.ts-52-      { data: teams, error: teamsError },
+app/api/admin/slates/[slateId]/route.ts-53-      { data: slateTeams, error: slateTeamsError },
+app/api/admin/slates/[slateId]/route.ts-54-      {
+app/api/admin/slates/[slateId]/route.ts-55-        data: golfFieldRows,
+app/api/admin/slates/[slateId]/route.ts-56-        error: golfFieldError,
+app/api/admin/slates/[slateId]/route.ts-57-        count: golfFieldCount,
+app/api/admin/slates/[slateId]/route.ts-58-      },
+app/api/admin/slates/[slateId]/route.ts-59-    ] = await Promise.all([
+app/api/admin/slates/[slateId]/route.ts-60-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-61-        .from("slates")
+app/api/admin/slates/[slateId]/route.ts-62-        .select(
+app/api/admin/slates/[slateId]/route.ts-63-          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, tournament_analysis, show_tournament_analysis, nba_team_abbreviations"
+app/api/admin/slates/[slateId]/route.ts-64-        )
+app/api/admin/slates/[slateId]/route.ts-65-        .eq("id", slateId)
+app/api/admin/slates/[slateId]/route.ts-66-        .single(),
+app/api/admin/slates/[slateId]/route.ts-67-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts:68:        .from("teams")
+app/api/admin/slates/[slateId]/route.ts-69-        .select("id, name")
+app/api/admin/slates/[slateId]/route.ts-70-        .order("name", { ascending: true }),
+app/api/admin/slates/[slateId]/route.ts-71-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-72-        .from("slate_teams")
+app/api/admin/slates/[slateId]/route.ts-73-        .select("slate_id, team_id, draft_order, is_participating")
+app/api/admin/slates/[slateId]/route.ts-74-        .eq("slate_id", slateId),
+app/api/admin/slates/[slateId]/route.ts-75-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-76-        .from("golf_event_players")
+app/api/admin/slates/[slateId]/route.ts-77-        .select("updated_at", {
+app/api/admin/slates/[slateId]/route.ts-78-          count: "exact",
+app/api/admin/slates/[slateId]/route.ts-79-        })
+app/api/admin/slates/[slateId]/route.ts-80-        .eq("slate_id", slateId)
+app/api/admin/slates/[slateId]/route.ts-81-        .order("updated_at", {
+app/api/admin/slates/[slateId]/route.ts-82-          ascending: false,
+app/api/admin/slates/[slateId]/route.ts-83-        })
+app/api/admin/slates/[slateId]/route.ts-84-        .limit(1),
+app/api/admin/slates/[slateId]/route.ts-85-    ]);
+app/api/admin/slates/[slateId]/route.ts-86-
+app/api/admin/slates/[slateId]/route.ts-87-    if (slateError || !slate) {
+app/api/admin/slates/[slateId]/route.ts-88-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-89-        { error: "Slate not found." },
+app/api/admin/slates/[slateId]/route.ts-90-        { status: 404 }
+app/api/admin/slates/[slateId]/route.ts-91-      );
+app/api/admin/slates/[slateId]/route.ts-92-    }
+app/api/admin/slates/[slateId]/route.ts-93-
+app/api/admin/slates/[slateId]/route.ts-94-    if (teamsError || slateTeamsError || golfFieldError) {
+app/api/admin/slates/[slateId]/route.ts-95-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-96-        {
+app/api/admin/slates/[slateId]/route.ts-97-          error:
+app/api/admin/slates/[slateId]/route.ts-98-            teamsError?.message ||
+app/api/admin/slates/[slateId]/route.ts-99-            slateTeamsError?.message ||
+app/api/admin/slates/[slateId]/route.ts-100-            golfFieldError?.message ||
+app/api/admin/slates/[slateId]/route.ts-101-            "Failed to load slate details.",
+app/api/admin/slates/[slateId]/route.ts-102-        },
+app/api/admin/slates/[slateId]/route.ts-103-        { status: 500 }
+app/api/admin/slates/[slateId]/route.ts-104-      );
+app/api/admin/slates/[slateId]/route.ts-105-    }
+app/api/admin/slates/[slateId]/route.ts-106-
+app/api/admin/slates/[slateId]/route.ts-107-    const safeTeams = teams ?? [];
+app/api/admin/slates/[slateId]/route.ts-108-    const safeSlateTeams = slateTeams ?? [];
+app/api/admin/slates/[slateId]/route.ts-109-
+app/api/admin/slates/[slateId]/route.ts-110-    const configMap = new Map(
+app/api/admin/slates/[slateId]/route.ts-111-      safeSlateTeams.map((row) => [row.team_id, row])
+app/api/admin/slates/[slateId]/route.ts-112-    );
+app/api/admin/slates/[slateId]/route.ts-113-
+app/api/admin/slates/[slateId]/route.ts-114-    const mergedTeams = safeTeams
+app/api/admin/slates/[slateId]/route.ts-115-      .map((team, index) => {
+app/api/admin/slates/[slateId]/route.ts-116-        const config = configMap.get(team.id);
+app/api/admin/slates/[slateId]/route.ts-117-
+app/api/admin/slates/[slateId]/route.ts-118-        return {
+app/api/admin/slates/[slateId]/route.ts-119-          team_id: team.id,
+app/api/admin/slates/[slateId]/route.ts-120-          team_name: team.name,
+app/api/admin/slates/[slateId]/route.ts-121-          draft_order: config?.draft_order ?? index + 1,
+app/api/admin/slates/[slateId]/route.ts-122-          is_participating: config?.is_participating ?? true,
+app/api/admin/slates/[slateId]/route.ts-123-        };
+app/api/admin/slates/[slateId]/route.ts-124-      })
+app/api/admin/slates/[slateId]/route.ts-125-      .sort((a, b) => {
+app/api/admin/slates/[slateId]/route.ts-126-        if (a.is_participating !== b.is_participating) {
+app/api/admin/slates/[slateId]/route.ts-127-          return a.is_participating ? -1 : 1;
+app/api/admin/slates/[slateId]/route.ts-128-        }
+app/api/admin/slates/[slateId]/route.ts-129-
+app/api/admin/slates/[slateId]/route.ts-130-        if (a.draft_order !== b.draft_order) {
+app/api/admin/slates/[slateId]/route.ts-131-          return a.draft_order - b.draft_order;
+app/api/admin/slates/[slateId]/route.ts-132-        }
+app/api/admin/slates/[slateId]/route.ts-133-
+app/api/admin/slates/[slateId]/route.ts-134-        return a.team_name.localeCompare(b.team_name);
+app/api/admin/slates/[slateId]/route.ts-135-      })
+app/api/admin/slates/[slateId]/route.ts-136-      .map((team, index) => ({
+app/api/admin/slates/[slateId]/route.ts-137-        ...team,
+app/api/admin/slates/[slateId]/route.ts-138-        draft_order: index + 1,
+--
+app/api/admin/correction-data/route.ts-1-import { NextResponse } from "next/server";
+app/api/admin/correction-data/route.ts-2-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+app/api/admin/correction-data/route.ts-3-import { requireAdminApi } from "@/lib/requireAdminApi";
+app/api/admin/correction-data/route.ts-4-
+app/api/admin/correction-data/route.ts-5-function formatSlateLabel(startDate: string, endDate: string) {
+app/api/admin/correction-data/route.ts-6-  return startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+app/api/admin/correction-data/route.ts-7-}
+app/api/admin/correction-data/route.ts-8-
+app/api/admin/correction-data/route.ts-9-export async function GET() {
+app/api/admin/correction-data/route.ts-10-  const authError = await requireAdminApi();
+app/api/admin/correction-data/route.ts-11-  if (authError) return authError;
+app/api/admin/correction-data/route.ts-12-
+app/api/admin/correction-data/route.ts-13-  try {
+app/api/admin/correction-data/route.ts-14-    const [
+app/api/admin/correction-data/route.ts-15-      { data: slates, error: slatesError },
+app/api/admin/correction-data/route.ts-16-      { data: teams, error: teamsError },
+app/api/admin/correction-data/route.ts-17-      { data: players, error: playersError },
+app/api/admin/correction-data/route.ts-18-    ] = await Promise.all([
+app/api/admin/correction-data/route.ts-19-      supabaseAdmin
+app/api/admin/correction-data/route.ts-20-        .from("slates")
+app/api/admin/correction-data/route.ts-21-        .select("id, date, start_date, end_date, is_locked")
+app/api/admin/correction-data/route.ts-22-        .order("start_date", { ascending: false })
+app/api/admin/correction-data/route.ts-23-        .order("end_date", { ascending: false }),
+app/api/admin/correction-data/route.ts:24:      supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+app/api/admin/correction-data/route.ts-25-      supabaseAdmin
+app/api/admin/correction-data/route.ts-26-        .from("players")
+app/api/admin/correction-data/route.ts-27-        .select("id, name, position_group, is_active, team_abbreviation")
+app/api/admin/correction-data/route.ts-28-        .order("name", { ascending: true }),
+app/api/admin/correction-data/route.ts-29-    ]);
+app/api/admin/correction-data/route.ts-30-
+app/api/admin/correction-data/route.ts-31-    if (slatesError) return NextResponse.json({ error: slatesError.message }, { status: 500 });
+app/api/admin/correction-data/route.ts-32-    if (teamsError) return NextResponse.json({ error: teamsError.message }, { status: 500 });
+app/api/admin/correction-data/route.ts-33-    if (playersError) return NextResponse.json({ error: playersError.message }, { status: 500 });
+app/api/admin/correction-data/route.ts-34-
+app/api/admin/correction-data/route.ts-35-    return NextResponse.json({
+app/api/admin/correction-data/route.ts-36-      success: true,
+app/api/admin/correction-data/route.ts-37-      slates: (slates ?? []).map((slate) => {
+app/api/admin/correction-data/route.ts-38-        const startDate = slate.start_date ?? slate.date;
+app/api/admin/correction-data/route.ts-39-        const endDate = slate.end_date ?? slate.date;
+app/api/admin/correction-data/route.ts-40-
+app/api/admin/correction-data/route.ts-41-        return {
+app/api/admin/correction-data/route.ts-42-          ...slate,
+app/api/admin/correction-data/route.ts-43-          label: formatSlateLabel(startDate, endDate),
+app/api/admin/correction-data/route.ts-44-        };
+app/api/admin/correction-data/route.ts-45-      }),
+app/api/admin/correction-data/route.ts-46-      teams: teams ?? [],
+app/api/admin/correction-data/route.ts-47-      players: players ?? [],
+app/api/admin/correction-data/route.ts-48-    });
+app/api/admin/correction-data/route.ts-49-  } catch (error) {
+app/api/admin/correction-data/route.ts-50-    console.error(error);
+app/api/admin/correction-data/route.ts-51-    return NextResponse.json(
+app/api/admin/correction-data/route.ts-52-      { error: "Unexpected server error while loading correction data." },
+app/api/admin/correction-data/route.ts-53-      { status: 500 }
+app/api/admin/correction-data/route.ts-54-    );
+app/api/admin/correction-data/route.ts-55-  }
+app/api/admin/correction-data/route.ts-56-}
+--
+app/api/admin/notification-history/route.ts-155-        rows
+app/api/admin/notification-history/route.ts-156-          .map((row) => row.team_id)
+app/api/admin/notification-history/route.ts-157-          .filter(Boolean)
+app/api/admin/notification-history/route.ts-158-          .map(Number)
+app/api/admin/notification-history/route.ts-159-      )
+app/api/admin/notification-history/route.ts-160-    );
+app/api/admin/notification-history/route.ts-161-
+app/api/admin/notification-history/route.ts-162-    const slateIds = Array.from(
+app/api/admin/notification-history/route.ts-163-      new Set(
+app/api/admin/notification-history/route.ts-164-        rows
+app/api/admin/notification-history/route.ts-165-          .map((row) => row.slate_id)
+app/api/admin/notification-history/route.ts-166-          .filter(Boolean)
+app/api/admin/notification-history/route.ts-167-          .map(Number)
+app/api/admin/notification-history/route.ts-168-      )
+app/api/admin/notification-history/route.ts-169-    );
+app/api/admin/notification-history/route.ts-170-
+app/api/admin/notification-history/route.ts-171-    const [
+app/api/admin/notification-history/route.ts-172-      { data: users },
+app/api/admin/notification-history/route.ts-173-      { data: teams },
+app/api/admin/notification-history/route.ts-174-      { data: slates },
+app/api/admin/notification-history/route.ts-175-    ] = await Promise.all([
+app/api/admin/notification-history/route.ts-176-      userIds.length
+app/api/admin/notification-history/route.ts-177-        ? supabaseAdmin
+app/api/admin/notification-history/route.ts-178-            .from("app_users")
+app/api/admin/notification-history/route.ts-179-            .select("id, display_name")
+app/api/admin/notification-history/route.ts-180-            .in("id", userIds)
+app/api/admin/notification-history/route.ts-181-        : Promise.resolve({ data: [] }),
+app/api/admin/notification-history/route.ts-182-
+app/api/admin/notification-history/route.ts-183-      teamIds.length
+app/api/admin/notification-history/route.ts-184-        ? supabaseAdmin
+app/api/admin/notification-history/route.ts:185:            .from("teams")
+app/api/admin/notification-history/route.ts-186-            .select("id, name")
+app/api/admin/notification-history/route.ts-187-            .in("id", teamIds)
+app/api/admin/notification-history/route.ts-188-        : Promise.resolve({ data: [] }),
+app/api/admin/notification-history/route.ts-189-
+app/api/admin/notification-history/route.ts-190-      slateIds.length
+app/api/admin/notification-history/route.ts-191-        ? supabaseAdmin
+app/api/admin/notification-history/route.ts-192-            .from("slates")
+app/api/admin/notification-history/route.ts-193-            .select(
+app/api/admin/notification-history/route.ts-194-              "id, date, start_date, end_date, sport, display_name"
+app/api/admin/notification-history/route.ts-195-            )
+app/api/admin/notification-history/route.ts-196-            .in("id", slateIds)
+app/api/admin/notification-history/route.ts-197-        : Promise.resolve({ data: [] }),
+app/api/admin/notification-history/route.ts-198-    ]);
+app/api/admin/notification-history/route.ts-199-
+app/api/admin/notification-history/route.ts-200-    const userMap = new Map(
+app/api/admin/notification-history/route.ts-201-      (users ?? []).map((row) => [
+app/api/admin/notification-history/route.ts-202-        String(row.id),
+app/api/admin/notification-history/route.ts-203-        row.display_name,
+app/api/admin/notification-history/route.ts-204-      ])
+app/api/admin/notification-history/route.ts-205-    );
+app/api/admin/notification-history/route.ts-206-
+app/api/admin/notification-history/route.ts-207-    const teamMap = new Map(
+app/api/admin/notification-history/route.ts-208-      (teams ?? []).map((row) => [
+app/api/admin/notification-history/route.ts-209-        Number(row.id),
+app/api/admin/notification-history/route.ts-210-        row.name,
+app/api/admin/notification-history/route.ts-211-      ])
+app/api/admin/notification-history/route.ts-212-    );
+app/api/admin/notification-history/route.ts-213-
+app/api/admin/notification-history/route.ts-214-    const slateSportMap = new Map<number, SportKey>(
+app/api/admin/notification-history/route.ts-215-      (slates ?? []).map((row) => [
+app/api/admin/notification-history/route.ts-216-        Number(row.id),
+app/api/admin/notification-history/route.ts-217-        normalizeSport(row.sport),
+app/api/admin/notification-history/route.ts-218-      ])
+app/api/admin/notification-history/route.ts-219-    );
+app/api/admin/notification-history/route.ts-220-
+app/api/admin/notification-history/route.ts-221-    const slateMap = new Map(
+app/api/admin/notification-history/route.ts-222-      (slates ?? []).map((row) => {
+app/api/admin/notification-history/route.ts-223-        const startDate = row.start_date ?? row.date;
+app/api/admin/notification-history/route.ts-224-        const endDate = row.end_date ?? row.date;
+app/api/admin/notification-history/route.ts-225-
+app/api/admin/notification-history/route.ts-226-        const dateLabel =
+app/api/admin/notification-history/route.ts-227-          startDate === endDate
+app/api/admin/notification-history/route.ts-228-            ? startDate
+app/api/admin/notification-history/route.ts-229-            : `${startDate} - ${endDate}`;
+app/api/admin/notification-history/route.ts-230-
+app/api/admin/notification-history/route.ts-231-        return [
+app/api/admin/notification-history/route.ts-232-          Number(row.id),
+app/api/admin/notification-history/route.ts-233-          row.display_name?.trim() || dateLabel,
+app/api/admin/notification-history/route.ts-234-        ];
+app/api/admin/notification-history/route.ts-235-      })
+app/api/admin/notification-history/route.ts-236-    );
+app/api/admin/notification-history/route.ts-237-
+app/api/admin/notification-history/route.ts-238-    const nbaPlayerIds = new Set<number>();
+app/api/admin/notification-history/route.ts-239-    const nflPlayerIds = new Set<number>();
+app/api/admin/notification-history/route.ts-240-    const golfPlayerIds = new Set<number>();
+app/api/admin/notification-history/route.ts-241-
+app/api/admin/notification-history/route.ts-242-    for (const row of rows) {
+app/api/admin/notification-history/route.ts-243-      if (!row.player_id) continue;
+app/api/admin/notification-history/route.ts-244-
+app/api/admin/notification-history/route.ts-245-      const rowSport = row.slate_id
+app/api/admin/notification-history/route.ts-246-        ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
+app/api/admin/notification-history/route.ts-247-        : "nba";
+app/api/admin/notification-history/route.ts-248-
+app/api/admin/notification-history/route.ts-249-      const playerId = Number(row.player_id);
+app/api/admin/notification-history/route.ts-250-
+app/api/admin/notification-history/route.ts-251-      if (rowSport === "nfl") {
+app/api/admin/notification-history/route.ts-252-        nflPlayerIds.add(playerId);
+app/api/admin/notification-history/route.ts-253-      } else if (rowSport === "golf") {
+app/api/admin/notification-history/route.ts-254-        golfPlayerIds.add(playerId);
+app/api/admin/notification-history/route.ts-255-      } else {
+--
+app/api/admin/league-awards/route.ts-130-          updated_at,
+app/api/admin/league-awards/route.ts-131-          teams (
+app/api/admin/league-awards/route.ts-132-            id,
+app/api/admin/league-awards/route.ts-133-            name
+app/api/admin/league-awards/route.ts-134-          )
+app/api/admin/league-awards/route.ts-135-        `
+app/api/admin/league-awards/route.ts-136-      )
+app/api/admin/league-awards/route.ts-137-      .order("season", { ascending: false })
+app/api/admin/league-awards/route.ts-138-      .order("featured", { ascending: false })
+app/api/admin/league-awards/route.ts-139-      .order("display_order", { ascending: true })
+app/api/admin/league-awards/route.ts-140-      .order("id", { ascending: true });
+app/api/admin/league-awards/route.ts-141-
+app/api/admin/league-awards/route.ts-142-    if (season && Number.isInteger(season)) {
+app/api/admin/league-awards/route.ts-143-      query = query.eq("season", season);
+app/api/admin/league-awards/route.ts-144-    }
+app/api/admin/league-awards/route.ts-145-
+app/api/admin/league-awards/route.ts-146-    if (sportParam) {
+app/api/admin/league-awards/route.ts-147-      query = query.eq("sport", sportParam);
+app/api/admin/league-awards/route.ts-148-    }
+app/api/admin/league-awards/route.ts-149-
+app/api/admin/league-awards/route.ts-150-    const { data, error } = await query;

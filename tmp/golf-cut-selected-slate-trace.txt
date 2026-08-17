@@ -1,0 +1,2662 @@
+============================================================
+1. SCORES PAGE — SLATE QUERY + MAPPING
+============================================================
+1-export const dynamic = "force-dynamic";
+2-
+3-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+4-import AppNav from "@/components/AppNav";
+5-import LineupBuilder from "@/components/lineups/LineupBuilder";
+6-import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+7-
+8-function getTodayDateString() {
+9-  const now = new Date();
+10-  const year = now.getFullYear();
+11-  const month = String(now.getMonth() + 1).padStart(2, "0");
+12-  const day = String(now.getDate()).padStart(2, "0");
+13-  return `${year}-${month}-${day}`;
+14-}
+15-
+16-type Slate = {
+17-  id: number;
+18-  date: string;
+19-  start_date?: string;
+20-  end_date?: string;
+21-  label?: string;
+22-  is_locked: boolean;
+23-  sport?: string;
+24:  has_cut?: boolean;
+25-};
+26-
+27-type SavedLineup = {
+28-  team_id: number;
+29-  player_ids: number[];
+30-  pregame_projected_points: number | null;
+31-};
+32-
+33-type SlateTeamConfig = {
+34-  slate_id: number;
+35-  team_id: number;
+36-  draft_order: number;
+37-  is_participating: boolean;
+38-};
+39-
+40-export default async function ScoresLineupsPage({
+41-  searchParams,
+42-}: {
+43-  searchParams: Promise<{ sport?: string | string[] }>;
+44-}) {
+45-  const resolvedSearchParams = await searchParams;
+46-  const sportParam = Array.isArray(resolvedSearchParams?.sport)
+47-    ? resolvedSearchParams.sport[0]
+48-    : resolvedSearchParams?.sport;
+49-  const sport =
+50-    sportParam === "nfl"
+51-      ? "nfl"
+52-      : sportParam === "golf"
+53-        ? "golf"
+54-        : "nba";
+55-
+56-  const today = getTodayDateString();
+57-
+58-  const playersTable =
+59-    sport === "nfl"
+60-      ? "players_nfl"
+61-      : sport === "golf"
+62-        ? "golf_players"
+63-        : "players";
+64-
+65-  const playersSelect =
+66-    sport === "nfl"
+67-      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+68-      : sport === "golf"
+69-        ? "id, display_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
+70-        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+71-
+72-  const statsTable =
+73-    sport === "nfl"
+74-      ? "player_nfl_slate_stats"
+75-      : "player_slate_stats";
+76-
+77-  const [
+78-    { data: rawPlayers, error: playersError },
+79-    { data: teams, error: teamsError },
+80-    { data: slates, error: slatesError },
+81-    { data: slateTeams, error: slateTeamsError },
+82-    { data: allPlayerStats, error: allPlayerStatsError },
+83-  ] = await Promise.all([
+84-    supabaseAdmin
+85-      .from(playersTable)
+86-      .select(playersSelect)
+87-      .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
+88-    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+89-    supabaseAdmin
+90:      .from("slates")
+91-      .select(
+92:        "id, date, start_date, end_date, is_locked, sport, display_name, has_cut",
+93-      )
+94-      .eq("sport", sport)
+95-      .order("start_date", { ascending: false })
+96-      .order("end_date", { ascending: false }),
+97-    supabaseAdmin
+98-      .from("slate_teams")
+99-      .select("slate_id, team_id, draft_order, is_participating")
+100-      .order("slate_id", { ascending: true })
+101-      .order("draft_order", { ascending: true }),
+102-    sport === "golf"
+103-      ? supabaseAdmin
+104-          .from("golf_event_players")
+105-          .select("player_id, fantasy_score")
+106-      : supabaseAdmin
+107-          .from(statsTable)
+108-          .select("player_id, fantasy_points"),
+109-  ]);
+110-
+111-  if (
+112-    playersError ||
+113-    teamsError ||
+114-    slatesError ||
+115-    slateTeamsError ||
+116-    allPlayerStatsError
+117-  ) {
+118-    return (
+119-      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+120-        <div className="mx-auto max-w-[1600px] space-y-6">
+121-          <AppNav />
+122-
+123-          <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
+124-            <h1 className="text-3xl font-bold tracking-tight">Live Scores</h1>
+125-            <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
+126-              Failed to load page data.
+127-              <div className="mt-2 text-sm text-red-600">
+128-                {playersError?.message ||
+129-                  teamsError?.message ||
+130-                  slatesError?.message ||
+131-                  slateTeamsError?.message ||
+132-                  allPlayerStatsError?.message}
+133-              </div>
+134-            </div>
+135-          </section>
+136-        </div>
+137-      </main>
+138-    );
+139-  }
+140-
+141-  const normalizedPlayers = (rawPlayers ?? []).map((p: any) => {
+142-    if (sport === "nfl") {
+143-      return {
+144-        id: p.id,
+145-        name: p.name,
+146-        position_group: p.position,
+147-        is_active: p.is_active,
+148-        is_playing_today: p.is_playing_this_week,
+149-        nba_player_id: null,
+150-        nfl_player_id: p.nfl_player_id,
+151-      };
+152-    }
+--
+180-    return {
+181-      id: p.id,
+182-      name: p.name,
+183-      position_group: p.position_group,
+184-      is_active: p.is_active,
+185-      is_playing_today: p.is_playing_today,
+186-      nba_player_id: p.nba_player_id,
+187-      nfl_player_id: null,
+188-    };
+189-  });
+190-
+191-  const safeSlates: Slate[] =
+192-    (slates ?? []).map((slate) => {
+193-      const startDate = slate.start_date ?? slate.date;
+194-      const endDate = slate.end_date ?? slate.date;
+195-
+196-      return {
+197-        id: slate.id,
+198-        date: slate.date,
+199-        start_date: startDate,
+200-        end_date: endDate,
+201-        label:
+202-          sport === "golf" && (slate as any).display_name
+203-            ? String((slate as any).display_name)
+204-            : formatSlateDateLabel({
+205-                start_date: startDate,
+206-                end_date: endDate,
+207-              }),
+208-        is_locked: slate.is_locked,
+209-        sport: slate.sport ?? "nba",
+210:        has_cut:
+211-          sport === "golf"
+212:            ? slate.has_cut !== false
+213-            : true,
+214-      };
+215-    }) ?? [];
+216-
+217-  const safeSlateTeams = (slateTeams ?? []) as SlateTeamConfig[];
+218-
+219-  const safeAllPlayerStats = allPlayerStats ?? [];
+220-  const playerAverageMap = new Map<number, { total: number; count: number }>();
+221-
+222-  safeAllPlayerStats.forEach((row) => {
+223-    const playerId = Number(row.player_id);
+224-    const fantasyPoints = Number(
+225-      sport === "golf"
+226-        ? (row as any).fantasy_score ?? 0
+227-        : (row as any).fantasy_points ?? 0,
+228-    );
+229-
+230-    if (!Number.isFinite(playerId)) return;
+231-    if (sport === "golf") return;
+232-    if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
+233-
+234-    const existing = playerAverageMap.get(playerId) ?? { total: 0, count: 0 };
+235-    playerAverageMap.set(playerId, {
+236-      total: existing.total + fantasyPoints,
+237-      count: existing.count + 1,
+238-    });
+239-  });
+240-
+241-  const playerAverages = Array.from(playerAverageMap.entries()).map(
+242-    ([player_id, stats]) => ({
+243-      player_id,
+244-      avg_fantasy_points:
+245-        stats.count > 0 ? Number((stats.total / stats.count).toFixed(2)) : 0,
+246-    })
+247-  );
+248-
+249-  const latestSlate = safeSlates[0] ?? null;
+250-  const previousSlate = safeSlates[1] ?? null;
+251-
+252-  let hasAnyStatsForLatest = false;
+253-
+254-  if (latestSlate) {
+255-    const { data: latestStats } =
+256-      sport === "golf"
+257-        ? await supabaseAdmin
+258-            .from("golf_event_players")
+259-            .select("player_id")
+260-            .eq("slate_id", latestSlate.id)
+261-            .limit(1)
+262-        : await supabaseAdmin
+263-            .from(statsTable)
+264-            .select("player_id")
+265-            .eq("slate_id", latestSlate.id)
+266-            .limit(1);
+267-
+268-    hasAnyStatsForLatest = (latestStats ?? []).length > 0;
+269-  }
+270-
+271-  let selectedSlateId =
+272-    !hasAnyStatsForLatest && previousSlate
+--
+459-                      hole.strokes === null ? null : Number(hole.strokes),
+460-                    relative_to_par:
+461-                      hole.relative_to_par === null
+462-                        ? null
+463-                        : Number(hole.relative_to_par),
+464-                    score_display: hole.score_display ?? null,
+465-                  }))
+466-                  .sort(
+467-                    (
+468-                      a: { hole_number: number },
+469-                      b: { hole_number: number },
+470-                    ) => a.hole_number - b.hole_number,
+471-                  ),
+472-              }))
+473-              .sort(
+474-                (
+475-                  a: { round_number: number },
+476-                  b: { round_number: number },
+477-                ) => a.round_number - b.round_number,
+478-              ),
+479-          }))
+480-        : statsData ?? [];
+481-    teamResults = teamResultsData ?? [];
+482-  }
+483-
+484-  return (
+485-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+486-      <div className="mx-auto max-w-[1600px] space-y-6">
+487-        <AppNav />
+488-
+489:        <LineupBuilder
+490-          players={normalizedPlayers}
+491-          teams={teams ?? []}
+492-          slates={safeSlates}
+493-          slateTeamConfigs={safeSlateTeams}
+494-          playerAverages={playerAverages}
+495:          initialSelectedSlateId={selectedSlateId}
+496-          savedLineupsForInitialSlate={savedLineupsForInitialSlate}
+497-          playerStats={playerStats}
+498-          teamResults={teamResults}
+499-          rosterSlots={rosterSlots}
+500-          defaultViewMode="scoring"
+501-          sport={sport}
+502-        />
+503-      </div>
+504-    </main>
+505-  );
+506-}
+
+============================================================
+2. LINEUPBUILDER — SELECTED SLATE
+============================================================
+10-import PlayerPool from "@/components/lineups/PlayerPool";
+11-import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
+12-import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
+13-import ScoresDashboard from "@/components/lineups/ScoresDashboard";
+14-import { useEffect, useMemo, useRef, useState } from "react";
+15-import { createPortal } from "react-dom";
+16-import LineupControls from "@/components/lineups/LineupControls";
+17-import { getStatColumns } from "@/lib/statColumns";
+18-import { useSelectedSport } from "@/components/providers/SportProvider";
+19-import { getSportConfig } from "@/lib/sports";
+20-import type {
+21-  Player,
+22-  PlayerHistoryDetailRow,
+23-  PlayerStat,
+24-  PositionFilter,
+25-  Props,
+26-  RosterSlotConfig,
+27-  SavedLineup,
+28-  Team,
+29-  TeamResult,
+30-  ViewMode,
+31-  TargetDraftSlot,
+32-} from "@/components/lineups/types";
+33-
+34-export default function LineupBuilder({
+35-  players,
+36-  teams,
+37-  slates,
+38-  slateTeamConfigs,
+39-  playerAverages,
+40:  initialSelectedSlateId,
+41-  savedLineupsForInitialSlate,
+42-  playerStats,
+43-  teamResults,
+44-  rosterSlots = [],
+45-  defaultViewMode,
+46-  sport,
+47-}: Props) {
+48-  const { selectedSport, setSelectedSport } = useSelectedSport();
+49-
+50-  useEffect(() => {
+51-    if (sport && sport !== selectedSport) {
+52-      setSelectedSport(sport);
+53-    }
+54-  }, [sport]);
+55-
+56:  const [selectedSlateId, setSelectedSlateId] = useState<string>(
+57:    initialSelectedSlateId ? String(initialSelectedSlateId) : ""
+58-  );
+59-
+60-  const [selectedSeason, setSelectedSeason] = useState<string>(() => {
+61:    const initialSlate = slates.find(
+62:      (slate) => slate.id === Number(initialSelectedSlateId)
+63-    );
+64-
+65-    const initialDate = initialSlate?.start_date ?? initialSlate?.date ?? "";
+66-    return initialDate ? initialDate.slice(0, 4) : "2026";
+67-  });
+68-  const [message, setMessage] = useState("");
+69-  const latestSlateLoadRef = useRef(0);
+70-  const [saveMessage, setSaveMessage] = useState("");
+71-  const [isSaving, setIsSaving] = useState(false);
+72-  const [isSlateLoading, setIsSlateLoading] = useState(false);
+73-  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+74-  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+75-  const [isAssigningPlayer, setIsAssigningPlayer] = useState(false);
+76-  const [draftingPlayerHistory, setDraftingPlayerHistory] = useState<
+77-    PlayerHistoryDetailRow[]
+78-  >([]);
+79-  const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] =
+80-    useState(false);
+81-
+82-  const [searchTerm, setSearchTerm] = useState("");
+83-  const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
+84-  const [onSlateOnly, setOnSlateOnly] = useState(false);
+85-  const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
+86-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+87-  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+88-  const refreshInFlightRef = useRef(false);
+89-  const lastGolfAutoRefreshRef = useRef(0);
+90-  const [isGolfSlateMenuOpen, setIsGolfSlateMenuOpen] =
+91-    useState(false);
+92-
+93-  const [compactView, setCompactView] = useState(false);
+94-  const [hasMounted, setHasMounted] = useState(false);
+95-  const [currentUser, setCurrentUser] = useState<{
+96-    teamId: number;
+97-    displayName: string;
+98-    role: "player" | "admin";
+99-  } | null>(null);
+100-  const [
+101-    notifyNextDrafterForProxyPicks,
+102-    setNotifyNextDrafterForProxyPicks,
+103-  ] = useState(false);
+104-
+105-  const [lineupsState, setLineupsState] = useState<SavedLineup[]>(
+106-    savedLineupsForInitialSlate
+107-  );
+108-  const [playerStatsState, setPlayerStatsState] =
+109-    useState<PlayerStat[]>(playerStats);
+110-  const [teamResultsState, setTeamResultsState] =
+111-    useState<TeamResult[]>(teamResults);
+112-  const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
+113-    useState<number[]>([]);
+114-  const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+115-  const [
+116-    isInspectingPlayerFromSlot,
+117-    setIsInspectingPlayerFromSlot,
+118-  ] = useState(false);
+119-  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+120-  const [leagueResearchPlayer, setLeagueResearchPlayer] =
+121-    useState<Player | null>(null);
+122-  const [targetDraftSlot, setTargetDraftSlot] =
+--
+125-  const [draftPageTab, setDraftPageTab] = useState<
+126-    "lineup" | "players"
+127-  >("lineup");
+128-
+129-  const [lastRefreshSummary, setLastRefreshSummary] = useState<{
+130-    gamesFound?: number;
+131-    playerStatsUpserted?: number;
+132-    teamResultsUpserted?: number;
+133-  } | null>(null);
+134-
+135-  const seasons = useMemo(() => {
+136-    const uniqueYears = new Set<string>();
+137-
+138-    slates.forEach((slate) => {
+139-      const date = slate.start_date ?? slate.date;
+140-      if (date) uniqueYears.add(date.slice(0, 4));
+141-    });
+142-
+143-    return Array.from(uniqueYears).sort((a, b) => Number(b) - Number(a));
+144-  }, [slates]);
+145-
+146-  const filteredSlates = useMemo(() => {
+147-    return slates.filter((slate) => {
+148-      const date = slate.start_date ?? slate.date;
+149-      const matchesSeason = date?.startsWith(selectedSeason);
+150-      const matchesSport = (slate.sport ?? "nba") === selectedSport;
+151-      return matchesSeason && matchesSport;
+152-    });
+153-  }, [slates, selectedSeason, selectedSport]);
+154-
+155:  const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
+156:  const selectedSlate =
+157:    slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
+158-
+159:  const selectedSlateDisplay =
+160:    selectedSlate?.label ?? selectedSlate?.date ?? "No slate selected";
+161-
+162-  useEffect(() => {
+163-    setHasMounted(true);
+164-    if (window.innerWidth < 768) {
+165-      setCompactView(true);
+166-    }
+167-  }, []);
+168-
+169-  useEffect(() => {
+170-    let isActive = true;
+171-
+172-    async function loadCurrentUser() {
+173-      try {
+174-        const response = await fetch("/api/me", {
+175-          cache: "no-store",
+176-        });
+177-
+178-        const result = await response.json();
+179-
+180-        if (!isActive) return;
+181-
+182-        if (!response.ok) {
+183-          setCurrentUser(null);
+184-          return;
+185-        }
+186-
+187-        setCurrentUser(result.user ?? null);
+188-      } catch (error) {
+189-        console.error("Failed to load current user", error);
+190-
+191-        if (isActive) {
+192-          setCurrentUser(null);
+193-        }
+194-      }
+195-    }
+196-
+197-    void loadCurrentUser();
+198-
+199-    return () => {
+200-      isActive = false;
+201-    };
+202-  }, []);
+203-
+204-  useEffect(() => {
+205-    if (!filteredSlates.length) return;
+206-
+207-    const selectedStillInYear = filteredSlates.some(
+208:      (slate) => String(slate.id) === selectedSlateId
+209-    );
+210-
+211-    if (!selectedStillInYear) {
+212-      setSelectedSlateId(String(filteredSlates[0].id));
+213-    }
+214:  }, [filteredSlates, selectedSlateId]);
+215-
+216-  useEffect(() => {
+217-    if (!draftingPlayer) {
+218-      setDraftingPlayerHistory([]);
+219-      setIsDraftingPlayerHistoryLoading(false);
+220-      return;
+221-    }
+222-
+223-    async function loadDraftingPlayerHistory() {
+224-      if ((sport ?? selectedSport) === "golf") {
+225-        setDraftingPlayerHistory([]);
+226-        setIsDraftingPlayerHistoryLoading(false);
+227-        return;
+228-      }
+229-
+230-      try {
+231-        setIsDraftingPlayerHistoryLoading(true);
+232-
+233-        if (!draftingPlayer) return;
+234-
+235-        const response = await fetch(
+236-          `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
+237-          { cache: "no-store" }
+238-        );
+239-
+240-        const result = await response.json();
+241-
+242-        if (!response.ok) {
+243-          console.error(result.error || "Failed to load player history detail.");
+244-          setDraftingPlayerHistory([]);
+245-          return;
+246-        }
+247-
+248-        setDraftingPlayerHistory(result.history ?? []);
+249-      } catch (error) {
+250-        console.error(error);
+251-        setDraftingPlayerHistory([]);
+252-      } finally {
+253-        setIsDraftingPlayerHistoryLoading(false);
+254-      }
+255-    }
+256-
+257-    void loadDraftingPlayerHistory();
+258-  }, [draftingPlayer, sport, selectedSport]);
+259-
+260-  useEffect(() => {
+261-    setPlayerStatsState(playerStats);
+262-  }, [playerStats]);
+263-
+264-  useEffect(() => {
+265-    setTeamResultsState(teamResults);
+266-  }, [teamResults]);
+267-
+268-  useEffect(() => {
+269:    if (!selectedSlateIdNumber) return;
+270-
+271-    let isActive = true;
+272-
+273-    async function loadAvailability() {
+274-      try {
+275-        setIsAvailabilityLoading(true);
+276-
+277-        const res = await fetch(
+278:          `/api/slate-availability?slateId=${selectedSlateIdNumber}`,
+279-          { cache: "no-store" }
+280-        );
+281-        const data = await res.json();
+282-
+283-        if (!isActive) return;
+284-
+285-        const nextIds = data.availablePlayerIds || [];
+286-        setAvailablePlayerIdsForSlate(nextIds);
+287-      } catch (err) {
+288-        console.error("Failed to load availability", err);
+289-        if (!isActive) return;
+290-        setAvailablePlayerIdsForSlate([]);
+291-      } finally {
+292-        if (isActive) {
+293-          setIsAvailabilityLoading(false);
+294-        }
+295-      }
+296-    }
+297-
+298-    void loadAvailability();
+299-
+300-    return () => {
+301-      isActive = false;
+302-    };
+303:  }, [selectedSlateIdNumber]);
+304-
+305-  useEffect(() => {
+306:    if (!selectedSlateIdNumber) return;
+307-
+308:    const isGolf = selectedSlate?.sport === "golf";
+309-    const shouldAutoRefresh = isGolf || autoRefreshEnabled;
+310-
+311-    if (!shouldAutoRefresh) return;
+312:    if (selectedSlate?.is_locked) return;
+313-
+314-    const refreshIfVisible = () => {
+315-      if (document.visibilityState !== "visible") return;
+316-
+317-      const now = Date.now();
+318-      const minimumGapMs = isGolf ? 4.5 * 60 * 1000 : 25 * 1000;
+319-
+320-      if (
+321-        lastGolfAutoRefreshRef.current &&
+322-        now - lastGolfAutoRefreshRef.current < minimumGapMs
+323-      ) {
+324-        return;
+325-      }
+326-
+327-      lastGolfAutoRefreshRef.current = now;
+328-      void refreshStatsForSelectedSlate(true);
+329-    };
+330-
+331-    // An open Golf page becomes a live-score updater immediately.
+332-    refreshIfVisible();
+333-
+334-    const intervalMs = isGolf ? 5 * 60 * 1000 : 30 * 1000;
+335-    const interval = window.setInterval(refreshIfVisible, intervalMs);
+336-
+337-    const handleVisibilityChange = () => {
+338-      if (document.visibilityState === "visible") {
+339-        refreshIfVisible();
+340-      }
+341-    };
+342-
+343-    document.addEventListener("visibilitychange", handleVisibilityChange);
+344-
+345-    return () => {
+346-      window.clearInterval(interval);
+347-      document.removeEventListener(
+348-        "visibilitychange",
+349-        handleVisibilityChange,
+350-      );
+351-    };
+352-  }, [
+353-    autoRefreshEnabled,
+354:    selectedSlateIdNumber,
+355:    selectedSlate?.sport,
+356:    selectedSlate?.is_locked,
+357-  ]);
+358-
+359-  useEffect(() => {
+360:    if (!selectedSlateIdNumber) return;
+361:    void loadSlateLineups(selectedSlateIdNumber);
+362:  }, [selectedSlateIdNumber]);
+363-
+364-  const playerStatsMap = useMemo(() => {
+365-    const map = new Map<number, PlayerStat>();
+366-    playerStatsState.forEach((stat) => {
+367-      map.set(stat.player_id, stat);
+368-    });
+369-    return map;
+370-  }, [playerStatsState]);
+371-
+372-  const [playerProjections, setPlayerProjections] = useState<Record<number, any>>({});
+373-
+374-  useEffect(() => {
+375-    if (!selectedSeason) return;
+376-
+377-    if ((sport ?? "nba") !== "nba") {
+378-      setPlayerProjections({});
+379-      return;
+380-    }
+381-
+382-    fetch(`/api/player-projections?season=${selectedSeason}`, { cache: "no-store" })
+383-      .then((res) => res.json())
+384-      .then((data) => setPlayerProjections(data.projections || {}))
+385-      .catch((error) => {
+386-        console.error("Failed to load player projections", error);
+387-        setPlayerProjections({});
+388-      });
+389-  }, [selectedSeason, sport]);
+390-
+391-  const playerAverageMap = useMemo(() => {
+392-    const map = new Map<number, number>();
+393-    playerAverages.forEach((row) => {
+394-      map.set(row.player_id, row.avg_fantasy_points);
+395-    });
+396-    return map;
+397-  }, [playerAverages]);
+398-
+399-  const getPlayerProjectionScore = (playerId: number) => {
+400-    const projected = playerProjections?.[playerId]?.projection;
+401-    const fallback = playerAverageMap.get(playerId);
+402-    const value = projected ?? fallback ?? 0;
+403-    return Number.isFinite(Number(value)) ? Number(value) : 0;
+404-  };
+405-
+406-  const getPregameProjectedTeamTotal = (teamId: number) => {
+407-    const lineup = lineupsState.find(
+408-      (item) => item.team_id === teamId
+409-    );
+410-
+411-    const value = lineup?.pregame_projected_points;
+412-
+413-    return value !== null &&
+414-      value !== undefined &&
+415-      Number.isFinite(Number(value))
+416-      ? Number(value)
+417-      : null;
+418-  };
+419-
+420-  const teamResultsMap = useMemo(() => {
+421-    const map = new Map<number, TeamResult>();
+422-    teamResultsState.forEach((result) => {
+423-      map.set(result.team_id, result);
+424-    });
+425-    return map;
+426-  }, [teamResultsState]);
+427-
+428-  const availablePlayerIdSet = useMemo(
+429-    () => new Set(availablePlayerIdsForSlate),
+430-    [availablePlayerIdsForSlate]
+431-  );
+432-
+433-  const teamsById = useMemo(() => {
+434-    const map = new Map<number, Team>();
+435-    teams.forEach((team) => map.set(team.id, team));
+436-    return map;
+437-  }, [teams]);
+438-
+439-  const orderedTeamsForSlate = useMemo(() => {
+440:    if (!selectedSlateIdNumber) return teams;
+441-
+442-    const configs = slateTeamConfigs
+443:      .filter((config) => config.slate_id === selectedSlateIdNumber)
+444-      .sort((a, b) => a.draft_order - b.draft_order);
+445-
+446-    if (configs.length === 0) return teams;
+447-
+448-    const configuredIds = configs.map((config) => config.team_id);
+449-    const configuredTeams = configs
+450-      .map((config) => {
+451-        const team = teamsById.get(config.team_id);
+452-        if (!team) return null;
+453-
+454-        return {
+455-          ...team,
+456-          is_participating: config.is_participating,
+457-          draft_order: config.draft_order,
+458-        };
+459-      })
+460-      .filter(Boolean) as Array<
+461-      Team & { is_participating?: boolean; draft_order?: number }
+462-    >;
+463-
+464-    const missingTeams = teams
+465-      .filter((team) => !configuredIds.includes(team.id))
+466-      .map((team, index) => ({
+467-        ...team,
+468-        is_participating: true,
+469-        draft_order: configuredTeams.length + index + 1,
+470-      }));
+471-
+472-    return [...configuredTeams, ...missingTeams];
+473:  }, [selectedSlateIdNumber, slateTeamConfigs, teams, teamsById]);
+474-
+475-  const participatingTeamIds = useMemo(() => {
+476-    return new Set(
+477-      orderedTeamsForSlate
+478-        .filter((team) => (team as any).is_participating !== false)
+479-        .map((team) => team.id)
+480-    );
+481-  }, [orderedTeamsForSlate]);
+482-
+483-  const filteredPlayers = useMemo(() => {
+484-    return players
+485-      .filter((player) => {
+486-        if (
+487-          searchTerm &&
+488-          !player.name.toLowerCase().includes(searchTerm.toLowerCase())
+489-        ) {
+490-          return false;
+491-        }
+492-
+493-        if (positionFilter !== "All" && player.position_group !== positionFilter) {
+494-          return false;
+495-        }
+496-
+497-        if (onSlateOnly && !isAvailabilityLoading) {
+498-          return availablePlayerIdSet.has(player.id);
+499-        }
+500-
+501-        return true;
+502-      })
+503-      .sort((a, b) => {
+504:        if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+505-          return a.name.localeCompare(b.name);
+506-        }
+507-
+508-        const avgA = playerAverageMap.get(a.id);
+509-        const avgB = playerAverageMap.get(b.id);
+510-
+511-        if (avgA == null && avgB == null) return 0;
+512-        if (avgA == null) return 1;
+513-        if (avgB == null) return -1;
+514-
+515-        return avgB - avgA;
+516-      });
+517-  }, [
+518-    players,
+519-    searchTerm,
+520-    positionFilter,
+521-    onSlateOnly,
+522-    isAvailabilityLoading,
+523-    availablePlayerIdSet,
+524-    playerAverageMap,
+525:    selectedSlate?.sport,
+526-    selectedSport,
+527-  ]);
+528-
+529-  function getLineupForTeam(teamId: number) {
+530-    return lineupsState.find((item) => item.team_id === teamId) ?? null;
+531-  }
+532-
+533-  const playersById = useMemo(() => {
+534-    const map = new Map<number, Player>();
+535-    players.forEach((player) => {
+536-      map.set(player.id, player);
+537-    });
+538-    return map;
+539-  }, [players]);
+540-
+541-  function getPlayersForTeam(teamId: number) {
+542-    const lineup = getLineupForTeam(teamId);
+543-    if (!lineup) return [];
+544-
+545-    return lineup.player_ids
+546-      .map((playerId) => {
+547-        const player = playersById.get(playerId);
+548-
+549-        if (player) return player;
+550-
+551-        return {
+552-          id: playerId,
+553-          name: `Player ${playerId}`,
+554-          position_group: "G" as "G" | "F/C",
+555-          is_active: false,
+556-          is_playing_today: null,
+557-        };
+558-      })
+559-      .filter((p): p is Player => Boolean(p));
+560-  }
+561-
+562-  function getOwnerTeamIdForPlayer(playerId: number) {
+563-    const owner = lineupsState.find((lineup) =>
+564-      lineup.player_ids.includes(playerId)
+565-    );
+566-    return owner?.team_id ?? null;
+567-  }
+568-
+569-  function getOwnerTeamForPlayer(playerId: number) {
+570-    const ownerTeamId = getOwnerTeamIdForPlayer(playerId);
+571-    if (!ownerTeamId) return null;
+572-    return orderedTeamsForSlate.find((team) => team.id === ownerTeamId) ?? null;
+573-  }
+574-
+575-  function getTeamStats(teamId: number) {
+576-    const teamPlayers = getPlayersForTeam(teamId);
+577-
+578-    const guards = teamPlayers.filter(
+579-      (player) => player.position_group === "G"
+580-    ).length;
+581-    const fcPlayers = teamPlayers.filter(
+582-      (player) => player.position_group === "F/C"
+583-    ).length;
+584-
+585:    const sport = selectedSlate?.sport ?? "nba";
+586-    const statColumns = getStatColumns(sport);
+587-
+588-    const statTotals: Record<string, number> = {};
+589-    statColumns.forEach((column) => {
+590-      statTotals[column.key] = 0;
+591-    });
+592-
+593-    teamPlayers.forEach((player) => {
+594-      const stat = playerStatsMap.get(player.id) as any;
+595-      if (!stat) return;
+596-
+597-      statColumns.forEach((column) => {
+598-        statTotals[column.key] += Number(stat[column.key] ?? 0);
+599-      });
+600-    });
+601-
+602-    const teamResult = teamResultsMap.get(teamId);
+603-
+604-    const nbaFallback =
+605-      (statTotals.points ?? 0) +
+606-      (statTotals.rebounds ?? 0) * 1.2 +
+607-      (statTotals.assists ?? 0) * 1.5 +
+608-      (statTotals.steals ?? 0) * 2 +
+609-      (statTotals.blocks ?? 0) * 2 -
+610-      (statTotals.turnovers ?? 0);
+611-
+612-    const playerFantasyTotal = teamPlayers.reduce((sum, player) => {
+613-      const stat = playerStatsMap.get(player.id);
+614-      return sum + Number(stat?.fantasy_points ?? 0);
+615-    }, 0);
+616-
+617-    const total =
+618-      teamResult?.fantasy_points ??
+619-      (sport === "nba"
+620-        ? nbaFallback
+621-        : sport === "golf"
+622-          ? playerFantasyTotal
+623-          : 0);
+624-
+625-    return {
+626-      totalPlayers: teamPlayers.length,
+627-      guards,
+628-      fcPlayers,
+629-      statTotals,
+630-      points: statTotals.points ?? 0,
+631-      rebounds: statTotals.rebounds ?? 0,
+632-      assists: statTotals.assists ?? 0,
+633-      steals: statTotals.steals ?? 0,
+634-      blocks: statTotals.blocks ?? 0,
+635-      turnovers: statTotals.turnovers ?? 0,
+636-      total,
+637-      games_completed: teamResult?.games_completed ?? 0,
+638-      games_in_progress: teamResult?.games_in_progress ?? 0,
+639-      games_remaining: teamResult?.games_remaining ?? 0,
+640-      finish_position: teamResult?.finish_position ?? null,
+641-    };
+642-  }
+643-
+644-  function getPlayerStat(playerId: number) {
+645-    const stat = playerStatsMap.get(playerId) as any;
+646:    const sport = selectedSlate?.sport ?? "nba";
+647-    const statColumns = getStatColumns(sport);
+648-
+649-    const statValues: Record<string, number> = {};
+650-    statColumns.forEach((column) => {
+651-      statValues[column.key] = Number(stat?.[column.key] ?? 0);
+652-    });
+653-
+654-    return {
+655-      ...statValues,
+656-      points: statValues.points ?? 0,
+657-      rebounds: statValues.rebounds ?? 0,
+658-      assists: statValues.assists ?? 0,
+659-      steals: statValues.steals ?? 0,
+660-      blocks: statValues.blocks ?? 0,
+661-      turnovers: statValues.turnovers ?? 0,
+662-      fantasy_points: stat?.fantasy_points ?? 0,
+663-    };
+664-  }
+665-
+666-  function getRawPlayerStat(playerId: number) {
+667-    return playerStatsMap.get(playerId) ?? null;
+668-  }
+669-
+670-  // ===== LIVE WIN % HELPERS =====
+671-
+672-  function parseNbaIsoClockMinutes(gameClock?: string | null) {
+673-    if (!gameClock) return null;
+674-
+675-    const match = gameClock.match(/^PT(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$/);
+676-    if (!match) return null;
+677-
+678-    const minutes = Number(match[1] ?? 0);
+679-    const seconds = Number(match[2] ?? 0);
+680-
+681-    return minutes + seconds / 60;
+682-  }
+683-
+684-  function parseStatusTextMinutesRemaining(statusText?: string | null) {
+685-    if (!statusText) return null;
+686-
+687-    const trimmed = statusText.trim();
+688-
+689-    if (/final/i.test(trimmed)) return 0;
+690-
+691-    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
+692-    if (!match) return null;
+693-
+694-    const period = Number(match[1]);
+695-    const minutes = Number(match[2] || 0);
+696-    const seconds = Number(match[3] ?? 0);
+697-
+698-    if (!Number.isFinite(period)) return null;
+699-
+700-    const clockMinutes = minutes + seconds / 60;
+701-    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
+702-
+703-    return periodsRemainingAfterCurrent * 12 + clockMinutes;
+704-  }
+705-
+706-  function getMinutesRemainingForPlayer(stat?: PlayerStat) {
+707-    const gameStatus = stat?.game_status ?? null;
+708-
+709-    if (gameStatus === 3) return 0;
+710-
+711-    const period = stat?.period ?? null;
+712-    const clockMinutes = parseNbaIsoClockMinutes(stat?.game_clock);
+713-
+714-    if (gameStatus === 2 && period && clockMinutes !== null) {
+715-      const regulationPeriods = 4;
+716-      const periodsRemainingAfterCurrent = Math.max(
+717-        regulationPeriods - period,
+718-        0
+719-      );
+720-
+721-      return periodsRemainingAfterCurrent * 12 + clockMinutes;
+722-    }
+723-
+724-    const statusTextMinutes = parseStatusTextMinutesRemaining(
+725-      stat?.game_status_text
+726-    );
+727-
+728-    if (statusTextMinutes !== null) return statusTextMinutes;
+729-
+730-    return 48;
+731-  }
+732-
+733-  function getLiveProjectedTeamTotal(teamId: number) {
+734-    const stats = getTeamStats(teamId);
+735-
+736:    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+737-      return Number(stats.total ?? 0);
+738-    }
+739-
+740:    if (selectedSlate?.is_locked) {
+741-      return Number(stats.total ?? 0);
+742-    }
+743-
+744-    const teamPlayers = getPlayersForTeam(teamId);
+745-
+746-    return teamPlayers.reduce((sum, player) => {
+747-      const stat = playerStatsMap.get(player.id);
+748-
+749-      const current = Number(stat?.fantasy_points ?? 0);
+750-
+751-      const projection =
+752-        playerProjections?.[player.id]?.projection ??
+753-        playerAverageMap.get(player.id) ??
+754-        0;
+755-
+756-      const minutesRemaining = getMinutesRemainingForPlayer(stat);
+757-      const remainingFactor = minutesRemaining / 48;
+758-
+759-      const projected =
+760-        minutesRemaining <= 0
+761-          ? current
+762-          : current + projection * remainingFactor;
+763-
+764-      return sum + projected;
+765-    }, 0);
+766-  }
+767-
+768-  function computeWinPctMap() {
+769-    const map = new Map<number, number>();
+770-
+771:    if ((selectedSlate?.sport ?? selectedSport) === "golf") {
+772-      return map;
+773-    }
+774-
+775:    if (selectedSlate?.is_locked) {
+776-      const rows = orderedTeamsForSlate
+777-        .map((team) => ({
+778-          teamId: team.id,
+779-          total: Number(getTeamStats(team.id).total ?? 0),
+780-        }))
+781-        .sort((a, b) => b.total - a.total);
+782-
+783-      const winnerTeamId = rows[0]?.teamId ?? null;
+784-
+785-      rows.forEach((row) => {
+786-        map.set(row.teamId, row.teamId === winnerTeamId ? 100 : 0);
+787-      });
+788-
+789-      return map;
+790-    }
+791-
+792-    const k = 20;
+793-
+794-    const teams = orderedTeamsForSlate.map((team) => ({
+795-      teamId: team.id,
+796-      projected: getLiveProjectedTeamTotal(team.id),
+797-    }));
+798-
+799-    const weights = teams.map((t) => ({
+800-      ...t,
+801-      weight: Math.exp(t.projected / k),
+802-    }));
+803-
+804-    const totalWeight = weights.reduce((sum, t) => sum + t.weight, 0);
+805-
+806-    weights.forEach((t) => {
+807-      let pct = (t.weight / totalWeight) * 100;
+808-      pct = Math.max(5, Math.min(95, pct));
+809-      map.set(t.teamId, pct);
+810-    });
+811-
+812-    return map;
+813-  }
+814-
+815-  const liveWinPctMap = computeWinPctMap();
+816-
+817-  function getEffectiveRosterSlots() {
+818-    if (rosterSlots.length > 0) {
+819-      return rosterSlots;
+820-    }
+821-
+822:    const activeSport = selectedSlate?.sport ?? selectedSport;
+823-
+824-    if (activeSport === "golf") {
+825-      return [
+826-        {
+827-          sport: "golf",
+828-          position: "GOLFER",
+829-          slot_count: 4,
+830-          display_order: 1,
+831-        },
+832-      ];
+833-    }
+834-
+835-    return [
+836-      { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+837-      { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+838-    ];
+839-  }
+840-
+841-  function getRosterTotalSlots() {
+842-    return getEffectiveRosterSlots().reduce(
+843-      (sum, slot) => sum + slot.slot_count,
+844-      0
+845-    );
+846-  }
+847-
+848-  function countPlayersByPosition(playerList: Player[]) {
+849-    const map = new Map<string, number>();
+850-    playerList.forEach((player) => {
+851-      map.set(
+852-        player.position_group,
+853-        (map.get(player.position_group) ?? 0) + 1
+854-      );
+855-    });
+856-    return map;
+857-  }
+858-
+859-  function getDraftNeeds(teamId: number) {
+860-    const teamPlayers = getPlayersForTeam(teamId);
+861-    const counts = countPlayersByPosition(teamPlayers);
+862-    const slots = getEffectiveRosterSlots();
+863-
+864-    const parts: string[] = [];
+865-
+866-    slots.forEach((slot) => {
+867-      const have = counts.get(slot.position) ?? 0;
+868-      const needed = Math.max(0, slot.slot_count - have);
+869-      if (needed > 0) parts.push(`${needed} ${slot.position}`);
+870-    });
+871-
+872-    if (parts.length === 0) {
+873-      return "Roster full";
+874-    }
+875-
+876-    return `Needs ${parts.join(" • ")}`;
+877-  }
+878-
+879-  const dailySummary = useMemo(() => {
+880-    const rows = orderedTeamsForSlate.map((team) => {
+881-      const stats = getTeamStats(team.id);
+882-      return {
+883-        teamId: team.id,
+884-        teamName: team.name,
+885-        total: Number(stats.total ?? 0),
+886-        games_completed: Number(stats.games_completed ?? 0),
+887-        games_in_progress: Number(stats.games_in_progress ?? 0),
+888-        games_remaining: Number(stats.games_remaining ?? 0),
+889-        finish_position: stats.finish_position,
+890-        is_participating: (team as any).is_participating !== false,
+891-      };
+892-    });
+893-
+894-    const leader =
+895-      rows
+896-        .filter((row) => row.is_participating)
+897-        .sort((a, b) =>
+898:        (selectedSlate?.sport ?? selectedSport) === "golf"
+899-          ? a.total - b.total
+900-          : b.total - a.total,
+901-      )[0] ?? null;
+902-
+903-    return {
+904-      leader,
+905-      rows,
+906-    };
+907-  }, [orderedTeamsForSlate, teamResultsState, playerStatsState, lineupsState]);
+908-
+909-  function getTeamAssignmentStatus(teamId: number, player: Player) {
+910-    const team = orderedTeamsForSlate.find((item) => item.id === teamId);
+911-    const teamPlayers = getPlayersForTeam(teamId);
+912-    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+913-    const isParticipating = (team as any)?.is_participating !== false;
+914-
+915:    if (!selectedSlateIdNumber) {
+916-      return { canAssign: false, reason: "No slate selected" };
+917-    }
+918:    if (selectedSlate?.is_locked) {
+919-      return { canAssign: false, reason: "Slate locked" };
+920-    }
+921-    if (!isParticipating) return { canAssign: false, reason: "Out" };
+922-    if (ownerTeamId === teamId) {
+923-      return { canAssign: false, reason: "Already here" };
+924-    }
+925-
+926-    const nextPlayers = [...teamPlayers, player];
+927-    const totalSlots = getRosterTotalSlots();
+928-
+929-    if (nextPlayers.length > totalSlots) {
+930-      return { canAssign: false, reason: "Lineup full" };
+931-    }
+932-
+933-    const nextCounts = countPlayersByPosition(nextPlayers);
+934-    const slots = getEffectiveRosterSlots();
+935-
+936-    for (const slot of slots) {
+937-      const count = nextCounts.get(slot.position) ?? 0;
+938-      if (count > slot.slot_count) {
+939-        return { canAssign: false, reason: `Too many ${slot.position}` };
+940-      }
+941-    }
+942-
+943-    return { canAssign: true, reason: "" };
+944-  }
+945-
+946-  async function loadSlateLineups(nextSlateId: number) {
+947-    const loadId = ++latestSlateLoadRef.current;
+948-
+949-    setLineupsState([]);
+950-    setPlayerStatsState([]);
+951-    setTeamResultsState([]);
+952-
+953-    try {
+954-      setIsSlateLoading(true);
+955-      setMessage("");
+956-      setSaveMessage("");
+957-
+958-      const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
+959-        fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
+960-        fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
+961-        fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
+962-      ]);
+963-
+964-      const lineupsResult = await lineupsResponse.json();
+965-      const statsResult = await statsResponse.json();
+966-      const resultsResult = await resultsResponse.json();
+967-
+968-      if (loadId !== latestSlateLoadRef.current) return;
+969-
+970-      if (!lineupsResponse.ok) {
+971-        setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
+972-        return;
+973-      }
+974-
+975-      if (!statsResponse.ok) {
+976-        setSaveMessage(statsResult.error || "Failed to load player stats.");
+977-        return;
+978-      }
+--
+1002-      const availabilityResponse = await fetch(
+1003-        `/api/slate-availability?slateId=${nextSlateId}`,
+1004-        { cache: "no-store" }
+1005-      );
+1006-
+1007-      const availabilityResult = await availabilityResponse.json();
+1008-
+1009-      if (loadId !== latestSlateLoadRef.current) return;
+1010-
+1011-      if (!availabilityResponse.ok) {
+1012-        console.error(
+1013-          availabilityResult.error || "Failed to load slate availability."
+1014-        );
+1015-        setAvailablePlayerIdsForSlate([]);
+1016-        return;
+1017-      }
+1018-
+1019-      setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+1020-    } catch (error) {
+1021-      if (loadId !== latestSlateLoadRef.current) return;
+1022-      console.error(error);
+1023-      setAvailablePlayerIdsForSlate([]);
+1024-    } finally {
+1025-      if (loadId === latestSlateLoadRef.current) {
+1026-        setIsAvailabilityLoading(false);
+1027-      }
+1028-    }
+1029-  }
+1030-
+1031-  async function refreshStatsForSelectedSlate(isSilent = false) {
+1032:    if (!selectedSlateIdNumber) {
+1033-      if (!isSilent) alert("No slate selected.");
+1034-      return;
+1035-    }
+1036-
+1037-    if (refreshInFlightRef.current) return;
+1038-
+1039-    refreshInFlightRef.current = true;
+1040-
+1041-    try {
+1042-      setIsRefreshingStats(true);
+1043-      if (!isSilent) {
+1044-        setMessage("");
+1045-        setSaveMessage("");
+1046-      }
+1047-
+1048-      let refreshResult:
+1049-        Record<string, unknown>;
+1050-
+1051-      if (
+1052:        selectedSlate?.sport ===
+1053-        "golf"
+1054-      ) {
+1055-        refreshResult =
+1056-          await refreshGolfFromBrowser(
+1057:            selectedSlateIdNumber,
+1058-          );
+1059-      } else {
+1060-        const refreshEndpoint =
+1061:          selectedSlate?.sport ===
+1062-          "nfl"
+1063-            ? "/api/refresh-stats-nfl"
+1064-            : "/api/refresh-stats";
+1065-
+1066-        const refreshResponse =
+1067-          await fetch(
+1068-            refreshEndpoint,
+1069-            {
+1070-              method: "POST",
+1071-              headers: {
+1072-                "Content-Type":
+1073-                  "application/json",
+1074-              },
+1075-              body: JSON.stringify({
+1076-                slateId:
+1077:                  selectedSlateIdNumber,
+1078-              }),
+1079-              cache: "no-store",
+1080-            },
+1081-          );
+1082-
+1083-        refreshResult =
+1084-          await refreshResponse.json();
+1085-
+1086-        if (!refreshResponse.ok) {
+1087-          const errorMessage =
+1088-            String(
+1089-              refreshResult.error ??
+1090-                "Failed to refresh stats.",
+1091-            );
+1092-
+1093-          if (!isSilent) {
+1094-            alert(errorMessage);
+1095-          } else {
+1096-            console.error(
+1097-              errorMessage,
+1098-            );
+1099-          }
+1100-
+1101-          return;
+1102-        }
+1103-      }
+1104-
+1105-      setLastRefreshSummary({
+1106-        gamesFound:
+1107-          typeof refreshResult.gamesFound ===
+1108-          "number"
+1109-            ? refreshResult.gamesFound
+1110-            : undefined,
+1111-        playerStatsUpserted:
+1112-          typeof refreshResult.playerStatsUpserted ===
+1113-          "number"
+1114-            ? refreshResult.playerStatsUpserted
+1115-            : undefined,
+1116-        teamResultsUpserted:
+1117-          typeof refreshResult.teamResultsUpserted ===
+1118-          "number"
+1119-            ? refreshResult.teamResultsUpserted
+1120-            : undefined,
+1121-      });
+1122-
+1123-      const [statsResponse, resultsResponse] = await Promise.all([
+1124:        fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, {
+1125-          cache: "no-store",
+1126-        }),
+1127:        fetch(`/api/team-results?slateId=${selectedSlateIdNumber}`, {
+1128-          cache: "no-store",
+1129-        }),
+1130-      ]);
+1131-
+1132-      const statsResult = await statsResponse.json();
+1133-      const resultsResult = await resultsResponse.json();
+1134-
+1135-      setPlayerStatsState(statsResult.playerStats ?? []);
+1136-      setTeamResultsState(resultsResult.teamResults ?? []);
+1137-      setLastUpdatedAt(new Date().toISOString());
+1138-
+1139-      if (!isSilent) {
+1140-        setSaveMessage("Stats refreshed successfully.");
+1141-      }
+1142-
+1143:      fetch(`/api/slate-availability?slateId=${selectedSlateIdNumber}`, {
+1144-        cache: "no-store",
+1145-      })
+1146-        .then((res) => res.json())
+1147-        .then((availabilityResult) => {
+1148-          setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+1149-        })
+1150-        .catch((error) => {
+1151-          console.error(error);
+1152-        });
+1153-    } catch (error) {
+1154-      const errorMessage =
+1155-        error instanceof Error
+1156-          ? error.message
+1157-          : String(error);
+1158-
+1159-      const golfFieldIsWaiting =
+1160:        selectedSlate?.sport === "golf" &&
+1161-        errorMessage
+1162-          .toLowerCase()
+1163-          .includes(
+1164-            "tournament field is not available yet",
+1165-          );
+1166-
+1167-      /*
+1168-       * ESPN often publishes the tournament shell before
+1169-       * the player field. For silent Golf auto-refreshes,
+1170-       * this is an expected waiting state rather than an
+1171-       * application error, so do not trigger the Next dev
+1172-       * error overlay.
+1173-       */
+1174-      if (!golfFieldIsWaiting) {
+1175-        console.error(error);
+1176-      }
+1177-
+1178-      if (!isSilent) {
+1179-        alert(
+1180-          golfFieldIsWaiting
+1181-            ? "The tournament is available, but ESPN has not published the field yet."
+1182-            : "Something went wrong while refreshing stats.",
+1183-        );
+1184-      }
+1185-    } finally {
+1186-      refreshInFlightRef.current = false;
+1187-      setIsRefreshingStats(false);
+1188-    }
+1189-  }
+1190-
+1191-  async function persistLineupForTeam(
+1192-    teamId: number,
+1193-    playerList: Player[],
+1194-    successMessage?: string,
+1195-    options?: {
+1196-      allowEmpty?: boolean;
+1197-      notifyNextDrafter?: boolean;
+1198-    }
+1199-  ) {
+1200-    setSaveMessage("");
+1201-    setMessage("");
+1202-
+1203:    if (!selectedSlateIdNumber) {
+1204-      setSaveMessage("Please choose a slate before saving.");
+1205-      return false;
+1206-    }
+1207-    if (!participatingTeamIds.has(teamId)) {
+1208-      setSaveMessage("That team is not participating in this slate.");
+1209-      return false;
+1210-    }
+1211:    if (selectedSlate?.is_locked) {
+1212-      setSaveMessage("This slate is locked.");
+1213-      return false;
+1214-    }
+1215-    if (!options?.allowEmpty && playerList.length === 0) {
+1216-      setSaveMessage("Select at least 1 player before saving.");
+1217-      return false;
+1218-    }
+1219-
+1220-    const totalSlots = getRosterTotalSlots();
+1221-    const slots = getEffectiveRosterSlots();
+1222-    const listCounts = countPlayersByPosition(playerList);
+1223-
+1224-    if (playerList.length > totalSlots) {
+1225-      setSaveMessage(`A lineup can have at most ${totalSlots} players.`);
+1226-      return false;
+1227-    }
+1228-
+1229-    const overLimitSlot = slots.find(
+1230-      (slot) => (listCounts.get(slot.position) ?? 0) > slot.slot_count
+1231-    );
+1232-
+1233-    if (overLimitSlot) {
+1234-      const limitDescription = slots
+1235-        .map((slot) => `${slot.slot_count} ${slot.position}`)
+1236-        .join(" and ");
+1237-      setSaveMessage(`A lineup can have at most ${limitDescription}.`);
+1238-      return false;
+1239-    }
+1240-
+1241-    try {
+1242-      setIsSaving(true);
+1243-
+1244-      const response = await fetch("/api/lineups", {
+1245-        method: "POST",
+1246-        headers: { "Content-Type": "application/json" },
+1247-        body: JSON.stringify({
+1248:          slateId: selectedSlateIdNumber,
+1249-          teamId,
+1250-          playerIds: playerList.map((player) => player.id),
+1251-          notifyNextDrafter: options?.notifyNextDrafter === true,
+1252-        }),
+1253-        cache: "no-store",
+1254-      });
+1255-
+1256-      const result = await response.json();
+1257-
+1258-      if (!response.ok) {
+1259-        setSaveMessage(result.error || "Failed to save lineup.");
+1260-        return false;
+1261-      }
+1262-
+1263-      setLineupsState((prev) => {
+1264-        const otherTeams = prev.filter((lineup) => lineup.team_id !== teamId);
+1265-        return [
+1266-          ...otherTeams,
+1267-          {
+1268-            team_id: teamId,
+1269-            player_ids: playerList.map((player) => player.id),
+1270-          },
+1271-        ];
+1272-      });
+1273-
+1274-      if (successMessage) setSaveMessage(successMessage);
+1275-      return true;
+1276-    } catch (error) {
+1277-      console.error(error);
+1278-      setSaveMessage("Something went wrong while saving the lineup.");
+1279-      return false;
+1280-    } finally {
+1281-      setIsSaving(false);
+1282-    }
+1283-  }
+1284-
+1285-  async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
+1286-    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
+1287-    if (!targetTeam) return;
+1288-
+1289-    const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
+1290-    if (!assignmentStatus.canAssign) {
+1291-      setSaveMessage(assignmentStatus.reason);
+1292-      return;
+1293-    }
+1294-
+1295-    const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
+1296-    const targetPlayers = getPlayersForTeam(targetTeamId);
+1297-
+1298-    if (currentOwnerTeamId === targetTeamId) {
+1299-      setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
+1300-      return;
+1301-    }
+1302-
+1303-    try {
+1304-      setIsAssigningPlayer(true);
+1305-
+1306-      if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
+1307-        const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
+1308-          (item) => item.id !== player.id
+--
+1313-          ownerPlayers,
+1314-          undefined,
+1315-          { allowEmpty: true }
+1316-        );
+1317-
+1318-        if (!removed) return;
+1319-      }
+1320-
+1321-      const isAdminProxyPick =
+1322-        currentUser?.role === "admin" &&
+1323-        targetTeamId !== currentUser.teamId;
+1324-
+1325-      const shouldNotifyNextDrafter = isAdminProxyPick
+1326-        ? notifyNextDrafterForProxyPicks
+1327-        : true;
+1328-
+1329-      const added = await persistLineupForTeam(
+1330-        targetTeamId,
+1331-        [...targetPlayers, player],
+1332-        `${player.name} drafted to ${targetTeam.name}.`,
+1333-        {
+1334-          notifyNextDrafter: shouldNotifyNextDrafter,
+1335-        }
+1336-      );
+1337-
+1338-      if (!added) return;
+1339-
+1340-      setDraftingPlayer(null);
+1341-      setSearchTerm("");
+1342-
+1343:      if (selectedSlateIdNumber) {
+1344:        void loadSlateLineups(selectedSlateIdNumber);
+1345-      }
+1346-    } finally {
+1347-      setIsAssigningPlayer(false);
+1348-    }
+1349-  }
+1350-
+1351-  async function handleRemovePlayerFromTeam(player: Player) {
+1352-    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+1353-    const ownerTeam = getOwnerTeamForPlayer(player.id);
+1354-
+1355-    if (!ownerTeamId || !ownerTeam) return;
+1356-
+1357-    try {
+1358-      setIsAssigningPlayer(true);
+1359-
+1360-      const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
+1361-        (item) => item.id !== player.id
+1362-      );
+1363-
+1364-      const removed = await persistLineupForTeam(
+1365-        ownerTeamId,
+1366-        nextPlayers,
+1367-        `${player.name} removed from ${ownerTeam.name}.`,
+1368-        { allowEmpty: true }
+1369-      );
+1370-
+1371-      if (!removed) return;
+1372-
+1373-      setDraftingPlayer(null);
+1374-      setSearchTerm("");
+1375-
+1376:      if (selectedSlateIdNumber) {
+1377:        void loadSlateLineups(selectedSlateIdNumber);
+1378-      }
+1379-    } finally {
+1380-      setIsAssigningPlayer(false);
+1381-    }
+1382-  }
+1383-
+1384-  const pillBase =
+1385-    "rounded-full border px-3 py-1.5 text-xs font-medium transition";
+1386-  const activePill = "border-sky-300 bg-sky-100 text-sky-900";
+1387-  const inactivePill =
+1388-    "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
+1389-
+1390-  const scoreTableCellClass = compactView
+1391-    ? "px-0 py-0 text-xs"
+1392-    : "px-3 py-2 text-sm";
+1393-
+1394-  const scoreTableHeaderClass = compactView
+1395-    ? "border-b border-slate-200 px-0 py-0 font-semibold"
+1396-    : "border-b border-slate-200 px-3 py-2 font-semibold";
+1397-
+1398-  const ownerTeamForDraftingPlayer = draftingPlayer
+1399-    ? getOwnerTeamForPlayer(draftingPlayer.id)
+1400-    : null;
+1401-
+1402-  function inspectPlayerFromSlot(player: Player) {
+1403-    setIsInspectingPlayerFromSlot(true);
+1404-    setDraftingPlayer(player);
+1405-  }
+1406-
+1407-  const setDraftingPlayerWithSlotRestore:
+1408-    React.Dispatch<React.SetStateAction<Player | null>> = (
+1409-      value
+1410-    ) => {
+1411-      setDraftingPlayer((currentPlayer) => {
+1412-        const nextPlayer =
+1413-          typeof value === "function"
+1414-            ? value(currentPlayer)
+1415-            : value;
+1416-
+1417-        setIsInspectingPlayerFromSlot(
+1418-          Boolean(nextPlayer),
+1419-        );
+1420-
+1421-        return nextPlayer;
+1422-      });
+1423-    };
+1424-
+1425-  async function handleDraftToTargetSlot(
+1426-    player: Player
+1427-  ) {
+1428-    if (!targetDraftSlot) return;
+1429-
+1430-    await handleAssignPlayerToTeam(
+1431-      player,
+1432-      targetDraftSlot.teamId
+1433-    );
+1434-
+1435-    setDraftingPlayer(null);
+1436-    setIsInspectingPlayerFromSlot(false);
+1437-    setTargetDraftSlot(null);
+1438-  }
+1439-
+1440-  const golfScoresControls = (
+1441-    <>
+1442-      <div className="space-y-2">
+1443-        <div className="flex items-center gap-2">
+1444-          <button
+1445-            type="button"
+1446-            onClick={() =>
+1447-              void refreshStatsForSelectedSlate(false)
+1448-            }
+1449-            disabled={
+1450:              !selectedSlateIdNumber ||
+1451-              isRefreshingStats
+1452-            }
+1453-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-sky-500 bg-sky-950 px-3 py-2.5 text-sm font-black text-sky-200 transition hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-60"
+1454-          >
+1455-            <span
+1456-              aria-hidden="true"
+1457-              className={
+1458-                isRefreshingStats
+1459-                  ? "animate-spin"
+1460-                  : ""
+1461-              }
+1462-            >
+1463-              ↻
+1464-            </span>
+1465-
+1466-            <span>
+1467-              {isRefreshingStats
+1468-                ? "Refreshing..."
+1469-                : "Refresh Scores"}
+1470-            </span>
+1471-          </button>
+1472-
+1473-          <button
+1474-            type="button"
+1475-            onClick={() =>
+1476-              setIsGolfSlateMenuOpen(true)
+1477-            }
+1478-            className="flex shrink-0 items-center justify-center rounded-xl border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm font-black text-slate-100 transition hover:border-sky-500"
+1479-          >
+1480-            Slates
+1481-            <span
+1482-              aria-hidden="true"
+1483-              className="ml-1"
+1484-            >
+1485-              ▾
+1486-            </span>
+1487-          </button>
+1488-        </div>
+1489-
+1490-        <div className="flex items-center justify-between gap-3 px-1 text-[11px] text-slate-500">
+1491-          <span className="truncate">
+1492:            {selectedSlateDisplay}
+1493-          </span>
+1494-
+1495-          <span className="shrink-0">
+1496-            {lastUpdatedAt
+1497-              ? `Updated ${new Date(
+1498-                  lastUpdatedAt,
+1499-                ).toLocaleTimeString([], {
+1500-                  hour: "numeric",
+1501-                  minute: "2-digit",
+1502-                })}`
+1503-              : "Not refreshed yet"}
+1504-          </span>
+1505-        </div>
+1506-      </div>
+1507-
+1508-      {hasMounted &&
+1509-      isGolfSlateMenuOpen
+1510-        ? createPortal(
+1511-            <div
+1512-              className="fixed inset-0 z-[12000] flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center"
+1513-              onMouseDown={(event) => {
+1514-                if (
+1515-                  event.target ===
+1516-                  event.currentTarget
+1517-                ) {
+1518-                  setIsGolfSlateMenuOpen(
+1519-                    false,
+1520-                  );
+1521-                }
+1522-              }}
+1523-            >
+1524-              <section
+1525-                role="dialog"
+1526-                aria-modal="true"
+1527-                aria-label="Golf slate and score settings"
+1528-                className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 text-slate-100 shadow-2xl"
+1529-              >
+1530-                <header className="flex items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
+1531-                  <div>
+1532-                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-400">
+1533-                      Golf scores
+1534-                    </span>
+1535-
+1536-                    <h3 className="mt-1 text-xl font-black">
+1537-                      Slate & Settings
+1538-                    </h3>
+1539-                  </div>
+1540-
+1541-                  <button
+1542-                    type="button"
+1543-                    onClick={() =>
+1544-                      setIsGolfSlateMenuOpen(
+1545-                        false,
+1546-                      )
+1547-                    }
+1548-                    aria-label="Close slate settings"
+1549-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800 hover:text-white"
+1550-                  >
+1551-                    ×
+1552-                  </button>
+--
+1559-                    </span>
+1560-
+1561-                    <select
+1562-                      value={selectedSeason}
+1563-                      onChange={(event) =>
+1564-                        setSelectedSeason(
+1565-                          event.target.value,
+1566-                        )
+1567-                      }
+1568-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white"
+1569-                    >
+1570-                      {seasons.map(
+1571-                        (season) => (
+1572-                          <option
+1573-                            key={season}
+1574-                            value={season}
+1575-                          >
+1576-                            {season}
+1577-                          </option>
+1578-                        ),
+1579-                      )}
+1580-                    </select>
+1581-                  </label>
+1582-
+1583-                  <label className="block">
+1584-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+1585-                      Tournament
+1586-                    </span>
+1587-
+1588-                    <select
+1589:                      value={selectedSlateId}
+1590-                      onChange={(event) => {
+1591-                        setSelectedSlateId(
+1592-                          event.target.value,
+1593-                        );
+1594-
+1595-                        setIsGolfSlateMenuOpen(
+1596-                          false,
+1597-                        );
+1598-                      }}
+1599-                      disabled={isSlateLoading}
+1600-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white disabled:opacity-60"
+1601-                    >
+1602-                      {filteredSlates.map(
+1603-                        (slate) => (
+1604-                          <option
+1605-                            key={slate.id}
+1606-                            value={String(
+1607-                              slate.id,
+1608-                            )}
+1609-                          >
+1610-                            {slate.label ??
+1611-                              slate.date}
+1612-                          </option>
+1613-                        ),
+1614-                      )}
+1615-                    </select>
+1616-                  </label>
+1617-
+1618-                  <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+1619-                    <span>
+1620-                      <strong className="block text-sm">
+1621-                        Auto-refresh
+1622-                      </strong>
+1623-
+1624-                      <span className="mt-0.5 block text-xs text-slate-500">
+1625-                        Refresh while this page is visible
+1626-                      </span>
+1627-                    </span>
+1628-
+1629-                    <input
+1630-                      type="checkbox"
+1631-                      checked={
+1632-                        autoRefreshEnabled
+1633-                      }
+1634-                      onChange={(event) =>
+1635-                        setAutoRefreshEnabled(
+1636-                          event.target.checked,
+1637-                        )
+1638-                      }
+1639-                      className="h-5 w-5"
+1640-                    />
+1641-                  </label>
+1642-
+1643-                  <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+1644-                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+1645-                      Current slate
+1646-                    </span>
+1647-
+1648-                    <strong className="mt-1 block text-base text-white">
+1649:                      {selectedSlateDisplay}
+1650-                    </strong>
+1651-
+1652-                    <span className="mt-1 block text-xs text-slate-500">
+1653-                      {lastUpdatedAt
+1654-                        ? `Last refreshed ${new Date(
+1655-                            lastUpdatedAt,
+1656-                          ).toLocaleTimeString([], {
+1657-                            hour: "numeric",
+1658-                            minute: "2-digit",
+1659-                          })}`
+1660-                        : "Scores have not been refreshed during this visit."}
+1661-                    </span>
+1662-                  </div>
+1663-                </div>
+1664-              </section>
+1665-            </div>,
+1666-            document.body,
+1667-          )
+1668-        : null}
+1669-    </>
+1670-  );
+1671-
+1672-  const lineupControls = (
+1673-    <LineupControls
+1674:      selectedSlateId={selectedSlateId}
+1675-      setSelectedSlateId={setSelectedSlateId}
+1676-      slates={filteredSlates}
+1677:      selectedSlate={selectedSlate}
+1678:      selectedSlateDisplay={selectedSlateDisplay}
+1679:      selectedSlateIdNumber={selectedSlateIdNumber}
+1680-      isRefreshingStats={isRefreshingStats}
+1681-      refreshStatsForSelectedSlate={
+1682-        refreshStatsForSelectedSlate
+1683-      }
+1684-      autoRefreshEnabled={autoRefreshEnabled}
+1685-      setAutoRefreshEnabled={
+1686-        setAutoRefreshEnabled
+1687-      }
+1688-      compactView={compactView}
+1689-      setCompactView={setCompactView}
+1690-      hasMounted={hasMounted}
+1691-      isSlateLoading={isSlateLoading}
+1692-      lastUpdatedAt={lastUpdatedAt}
+1693-      seasons={seasons}
+1694-      selectedSeason={selectedSeason}
+1695-      setSelectedSeason={setSelectedSeason}
+1696-    />
+1697-  );
+1698-
+1699-  return (
+1700-    <div className="space-y-6">
+1701-      {viewMode === "draft"
+1702-        ? lineupControls
+1703-        : null}
+1704-
+1705-      {message ? (
+1706-        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+1707-          {message}
+1708-        </div>
+1709-      ) : null}
+1710-
+1711-      {currentUser?.role === "admin" && viewMode === "draft" ? (
+1712-        <section className="draft-admin-toggle">
+1713-          <div>
+1714-            <strong>Proxy Pick Notifications</strong>
+1715-            <span>
+1716-              Notify the next drafter after an admin-entered pick.
+1717-            </span>
+1718-          </div>
+1719-
+1720-          <label className="draft-admin-switch">
+1721-            <input
+1722-              type="checkbox"
+1723-              checked={notifyNextDrafterForProxyPicks}
+1724-              onChange={(event) =>
+1725-                setNotifyNextDrafterForProxyPicks(
+1726-                  event.target.checked
+1727-                )
+1728-              }
+1729-            />
+1730-
+1731-            <span aria-hidden="true" />
+1732-
+1733-            <em>
+1734-              {notifyNextDrafterForProxyPicks
+1735-                ? "On"
+1736-                : "Off"}
+1737-            </em>
+1738-          </label>
+1739-        </section>
+--
+1774-                <span className="draft-page-tab-count">
+1775-                  {getPlayersForTeam(currentUser.teamId).length}/{getRosterTotalSlots()}
+1776-                </span>
+1777-              ) : null}
+1778-            </button>
+1779-
+1780-            <button
+1781-              type="button"
+1782-              onClick={() => setDraftPageTab("players")}
+1783-              className={`draft-page-tab ${
+1784-                draftPageTab === "players"
+1785-                  ? "draft-page-tab--active"
+1786-                  : ""
+1787-              }`}
+1788-            >
+1789-              <span aria-hidden="true">🔎</span>
+1790-              <span>Players</span>
+1791-            </button>
+1792-          </section>
+1793-
+1794-          {draftPageTab === "lineup" ? (
+1795-            <DraftRosterCourt
+1796-              teamId={currentUser?.teamId ?? null}
+1797-              teamName={currentUser?.displayName ?? null}
+1798-              players={
+1799-                currentUser?.teamId
+1800-                  ? getPlayersForTeam(currentUser.teamId)
+1801-                  : []
+1802-              }
+1803-              rosterSlots={rosterSlots}
+1804:              isLocked={Boolean(selectedSlate?.is_locked)}
+1805-              setDraftingPlayer={setLeagueResearchPlayer}
+1806-              setTargetDraftSlot={setTargetDraftSlot}
+1807-            />
+1808-          ) : (
+1809-            <PlayerPool
+1810-              players={players}
+1811-              filteredPlayers={filteredPlayers}
+1812-              searchTerm={searchTerm}
+1813-              setSearchTerm={setSearchTerm}
+1814-              positionFilter={positionFilter}
+1815-              setPositionFilter={setPositionFilter}
+1816-              onSlateOnly={onSlateOnly}
+1817-              setOnSlateOnly={setOnSlateOnly}
+1818-              isAvailabilityLoading={isAvailabilityLoading}
+1819-              availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+1820-              availablePlayerIdSet={availablePlayerIdSet}
+1821-              playerAverageMap={playerAverageMap}
+1822-              playerProjections={playerProjections}
+1823-              getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1824-              setDraftingPlayer={setDraftingPlayer}
+1825-              isAssigningPlayer={isAssigningPlayer}
+1826-              pillBase={pillBase}
+1827-              activePill={activePill}
+1828-              inactivePill={inactivePill}
+1829-              rosterSlots={rosterSlots}
+1830-              selectedSeason={selectedSeason}
+1831-            />
+1832-          )}
+1833-
+1834-          <LeagueLineupCards
+1835-            teams={orderedTeamsForSlate}
+1836-            currentTeamId={currentUser?.teamId ?? null}
+1837-            getPlayersForTeam={getPlayersForTeam}
+1838-            getPlayerProjectionScore={
+1839-              getPlayerProjectionScore
+1840-            }
+1841-            getDraftNeeds={getDraftNeeds}
+1842-            rosterSlots={rosterSlots}
+1843-            setResearchPlayer={setLeagueResearchPlayer}
+1844-            setTargetDraftSlot={setTargetDraftSlot}
+1845-            isLocked={Boolean(
+1846:              selectedSlate?.is_locked
+1847-            )}
+1848-          />
+1849-        </>
+1850-      ) : (
+1851:        <ScoresDashboard
+1852-          players={players}
+1853-          teams={orderedTeamsForSlate}
+1854:          selectedSlate={selectedSlate}
+1855-          rosterSlots={rosterSlots}
+1856-          lastRefreshSummary={lastRefreshSummary}
+1857-          getPlayersForTeam={getPlayersForTeam}
+1858-          getTeamStats={getTeamStats}
+1859-          getPlayerStat={getPlayerStat}
+1860-          getRawPlayerStat={getRawPlayerStat}
+1861-          getLiveProjectedTeamTotal={
+1862-            getLiveProjectedTeamTotal
+1863-          }
+1864-          getPregameProjectedTeamTotal={
+1865-            getPregameProjectedTeamTotal
+1866-          }
+1867-          liveWinPctMap={liveWinPctMap}
+1868-          playerProjections={playerProjections}
+1869-          controls={
+1870:            (selectedSlate?.sport ??
+1871-              selectedSport) === "golf"
+1872-              ? golfScoresControls
+1873-              : lineupControls
+1874-          }
+1875-          setProfilePlayer={setProfilePlayer}
+1876-        />
+1877-      )}
+1878-
+1879-      <SlotDraftModal
+1880-        targetDraftSlot={targetDraftSlot}
+1881-        setTargetDraftSlot={setTargetDraftSlot}
+1882-        players={players}
+1883-        playerAverageMap={playerAverageMap}
+1884-        playerProjections={playerProjections}
+1885-        availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+1886-        availablePlayerIdSet={availablePlayerIdSet}
+1887-        isAvailabilityLoading={isAvailabilityLoading}
+1888-        getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1889-        setDraftingPlayer={setDraftingPlayerWithSlotRestore}
+1890-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1891-        selectedSeason={selectedSeason}
+1892-        rosterSlots={rosterSlots}
+1893-        hidden={isInspectingPlayerFromSlot}
+1894-        isAssigningPlayer={isAssigningPlayer}
+1895-      />
+1896-
+1897-      <ReadOnlyPlayerModal
+1898-        player={profilePlayer}
+1899-        setPlayer={setProfilePlayer}
+1900-        playerAverageMap={playerAverageMap}
+1901-        playerProjections={playerProjections}
+1902-        golfStat={
+1903-          profilePlayer
+1904-            ? getRawPlayerStat(profilePlayer.id)
+1905-            : null
+1906-        }
+1907-        golfSlateId={
+1908:          selectedSlate?.sport === "golf"
+1909:            ? selectedSlate.id
+1910-            : null
+1911-        }
+1912-      />
+1913-
+1914-      <PlayerResearchModal
+1915-        player={
+1916-          leagueResearchPlayer
+1917-            ? {
+1918-                id: leagueResearchPlayer.id,
+1919-                name: leagueResearchPlayer.name,
+1920-                nbaPlayerId:
+1921-                  leagueResearchPlayer.nba_player_id ??
+1922-                  null,
+1923-                nflPlayerId:
+1924-                  leagueResearchPlayer.nfl_player_id ??
+1925-                  null,
+1926-                espnGolfPlayerId:
+1927-                  leagueResearchPlayer.espn_player_id ??
+1928-                  null,
+1929-                headshotUrl:
+1930-                  leagueResearchPlayer.headshot_url ??
+1931-                  null,
+1932-                positionGroup:
+1933-                  leagueResearchPlayer.position_group ??
+1934-                  null,
+1935-                owgrRank:
+1936-                  leagueResearchPlayer.owgr_rank ??
+1937-                  null,
+1938-              }
+1939-            : null
+1940-        }
+1941-        sport={
+1942:          (selectedSlate?.sport ??
+1943-            selectedSport) as
+1944-            | "nba"
+1945-            | "nfl"
+1946-            | "golf"
+1947-        }
+1948-        season={Number(selectedSeason)}
+1949-        defaultMode="season"
+1950-        onClose={() =>
+1951-          setLeagueResearchPlayer(null)
+1952-        }
+1953-      />
+1954-
+1955-      <DraftPlayerModal
+1956-        draftingPlayer={draftingPlayer}
+1957-        setDraftingPlayer={
+1958-          setDraftingPlayerWithSlotRestore
+1959-        }
+1960-        playerAverageMap={playerAverageMap}
+1961-        playerProjections={playerProjections}
+1962-        availablePlayerIdSet={availablePlayerIdSet}
+1963-        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+1964-        isAssigningPlayer={isAssigningPlayer}
+1965-        isSaving={isSaving}
+1966-        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+1967-        draftingPlayerHistory={draftingPlayerHistory}
+1968-        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+1969-        orderedTeamsForSlate={orderedTeamsForSlate}
+1970-        getTeamStats={getTeamStats}
+1971-        getTeamAssignmentStatus={getTeamAssignmentStatus}
+1972-        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+1973-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1974-        targetDraftSlot={targetDraftSlot}
+1975-        handleDraftToTargetSlot={
+1976-          handleDraftToTargetSlot
+1977-        }
+1978-      />
+1979-    </div>
+1980-  );
+1981-}
+
+============================================================
+3. SCORES DASHBOARD — GOLF PROP HANDOFF
+============================================================
+1-"use client";
+2-
+3-import { useEffect, useMemo, useState } from "react";
+4-import type { ReactNode } from "react";
+5-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+6:import GolfScoresDashboard from "@/components/lineups/GolfScoresDashboard";
+7-import TeamAvatar from "@/components/ui/TeamAvatar";
+8-import { getStatColumns } from "@/lib/statColumns";
+9-import type {
+10-  OrderedTeam,
+11-  Player,
+12-  PlayerStat,
+13-  RosterSlotConfig,
+14-  Slate,
+15-} from "@/components/lineups/types";
+16-
+17-type TeamStats = {
+18-  totalPlayers: number;
+19-  guards: number;
+20-  fcPlayers: number;
+21-  statTotals?: Record<string, number>;
+22-  points: number;
+23-  rebounds: number;
+24-  assists: number;
+25-  steals: number;
+26-  blocks: number;
+27-  turnovers: number;
+28-  total: number;
+29-  games_completed: number;
+30-  games_in_progress: number;
+31-  games_remaining: number;
+32-  finish_position: number | null;
+33-};
+34-
+35-type PlayerBoxScore = Record<string, number> & {
+36-  fantasy_points: number;
+37-};
+38-
+39-type RefreshSummary = {
+40-  gamesFound?: number;
+41-  playerStatsUpserted?: number;
+42-  teamResultsUpserted?: number;
+43-} | null;
+44-
+45-type Props = {
+46-  players: Player[];
+47-  teams: OrderedTeam[];
+48:  selectedSlate: Slate | null;
+49-  rosterSlots?: RosterSlotConfig[];
+50-  lastRefreshSummary: RefreshSummary;
+51-  getPlayersForTeam: (teamId: number) => Player[];
+52-  getTeamStats: (teamId: number) => TeamStats;
+53-  getPlayerStat: (playerId: number) => PlayerBoxScore;
+54-  getRawPlayerStat: (playerId: number) => PlayerStat | null;
+55-  getLiveProjectedTeamTotal: (teamId: number) => number;
+56-  getPregameProjectedTeamTotal: (teamId: number) => number | null;
+57-  liveWinPctMap: Map<number, number>;
+58-  playerProjections: Record<number, any>;
+59-  controls?: ReactNode;
+60-  setProfilePlayer: (player: Player | null) => void;
+61-};
+62-
+63-const FALLBACK_ROSTER_SLOTS: RosterSlotConfig[] = [
+64-  { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+65-  { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+66-];
+67-
+68-function formatScore(value: number | null | undefined) {
+69-  const numeric = Number(value ?? 0);
+70-
+71-  return Number.isFinite(numeric)
+72-    ? numeric.toFixed(1)
+73-    : "0.0";
+74-}
+75-
+76-function getPlayerGameStatus(stat: PlayerStat | null) {
+77-  if (!stat) {
+78-    return {
+79-      label: "Upcoming",
+80-      tone: "upcoming",
+81-      detail: "Not started",
+82-    };
+83-  }
+84-
+85-  if (
+86-    stat.game_status === 3 ||
+87-    /final/i.test(stat.game_status_text ?? "")
+88-  ) {
+89-    return {
+90-      label: "Final",
+91-      tone: "final",
+92-      detail: "Game complete",
+93-    };
+94-  }
+95-
+96-  if (stat.game_status === 2) {
+97-    const periodLabel = stat.period
+98-      ? `Q${stat.period}`
+99-      : "Live";
+100-
+101-    const clock =
+102-      stat.game_clock
+103-        ?.replace(/^PT/, "")
+104-        .replace("M", ":")
+105-        .replace(/S$/, "")
+106-        .replace(/\.0$/, "") ?? "";
+107-
+108-    return {
+109-      label: "Live",
+110-      tone: "live",
+111-      detail: [periodLabel, clock]
+112-        .filter(Boolean)
+113-        .join(" "),
+114-    };
+115-  }
+116-
+117-  return {
+118-    label: "Upcoming",
+119-    tone: "upcoming",
+120-    detail:
+121-      stat.game_status_text?.trim() ||
+122-      "Not started",
+123-  };
+124-}
+125-
+126-function medalForPosition(position: number) {
+127-  if (position === 1) return "🥇";
+128-  if (position === 2) return "🥈";
+129-  if (position === 3) return "🥉";
+130-  return `${position}.`;
+131-}
+132-
+133-function TraditionalScoresDashboard({
+134-  teams,
+135:  selectedSlate,
+136-  rosterSlots,
+137-  lastRefreshSummary,
+138-  getPlayersForTeam,
+139-  getTeamStats,
+140-  getPlayerStat,
+141-  getRawPlayerStat,
+142-  getLiveProjectedTeamTotal,
+143-  getPregameProjectedTeamTotal,
+144-  liveWinPctMap,
+145-  playerProjections,
+146-  controls,
+147-  setProfilePlayer,
+148-}: Props) {
+149:  const sport = selectedSlate?.sport ?? "nba";
+150-  const statColumns = getStatColumns(sport);
+151-
+152-  const effectiveRosterSlots =
+153-    rosterSlots && rosterSlots.length > 0
+154-      ? rosterSlots
+155-      : FALLBACK_ROSTER_SLOTS;
+156-
+157-  const totalRosterSlots = effectiveRosterSlots.reduce(
+158-    (sum, slot) => sum + slot.slot_count,
+159-    0
+160-  );
+161-
+162-  const participatingTeams = useMemo(
+163-    () =>
+164-      teams.filter(
+165-        (team) => team.is_participating !== false
+166-      ),
+167-    [teams]
+168-  );
+169-
+170-  const leaderboard = useMemo(() => {
+171-    return participatingTeams
+172-      .map((team) => {
+173-        const stats = getTeamStats(team.id);
+174-
+175-        return {
+176-          team,
+177-          stats,
+178-          score: Number(stats.total ?? 0),
+179-          projected:
+180-            getLiveProjectedTeamTotal(team.id),
+181-          winPct:
+182-            liveWinPctMap.get(team.id) ?? 0,
+183-        };
+184-      })
+185-      .sort((a, b) => b.score - a.score);
+186-  }, [
+187-    participatingTeams,
+188-    getTeamStats,
+189-    getLiveProjectedTeamTotal,
+190-    liveWinPctMap,
+191-  ]);
+192-
+193-  const [selectedTeamId, setSelectedTeamId] =
+194-    useState<number | null>(
+195-      leaderboard[0]?.team.id ?? null
+196-    );
+197-
+198-  useEffect(() => {
+199-    const selectedStillExists =
+200-      participatingTeams.some(
+201-        (team) => team.id === selectedTeamId
+202-      );
+203-
+204-    if (!selectedStillExists) {
+205-      setSelectedTeamId(
+206-        leaderboard[0]?.team.id ?? null
+207-      );
+208-    }
+209-  }, [
+--
+268-      playersByPosition.get(slotConfig.position) ?? [];
+269-
+270-    for (let i = 0; i < slotConfig.slot_count; i += 1) {
+271-      rosterRows.push({
+272-        slot: slotConfig.position,
+273-        player: positionPlayers[i] ?? null,
+274-      });
+275-    }
+276-  });
+277-
+278-  const progressTotal =
+279-    selectedStats.games_completed +
+280-    selectedStats.games_in_progress +
+281-    selectedStats.games_remaining;
+282-
+283-  const progressComplete =
+284-    progressTotal > 0
+285-      ? (selectedStats.games_completed /
+286-          progressTotal) *
+287-        100
+288-      : 0;
+289-
+290-  const progressLive =
+291-    progressTotal > 0
+292-      ? (selectedStats.games_in_progress /
+293-          progressTotal) *
+294-        100
+295-      : 0;
+296-
+297-  const isFinal =
+298:    selectedSlate?.is_locked === true ||
+299-    (selectedStats.games_completed > 0 &&
+300-      selectedStats.games_in_progress === 0 &&
+301-      selectedStats.games_remaining === 0);
+302-
+303-  const hasLiveGames =
+304-    selectedStats.games_in_progress > 0;
+305-
+306-  const hasStarted =
+307-    selectedStats.games_completed > 0 ||
+308-    hasLiveGames;
+309-
+310-  const projectionDifference =
+311-    selectedPregameProjection !== null
+312-      ? Number(
+313-          (
+314-            Number(selectedStats.total ?? 0) -
+315-            selectedPregameProjection
+316-          ).toFixed(1)
+317-        )
+318-      : null;
+319-
+320-  const projectionDifferenceIsNeutral =
+321-    projectionDifference !== null &&
+322-    Math.abs(projectionDifference) <= 1;
+323-
+324-  const projectionDifferenceIsPositive =
+325-    projectionDifference !== null &&
+326-    projectionDifference > 1;
+327-
+328-  const projectionDifferenceDisplay =
+329-    projectionDifference === null
+330-      ? "—"
+331-      : projectionDifference > 0
+332-        ? `+${projectionDifference.toFixed(1)}`
+333-        : projectionDifference.toFixed(1);
+334-
+335-  const gameStatusParts = [
+336-    selectedStats.games_completed > 0
+337-      ? `${selectedStats.games_completed} Final`
+338-      : null,
+339-    selectedStats.games_in_progress > 0
+340-      ? `${selectedStats.games_in_progress} Live`
+341-      : null,
+342-    selectedStats.games_remaining > 0
+343-      ? `${selectedStats.games_remaining} Left`
+344-      : null,
+345-  ].filter(Boolean);
+346-
+347-  return (
+348-    <section className="scores-dashboard-shell">
+349-      <div className="scores-dashboard-heading">
+350-        <div>
+351-          <div className="scores-dashboard-kicker">
+352-            Fantasy scoreboard
+353-          </div>
+354-
+355-          <h2>Scores</h2>
+356-
+357-          <p>
+358-            Live totals, projections, and player
+359-            box scores.
+360-          </p>
+361-        </div>
+362-
+363:        {selectedSlate?.is_locked ? (
+364-          <span className="scores-dashboard-status scores-dashboard-status--final">
+365-            Final
+366-          </span>
+367-        ) : (
+368-          <span className="scores-dashboard-status scores-dashboard-status--live">
+369-            Live
+370-          </span>
+371-        )}
+372-      </div>
+373-
+374-      {controls ? (
+375-        <div className="scores-dashboard-controls">
+376-          {controls}
+377-        </div>
+378-      ) : null}
+379-
+380-      {lastRefreshSummary ? (
+381-        <details className="scores-refresh-summary">
+382-          <summary>
+383-            ✓ Latest refresh complete
+384-          </summary>
+385-
+386-          <div>
+387-            Games found:{" "}
+388-            {lastRefreshSummary.gamesFound ?? 0}
+389-            <span aria-hidden="true"> • </span>
+390-            Players updated:{" "}
+391-            {lastRefreshSummary.playerStatsUpserted ??
+392-              0}
+393-            <span aria-hidden="true"> • </span>
+394-            Teams updated:{" "}
+395-            {lastRefreshSummary.teamResultsUpserted ??
+396-              0}
+397-          </div>
+398-        </details>
+399-      ) : null}
+400-
+401-      <section className="scores-leaderboard-section">
+402-        <div className="scores-section-heading">
+403-          <div>
+404-            <span>League standings</span>
+405-            <h3>Live Leaderboard</h3>
+406-          </div>
+407-
+408-          <small>Swipe →</small>
+409-        </div>
+410-
+411-        <div className="scores-leaderboard-strip">
+412-          {leaderboard.map((row, index) => {
+413-            const isSelected =
+414-              row.team.id === selectedTeam.id;
+415-
+416-            const projectedDifference =
+417-              row.projected - row.score;
+418-
+419-            return (
+420-              <button
+421-                key={row.team.id}
+422-                type="button"
+423-                onClick={() =>
+--
+834-          })}
+835-        </div>
+836-
+837-        <details className="scores-team-totals">
+838-          <summary>
+839-            <span>Team Box Score Totals</span>
+840-
+841-            <strong>
+842-              {formatScore(selectedStats.total)} FP
+843-            </strong>
+844-          </summary>
+845-
+846-          <div>
+847-            {statColumns.map((column) => (
+848-              <div key={column.key}>
+849-                <span>{column.label}</span>
+850-                <strong>
+851-                  {selectedStats.statTotals?.[column.key] ?? 0}
+852-                </strong>
+853-              </div>
+854-            ))}
+855-          </div>
+856-        </details>
+857-      </section>
+858-    </section>
+859-  );
+860-}
+861-
+862-
+863-export default function ScoresDashboard(props: Props) {
+864:  const sport = props.selectedSlate?.sport ?? "nba";
+865-
+866-  if (sport === "golf") {
+867-    return (
+868:      <GolfScoresDashboard
+869-        players={props.players}
+870-        teams={props.teams}
+871:        selectedSlate={props.selectedSlate}
+872-        rosterSlots={props.rosterSlots}
+873-        lastRefreshSummary={props.lastRefreshSummary}
+874-        getPlayersForTeam={props.getPlayersForTeam}
+875-        getTeamStats={props.getTeamStats}
+876-        getRawPlayerStat={props.getRawPlayerStat}
+877-        controls={props.controls}
+878-        setProfilePlayer={props.setProfilePlayer}
+879-      />
+880-    );
+881-  }
+882-
+883-  return <TraditionalScoresDashboard {...props} />;
+884-}
+
+============================================================
+4. SHARED SLATE TYPE
+============================================================
+67-export type Team = {
+68-  id: number;
+69-  name: string;
+70-};
+71-
+72:export type Slate = {
+73-  id: number;
+74-  date: string;
+75-  start_date?: string;
+76-  end_date?: string;
+77-  label?: string;
+78-  is_locked: boolean;
+79-  sport?: string;
+80-  has_cut?: boolean;
+81-};
+82-
+83-export type SavedLineup = {
+84-  team_id: number;
+85-  player_ids: number[];
+86-  pregame_projected_points?: number | null;
+87-};
+88-
+89-export type PlayerStat = {
+90-  player_id: number;
+91-
+92-  points?: number | null;

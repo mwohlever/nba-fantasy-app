@@ -957,25 +957,54 @@ function HomePageContent() {
             </Link>
           </div>
 
-          {isGolf &&
-          latestSlate?.show_tournament_analysis === true &&
+          {latestSlate?.show_tournament_analysis === true &&
           latestSlate.tournament_analysis?.trim() ? (
-            <details className="group mb-4 overflow-hidden rounded-2xl border border-emerald-800/70 bg-emerald-950/25">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-emerald-100 [&::-webkit-details-marker]:hidden">
+            <details
+              className={`group mb-4 overflow-hidden rounded-2xl border ${
+                isGolf
+                  ? "border-emerald-800/70 bg-emerald-950/25"
+                  : sport === "nfl"
+                    ? "border-violet-800/70 bg-violet-950/25"
+                    : "border-orange-800/70 bg-orange-950/25"
+              }`}
+            >
+              <summary
+                className={`flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold [&::-webkit-details-marker]:hidden ${
+                  isGolf
+                    ? "text-emerald-100"
+                    : sport === "nfl"
+                      ? "text-violet-100"
+                      : "text-orange-100"
+                }`}
+              >
                 <span className="flex items-center gap-2">
                   <span aria-hidden="true">📝</span>
-                  Tournament Analysis
+                  MW Analysis
                 </span>
 
                 <span
                   aria-hidden="true"
-                  className="text-xs text-emerald-300 transition-transform group-open:rotate-180"
+                  className={`text-xs transition-transform group-open:rotate-180 ${
+                    isGolf
+                      ? "text-emerald-300"
+                      : sport === "nfl"
+                        ? "text-violet-300"
+                        : "text-orange-300"
+                  }`}
                 >
                   ▼
                 </span>
               </summary>
 
-              <div className="border-t border-emerald-900/70 px-4 py-4">
+              <div
+                className={`border-t px-4 py-4 ${
+                  isGolf
+                    ? "border-emerald-900/70"
+                    : sport === "nfl"
+                      ? "border-violet-900/70"
+                      : "border-orange-900/70"
+                }`}
+              >
                 <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">
                   {latestSlate.tournament_analysis.trim()}
                 </p>

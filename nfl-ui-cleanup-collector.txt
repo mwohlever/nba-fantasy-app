@@ -1,0 +1,3440 @@
+========================================
+NFL UI CLEANUP COLLECTOR
+========================================
+
+=== PLAYERPOOL NFL SEASON/CARD CODE ===
+828-    playerId:
+829-      number,
+830-  ) {
+831-    setComparePlayerIds(
+832-      (
+833-        previous,
+834-      ) => {
+835-        if (
+836-          previous.includes(
+837-            playerId,
+838-          )
+839-        ) {
+840-          return previous.filter(
+841-            (
+842-              id,
+843-            ) =>
+844-              id !==
+845-              playerId,
+846-          );
+847-        }
+848-
+849-        if (
+850-          previous.length >=
+851-          3
+852-        ) {
+853-          return previous;
+854-        }
+855-
+856-        return [
+857-          ...previous,
+858-          playerId,
+859-        ];
+860-      },
+861-    );
+862-  }
+863-
+864-  const comparePlayers =
+865-    comparePlayerIds
+866-      .map(
+867-        (
+868-          playerId,
+869-        ) =>
+870-          players.find(
+871-            (
+872-              player,
+873-            ) =>
+874-              player.id ===
+875-              playerId,
+876-          ),
+877-      )
+878-      .filter(
+879-        (
+880-          player,
+881-        ): player is Player =>
+882-          Boolean(
+883-            player,
+884-          ),
+885-      );
+886-
+887-  const seasonSortLabel =
+888-    sortBy ===
+889-      "season_pts"
+890-      ? "PTS"
+891-      : sortBy ===
+892-          "season_reb"
+893-        ? "REB"
+894-        : sortBy ===
+895-            "season_ast"
+896-          ? "AST"
+897-          : sortBy ===
+898-              "season_stl"
+899-            ? "STL"
+900-            : sortBy ===
+901-                "season_blk"
+902-              ? "BLK"
+903-              : sortBy ===
+904-                  "season_to"
+905-                ? "TO"
+906-                : "FP";
+907-
+908:  const nflSeasonSortLabel =
+909-    sortBy ===
+910-      "nfl_pass_yd"
+911-      ? "PASS"
+912-      : sortBy ===
+913-          "nfl_pass_td"
+914-        ? "P TD"
+915-        : sortBy ===
+916-            "nfl_int"
+917-          ? "INT"
+918-          : sortBy ===
+919-              "nfl_rush_yd"
+920-            ? "RUSH"
+921-            : sortBy ===
+922-                "nfl_rush_td"
+923-              ? "R TD"
+924-              : sortBy ===
+925-                  "nfl_targets"
+926-                ? "TGT"
+927-                : sortBy ===
+928-                    "nfl_receptions"
+929-                  ? "REC"
+930-                  : sortBy ===
+931-                      "nfl_rec_yd"
+932-                    ? "REC YD"
+933-                    : sortBy ===
+934-                        "nfl_rec_td"
+935-                      ? "REC TD"
+936-                      : "FP/G";
+937-
+938-  function nflSeasonSortValue(
+939-    stat:
+940-      NflSeasonStat | undefined,
+941-  ) {
+942-    if (
+943-      sortBy ===
+944-      "nfl_pass_yd"
+945-    ) {
+946-      return stat?.passing_yards_per_game;
+947-    }
+948-
+949-    if (
+950-      sortBy ===
+951-      "nfl_pass_td"
+952-    ) {
+953-      return stat?.passing_tds_per_game;
+954-    }
+955-
+956-    if (
+957-      sortBy ===
+958-      "nfl_int"
+959-    ) {
+960-      return stat?.passing_ints_per_game;
+961-    }
+962-
+963-    if (
+964-      sortBy ===
+965-      "nfl_rush_yd"
+966-    ) {
+967-      return stat?.rushing_yards_per_game;
+968-    }
+969-
+970-    if (
+971-      sortBy ===
+972-      "nfl_rush_td"
+973-    ) {
+974-      return stat?.rushing_tds_per_game;
+975-    }
+976-
+977-    if (
+978-      sortBy ===
+979-      "nfl_targets"
+980-    ) {
+981-      return stat?.receiving_targets_per_game;
+982-    }
+983-
+984-    if (
+985-      sortBy ===
+986-      "nfl_receptions"
+987-    ) {
+988-      return stat?.receptions_per_game;
+989-    }
+990-
+991-    if (
+992-      sortBy ===
+993-      "nfl_rec_yd"
+994-    ) {
+995-      return stat?.receiving_yards_per_game;
+996-    }
+997-
+998-    if (
+999-      sortBy ===
+1000-      "nfl_rec_td"
+1001-    ) {
+1002-      return stat?.receiving_tds_per_game;
+1003-    }
+1004-
+1005-    return stat?.fantasy_points_per_game;
+1006-  }
+1007-
+1008-  function seasonSortValue(
+1009-    stat:
+1010-      NbaSeasonStat | undefined,
+1011-  ) {
+1012-    if (
+1013-      sortBy ===
+1014-      "season_pts"
+1015-    ) {
+1016-      return stat?.points;
+1017-    }
+1018-
+1019-    if (
+1020-      sortBy ===
+1021-      "season_reb"
+1022-    ) {
+1023-      return stat?.rebounds;
+1024-    }
+1025-
+1026-    if (
+1027-      sortBy ===
+1028-      "season_ast"
+1029-    ) {
+1030-      return stat?.assists;
+1031-    }
+1032-
+1033-    if (
+1034-      sortBy ===
+1035-      "season_stl"
+1036-    ) {
+1037-      return stat?.steals;
+1038-    }
+1039-
+1040-    if (
+1041-      sortBy ===
+1042-      "season_blk"
+1043-    ) {
+1044-      return stat?.blocks;
+1045-    }
+1046-
+1047-    if (
+1048-      sortBy ===
+1049-      "season_to"
+1050-    ) {
+1051-      return stat?.turnovers;
+1052-    }
+1053-
+1054-    return stat?.fantasy_points;
+1055-  }
+1056-
+1057-  return (
+1058-    <section className="draft-player-pool">
+1059-      {hasSeasonResearch ? (
+1060-        <div className="mb-4 space-y-3 rounded-2xl border border-slate-700 bg-slate-950 p-3 text-white">
+1061-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1">
+1062-            <button
+1063-              type="button"
+1064-              onClick={() => {
+1065-                setResearchMode(
+1066-                  "league",
+1067-                );
+1068-
+1069-                setSortBy(
+1070-                  "projection",
+1071-                );
+1072-
+1073-                setCompareMode(
+1074-                  false,
+1075-                );
+1076-
+1077-                setComparePlayerIds(
+1078-                  [],
+1079-                );
+1080-              }}
+1081-              className={`rounded-lg px-3 py-2 text-sm font-black transition ${
+1082-                researchMode ===
+1083-                "league"
+1084-                  ? "bg-sky-600 text-white"
+1085-                  : "text-slate-400 hover:text-white"
+1086-              }`}
+1087-            >
+1088-              League History
+1089-            </button>
+1090-
+1091-            <button
+1092-              type="button"
+1093-              onClick={() => {
+1094-                setResearchMode(
+1095-                  "season",
+1096-                );
+1097-
+1098-                setSortBy(
+1099-                  isNfl
+1100-                    ? "nfl_fp"
+1101-                    : "season_fp",
+1102-                );
+1103-
+1104-                setCompareMode(
+1105-                  false,
+1106-                );
+1107-
+1108-                setComparePlayerIds(
+1109-                  [],
+1110-                );
+1111-              }}
+1112-              className={`rounded-lg px-3 py-2 text-sm font-black transition ${
+1113-                researchMode ===
+1114-                "season"
+1115-                  ? "bg-sky-600 text-white"
+1116-                  : "text-slate-400 hover:text-white"
+1117-              }`}
+1118-            >
+1119-              Season Stats
+1120-            </button>
+1121-          </div>
+1122-
+1123-          {!compareMode ? (
+1124-            <button
+1125-              type="button"
+1126-              onClick={() => {
+1127-                setCompareMode(
+1128-                  true,
+1129-                );
+1130-
+1131-                setComparePlayerIds(
+1132-                  [],
+1133-                );
+1134-              }}
+1135-              className="rounded-xl border border-sky-500/60 bg-slate-900 px-4 py-2 text-sm font-black text-sky-200 transition hover:bg-slate-800"
+1136-            >
+1137-              ⇄ Compare Players
+1138-            </button>
+1139-          ) : (
+1140-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+1141-              <div>
+1142-                <strong className="block">
+1143-                  Select 2–3 players
+1144-                </strong>
+1145-
+1146-                <span className="text-xs text-sky-300">
+1147-                  Tap player cards to compare.{" "}
+1148-                  {
+1149-                    comparePlayerIds.length
+1150-                  }
+1151-                  /3 selected
+1152-                </span>
+1153-              </div>
+1154-
+1155-              <div className="flex gap-2">
+1156-                <button
+1157-                  type="button"
+1158-                  onClick={() => {
+1159-                    setCompareMode(
+1160-                      false,
+1161-                    );
+1162-
+1163-                    setComparePlayerIds(
+1164-                      [],
+1165-                    );
+1166-                  }}
+1167-                  className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200"
+1168-                >
+--
+1457-          </label>
+1458-
+1459-          <div className="draft-player-results-count">
+1460-            <strong>
+1461-              {sortedFilteredPlayers.length}
+1462-            </strong>{" "}
+1463-            shown
+1464-            <span aria-hidden="true"> • </span>
+1465-            {isAvailabilityLoading
+1466-              ? "Checking slate…"
+1467-              : `${availablePlayerIdsForSlate.length} on slate`}
+1468-          </div>
+1469-        </div>
+1470-      </div>
+1471-
+1472-      {sortedFilteredPlayers.length === 0 ? (
+1473-        <div className="draft-player-empty">
+1474-          <div aria-hidden="true">
+1475-            {isGolf ? "⛳" : "🏀"}
+1476-          </div>
+1477-
+1478-          <strong>No players found</strong>
+1479-
+1480-          <p>
+1481-            {onSlateOnly
+1482-              ? "No players match these filters on the selected slate. Switch to All Players to browse everyone."
+1483-              : "Try another search or position filter."}
+1484-          </p>
+1485-        </div>
+1486-      ) : (
+1487-        <div className="draft-player-grid">
+1488-          {sortedFilteredPlayers.map((player) => {
+1489-            const ownerTeam =
+1490-              getOwnerTeamForPlayer(player.id);
+1491-
+1492-            const isOnSlate =
+1493-              availablePlayerIdSet.has(player.id);
+1494-
+1495-            const projectionMeta =
+1496-              playerProjections?.[player.id];
+1497-
+1498-            const seasonStat =
+1499-              nbaSeasonStatByPlayerId.get(
+1500-                player.id,
+1501-              );
+1502-
+1503-            const displayScore =
+1504-              isGolf
+1505-                ? player.owgr_rank
+1506-                : isNfl &&
+1507-                    researchMode ===
+1508-                      "season"
+1509-                  ? nflSeasonSortValue(
+1510-                      nflSeasonStatByPlayerId.get(
+1511-                        player.id,
+1512-                      ),
+1513-                    )
+1514-                  : isNba &&
+1515-                      researchMode ===
+1516-                        "season"
+1517-                    ? seasonSortValue(
+1518-                        seasonStat,
+1519-                      )
+1520-                    : sortBy ===
+1521-                      "average"
+1522-                    ? playerAverageMap.get(
+1523-                        player.id,
+1524-                      ) ?? 0
+1525-                    : projectionMeta?.projection ??
+1526-                      playerAverageMap.get(
+1527-                        player.id,
+1528-                      ) ??
+1529-                      0;
+1530-
+1531-            const scoreLabel =
+1532-              isGolf
+1533-                ? "OWGR"
+1534-                : isNfl &&
+1535-                    researchMode ===
+1536-                      "season"
+1537:                  ? nflSeasonSortLabel
+1538-                  : isNba &&
+1539-                      researchMode ===
+1540-                        "season"
+1541-                    ? seasonSortLabel
+1542-                    : sortBy ===
+1543-                      "average"
+1544-                    ? "Avg"
+1545-                    : "Proj";
+1546-
+1547-            const badges =
+1548-              projectionMeta?.badges ?? [];
+1549-
+1550-            return (
+1551-              <button
+1552-                key={player.id}
+1553-                type="button"
+1554-                disabled={isAssigningPlayer}
+1555-                onClick={() => {
+1556-                  if (
+1557-                    compareMode
+1558-                  ) {
+1559-                    toggleComparePlayer(
+1560-                      player.id,
+1561-                    );
+1562-
+1563-                    return;
+1564-                  }
+1565-
+1566-                  setDraftingPlayer(
+1567-                    player,
+1568-                  );
+1569-                }}
+1570-                className={`draft-player-card ${
+1571-                  ownerTeam
+1572-                    ? "draft-player-card--owned"
+1573-                    : ""
+1574-                } ${
+1575-                  comparePlayerIds.includes(
+1576-                    player.id,
+1577-                  )
+1578-                    ? "ring-2 ring-sky-400"
+1579-                    : ""
+1580-                }`}
+1581-              >
+1582-                <PlayerHeadshot
+1583-                  nbaPlayerId={
+1584-                    player.nba_player_id
+1585-                  }
+1586-                  nflPlayerId={
+1587-                    player.nfl_player_id
+1588-                  }
+1589-                  espnGolfPlayerId={
+1590-                    player.espn_player_id
+1591-                  }
+1592-                  imageUrl={
+1593-                    player.headshot_url
+1594-                  }
+1595-                  playerName={player.name}
+1596-                  size="md"
+1597-                  className="draft-player-card-headshot"
+1598-                />
+1599-
+1600-                <div className="draft-player-card-main">
+1601-                  <div className="draft-player-card-name-row">
+1602-                    <strong>{player.name}</strong>
+1603-
+1604-                    <span className="draft-player-position">
+1605-                      {player.position_group}
+1606-                    </span>
+1607-                  </div>
+1608-
+1609-                  <div className="draft-player-card-meta">
+1610-                    <span className="draft-player-score">
+1611-                      {scoreLabel}{" "}
+1612-                      {isGolf
+1613-                        ? displayScore == null
+1614-                          ? "—"
+1615-                          : `#${displayScore}`
+1616-                        : formatScore(displayScore)}
+1617-                    </span>
+1618-
+1619-                    {badges.includes("trophy") ||
+1620-                    badges.includes("winner") ? (
+1621-                      <span
+1622-                        title="Strong league history"
+1623-                        aria-label="Strong league history"
+1624-                      >
+1625-                        🏆
+1626-                      </span>
+1627-                    ) : null}
+1628-
+1629-                    {badges.includes("hot") ? (
+1630-                      <span
+1631-                        title="Trending up"
+1632-                        aria-label="Trending up"
+1633-                      >
+1634-                        🔥
+1635-                      </span>
+1636-                    ) : null}
+1637-
+1638-                    {badges.includes("cold") ? (
+1639-                      <span
+1640-                        title="Trending down"
+1641-                        aria-label="Trending down"
+1642-                      >
+1643-                        🧊
+1644-                      </span>
+1645-                    ) : null}
+1646-
+1647-                    {isOnSlate ? (
+1648-                      <span className="draft-player-on-slate">
+1649-                        On slate
+1650-                      </span>
+1651-                    ) : null}
+1652-                  </div>
+1653-                </div>
+1654-
+1655-                {isNfl &&
+1656-                researchMode ===
+1657-                  "season" &&
+1658-                nflSeasonStatByPlayerId.get(
+1659-                  player.id,
+1660-                ) ? (
+1661-                  (() => {
+1662-                    const stat =
+1663-                      nflSeasonStatByPlayerId.get(
+1664-                        player.id,
+1665-                      )!;
+1666-
+1667-                    const position =
+1668-                      String(
+1669-                        player.position_group ??
+1670-                          stat.position ??
+1671-                          "",
+1672-                      ).toUpperCase();
+1673-
+1674-                    const cardStats =
+1675-                      position ===
+1676-                      "QB"
+1677-                        ? [
+1678-                            {
+1679-                              label:
+1680-                                "PASS",
+1681-                              value:
+1682-                                stat.passing_yards_per_game,
+1683-                              key:
+1684-                                "nfl_pass_yd",
+1685-                            },
+1686-                            {
+1687-                              label:
+1688-                                "P TD",
+1689-                              value:
+1690-                                stat.passing_tds_per_game,
+1691-                              key:
+1692-                                "nfl_pass_td",
+1693-                            },
+1694-                            {
+1695-                              label:
+1696-                                "INT",
+1697-                              value:
+1698-                                stat.passing_ints_per_game,
+1699-                              key:
+1700-                                "nfl_int",
+1701-                            },
+1702-                            {
+1703-                              label:
+1704-                                "RUSH",
+1705-                              value:
+1706-                                stat.rushing_yards_per_game,
+1707-                              key:
+1708-                                "nfl_rush_yd",
+1709-                            },
+1710-                            {
+1711-                              label:
+1712-                                "R TD",
+1713-                              value:
+1714-                                stat.rushing_tds_per_game,
+1715-                              key:
+1716-                                "nfl_rush_td",
+1717-                            },
+1718-                          ]
+1719-                        : [
+1720-                            {
+1721-                              label:
+1722-                                "TGT",
+1723-                              value:
+1724-                                stat.receiving_targets_per_game,
+1725-                              key:
+1726-                                "nfl_targets",
+1727-                            },
+1728-                            {
+1729-                              label:
+1730-                                "REC",
+1731-                              value:
+1732-                                stat.receptions_per_game,
+1733-                              key:
+1734-                                "nfl_receptions",
+1735-                            },
+1736-                            {
+1737-                              label:
+1738-                                "REC YD",
+1739-                              value:
+1740-                                stat.receiving_yards_per_game,
+1741-                              key:
+1742-                                "nfl_rec_yd",
+1743-                            },
+1744-                            {
+1745-                              label:
+1746-                                "RUSH",
+1747-                              value:
+1748-                                stat.rushing_yards_per_game,
+1749-                              key:
+1750-                                "nfl_rush_yd",
+1751-                            },
+1752-                            {
+1753-                              label:
+1754-                                "TD",
+1755-                              value:
+1756-                                Number(
+1757-                                  stat.receiving_tds_per_game ??
+1758-                                    0,
+1759-                                ) +
+1760-                                Number(
+1761-                                  stat.rushing_tds_per_game ??
+1762-                                    0,
+1763-                                ),
+1764-                              key:
+1765-                                sortBy ===
+1766-                                "nfl_rush_td"
+1767-                                  ? "nfl_rush_td"
+1768-                                  : "nfl_rec_td",
+1769-                            },
+1770-                          ];
+1771-
+1772-                    return (
+1773-                      <div className="mt-2 grid grid-cols-5 gap-1 text-center text-[9px] leading-tight text-slate-500">
+1774-                        {cardStats.map(
+1775-                          (
+1776-                            item,
+1777-                          ) => {
+1778-                            const active =
+1779-                              item.key ===
+1780-                              sortBy;
+1781-
+1782-                            return (
+1783-                              <div
+1784-                                key={
+1785-                                  item.label
+1786-                                }
+1787-                                className={`rounded-lg px-1 py-1 ${
+1788-                                  active
+1789-                                    ? "border border-sky-300 bg-sky-50"
+1790-                                    : ""
+1791-                                }`}
+1792-                              >
+1793-                                <strong
+1794-                                  className={`block text-[12px] font-black leading-tight ${
+1795-                                    active
+1796-                                      ? "text-sky-800"
+1797-                                      : "text-slate-900"
+
+=== PLAYERPOOL COMPARE CODE ===
+
+=== PLAYERPOOL EMPTY STATE ===
+1438-                    Player Name
+1439-                  </option>
+1440-                </>
+1441-              ) : (
+1442-                <>
+1443-                  <option value="projection">
+1444-                    Projection
+1445-                  </option>
+1446-
+1447-                  <option value="average">
+1448-                    League Average
+1449-                  </option>
+1450-
+1451-                  <option value="name">
+1452-                    Player Name
+1453-                  </option>
+1454-                </>
+1455-              )}
+1456-            </select>
+1457-          </label>
+1458-
+1459-          <div className="draft-player-results-count">
+1460-            <strong>
+1461-              {sortedFilteredPlayers.length}
+1462-            </strong>{" "}
+1463-            shown
+1464-            <span aria-hidden="true"> • </span>
+1465-            {isAvailabilityLoading
+1466-              ? "Checking slate…"
+1467-              : `${availablePlayerIdsForSlate.length} on slate`}
+1468-          </div>
+1469-        </div>
+1470-      </div>
+1471-
+1472-      {sortedFilteredPlayers.length === 0 ? (
+1473-        <div className="draft-player-empty">
+1474-          <div aria-hidden="true">
+1475-            {isGolf ? "⛳" : "🏀"}
+1476-          </div>
+1477-
+1478:          <strong>No players found</strong>
+1479-
+1480-          <p>
+1481-            {onSlateOnly
+1482-              ? "No players match these filters on the selected slate. Switch to All Players to browse everyone."
+1483-              : "Try another search or position filter."}
+1484-          </p>
+1485-        </div>
+1486-      ) : (
+1487-        <div className="draft-player-grid">
+1488-          {sortedFilteredPlayers.map((player) => {
+1489-            const ownerTeam =
+1490-              getOwnerTeamForPlayer(player.id);
+1491-
+1492-            const isOnSlate =
+1493-              availablePlayerIdSet.has(player.id);
+1494-
+1495-            const projectionMeta =
+1496-              playerProjections?.[player.id];
+1497-
+1498-            const seasonStat =
+1499-              nbaSeasonStatByPlayerId.get(
+1500-                player.id,
+1501-              );
+1502-
+1503-            const displayScore =
+1504-              isGolf
+1505-                ? player.owgr_rank
+1506-                : isNfl &&
+1507-                    researchMode ===
+1508-                      "season"
+1509-                  ? nflSeasonSortValue(
+1510-                      nflSeasonStatByPlayerId.get(
+1511-                        player.id,
+1512-                      ),
+1513-                    )
+1514-                  : isNba &&
+1515-                      researchMode ===
+1516-                        "season"
+1517-                    ? seasonSortValue(
+1518-                        seasonStat,
+1519-                      )
+1520-                    : sortBy ===
+1521-                      "average"
+1522-                    ? playerAverageMap.get(
+1523-                        player.id,
+1524-                      ) ?? 0
+1525-                    : projectionMeta?.projection ??
+1526-                      playerAverageMap.get(
+1527-                        player.id,
+1528-                      ) ??
+1529-                      0;
+1530-
+1531-            const scoreLabel =
+1532-              isGolf
+1533-                ? "OWGR"
+1534-                : isNfl &&
+1535-                    researchMode ===
+1536-                      "season"
+1537-                  ? nflSeasonSortLabel
+1538-                  : isNba &&
+1539-                      researchMode ===
+1540-                        "season"
+1541-                    ? seasonSortLabel
+1542-                    : sortBy ===
+1543-                      "average"
+1544-                    ? "Avg"
+1545-                    : "Proj";
+1546-
+1547-            const badges =
+1548-              projectionMeta?.badges ?? [];
+1549-
+1550-            return (
+1551-              <button
+1552-                key={player.id}
+1553-                type="button"
+1554-                disabled={isAssigningPlayer}
+1555-                onClick={() => {
+1556-                  if (
+1557-                    compareMode
+1558-                  ) {
+1559-                    toggleComparePlayer(
+1560-                      player.id,
+1561-                    );
+1562-
+1563-                    return;
+1564-                  }
+1565-
+1566-                  setDraftingPlayer(
+1567-                    player,
+1568-                  );
+1569-                }}
+1570-                className={`draft-player-card ${
+1571-                  ownerTeam
+1572-                    ? "draft-player-card--owned"
+1573-                    : ""
+1574-                } ${
+1575-                  comparePlayerIds.includes(
+1576-                    player.id,
+1577-                  )
+1578-                    ? "ring-2 ring-sky-400"
+
+=== PLAYER HISTORY NFL COMPARE ===
+1033-                            <div className="shrink-0 text-right">
+1034-                              <div className="text-xl font-black text-slate-950">
+1035-                                {golfScore(
+1036-                                  history.golferScore ??
+1037-                                    history.fantasyPoints,
+1038-                                )}
+1039-                              </div>
+1040-
+1041-                              <div className="mt-1 text-xs font-bold">
+1042-                                {isFinal ? (
+1043-                                  <span className="text-slate-700">
+1044-                                    Team{" "}
+1045-                                    {ordinal(
+1046-                                      history.finishPosition,
+1047-                                    )}
+1048-                                  </span>
+1049-                                ) : isCut ? (
+1050-                                  <span className="text-red-600">
+1051-                                    CUT
+1052-                                  </span>
+1053-                                ) : (
+1054-                                  <span className="text-emerald-700">
+1055-                                    LIVE
+1056-                                  </span>
+1057-                                )}
+1058-                              </div>
+1059-                            </div>
+1060-                          </div>
+1061-
+1062-                          {stats ? (
+1063-                            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-slate-200 pt-3 text-xs text-slate-500">
+1064-                              <span>
+1065-                                {
+1066-                                  stats.birdies ??
+1067-                                  0
+1068-                                }{" "}
+1069-                                birdies
+1070-                              </span>
+1071-
+1072-                              <span>
+1073-                                {
+1074-                                  stats.eagles ??
+1075-                                  0
+1076-                                }{" "}
+1077-                                eagles
+1078-                              </span>
+1079-
+1080-                              {(stats.albatrosses ??
+1081-                                0) >
+1082-                              0 ? (
+1083-                                <span className="font-bold text-violet-700">
+1084-                                  {
+1085-                                    stats.albatrosses
+1086-                                  }{" "}
+1087-                                  albatross
+1088-                                </span>
+1089-                              ) : null}
+1090-
+1091-                              {(stats.holesInOne ??
+1092-                                0) >
+1093-                              0 ? (
+1094-                                <span className="font-bold text-amber-700">
+1095-                                  {
+1096-                                    stats.holesInOne
+1097-                                  }{" "}
+1098-                                  ace
+1099-                                </span>
+1100-                              ) : null}
+1101-
+1102-                              <span>
+1103-                                {
+1104-                                  stats.bogeys ??
+1105-                                  0
+1106-                                }{" "}
+1107-                                bogeys
+1108-                              </span>
+1109-
+1110-                              <span>
+1111-                                {
+1112-                                  stats.roundsUnderPar ??
+1113-                                  0
+1114-                                }{" "}
+1115-                                rounds under par
+1116-                              </span>
+1117-                            </div>
+1118-                          ) : null}
+1119-                        </div>
+1120-                      );
+1121-                    },
+1122-                  )
+1123-                )}
+1124-              </div>
+1125-            </section>
+1126-          </div>
+1127-        ) : null}
+1128-      </div>
+1129-    </div>
+1130-  );
+1131-}
+1132-
+1133:function PlayerCompareModal({
+1134-  rows,
+1135-  sport,
+1136-  historyMode,
+1137-  onClose,
+1138-}: {
+1139-  rows:
+1140-    PlayerHistoryRow[];
+1141-  sport:
+1142-    "nba" | "nfl" | "golf";
+1143-  historyMode:
+1144-    HistoryMode;
+1145-  onClose: () => void;
+1146-}) {
+1147-  if (
+1148-    rows.length < 2
+1149-  ) {
+1150-    return null;
+1151-  }
+1152-
+1153-  const isGolf =
+1154-    sport === "golf";
+1155-
+1156-  const isNbaSeason =
+1157-    sport ===
+1158-      "nba" &&
+1159-    historyMode ===
+1160-      "season";
+1161-
+1162-  const isNflSeason =
+1163-    sport ===
+1164-      "nfl" &&
+1165-    historyMode ===
+1166-      "season";
+1167-
+1168-  type CompareMetric = {
+1169-    label: string;
+1170-    value:
+1171-      (
+1172-        row:
+1173-          PlayerHistoryRow,
+1174-      ) =>
+1175-        number | null;
+1176-    display:
+1177-      (
+1178-        row:
+1179-          PlayerHistoryRow,
+1180-      ) =>
+1181-        string;
+1182-    better:
+1183-      "high" | "low";
+1184-  };
+1185-
+1186-  const metrics:
+1187-    CompareMetric[] =
+1188-    isNflSeason
+1189-      ? [
+1190-          {
+1191-            label:
+1192-              "FP/G",
+1193-            value:
+1194-              (row) =>
+1195-                row.nfl_fantasy_points_per_game ??
+1196-                null,
+1197-            display:
+1198-              (row) =>
+1199-                fmt(
+1200-                  row.nfl_fantasy_points_per_game,
+1201-                  2,
+1202-                ),
+1203-            better:
+1204-              "high",
+1205-          },
+1206-          {
+1207-            label:
+1208-              "Pass Yds/G",
+1209-            value:
+1210-              (row) =>
+1211-                row.nfl_passing_yards_per_game ??
+1212-                null,
+1213-            display:
+1214-              (row) =>
+1215-                fmt(
+1216-                  row.nfl_passing_yards_per_game,
+1217-                  1,
+1218-                ),
+1219-            better:
+1220-              "high",
+1221-          },
+1222-          {
+1223-            label:
+1224-              "Pass TD/G",
+1225-            value:
+1226-              (row) =>
+1227-                row.nfl_passing_tds_per_game ??
+1228-                null,
+1229-            display:
+1230-              (row) =>
+1231-                fmt(
+1232-                  row.nfl_passing_tds_per_game,
+1233-                  2,
+1234-                ),
+1235-            better:
+1236-              "high",
+1237-          },
+1238-          {
+1239-            label:
+1240-              "INT/G",
+1241-            value:
+1242-              (row) =>
+1243-                row.nfl_passing_ints_per_game ??
+1244-                null,
+1245-            display:
+1246-              (row) =>
+1247-                fmt(
+1248-                  row.nfl_passing_ints_per_game,
+1249-                  2,
+1250-                ),
+1251-            better:
+1252-              "low",
+1253-          },
+1254-          {
+1255-            label:
+1256-              "Rush Yds/G",
+1257-            value:
+1258-              (row) =>
+1259-                row.nfl_rushing_yards_per_game ??
+1260-                null,
+1261-            display:
+1262-              (row) =>
+1263-                fmt(
+1264-                  row.nfl_rushing_yards_per_game,
+1265-                  1,
+1266-                ),
+1267-            better:
+1268-              "high",
+1269-          },
+1270-          {
+1271-            label:
+1272-              "Rush TD/G",
+1273-            value:
+1274-              (row) =>
+1275-                row.nfl_rushing_tds_per_game ??
+1276-                null,
+1277-            display:
+1278-              (row) =>
+1279-                fmt(
+1280-                  row.nfl_rushing_tds_per_game,
+1281-                  2,
+1282-                ),
+1283-            better:
+1284-              "high",
+1285-          },
+1286-          {
+1287-            label:
+1288-              "Targets/G",
+1289-            value:
+1290-              (row) =>
+1291-                row.nfl_receiving_targets_per_game ??
+1292-                null,
+1293-            display:
+1294-              (row) =>
+1295-                fmt(
+1296-                  row.nfl_receiving_targets_per_game,
+1297-                  2,
+1298-                ),
+1299-            better:
+1300-              "high",
+1301-          },
+1302-          {
+1303-            label:
+1304-              "REC/G",
+1305-            value:
+1306-              (row) =>
+1307-                row.nfl_receptions_per_game ??
+1308-                null,
+1309-            display:
+1310-              (row) =>
+1311-                fmt(
+1312-                  row.nfl_receptions_per_game,
+1313-                  2,
+1314-                ),
+1315-            better:
+1316-              "high",
+1317-          },
+1318-          {
+1319-            label:
+1320-              "Rec Yds/G",
+1321-            value:
+1322-              (row) =>
+1323-                row.nfl_receiving_yards_per_game ??
+1324-                null,
+1325-            display:
+1326-              (row) =>
+1327-                fmt(
+1328-                  row.nfl_receiving_yards_per_game,
+1329-                  1,
+1330-                ),
+1331-            better:
+1332-              "high",
+1333-          },
+1334-          {
+1335-            label:
+1336-              "Rec TD/G",
+1337-            value:
+1338-              (row) =>
+1339-                row.nfl_receiving_tds_per_game ??
+1340-                null,
+1341-            display:
+1342-              (row) =>
+1343-                fmt(
+1344-                  row.nfl_receiving_tds_per_game,
+1345-                  2,
+1346-                ),
+1347-            better:
+1348-              "high",
+1349-          },
+1350-        ]
+1351-      : isNbaSeason
+1352-      ? [
+1353-          {
+1354-            label:
+1355-              "Fantasy Pts",
+1356-            value:
+1357-              (row) =>
+1358-                row.season_fantasy_points ??
+1359-                null,
+1360-            display:
+1361-              (row) =>
+1362-                fmt(
+1363-                  row.season_fantasy_points,
+1364-                  1,
+1365-                ),
+1366-            better:
+1367-              "high",
+1368-          },
+1369-          {
+1370-            label:
+1371-              "Points",
+1372-            value:
+1373-              (row) =>
+1374-                row.season_points ??
+1375-                null,
+1376-            display:
+1377-              (row) =>
+1378-                fmt(
+1379-                  row.season_points,
+1380-                  1,
+1381-                ),
+1382-            better:
+1383-              "high",
+1384-          },
+1385-          {
+1386-            label:
+1387-              "Rebounds",
+1388-            value:
+1389-              (row) =>
+1390-                row.season_rebounds ??
+1391-                null,
+1392-            display:
+1393-              (row) =>
+1394-                fmt(
+1395-                  row.season_rebounds,
+1396-                  1,
+1397-                ),
+1398-            better:
+1399-              "high",
+1400-          },
+1401-          {
+1402-            label:
+1403-              "Assists",
+1404-            value:
+1405-              (row) =>
+1406-                row.season_assists ??
+1407-                null,
+1408-            display:
+1409-              (row) =>
+1410-                fmt(
+1411-                  row.season_assists,
+1412-                  1,
+1413-                ),
+1414-            better:
+1415-              "high",
+1416-          },
+1417-          {
+1418-            label:
+1419-              "Steals",
+1420-            value:
+1421-              (row) =>
+1422-                row.season_steals ??
+1423-                null,
+1424-            display:
+1425-              (row) =>
+1426-                fmt(
+1427-                  row.season_steals,
+1428-                  1,
+1429-                ),
+1430-            better:
+1431-              "high",
+1432-          },
+1433-          {
+1434-            label:
+1435-              "Blocks",
+1436-            value:
+1437-              (row) =>
+1438-                row.season_blocks ??
+1439-                null,
+1440-            display:
+1441-              (row) =>
+1442-                fmt(
+1443-                  row.season_blocks,
+1444-                  1,
+1445-                ),
+1446-            better:
+1447-              "high",
+1448-          },
+1449-          {
+1450-            label:
+1451-              "Turnovers",
+1452-            value:
+1453-              (row) =>
+1454-                row.season_turnovers ??
+1455-                null,
+1456-            display:
+1457-              (row) =>
+1458-                fmt(
+1459-                  row.season_turnovers,
+1460-                  1,
+1461-                ),
+1462-            better:
+1463-              "low",
+1464-          },
+1465-        ]
+1466-      : isGolf
+1467-      ? [
+1468-          {
+1469-            label:
+1470-              "Avg Score",
+1471-            value:
+1472-              (row) =>
+1473-                row.avg_score,
+1474-            display:
+1475-              (row) =>
+1476-                golfScore(
+1477-                  row.avg_score,
+1478-                ),
+1479-            better:
+1480-              "low",
+1481-          },
+1482-          {
+1483-            label:
+1484-              "Best Score",
+1485-            value:
+1486-              (row) =>
+1487-                row.high_score,
+1488-            display:
+1489-              (row) =>
+1490-                golfScore(
+1491-                  row.high_score,
+1492-                ),
+1493-            better:
+1494-              "low",
+1495-          },
+1496-          {
+1497-            label:
+1498-              "Times Drafted",
+1499-            value:
+1500-              (row) =>
+1501-                row.times_drafted,
+1502-            display:
+1503-              (row) =>
+1504-                String(
+1505-                  row.times_drafted,
+1506-                ),
+1507-            better:
+1508-              "high",
+1509-          },
+1510-          {
+1511-            label:
+1512-              "Wins",
+1513-            value:
+1514-              (row) =>
+1515-                row.winning_lineups,
+1516-            display:
+1517-              (row) =>
+1518-                String(
+1519-                  row.winning_lineups,
+1520-                ),
+1521-            better:
+1522-              "high",
+1523-          },
+1524-          {
+1525-            label:
+1526-              "Podiums",
+1527-            value:
+1528-              (row) =>
+1529-                row.podium_lineups ??
+1530-                0,
+1531-            display:
+1532-              (row) =>
+1533-                String(
+1534-                  row.podium_lineups ??
+1535-                    0,
+1536-                ),
+1537-            better:
+1538-              "high",
+1539-          },
+1540-          {
+1541-            label:
+1542-              "Avg Finish",
+1543-            value:
+1544-              (row) =>
+1545-                row.avg_finish,
+1546-            display:
+1547-              (row) =>
+1548-                row.avg_finish ===
+1549-                null
+1550-                  ? "—"
+1551-                  : fmt(
+1552-                      row.avg_finish,
+1553-                      1,
+1554-                    ),
+1555-            better:
+1556-              "low",
+1557-          },
+1558-          {
+1559-            label:
+1560-              "Cuts",
+1561-            value:
+1562-              (row) =>
+1563-                row.cuts_made_pct ??
+1564-                null,
+1565-            display:
+1566-              (row) =>
+1567-                row.cut_opportunities
+1568-                  ? `${row.cuts_made ?? 0}/${row.cut_opportunities} · ${fmt(
+1569-                      row.cuts_made_pct,
+1570-                      0,
+1571-                    )}%`
+1572-                  : "—",
+1573-            better:
+1574-              "high",
+1575-          },
+1576-          {
+1577-            label:
+1578-              "Rounds Under Par",
+1579-            value:
+1580-              (row) =>
+1581-                row.rounds_under_par ??
+1582-                0,
+1583-            display:
+1584-              (row) =>
+1585-                `${row.rounds_under_par ?? 0}/${row.completed_rounds ?? 0}`,
+1586-            better:
+1587-              "high",
+1588-          },
+1589-          {
+1590-            label:
+1591-              "Birdies",
+1592-            value:
+1593-              (row) =>
+1594-                row.birdies ??
+1595-                0,
+1596-            display:
+1597-              (row) =>
+1598-                String(
+1599-                  row.birdies ??
+1600-                    0,
+1601-                ),
+1602-            better:
+1603-              "high",
+1604-          },
+1605-          {
+1606-            label:
+1607-              "Eagles",
+1608-            value:
+1609-              (row) =>
+1610-                row.eagles ??
+1611-                0,
+1612-            display:
+1613-              (row) =>
+1614-                String(
+1615-                  row.eagles ??
+1616-                    0,
+1617-                ),
+1618-            better:
+1619-              "high",
+1620-          },
+1621-          {
+1622-            label:
+1623-              "Albatrosses",
+1624-            value:
+1625-              (row) =>
+1626-                row.albatrosses ??
+1627-                0,
+1628-            display:
+1629-              (row) =>
+1630-                String(
+1631-                  row.albatrosses ??
+1632-                    0,
+1633-                ),
+
+=== PLAYER HISTORY NFL METRICS ===
+4-  useEffect,
+5-  useMemo,
+6-  useState,
+7-} from "react";
+8-
+9-import AppNav from "@/components/AppNav";
+10-import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+11-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+12-import type {
+13-  Player,
+14-} from "@/components/lineups/types";
+15-import {
+16-  useSelectedSport,
+17-} from "@/components/providers/SportProvider";
+18-
+19-type PlayerHistoryRow = {
+20-  player_id: number;
+21-  player_name: string;
+22-
+23-  nba_player_id: number | null;
+24-  nfl_player_id: number | null;
+25-
+26-  espn_golf_player_id?: string | null;
+27-  headshot_url?: string | null;
+28-  country?: string | null;
+29-  owgr_rank?: number | null;
+30-
+31-  times_drafted: number;
+32-
+33-  avg_score: number;
+34-  high_score: number;
+35-  low_score: number;
+36-
+37-  winning_lineups: number;
+38-  runner_up_lineups: number;
+39-  podium_lineups?: number;
+40-
+41-  avg_finish: number | null;
+42-
+43-  cuts_made?: number;
+44-  cut_opportunities?: number;
+45-  cuts_made_pct?: number | null;
+46-
+47-  completed_rounds?: number;
+48-  rounds_under_par?: number;
+49-
+50-  birdies?: number;
+51-  eagles?: number;
+52-  albatrosses?: number;
+53-  holes_in_one?: number;
+54-  pars?: number;
+55-  bogeys?: number;
+56-  double_bogeys_or_worse?: number;
+57-
+58-  /*
+59-   * Real-world professional season statistics.
+60-   * These are populated in Season Stats mode and
+61-   * intentionally remain separate from 111 History.
+62-   */
+63-  position_group?: string | null;
+64-  team_abbreviation?: string | null;
+65-
+66-  season_games_played?: number | null;
+67-  season_fantasy_points?: number | null;
+68-  season_points?: number | null;
+69-  season_rebounds?: number | null;
+70-  season_assists?: number | null;
+71-  season_steals?: number | null;
+72-  season_blocks?: number | null;
+73-  season_turnovers?: number | null;
+74-
+75-  /*
+76-   * NFL professional-season research stats.
+77-   * Per-game values are used for ranking/comparison
+78-   * so missed games do not distort player quality.
+79-   */
+80-  nfl_games_played?: number | null;
+81-
+82-  nfl_fantasy_points_per_game?: number | null;
+83-
+84:  nfl_passing_yards_per_game?: number | null;
+85-  nfl_passing_tds_per_game?: number | null;
+86-  nfl_passing_ints_per_game?: number | null;
+87-
+88-  nfl_rushing_yards_per_game?: number | null;
+89-  nfl_rushing_tds_per_game?: number | null;
+90-
+91-  nfl_receiving_targets_per_game?: number | null;
+92-  nfl_receptions_per_game?: number | null;
+93-  nfl_receiving_yards_per_game?: number | null;
+94-  nfl_receiving_tds_per_game?: number | null;
+95-
+96-  nfl_fumbles_lost_per_game?: number | null;
+97-};
+98-
+99-type SortKey =
+100-  | "player_name"
+101-  | "times_drafted"
+102-  | "avg_score"
+103-  | "high_score"
+104-  | "low_score"
+105-  | "winning_lineups"
+106-  | "runner_up_lineups"
+107-  | "podium_lineups"
+108-  | "avg_finish"
+109-  | "cuts_made_pct"
+110-  | "birdies"
+111-  | "eagles"
+112-  | "albatrosses"
+113-  | "holes_in_one"
+114-  | "rounds_under_par"
+115-  | "season_fantasy_points"
+116-  | "season_points"
+117-  | "season_rebounds"
+118-  | "season_assists"
+119-  | "season_steals"
+120-  | "season_blocks"
+121-  | "season_turnovers"
+122-  | "nfl_fp"
+123-  | "nfl_pass_yd"
+124-  | "nfl_pass_td"
+125-  | "nfl_int"
+126-  | "nfl_rush_yd"
+127-  | "nfl_rush_td"
+128-  | "nfl_targets"
+129-  | "nfl_receptions"
+130-  | "nfl_rec_yd"
+131-  | "nfl_rec_td";
+132-
+133-type SortDirection =
+134-  | "asc"
+135-  | "desc";
+136-
+137-type HistoryMode =
+138-  | "league"
+139-  | "season";
+140-
+141-type ApiResponse = {
+142-  success: boolean;
+143-  season: number | "all";
+144-  sport?: string;
+145-  playerHistory:
+146-    PlayerHistoryRow[];
+147-};
+148-
+149-type GolfProfile = {
+150-  success: boolean;
+151-
+152-  selectedSeason:
+153-    number | "all";
+154-
+155-  player: {
+156-    id: number;
+157-    name: string;
+158-    position_group:
+159-      string | null;
+160-
+161-    country?: string | null;
+162-
+163-    owgrRank?:
+164-      number | null;
+165-
+166-    owgrUpdatedAt?:
+167-      string | null;
+168-
+169-    espnGolfPlayerId?:
+170-      string | null;
+171-
+172-    headshotUrl?:
+173-      string | null;
+174-  };
+175-
+176-  summary: {
+177-    timesDrafted: number;
+178-
+179-    wins: number;
+180-    runnerUps: number;
+181-    podiums?: number;
+182-
+183-    winRate:
+184-      number | null;
+185-
+186-    draftedMostBy: {
+187-      teamName: string;
+188-      count: number;
+189-    } | null;
+190-
+191-    draftedByBreakdown:
+192-      Array<{
+193-        teamName: string;
+194-        count: number;
+195-      }>;
+196-
+197-    averageFantasyPoints:
+198-      number | null;
+199-
+200-    bestFantasyPoints:
+201-      number | null;
+202-
+203-    worstFantasyPoints:
+204-      number | null;
+205-
+206-    averageFinish:
+207-      number | null;
+208-
+209-    cutsMade?: number;
+210-    cutOpportunities?: number;
+211-    cutsMadePct?:
+212-      number | null;
+213-
+214-    birdies?: number;
+215-    eagles?: number;
+216-    albatrosses?: number;
+217-    holesInOne?: number;
+218-
+219-    pars?: number;
+220-    bogeys?: number;
+221-    doubleBogeysOrWorse?:
+222-      number;
+223-
+224-    roundsUnderPar?: number;
+225-    completedRounds?: number;
+226-  };
+227-
+228-  recentHistory:
+229-    Array<{
+230-      slateId:
+231-        number;
+232-
+233-      slateLabel:
+234-        string;
+235-
+236-      teamName:
+237-        string;
+238-
+239-      finishPosition:
+240-        number | null;
+241-
+242-      fantasyPoints:
+243-        number | null;
+244-
+245-      golferScore?:
+246-        number | null;
+247-
+248-      status?:
+249-        string | null;
+250-
+251-      madeCut?:
+252-        boolean | null;
+253-
+254-      stats?: {
+255-        birdies?: number;
+256-        eagles?: number;
+257-        albatrosses?: number;
+258-        holesInOne?: number;
+259-
+260-        pars?: number;
+261-        bogeys?: number;
+262-        doubleBogeysOrWorse?:
+263-          number;
+264-
+265-        roundsUnderPar?:
+266-          number;
+267-
+268-        completedRounds?:
+269-          number;
+270-      };
+271-    }>;
+272-};
+273-
+274-function golfScore(
+275-  value:
+276-    number | null | undefined,
+277-  digits = 1,
+278-) {
+279-  if (
+280-    value === null ||
+281-    value === undefined ||
+282-    !Number.isFinite(
+283-      Number(value),
+284-    )
+285-  ) {
+286-    return "—";
+287-  }
+288-
+289-  const numeric =
+290-    Number(value);
+291-
+292-  const rounded =
+293-    Number(
+294-      numeric.toFixed(
+295-        digits,
+296-      ),
+297-    );
+298-
+299-  if (rounded === 0) {
+300-    return "E";
+301-  }
+302-
+303-  if (rounded > 0) {
+304-    return `+${rounded}`;
+305-  }
+306-
+307-  return String(
+308-    rounded,
+309-  );
+310-}
+311-
+312-function fmt(
+313-  value:
+314-    number | null | undefined,
+315-  digits = 1,
+316-) {
+317-  if (
+318-    value === null ||
+319-    value === undefined
+320-  ) {
+321-    return "—";
+322-  }
+323-
+324-  return Number(
+325-    value,
+326-  ).toFixed(
+327-    digits,
+328-  );
+329-}
+330-
+331-function ordinal(
+332-  position:
+333-    number | null | undefined,
+334-) {
+--
+1131-}
+1132-
+1133-function PlayerCompareModal({
+1134-  rows,
+1135-  sport,
+1136-  historyMode,
+1137-  onClose,
+1138-}: {
+1139-  rows:
+1140-    PlayerHistoryRow[];
+1141-  sport:
+1142-    "nba" | "nfl" | "golf";
+1143-  historyMode:
+1144-    HistoryMode;
+1145-  onClose: () => void;
+1146-}) {
+1147-  if (
+1148-    rows.length < 2
+1149-  ) {
+1150-    return null;
+1151-  }
+1152-
+1153-  const isGolf =
+1154-    sport === "golf";
+1155-
+1156-  const isNbaSeason =
+1157-    sport ===
+1158-      "nba" &&
+1159-    historyMode ===
+1160-      "season";
+1161-
+1162-  const isNflSeason =
+1163-    sport ===
+1164-      "nfl" &&
+1165-    historyMode ===
+1166-      "season";
+1167-
+1168-  type CompareMetric = {
+1169-    label: string;
+1170-    value:
+1171-      (
+1172-        row:
+1173-          PlayerHistoryRow,
+1174-      ) =>
+1175-        number | null;
+1176-    display:
+1177-      (
+1178-        row:
+1179-          PlayerHistoryRow,
+1180-      ) =>
+1181-        string;
+1182-    better:
+1183-      "high" | "low";
+1184-  };
+1185-
+1186-  const metrics:
+1187-    CompareMetric[] =
+1188-    isNflSeason
+1189-      ? [
+1190-          {
+1191-            label:
+1192-              "FP/G",
+1193-            value:
+1194-              (row) =>
+1195-                row.nfl_fantasy_points_per_game ??
+1196-                null,
+1197-            display:
+1198-              (row) =>
+1199-                fmt(
+1200-                  row.nfl_fantasy_points_per_game,
+1201-                  2,
+1202-                ),
+1203-            better:
+1204-              "high",
+1205-          },
+1206-          {
+1207-            label:
+1208-              "Pass Yds/G",
+1209-            value:
+1210-              (row) =>
+1211:                row.nfl_passing_yards_per_game ??
+1212-                null,
+1213-            display:
+1214-              (row) =>
+1215-                fmt(
+1216:                  row.nfl_passing_yards_per_game,
+1217-                  1,
+1218-                ),
+1219-            better:
+1220-              "high",
+1221-          },
+1222-          {
+1223-            label:
+1224-              "Pass TD/G",
+1225-            value:
+1226-              (row) =>
+1227-                row.nfl_passing_tds_per_game ??
+1228-                null,
+1229-            display:
+1230-              (row) =>
+1231-                fmt(
+1232-                  row.nfl_passing_tds_per_game,
+1233-                  2,
+1234-                ),
+1235-            better:
+1236-              "high",
+1237-          },
+1238-          {
+1239-            label:
+1240-              "INT/G",
+1241-            value:
+1242-              (row) =>
+1243-                row.nfl_passing_ints_per_game ??
+1244-                null,
+1245-            display:
+1246-              (row) =>
+1247-                fmt(
+1248-                  row.nfl_passing_ints_per_game,
+1249-                  2,
+1250-                ),
+1251-            better:
+1252-              "low",
+1253-          },
+1254-          {
+1255-            label:
+1256-              "Rush Yds/G",
+1257-            value:
+1258-              (row) =>
+1259-                row.nfl_rushing_yards_per_game ??
+1260-                null,
+1261-            display:
+1262-              (row) =>
+1263-                fmt(
+1264-                  row.nfl_rushing_yards_per_game,
+1265-                  1,
+1266-                ),
+1267-            better:
+1268-              "high",
+1269-          },
+1270-          {
+1271-            label:
+1272-              "Rush TD/G",
+1273-            value:
+1274-              (row) =>
+1275-                row.nfl_rushing_tds_per_game ??
+1276-                null,
+1277-            display:
+1278-              (row) =>
+1279-                fmt(
+1280-                  row.nfl_rushing_tds_per_game,
+1281-                  2,
+1282-                ),
+1283-            better:
+1284-              "high",
+1285-          },
+1286-          {
+1287-            label:
+1288-              "Targets/G",
+1289-            value:
+1290-              (row) =>
+1291-                row.nfl_receiving_targets_per_game ??
+1292-                null,
+1293-            display:
+1294-              (row) =>
+1295-                fmt(
+1296-                  row.nfl_receiving_targets_per_game,
+1297-                  2,
+1298-                ),
+1299-            better:
+1300-              "high",
+1301-          },
+1302-          {
+1303-            label:
+1304-              "REC/G",
+1305-            value:
+1306-              (row) =>
+1307-                row.nfl_receptions_per_game ??
+1308-                null,
+1309-            display:
+1310-              (row) =>
+1311-                fmt(
+1312-                  row.nfl_receptions_per_game,
+1313-                  2,
+1314-                ),
+1315-            better:
+1316-              "high",
+1317-          },
+1318-          {
+1319-            label:
+1320-              "Rec Yds/G",
+1321-            value:
+1322-              (row) =>
+1323-                row.nfl_receiving_yards_per_game ??
+1324-                null,
+1325-            display:
+1326-              (row) =>
+1327-                fmt(
+1328-                  row.nfl_receiving_yards_per_game,
+1329-                  1,
+1330-                ),
+1331-            better:
+1332-              "high",
+1333-          },
+1334-          {
+1335-            label:
+1336-              "Rec TD/G",
+1337-            value:
+1338-              (row) =>
+1339-                row.nfl_receiving_tds_per_game ??
+1340-                null,
+1341-            display:
+1342-              (row) =>
+1343-                fmt(
+1344-                  row.nfl_receiving_tds_per_game,
+1345-                  2,
+1346-                ),
+1347-            better:
+1348-              "high",
+1349-          },
+1350-        ]
+1351-      : isNbaSeason
+1352-      ? [
+1353-          {
+1354-            label:
+1355-              "Fantasy Pts",
+1356-            value:
+1357-              (row) =>
+1358-                row.season_fantasy_points ??
+1359-                null,
+1360-            display:
+1361-              (row) =>
+1362-                fmt(
+1363-                  row.season_fantasy_points,
+1364-                  1,
+1365-                ),
+1366-            better:
+1367-              "high",
+1368-          },
+1369-          {
+1370-            label:
+1371-              "Points",
+1372-            value:
+1373-              (row) =>
+1374-                row.season_points ??
+1375-                null,
+1376-            display:
+1377-              (row) =>
+1378-                fmt(
+1379-                  row.season_points,
+1380-                  1,
+1381-                ),
+1382-            better:
+1383-              "high",
+1384-          },
+1385-          {
+1386-            label:
+1387-              "Rebounds",
+1388-            value:
+1389-              (row) =>
+1390-                row.season_rebounds ??
+1391-                null,
+1392-            display:
+1393-              (row) =>
+1394-                fmt(
+1395-                  row.season_rebounds,
+1396-                  1,
+1397-                ),
+1398-            better:
+1399-              "high",
+1400-          },
+1401-          {
+1402-            label:
+1403-              "Assists",
+1404-            value:
+1405-              (row) =>
+1406-                row.season_assists ??
+1407-                null,
+1408-            display:
+1409-              (row) =>
+1410-                fmt(
+1411-                  row.season_assists,
+1412-                  1,
+1413-                ),
+1414-            better:
+1415-              "high",
+1416-          },
+1417-          {
+1418-            label:
+1419-              "Steals",
+1420-            value:
+1421-              (row) =>
+1422-                row.season_steals ??
+1423-                null,
+1424-            display:
+1425-              (row) =>
+1426-                fmt(
+1427-                  row.season_steals,
+1428-                  1,
+1429-                ),
+1430-            better:
+1431-              "high",
+1432-          },
+1433-          {
+1434-            label:
+1435-              "Blocks",
+1436-            value:
+1437-              (row) =>
+1438-                row.season_blocks ??
+1439-                null,
+1440-            display:
+1441-              (row) =>
+1442-                fmt(
+1443-                  row.season_blocks,
+1444-                  1,
+1445-                ),
+1446-            better:
+1447-              "high",
+1448-          },
+1449-          {
+1450-            label:
+1451-              "Turnovers",
+1452-            value:
+1453-              (row) =>
+1454-                row.season_turnovers ??
+1455-                null,
+1456-            display:
+1457-              (row) =>
+1458-                fmt(
+1459-                  row.season_turnovers,
+1460-                  1,
+1461-                ),
+1462-            better:
+1463-              "low",
+1464-          },
+1465-        ]
+1466-      : isGolf
+--
+2516-                  ? rawRows
+2517-                  : []
+2518-              ).map(
+2519-                (
+2520-                  row:
+2521-                    any,
+2522-                ) => {
+2523-                  const fantasyPoints =
+2524-                    Number(
+2525-                      row.fantasy_points_per_game ??
+2526-                        0,
+2527-                    );
+2528-
+2529-                  return {
+2530-                    player_id:
+2531-                      Number(
+2532-                        row.player_id,
+2533-                      ),
+2534-
+2535-                    player_name:
+2536-                      String(
+2537-                        row.player_name ??
+2538-                          "Unknown Player",
+2539-                      ),
+2540-
+2541-                    nba_player_id:
+2542-                      null,
+2543-
+2544-                    nfl_player_id:
+2545-                      row.nfl_player_id ===
+2546-                        null ||
+2547-                      row.nfl_player_id ===
+2548-                        undefined
+2549-                        ? null
+2550-                        : Number(
+2551-                            row.nfl_player_id,
+2552-                          ),
+2553-
+2554-                    times_drafted:
+2555-                      0,
+2556-
+2557-                    avg_score:
+2558-                      fantasyPoints,
+2559-
+2560-                    high_score:
+2561-                      fantasyPoints,
+2562-
+2563-                    low_score:
+2564-                      fantasyPoints,
+2565-
+2566-                    winning_lineups:
+2567-                      0,
+2568-
+2569-                    runner_up_lineups:
+2570-                      0,
+2571-
+2572-                    avg_finish:
+2573-                      null,
+2574-
+2575-                    position_group:
+2576-                      row.position_group ??
+2577-                      row.position ??
+2578-                      null,
+2579-
+2580-                    team_abbreviation:
+2581-                      row.team_abbreviation ??
+2582-                      null,
+2583-
+2584-                    nfl_games_played:
+2585-                      Number(
+2586-                        row.games_played ??
+2587-                          0,
+2588-                      ),
+2589-
+2590-                    nfl_fantasy_points_per_game:
+2591-                      Number(
+2592-                        row.fantasy_points_per_game ??
+2593-                          0,
+2594-                      ),
+2595-
+2596:                    nfl_passing_yards_per_game:
+2597-                      Number(
+2598:                        row.passing_yards_per_game ??
+2599-                          0,
+2600-                      ),
+2601-
+2602-                    nfl_passing_tds_per_game:
+2603-                      Number(
+2604-                        row.passing_tds_per_game ??
+2605-                          0,
+2606-                      ),
+2607-
+2608-                    nfl_passing_ints_per_game:
+2609-                      Number(
+2610-                        row.passing_ints_per_game ??
+2611-                          0,
+2612-                      ),
+2613-
+2614-                    nfl_rushing_yards_per_game:
+2615-                      Number(
+2616-                        row.rushing_yards_per_game ??
+2617-                          0,
+2618-                      ),
+2619-
+2620-                    nfl_rushing_tds_per_game:
+2621-                      Number(
+2622-                        row.rushing_tds_per_game ??
+2623-                          0,
+2624-                      ),
+2625-
+2626-                    nfl_receiving_targets_per_game:
+2627-                      Number(
+2628-                        row.receiving_targets_per_game ??
+2629-                          0,
+2630-                      ),
+2631-
+2632-                    nfl_receptions_per_game:
+2633-                      Number(
+2634-                        row.receptions_per_game ??
+2635-                          0,
+2636-                      ),
+2637-
+2638-                    nfl_receiving_yards_per_game:
+2639-                      Number(
+2640-                        row.receiving_yards_per_game ??
+2641-                          0,
+2642-                      ),
+2643-
+2644-                    nfl_receiving_tds_per_game:
+2645-                      Number(
+2646-                        row.receiving_tds_per_game ??
+2647-                          0,
+2648-                      ),
+2649-
+2650-                    nfl_fumbles_lost_per_game:
+2651-                      Number(
+2652-                        row.fumbles_lost_per_game ??
+2653-                          0,
+2654-                      ),
+2655-                  };
+2656-                },
+2657-              )
+2658-            : (
+2659-                Array.isArray(
+2660-                  rawRows,
+2661-                )
+2662-                  ? rawRows
+2663-                  : []
+2664-              );
+2665-
+2666-      setRows(
+2667-        nextRows,
+2668-      );
+2669-    } catch (
+2670-      error
+2671-    ) {
+2672-      console.error(
+2673-        error,
+2674-      );
+2675-
+2676-      setRows([]);
+2677-
+2678-      setMessage(
+2679-        historyMode ===
+2680-        "season"
+2681-          ? "Something went wrong while loading season stats."
+2682-          : "Something went wrong while loading player history.",
+2683-      );
+2684-    } finally {
+2685-      setIsLoading(
+2686-        false,
+2687-      );
+2688-    }
+2689-  }
+2690-
+2691-  function defaultDirection(
+2692-    key:
+2693-      SortKey,
+2694-  ): SortDirection {
+2695-    if (
+2696-      key ===
+2697-      "player_name"
+2698-    ) {
+2699-      return "asc";
+2700-    }
+2701-
+2702-    if (
+2703-      isGolf &&
+2704-      [
+2705-        "avg_score",
+2706-        "high_score",
+2707-        "low_score",
+2708-        "avg_finish",
+2709-      ].includes(
+2710-        key,
+2711-      )
+2712-    ) {
+2713-      return "asc";
+2714-    }
+2715-
+2716-    return "desc";
+2717-  }
+2718-
+2719-  function handleSort(
+2720-    nextKey:
+2721-      SortKey,
+2722-  ) {
+2723-    if (
+2724-      sortKey ===
+2725-      nextKey
+2726-    ) {
+2727-      setSortDirection(
+2728-        (
+2729-          previous,
+2730-        ) =>
+2731-          previous ===
+2732-          "asc"
+2733-            ? "desc"
+2734-            : "asc",
+2735-      );
+2736-
+2737-      return;
+2738-    }
+2739-
+2740-    setSortKey(
+2741-      nextKey,
+2742-    );
+2743-
+2744-    setSortDirection(
+2745-      defaultDirection(
+2746-        nextKey,
+2747-      ),
+2748-    );
+2749-  }
+2750-
+2751-  const filteredRows =
+2752-    useMemo(() => {
+2753-      const normalizedSearch =
+2754-        searchTerm
+2755-          .trim()
+2756-          .toLowerCase();
+2757-
+2758-      const filtered =
+2759-        rows.filter(
+2760-          (row) => {
+2761-            const matchesSearch =
+2762-              !normalizedSearch ||
+2763-              row.player_name
+2764-                .toLowerCase()
+2765-                .includes(
+2766-                  normalizedSearch,
+2767-                );
+2768-
+2769-            const matchesMinDrafted =
+2770-              historyMode ===
+2771-                "season" ||
+2772-              row.times_drafted >=
+2773-                minTimesDrafted;
+2774-
+2775-            return (
+2776-              matchesSearch &&
+2777-              matchesMinDrafted
+2778-            );
+2779-          },
+2780-        );
+2781-
+2782-      filtered.sort(
+2783-        (a, b) => {
+2784-          let comparison =
+2785-            0;
+2786-
+2787-          switch (
+2788-            sortKey
+2789-          ) {
+2790-            case "player_name":
+2791-              comparison =
+2792-                a.player_name.localeCompare(
+2793-                  b.player_name,
+2794-                );
+2795-              break;
+2796-
+2797-            case "times_drafted":
+2798-              comparison =
+2799-                a.times_drafted -
+2800-                b.times_drafted;
+2801-              break;
+2802-
+2803-            case "avg_score":
+2804-              comparison =
+2805-                a.avg_score -
+2806-                b.avg_score;
+2807-              break;
+2808-
+2809-            case "high_score":
+2810-              comparison =
+2811-                a.high_score -
+2812-                b.high_score;
+2813-              break;
+2814-
+2815-            case "low_score":
+2816-              comparison =
+2817-                a.low_score -
+2818-                b.low_score;
+2819-              break;
+2820-
+2821-            case "winning_lineups":
+2822-              comparison =
+2823-                a.winning_lineups -
+2824-                b.winning_lineups;
+2825-              break;
+2826-
+2827-            case "runner_up_lineups":
+2828-              comparison =
+2829-                a.runner_up_lineups -
+2830-                b.runner_up_lineups;
+2831-              break;
+2832-
+2833-            case "podium_lineups":
+2834-              comparison =
+2835-                (
+2836-                  a.podium_lineups ??
+2837-                  0
+2838-                ) -
+2839-                (
+2840-                  b.podium_lineups ??
+2841-                  0
+2842-                );
+2843-              break;
+2844-
+2845-            case "avg_finish":
+2846-              comparison =
+2847-                (
+2848-                  a.avg_finish ??
+--
+2948-                  b.season_points ??
+2949-                  0
+2950-                );
+2951-              break;
+2952-
+2953-            case "season_rebounds":
+2954-              comparison =
+2955-                (
+2956-                  a.season_rebounds ??
+2957-                  0
+2958-                ) -
+2959-                (
+2960-                  b.season_rebounds ??
+2961-                  0
+2962-                );
+2963-              break;
+2964-
+2965-            case "season_assists":
+2966-              comparison =
+2967-                (
+2968-                  a.season_assists ??
+2969-                  0
+2970-                ) -
+2971-                (
+2972-                  b.season_assists ??
+2973-                  0
+2974-                );
+2975-              break;
+2976-
+2977-            case "season_steals":
+2978-              comparison =
+2979-                (
+2980-                  a.season_steals ??
+2981-                  0
+2982-                ) -
+2983-                (
+2984-                  b.season_steals ??
+2985-                  0
+2986-                );
+2987-              break;
+2988-
+2989-            case "season_blocks":
+2990-              comparison =
+2991-                (
+2992-                  a.season_blocks ??
+2993-                  0
+2994-                ) -
+2995-                (
+2996-                  b.season_blocks ??
+2997-                  0
+2998-                );
+2999-              break;
+3000-
+3001-            case "season_turnovers":
+3002-              comparison =
+3003-                (
+3004-                  a.season_turnovers ??
+3005-                  0
+3006-                ) -
+3007-                (
+3008-                  b.season_turnovers ??
+3009-                  0
+3010-                );
+3011-              break;
+3012-
+3013-            case "nfl_fp":
+3014-              comparison =
+3015-                (
+3016-                  a.nfl_fantasy_points_per_game ??
+3017-                  0
+3018-                ) -
+3019-                (
+3020-                  b.nfl_fantasy_points_per_game ??
+3021-                  0
+3022-                );
+3023-              break;
+3024-
+3025-            case "nfl_pass_yd":
+3026-              comparison =
+3027-                (
+3028:                  a.nfl_passing_yards_per_game ??
+3029-                  0
+3030-                ) -
+3031-                (
+3032:                  b.nfl_passing_yards_per_game ??
+3033-                  0
+3034-                );
+3035-              break;
+3036-
+3037-            case "nfl_pass_td":
+3038-              comparison =
+3039-                (
+3040-                  a.nfl_passing_tds_per_game ??
+3041-                  0
+3042-                ) -
+3043-                (
+3044-                  b.nfl_passing_tds_per_game ??
+3045-                  0
+3046-                );
+3047-              break;
+3048-
+3049-            case "nfl_int":
+3050-              comparison =
+3051-                (
+3052-                  a.nfl_passing_ints_per_game ??
+3053-                  0
+3054-                ) -
+3055-                (
+3056-                  b.nfl_passing_ints_per_game ??
+3057-                  0
+3058-                );
+3059-              break;
+3060-
+3061-            case "nfl_rush_yd":
+3062-              comparison =
+3063-                (
+3064-                  a.nfl_rushing_yards_per_game ??
+3065-                  0
+3066-                ) -
+3067-                (
+3068-                  b.nfl_rushing_yards_per_game ??
+3069-                  0
+3070-                );
+3071-              break;
+3072-
+3073-            case "nfl_rush_td":
+3074-              comparison =
+3075-                (
+3076-                  a.nfl_rushing_tds_per_game ??
+3077-                  0
+3078-                ) -
+3079-                (
+3080-                  b.nfl_rushing_tds_per_game ??
+3081-                  0
+3082-                );
+3083-              break;
+3084-
+3085-            case "nfl_targets":
+3086-              comparison =
+3087-                (
+3088-                  a.nfl_receiving_targets_per_game ??
+3089-                  0
+3090-                ) -
+3091-                (
+3092-                  b.nfl_receiving_targets_per_game ??
+3093-                  0
+3094-                );
+3095-              break;
+3096-
+3097-            case "nfl_receptions":
+3098-              comparison =
+3099-                (
+3100-                  a.nfl_receptions_per_game ??
+3101-                  0
+3102-                ) -
+3103-                (
+3104-                  b.nfl_receptions_per_game ??
+3105-                  0
+3106-                );
+3107-              break;
+3108-
+3109-            case "nfl_rec_yd":
+3110-              comparison =
+3111-                (
+3112-                  a.nfl_receiving_yards_per_game ??
+3113-                  0
+3114-                ) -
+3115-                (
+3116-                  b.nfl_receiving_yards_per_game ??
+3117-                  0
+3118-                );
+3119-              break;
+3120-
+3121-            case "nfl_rec_td":
+3122-              comparison =
+3123-                (
+3124-                  a.nfl_receiving_tds_per_game ??
+3125-                  0
+3126-                ) -
+3127-                (
+3128-                  b.nfl_receiving_tds_per_game ??
+3129-                  0
+3130-                );
+3131-              break;
+3132-          }
+3133-
+3134-          if (
+3135-            comparison ===
+3136-            0
+3137-          ) {
+3138-            comparison =
+3139-              a.player_name.localeCompare(
+3140-                b.player_name,
+3141-              );
+3142-          }
+3143-
+3144-          return (
+3145-            sortDirection ===
+3146-            "asc"
+3147-              ? comparison
+3148-              : -comparison
+3149-          );
+3150-        },
+3151-      );
+3152-
+3153-      return filtered;
+3154-    }, [
+3155-      rows,
+3156-      searchTerm,
+3157-      minTimesDrafted,
+3158-      sortKey,
+3159-      sortDirection,
+3160-    ]);
+3161-
+3162-  const playerAverageMap =
+3163-    useMemo(() => {
+3164-      const map =
+3165-        new Map<
+3166-          number,
+3167-          number
+3168-        >();
+3169-
+3170-      rows.forEach(
+3171-        (row) => {
+3172-          map.set(
+3173-            row.player_id,
+3174-            row.avg_score,
+3175-          );
+3176-        },
+3177-      );
+3178-
+3179-      return map;
+3180-    }, [
+3181-      rows,
+3182-    ]);
+3183-
+3184-  function sortIndicator(
+3185-    key:
+3186-      SortKey,
+3187-  ) {
+3188-    if (
+3189-      sortKey !==
+3190-      key
+3191-    ) {
+3192-      return "";
+3193-    }
+3194-
+3195-    return (
+3196-      sortDirection ===
+3197-      "asc"
+3198-        ? " ↑"
+3199-        : " ↓"
+3200-    );
+3201-  }
+3202-
+3203-  function headerButton(
+3204-    label:
+3205-      string,
+3206-    key:
+3207-      SortKey,
+3208-  ) {
+3209-    return (
+3210-      <button
+3211-        type="button"
+3212-        onClick={() =>
+3213-          handleSort(
+3214-            key,
+3215-          )
+3216-        }
+3217-        className="whitespace-nowrap text-left font-semibold transition hover:text-emerald-700"
+3218-      >
+3219-        {label}
+3220-        {sortIndicator(
+3221-          key,
+3222-        )}
+3223-      </button>
+3224-    );
+3225-  }
+3226-
+3227-  const compareRows =
+3228-    useMemo(
+3229-      () =>
+3230-        comparePlayerIds
+3231-          .map(
+3232-            (playerId) =>
+3233-              rows.find(
+3234-                (row) =>
+3235-                  row.player_id ===
+3236-                  playerId,
+3237-              ),
+3238-          )
+3239-          .filter(
+3240-            (
+3241-              row,
+3242-            ): row is PlayerHistoryRow =>
+3243-              Boolean(
+3244-                row,
+3245-              ),
+3246-          ),
+3247-      [
+3248-        comparePlayerIds,
+3249-        rows,
+3250-      ],
+3251-    );
+3252-
+3253-  function toggleComparePlayer(
+3254-    row:
+3255-      PlayerHistoryRow,
+3256-  ) {
+3257-    setComparePlayerIds(
+3258-      (
+3259-        previous,
+3260-      ) => {
+3261-        if (
+3262-          previous.includes(
+3263-            row.player_id,
+3264-          )
+3265-        ) {
+3266-          return previous.filter(
+3267-            (playerId) =>
+3268-              playerId !==
+3269-              row.player_id,
+3270-          );
+3271-        }
+3272-
+3273-        if (
+3274-          previous.length >=
+3275-          3
+3276-        ) {
+3277-          return previous;
+3278-        }
+3279-
+3280-        return [
+3281-          ...previous,
+3282-          row.player_id,
+--
+4079-                    <option value="nfl_int">
+4080-                      INT / Game
+4081-                    </option>
+4082-
+4083-                    <option value="nfl_rush_yd">
+4084-                      Rush Yards / Game
+4085-                    </option>
+4086-
+4087-                    <option value="nfl_rush_td">
+4088-                      Rush TD / Game
+4089-                    </option>
+4090-
+4091-                    <option value="nfl_targets">
+4092-                      Targets / Game
+4093-                    </option>
+4094-
+4095-                    <option value="nfl_receptions">
+4096-                      Receptions / Game
+4097-                    </option>
+4098-
+4099-                    <option value="nfl_rec_yd">
+4100-                      Receiving Yards / Game
+4101-                    </option>
+4102-
+4103-                    <option value="nfl_rec_td">
+4104-                      Receiving TD / Game
+4105-                    </option>
+4106-
+4107-                    <option value="player_name">
+4108-                      Player Name
+4109-                    </option>
+4110-                  </select>
+4111-                </div>
+4112-
+4113-                <button
+4114-                  type="button"
+4115-                  onClick={() =>
+4116-                    setSortDirection(
+4117-                      (
+4118-                        previous,
+4119-                      ) =>
+4120-                        previous ===
+4121-                        "asc"
+4122-                          ? "desc"
+4123-                          : "asc",
+4124-                    )
+4125-                  }
+4126-                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700"
+4127-                >
+4128-                  {sortDirection ===
+4129-                  "asc"
+4130-                    ? "↑"
+4131-                    : "↓"}
+4132-                </button>
+4133-              </div>
+4134-
+4135-              <div className="space-y-3 md:hidden">
+4136-                {filteredRows.map(
+4137-                  (
+4138-                    row,
+4139-                  ) => {
+4140-                    const position =
+4141-                      String(
+4142-                        row.position_group ??
+4143-                          "",
+4144-                      ).toUpperCase();
+4145-
+4146-                    const selected =
+4147-                      isCompareSelected(
+4148-                        row,
+4149-                      );
+4150-
+4151-                    const stats =
+4152-                      position ===
+4153-                      "QB"
+4154-                        ? [
+4155-                            {
+4156-                              label:
+4157-                                "PASS",
+4158-                              value:
+4159:                                row.nfl_passing_yards_per_game,
+4160-                              key:
+4161-                                "nfl_pass_yd" as SortKey,
+4162-                            },
+4163-                            {
+4164-                              label:
+4165-                                "P TD",
+4166-                              value:
+4167-                                row.nfl_passing_tds_per_game,
+4168-                              key:
+4169-                                "nfl_pass_td" as SortKey,
+4170-                            },
+4171-                            {
+4172-                              label:
+4173-                                "INT",
+4174-                              value:
+4175-                                row.nfl_passing_ints_per_game,
+4176-                              key:
+4177-                                "nfl_int" as SortKey,
+4178-                            },
+4179-                            {
+4180-                              label:
+4181-                                "RUSH",
+4182-                              value:
+4183-                                row.nfl_rushing_yards_per_game,
+4184-                              key:
+4185-                                "nfl_rush_yd" as SortKey,
+4186-                            },
+4187-                            {
+4188-                              label:
+4189-                                "R TD",
+4190-                              value:
+4191-                                row.nfl_rushing_tds_per_game,
+4192-                              key:
+4193-                                "nfl_rush_td" as SortKey,
+4194-                            },
+4195-                          ]
+4196-                        : [
+4197-                            {
+4198-                              label:
+4199-                                "TGT",
+4200-                              value:
+4201-                                row.nfl_receiving_targets_per_game,
+4202-                              key:
+4203-                                "nfl_targets" as SortKey,
+4204-                            },
+4205-                            {
+4206-                              label:
+4207-                                "REC",
+4208-                              value:
+4209-                                row.nfl_receptions_per_game,
+4210-                              key:
+4211-                                "nfl_receptions" as SortKey,
+4212-                            },
+4213-                            {
+4214-                              label:
+4215-                                "REC YD",
+4216-                              value:
+4217-                                row.nfl_receiving_yards_per_game,
+4218-                              key:
+4219-                                "nfl_rec_yd" as SortKey,
+4220-                            },
+4221-                            {
+4222-                              label:
+4223-                                "RUSH",
+4224-                              value:
+4225-                                row.nfl_rushing_yards_per_game,
+4226-                              key:
+4227-                                "nfl_rush_yd" as SortKey,
+4228-                            },
+4229-                            {
+4230-                              label:
+4231-                                "TD",
+4232-                              value:
+4233-                                (
+4234-                                  row.nfl_receiving_tds_per_game ??
+4235-                                  0
+4236-                                ) +
+4237-                                (
+4238-                                  row.nfl_rushing_tds_per_game ??
+4239-                                  0
+4240-                                ),
+4241-                              key:
+4242-                                sortKey ===
+4243-                                "nfl_rush_td"
+4244-                                  ? "nfl_rush_td" as SortKey
+4245-                                  : "nfl_rec_td" as SortKey,
+4246-                            },
+4247-                          ];
+4248-
+4249-                    return (
+4250-                      <button
+4251-                        key={
+4252-                          row.player_id
+4253-                        }
+4254-                        type="button"
+4255-                        onClick={() =>
+4256-                          handlePlayerHistoryRowClick(
+4257-                            row,
+4258-                          )
+4259-                        }
+4260-                        className={`relative w-full rounded-2xl border bg-white p-3.5 text-left shadow-sm transition ${
+4261-                          selected
+4262-                            ? "border-sky-400 ring-2 ring-sky-300/60"
+4263-                            : "border-slate-200"
+4264-                        }`}
+4265-                      >
+4266-                        <div className="flex items-center gap-3">
+4267-                          <PlayerHeadshot
+4268-                            nbaPlayerId={
+4269-                              null
+4270-                            }
+4271-                            nflPlayerId={
+4272-                              row.nfl_player_id
+4273-                            }
+4274-                            playerName={
+4275-                              row.player_name
+4276-                            }
+4277-                            size="md"
+4278-                          />
+4279-
+4280-                          <div className="min-w-0 flex-1">
+4281-                            <div className="truncate font-black text-slate-950">
+4282-                              {
+4283-                                row.player_name
+4284-                              }
+4285-                            </div>
+4286-
+4287-                            <div className="mt-0.5 text-xs text-slate-500">
+4288-                              {[
+4289-                                row.team_abbreviation,
+4290-                                row.position_group,
+4291-                                row.nfl_games_played
+4292-                                  ? `${row.nfl_games_played} GP`
+4293-                                  : null,
+4294-                              ]
+4295-                                .filter(
+4296-                                  Boolean,
+4297-                                )
+4298-                                .join(" · ")}
+4299-                            </div>
+4300-                          </div>
+4301-
+4302-                          <div className="text-right">
+4303-                            <div className={`text-xl font-black ${
+4304-                              sortKey ===
+4305-                              "nfl_fp"
+4306-                                ? "text-sky-800"
+4307-                                : "text-slate-950"
+4308-                            }`}>
+4309-                              {fmt(
+4310-                                row.nfl_fantasy_points_per_game,
+4311-                                2,
+4312-                              )}
+4313-                            </div>
+4314-
+4315-                            <div className="text-[10px] font-bold uppercase text-slate-400">
+4316-                              FP/G
+4317-                            </div>
+4318-                          </div>
+4319-                        </div>
+4320-
+4321-                        <div className="mt-3 grid grid-cols-5 gap-1 text-center">
+4322-                          {stats.map(
+4323-                            (
+4324-                              stat,
+4325-                            ) => {
+4326-                              const active =
+4327-                                stat.key ===
+4328-                                sortKey;
+4329-
+4330-                              return (
+4331-                                <div
+4332-                                  key={
+4333-                                    stat.label
+4334-                                  }
+4335-                                  className={`rounded-lg px-1 py-1.5 ${
+4336-                                    active
+4337-                                      ? "border border-sky-300 bg-sky-50"
+4338-                                      : ""
+4339-                                  }`}
+4340-                                >
+4341-                                  <div className={`text-[13px] font-black ${
+4342-                                    active
+4343-                                      ? "text-sky-800"
+4344-                                      : "text-slate-900"
+4345-                                  }`}>
+4346-                                    {fmt(
+4347-                                      stat.value,
+4348-                                      stat.label.includes(
+4349-                                        "TD",
+4350-                                      ) ||
+4351-                                      stat.label ===
+4352-                                        "INT"
+4353-                                        ? 2
+4354-                                        : 1,
+4355-                                    )}
+4356-                                  </div>
+4357-
+4358-                                  <div className={`text-[9px] font-bold uppercase ${
+4359-                                    active
+4360-                                      ? "text-sky-700"
+4361-                                      : "text-slate-400"
+4362-                                  }`}>
+4363-                                    {
+4364-                                      stat.label
+4365-                                    }
+4366-                                  </div>
+4367-                                </div>
+4368-                              );
+4369-                            },
+4370-                          )}
+4371-                        </div>
+4372-                      </button>
+4373-                    );
+4374-                  },
+4375-                )}
+4376-              </div>
+4377-
+4378-              <div className="hidden overflow-x-auto md:block">
+4379-                <table className="min-w-[1100px] w-full border-collapse text-sm">
+4380-                  <thead className="bg-sky-50 text-slate-700">
+4381-                    <tr className="text-left">
+4382-                      <th className="px-4 py-3">
+4383-                        {headerButton(
+4384-                          "Player",
+4385-                          "player_name",
+4386-                        )}
+4387-                      </th>
+4388-
+4389-                      <th className="px-3 py-3">
+4390-                        Pos
+4391-                      </th>
+4392-
+4393-                      <th className="px-3 py-3">
+4394-                        GP
+4395-                      </th>
+4396-
+4397-                      <th className="px-3 py-3">
+4398-                        {headerButton(
+4399-                          "FP/G",
+4400-                          "nfl_fp",
+4401-                        )}
+4402-                      </th>
+4403-
+4404-                      <th className="px-3 py-3">
+4405-                        {headerButton(
+4406-                          "Pass Yd/G",
+4407-                          "nfl_pass_yd",
+4408-                        )}
+4409-                      </th>
+--
+4458-                      </th>
+4459-
+4460-                      <th className="px-3 py-3">
+4461-                        {headerButton(
+4462-                          "Rec TD/G",
+4463-                          "nfl_rec_td",
+4464-                        )}
+4465-                      </th>
+4466-                    </tr>
+4467-                  </thead>
+4468-
+4469-                  <tbody className="bg-white text-slate-800">
+4470-                    {filteredRows.map(
+4471-                      (
+4472-                        row,
+4473-                      ) => (
+4474-                        <tr
+4475-                          key={
+4476-                            row.player_id
+4477-                          }
+4478-                          className={`border-t border-slate-100 ${
+4479-                            isCompareSelected(
+4480-                              row,
+4481-                            )
+4482-                              ? "bg-sky-50"
+4483-                              : "hover:bg-sky-50/40"
+4484-                          }`}
+4485-                        >
+4486-                          <td className="px-4 py-3">
+4487-                            <button
+4488-                              type="button"
+4489-                              onClick={() =>
+4490-                                handlePlayerHistoryRowClick(
+4491-                                  row,
+4492-                                )
+4493-                              }
+4494-                              className="flex items-center gap-2 font-bold text-sky-800"
+4495-                            >
+4496-                              <PlayerHeadshot
+4497-                                nbaPlayerId={
+4498-                                  null
+4499-                                }
+4500-                                nflPlayerId={
+4501-                                  row.nfl_player_id
+4502-                                }
+4503-                                playerName={
+4504-                                  row.player_name
+4505-                                }
+4506-                                size="xs"
+4507-                              />
+4508-
+4509-                              {
+4510-                                row.player_name
+4511-                              }
+4512-                            </button>
+4513-                          </td>
+4514-
+4515-                          <td className="px-3 py-3 font-bold">
+4516-                            {
+4517-                              row.position_group ??
+4518-                              "—"
+4519-                            }
+4520-                          </td>
+4521-
+4522-                          <td className="px-3 py-3">
+4523-                            {
+4524-                              row.nfl_games_played ??
+4525-                              "—"
+4526-                            }
+4527-                          </td>
+4528-
+4529-                          <td className="px-3 py-3 font-black text-sky-800">
+4530-                            {fmt(
+4531-                              row.nfl_fantasy_points_per_game,
+4532-                              2,
+4533-                            )}
+4534-                          </td>
+4535-
+4536-                          <td className="px-3 py-3">
+4537-                            {fmt(
+4538:                              row.nfl_passing_yards_per_game,
+4539-                              1,
+4540-                            )}
+4541-                          </td>
+4542-
+4543-                          <td className="px-3 py-3">
+4544-                            {fmt(
+4545-                              row.nfl_passing_tds_per_game,
+4546-                              2,
+4547-                            )}
+4548-                          </td>
+4549-
+4550-                          <td className="px-3 py-3">
+4551-                            {fmt(
+4552-                              row.nfl_passing_ints_per_game,
+4553-                              2,
+4554-                            )}
+4555-                          </td>
+4556-
+4557-                          <td className="px-3 py-3">
+4558-                            {fmt(
+4559-                              row.nfl_rushing_yards_per_game,
+4560-                              1,
+4561-                            )}
+4562-                          </td>
+4563-
+4564-                          <td className="px-3 py-3">
+4565-                            {fmt(
+4566-                              row.nfl_rushing_tds_per_game,
+4567-                              2,
+4568-                            )}
+4569-                          </td>
+4570-
+4571-                          <td className="px-3 py-3">
+4572-                            {fmt(
+4573-                              row.nfl_receiving_targets_per_game,
+4574-                              2,
+4575-                            )}
+4576-                          </td>
+4577-
+4578-                          <td className="px-3 py-3">
+4579-                            {fmt(
+4580-                              row.nfl_receptions_per_game,
+4581-                              2,
+4582-                            )}
+4583-                          </td>
+4584-
+4585-                          <td className="px-3 py-3">
+4586-                            {fmt(
+4587-                              row.nfl_receiving_yards_per_game,
+4588-                              1,
+4589-                            )}
+4590-                          </td>
+4591-
+4592-                          <td className="px-3 py-3">
+4593-                            {fmt(
+4594-                              row.nfl_receiving_tds_per_game,
+4595-                              2,
+4596-                            )}
+4597-                          </td>
+4598-                        </tr>
+4599-                      ),
+4600-                    )}
+4601-                  </tbody>
+4602-                </table>
+4603-              </div>
+4604-            </>
+4605-          ) : historyMode ===
+4606-              "season" &&
+4607-            selectedSport ===
+4608-              "nba" ? (
+4609-            <>
+4610-              <div className="mb-4 flex items-end gap-2 md:hidden">
+4611-                <div className="min-w-0 flex-1">
+4612-                  <label
+4613-                    htmlFor="nba-season-mobile-sort"
+4614-                    className="mb-2 block text-sm font-medium text-slate-700"
+4615-                  >
+4616-                    Sort by
+4617-                  </label>
+4618-
+4619-                  <select
+4620-                    id="nba-season-mobile-sort"
+4621-                    value={
+4622-                      sortKey
+4623-                    }
+4624-                    onChange={
+4625-                      (
+4626-                        event,
+4627-                      ) => {
+4628-                        const nextKey =
+4629-                          event.target.value as SortKey;
+4630-
+4631-                        setSortKey(
+4632-                          nextKey,
+4633-                        );
+4634-
+4635-                        setSortDirection(
+4636-                          nextKey ===
+4637-                            "player_name"
+4638-                            ? "asc"
+4639-                            : "desc",
+4640-                        );
+4641-                      }
+4642-                    }
+4643-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300"
+4644-                  >
+4645-                    <option value="season_fantasy_points">
+4646-                      Fantasy Points
+4647-                    </option>
+4648-
+4649-                    <option value="season_points">
+4650-                      Points
+4651-                    </option>
+4652-
+4653-                    <option value="season_rebounds">
+4654-                      Rebounds
+4655-                    </option>
+4656-
+4657-                    <option value="season_assists">
+4658-                      Assists
+4659-                    </option>
+4660-
+4661-                    <option value="season_steals">
+4662-                      Steals
+4663-                    </option>
+4664-
+4665-                    <option value="season_blocks">
+4666-                      Blocks
+4667-                    </option>
+4668-
+4669-                    <option value="season_turnovers">
+4670-                      Turnovers
+4671-                    </option>
+4672-
+4673-                    <option value="player_name">
+4674-                      Player Name
+4675-                    </option>
+4676-                  </select>
+4677-                </div>
+4678-
+4679-                <button
+4680-                  type="button"
+4681-                  onClick={() =>
+4682-                    setSortDirection(
+4683-                      (
+4684-                        previous,
+4685-                      ) =>
+4686-                        previous ===
+4687-                        "asc"
+4688-                          ? "desc"
+4689-                          : "asc",
+4690-                    )
+4691-                  }
+4692-                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700"
+4693-                  aria-label="Reverse sort direction"
+4694-                >
+4695-                  {sortDirection ===
+4696-                  "asc"
+4697-                    ? "↑"
+4698-                    : "↓"}
+4699-                </button>
+4700-              </div>
+4701-
+4702-              <div className="space-y-3 md:hidden">
+4703-                {filteredRows.map(
+4704-                  (
+4705-                    row,
+4706-                  ) => {
+4707-                    const selected =
+4708-                      isCompareSelected(
+4709-                        row,
+4710-                      );
+4711-
+4712-                    /*
+4713-                     * PTS / REB / AST already have permanent
+4714-                     * quick-stat slots.
+4715-                     *
+4716-                     * Only replace the fourth slot when sorting
+4717-                     * by a stat that is not already visible there.
+4718-                     */
+4719-                    const dynamicStat =
+4720-                      sortKey ===
+4721-                      "season_steals"
+4722-                        ? {
+4723-                            label:
+4724-                              "STL",
+4725-                            value:
+4726-                              row.season_steals,
+4727-                            key:
+4728-                              "season_steals" as SortKey,
+4729-                          }
+4730-                        : sortKey ===
+4731-                            "season_blocks"
+4732-                          ? {
+4733-                              label:
+4734-                                "BLK",
+4735-                              value:
+4736-                                row.season_blocks,
+4737-                              key:
+4738-                                "season_blocks" as SortKey,
+4739-                            }
+4740-                          : sortKey ===
+4741-                              "season_turnovers"
+4742-                            ? {
+4743-                                label:
+4744-                                  "TO",
+4745-                                value:
+4746-                                  row.season_turnovers,
+4747-                                key:
+4748-                                  "season_turnovers" as SortKey,
+4749-                              }
+4750-                            : {
+4751-                                label:
+4752-                                  "FP",
+4753-                                value:
+4754-                                  row.season_fantasy_points,
+4755-                                key:
+4756-                                  "season_fantasy_points" as SortKey,
+4757-                              };
+4758-
+4759-                    return (
+4760-                      <button
+4761-                        key={
+4762-                          row.player_id
+4763-                        }
+4764-                        type="button"
+4765-                        onClick={() => {
+4766-                          if (
+4767-                            compareMode
+4768-                          ) {
+4769-                            toggleComparePlayer(
+4770-                              row,
+4771-                            );
+4772-                          }
+4773-                        }}
+4774-                        className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+4775-                          selected
+4776-                            ? "border-sky-400 ring-2 ring-sky-300/60"
+4777-                            : "border-slate-200"
+4778-                        }`}
+4779-                      >
+4780-                        {compareMode &&
+4781-                        selected ? (
+4782-                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-xs font-black text-white">
+4783-                            ✓
+4784-                          </div>
+4785-                        ) : null}
+4786-
+4787-                        <div className="flex items-center gap-3">
+4788-                          <PlayerHeadshot

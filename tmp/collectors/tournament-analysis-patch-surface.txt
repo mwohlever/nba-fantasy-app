@@ -1,0 +1,3330 @@
+============================================================
+TOURNAMENT ANALYSIS — PATCH SURFACE
+============================================================
+
+===== 1. ADMIN NAV / SETTINGS SURFACE =====
+app/admin/players/page.tsx-1-"use client";
+app/admin/players/page.tsx-2-
+app/admin/players/page.tsx-3-import AppNav from "@/components/AppNav";
+app/admin/players/page.tsx-4-import Link from "next/link";
+app/admin/players/page.tsx-5-import { useEffect, useMemo, useState } from "react";
+app/admin/players/page.tsx-6-
+app/admin/players/page.tsx-7-type PlayerRow = {
+app/admin/players/page.tsx-8-  id: number;
+app/admin/players/page.tsx-9-  name: string;
+app/admin/players/page.tsx-10-  position_group: "G" | "F/C";
+app/admin/players/page.tsx-11-  is_active: boolean;
+app/admin/players/page.tsx-12-  team_abbreviation?: string | null;
+app/admin/players/page.tsx-13-  nba_display_name?: string | null;
+app/admin/players/page.tsx-14-};
+app/admin/players/page.tsx-15-
+app/admin/players/page.tsx-16-type ApiResponse = {
+app/admin/players/page.tsx-17-  success: boolean;
+app/admin/players/page.tsx-18-  players: PlayerRow[];
+app/admin/players/page.tsx-19-};
+app/admin/players/page.tsx-20-
+app/admin/players/page.tsx:21:export default function AdminPlayersPage() {
+app/admin/players/page.tsx-22-  const [players, setPlayers] = useState<PlayerRow[]>([]);
+app/admin/players/page.tsx-23-  const [originalPlayers, setOriginalPlayers] = useState<PlayerRow[]>([]);
+app/admin/players/page.tsx-24-  const [searchTerm, setSearchTerm] = useState("");
+app/admin/players/page.tsx-25-  const [showInactiveOnly, setShowInactiveOnly] = useState(false);
+app/admin/players/page.tsx-26-  const [showChangedOnly, setShowChangedOnly] = useState(false);
+app/admin/players/page.tsx-27-  const [isLoading, setIsLoading] = useState(true);
+app/admin/players/page.tsx-28-  const [isSaving, setIsSaving] = useState(false);
+app/admin/players/page.tsx-29-  const [message, setMessage] = useState("");
+app/admin/players/page.tsx-30-
+app/admin/players/page.tsx-31-  useEffect(() => {
+app/admin/players/page.tsx-32-    void loadPlayers();
+app/admin/players/page.tsx-33-  }, []);
+app/admin/players/page.tsx-34-
+app/admin/players/page.tsx-35-  async function loadPlayers() {
+app/admin/players/page.tsx-36-    try {
+app/admin/players/page.tsx-37-      setIsLoading(true);
+app/admin/players/page.tsx-38-      setMessage("");
+app/admin/players/page.tsx-39-
+app/admin/players/page.tsx:40:      const response = await fetch("/api/admin/players");
+app/admin/players/page.tsx-41-      const result = (await response.json()) as ApiResponse | { error?: string };
+app/admin/players/page.tsx-42-
+app/admin/players/page.tsx-43-      if (!response.ok) {
+app/admin/players/page.tsx-44-        setMessage(
+app/admin/players/page.tsx-45-          "error" in result && result.error
+app/admin/players/page.tsx-46-            ? result.error
+app/admin/players/page.tsx-47-            : "Failed to load players."
+app/admin/players/page.tsx-48-        );
+app/admin/players/page.tsx-49-        return;
+app/admin/players/page.tsx-50-      }
+app/admin/players/page.tsx-51-
+app/admin/players/page.tsx-52-      const safePlayers = (result as ApiResponse).players ?? [];
+app/admin/players/page.tsx-53-      setPlayers(safePlayers);
+app/admin/players/page.tsx-54-      setOriginalPlayers(safePlayers);
+app/admin/players/page.tsx-55-    } catch (error) {
+app/admin/players/page.tsx-56-      console.error(error);
+app/admin/players/page.tsx-57-      setMessage("Something went wrong while loading players.");
+app/admin/players/page.tsx-58-    } finally {
+app/admin/players/page.tsx-59-      setIsLoading(false);
+app/admin/players/page.tsx-60-    }
+app/admin/players/page.tsx-61-  }
+app/admin/players/page.tsx-62-
+app/admin/players/page.tsx-63-  function updatePlayer(
+app/admin/players/page.tsx-64-    playerId: number,
+app/admin/players/page.tsx-65-    field: "position_group" | "is_active",
+app/admin/players/page.tsx-66-    value: string | boolean
+app/admin/players/page.tsx-67-  ) {
+app/admin/players/page.tsx-68-    setPlayers((prev) =>
+app/admin/players/page.tsx-69-      prev.map((player) =>
+app/admin/players/page.tsx-70-        player.id === playerId
+app/admin/players/page.tsx-71-          ? {
+app/admin/players/page.tsx-72-              ...player,
+app/admin/players/page.tsx-73-              [field]: value,
+app/admin/players/page.tsx-74-            }
+app/admin/players/page.tsx-75-          : player
+app/admin/players/page.tsx-76-      )
+app/admin/players/page.tsx-77-    );
+app/admin/players/page.tsx-78-  }
+app/admin/players/page.tsx-79-
+app/admin/players/page.tsx-80-  const changedPlayerIds = useMemo(() => {
+--
+app/admin/players/page.tsx-101-    const normalizedSearch = searchTerm.trim().toLowerCase();
+app/admin/players/page.tsx-102-
+app/admin/players/page.tsx-103-    return players.filter((player) => {
+app/admin/players/page.tsx-104-      const matchesSearch =
+app/admin/players/page.tsx-105-        normalizedSearch === "" ||
+app/admin/players/page.tsx-106-        player.name.toLowerCase().includes(normalizedSearch) ||
+app/admin/players/page.tsx-107-        (player.nba_display_name ?? "")
+app/admin/players/page.tsx-108-          .toLowerCase()
+app/admin/players/page.tsx-109-          .includes(normalizedSearch) ||
+app/admin/players/page.tsx-110-        (player.team_abbreviation ?? "")
+app/admin/players/page.tsx-111-          .toLowerCase()
+app/admin/players/page.tsx-112-          .includes(normalizedSearch);
+app/admin/players/page.tsx-113-
+app/admin/players/page.tsx-114-      const matchesInactive = !showInactiveOnly || !player.is_active;
+app/admin/players/page.tsx-115-      const matchesChanged = !showChangedOnly || changedPlayerIds.has(player.id);
+app/admin/players/page.tsx-116-
+app/admin/players/page.tsx-117-      return matchesSearch && matchesInactive && matchesChanged;
+app/admin/players/page.tsx-118-    });
+app/admin/players/page.tsx-119-  }, [players, searchTerm, showInactiveOnly, showChangedOnly, changedPlayerIds]);
+app/admin/players/page.tsx-120-
+app/admin/players/page.tsx:121:  async function handleSave() {
+app/admin/players/page.tsx-122-    const originalMap = new Map(
+app/admin/players/page.tsx-123-      originalPlayers.map((player) => [player.id, player])
+app/admin/players/page.tsx-124-    );
+app/admin/players/page.tsx-125-
+app/admin/players/page.tsx-126-    const updates = players
+app/admin/players/page.tsx-127-      .filter((player) => {
+app/admin/players/page.tsx-128-        const original = originalMap.get(player.id);
+app/admin/players/page.tsx-129-        if (!original) return false;
+app/admin/players/page.tsx-130-
+app/admin/players/page.tsx-131-        return (
+app/admin/players/page.tsx-132-          original.position_group !== player.position_group ||
+app/admin/players/page.tsx-133-          original.is_active !== player.is_active
+app/admin/players/page.tsx-134-        );
+app/admin/players/page.tsx-135-      })
+app/admin/players/page.tsx-136-      .map((player) => ({
+app/admin/players/page.tsx-137-        id: player.id,
+app/admin/players/page.tsx-138-        position_group: player.position_group,
+app/admin/players/page.tsx-139-        is_active: player.is_active,
+app/admin/players/page.tsx-140-      }));
+app/admin/players/page.tsx-141-
+app/admin/players/page.tsx-142-    if (updates.length === 0) {
+app/admin/players/page.tsx:143:      setMessage("No changes to save.");
+app/admin/players/page.tsx-144-      return;
+app/admin/players/page.tsx-145-    }
+app/admin/players/page.tsx-146-
+app/admin/players/page.tsx-147-    try {
+app/admin/players/page.tsx-148-      setIsSaving(true);
+app/admin/players/page.tsx-149-      setMessage("");
+app/admin/players/page.tsx-150-
+app/admin/players/page.tsx:151:      const response = await fetch("/api/admin/players", {
+app/admin/players/page.tsx-152-        method: "PATCH",
+app/admin/players/page.tsx-153-        headers: {
+app/admin/players/page.tsx-154-          "Content-Type": "application/json",
+app/admin/players/page.tsx-155-        },
+app/admin/players/page.tsx-156-        body: JSON.stringify({ updates }),
+app/admin/players/page.tsx-157-      });
+app/admin/players/page.tsx-158-
+app/admin/players/page.tsx-159-      const result = await response.json();
+app/admin/players/page.tsx-160-
+app/admin/players/page.tsx-161-      if (!response.ok) {
+app/admin/players/page.tsx:162:        setMessage(result.error || "Failed to save player updates.");
+app/admin/players/page.tsx-163-        return;
+app/admin/players/page.tsx-164-      }
+app/admin/players/page.tsx-165-
+app/admin/players/page.tsx:166:      setMessage(`Saved ${result.updatedCount} player updates.`);
+app/admin/players/page.tsx-167-      setOriginalPlayers(players);
+app/admin/players/page.tsx-168-    } catch (error) {
+app/admin/players/page.tsx-169-      console.error(error);
+app/admin/players/page.tsx-170-      setMessage("Something went wrong while saving player updates.");
+app/admin/players/page.tsx-171-    } finally {
+app/admin/players/page.tsx-172-      setIsSaving(false);
+app/admin/players/page.tsx-173-    }
+app/admin/players/page.tsx-174-  }
+app/admin/players/page.tsx-175-
+app/admin/players/page.tsx-176-  return (
+app/admin/players/page.tsx-177-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+app/admin/players/page.tsx-178-      <div className="mx-auto max-w-7xl space-y-6">
+app/admin/players/page.tsx-179-        <AppNav />
+app/admin/players/page.tsx-180-
+app/admin/players/page.tsx-181-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
+app/admin/players/page.tsx-182-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+app/admin/players/page.tsx-183-            <div>
+app/admin/players/page.tsx-184-              <p className="text-sm font-medium uppercase tracking-wide text-sky-700">
+app/admin/players/page.tsx:185:                Admin
+app/admin/players/page.tsx-186-              </p>
+app/admin/players/page.tsx-187-              <h1 className="mt-2 text-3xl font-bold tracking-tight">Players</h1>
+app/admin/players/page.tsx-188-              <p className="mt-2 text-sm text-slate-600">
+app/admin/players/page.tsx-189-                Edit positions and active/inactive status without using the raw
+app/admin/players/page.tsx-190-                table editor.
+app/admin/players/page.tsx-191-              </p>
+app/admin/players/page.tsx-192-            </div>
+app/admin/players/page.tsx-193-
+app/admin/players/page.tsx-194-            <div className="flex flex-wrap items-center gap-3">
+app/admin/players/page.tsx-195-              <Link
+app/admin/players/page.tsx:196:                href="/admin"
+app/admin/players/page.tsx-197-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+app/admin/players/page.tsx-198-              >
+app/admin/players/page.tsx-199-                ← Back
+app/admin/players/page.tsx-200-              </Link>
+app/admin/players/page.tsx-201-
+app/admin/players/page.tsx-202-              <button
+app/admin/players/page.tsx-203-                type="button"
+app/admin/players/page.tsx-204-                onClick={() => void loadPlayers()}
+app/admin/players/page.tsx-205-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+app/admin/players/page.tsx-206-              >
+app/admin/players/page.tsx-207-                Reload
+app/admin/players/page.tsx-208-              </button>
+app/admin/players/page.tsx-209-
+app/admin/players/page.tsx-210-              <button
+app/admin/players/page.tsx-211-                type="button"
+app/admin/players/page.tsx:212:                onClick={() => void handleSave()}
+app/admin/players/page.tsx-213-                disabled={isSaving}
+app/admin/players/page.tsx-214-                className="rounded-xl border border-sky-300 bg-sky-100 px-4 py-2.5 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60"
+app/admin/players/page.tsx-215-              >
+app/admin/players/page.tsx:216:                {isSaving ? "Saving..." : "Save Changes"}
+app/admin/players/page.tsx-217-              </button>
+app/admin/players/page.tsx-218-            </div>
+app/admin/players/page.tsx-219-          </div>
+app/admin/players/page.tsx-220-        </section>
+app/admin/players/page.tsx-221-
+app/admin/players/page.tsx-222-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+app/admin/players/page.tsx-223-          <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+app/admin/players/page.tsx-224-            <input
+app/admin/players/page.tsx-225-              type="text"
+app/admin/players/page.tsx-226-              value={searchTerm}
+app/admin/players/page.tsx-227-              onChange={(e) => setSearchTerm(e.target.value)}
+app/admin/players/page.tsx-228-              placeholder="Search players, NBA display name, or team abbreviation"
+app/admin/players/page.tsx-229-              className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-sky-300"
+app/admin/players/page.tsx-230-            />
+app/admin/players/page.tsx-231-
+app/admin/players/page.tsx-232-            <button
+app/admin/players/page.tsx-233-              type="button"
+app/admin/players/page.tsx-234-              onClick={() => setShowInactiveOnly((prev) => !prev)}
+app/admin/players/page.tsx-235-              className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+app/admin/players/page.tsx-236-                showInactiveOnly
+app/admin/players/page.tsx-237-                  ? "border-orange-300 bg-orange-100 text-orange-900"
+app/admin/players/page.tsx-238-                  : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"
+app/admin/players/page.tsx-239-              }`}
+app/admin/players/page.tsx-240-            >
+app/admin/players/page.tsx-241-              {showInactiveOnly
+app/admin/players/page.tsx-242-                ? "Showing Inactive Only"
+app/admin/players/page.tsx-243-                : "All Active + Inactive"}
+app/admin/players/page.tsx-244-            </button>
+app/admin/players/page.tsx-245-
+app/admin/players/page.tsx-246-            <button
+app/admin/players/page.tsx-247-              type="button"
+app/admin/players/page.tsx-248-              onClick={() => setShowChangedOnly((prev) => !prev)}
+app/admin/players/page.tsx-249-              className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+app/admin/players/page.tsx-250-                showChangedOnly
+app/admin/players/page.tsx-251-                  ? "border-emerald-300 bg-emerald-100 text-emerald-900"
+app/admin/players/page.tsx-252-                  : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"
+app/admin/players/page.tsx-253-              }`}
+app/admin/players/page.tsx-254-            >
+app/admin/players/page.tsx-255-              {showChangedOnly ? "Showing Changed Only" : "Show All Rows"}
+app/admin/players/page.tsx-256-            </button>
+app/admin/players/page.tsx-257-          </div>
+app/admin/players/page.tsx-258-
+app/admin/players/page.tsx-259-          <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
+app/admin/players/page.tsx-260-            <span>Total rows: {players.length}</span>
+app/admin/players/page.tsx-261-            <span>Visible rows: {filteredPlayers.length}</span>
+app/admin/players/page.tsx:262:            <span>Unsaved changes: {changedPlayerIds.size}</span>
+app/admin/players/page.tsx-263-          </div>
+app/admin/players/page.tsx-264-
+app/admin/players/page.tsx-265-          {message ? (
+app/admin/players/page.tsx-266-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+app/admin/players/page.tsx-267-              {message}
+app/admin/players/page.tsx-268-            </div>
+app/admin/players/page.tsx-269-          ) : null}
+app/admin/players/page.tsx-270-        </section>
+app/admin/players/page.tsx-271-
+app/admin/players/page.tsx-272-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+app/admin/players/page.tsx-273-          {isLoading ? (
+app/admin/players/page.tsx-274-            <div className="px-2 py-6 text-sm text-slate-600">
+app/admin/players/page.tsx-275-              Loading players...
+app/admin/players/page.tsx-276-            </div>
+app/admin/players/page.tsx-277-          ) : filteredPlayers.length === 0 ? (
+app/admin/players/page.tsx-278-            <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+app/admin/players/page.tsx-279-              No players match your current filters.
+app/admin/players/page.tsx-280-            </div>
+app/admin/players/page.tsx-281-          ) : (
+app/admin/players/page.tsx-282-            <div className="overflow-hidden rounded-2xl border border-slate-200">
+app/admin/players/page.tsx-283-              <div className="overflow-x-auto">
+app/admin/players/page.tsx-284-                <table className="min-w-full border-collapse text-sm">
+app/admin/players/page.tsx-285-                  <thead className="bg-slate-100 text-slate-700">
+app/admin/players/page.tsx-286-                    <tr className="text-left">
+app/admin/players/page.tsx-287-                      <th className="px-3 py-3 font-semibold">Name</th>
+app/admin/players/page.tsx-288-                      <th className="px-3 py-3 font-semibold">NBA Name</th>
+app/admin/players/page.tsx-289-                      <th className="px-3 py-3 font-semibold">Team</th>
+app/admin/players/page.tsx-290-                      <th className="px-3 py-3 font-semibold">Position</th>
+app/admin/players/page.tsx-291-                      <th className="px-3 py-3 font-semibold">Active</th>
+app/admin/players/page.tsx-292-                      <th className="px-3 py-3 font-semibold">Changed</th>
+app/admin/players/page.tsx-293-                    </tr>
+app/admin/players/page.tsx-294-                  </thead>
+app/admin/players/page.tsx-295-                  <tbody className="bg-white text-slate-800">
+app/admin/players/page.tsx-296-                    {filteredPlayers.map((player) => {
+app/admin/players/page.tsx-297-                      const isChanged = changedPlayerIds.has(player.id);
+app/admin/players/page.tsx-298-
+app/admin/players/page.tsx-299-                      return (
+app/admin/players/page.tsx-300-                        <tr
+app/admin/players/page.tsx-301-                          key={player.id}
+app/admin/players/page.tsx-302-                          className={`border-t border-slate-100 ${
+--
+app/admin/players/page.tsx-331-                              <input
+app/admin/players/page.tsx-332-                                type="checkbox"
+app/admin/players/page.tsx-333-                                checked={player.is_active}
+app/admin/players/page.tsx-334-                                onChange={(e) =>
+app/admin/players/page.tsx-335-                                  updatePlayer(
+app/admin/players/page.tsx-336-                                    player.id,
+app/admin/players/page.tsx-337-                                    "is_active",
+app/admin/players/page.tsx-338-                                    e.target.checked
+app/admin/players/page.tsx-339-                                  )
+app/admin/players/page.tsx-340-                                }
+app/admin/players/page.tsx-341-                                className="h-4 w-4 rounded border-slate-300"
+app/admin/players/page.tsx-342-                              />
+app/admin/players/page.tsx-343-                              <span>
+app/admin/players/page.tsx-344-                                {player.is_active ? "Active" : "Inactive"}
+app/admin/players/page.tsx-345-                              </span>
+app/admin/players/page.tsx-346-                            </label>
+app/admin/players/page.tsx-347-                          </td>
+app/admin/players/page.tsx-348-                          <td className="px-3 py-3">
+app/admin/players/page.tsx-349-                            {isChanged ? (
+app/admin/players/page.tsx-350-                              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs text-emerald-800">
+app/admin/players/page.tsx:351:                                Unsaved
+app/admin/players/page.tsx-352-                              </span>
+app/admin/players/page.tsx-353-                            ) : (
+app/admin/players/page.tsx-354-                              <span className="text-slate-400">—</span>
+app/admin/players/page.tsx-355-                            )}
+app/admin/players/page.tsx-356-                          </td>
+app/admin/players/page.tsx-357-                        </tr>
+app/admin/players/page.tsx-358-                      );
+app/admin/players/page.tsx-359-                    })}
+app/admin/players/page.tsx-360-                  </tbody>
+app/admin/players/page.tsx-361-                </table>
+app/admin/players/page.tsx-362-              </div>
+app/admin/players/page.tsx-363-            </div>
+app/admin/players/page.tsx-364-          )}
+app/admin/players/page.tsx-365-        </section>
+app/admin/players/page.tsx-366-      </div>
+app/admin/players/page.tsx-367-    </main>
+app/admin/players/page.tsx-368-  );
+app/admin/players/page.tsx-369-}
+--
+app/admin/slates/page.tsx-97-  return `${startDate} – ${endDate}`;
+app/admin/slates/page.tsx-98-}
+app/admin/slates/page.tsx-99-
+app/admin/slates/page.tsx-100-function formatRefreshTime(value: string | null) {
+app/admin/slates/page.tsx-101-  if (!value) return "Not loaded yet";
+app/admin/slates/page.tsx-102-
+app/admin/slates/page.tsx-103-  const date = new Date(value);
+app/admin/slates/page.tsx-104-
+app/admin/slates/page.tsx-105-  if (Number.isNaN(date.getTime())) {
+app/admin/slates/page.tsx-106-    return "Unavailable";
+app/admin/slates/page.tsx-107-  }
+app/admin/slates/page.tsx-108-
+app/admin/slates/page.tsx-109-  return date.toLocaleString([], {
+app/admin/slates/page.tsx-110-    month: "short",
+app/admin/slates/page.tsx-111-    day: "numeric",
+app/admin/slates/page.tsx-112-    hour: "numeric",
+app/admin/slates/page.tsx-113-    minute: "2-digit",
+app/admin/slates/page.tsx-114-  });
+app/admin/slates/page.tsx-115-}
+app/admin/slates/page.tsx-116-
+app/admin/slates/page.tsx:117:export default function AdminSlatesPage() {
+app/admin/slates/page.tsx-118-  const { selectedSport } = useSelectedSport();
+app/admin/slates/page.tsx-119-
+app/admin/slates/page.tsx-120-  const [slates, setSlates] = useState<SlateListRow[]>([]);
+app/admin/slates/page.tsx-121-  const [selectedSlateId, setSelectedSlateId] =
+app/admin/slates/page.tsx-122-    useState<number | "">("");
+app/admin/slates/page.tsx-123-  const [selectedSlate, setSelectedSlate] =
+app/admin/slates/page.tsx-124-    useState<SelectedSlateState | null>(null);
+app/admin/slates/page.tsx-125-  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+app/admin/slates/page.tsx-126-  const [golfField, setGolfField] =
+app/admin/slates/page.tsx-127-    useState<GolfFieldSummary | null>(null);
+app/admin/slates/page.tsx-128-
+app/admin/slates/page.tsx-129-  const [
+app/admin/slates/page.tsx-130-    shotCast,
+app/admin/slates/page.tsx-131-    setShotCast,
+app/admin/slates/page.tsx-132-  ] = useState<ShotCastSummary | null>(
+app/admin/slates/page.tsx-133-    null,
+app/admin/slates/page.tsx-134-  );
+app/admin/slates/page.tsx-135-
+app/admin/slates/page.tsx-136-  const [
+app/admin/slates/page.tsx-137-    shotCastTournamentId,
+app/admin/slates/page.tsx-138-    setShotCastTournamentId,
+app/admin/slates/page.tsx-139-  ] = useState("");
+app/admin/slates/page.tsx-140-
+app/admin/slates/page.tsx-141-  const [isLoading, setIsLoading] = useState(true);
+app/admin/slates/page.tsx-142-  const [isSaving, setIsSaving] = useState(false);
+app/admin/slates/page.tsx-143-  const [isReseeding, setIsReseeding] = useState(false);
+app/admin/slates/page.tsx-144-  const [isDeleting, setIsDeleting] = useState(false);
+app/admin/slates/page.tsx-145-  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx-146-    useState(false);
+app/admin/slates/page.tsx-147-  const [isImportingGolfField, setIsImportingGolfField] =
+app/admin/slates/page.tsx-148-    useState(false);
+app/admin/slates/page.tsx-149-  const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
+app/admin/slates/page.tsx-150-    useState(false);
+app/admin/slates/page.tsx-151-
+app/admin/slates/page.tsx-152-  const [
+app/admin/slates/page.tsx-153-    isRefreshingShotCast,
+app/admin/slates/page.tsx-154-    setIsRefreshingShotCast,
+app/admin/slates/page.tsx-155-  ] = useState(false);
+app/admin/slates/page.tsx-156-
+app/admin/slates/page.tsx-157-  const [message, setMessage] = useState("");
+--
+app/admin/slates/page.tsx-169-    setSelectedSlateId("");
+app/admin/slates/page.tsx-170-    setSelectedSlate(null);
+app/admin/slates/page.tsx-171-    setTeams([]);
+app/admin/slates/page.tsx-172-    setGolfField(null);
+app/admin/slates/page.tsx-173-    setShotCast(null);
+app/admin/slates/page.tsx-174-    setShotCastTournamentId("");
+app/admin/slates/page.tsx-175-    void loadSlates();
+app/admin/slates/page.tsx-176-  }, [selectedSport]);
+app/admin/slates/page.tsx-177-
+app/admin/slates/page.tsx-178-  useEffect(() => {
+app/admin/slates/page.tsx-179-    if (!selectedSlateId) return;
+app/admin/slates/page.tsx-180-    void loadSlateDetail(Number(selectedSlateId));
+app/admin/slates/page.tsx-181-  }, [selectedSlateId]);
+app/admin/slates/page.tsx-182-
+app/admin/slates/page.tsx-183-  async function loadSlates() {
+app/admin/slates/page.tsx-184-    try {
+app/admin/slates/page.tsx-185-      setIsLoading(true);
+app/admin/slates/page.tsx-186-      setMessage("");
+app/admin/slates/page.tsx-187-
+app/admin/slates/page.tsx-188-      const response = await fetch(
+app/admin/slates/page.tsx:189:        `/api/admin/slates?sport=${encodeURIComponent(selectedSport)}`,
+app/admin/slates/page.tsx-190-        { cache: "no-store" },
+app/admin/slates/page.tsx-191-      );
+app/admin/slates/page.tsx-192-
+app/admin/slates/page.tsx-193-      const result = await response.json();
+app/admin/slates/page.tsx-194-
+app/admin/slates/page.tsx-195-      if (!response.ok) {
+app/admin/slates/page.tsx-196-        setMessage(result.error || "Failed to load slates.");
+app/admin/slates/page.tsx-197-        return;
+app/admin/slates/page.tsx-198-      }
+app/admin/slates/page.tsx-199-
+app/admin/slates/page.tsx-200-      const nextSlates = (result.slates ?? []) as SlateListRow[];
+app/admin/slates/page.tsx-201-      setSlates(nextSlates);
+app/admin/slates/page.tsx-202-
+app/admin/slates/page.tsx-203-      if (nextSlates.length > 0) {
+app/admin/slates/page.tsx-204-        setSelectedSlateId((current) => {
+app/admin/slates/page.tsx-205-          if (
+app/admin/slates/page.tsx-206-            current &&
+app/admin/slates/page.tsx-207-            nextSlates.some((slate) => slate.id === Number(current))
+app/admin/slates/page.tsx-208-          ) {
+app/admin/slates/page.tsx-209-            return current;
+app/admin/slates/page.tsx-210-          }
+app/admin/slates/page.tsx-211-
+app/admin/slates/page.tsx-212-          return nextSlates[0].id;
+app/admin/slates/page.tsx-213-        });
+app/admin/slates/page.tsx-214-      } else {
+app/admin/slates/page.tsx-215-        setSelectedSlateId("");
+app/admin/slates/page.tsx-216-        setSelectedSlate(null);
+app/admin/slates/page.tsx-217-        setTeams([]);
+app/admin/slates/page.tsx-218-        setGolfField(null);
+app/admin/slates/page.tsx-219-      }
+app/admin/slates/page.tsx-220-    } catch (error) {
+app/admin/slates/page.tsx-221-      console.error(error);
+app/admin/slates/page.tsx-222-      setMessage("Something went wrong while loading slates.");
+app/admin/slates/page.tsx-223-    } finally {
+app/admin/slates/page.tsx-224-      setIsLoading(false);
+app/admin/slates/page.tsx-225-    }
+app/admin/slates/page.tsx-226-  }
+app/admin/slates/page.tsx-227-
+app/admin/slates/page.tsx-228-  async function loadSlateDetail(slateId: number) {
+app/admin/slates/page.tsx-229-    try {
+app/admin/slates/page.tsx-230-      setMessage("");
+app/admin/slates/page.tsx-231-
+app/admin/slates/page.tsx-232-      const response = await fetch(
+app/admin/slates/page.tsx:233:        `/api/admin/slates/${slateId}`,
+app/admin/slates/page.tsx-234-        { cache: "no-store" },
+app/admin/slates/page.tsx-235-      );
+app/admin/slates/page.tsx-236-
+app/admin/slates/page.tsx-237-      const result = (await response.json()) as
+app/admin/slates/page.tsx-238-        | SlateDetailResponse
+app/admin/slates/page.tsx-239-        | { error?: string };
+app/admin/slates/page.tsx-240-
+app/admin/slates/page.tsx-241-      if (!response.ok) {
+app/admin/slates/page.tsx-242-        setMessage(
+app/admin/slates/page.tsx-243-          "error" in result
+app/admin/slates/page.tsx-244-            ? result.error || "Failed to load slate."
+app/admin/slates/page.tsx-245-            : "Failed to load slate.",
+app/admin/slates/page.tsx-246-        );
+app/admin/slates/page.tsx-247-        return;
+app/admin/slates/page.tsx-248-      }
+app/admin/slates/page.tsx-249-
+app/admin/slates/page.tsx-250-      const safeResult = result as SlateDetailResponse;
+app/admin/slates/page.tsx-251-
+app/admin/slates/page.tsx-252-      setSelectedSlate({
+app/admin/slates/page.tsx-253-        ...safeResult.slate,
+app/admin/slates/page.tsx-254-        nbaTeamsInput: (
+app/admin/slates/page.tsx-255-          safeResult.slate.nba_team_abbreviations ?? []
+app/admin/slates/page.tsx-256-        ).join(", "),
+app/admin/slates/page.tsx-257-      });
+app/admin/slates/page.tsx-258-
+app/admin/slates/page.tsx-259-      setTeams(normalizeTeamOrder(safeResult.teams ?? []));
+app/admin/slates/page.tsx-260-      setGolfField(safeResult.golfField ?? null);
+app/admin/slates/page.tsx-261-
+app/admin/slates/page.tsx-262-      if (safeResult.slate.sport === "golf") {
+app/admin/slates/page.tsx-263-        void loadShotCastStatus(
+app/admin/slates/page.tsx-264-          slateId,
+app/admin/slates/page.tsx-265-        );
+app/admin/slates/page.tsx-266-      } else {
+app/admin/slates/page.tsx-267-        setShotCast(null);
+app/admin/slates/page.tsx-268-        setShotCastTournamentId("");
+app/admin/slates/page.tsx-269-      }
+app/admin/slates/page.tsx-270-    } catch (error) {
+app/admin/slates/page.tsx-271-      console.error(error);
+app/admin/slates/page.tsx-272-      setMessage(
+app/admin/slates/page.tsx-273-        "Something went wrong while loading slate details.",
+app/admin/slates/page.tsx-274-      );
+app/admin/slates/page.tsx-275-    }
+app/admin/slates/page.tsx-276-  }
+app/admin/slates/page.tsx-277-
+app/admin/slates/page.tsx-278-  async function loadShotCastStatus(
+app/admin/slates/page.tsx-279-    slateId: number,
+app/admin/slates/page.tsx-280-  ) {
+app/admin/slates/page.tsx-281-    try {
+app/admin/slates/page.tsx-282-      const response = await fetch(
+app/admin/slates/page.tsx:283:        `/api/admin/golf/shotcast?slateId=${slateId}`,
+app/admin/slates/page.tsx-284-        {
+app/admin/slates/page.tsx-285-          cache: "no-store",
+app/admin/slates/page.tsx-286-        },
+app/admin/slates/page.tsx-287-      );
+app/admin/slates/page.tsx-288-
+app/admin/slates/page.tsx-289-      const result =
+app/admin/slates/page.tsx-290-        await response.json();
+app/admin/slates/page.tsx-291-
+app/admin/slates/page.tsx-292-      if (!response.ok) {
+app/admin/slates/page.tsx-293-        setShotCast(null);
+app/admin/slates/page.tsx-294-        return;
+app/admin/slates/page.tsx-295-      }
+app/admin/slates/page.tsx-296-
+app/admin/slates/page.tsx-297-      const nextShotCast =
+app/admin/slates/page.tsx-298-        result.shotcast as
+app/admin/slates/page.tsx-299-          | ShotCastSummary
+app/admin/slates/page.tsx-300-          | null;
+app/admin/slates/page.tsx-301-
+app/admin/slates/page.tsx-302-      setShotCast(nextShotCast);
+app/admin/slates/page.tsx-303-
+app/admin/slates/page.tsx-304-      if (
+app/admin/slates/page.tsx-305-        nextShotCast
+app/admin/slates/page.tsx-306-          ?.tournamentId
+app/admin/slates/page.tsx-307-      ) {
+app/admin/slates/page.tsx-308-        setShotCastTournamentId(
+app/admin/slates/page.tsx-309-          nextShotCast
+app/admin/slates/page.tsx-310-            .tournamentId,
+app/admin/slates/page.tsx-311-        );
+app/admin/slates/page.tsx-312-      }
+app/admin/slates/page.tsx-313-    } catch (error) {
+app/admin/slates/page.tsx-314-      console.error(error);
+app/admin/slates/page.tsx-315-      setShotCast(null);
+app/admin/slates/page.tsx-316-    }
+app/admin/slates/page.tsx-317-  }
+app/admin/slates/page.tsx-318-
+app/admin/slates/page.tsx-319-  async function handleRefreshShotCast() {
+app/admin/slates/page.tsx-320-    if (!selectedSlateId) {
+app/admin/slates/page.tsx-321-      return;
+app/admin/slates/page.tsx-322-    }
+app/admin/slates/page.tsx-323-
+--
+app/admin/slates/page.tsx-326-        .trim()
+app/admin/slates/page.tsx-327-        .toUpperCase();
+app/admin/slates/page.tsx-328-
+app/admin/slates/page.tsx-329-    if (
+app/admin/slates/page.tsx-330-      !/^R\d{7}$/.test(
+app/admin/slates/page.tsx-331-        tournamentId,
+app/admin/slates/page.tsx-332-      )
+app/admin/slates/page.tsx-333-    ) {
+app/admin/slates/page.tsx-334-      setMessage(
+app/admin/slates/page.tsx-335-        "Enter a PGA tournament ID such as R2026013.",
+app/admin/slates/page.tsx-336-      );
+app/admin/slates/page.tsx-337-
+app/admin/slates/page.tsx-338-      return;
+app/admin/slates/page.tsx-339-    }
+app/admin/slates/page.tsx-340-
+app/admin/slates/page.tsx-341-    try {
+app/admin/slates/page.tsx-342-      setIsRefreshingShotCast(true);
+app/admin/slates/page.tsx-343-      setMessage("");
+app/admin/slates/page.tsx-344-
+app/admin/slates/page.tsx-345-      const response = await fetch(
+app/admin/slates/page.tsx:346:        "/api/admin/golf/shotcast",
+app/admin/slates/page.tsx-347-        {
+app/admin/slates/page.tsx-348-          method: "POST",
+app/admin/slates/page.tsx-349-          headers: {
+app/admin/slates/page.tsx-350-            "Content-Type":
+app/admin/slates/page.tsx-351-              "application/json",
+app/admin/slates/page.tsx-352-          },
+app/admin/slates/page.tsx-353-          body: JSON.stringify({
+app/admin/slates/page.tsx-354-            slateId:
+app/admin/slates/page.tsx-355-              Number(
+app/admin/slates/page.tsx-356-                selectedSlateId,
+app/admin/slates/page.tsx-357-              ),
+app/admin/slates/page.tsx-358-            tournamentId,
+app/admin/slates/page.tsx-359-            round: 1,
+app/admin/slates/page.tsx-360-          }),
+app/admin/slates/page.tsx-361-          cache: "no-store",
+app/admin/slates/page.tsx-362-        },
+app/admin/slates/page.tsx-363-      );
+app/admin/slates/page.tsx-364-
+app/admin/slates/page.tsx-365-      const result =
+app/admin/slates/page.tsx-366-        await response.json();
+app/admin/slates/page.tsx-367-
+app/admin/slates/page.tsx-368-      if (!response.ok) {
+app/admin/slates/page.tsx-369-        setMessage(
+app/admin/slates/page.tsx-370-          result.error ||
+app/admin/slates/page.tsx-371-            "Failed to refresh ShotCast assets.",
+app/admin/slates/page.tsx-372-        );
+app/admin/slates/page.tsx-373-
+app/admin/slates/page.tsx-374-        return;
+app/admin/slates/page.tsx-375-      }
+app/admin/slates/page.tsx-376-
+app/admin/slates/page.tsx-377-      await loadShotCastStatus(
+app/admin/slates/page.tsx-378-        Number(selectedSlateId),
+app/admin/slates/page.tsx-379-      );
+app/admin/slates/page.tsx-380-
+app/admin/slates/page.tsx-381-      setMessage(
+app/admin/slates/page.tsx-382-        `ShotCast refreshed: ${
+app/admin/slates/page.tsx-383-          result.summary
+app/admin/slates/page.tsx-384-            ?.localImages ?? 0
+app/admin/slates/page.tsx-385-        } photos, ${
+app/admin/slates/page.tsx-386-          result.summary
+--
+app/admin/slates/page.tsx-449-        return normalized;
+app/admin/slates/page.tsx-450-      }
+app/admin/slates/page.tsx-451-
+app/admin/slates/page.tsx-452-      const reorderedSection = [...sameSection];
+app/admin/slates/page.tsx-453-      const [moved] = reorderedSection.splice(currentIndex, 1);
+app/admin/slates/page.tsx-454-      reorderedSection.splice(targetIndex, 0, moved);
+app/admin/slates/page.tsx-455-
+app/admin/slates/page.tsx-456-      const otherSection = normalized.filter(
+app/admin/slates/page.tsx-457-        (row) =>
+app/admin/slates/page.tsx-458-          row.is_participating !== team.is_participating,
+app/admin/slates/page.tsx-459-      );
+app/admin/slates/page.tsx-460-
+app/admin/slates/page.tsx-461-      return normalizeTeamOrder(
+app/admin/slates/page.tsx-462-        team.is_participating
+app/admin/slates/page.tsx-463-          ? [...reorderedSection, ...otherSection]
+app/admin/slates/page.tsx-464-          : [...otherSection, ...reorderedSection],
+app/admin/slates/page.tsx-465-      );
+app/admin/slates/page.tsx-466-    });
+app/admin/slates/page.tsx-467-  }
+app/admin/slates/page.tsx-468-
+app/admin/slates/page.tsx:469:  async function handleSave() {
+app/admin/slates/page.tsx-470-    if (!selectedSlateId || !selectedSlate) return;
+app/admin/slates/page.tsx-471-
+app/admin/slates/page.tsx-472-    const normalizedTeams = normalizeTeamOrder(teams);
+app/admin/slates/page.tsx-473-
+app/admin/slates/page.tsx-474-    if (
+app/admin/slates/page.tsx-475-      selectedSlate.sport === "golf" &&
+app/admin/slates/page.tsx-476-      (
+app/admin/slates/page.tsx-477-        !Number.isInteger(
+app/admin/slates/page.tsx-478-          selectedSlate.cut_penalty_per_round,
+app/admin/slates/page.tsx-479-        ) ||
+app/admin/slates/page.tsx-480-        Number(selectedSlate.cut_penalty_per_round) < 0 ||
+app/admin/slates/page.tsx-481-        Number(selectedSlate.cut_penalty_per_round) > 100
+app/admin/slates/page.tsx-482-      )
+app/admin/slates/page.tsx-483-    ) {
+app/admin/slates/page.tsx-484-      setMessage(
+app/admin/slates/page.tsx-485-        "Cut penalty must be a whole number from 0 through 100.",
+app/admin/slates/page.tsx-486-      );
+app/admin/slates/page.tsx-487-      return;
+app/admin/slates/page.tsx-488-    }
+app/admin/slates/page.tsx-489-
+app/admin/slates/page.tsx-490-    try {
+app/admin/slates/page.tsx-491-      setIsSaving(true);
+app/admin/slates/page.tsx-492-      setMessage("");
+app/admin/slates/page.tsx-493-
+app/admin/slates/page.tsx-494-      const response = await fetch(
+app/admin/slates/page.tsx:495:        `/api/admin/slates/${selectedSlateId}`,
+app/admin/slates/page.tsx-496-        {
+app/admin/slates/page.tsx-497-          method: "PATCH",
+app/admin/slates/page.tsx-498-          headers: {
+app/admin/slates/page.tsx-499-            "Content-Type": "application/json",
+app/admin/slates/page.tsx-500-          },
+app/admin/slates/page.tsx-501-          body: JSON.stringify({
+app/admin/slates/page.tsx-502-            is_locked: selectedSlate.is_locked,
+app/admin/slates/page.tsx-503-            cut_penalty_per_round:
+app/admin/slates/page.tsx-504-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx-505-                ? Number(
+app/admin/slates/page.tsx-506-                    selectedSlate.cut_penalty_per_round,
+app/admin/slates/page.tsx-507-                  )
+app/admin/slates/page.tsx-508-                : undefined,
+app/admin/slates/page.tsx-509-            has_cut:
+app/admin/slates/page.tsx-510-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx-511-                ? selectedSlate.has_cut !== false
+app/admin/slates/page.tsx-512-                : undefined,
+app/admin/slates/page.tsx-513-            nba_team_abbreviations:
+app/admin/slates/page.tsx-514-              selectedSlate.nbaTeamsInput
+app/admin/slates/page.tsx-515-                .split(",")
+app/admin/slates/page.tsx-516-                .map((value) =>
+app/admin/slates/page.tsx-517-                  value.trim().toUpperCase(),
+app/admin/slates/page.tsx-518-                )
+app/admin/slates/page.tsx-519-                .filter(Boolean),
+app/admin/slates/page.tsx-520-            teams: normalizedTeams.map(
+app/admin/slates/page.tsx-521-              (team, index) => ({
+app/admin/slates/page.tsx-522-                team_id: team.team_id,
+app/admin/slates/page.tsx-523-                draft_order: index + 1,
+app/admin/slates/page.tsx-524-                is_participating:
+app/admin/slates/page.tsx-525-                  team.is_participating,
+app/admin/slates/page.tsx-526-              }),
+app/admin/slates/page.tsx-527-            ),
+app/admin/slates/page.tsx-528-          }),
+app/admin/slates/page.tsx-529-        },
+app/admin/slates/page.tsx-530-      );
+app/admin/slates/page.tsx-531-
+app/admin/slates/page.tsx-532-      const result = await response.json();
+app/admin/slates/page.tsx-533-
+app/admin/slates/page.tsx-534-      if (!response.ok) {
+app/admin/slates/page.tsx-535-        setMessage(
+app/admin/slates/page.tsx:536:          result.error || "Failed to save slate.",
+app/admin/slates/page.tsx-537-        );
+app/admin/slates/page.tsx-538-        return;
+app/admin/slates/page.tsx-539-      }
+app/admin/slates/page.tsx-540-
+app/admin/slates/page.tsx-541-      setMessage("Slate updated successfully.");
+app/admin/slates/page.tsx-542-      await loadSlateDetail(Number(selectedSlateId));
+app/admin/slates/page.tsx-543-      await loadSlates();
+app/admin/slates/page.tsx-544-    } catch (error) {
+app/admin/slates/page.tsx-545-      console.error(error);
+app/admin/slates/page.tsx-546-      setMessage(
+app/admin/slates/page.tsx-547-        "Something went wrong while saving the slate.",
+app/admin/slates/page.tsx-548-      );
+app/admin/slates/page.tsx-549-    } finally {
+app/admin/slates/page.tsx-550-      setIsSaving(false);
+app/admin/slates/page.tsx-551-    }
+app/admin/slates/page.tsx-552-  }
+app/admin/slates/page.tsx-553-
+app/admin/slates/page.tsx-554-  async function handleRefreshGolfField() {
+app/admin/slates/page.tsx-555-    if (!selectedSlateId || !selectedSlate) return;
+app/admin/slates/page.tsx-556-
+app/admin/slates/page.tsx-557-    try {
+app/admin/slates/page.tsx-558-      setIsRefreshingGolfField(true);
+app/admin/slates/page.tsx-559-      setMessage("");
+app/admin/slates/page.tsx-560-
+app/admin/slates/page.tsx-561-      await refreshGolfFromBrowser(
+app/admin/slates/page.tsx-562-        Number(selectedSlateId),
+app/admin/slates/page.tsx-563-      );
+app/admin/slates/page.tsx-564-
+app/admin/slates/page.tsx-565-      await loadSlateDetail(Number(selectedSlateId));
+app/admin/slates/page.tsx-566-
+app/admin/slates/page.tsx-567-      setMessage(
+app/admin/slates/page.tsx-568-        "Tournament field, scores, rounds, and hole data refreshed successfully.",
+app/admin/slates/page.tsx-569-      );
+app/admin/slates/page.tsx-570-    } catch (error) {
+app/admin/slates/page.tsx-571-      const errorMessage =
+app/admin/slates/page.tsx-572-        error instanceof Error
+app/admin/slates/page.tsx-573-          ? error.message
+app/admin/slates/page.tsx-574-          : String(error);
+app/admin/slates/page.tsx-575-
+app/admin/slates/page.tsx-576-      const isWaitingForField =
+--
+app/admin/slates/page.tsx-586-        );
+app/admin/slates/page.tsx-587-      } else {
+app/admin/slates/page.tsx-588-        console.error(error);
+app/admin/slates/page.tsx-589-        setMessage(
+app/admin/slates/page.tsx-590-          "Something went wrong while refreshing the tournament field.",
+app/admin/slates/page.tsx-591-        );
+app/admin/slates/page.tsx-592-      }
+app/admin/slates/page.tsx-593-    } finally {
+app/admin/slates/page.tsx-594-      setIsRefreshingGolfField(false);
+app/admin/slates/page.tsx-595-    }
+app/admin/slates/page.tsx-596-  }
+app/admin/slates/page.tsx-597-
+app/admin/slates/page.tsx-598-  async function handleImportPgaTourField() {
+app/admin/slates/page.tsx-599-    if (!selectedSlateId || !selectedSlate) return;
+app/admin/slates/page.tsx-600-
+app/admin/slates/page.tsx-601-    try {
+app/admin/slates/page.tsx-602-      setIsImportingGolfField(true);
+app/admin/slates/page.tsx-603-      setMessage("");
+app/admin/slates/page.tsx-604-
+app/admin/slates/page.tsx-605-      const response = await fetch(
+app/admin/slates/page.tsx:606:        "/api/admin/golf/import-field",
+app/admin/slates/page.tsx-607-        {
+app/admin/slates/page.tsx-608-          method: "POST",
+app/admin/slates/page.tsx-609-          headers: {
+app/admin/slates/page.tsx-610-            "Content-Type": "application/json",
+app/admin/slates/page.tsx-611-          },
+app/admin/slates/page.tsx-612-          cache: "no-store",
+app/admin/slates/page.tsx-613-          body: JSON.stringify({
+app/admin/slates/page.tsx-614-            slateId: Number(selectedSlateId),
+app/admin/slates/page.tsx-615-          }),
+app/admin/slates/page.tsx-616-        },
+app/admin/slates/page.tsx-617-      );
+app/admin/slates/page.tsx-618-
+app/admin/slates/page.tsx-619-      const result = await response.json();
+app/admin/slates/page.tsx-620-
+app/admin/slates/page.tsx-621-      if (!response.ok) {
+app/admin/slates/page.tsx-622-        setMessage(
+app/admin/slates/page.tsx-623-          result?.error ||
+app/admin/slates/page.tsx-624-            "PGA Tour field import failed.",
+app/admin/slates/page.tsx-625-        );
+app/admin/slates/page.tsx-626-        return;
+app/admin/slates/page.tsx-627-      }
+app/admin/slates/page.tsx-628-
+app/admin/slates/page.tsx-629-      await loadSlateDetail(
+app/admin/slates/page.tsx-630-        Number(selectedSlateId),
+app/admin/slates/page.tsx-631-      );
+app/admin/slates/page.tsx-632-
+app/admin/slates/page.tsx-633-      const playerCount =
+app/admin/slates/page.tsx-634-        Number(
+app/admin/slates/page.tsx-635-          result?.eventPlayersUpserted ??
+app/admin/slates/page.tsx-636-            result?.fieldPlayersFound ??
+app/admin/slates/page.tsx-637-            0,
+app/admin/slates/page.tsx-638-        );
+app/admin/slates/page.tsx-639-
+app/admin/slates/page.tsx-640-      setMessage(
+app/admin/slates/page.tsx-641-        `PGA Tour field imported successfully: ${playerCount} golfers loaded.`,
+app/admin/slates/page.tsx-642-      );
+app/admin/slates/page.tsx-643-    } catch (error) {
+app/admin/slates/page.tsx-644-      console.error(error);
+app/admin/slates/page.tsx-645-
+app/admin/slates/page.tsx-646-      setMessage(
+app/admin/slates/page.tsx-647-        error instanceof Error
+app/admin/slates/page.tsx-648-          ? `PGA Tour field import failed: ${error.message}`
+app/admin/slates/page.tsx-649-          : "Something went wrong while importing the PGA Tour field.",
+app/admin/slates/page.tsx-650-      );
+app/admin/slates/page.tsx-651-    } finally {
+app/admin/slates/page.tsx-652-      setIsImportingGolfField(false);
+app/admin/slates/page.tsx-653-    }
+app/admin/slates/page.tsx-654-  }
+app/admin/slates/page.tsx-655-
+app/admin/slates/page.tsx-656-  async function handleSyncGolfRankings() {
+app/admin/slates/page.tsx-657-    try {
+app/admin/slates/page.tsx-658-      setIsSyncingGolfRankings(true);
+app/admin/slates/page.tsx-659-      setMessage("");
+app/admin/slates/page.tsx-660-
+app/admin/slates/page.tsx-661-      const response = await fetch(
+app/admin/slates/page.tsx:662:        "/api/admin/sync-golf-rankings",
+app/admin/slates/page.tsx-663-        {
+app/admin/slates/page.tsx-664-          method: "POST",
+app/admin/slates/page.tsx-665-          cache: "no-store",
+app/admin/slates/page.tsx-666-        },
+app/admin/slates/page.tsx-667-      );
+app/admin/slates/page.tsx-668-
+app/admin/slates/page.tsx-669-      const result = await response.json();
+app/admin/slates/page.tsx-670-
+app/admin/slates/page.tsx-671-      if (!response.ok) {
+app/admin/slates/page.tsx-672-        setMessage(
+app/admin/slates/page.tsx-673-          result.error || "Failed to sync Golf rankings.",
+app/admin/slates/page.tsx-674-        );
+app/admin/slates/page.tsx-675-        return;
+app/admin/slates/page.tsx-676-      }
+app/admin/slates/page.tsx-677-
+app/admin/slates/page.tsx-678-      setMessage(
+app/admin/slates/page.tsx-679-        `OWGR synced: ${result.updatedGolfers ?? 0} updated, ` +
+app/admin/slates/page.tsx-680-          `${result.createdGolfers ?? 0} added, ` +
+app/admin/slates/page.tsx-681-          `${result.unmatchedGolfers ?? 0} unmatched.`,
+app/admin/slates/page.tsx-682-      );
+app/admin/slates/page.tsx-683-    } catch (error) {
+app/admin/slates/page.tsx-684-      console.error(error);
+app/admin/slates/page.tsx-685-      setMessage(
+app/admin/slates/page.tsx-686-        "Something went wrong while syncing Golf rankings.",
+app/admin/slates/page.tsx-687-      );
+app/admin/slates/page.tsx-688-    } finally {
+app/admin/slates/page.tsx-689-      setIsSyncingGolfRankings(false);
+app/admin/slates/page.tsx-690-    }
+app/admin/slates/page.tsx-691-  }
+app/admin/slates/page.tsx-692-
+app/admin/slates/page.tsx-693-  async function handleReseed() {
+app/admin/slates/page.tsx-694-    if (!selectedSlateId) return;
+app/admin/slates/page.tsx-695-
+app/admin/slates/page.tsx-696-    const confirmed = window.confirm(
+app/admin/slates/page.tsx-697-      "Replace the current draft order using the previous completed slate?",
+app/admin/slates/page.tsx-698-    );
+app/admin/slates/page.tsx-699-
+app/admin/slates/page.tsx-700-    if (!confirmed) return;
+app/admin/slates/page.tsx-701-
+app/admin/slates/page.tsx-702-    try {
+app/admin/slates/page.tsx-703-      setIsReseeding(true);
+app/admin/slates/page.tsx-704-      setMessage("");
+app/admin/slates/page.tsx-705-
+app/admin/slates/page.tsx-706-      const response = await fetch(
+app/admin/slates/page.tsx:707:        `/api/admin/slates/${selectedSlateId}/reseed`,
+app/admin/slates/page.tsx-708-        { method: "POST" },
+app/admin/slates/page.tsx-709-      );
+app/admin/slates/page.tsx-710-
+app/admin/slates/page.tsx-711-      const result = await response.json();
+app/admin/slates/page.tsx-712-
+app/admin/slates/page.tsx-713-      if (!response.ok) {
+app/admin/slates/page.tsx-714-        setMessage(
+app/admin/slates/page.tsx-715-          result.error || "Failed to reseed the slate.",
+app/admin/slates/page.tsx-716-        );
+app/admin/slates/page.tsx-717-        return;
+app/admin/slates/page.tsx-718-      }
+app/admin/slates/page.tsx-719-
+app/admin/slates/page.tsx-720-      setMessage("Slate reseeded successfully.");
+app/admin/slates/page.tsx-721-      await loadSlateDetail(Number(selectedSlateId));
+app/admin/slates/page.tsx-722-    } catch (error) {
+app/admin/slates/page.tsx-723-      console.error(error);
+app/admin/slates/page.tsx-724-      setMessage(
+app/admin/slates/page.tsx-725-        "Something went wrong while reseeding.",
+app/admin/slates/page.tsx-726-      );
+app/admin/slates/page.tsx-727-    } finally {
+app/admin/slates/page.tsx-728-      setIsReseeding(false);
+app/admin/slates/page.tsx-729-    }
+app/admin/slates/page.tsx-730-  }
+app/admin/slates/page.tsx-731-
+app/admin/slates/page.tsx-732-  async function handleDelete() {
+app/admin/slates/page.tsx-733-    if (!selectedSlateId) return;
+app/admin/slates/page.tsx-734-
+app/admin/slates/page.tsx-735-    const confirmed = window.confirm(
+app/admin/slates/page.tsx:736:      "Delete this slate? This removes its lineups, stats, results, and settings.",
+app/admin/slates/page.tsx-737-    );
+app/admin/slates/page.tsx-738-
+app/admin/slates/page.tsx-739-    if (!confirmed) return;
+app/admin/slates/page.tsx-740-
+app/admin/slates/page.tsx-741-    try {
+app/admin/slates/page.tsx-742-      setIsDeleting(true);
+app/admin/slates/page.tsx-743-      setMessage("");
+app/admin/slates/page.tsx-744-
+app/admin/slates/page.tsx-745-      const response = await fetch(
+app/admin/slates/page.tsx:746:        `/api/admin/slates/${selectedSlateId}`,
+app/admin/slates/page.tsx-747-        { method: "DELETE" },
+app/admin/slates/page.tsx-748-      );
+app/admin/slates/page.tsx-749-
+app/admin/slates/page.tsx-750-      const result = await response.json();
+app/admin/slates/page.tsx-751-
+app/admin/slates/page.tsx-752-      if (!response.ok) {
+app/admin/slates/page.tsx-753-        setMessage(
+app/admin/slates/page.tsx-754-          result.error || "Failed to delete the slate.",
+app/admin/slates/page.tsx-755-        );
+app/admin/slates/page.tsx-756-        return;
+app/admin/slates/page.tsx-757-      }
+app/admin/slates/page.tsx-758-
+app/admin/slates/page.tsx-759-      setSelectedSlate(null);
+app/admin/slates/page.tsx-760-      setTeams([]);
+app/admin/slates/page.tsx-761-      setGolfField(null);
+app/admin/slates/page.tsx-762-      setSelectedSlateId("");
+app/admin/slates/page.tsx-763-      await loadSlates();
+app/admin/slates/page.tsx-764-      setMessage("Slate deleted successfully.");
+app/admin/slates/page.tsx-765-    } catch (error) {
+app/admin/slates/page.tsx-766-      console.error(error);
+app/admin/slates/page.tsx-767-      setMessage(
+app/admin/slates/page.tsx-768-        "Something went wrong while deleting the slate.",
+app/admin/slates/page.tsx-769-      );
+app/admin/slates/page.tsx-770-    } finally {
+app/admin/slates/page.tsx-771-      setIsDeleting(false);
+app/admin/slates/page.tsx-772-    }
+app/admin/slates/page.tsx-773-  }
+app/admin/slates/page.tsx-774-
+app/admin/slates/page.tsx-775-  const orderedTeams = useMemo(
+app/admin/slates/page.tsx-776-    () => normalizeTeamOrder(teams),
+app/admin/slates/page.tsx-777-    [teams],
+app/admin/slates/page.tsx-778-  );
+app/admin/slates/page.tsx-779-
+app/admin/slates/page.tsx-780-  const participatingTeams = useMemo(
+app/admin/slates/page.tsx-781-    () =>
+app/admin/slates/page.tsx-782-      orderedTeams.filter(
+app/admin/slates/page.tsx-783-        (team) => team.is_participating,
+app/admin/slates/page.tsx-784-      ),
+app/admin/slates/page.tsx-785-    [orderedTeams],
+app/admin/slates/page.tsx-786-  );
+--
+app/admin/slates/page.tsx-857-            </button>
+app/admin/slates/page.tsx-858-          </div>
+app/admin/slates/page.tsx-859-        </td>
+app/admin/slates/page.tsx-860-      </tr>
+app/admin/slates/page.tsx-861-    );
+app/admin/slates/page.tsx-862-  }
+app/admin/slates/page.tsx-863-
+app/admin/slates/page.tsx-864-  return (
+app/admin/slates/page.tsx-865-    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100">
+app/admin/slates/page.tsx-866-      <div className="mx-auto max-w-6xl space-y-6">
+app/admin/slates/page.tsx-867-        <AppNav />
+app/admin/slates/page.tsx-868-
+app/admin/slates/page.tsx-869-        <section className="rounded-3xl border border-slate-700 bg-slate-900 px-6 py-6 shadow-sm">
+app/admin/slates/page.tsx-870-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+app/admin/slates/page.tsx-871-            <div>
+app/admin/slates/page.tsx-872-              <h1 className="text-3xl font-bold tracking-tight">
+app/admin/slates/page.tsx-873-                Slate Manager
+app/admin/slates/page.tsx-874-              </h1>
+app/admin/slates/page.tsx-875-
+app/admin/slates/page.tsx-876-              <p className="mt-2 text-sm text-slate-300">
+app/admin/slates/page.tsx:877:                Manage tournament settings, participants,
+app/admin/slates/page.tsx-878-                draft order, field data, and slate status.
+app/admin/slates/page.tsx-879-              </p>
+app/admin/slates/page.tsx-880-            </div>
+app/admin/slates/page.tsx-881-
+app/admin/slates/page.tsx-882-            <div className="flex flex-wrap items-end gap-3">
+app/admin/slates/page.tsx-883-              <Link
+app/admin/slates/page.tsx:884:                href="/admin"
+app/admin/slates/page.tsx-885-                className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-sky-400 hover:bg-slate-800"
+app/admin/slates/page.tsx-886-              >
+app/admin/slates/page.tsx-887-                ← Back
+app/admin/slates/page.tsx-888-              </Link>
+app/admin/slates/page.tsx-889-
+app/admin/slates/page.tsx-890-              <div className="min-w-[250px]">
+app/admin/slates/page.tsx-891-                <label
+app/admin/slates/page.tsx-892-                  htmlFor="slate-select"
+app/admin/slates/page.tsx-893-                  className="mb-1 block text-xs font-medium text-slate-300"
+app/admin/slates/page.tsx-894-                >
+app/admin/slates/page.tsx-895-                  Select Slate
+app/admin/slates/page.tsx-896-                </label>
+app/admin/slates/page.tsx-897-
+app/admin/slates/page.tsx-898-                <select
+app/admin/slates/page.tsx-899-                  id="slate-select"
+app/admin/slates/page.tsx-900-                  value={selectedSlateId}
+app/admin/slates/page.tsx-901-                  onChange={(event) =>
+app/admin/slates/page.tsx-902-                    setSelectedSlateId(
+app/admin/slates/page.tsx-903-                      event.target.value
+app/admin/slates/page.tsx-904-                        ? Number(event.target.value)
+app/admin/slates/page.tsx-905-                        : "",
+app/admin/slates/page.tsx-906-                    )
+app/admin/slates/page.tsx-907-                  }
+app/admin/slates/page.tsx-908-                  disabled={isBusy}
+app/admin/slates/page.tsx-909-                  className="w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-3 text-sm text-slate-100 outline-none transition focus:border-sky-400 disabled:opacity-60"
+app/admin/slates/page.tsx-910-                >
+app/admin/slates/page.tsx-911-                  {slates.map((slate) => (
+app/admin/slates/page.tsx-912-                    <option
+app/admin/slates/page.tsx-913-                      key={slate.id}
+app/admin/slates/page.tsx-914-                      value={slate.id}
+app/admin/slates/page.tsx-915-                    >
+app/admin/slates/page.tsx-916-                      {slate.label}
+app/admin/slates/page.tsx-917-                      {slate.is_locked ? " (Locked)" : ""}
+app/admin/slates/page.tsx-918-                    </option>
+app/admin/slates/page.tsx-919-                  ))}
+app/admin/slates/page.tsx-920-                </select>
+app/admin/slates/page.tsx-921-              </div>
+app/admin/slates/page.tsx-922-            </div>
+app/admin/slates/page.tsx-923-          </div>
+app/admin/slates/page.tsx-924-        </section>
+--
+app/admin/slates/page.tsx-1236-                          >
+app/admin/slates/page.tsx-1237-                            Not participating
+app/admin/slates/page.tsx-1238-                          </td>
+app/admin/slates/page.tsx-1239-                        </tr>
+app/admin/slates/page.tsx-1240-                      ) : null}
+app/admin/slates/page.tsx-1241-
+app/admin/slates/page.tsx-1242-                      {inactiveTeams.map((team) =>
+app/admin/slates/page.tsx-1243-                        renderTeamRow(
+app/admin/slates/page.tsx-1244-                          team,
+app/admin/slates/page.tsx-1245-                          inactiveTeams,
+app/admin/slates/page.tsx-1246-                        ),
+app/admin/slates/page.tsx-1247-                      )}
+app/admin/slates/page.tsx-1248-                    </tbody>
+app/admin/slates/page.tsx-1249-                  </table>
+app/admin/slates/page.tsx-1250-                </div>
+app/admin/slates/page.tsx-1251-              </div>
+app/admin/slates/page.tsx-1252-
+app/admin/slates/page.tsx-1253-              <div className="flex flex-wrap gap-3">
+app/admin/slates/page.tsx-1254-                <button
+app/admin/slates/page.tsx-1255-                  type="button"
+app/admin/slates/page.tsx:1256:                  onClick={() => void handleSave()}
+app/admin/slates/page.tsx-1257-                  disabled={isBusy}
+app/admin/slates/page.tsx-1258-                  className="rounded-xl border border-emerald-500 bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+app/admin/slates/page.tsx-1259-                >
+app/admin/slates/page.tsx:1260:                  {isSaving ? "Saving..." : "Save Slate"}
+app/admin/slates/page.tsx-1261-                </button>
+app/admin/slates/page.tsx-1262-
+app/admin/slates/page.tsx-1263-                {selectedSlate.sport === "golf" ? (
+app/admin/slates/page.tsx-1264-                  <>
+app/admin/slates/page.tsx-1265-                    <button
+app/admin/slates/page.tsx-1266-                      type="button"
+app/admin/slates/page.tsx-1267-                      onClick={() =>
+app/admin/slates/page.tsx-1268-                        void handleRefreshGolfField()
+app/admin/slates/page.tsx-1269-                      }
+app/admin/slates/page.tsx-1270-                      disabled={
+app/admin/slates/page.tsx-1271-                        isBusy || selectedSlate.is_locked
+app/admin/slates/page.tsx-1272-                      }
+app/admin/slates/page.tsx-1273-                      title={
+app/admin/slates/page.tsx-1274-                        selectedSlate.is_locked
+app/admin/slates/page.tsx:1275:                          ? "Unlock and save the slate before refreshing the field."
+app/admin/slates/page.tsx-1276-                          : "Reload the field, leaderboard, rounds, and holes from ESPN."
+app/admin/slates/page.tsx-1277-                      }
+app/admin/slates/page.tsx-1278-                      className="rounded-xl border border-sky-500 bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+app/admin/slates/page.tsx-1279-                    >
+app/admin/slates/page.tsx-1280-                      {isRefreshingGolfField
+app/admin/slates/page.tsx-1281-                        ? "Refreshing Field..."
+app/admin/slates/page.tsx-1282-                        : "Refresh Tournament Field"}
+app/admin/slates/page.tsx-1283-                    </button>
+app/admin/slates/page.tsx-1284-
+app/admin/slates/page.tsx-1285-                    <button
+app/admin/slates/page.tsx-1286-                      type="button"
+app/admin/slates/page.tsx-1287-                      onClick={() =>
+app/admin/slates/page.tsx-1288-                        void handleImportPgaTourField()
+app/admin/slates/page.tsx-1289-                      }
+app/admin/slates/page.tsx-1290-                      disabled={
+app/admin/slates/page.tsx-1291-                        isBusy || selectedSlate.is_locked
+app/admin/slates/page.tsx-1292-                      }
+app/admin/slates/page.tsx-1293-                      title={
+app/admin/slates/page.tsx-1294-                        selectedSlate.is_locked
+app/admin/slates/page.tsx:1295:                          ? "Unlock and save the slate before importing the field."
+app/admin/slates/page.tsx-1296-                          : "Load the tournament field directly from PGA Tour when ESPN has not published its field yet."
+app/admin/slates/page.tsx-1297-                      }
+app/admin/slates/page.tsx-1298-                      className="rounded-xl border border-emerald-400 bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+app/admin/slates/page.tsx-1299-                    >
+app/admin/slates/page.tsx-1300-                      {isImportingGolfField
+app/admin/slates/page.tsx-1301-                        ? "Importing PGA Field..."
+app/admin/slates/page.tsx-1302-                        : "Import PGA Tour Field"}
+app/admin/slates/page.tsx-1303-                    </button>
+app/admin/slates/page.tsx-1304-
+app/admin/slates/page.tsx-1305-                    <button
+app/admin/slates/page.tsx-1306-                      type="button"
+app/admin/slates/page.tsx-1307-                      onClick={() =>
+app/admin/slates/page.tsx-1308-                        void handleSyncGolfRankings()
+app/admin/slates/page.tsx-1309-                      }
+app/admin/slates/page.tsx-1310-                      disabled={isBusy}
+app/admin/slates/page.tsx-1311-                      className="rounded-xl border border-emerald-500 bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+app/admin/slates/page.tsx-1312-                    >
+app/admin/slates/page.tsx-1313-                      {isSyncingGolfRankings
+app/admin/slates/page.tsx-1314-                        ? "Syncing OWGR..."
+app/admin/slates/page.tsx-1315-                        : "Sync OWGR"}
+app/admin/slates/page.tsx-1316-                    </button>
+app/admin/slates/page.tsx-1317-                  </>
+app/admin/slates/page.tsx-1318-                ) : null}
+app/admin/slates/page.tsx-1319-
+app/admin/slates/page.tsx-1320-                <button
+app/admin/slates/page.tsx-1321-                  type="button"
+app/admin/slates/page.tsx-1322-                  onClick={() => void handleReseed()}
+app/admin/slates/page.tsx-1323-                  disabled={isBusy}
+app/admin/slates/page.tsx-1324-                  className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+app/admin/slates/page.tsx-1325-                >
+app/admin/slates/page.tsx-1326-                  {isReseeding
+app/admin/slates/page.tsx-1327-                    ? "Reseeding..."
+app/admin/slates/page.tsx-1328-                    : "Reseed From Previous Slate"}
+app/admin/slates/page.tsx-1329-                </button>
+app/admin/slates/page.tsx-1330-
+app/admin/slates/page.tsx-1331-                <button
+app/admin/slates/page.tsx-1332-                  type="button"
+app/admin/slates/page.tsx-1333-                  onClick={() => void handleDelete()}
+app/admin/slates/page.tsx-1334-                  disabled={isBusy}
+app/admin/slates/page.tsx-1335-                  className="rounded-xl border border-red-600 bg-red-900 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+--
+app/admin/slates/page.tsx.before-shotcast-admin-76-  return `${startDate} – ${endDate}`;
+app/admin/slates/page.tsx.before-shotcast-admin-77-}
+app/admin/slates/page.tsx.before-shotcast-admin-78-
+app/admin/slates/page.tsx.before-shotcast-admin-79-function formatRefreshTime(value: string | null) {
+app/admin/slates/page.tsx.before-shotcast-admin-80-  if (!value) return "Not loaded yet";
+app/admin/slates/page.tsx.before-shotcast-admin-81-
+app/admin/slates/page.tsx.before-shotcast-admin-82-  const date = new Date(value);
+app/admin/slates/page.tsx.before-shotcast-admin-83-
+app/admin/slates/page.tsx.before-shotcast-admin-84-  if (Number.isNaN(date.getTime())) {
+app/admin/slates/page.tsx.before-shotcast-admin-85-    return "Unavailable";
+app/admin/slates/page.tsx.before-shotcast-admin-86-  }
+app/admin/slates/page.tsx.before-shotcast-admin-87-
+app/admin/slates/page.tsx.before-shotcast-admin-88-  return date.toLocaleString([], {
+app/admin/slates/page.tsx.before-shotcast-admin-89-    month: "short",
+app/admin/slates/page.tsx.before-shotcast-admin-90-    day: "numeric",
+app/admin/slates/page.tsx.before-shotcast-admin-91-    hour: "numeric",
+app/admin/slates/page.tsx.before-shotcast-admin-92-    minute: "2-digit",
+app/admin/slates/page.tsx.before-shotcast-admin-93-  });
+app/admin/slates/page.tsx.before-shotcast-admin-94-}
+app/admin/slates/page.tsx.before-shotcast-admin-95-
+app/admin/slates/page.tsx.before-shotcast-admin:96:export default function AdminSlatesPage() {
+app/admin/slates/page.tsx.before-shotcast-admin-97-  const { selectedSport } = useSelectedSport();
+app/admin/slates/page.tsx.before-shotcast-admin-98-
+app/admin/slates/page.tsx.before-shotcast-admin-99-  const [slates, setSlates] = useState<SlateListRow[]>([]);
+app/admin/slates/page.tsx.before-shotcast-admin-100-  const [selectedSlateId, setSelectedSlateId] =
+app/admin/slates/page.tsx.before-shotcast-admin-101-    useState<number | "">("");
+app/admin/slates/page.tsx.before-shotcast-admin-102-  const [selectedSlate, setSelectedSlate] =
+app/admin/slates/page.tsx.before-shotcast-admin-103-    useState<SelectedSlateState | null>(null);
+app/admin/slates/page.tsx.before-shotcast-admin-104-  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+app/admin/slates/page.tsx.before-shotcast-admin-105-  const [golfField, setGolfField] =
+app/admin/slates/page.tsx.before-shotcast-admin-106-    useState<GolfFieldSummary | null>(null);
+app/admin/slates/page.tsx.before-shotcast-admin-107-
+app/admin/slates/page.tsx.before-shotcast-admin-108-  const [isLoading, setIsLoading] = useState(true);
+app/admin/slates/page.tsx.before-shotcast-admin-109-  const [isSaving, setIsSaving] = useState(false);
+app/admin/slates/page.tsx.before-shotcast-admin-110-  const [isReseeding, setIsReseeding] = useState(false);
+app/admin/slates/page.tsx.before-shotcast-admin-111-  const [isDeleting, setIsDeleting] = useState(false);
+app/admin/slates/page.tsx.before-shotcast-admin-112-  const [isRefreshingGolfField, setIsRefreshingGolfField] =
+app/admin/slates/page.tsx.before-shotcast-admin-113-    useState(false);
+app/admin/slates/page.tsx.before-shotcast-admin-114-  const [isSyncingGolfRankings, setIsSyncingGolfRankings] =
+app/admin/slates/page.tsx.before-shotcast-admin-115-    useState(false);
+app/admin/slates/page.tsx.before-shotcast-admin-116-
+app/admin/slates/page.tsx.before-shotcast-admin-117-  const [message, setMessage] = useState("");
+app/admin/slates/page.tsx.before-shotcast-admin-118-
+app/admin/slates/page.tsx.before-shotcast-admin-119-  const isBusy =
+app/admin/slates/page.tsx.before-shotcast-admin-120-    isSaving ||
+app/admin/slates/page.tsx.before-shotcast-admin-121-    isReseeding ||
+app/admin/slates/page.tsx.before-shotcast-admin-122-    isDeleting ||
+app/admin/slates/page.tsx.before-shotcast-admin-123-    isRefreshingGolfField ||
+app/admin/slates/page.tsx.before-shotcast-admin-124-    isSyncingGolfRankings;
+app/admin/slates/page.tsx.before-shotcast-admin-125-
+app/admin/slates/page.tsx.before-shotcast-admin-126-  useEffect(() => {
+app/admin/slates/page.tsx.before-shotcast-admin-127-    setSelectedSlateId("");
+app/admin/slates/page.tsx.before-shotcast-admin-128-    setSelectedSlate(null);
+app/admin/slates/page.tsx.before-shotcast-admin-129-    setTeams([]);
+app/admin/slates/page.tsx.before-shotcast-admin-130-    setGolfField(null);
+app/admin/slates/page.tsx.before-shotcast-admin-131-    void loadSlates();
+app/admin/slates/page.tsx.before-shotcast-admin-132-  }, [selectedSport]);
+app/admin/slates/page.tsx.before-shotcast-admin-133-
+app/admin/slates/page.tsx.before-shotcast-admin-134-  useEffect(() => {
+app/admin/slates/page.tsx.before-shotcast-admin-135-    if (!selectedSlateId) return;
+app/admin/slates/page.tsx.before-shotcast-admin-136-    void loadSlateDetail(Number(selectedSlateId));
+app/admin/slates/page.tsx.before-shotcast-admin-137-  }, [selectedSlateId]);
+app/admin/slates/page.tsx.before-shotcast-admin-138-
+app/admin/slates/page.tsx.before-shotcast-admin-139-  async function loadSlates() {
+app/admin/slates/page.tsx.before-shotcast-admin-140-    try {
+app/admin/slates/page.tsx.before-shotcast-admin-141-      setIsLoading(true);
+app/admin/slates/page.tsx.before-shotcast-admin-142-      setMessage("");
+app/admin/slates/page.tsx.before-shotcast-admin-143-
+app/admin/slates/page.tsx.before-shotcast-admin-144-      const response = await fetch(
+app/admin/slates/page.tsx.before-shotcast-admin:145:        `/api/admin/slates?sport=${encodeURIComponent(selectedSport)}`,
+app/admin/slates/page.tsx.before-shotcast-admin-146-        { cache: "no-store" },
+app/admin/slates/page.tsx.before-shotcast-admin-147-      );
+app/admin/slates/page.tsx.before-shotcast-admin-148-
+app/admin/slates/page.tsx.before-shotcast-admin-149-      const result = await response.json();
+app/admin/slates/page.tsx.before-shotcast-admin-150-
+app/admin/slates/page.tsx.before-shotcast-admin-151-      if (!response.ok) {
+app/admin/slates/page.tsx.before-shotcast-admin-152-        setMessage(result.error || "Failed to load slates.");
+app/admin/slates/page.tsx.before-shotcast-admin-153-        return;
+app/admin/slates/page.tsx.before-shotcast-admin-154-      }
+app/admin/slates/page.tsx.before-shotcast-admin-155-
+app/admin/slates/page.tsx.before-shotcast-admin-156-      const nextSlates = (result.slates ?? []) as SlateListRow[];
+app/admin/slates/page.tsx.before-shotcast-admin-157-      setSlates(nextSlates);
+app/admin/slates/page.tsx.before-shotcast-admin-158-
+app/admin/slates/page.tsx.before-shotcast-admin-159-      if (nextSlates.length > 0) {
+app/admin/slates/page.tsx.before-shotcast-admin-160-        setSelectedSlateId((current) => {
+app/admin/slates/page.tsx.before-shotcast-admin-161-          if (
+app/admin/slates/page.tsx.before-shotcast-admin-162-            current &&
+app/admin/slates/page.tsx.before-shotcast-admin-163-            nextSlates.some((slate) => slate.id === Number(current))
+app/admin/slates/page.tsx.before-shotcast-admin-164-          ) {
+app/admin/slates/page.tsx.before-shotcast-admin-165-            return current;
+app/admin/slates/page.tsx.before-shotcast-admin-166-          }
+app/admin/slates/page.tsx.before-shotcast-admin-167-
+app/admin/slates/page.tsx.before-shotcast-admin-168-          return nextSlates[0].id;
+app/admin/slates/page.tsx.before-shotcast-admin-169-        });
+app/admin/slates/page.tsx.before-shotcast-admin-170-      } else {
+
+===== 2. HOME GOLF TOURNAMENT CARD =====
+42-  finish_position: number | null;
+43-  games_completed: number | null;
+44-  games_in_progress: number | null;
+45-  games_remaining: number | null;
+46-  projected_points?: number | null;
+47-  pregame_projected_points?: number | null;
+48-  win_probability?: number | null;
+49-  golf_status_label?: string | null;
+50-};
+51-
+52-type SeasonSnapshotRow = {
+53-  team_id: number;
+54-  name: string;
+55-  wins: number;
+56-  runner_ups: number;
+57-  avg_finish: number | null;
+58-  avg_score: number | null;
+59-  slates_played: number;
+60-};
+61-
+62-type FunFact = {
+63-  label: string;
+64-  value: string;
+65-  detail?: string;
+66-};
+67-
+68-type SeasonAwardsResponse = {
+69-  success: boolean;
+70-  awards: Array<{
+71-    title: string;
+72-    emoji: string;
+73-    winner: string;
+74-    detail: string;
+75-  }>;
+76-  firstTeam: {
+77-    guards: any[];
+78-    frontcourt: any[];
+79-  };
+80-};
+81-
+82:type GolfTournamentLeaderboardRow = {
+83-  playerId: number;
+84-  name: string;
+85-  shortName: string;
+86-  espnGolfPlayerId: string | null;
+87-  headshotUrl: string | null;
+88-  country: string | null;
+89-  owgrRank: number | null;
+90-  position: number | null;
+91-  score: number | null;
+92-  scoreDisplay: string | null;
+93-  status: string | null;
+94-  statusLabel: string;
+95-  currentRound: number | null;
+96-  lastHole: number | null;
+97-  holesCompleted: number | null;
+98-  isDrafted: boolean;
+99-  draftedBy: string[];
+100-};
+101-
+102-type HomeSummaryResponse = {
+103-  success: boolean;
+104:  latestSlate: LatestSlate | null;
+105-  nextSlate: LatestSlate | null;
+106:  latestSlateRows: LatestSlateRow[];
+107:  tournamentLeaderboard?: GolfTournamentLeaderboardRow[];
+108-  projectedCut?: GolfCutLine | null;
+109-  seasonSnapshot: SeasonSnapshotRow[];
+110-  funFacts: FunFact[];
+111-  latestSeason: number;
+112:  latestGolfTournamentIsFinal?: boolean;
+113-};
+114-
+115-type SlateRosterModalState = {
+116-  slateId: number;
+117-  teamId: number;
+118-  teamName: string;
+119-  slateLabel: string;
+120-} | null;
+121-
+122-type SlateRosterRow = {
+123-  playerId: number;
+124-  name: string;
+125-  nbaPlayerId: number | null;
+126-  nflPlayerId: number | null;
+127-  espnGolfPlayerId?: string | null;
+128-  headshotUrl?: string | null;
+129-  positionGroup: string | null;
+130-  fantasyPoints: number;
+131-  officialScore?: number | null;
+132-  penaltyStrokes?: number;
+133-  leaderboardOrder?: number | null;
+134-  status?: string | null;
+135-  statusLabel?: string | null;
+136-  currentRound?: number | null;
+137-  lastHole?: number | null;
+138-  holesCompleted?: number | null;
+139-  roundScores?: Array<{
+140-    roundNumber: number;
+141-    scoreToPar: number | null;
+142-    scoreDisplay: string | null;
+143-    strokes: number | null;
+144-    holesCompleted: number;
+145-    status: string | null;
+146-  }>;
+147-  gameStatus?: number | null;
+148-  gameStatusText?: string | null;
+149-  [statKey: string]: any;
+150-};
+151-
+152-const EMPTY_PLAYER_AVERAGE_MAP = new Map<number, number>();
+153-const EMPTY_PLAYER_PROJECTIONS: Record<number, any> = {};
+154-
+155-function rosterRowToPlayer(row: SlateRosterRow): Player | null {
+156-  if (!row.positionGroup) {
+157-    return null;
+158-  }
+159-
+160-  return {
+161-    id: row.playerId,
+162-    name: row.name,
+163-    position_group: row.positionGroup,
+164-    is_active: true,
+165-    nba_player_id: row.nbaPlayerId,
+166-    nfl_player_id: row.nflPlayerId,
+167-    espn_player_id:
+168-      row.espnGolfPlayerId ?? null,
+169-    headshot_url:
+170-      row.headshotUrl ?? null,
+171-  };
+172-}
+173-
+174-function GamesStatus({
+175-  completed,
+176-  inProgress,
+177-  remaining,
+178-}: {
+179-  completed: number | null;
+180-  inProgress: number | null;
+181-  remaining: number | null;
+182-}) {
+183-  const finalCount = Number(completed ?? 0);
+184-  const liveCount = Number(inProgress ?? 0);
+185-  const leftCount = Number(remaining ?? 0);
+186-
+187-  return (
+188-    <div
+189-      className="home-games-status-v2"
+190-      aria-label={`${finalCount} final, ${liveCount} live, ${leftCount} remaining`}
+191-    >
+192-      <span className="home-games-status-v2-final">{finalCount} Final</span>
+--
+295-    return "DNS";
+296-  }
+297-
+298-  if (normalizedStatus === "cut") {
+299-    return "✂ Cut";
+300-  }
+301-
+302-  if (normalizedStatus === "withdrawn") {
+303-    return "⚠ Withdrawn";
+304-  }
+305-
+306-  if (normalizedStatus === "disqualified") {
+307-    return "⛔ Disqualified";
+308-  }
+309-
+310-  const thruMatch = rawLabel.match(
+311-    /^R(\d+)\s*·\s*Thru\s+(\d+)$/i,
+312-  );
+313-
+314-  if (thruMatch) {
+315-    return `🟢 Round ${thruMatch[1]} · Thru ${thruMatch[2]}`;
+316-  }
+317-
+318-  const finishedRoundMatch = rawLabel.match(
+319-    /^R(\d+)\s*·\s*Finished$/i,
+320-  );
+321-
+322-  if (finishedRoundMatch) {
+323-    return `✓ Round ${finishedRoundMatch[1]} complete`;
+324-  }
+325-
+326-  const upcomingRoundMatch = rawLabel.match(
+327-    /^R(\d+)\s*·\s*(Upcoming|Scheduled|Not started)$/i,
+328-  );
+329-
+330-  if (upcomingRoundMatch) {
+331-    return `⏰ Round ${upcomingRoundMatch[1]} upcoming`;
+332-  }
+333-
+334-  if (/^finished$/i.test(rawLabel)) {
+335:    return "✓ Tournament complete";
+336-  }
+337-
+338-  if (
+339-    /^upcoming$/i.test(rawLabel) ||
+340-    /^scheduled$/i.test(rawLabel) ||
+341-    /^not started$/i.test(rawLabel)
+342-  ) {
+343-    return "⏰ Upcoming";
+344-  }
+345-
+346-  if (rawLabel) {
+347-    return rawLabel;
+348-  }
+349-
+350-  if (
+351-    normalizedStatus === "scheduled" ||
+352-    normalizedStatus === "did_not_start"
+353-  ) {
+354-    return "⏰ Upcoming";
+355-  }
+356-
+357-  return "—";
+358-}
+359-
+360-function HomePageContent() {
+361-  const { selectedSport, setSelectedSport } = useSelectedSport();
+362-  const searchParams = useSearchParams();
+363-  const sportFromUrl = searchParams.get("sport");
+364-  const sport =
+365-    sportFromUrl === "nfl" ||
+366-    sportFromUrl === "nba" ||
+367-    sportFromUrl === "golf"
+368-      ? sportFromUrl
+369-      : selectedSport;
+370-
+371-  const isGolf = sport === "golf";
+372-
+373-  useEffect(() => {
+374-    if (sportFromUrl && sportFromUrl !== selectedSport) {
+375-      setSelectedSport(sportFromUrl);
+376-    }
+377-  }, [sportFromUrl]);
+378-  const [data, setData] = useState<HomeSummaryResponse | null>(null);
+379-  const [isLoading, setIsLoading] = useState(true);
+380-  const [message, setMessage] = useState("");
+381-  const [profileTeam, setProfileTeam] = useState<{
+382-    id: number;
+383-    name: string;
+384-  } | null>(null);
+385-  const [slateRosterModal, setSlateRosterModal] =
+386-    useState<SlateRosterModalState>(null);
+387-  const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
+388-  const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+389-  const [slateRosterStatColumns, setSlateRosterStatColumns] =
+390-    useState<StatColumn[]>(getStatColumns("nba"));
+391-  const [selectedRosterPlayer, setSelectedRosterPlayer] =
+392-    useState<Player | null>(null);
+393-
+394-  const [golfPlayerStats, setGolfPlayerStats] =
+395-    useState<PlayerStat[]>([]);
+396-
+397-  const [seasonAwards, setSeasonAwards] = useState<SeasonAwardsResponse | null>(
+398-    null,
+399-  );
+400-
+401-  const [golfHomeTab, setGolfHomeTab] =
+402-    useState<"fantasy" | "tournament">(
+403-      "fantasy",
+404-    );
+405-
+406-  function parseStatusTextMinutesRemaining(statusText?: string | null) {
+407-    if (!statusText) return null;
+408-
+409-    const trimmed = statusText.trim();
+410-
+411-    if (/final/i.test(trimmed)) return 0;
+412-
+413-    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
+414-
+415-    if (!match) return null;
+416-
+417-    const period = Number(match[1]);
+418-    const minutes = Number(match[2] || 0);
+419-    const seconds = Number(match[3] ?? 0);
+420-
+421-    const clockMinutes = minutes + seconds / 60;
+422-    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
+423-
+424-    return periodsRemainingAfterCurrent * 12 + clockMinutes;
+425-  }
+426-
+427:  function getProjectedFantasyPoints(row: any) {
+428-    const current = Number(row.fantasyPoints ?? 0);
+429-    const baseline = Number(row.projection ?? row.averageProjection ?? 30);
+430-
+431-    const remainingMinutes = parseStatusTextMinutesRemaining(
+432-      row.gameStatusText,
+433-    );
+434-
+435-    if (remainingMinutes === 0) return current;
+436-
+437-    if (remainingMinutes === null) return baseline;
+438-
+439-    return current + baseline * (remainingMinutes / 48);
+440-  }
+441-
+442-  function getPlayerStatusLabel(row: any) {
+443-    const text = row.gameStatusText;
+444-
+445-    if (!text) return "Pregame";
+446-
+447-    if (/final/i.test(text)) return "Final";
+448-
+449-    return text;
+450-  }
+451-  const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
+452-  const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
+453-  const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+454-    null,
+455-  );
+456-  const homeGolfRefreshInFlightRef = useRef(false);
+457-  const lastHomeGolfAutoRefreshRef = useRef(0);
+458-
+459-  async function refreshSlateStatsById(slateId: number) {
+460-    if (homeGolfRefreshInFlightRef.current) return;
+461-
+462-    homeGolfRefreshInFlightRef.current = true;
+463-
+464-    try {
+465-      setIsRefreshingHomeStats(true);
+466-      setMessage("");
+467-
+468-      if (sport === "golf") {
+469-        await refreshGolfFromBrowser(
+470-          slateId,
+471-        );
+472-      } else {
+473-        const refreshEndpoint =
+474-          sport === "nfl"
+475-            ? "/api/refresh-stats-nfl"
+476-            : "/api/refresh-stats";
+477-
+478-        const response =
+479-          await fetch(
+480-            refreshEndpoint,
+481-            {
+482-              method: "POST",
+483-              headers: {
+484-                "Content-Type":
+485-                  "application/json",
+486-              },
+487-              body: JSON.stringify({
+488-                slateId,
+489-              }),
+490-            },
+491-          );
+492-
+493-        const result =
+494-          await response.json();
+495-
+496-        if (!response.ok) {
+497-          setMessage(
+498-            result.error ||
+499-              "Failed to refresh stats.",
+500-          );
+501-          return;
+502-        }
+503-      }
+504-
+505-      await loadHomeSummary();
+506-    } catch (err) {
+507-      console.error("Failed to refresh stats", err);
+508-      setMessage("Failed to refresh stats.");
+509-    } finally {
+510-      homeGolfRefreshInFlightRef.current = false;
+511-      setIsRefreshingHomeStats(false);
+512-    }
+513-  }
+514-
+515-  async function handleRefreshStats() {
+516:    if (!latestSlate?.id) {
+517-      setMessage("No active slate found to refresh.");
+518-      return;
+519-    }
+520-
+521:    await refreshSlateStatsById(latestSlate.id);
+522-  }
+523-
+524-  async function loadHomeSummary() {
+525-    try {
+526-      setIsLoading(true);
+527-      setMessage("");
+528-
+529-      const response = await fetch(
+530-        `/api/home-summary?sport=${sport}`,
+531-        { cache: "no-store" }
+532-      );
+533-
+534-      const result = await response.json();
+535-
+536-      if (!response.ok) {
+537-        setMessage(result.error || "Failed to load home summary.");
+538-        return;
+539-      }
+540-
+541-      setData(result);
+542-
+543-      if (
+544-        sport === "golf" &&
+545:        result.latestSlate?.id
+546-      ) {
+547-        try {
+548-          const statsResponse = await fetch(
+549:            `/api/player-stats?slateId=${result.latestSlate.id}`,
+550-            { cache: "no-store" },
+551-          );
+552-
+553-          const statsResult =
+554-            await statsResponse.json();
+555-
+556-          if (statsResponse.ok) {
+557-            setGolfPlayerStats(
+558-              statsResult.playerStats ?? [],
+559-            );
+560-          } else {
+561-            console.error(
+562-              statsResult.error ||
+563-                "Failed to load Golf player stats.",
+564-            );
+565-            setGolfPlayerStats([]);
+566-          }
+567-        } catch (statsError) {
+568-          console.error(
+569-            "Failed to load Golf player stats",
+570-            statsError,
+571-          );
+572-          setGolfPlayerStats([]);
+573-        }
+574-      } else {
+575-        setGolfPlayerStats([]);
+576-      }
+577-
+578-      if (sport === "nba") {
+579-        const awardsResponse = await fetch("/api/season-awards", {
+580-          cache: "no-store",
+581-        });
+582-        const awardsResult = await awardsResponse.json();
+583-
+584-        if (awardsResponse.ok) {
+585-          setSeasonAwards(awardsResult);
+586-        } else {
+587-          console.error("Failed to load season awards", awardsResult);
+588-          setSeasonAwards(null);
+589-        }
+590-      } else {
+591-        setSeasonAwards(null);
+592-      }
+593-    } catch (error) {
+594-      console.error(error);
+595-      setMessage("Something went wrong while loading the home page.");
+596-    } finally {
+597-      setIsLoading(false);
+598-    }
+599-  }
+600-
+601-  useEffect(() => {
+602-    void loadHomeSummary();
+603-  }, [sport]);
+604-
+605-  useEffect(() => {
+606-    if (!slateRosterModal) {
+607-      setSlateRosterRows([]);
+608-      setSlateRosterTotal(0);
+609-      return;
+610-    }
+611-
+612-    let isActive = true;
+613-    const activeSlateRosterModal = slateRosterModal;
+614-
+615-    async function loadSlateRoster() {
+616-      try {
+617-        setIsSlateRosterLoading(true);
+618-
+619-        const response = await fetch(
+620-          `/api/team-slate-roster?slateId=${activeSlateRosterModal.slateId}&teamId=${activeSlateRosterModal.teamId}&sport=${sport}`,
+621-          { cache: "no-store" },
+622-        );
+623-
+624-        const result = await response.json();
+625-
+626-        if (!isActive) return;
+627-
+628-        if (!response.ok) {
+629-          console.error(result.error || "Failed to load slate roster.");
+630-          setSlateRosterRows([]);
+631-          setSlateRosterTotal(0);
+632-          return;
+633-        }
+634-
+635-        setSlateRosterRows(result.roster ?? []);
+636-        setSlateRosterTotal(Number(result.total ?? 0));
+637-        setSlateRosterStatColumns(
+638-          result.statColumns ?? getStatColumns(result.sport ?? "nba"),
+639-        );
+640-      } catch (error) {
+641-        console.error(error);
+642-        if (!isActive) return;
+643-        setSlateRosterRows([]);
+644-        setSlateRosterTotal(0);
+645-      } finally {
+646-        if (isActive) setIsSlateRosterLoading(false);
+647-      }
+648-    }
+649-
+650-    void loadSlateRoster();
+651-
+652-    return () => {
+653-      isActive = false;
+654-    };
+655-  }, [slateRosterModal]);
+656-
+657:  const latestSlate = data?.latestSlate ?? null;
+658:  const latestSlateRows = data?.latestSlateRows ?? [];
+659-
+660-  const tournamentLeaderboard =
+661-    data?.tournamentLeaderboard ?? [];
+662-
+663-  const projectedCut =
+664-    data?.projectedCut ?? null;
+665-
+666-  const seasonSnapshot = data?.seasonSnapshot ?? [];
+667-  const funFacts = data?.funFacts ?? [];
+668-  const latestSeason = data?.latestSeason ?? new Date().getFullYear();
+669-
+670:  const leader = latestSlateRows[0] ?? null;
+671-
+672-  const selectedGolfPlayerStat =
+673-    isGolf && selectedRosterPlayer
+674-      ? golfPlayerStats.find(
+675-          (stat) =>
+676-            Number(stat.player_id) ===
+677-            Number(selectedRosterPlayer.id),
+678-        ) ?? null
+679-      : null;
+680-
+681:  const hasLiveGames = latestSlateRows.some(
+682-    (row) => Number(row.games_in_progress ?? 0) > 0,
+683-  );
+684-
+685:  const hasCompletedGames = latestSlateRows.some(
+686-    (row) => Number(row.games_completed ?? 0) > 0,
+687-  );
+688-
+689:  const hasRemainingGames = latestSlateRows.some(
+690-    (row) => Number(row.games_remaining ?? 0) > 0,
+691-  );
+692-
+693-  const slateHeading =
+694-    isGolf
+695:      ? latestSlate?.display_name?.trim() ||
+696:        latestSlate?.label ||
+697:        "Current Tournament"
+698-      : "Current Slate";
+699-
+700:  const activeSlateStartTime = latestSlate?.first_game_start_time
+701:    ? new Date(latestSlate.first_game_start_time)
+702-    : null;
+703-
+704-  const hasSlateStarted =
+705-    activeSlateStartTime !== null &&
+706-    activeSlateStartTime.getTime() <= Date.now();
+707-
+708-  const isFinalSlate =
+709-    isGolf
+710-      ? (
+711:          latestSlate?.is_locked === true ||
+712:          data?.latestGolfTournamentIsFinal === true
+713-        )
+714-      : (
+715:          latestSlate?.is_locked === true ||
+716-          (
+717-            !hasLiveGames &&
+718-            hasCompletedGames &&
+719-            !hasRemainingGames
+720-          )
+721-        );
+722-
+723-  const scoreColumnLabel =
+724-    isGolf
+725-      ? "Score"
+726-      : isFinalSlate
+727-        ? "Final"
+728-        : "Current";
+729-
+730-  const projectionColumnLabel = isFinalSlate
+731-    ? "vs Proj."
+732-    : hasSlateStarted
+733-      ? "Proj. Final"
+734-      : "Pregame Proj.";
+735-
+736-  const slateBadge =
+737-    isGolf
+738-      ? isFinalSlate
+739-        ? "FINAL"
+740-        : hasSlateStarted
+741-          ? "LIVE"
+742-          : null
+743-      : hasLiveGames
+744-        ? "LIVE"
+745-        : hasCompletedGames && !hasRemainingGames
+746-          ? "FINAL"
+747-          : null;
+748-
+749-  const leaderLabel =
+750-    isFinalSlate ? "Winner" : "Leader";
+751-
+752-  const nextSlate = data?.nextSlate ?? null;
+753-
+754-  useEffect(() => {
+755-    if (sport !== "golf") return;
+756:    if (!latestSlate?.id) return;
+757:    if (latestSlate.is_locked) return;
+758-
+759-    const refreshIfVisible = () => {
+760-      if (document.visibilityState !== "visible") return;
+761-
+762-      const now = Date.now();
+763-      const minimumGapMs = 4.5 * 60 * 1000;
+764-
+765-      if (
+766-        lastHomeGolfAutoRefreshRef.current &&
+767-        now - lastHomeGolfAutoRefreshRef.current < minimumGapMs
+768-      ) {
+769-        return;
+770-      }
+771-
+772-      lastHomeGolfAutoRefreshRef.current = now;
+773:      void refreshSlateStatsById(latestSlate.id);
+774-    };
+775-
+776-    // Opening Home during an active Golf slate immediately
+777-    // makes this browser/device an updater.
+778-    refreshIfVisible();
+779-
+780-    const interval = window.setInterval(
+781-      refreshIfVisible,
+782-      5 * 60 * 1000,
+783-    );
+784-
+785-    const handleVisibilityChange = () => {
+786-      if (document.visibilityState === "visible") {
+787-        refreshIfVisible();
+788-      }
+789-    };
+790-
+791-    document.addEventListener(
+792-      "visibilitychange",
+793-      handleVisibilityChange,
+794-    );
+795-
+796-    return () => {
+797-      window.clearInterval(interval);
+798-      document.removeEventListener(
+799-        "visibilitychange",
+800-        handleVisibilityChange,
+801-      );
+802-    };
+803-  }, [
+804-    sport,
+805:    latestSlate?.id,
+806:    latestSlate?.is_locked,
+807-  ]);
+808-
+809-  useEffect(() => {
+810-    if (!nextSlate?.id || !nextSlate.first_game_start_time) return;
+811-
+812-    const tipoffMs = new Date(nextSlate.first_game_start_time).getTime();
+813-    const delayMs = tipoffMs - Date.now();
+814-
+815-    if (delayMs <= 0) return;
+816-
+817-    if (autoRefreshTimerRef.current) {
+818-      clearTimeout(autoRefreshTimerRef.current);
+819-    }
+820-
+821-    autoRefreshTimerRef.current = setTimeout(() => {
+822-      void refreshSlateStatsById(nextSlate.id);
+823-    }, delayMs);
+824-
+825-    return () => {
+826-      if (autoRefreshTimerRef.current) {
+827-        clearTimeout(autoRefreshTimerRef.current);
+828-      }
+829-    };
+830-  }, [nextSlate?.id, nextSlate?.first_game_start_time]);
+831-
+832-  const nextSlateStartTime = nextSlate?.first_game_start_time
+833-    ? new Date(nextSlate.first_game_start_time)
+834-    : null;
+835-
+836-  const shouldShowRefreshStats =
+837:    Boolean(latestSlate) &&
+838:    !latestSlate?.is_locked &&
+839-    (isGolf || hasSlateStarted);
+840-
+841:  const latestSlateIsFinal = latestSlate?.is_locked === true;
+842-
+843-  const shouldShowTipoff =
+844-    Boolean(nextSlateStartTime) &&
+845-    !shouldShowRefreshStats &&
+846-    !hasLiveGames &&
+847:    latestSlateIsFinal;
+848-
+849-  const tipoffTime =
+850-    shouldShowTipoff && nextSlateStartTime
+851-      ? nextSlateStartTime.toLocaleTimeString("en-US", {
+852-          hour: "numeric",
+853-          minute: "2-digit",
+854-          timeZone: "America/New_York",
+855-        })
+856-      : null;
+857-
+858-  const tipoffLabel =
+859-    shouldShowTipoff && nextSlate ? `Next slate ${nextSlate.label}` : null;
+860-
+861-  const slateStatusLabel =
+862-    isGolf
+863-      ? isFinalSlate
+864-        ? "Final"
+865-        : hasSlateStarted
+866-          ? "Live"
+867-          : "Open"
+868-      : hasLiveGames
+869-        ? "Live"
+870-        : hasCompletedGames && !hasRemainingGames
+871-          ? "Final"
+872:          : latestSlate?.is_locked
+873-            ? "Locked"
+874-            : "Open";
+875-
+876:  const slateDateLabel = latestSlate
+877-    ? formatSlateDateLabel({
+878:        date: latestSlate.date,
+879:        start_date: latestSlate.start_date,
+880:        end_date: latestSlate.end_date,
+881-      })
+882-    : "No slate";
+883-
+884-  return (
+885-    <main
+886-      className={`min-h-screen px-3 py-5 pb-24 sm:px-4 sm:py-6 sm:pb-6 ${
+887-        isGolf
+888-          ? "bg-slate-950 text-slate-100"
+889-          : "bg-slate-50 text-slate-900"
+890-      }`}
+891-    >
+892-      <div
+893-        className={`mx-auto space-y-6 ${
+894-          isGolf ? "max-w-6xl" : "max-w-7xl"
+895-        }`}
+896-      >
+897-        <AppNav />
+898-
+899-        <FunFactCarousel facts={funFacts} sport={sport} />
+900-
+901-        {message ? (
+902-          <section className="rounded-3xl border border-orange-200 bg-orange-50 px-5 py-4 text-sm text-orange-800 shadow-sm">
+903-            {message}
+904-          </section>
+905-        ) : null}
+906-
+907-        <section
+908-          className={`home-current-slate rounded-3xl p-5 shadow-sm ${
+909-            isGolf
+910-              ? "golf-home-current-slate golf-home-current-slate--compact border border-emerald-800/60 bg-slate-900"
+911-              : "border border-slate-200 bg-white"
+912-          }`}
+913-        >
+914-          <div className="mb-4 flex items-center justify-between gap-3">
+915-            <div>
+916-              <div className="flex items-center gap-2">
+917-                <h2
+918-                  className={`text-2xl font-semibold ${
+919-                    isGolf
+920-                      ? "text-white"
+921-                      : "text-slate-900"
+922-                  }`}
+923-                >
+924-                  {slateHeading}
+925-                </h2>
+926-
+927-                {slateBadge === "LIVE" ? (
+928-                  <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+929-                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500"></span>
+930-                    LIVE
+931-                  </span>
+932-                ) : slateBadge === "FINAL" ? (
+933-                  <span className="text-xs font-medium text-slate-500">
+934-                    FINAL
+935-                  </span>
+936-                ) : null}
+937-              </div>
+938-
+939-              <div
+940-                className={`mt-1 text-sm ${
+941-                  isGolf
+942-                    ? "text-emerald-100/70"
+943-                    : "text-slate-500"
+944-                }`}
+945-              >
+946:                {latestSlate ? slateDateLabel : "No slate available"}
+947-              </div>
+948-            </div>
+949-
+950-            <Link
+951-              href={`/lineups/scores?sport=${sport}`}
+952-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+953-            >
+954:              View Scores
+955-            </Link>
+956-          </div>
+957-
+958-          {isLoading ? (
+959-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+960-              Loading current slate...
+961-            </div>
+962:          ) : latestSlateRows.length === 0 ? (
+963-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+964-              No current slate data available yet.
+965-            </div>
+966-          ) : (
+967-            <>
+968-              <div
+969-                className={`mb-3 overflow-hidden rounded-2xl border ${
+970-                  isGolf
+971-                    ? "border-emerald-700/60 bg-slate-950/70"
+972-                    : "border-slate-200 bg-slate-50"
+973-                }`}
+974-              >
+975-                <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
+976-                  <div className="min-w-0">
+977-                    <span
+978-                      className={`block text-[9px] font-black uppercase tracking-[0.16em] ${
+979-                        isGolf
+980-                          ? "text-emerald-300"
+981-                          : "text-orange-700"
+982-                      }`}
+983-                    >
+984-                      {leaderLabel}
+985-                    </span>
+986-
+987-                    {leader ? (
+988-                      <div className="mt-1">
+989-                        <TeamProfileButton
+990-                          teamName={leader.teamName}
+991-                          avatarUrl={leader.avatarUrl}
+992-                          onClick={() =>
+993-                            setProfileTeam({
+994-                              id: leader.team_id,
+995-                              name: leader.teamName,
+996-                            })
+997-                          }
+998-                        />
+999-                      </div>
+1000-                    ) : (
+1001-                      <strong
+1002-                        className={`mt-1 block text-lg ${
+1003-                          isGolf
+1004-                            ? "text-white"
+1005-                            : "text-slate-900"
+1006-                        }`}
+1007-                      >
+1008-                        —
+1009-                      </strong>
+1010-                    )}
+1011-                  </div>
+1012-
+1013-                  <div className="flex shrink-0 items-center gap-2">
+1014-                    <strong
+1015-                      className={`text-2xl font-black leading-none sm:text-3xl ${
+1016-                        isGolf
+1017-                          ? "text-white"
+1018-                          : "text-slate-950"
+1019-                      }`}
+1020-                    >
+1021-                      {leader
+1022-                        ? isGolf
+1023-                          ? formatGolfScore(
+1024-                              leader.fantasy_points,
+1025-                            )
+1026-                          : `${roundTo(
+1027-                              Number(
+1028-                                leader.fantasy_points ?? 0,
+1029-                              ),
+1030-                            )} pts`
+1031-                        : "—"}
+1032-                    </strong>
+1033-
+1034-                    <button
+1035-                      type="button"
+1036-                      onClick={() =>
+1037-                        shouldShowRefreshStats
+1038-                          ? void handleRefreshStats()
+1039-                          : void loadHomeSummary()
+1040-                      }
+1041-                      disabled={
+1042-                        isRefreshingHomeStats ||
+--
+1063-                      : "border-slate-200 text-slate-500"
+1064-                  }`}
+1065-                >
+1066-                  <span>{slateDateLabel}</span>
+1067-
+1068-                  <span
+1069-                    aria-hidden="true"
+1070-                    className={
+1071-                      isGolf
+1072-                        ? "text-slate-600"
+1073-                        : "text-slate-300"
+1074-                    }
+1075-                  >
+1076-                    •
+1077-                  </span>
+1078-
+1079-                  <span
+1080-                    className={
+1081-                      slateStatusLabel === "Live"
+1082-                        ? isGolf
+1083-                          ? "font-bold text-emerald-300"
+1084-                          : "font-bold text-red-600"
+1085-                        : ""
+1086-                    }
+1087-                  >
+1088-                    {slateStatusLabel}
+1089-                  </span>
+1090-
+1091-                  <span
+1092-                    aria-hidden="true"
+1093-                    className={
+1094-                      isGolf
+1095-                        ? "text-slate-600"
+1096-                        : "text-slate-300"
+1097-                    }
+1098-                  >
+1099-                    •
+1100-                  </span>
+1101-
+1102-                  <span>
+1103:                    {latestSlateRows.length}{" "}
+1104:                    {latestSlateRows.length === 1
+1105-                      ? "Team"
+1106-                      : "Teams"}
+1107-                  </span>
+1108-
+1109-                  {tipoffTime ? (
+1110-                    <>
+1111-                      <span
+1112-                        aria-hidden="true"
+1113-                        className="text-slate-300"
+1114-                      >
+1115-                        •
+1116-                      </span>
+1117-
+1118-                      <span className="font-bold text-sky-700">
+1119-                        Next: {tipoffTime} ET
+1120-                      </span>
+1121-                    </>
+1122-                  ) : null}
+1123-                </div>
+1124-              </div>
+1125-
+1126-              {isGolf ? (
+1127-                <div>
+1128-                  <div className="mb-3 flex rounded-xl border border-emerald-800/60 bg-slate-950/80 p-1">
+1129-                    <button
+1130-                      type="button"
+1131-                      onClick={() =>
+1132-                        setGolfHomeTab("fantasy")
+1133-                      }
+1134-                      className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${
+1135-                        golfHomeTab === "fantasy"
+1136-                          ? "bg-emerald-700 text-white shadow-sm"
+1137-                          : "text-slate-400 hover:text-emerald-200"
+1138-                      }`}
+1139-                    >
+1140:                      Fantasy
+1141-                    </button>
+1142-
+1143-                    <button
+1144-                      type="button"
+1145-                      onClick={() =>
+1146-                        setGolfHomeTab("tournament")
+1147-                      }
+1148-                      className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${
+1149-                        golfHomeTab === "tournament"
+1150-                          ? "bg-emerald-700 text-white shadow-sm"
+1151-                          : "text-slate-400 hover:text-emerald-200"
+1152-                      }`}
+1153-                    >
+1154:                      Tournament
+1155-                    </button>
+1156-                  </div>
+1157-
+1158-                  {golfHomeTab === "fantasy" ? (
+1159-                <div className="overflow-hidden rounded-2xl border border-emerald-800/50 bg-slate-950">
+1160-                  <div className="sm:hidden">
+1161-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center bg-emerald-950/80 px-4 py-3 text-xs font-bold uppercase tracking-wide text-emerald-100">
+1162-                      <span>Team</span>
+1163-                      <span className="pr-1 text-right">
+1164-                        Score
+1165-                      </span>
+1166-                    </div>
+1167-
+1168-                    <div>
+1169:                      {latestSlateRows.map(
+1170-                        (row, index) => (
+1171-                          <div
+1172-                            key={`mobile-${row.slate_id}-${row.team_id}`}
+1173-                            className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-slate-800 px-4 py-2.5 ${
+1174-                              index === 0
+1175-                                ? "bg-emerald-950/50"
+1176-                                : "bg-slate-900"
+1177-                            }`}
+1178-                          >
+1179-                            <button
+1180-                              type="button"
+1181-                              onClick={() =>
+1182-                                setProfileTeam({
+1183-                                  id: row.team_id,
+1184-                                  name: row.teamName,
+1185-                                })
+1186-                              }
+1187-                              className="flex min-w-0 items-center gap-2.5 text-left"
+1188-                              aria-label={`View ${row.teamName}'s profile`}
+1189-                            >
+1190-                              <TeamAvatar
+1191-                                teamName={row.teamName}
+1192-                                avatarUrl={row.avatarUrl}
+1193-                                size="sm"
+1194-                              />
+1195-
+1196-                              <span className="min-w-0 flex-1">
+1197-                                <span className="block truncate text-sm font-bold text-white">
+1198-                                  {row.teamName}
+1199-                                </span>
+1200-
+1201-                                <span className="mt-0.5 block truncate text-[11px] font-semibold text-emerald-300">
+1202-                                  {row.golf_status_label ?? "—"}
+1203-                                </span>
+1204-                              </span>
+1205-                            </button>
+1206-
+1207-                            <button
+1208-                              type="button"
+1209-                              onClick={() =>
+1210-                                setSlateRosterModal({
+1211-                                  slateId:
+1212-                                    row.slate_id,
+1213-                                  teamId:
+1214-                                    row.team_id,
+1215-                                  teamName:
+1216-                                    row.teamName,
+1217-                                  slateLabel:
+1218:                                    latestSlate
+1219-                                      ? slateDateLabel
+1220-                                      : String(
+1221-                                          row.slate_id,
+1222-                                        ),
+1223-                                })
+1224-                              }
+1225-                              className="inline-flex min-w-14 shrink-0 items-center justify-end gap-1 rounded-full border border-emerald-600/50 bg-emerald-950/70 px-2.5 py-1 text-base font-black text-white transition hover:bg-emerald-900"
+1226-                              aria-label={`View ${row.teamName}'s Golf lineup`}
+1227-                            >
+1228-                              {formatGolfScore(
+1229-                                row.fantasy_points,
+1230-                              )}
+1231-
+1232-                              <span
+1233-                                className="text-emerald-300"
+1234-                                aria-hidden="true"
+1235-                              >
+1236-                                ›
+1237-                              </span>
+1238-                            </button>
+1239-                          </div>
+1240-                        ),
+1241-                      )}
+1242-                    </div>
+1243-                  </div>
+1244-
+1245-                  <table className="hidden w-full table-fixed border-collapse text-sm sm:table">
+1246-                    <colgroup>
+1247-                      <col className="w-[48%]" />
+1248-                      <col className="w-[22%]" />
+1249-                      <col className="w-[30%]" />
+1250-                    </colgroup>
+1251-
+1252-                    <thead className="bg-emerald-950/80 text-emerald-100">
+1253-                      <tr className="text-left">
+1254-                        <th className="px-4 py-3 font-semibold">
+1255-                          Team
+1256-                        </th>
+1257-
+1258-                        <th className="px-3 py-3 text-right font-semibold">
+1259-                          Score
+1260-                        </th>
+1261-
+1262-                        <th className="px-4 py-3 text-right font-semibold">
+1263-                          Status
+1264-                        </th>
+1265-                      </tr>
+1266-                    </thead>
+1267-
+1268-                    <tbody className="text-slate-100">
+1269:                      {latestSlateRows.map(
+1270-                        (row, index) => (
+1271-                          <tr
+1272-                            key={`${row.slate_id}-${row.team_id}`}
+1273-                            className={`border-t border-slate-800 ${
+1274-                              index === 0
+1275-                                ? "bg-emerald-950/50"
+1276-                                : "bg-slate-900"
+1277-                            }`}
+1278-                          >
+1279-                            <td className="px-4 py-3">
+1280-                              <TeamProfileButton
+1281-                                teamName={row.teamName}
+1282-                                avatarUrl={row.avatarUrl}
+1283-                                onClick={() =>
+1284-                                  setProfileTeam({
+1285-                                    id: row.team_id,
+1286-                                    name: row.teamName,
+1287-                                  })
+1288-                                }
+1289-                              />
+1290-                            </td>
+1291-
+1292-                            <td className="px-3 py-3 text-right">
+1293-                              <button
+1294-                                type="button"
+1295-                                onClick={() =>
+1296-                                  setSlateRosterModal({
+1297-                                    slateId:
+1298-                                      row.slate_id,
+1299-                                    teamId:
+1300-                                      row.team_id,
+1301-                                    teamName:
+1302-                                      row.teamName,
+1303-                                    slateLabel:
+1304:                                      latestSlate
+1305-                                        ? slateDateLabel
+1306-                                        : String(
+1307-                                            row.slate_id,
+1308-                                          ),
+1309-                                  })
+1310-                                }
+1311-                                className="inline-flex min-w-14 items-center justify-end gap-1 rounded-full border border-emerald-600/50 bg-emerald-950/70 px-2.5 py-1 text-base font-black text-white transition hover:bg-emerald-900 sm:min-w-16 sm:px-3 sm:py-1.5 sm:text-lg"
+1312-                              >
+1313-                                {formatGolfScore(
+1314-                                  row.fantasy_points,
+1315-                                )}
+1316-                                <span
+1317-                                  className="text-emerald-300"
+1318-                                  aria-hidden="true"
+1319-                                >
+1320-                                  ›
+1321-                                </span>
+1322-                              </button>
+1323-                            </td>
+1324-
+1325-                            <td className="px-4 py-3 text-right">
+1326-                              <span
+1327-                                className={`inline-flex max-w-full items-center justify-end rounded-full px-2.5 py-1 text-xs font-bold ${
+1328-                                  row.golf_status_label?.includes(
+1329-                                    "complete",
+1330-                                  ) ||
+1331-                                  row.golf_status_label ===
+1332-                                    "Finished"
+1333-                                    ? "bg-slate-800 text-slate-300"
+1334-                                    : row.golf_status_label?.includes(
+1335-                                          "live",
+1336-                                        )
+1337-                                      ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
+1338-                                      : "bg-slate-800 text-slate-300"
+1339-                                }`}
+1340-                              >
+1341-                                {row.golf_status_label ?? "—"}
+1342-                              </span>
+1343-                            </td>
+1344-                          </tr>
+1345-                        ),
+1346-                      )}
+1347-                    </tbody>
+1348-                  </table>
+1349-                </div>
+1350-
+1351-                  ) : (
+1352-                    <div className="overflow-hidden rounded-2xl border border-emerald-800/50 bg-slate-950">
+1353-                      <div className="flex items-center justify-between border-b border-emerald-900/70 bg-emerald-950/70 px-4 py-3">
+1354-                        <div>
+1355-                          <h3 className="font-bold text-emerald-50">
+1356:                            Tournament Leaderboard
+1357-                          </h3>
+1358-
+1359-                          <p className="mt-0.5 text-xs text-emerald-300/70">
+1360-                            Drafted golfers are highlighted
+1361-                          </p>
+
+===== 3. EXISTING SIMPLE SETTINGS / CONTENT TABLE PATTERNS =====
+app/globals.css-888-  color: #ffffff !important;
+app/globals.css-889-  box-shadow:
+app/globals.css-890-    0 0 0 1px rgb(125 211 252 / 0.28),
+app/globals.css-891-    0 6px 20px rgb(14 165 233 / 0.3);
+app/globals.css-892-}
+app/globals.css-893-
+app/globals.css-894-.dark .app-mobile-nav-active::after {
+app/globals.css-895-  position: absolute;
+app/globals.css-896-  right: 22%;
+app/globals.css-897-  bottom: 2px;
+app/globals.css-898-  left: 22%;
+app/globals.css-899-  height: 2px;
+app/globals.css-900-  border-radius: 999px;
+app/globals.css-901-  background: #fde047;
+app/globals.css-902-  box-shadow: 0 0 10px rgb(250 204 21 / 0.65);
+app/globals.css:903:  content: "";
+app/globals.css-904-}
+app/globals.css-905-
+app/globals.css-906-/* Dropdown panels */
+app/globals.css-907-
+app/globals.css-908-.app-dropdown-panel {
+app/globals.css-909-  border-color: var(--app-border);
+app/globals.css-910-  background: var(--app-surface-raised);
+app/globals.css-911-  box-shadow: var(--app-shadow-raised);
+app/globals.css-912-}
+app/globals.css-913-
+app/globals.css-914-.dark .app-dropdown-panel {
+app/globals.css-915-  background: linear-gradient(145deg, #17243b, #111c31);
+app/globals.css-916-}
+app/globals.css-917-
+app/globals.css-918-/* Respect reduced-motion preferences */
+app/globals.css-919-
+app/globals.css-920-@media (prefers-reduced-motion: reduce) {
+app/globals.css-921-  .app-interactive,
+app/globals.css-922-  .app-desktop-link,
+app/globals.css-923-  .app-mobile-nav-item {
+app/globals.css-924-    transition: none !important;
+app/globals.css-925-  }
+app/globals.css-926-
+app/globals.css-927-  .app-interactive:hover,
+app/globals.css-928-  .app-desktop-link:hover {
+app/globals.css-929-    transform: none !important;
+app/globals.css-930-  }
+app/globals.css-931-}
+app/globals.css-932-
+app/globals.css-933-/* =========================================================
+app/globals.css-934-   HOME — CHAMPIONSHIP PRESENTATION
+app/globals.css-935-   ========================================================= */
+app/globals.css-936-
+app/globals.css-937-.dark .home-winner-card {
+app/globals.css-938-  background:
+--
+app/globals.css-1272-  color: #075985 !important;
+app/globals.css-1273-  box-shadow:
+app/globals.css-1274-    0 0 0 1px rgb(14 165 233 / 0.18),
+app/globals.css-1275-    0 7px 18px rgb(2 132 199 / 0.13);
+app/globals.css-1276-}
+app/globals.css-1277-
+app/globals.css-1278-html:not(.dark) .app-mobile-nav-active::after {
+app/globals.css-1279-  position: absolute;
+app/globals.css-1280-  right: 22%;
+app/globals.css-1281-  bottom: 2px;
+app/globals.css-1282-  left: 22%;
+app/globals.css-1283-  height: 3px;
+app/globals.css-1284-  border-radius: 999px;
+app/globals.css-1285-  background: #f59e0b;
+app/globals.css-1286-  box-shadow: 0 0 8px rgb(245 158 11 / 0.35);
+app/globals.css:1287:  content: "";
+app/globals.css-1288-}
+app/globals.css-1289-
+app/globals.css-1290-html:not(.dark) .app-mobile-nav-idle {
+app/globals.css-1291-  color: #64748b !important;
+app/globals.css-1292-}
+app/globals.css-1293-
+app/globals.css-1294-/* =========================================================
+app/globals.css-1295-   HOME — LIGHT CHAMPIONSHIP PRESENTATION
+app/globals.css-1296-   ========================================================= */
+app/globals.css-1297-
+app/globals.css-1298-html:not(.dark) .home-current-slate {
+app/globals.css-1299-  background: linear-gradient(145deg, #ffffff, #fbfdff);
+app/globals.css-1300-  border-color: #dbe5f1;
+app/globals.css-1301-}
+app/globals.css-1302-
+app/globals.css-1303-html:not(.dark) .home-winner-card {
+app/globals.css-1304-  background:
+app/globals.css-1305-    radial-gradient(
+app/globals.css-1306-      circle at 90% 10%,
+app/globals.css-1307-      rgb(254 240 138 / 0.85),
+app/globals.css-1308-      transparent 11rem
+app/globals.css-1309-    ),
+app/globals.css-1310-    linear-gradient(118deg, #fff7ed 0%, #ffedd5 40%, #fed7aa 72%, #fdba74 100%) !important;
+app/globals.css-1311-
+app/globals.css-1312-  border: 2px solid #fb923c !important;
+app/globals.css-1313-
+app/globals.css-1314-  box-shadow:
+app/globals.css-1315-    inset 0 1px 0 rgb(255 255 255 / 0.9),
+app/globals.css-1316-    0 0 0 1px rgb(245 158 11 / 0.1),
+app/globals.css-1317-    0 12px 30px rgb(249 115 22 / 0.16) !important;
+app/globals.css-1318-}
+app/globals.css-1319-
+app/globals.css-1320-html:not(.dark) .home-winner-card .text-orange-700 {
+app/globals.css-1321-  color: #c2410c !important;
+app/globals.css-1322-  font-weight: 900;
+--
+app/globals.css-1696-  color: #0369a1 !important;
+app/globals.css-1697-}
+app/globals.css-1698-
+app/globals.css-1699-.collectible-card--epic .collectible-rarity {
+app/globals.css-1700-  color: #6d28d9 !important;
+app/globals.css-1701-}
+app/globals.css-1702-
+app/globals.css-1703-.collectible-card--legendary .collectible-rarity {
+app/globals.css-1704-  color: #b45309 !important;
+app/globals.css-1705-}
+app/globals.css-1706-
+app/globals.css-1707-.collectible-pill,
+app/globals.css-1708-.collectible-count {
+app/globals.css-1709-  display: inline-flex;
+app/globals.css-1710-  align-items: center;
+app/globals.css:1711:  justify-content: center;
+app/globals.css-1712-  border: 1px solid rgb(255 255 255 / 0.9);
+app/globals.css-1713-  border-radius: 999px;
+app/globals.css-1714-  background: rgb(255 255 255 / 0.78);
+app/globals.css-1715-  color: #334155 !important;
+app/globals.css-1716-  font-weight: 800;
+app/globals.css-1717-}
+app/globals.css-1718-
+app/globals.css-1719-.collectible-pill {
+app/globals.css-1720-  padding: 0.25rem 0.625rem;
+app/globals.css-1721-  font-size: 0.625rem;
+app/globals.css-1722-  letter-spacing: 0.08em;
+app/globals.css-1723-  text-transform: uppercase;
+app/globals.css-1724-}
+app/globals.css-1725-
+app/globals.css-1726-.collectible-count {
+app/globals.css-1727-  padding: 0.25rem 0.625rem;
+app/globals.css-1728-  font-size: 0.75rem;
+app/globals.css-1729-}
+app/globals.css-1730-
+app/globals.css-1731-.collectible-pill--locked {
+app/globals.css-1732-  border-color: #94a3b8;
+app/globals.css-1733-  background: rgb(203 213 225 / 0.86);
+app/globals.css-1734-  color: #475569 !important;
+app/globals.css-1735-}
+app/globals.css-1736-
+app/globals.css-1737-html.dark .collectible-card,
+app/globals.css-1738-html.dark .collectible-card * {
+app/globals.css-1739-  color: inherit;
+app/globals.css-1740-}
+app/globals.css-1741-
+app/globals.css-1742-html.dark .collectible-title {
+app/globals.css-1743-  color: var(--collectible-title) !important;
+app/globals.css-1744-}
+app/globals.css-1745-
+app/globals.css-1746-html.dark .collectible-meta {
+--
+app/globals.css-1796-      inset 0 1px 0 rgb(255 255 255 / 0.9);
+app/globals.css-1797-  }
+app/globals.css-1798-}
+app/globals.css-1799-
+app/globals.css-1800-@media (prefers-reduced-motion: reduce) {
+app/globals.css-1801-  .collectible-card {
+app/globals.css-1802-    transition: none !important;
+app/globals.css-1803-  }
+app/globals.css-1804-
+app/globals.css-1805-  .collectible-card:hover {
+app/globals.css-1806-    transform: none !important;
+app/globals.css-1807-  }
+app/globals.css-1808-}
+app/globals.css-1809-
+app/globals.css-1810-/* =========================================================
+app/globals.css:1811:   TROPHY CASE CONTENT SECTIONS
+app/globals.css-1812-   Career and League Awards now match the Milestones shell.
+app/globals.css-1813-   ========================================================= */
+app/globals.css-1814-
+app/globals.css:1815:.trophy-content-section {
+app/globals.css-1816-  border-color: var(--app-border);
+app/globals.css-1817-  background: linear-gradient(
+app/globals.css-1818-    145deg,
+app/globals.css-1819-    color-mix(in srgb, var(--app-surface-raised) 98%, transparent),
+app/globals.css-1820-    color-mix(in srgb, var(--app-surface) 98%, transparent)
+app/globals.css-1821-  );
+app/globals.css-1822-  color: var(--app-text);
+app/globals.css-1823-  box-shadow: var(--app-shadow-card);
+app/globals.css-1824-}
+app/globals.css-1825-
+app/globals.css-1826-.trophy-section-title {
+app/globals.css-1827-  color: var(--app-text) !important;
+app/globals.css-1828-}
+app/globals.css-1829-
+app/globals.css-1830-.trophy-section-copy {
+app/globals.css-1831-  color: var(--app-text-soft) !important;
+app/globals.css-1832-}
+app/globals.css-1833-
+app/globals.css-1834-.trophy-section-label {
+app/globals.css-1835-  color: var(--app-text-muted) !important;
+app/globals.css-1836-}
+app/globals.css-1837-
+app/globals.css-1838-.trophy-section-kicker--gold {
+app/globals.css-1839-  color: #d97706 !important;
+app/globals.css-1840-}
+app/globals.css-1841-
+app/globals.css-1842-html.dark .trophy-section-kicker--gold {
+app/globals.css-1843-  color: #fbbf24 !important;
+app/globals.css-1844-}
+app/globals.css-1845-
+app/globals.css-1846-.trophy-season-select {
+app/globals.css-1847-  border-color: #f59e0b;
+app/globals.css-1848-  background: var(--app-surface-raised);
+app/globals.css-1849-  color: var(--app-text);
+app/globals.css-1850-}
+--
+app/globals.css-2347-.slate-detail-kicker,
+app/globals.css-2348-.slate-detail-section-kicker {
+app/globals.css-2349-  color: var(--app-blue);
+app/globals.css-2350-  font-size: 0.68rem;
+app/globals.css-2351-  font-weight: 900;
+app/globals.css-2352-  letter-spacing: 0.18em;
+app/globals.css-2353-  text-transform: uppercase;
+app/globals.css-2354-}
+app/globals.css-2355-
+app/globals.css-2356-.slate-detail-close {
+app/globals.css-2357-  display: flex;
+app/globals.css-2358-  height: 2.4rem;
+app/globals.css-2359-  width: 2.4rem;
+app/globals.css-2360-  flex-shrink: 0;
+app/globals.css-2361-  align-items: center;
+app/globals.css:2362:  justify-content: center;
+app/globals.css-2363-  border: 1px solid var(--app-border);
+app/globals.css-2364-  border-radius: 999px;
+app/globals.css-2365-  background: var(--app-surface-soft);
+app/globals.css-2366-  color: var(--app-text);
+app/globals.css-2367-  font-size: 1.55rem;
+app/globals.css-2368-  line-height: 1;
+app/globals.css-2369-}
+app/globals.css-2370-
+app/globals.css-2371-.slate-detail-summary {
+app/globals.css-2372-  border: 1px solid var(--app-border);
+app/globals.css-2373-  border-radius: 1.4rem;
+app/globals.css-2374-  padding: 1.1rem;
+app/globals.css-2375-  background: linear-gradient(
+app/globals.css-2376-    145deg,
+app/globals.css-2377-    var(--app-surface-raised),
+app/globals.css-2378-    var(--app-surface-soft)
+app/globals.css-2379-  );
+app/globals.css-2380-}
+app/globals.css-2381-
+app/globals.css-2382-.slate-detail-summary--winner {
+app/globals.css-2383-  border-color: #f59e0b;
+app/globals.css-2384-  background:
+app/globals.css-2385-    radial-gradient(
+app/globals.css-2386-      circle at 90% 5%,
+app/globals.css-2387-      rgb(250 204 21 / 0.18),
+app/globals.css-2388-      transparent 11rem
+app/globals.css-2389-    ),
+app/globals.css-2390-    linear-gradient(
+app/globals.css-2391-      145deg,
+app/globals.css-2392-      color-mix(in srgb, var(--app-surface-raised) 90%, #f59e0b 10%),
+app/globals.css-2393-      var(--app-surface-soft)
+app/globals.css-2394-    );
+app/globals.css-2395-}
+app/globals.css-2396-
+app/globals.css-2397-.slate-detail-summary-label {
+--
+app/globals.css-2415-  padding: 1.1rem;
+app/globals.css-2416-  background: var(--app-surface-raised);
+app/globals.css-2417-}
+app/globals.css-2418-
+app/globals.css-2419-.slate-detail-section-title {
+app/globals.css-2420-  margin-top: 0.25rem;
+app/globals.css-2421-  color: var(--app-text) !important;
+app/globals.css-2422-  font-size: 1.3rem;
+app/globals.css-2423-  font-weight: 900;
+app/globals.css-2424-}
+app/globals.css-2425-
+app/globals.css-2426-.slate-detail-roster-row,
+app/globals.css-2427-.slate-detail-standing-row {
+app/globals.css-2428-  display: flex;
+app/globals.css-2429-  align-items: center;
+app/globals.css:2430:  justify-content: space-between;
+app/globals.css-2431-  gap: 1rem;
+app/globals.css-2432-  border-top: 1px solid var(--app-border);
+app/globals.css-2433-  padding: 0.85rem;
+app/globals.css-2434-  color: var(--app-text);
+app/globals.css-2435-}
+app/globals.css-2436-
+app/globals.css-2437-.slate-detail-roster-row:first-child,
+app/globals.css-2438-.slate-detail-standing-row:first-child {
+app/globals.css-2439-  border-top: 0;
+app/globals.css-2440-}
+app/globals.css-2441-
+app/globals.css-2442-.slate-detail-roster-row > div > div:last-child {
+app/globals.css-2443-  color: var(--app-text-muted);
+app/globals.css-2444-}
+app/globals.css-2445-
+app/globals.css-2446-.slate-detail-standing-row--selected {
+app/globals.css-2447-  background: linear-gradient(90deg, rgb(14 165 233 / 0.13), transparent);
+app/globals.css-2448-  box-shadow: inset 4px 0 0 var(--app-blue);
+app/globals.css-2449-}
+app/globals.css-2450-
+app/globals.css-2451-.slate-detail-rank {
+app/globals.css-2452-  display: flex;
+app/globals.css-2453-  height: 2rem;
+app/globals.css-2454-  width: 2rem;
+app/globals.css-2455-  flex-shrink: 0;
+app/globals.css-2456-  align-items: center;
+app/globals.css:2457:  justify-content: center;
+app/globals.css-2458-  border-radius: 999px;
+app/globals.css-2459-  background: var(--app-surface-soft);
+app/globals.css-2460-  color: var(--app-text);
+app/globals.css-2461-  font-size: 0.75rem;
+app/globals.css-2462-  font-weight: 900;
+app/globals.css-2463-}
+app/globals.css-2464-
+app/globals.css-2465-.slate-detail-empty,
+app/globals.css-2466-.slate-detail-error {
+app/globals.css-2467-  border: 1px dashed var(--app-border-strong);
+app/globals.css-2468-  border-radius: 1.2rem;
+app/globals.css-2469-  padding: 2rem 1rem;
+app/globals.css-2470-  text-align: center;
+app/globals.css-2471-  font-size: 0.85rem;
+app/globals.css-2472-}
+app/globals.css-2473-
+app/globals.css-2474-.slate-detail-empty {
+app/globals.css-2475-  color: var(--app-text-muted);
+app/globals.css-2476-}
+app/globals.css-2477-
+app/globals.css-2478-.slate-detail-error {
+app/globals.css-2479-  border-color: #ef4444;
+app/globals.css-2480-  color: #ef4444;
+app/globals.css-2481-}
+app/globals.css-2482-
+app/globals.css-2483-@media (hover: hover) {
+app/globals.css-2484-  .profile-result-card--button:hover {
+app/globals.css-2485-    transform: translateY(-3px);
+app/globals.css-2486-    border-color: var(--app-blue-bright);
+app/globals.css-2487-    box-shadow: var(--app-shadow-raised);
+app/globals.css-2488-  }
+app/globals.css-2489-
+app/globals.css-2490-  .slate-detail-close:hover {
+app/globals.css-2491-    border-color: var(--app-blue-bright);
+app/globals.css-2492-    color: var(--app-blue);
+--
+app/globals.css-2505-  padding: 1rem;
+app/globals.css-2506-  background:
+app/globals.css-2507-    radial-gradient(
+app/globals.css-2508-      circle at 50% 105%,
+app/globals.css-2509-      rgb(14 165 233 / 0.11),
+app/globals.css-2510-      transparent 15rem
+app/globals.css-2511-    ),
+app/globals.css-2512-    var(--app-surface);
+app/globals.css-2513-  color: var(--app-text);
+app/globals.css-2514-  box-shadow: var(--app-shadow-card);
+app/globals.css-2515-}
+app/globals.css-2516-
+app/globals.css-2517-.draft-roster-header {
+app/globals.css-2518-  display: flex;
+app/globals.css-2519-  align-items: flex-start;
+app/globals.css:2520:  justify-content: space-between;
+app/globals.css-2521-  gap: 1rem;
+app/globals.css-2522-}
+app/globals.css-2523-
+app/globals.css-2524-.draft-roster-kicker {
+app/globals.css-2525-  color: var(--app-blue);
+app/globals.css-2526-  font-size: 0.68rem;
+app/globals.css-2527-  font-weight: 900;
+app/globals.css-2528-  letter-spacing: 0.18em;
+app/globals.css-2529-  text-transform: uppercase;
+app/globals.css-2530-}
+app/globals.css-2531-
+app/globals.css-2532-.draft-roster-title {
+app/globals.css-2533-  margin-top: 0.25rem;
+app/globals.css-2534-  color: var(--app-text) !important;
+app/globals.css-2535-  font-size: 1.35rem;
+app/globals.css-2536-  font-weight: 900;
+app/globals.css-2537-  letter-spacing: -0.025em;
+app/globals.css-2538-}
+app/globals.css-2539-
+app/globals.css-2540-.draft-roster-count {
+app/globals.css-2541-  display: flex;
+app/globals.css-2542-  flex-shrink: 0;
+app/globals.css-2543-  flex-direction: column;
+app/globals.css-2544-  align-items: flex-end;
+app/globals.css-2545-}
+app/globals.css-2546-
+app/globals.css-2547-.draft-roster-count strong {
+app/globals.css-2548-  color: var(--app-text);
+app/globals.css-2549-  font-size: 1.2rem;
+app/globals.css-2550-  font-weight: 900;
+app/globals.css-2551-}
+app/globals.css-2552-
+app/globals.css-2553-.draft-roster-count span {
+app/globals.css-2554-  color: var(--app-text-muted);
+app/globals.css-2555-  font-size: 0.65rem;
+--
+app/globals.css-2567-
+app/globals.css-2568-.draft-roster-progress-fill {
+app/globals.css-2569-  height: 100%;
+app/globals.css-2570-  border-radius: inherit;
+app/globals.css-2571-  background: linear-gradient(90deg, var(--app-blue), #38bdf8, #f59e0b);
+app/globals.css-2572-  transition: width 220ms ease;
+app/globals.css-2573-}
+app/globals.css-2574-
+app/globals.css-2575-.draft-roster-formation {
+app/globals.css-2576-  margin-top: 1.1rem;
+app/globals.css-2577-}
+app/globals.css-2578-
+app/globals.css-2579-.draft-roster-row {
+app/globals.css-2580-  display: flex;
+app/globals.css-2581-  align-items: flex-start;
+app/globals.css:2582:  justify-content: center;
+app/globals.css-2583-}
+app/globals.css-2584-
+app/globals.css-2585-.draft-roster-row--guards {
+app/globals.css-2586-  gap: clamp(2rem, 13vw, 7rem);
+app/globals.css-2587-}
+app/globals.css-2588-
+app/globals.css-2589-.draft-roster-row--frontcourt {
+app/globals.css-2590-  margin-top: 1rem;
+app/globals.css-2591-  gap: clamp(0.65rem, 6vw, 4rem);
+app/globals.css-2592-}
+app/globals.css-2593-
+app/globals.css-2594-.draft-roster-slot {
+app/globals.css-2595-  display: flex;
+app/globals.css-2596-  width: min(7rem, 28vw);
+app/globals.css-2597-  min-width: 0;
+app/globals.css-2598-  flex-direction: column;
+app/globals.css-2599-  align-items: center;
+app/globals.css-2600-  color: var(--app-text);
+app/globals.css-2601-  text-align: center;
+app/globals.css-2602-}
+app/globals.css-2603-
+app/globals.css-2604-.draft-roster-slot:disabled {
+app/globals.css-2605-  cursor: default;
+app/globals.css-2606-}
+app/globals.css-2607-
+app/globals.css-2608-.draft-roster-headshot {
+app/globals.css-2609-  display: flex;
+app/globals.css-2610-  height: 5.25rem;
+app/globals.css-2611-  width: 5.25rem;
+app/globals.css-2612-  align-items: center;
+app/globals.css:2613:  justify-content: center;
+app/globals.css-2614-  overflow: hidden;
+app/globals.css-2615-  border: 2px solid var(--app-border-strong);
+app/globals.css-2616-  border-radius: 999px;
+app/globals.css-2617-  background: var(--app-surface-raised);
+app/globals.css-2618-  box-shadow:
+app/globals.css-2619-    0 8px 20px rgb(15 23 42 / 0.14),
+app/globals.css-2620-    inset 0 1px 0 rgb(255 255 255 / 0.12);
+app/globals.css-2621-}
+app/globals.css-2622-
+app/globals.css-2623-.draft-roster-slot--filled .draft-roster-headshot {
+app/globals.css-2624-  border-color: var(--app-blue-bright);
+app/globals.css-2625-}
+app/globals.css-2626-
+app/globals.css-2627-.draft-roster-slot--empty .draft-roster-headshot {
+app/globals.css-2628-  border-style: dashed;
+app/globals.css-2629-}
+app/globals.css-2630-
+app/globals.css-2631-.draft-roster-player-image {
+app/globals.css-2632-  height: 100% !important;
+app/globals.css-2633-  width: 100% !important;
+app/globals.css-2634-  border: 0 !important;
+app/globals.css-2635-  background: transparent !important;
+app/globals.css-2636-}
+app/globals.css-2637-
+app/globals.css-2638-.draft-roster-plus {
+app/globals.css-2639-  color: var(--app-blue);
+app/globals.css-2640-  font-size: 2rem;
+app/globals.css-2641-  font-weight: 400;
+app/globals.css-2642-  line-height: 1;
+app/globals.css-2643-}
+app/globals.css-2644-
+app/globals.css-2645-.draft-roster-player-name {
+app/globals.css-2646-  display: -webkit-box;
+app/globals.css-2647-  max-width: 100%;
+app/globals.css-2648-  margin-top: 0.55rem;
+--
+app/globals.css-2709-    transition: none !important;
+app/globals.css-2710-  }
+app/globals.css-2711-
+app/globals.css-2712-  .draft-roster-slot:hover .draft-roster-headshot {
+app/globals.css-2713-    transform: none !important;
+app/globals.css-2714-  }
+app/globals.css-2715-}
+app/globals.css-2716-
+app/globals.css-2717-/* =========================================================
+app/globals.css-2718-   DRAFT PAGE — TABS + COMPACT CONTROLS
+app/globals.css-2719-   ========================================================= */
+app/globals.css-2720-
+app/globals.css-2721-.draft-page-intro {
+app/globals.css-2722-  display: flex;
+app/globals.css-2723-  align-items: center;
+app/globals.css:2724:  justify-content: space-between;
+app/globals.css-2725-  gap: 1rem;
+app/globals.css-2726-  border: 1px solid var(--app-border);
+app/globals.css-2727-  border-radius: 1.5rem;
+app/globals.css-2728-  padding: 1rem 1.15rem;
+app/globals.css-2729-  background:
+app/globals.css-2730-    radial-gradient(
+app/globals.css-2731-      circle at 92% 10%,
+app/globals.css-2732-      rgb(14 165 233 / 0.1),
+app/globals.css-2733-      transparent 12rem
+app/globals.css-2734-    ),
+app/globals.css-2735-    var(--app-surface);
+app/globals.css-2736-  color: var(--app-text);
+app/globals.css-2737-  box-shadow: var(--app-shadow-card);
+app/globals.css-2738-}
+app/globals.css-2739-
+app/globals.css-2740-.draft-page-intro-kicker {
+app/globals.css-2741-  color: var(--app-blue);
+app/globals.css-2742-  font-size: 0.65rem;
+app/globals.css-2743-  font-weight: 900;
+app/globals.css-2744-  letter-spacing: 0.17em;
+app/globals.css-2745-  text-transform: uppercase;
+app/globals.css-2746-}
+app/globals.css-2747-
+app/globals.css-2748-.draft-page-intro h1 {
+app/globals.css-2749-  margin-top: 0.15rem;
+app/globals.css-2750-  color: var(--app-text);
+app/globals.css-2751-  font-size: 1.65rem;
+app/globals.css-2752-  font-weight: 900;
+app/globals.css-2753-  letter-spacing: -0.035em;
+app/globals.css-2754-}
+app/globals.css-2755-
+app/globals.css-2756-.draft-page-intro p {
+app/globals.css-2757-  margin-top: 0.1rem;
+app/globals.css-2758-  color: var(--app-text-muted);
+app/globals.css-2759-  font-size: 0.78rem;
+--
+app/globals.css-2798-  background: var(--app-surface-raised);
+app/globals.css-2799-  color: var(--app-text);
+app/globals.css-2800-  font-size: 0.78rem;
+app/globals.css-2801-  font-weight: 650;
+app/globals.css-2802-  outline: none;
+app/globals.css-2803-}
+app/globals.css-2804-
+app/globals.css-2805-.draft-compact-field select:focus {
+app/globals.css-2806-  border-color: var(--app-blue-bright);
+app/globals.css-2807-  box-shadow: 0 0 0 3px rgb(56 189 248 / 0.12);
+app/globals.css-2808-}
+app/globals.css-2809-
+app/globals.css-2810-.draft-compact-meta {
+app/globals.css-2811-  display: flex;
+app/globals.css-2812-  align-items: center;
+app/globals.css:2813:  justify-content: space-between;
+app/globals.css-2814-  gap: 0.75rem;
+app/globals.css-2815-  margin-top: 0.65rem;
+app/globals.css-2816-  padding-top: 0.65rem;
+app/globals.css-2817-  border-top: 1px solid var(--app-border);
+app/globals.css-2818-}
+app/globals.css-2819-
+app/globals.css-2820-.draft-compact-status {
+app/globals.css-2821-  display: inline-flex;
+app/globals.css-2822-  min-width: 0;
+app/globals.css-2823-  align-items: center;
+app/globals.css-2824-  gap: 0.4rem;
+app/globals.css-2825-  color: var(--app-text-muted);
+app/globals.css-2826-  font-size: 0.7rem;
+app/globals.css-2827-}
+app/globals.css-2828-
+app/globals.css-2829-.draft-compact-status-dot {
+app/globals.css-2830-  height: 0.45rem;
+app/globals.css-2831-  width: 0.45rem;
+app/globals.css-2832-  flex-shrink: 0;
+app/globals.css-2833-  border-radius: 999px;
+app/globals.css-2834-}
+app/globals.css-2835-
+app/globals.css-2836-.draft-compact-status-dot--locked {
+app/globals.css-2837-  background: #f59e0b;
+app/globals.css-2838-}
+app/globals.css-2839-
+app/globals.css-2840-.draft-compact-status-dot--open {
+app/globals.css-2841-  background: #10b981;
+app/globals.css-2842-}
+app/globals.css-2843-
+app/globals.css-2844-.draft-compact-standings-link {
+app/globals.css-2845-  flex-shrink: 0;
+app/globals.css-2846-  color: var(--app-blue);
+app/globals.css-2847-  font-size: 0.7rem;
+app/globals.css-2848-  font-weight: 800;
+--
+app/globals.css-2851-.draft-page-tabs {
+app/globals.css-2852-  display: grid;
+app/globals.css-2853-  grid-template-columns: repeat(2, minmax(0, 1fr));
+app/globals.css-2854-  gap: 0.35rem;
+app/globals.css-2855-  border: 1px solid var(--app-border);
+app/globals.css-2856-  border-radius: 1.25rem;
+app/globals.css-2857-  padding: 0.35rem;
+app/globals.css-2858-  background: var(--app-surface);
+app/globals.css-2859-  box-shadow: var(--app-shadow-card);
+app/globals.css-2860-}
+app/globals.css-2861-
+app/globals.css-2862-.draft-page-tab {
+app/globals.css-2863-  display: flex;
+app/globals.css-2864-  min-height: 2.9rem;
+app/globals.css-2865-  align-items: center;
+app/globals.css:2866:  justify-content: center;
+app/globals.css-2867-  gap: 0.45rem;
+app/globals.css-2868-  border: 1px solid transparent;
+app/globals.css-2869-  border-radius: 0.95rem;
+app/globals.css-2870-  color: var(--app-text-muted);
+app/globals.css-2871-  font-size: 0.82rem;
+app/globals.css-2872-  font-weight: 800;
+app/globals.css-2873-  transition:
+app/globals.css-2874-    background 150ms ease,
+app/globals.css-2875-    border-color 150ms ease,
+app/globals.css-2876-    color 150ms ease;
+app/globals.css-2877-}
+app/globals.css-2878-
+app/globals.css-2879-.draft-page-tab--active {
+app/globals.css-2880-  border-color: var(--app-blue-bright);
+app/globals.css-2881-  background: linear-gradient(135deg, var(--app-blue), #0891b2);
+app/globals.css-2882-  color: white;
+app/globals.css-2883-  box-shadow: 0 5px 14px rgb(14 165 233 / 0.18);
+app/globals.css-2884-}
+app/globals.css-2885-
+app/globals.css-2886-.draft-page-tab-count {
+app/globals.css-2887-  display: inline-flex;
+app/globals.css-2888-  min-width: 1.65rem;
+app/globals.css-2889-  align-items: center;
+app/globals.css:2890:  justify-content: center;
+app/globals.css-2891-  border-radius: 999px;
+app/globals.css-2892-  padding: 0.1rem 0.38rem;
+app/globals.css-2893-  background: rgb(255 255 255 / 0.18);
+app/globals.css-2894-  font-size: 0.65rem;
+app/globals.css-2895-}
+app/globals.css-2896-
+app/globals.css-2897-@media (min-width: 640px) {
+app/globals.css-2898-  .draft-page-intro {
+app/globals.css-2899-    padding: 1rem 1.35rem;
+app/globals.css-2900-  }
+app/globals.css-2901-
+app/globals.css-2902-  .draft-compact-controls {
+app/globals.css-2903-    display: flex;
+app/globals.css-2904-    align-items: end;
+app/globals.css:2905:    justify-content: space-between;
+app/globals.css-2906-    gap: 1rem;
+app/globals.css-2907-  }
+app/globals.css-2908-
+app/globals.css-2909-  .draft-compact-controls-main {
+app/globals.css-2910-    width: min(31rem, 65%);
+app/globals.css-2911-  }
+app/globals.css-2912-
+app/globals.css-2913-  .draft-compact-meta {
+app/globals.css-2914-    min-width: 16rem;
+app/globals.css:2915:    justify-content: flex-end;
+app/globals.css-2916-    margin-top: 0;
+app/globals.css-2917-    padding-top: 0;
+app/globals.css-2918-    border-top: 0;
+app/globals.css-2919-  }
+app/globals.css-2920-
+app/globals.css-2921-  .draft-page-tabs {
+app/globals.css-2922-    max-width: 34rem;
+app/globals.css-2923-    margin-inline: auto;
+app/globals.css-2924-  }
+app/globals.css-2925-}
+app/globals.css-2926-
+app/globals.css-2927-@media (hover: hover) {
+app/globals.css-2928-  .draft-page-tab:not(.draft-page-tab--active):hover {
+app/globals.css-2929-    border-color: var(--app-border-strong);
+app/globals.css-2930-    background: var(--app-surface-soft);
+app/globals.css-2931-    color: var(--app-text);
+app/globals.css-2932-  }
+app/globals.css-2933-
+app/globals.css-2934-  .draft-compact-standings-link:hover {
+app/globals.css-2935-    text-decoration: underline;
+app/globals.css-2936-    text-underline-offset: 0.18rem;
+app/globals.css-2937-  }
+app/globals.css-2938-}
+app/globals.css-2939-
+app/globals.css-2940-/* =========================================================
+app/globals.css-2941-   DRAFT — LEAGUE LINEUP CARDS
+app/globals.css-2942-   ========================================================= */
+app/globals.css-2943-
+app/globals.css-2944-.league-lineups-shell {
+app/globals.css-2945-  border: 1px solid var(--app-border);
+app/globals.css-2946-  border-radius: 1.5rem;
+app/globals.css-2947-  padding: 1rem;
+app/globals.css-2948-  background: var(--app-surface);
+app/globals.css-2949-  color: var(--app-text);
+app/globals.css-2950-  box-shadow: var(--app-shadow-card);
+app/globals.css-2951-}
+app/globals.css-2952-
+app/globals.css-2953-.league-lineups-heading {
+app/globals.css-2954-  display: flex;
+app/globals.css-2955-  align-items: flex-end;
+app/globals.css:2956:  justify-content: space-between;
+app/globals.css-2957-  gap: 1rem;
+app/globals.css-2958-}
+app/globals.css-2959-
+app/globals.css-2960-.league-lineups-kicker {
+app/globals.css-2961-  color: var(--app-blue);
+app/globals.css-2962-  font-size: 0.65rem;
+app/globals.css-2963-  font-weight: 900;
+app/globals.css-2964-  letter-spacing: 0.17em;
+app/globals.css-2965-  text-transform: uppercase;
+app/globals.css-2966-}
+app/globals.css-2967-
+app/globals.css-2968-.league-lineups-heading h2 {
+app/globals.css-2969-  margin-top: 0.2rem;
+app/globals.css-2970-  color: var(--app-text);
+app/globals.css-2971-  font-size: 1.35rem;
+app/globals.css-2972-  font-weight: 900;
+app/globals.css-2973-  letter-spacing: -0.025em;
+app/globals.css-2974-}
+app/globals.css-2975-
+app/globals.css-2976-.league-lineups-heading p {
+app/globals.css-2977-  margin-top: 0.2rem;
+app/globals.css-2978-  color: var(--app-text-muted);
+app/globals.css-2979-  font-size: 0.75rem;
+app/globals.css-2980-}
+app/globals.css-2981-
+app/globals.css-2982-.league-lineups-swipe-note {
+app/globals.css-2983-  flex-shrink: 0;
+app/globals.css-2984-  color: var(--app-blue);
+app/globals.css-2985-  font-size: 0.68rem;
+app/globals.css-2986-  font-weight: 800;
+app/globals.css-2987-}
+app/globals.css-2988-
+app/globals.css-2989-.league-lineups-strip {
+app/globals.css-2990-  display: grid;
+app/globals.css-2991-  grid-auto-columns: minmax(16rem, 86%);
+--
+app/globals.css-3004-  border-radius: 1.3rem;
+app/globals.css-3005-  padding: 1rem;
+app/globals.css-3006-  background:
+app/globals.css-3007-    radial-gradient(circle at 95% 5%, rgb(14 165 233 / 0.08), transparent 9rem),
+app/globals.css-3008-    var(--app-surface-raised);
+app/globals.css-3009-  color: var(--app-text);
+app/globals.css-3010-}
+app/globals.css-3011-
+app/globals.css-3012-.league-lineup-card--inactive {
+app/globals.css-3013-  opacity: 0.6;
+app/globals.css-3014-}
+app/globals.css-3015-
+app/globals.css-3016-.league-lineup-card-header {
+app/globals.css-3017-  display: flex;
+app/globals.css-3018-  align-items: flex-start;
+app/globals.css:3019:  justify-content: space-between;
+app/globals.css-3020-  gap: 0.75rem;
+app/globals.css-3021-}
+app/globals.css-3022-
+app/globals.css-3023-.league-lineup-card-header h3 {
+app/globals.css-3024-  overflow: hidden;
+app/globals.css-3025-  color: var(--app-text);
+app/globals.css-3026-  font-size: 1.05rem;
+app/globals.css-3027-  font-weight: 900;
+app/globals.css-3028-  text-overflow: ellipsis;
+app/globals.css-3029-  white-space: nowrap;
+app/globals.css-3030-}
+app/globals.css-3031-
+app/globals.css-3032-.league-lineup-draft-order {
+app/globals.css-3033-  margin-top: 0.15rem;
+app/globals.css-3034-  color: var(--app-text-muted);
+app/globals.css-3035-  font-size: 0.68rem;
+app/globals.css-3036-}
+app/globals.css-3037-
+app/globals.css-3038-.league-lineup-count {
+app/globals.css-3039-  display: inline-flex;
+app/globals.css-3040-  min-width: 2.5rem;
+app/globals.css-3041-  align-items: center;
+app/globals.css:3042:  justify-content: center;
+app/globals.css-3043-  border: 1px solid var(--app-border);
+app/globals.css-3044-  border-radius: 999px;
+app/globals.css-3045-  padding: 0.3rem 0.5rem;
+app/globals.css-3046-  background: var(--app-surface-soft);
+app/globals.css-3047-  color: var(--app-text-muted);
+app/globals.css-3048-  font-size: 0.7rem;
+app/globals.css-3049-  font-weight: 900;
+app/globals.css-3050-}
+app/globals.css-3051-
+app/globals.css-3052-.league-lineup-count--complete {
+app/globals.css-3053-  border-color: #10b981;
+app/globals.css-3054-  background: rgb(16 185 129 / 0.12);
+app/globals.css-3055-  color: #059669;
+app/globals.css-3056-}
+app/globals.css-3057-
+app/globals.css-3058-.league-lineup-formation {
+app/globals.css-3059-  margin-top: 1rem;
+app/globals.css-3060-}
+app/globals.css-3061-
+app/globals.css-3062-.league-lineup-row {
+app/globals.css-3063-  display: flex;
+app/globals.css:3064:  justify-content: center;
+app/globals.css-3065-}
+app/globals.css-3066-
+app/globals.css-3067-.league-lineup-row--guards {
+app/globals.css-3068-  gap: 2.4rem;
+app/globals.css-3069-}
+app/globals.css-3070-
+app/globals.css-3071-.league-lineup-row--frontcourt {
+app/globals.css-3072-  gap: 0.75rem;
+app/globals.css-3073-  margin-top: 0.65rem;
+app/globals.css-3074-}
+app/globals.css-3075-
+app/globals.css-3076-.league-lineup-mini-slot {
+app/globals.css-3077-  display: flex;
+app/globals.css-3078-  height: 2.55rem;
+app/globals.css-3079-  width: 2.55rem;
+app/globals.css-3080-  align-items: center;
+app/globals.css:3081:  justify-content: center;
+app/globals.css-3082-  overflow: hidden;
+app/globals.css-3083-  border: 1.5px solid var(--app-border-strong);
+app/globals.css-3084-  border-radius: 999px;
+app/globals.css-3085-  background: var(--app-surface-soft);
+app/globals.css-3086-}
+app/globals.css-3087-
+app/globals.css-3088-.league-lineup-mini-slot--filled {
+app/globals.css-3089-  border-color: var(--app-blue-bright);
+app/globals.css-3090-}
+app/globals.css-3091-
+app/globals.css-3092-.league-lineup-mini-slot--empty {
+app/globals.css-3093-  border-style: dashed;
+app/globals.css-3094-  color: var(--app-blue);
+app/globals.css-3095-  font-size: 1.2rem;
+app/globals.css-3096-}
+app/globals.css-3097-
+app/globals.css-3098-.league-lineup-mini-headshot {
+app/globals.css-3099-  height: 100% !important;
+app/globals.css-3100-  width: 100% !important;
+app/globals.css-3101-  border: 0 !important;
+app/globals.css-3102-  background: transparent !important;
+app/globals.css-3103-}
+app/globals.css-3104-
+app/globals.css-3105-.league-lineup-progress {
+app/globals.css-3106-  height: 0.35rem;
+app/globals.css-3107-  margin-top: 1rem;
+app/globals.css-3108-  overflow: hidden;
+app/globals.css-3109-  border-radius: 999px;
+app/globals.css-3110-  background: var(--app-surface-soft);
+app/globals.css-3111-}
+app/globals.css-3112-
+app/globals.css-3113-.league-lineup-progress > div {
+app/globals.css-3114-  height: 100%;
+app/globals.css-3115-  border-radius: inherit;
+app/globals.css-3116-  background: linear-gradient(90deg, var(--app-blue), #38bdf8, #f59e0b);
+app/globals.css-3117-}
+app/globals.css-3118-
+app/globals.css-3119-.league-lineup-card-footer {
+app/globals.css-3120-  display: flex;
+app/globals.css-3121-  align-items: flex-end;
+app/globals.css:3122:  justify-content: space-between;
+app/globals.css-3123-  gap: 0.75rem;
+app/globals.css-3124-  margin-top: 0.8rem;
+app/globals.css-3125-}
+app/globals.css-3126-
+app/globals.css-3127-.league-lineup-card-footer > div:first-child {
+app/globals.css-3128-  display: flex;
+app/globals.css-3129-  flex-direction: column;
+app/globals.css-3130-}
+app/globals.css-3131-
+app/globals.css-3132-.league-lineup-card-footer span {
+app/globals.css-3133-  color: var(--app-text-muted);
+app/globals.css-3134-  font-size: 0.62rem;
+app/globals.css-3135-  font-weight: 800;
+app/globals.css-3136-  letter-spacing: 0.08em;
+app/globals.css-3137-  text-transform: uppercase;
+app/globals.css-3138-}
+app/globals.css-3139-
+app/globals.css-3140-.league-lineup-card-footer strong {
+app/globals.css-3141-  margin-top: 0.1rem;
+app/globals.css-3142-  color: var(--app-text);
+app/globals.css-3143-  font-size: 1.25rem;
+app/globals.css-3144-  font-weight: 900;
+app/globals.css-3145-}
+app/globals.css-3146-
+app/globals.css-3147-.league-lineup-need {
+app/globals.css-3148-  max-width: 55%;
+app/globals.css-3149-  color: var(--app-blue);
+app/globals.css-3150-  font-size: 0.7rem;
+app/globals.css-3151-  font-weight: 850;
+app/globals.css-3152-  text-align: right;
+app/globals.css-3153-}
+app/globals.css-3154-
+app/globals.css-3155-@media (min-width: 768px) {
+app/globals.css-3156-  .league-lineups-strip {
+app/globals.css-3157-    grid-auto-flow: initial;
+--
+app/globals.css-3160-    padding-bottom: 0;
+app/globals.css-3161-  }
+app/globals.css-3162-
+app/globals.css-3163-  .league-lineups-swipe-note {
+app/globals.css-3164-    display: none;
+app/globals.css-3165-  }
+app/globals.css-3166-}
+app/globals.css-3167-
+app/globals.css-3168-/* =========================================================
+app/globals.css-3169-   DRAFT — COMPACT ADMIN CONTROL
+app/globals.css-3170-   ========================================================= */
+app/globals.css-3171-
+app/globals.css-3172-.draft-admin-toggle {
+app/globals.css-3173-  display: flex;
+app/globals.css-3174-  align-items: center;
+app/globals.css:3175:  justify-content: space-between;
+app/globals.css-3176-  gap: 1rem;
+app/globals.css-3177-  border: 1px solid var(--app-border);
+app/globals.css-3178-  border-radius: 1.1rem;
+app/globals.css-3179-  padding: 0.75rem 0.9rem;
+app/globals.css-3180-  background: var(--app-surface);
+
+===== 4. ADMIN ROUTES =====
+app/api/admin/backfill-player-stats/route.ts
+app/api/admin/correction-data/route.ts
+app/api/admin/golf/import-field/route.ts
+app/api/admin/golf/shotcast/route.ts
+app/api/admin/league-awards/route.ts
+app/api/admin/lineup-correction/route.ts
+app/api/admin/manual-stat-correction/route.ts
+app/api/admin/notification-history/action/route.ts
+app/api/admin/notification-history/route.ts
+app/api/admin/notification-templates/route.ts
+app/api/admin/players-nfl/route.ts
+app/api/admin/players/route.ts
+app/api/admin/players.ts
+app/api/admin/recompute-slate-results/route.ts
+app/api/admin/slate-nba-games/route.ts
+app/api/admin/slates/route.ts
+app/api/admin/slates/[slateId]/reseed/route.ts
+app/api/admin/slates/[slateId]/route.ts
+app/api/admin/sync-golf-rankings/route.ts

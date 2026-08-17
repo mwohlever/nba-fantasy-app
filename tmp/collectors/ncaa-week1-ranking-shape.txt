@@ -1,0 +1,2083 @@
+============================================================
+NCAA WEEK 1 — ESPN RANKING SHAPE
+============================================================
+events: 99
+
+============================================================
+North Carolina Tar Heels at TCU Horned Frogs
+EVENT: 401856766
+============================================================
+
+home TCU Horned Frogs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away North Carolina Tar Heels | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+San José State Spartans at USC Trojans
+EVENT: 401864494
+============================================================
+
+home USC Trojans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away San José State Spartans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+NC State Wolfpack at Virginia Cavaliers
+EVENT: 401858202
+============================================================
+
+home Virginia Cavaliers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away NC State Wolfpack | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Jacksonville State Gamecocks at North Dakota State Bison
+EVENT: 401864577
+============================================================
+
+home North Dakota State Bison | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Jacksonville State Gamecocks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Sacramento State Hornets at Eastern Michigan Eagles
+EVENT: 401866408
+============================================================
+
+home Eastern Michigan Eagles | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Sacramento State Hornets | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Hawai'i Rainbow Warriors at Stanford Cardinal
+EVENT: 401858201
+============================================================
+
+home Stanford Cardinal | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Hawai'i Rainbow Warriors | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+New Mexico State Aggies at Florida State Seminoles
+EVENT: 401864570
+============================================================
+
+home Florida State Seminoles | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away New Mexico State Aggies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Memphis Tigers at UNLV Rebels
+EVENT: 401862693
+============================================================
+
+home UNLV Rebels | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Memphis Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Massachusetts Minutemen at Rutgers Scarlet Knights
+EVENT: 401858423
+============================================================
+
+home Rutgers Scarlet Knights | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Massachusetts Minutemen | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Bethune-Cookman Wildcats at UCF Knights
+EVENT: 401856767
+============================================================
+
+home UCF Knights | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Bethune-Cookman Wildcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Akron Zips at Wake Forest Demon Deacons
+EVENT: 401858204
+============================================================
+
+home Wake Forest Demon Deacons | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Akron Zips | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Merrimack Warriors at Delaware Blue Hens
+EVENT: 401864424
+============================================================
+
+home Delaware Blue Hens | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Merrimack Warriors | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+West Georgia Wolves at Kennesaw State Owls
+EVENT: 401864425
+============================================================
+
+home Kennesaw State Owls | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away West Georgia Wolves | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+UAlbany Great Danes at Buffalo Bulls
+EVENT: 401866409
+============================================================
+
+home Buffalo Bulls | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away UAlbany Great Danes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Arkansas-Pine Bluff Golden Lions at Missouri Tigers
+EVENT: 401856663
+============================================================
+
+home Missouri Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Arkansas-Pine Bluff Golden Lions | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Colorado Buffaloes at Georgia Tech Yellow Jackets
+EVENT: 401856776
+============================================================
+
+home Georgia Tech Yellow Jackets | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Colorado Buffaloes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Eastern Illinois Panthers at Minnesota Golden Gophers
+EVENT: 401858422
+============================================================
+
+home Minnesota Golden Gophers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Eastern Illinois Panthers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Idaho Vandals at Utah Utes
+EVENT: 401856768
+============================================================
+
+home Utah Utes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Idaho Vandals | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+UAB Blazers at Illinois Fighting Illini
+EVENT: 401858424
+============================================================
+
+home Illinois Fighting Illini | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away UAB Blazers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+San José State Spartans at Eastern Michigan Eagles
+EVENT: 401864495
+============================================================
+
+home Eastern Michigan Eagles | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away San José State Spartans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Indiana State Sycamores at Purdue Boilermakers
+EVENT: 401858435
+============================================================
+
+home Purdue Boilermakers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Indiana State Sycamores | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+North Carolina A&T Aggies at Georgia State Panthers
+EVENT: 401866623
+============================================================
+
+home Georgia State Panthers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away North Carolina A&T Aggies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+UTEP Miners at Oklahoma Sooners
+EVENT: 401856664
+============================================================
+
+home Oklahoma Sooners | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away UTEP Miners | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Long Island University Sharks at Kansas Jayhawks
+EVENT: 401856769
+============================================================
+
+home Kansas Jayhawks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Long Island University Sharks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Toledo Rockets at Michigan State Spartans
+EVENT: 401858429
+============================================================
+
+home Michigan State Spartans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Toledo Rockets | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Miami Hurricanes at Stanford Cardinal
+EVENT: 401858206
+============================================================
+
+home Stanford Cardinal | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Miami Hurricanes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Fresno State Bulldogs at USC Trojans
+EVENT: 401858436
+============================================================
+
+home USC Trojans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Fresno State Bulldogs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+East Carolina Pirates at Alabama Crimson Tide
+EVENT: 401856634
+============================================================
+
+home Alabama Crimson Tide | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away East Carolina Pirates | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Oregon State Beavers at Houston Cougars
+EVENT: 401856778
+============================================================
+
+home Houston Cougars | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Oregon State Beavers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Coastal Carolina Chanticleers at West Virginia Mountaineers
+EVENT: 401856780
+============================================================
+
+home West Virginia Mountaineers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Coastal Carolina Chanticleers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+New Hampshire Wildcats at Syracuse Orange
+EVENT: 401858208
+============================================================
+
+home Syracuse Orange | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away New Hampshire Wildcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+North Texas Mean Green at Indiana Hoosiers
+EVENT: 401858425
+============================================================
+
+home Indiana Hoosiers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away North Texas Mean Green | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Ohio Bobcats at Nebraska Cornhuskers
+EVENT: 401858430
+============================================================
+
+home Nebraska Cornhuskers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Ohio Bobcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Lafayette Leopards at UConn Huskies
+EVENT: 401861962
+============================================================
+
+home UConn Huskies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Lafayette Leopards | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Bryant Bulldogs at Army Black Knights
+EVENT: 401862701
+============================================================
+
+home Army Black Knights | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Bryant Bulldogs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Tarleton State Texans at Bowling Green Falcons
+EVENT: 401866410
+============================================================
+
+home Bowling Green Falcons | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Tarleton State Texans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Liberty Flames at James Madison Dukes
+EVENT: 401869960
+============================================================
+
+home James Madison Dukes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Liberty Flames | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Miami (OH) RedHawks at Pittsburgh Panthers
+EVENT: 401858207
+============================================================
+
+home Pittsburgh Panthers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Miami (OH) RedHawks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Ball State Cardinals at Ohio State Buckeyes
+EVENT: 401858432
+============================================================
+
+home Ohio State Buckeyes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Ball State Cardinals | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Kent State Golden Flashes at South Carolina Gamecocks
+EVENT: 401856665
+============================================================
+
+home South Carolina Gamecocks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Kent State Golden Flashes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Youngstown State Penguins at Kentucky Wildcats
+EVENT: 401856659
+============================================================
+
+home Kentucky Wildcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Youngstown State Penguins | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Southeast Missouri State Redhawks at Iowa State Cyclones
+EVENT: 401856779
+============================================================
+
+home Iowa State Cyclones | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Southeast Missouri State Redhawks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Duquesne Dukes at Air Force Falcons
+EVENT: 401864496
+============================================================
+
+home Air Force Falcons | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Duquesne Dukes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Rhode Island Rams at Temple Owls
+EVENT: 401862698
+============================================================
+
+home Temple Owls | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Rhode Island Rams | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Tennessee State Tigers at Georgia Bulldogs
+EVENT: 401856658
+============================================================
+
+home Georgia Bulldogs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Tennessee State Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Baylor Bears at Auburn Tigers
+EVENT: 401856636
+============================================================
+
+home Auburn Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Baylor Bears | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Furman Paladins at Tennessee Volunteers
+EVENT: 401856666
+============================================================
+
+home Tennessee Volunteers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Furman Paladins | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Texas State Bobcats at Texas Longhorns
+EVENT: 401856667
+============================================================
+
+home Texas Longhorns | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Texas State Bobcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Boston College Eagles at Cincinnati Bearcats
+EVENT: 401856777
+============================================================
+
+home Cincinnati Bearcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Boston College Eagles | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Tulane Green Wave at Duke Blue Devils
+EVENT: 401858209
+============================================================
+
+home Duke Blue Devils | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Tulane Green Wave | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Boise State Broncos at Oregon Ducks
+EVENT: 401858433
+============================================================
+
+home Oregon Ducks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Boise State Broncos | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Marshall Thundering Herd at Penn State Nittany Lions
+EVENT: 401858434
+============================================================
+
+home Penn State Nittany Lions | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Marshall Thundering Herd | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+The Citadel Bulldogs at Charlotte 49ers
+EVENT: 401862694
+============================================================
+
+home Charlotte 49ers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away The Citadel Bulldogs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Towson Tigers at Navy Midshipmen
+EVENT: 401862696
+============================================================
+
+home Navy Midshipmen | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Towson Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+UT Rio Grande Valley Vaqueros at UTSA Roadrunners
+EVENT: 401862700
+============================================================
+
+home UTSA Roadrunners | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away UT Rio Grande Valley Vaqueros | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Fordham Rams at North Dakota State Bison
+EVENT: 401864499
+============================================================
+
+home North Dakota State Bison | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Fordham Rams | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Maine Black Bears at App State Mountaineers
+EVENT: 401866627
+============================================================
+
+home App State Mountaineers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Maine Black Bears | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Oklahoma State Cowboys at Tulsa Golden Hurricane
+EVENT: 401856772
+============================================================
+
+home Tulsa Golden Hurricane | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Oklahoma State Cowboys | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+North Alabama Lions at Arkansas Razorbacks
+EVENT: 401856635
+============================================================
+
+home Arkansas Razorbacks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away North Alabama Lions | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Northern Illinois Huskies at Iowa Hawkeyes
+EVENT: 401858426
+============================================================
+
+home Iowa Hawkeyes | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Northern Illinois Huskies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Alcorn State Braves at Southern Miss Golden Eagles
+EVENT: 401868356
+============================================================
+
+home Southern Miss Golden Eagles | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Alcorn State Braves | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Wyoming Cowboys at Colorado State Rams
+EVENT: 401860878
+============================================================
+
+home Colorado State Rams | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Wyoming Cowboys | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Norfolk State Spartans at Old Dominion Monarchs
+EVENT: 401867973
+============================================================
+
+home Old Dominion Monarchs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Norfolk State Spartans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Missouri State Bears at Texas A&M Aggies
+EVENT: 401856668
+============================================================
+
+home Texas A&M Aggies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Missouri State Bears | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Austin Peay Governors at Vanderbilt Commodores
+EVENT: 401856669
+============================================================
+
+home Vanderbilt Commodores | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Austin Peay Governors | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Abilene Christian Wildcats at Texas Tech Red Raiders
+EVENT: 401856770
+============================================================
+
+home Texas Tech Red Raiders | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Abilene Christian Wildcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Nicholls Colonels at Kansas State Wildcats
+EVENT: 401856771
+============================================================
+
+home Kansas State Wildcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Nicholls Colonels | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Idaho State Bengals at Utah State Aggies
+EVENT: 401860880
+============================================================
+
+home Utah State Aggies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Idaho State Bengals | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Arkansas State Red Wolves at Memphis Tigers
+EVENT: 401862695
+============================================================
+
+home Memphis Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Arkansas State Red Wolves | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Houston Christian Huskies at Rice Owls
+EVENT: 401862697
+============================================================
+
+home Rice Owls | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Houston Christian Huskies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Florida International Panthers at South Florida Bulls
+EVENT: 401862699
+============================================================
+
+home South Florida Bulls | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Florida International Panthers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Murray State Racers at Middle Tennessee Blue Raiders
+EVENT: 401867866
+============================================================
+
+home Middle Tennessee Blue Raiders | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Murray State Racers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Eastern Kentucky Colonels at Jacksonville State Gamecocks
+EVENT: 401868140
+============================================================
+
+home Jacksonville State Gamecocks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Eastern Kentucky Colonels | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Charleston Southern Buccaneers at Georgia Southern Eagles
+EVENT: 401868170
+============================================================
+
+home Georgia Southern Eagles | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Charleston Southern Buccaneers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+SE Louisiana Lions at South Alabama Jaguars
+EVENT: 401868316
+============================================================
+
+home South Alabama Jaguars | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away SE Louisiana Lions | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Sam Houston Bearkats at Troy Trojans
+EVENT: 401870763
+============================================================
+
+home Troy Trojans | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Sam Houston Bearkats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Clemson Tigers at LSU Tigers
+EVENT: 401856660
+============================================================
+
+home LSU Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Clemson Tigers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+UL Monroe Warhawks at Mississippi State Bulldogs
+EVENT: 401856662
+============================================================
+
+home Mississippi State Bulldogs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away UL Monroe Warhawks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+VMI Keydets at Virginia Tech Hokies
+EVENT: 401858211
+============================================================
+
+home Virginia Tech Hokies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away VMI Keydets | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Western Michigan Broncos at Michigan Wolverines
+EVENT: 401858428
+============================================================
+
+home Michigan Wolverines | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Western Michigan Broncos | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Northwestern State Demons at Louisiana Tech Bulldogs
+EVENT: 401869129
+============================================================
+
+home Louisiana Tech Bulldogs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Northwestern State Demons | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Florida Atlantic Owls at Florida Gators
+EVENT: 401856637
+============================================================
+
+home Florida Gators | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Florida Atlantic Owls | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Utah Tech Trailblazers at BYU Cougars
+EVENT: 401856775
+============================================================
+
+home BYU Cougars | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Utah Tech Trailblazers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Hampton Pirates at Maryland Terrapins
+EVENT: 401858427
+============================================================
+
+home Maryland Terrapins | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Hampton Pirates | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+South Dakota State Jackrabbits at Northwestern Wildcats
+EVENT: 401858431
+============================================================
+
+home Northwestern Wildcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away South Dakota State Jackrabbits | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Lamar Cardinals at Louisiana Ragin' Cajuns
+EVENT: 401869142
+============================================================
+
+home Louisiana Ragin' Cajuns | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Lamar Cardinals | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Morgan State Bears at Arizona State Sun Devils
+EVENT: 401856774
+============================================================
+
+home Arizona State Sun Devils | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Morgan State Bears | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Mercyhurst Lakers at New Mexico State Aggies
+EVENT: 401870790
+============================================================
+
+home New Mexico State Aggies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Mercyhurst Lakers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Northern Arizona Lumberjacks at Arizona Wildcats
+EVENT: 401856773
+============================================================
+
+home Arizona Wildcats | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Northern Arizona Lumberjacks | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Portland State Vikings at San Diego State Aztecs
+EVENT: 401860879
+============================================================
+
+home San Diego State Aztecs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Portland State Vikings | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+UNLV Rebels at Hawai'i Rainbow Warriors
+EVENT: 401864497
+============================================================
+
+home Hawai'i Rainbow Warriors | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away UNLV Rebels | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Central Michigan Chippewas at New Mexico Lobos
+EVENT: 401864498
+============================================================
+
+home New Mexico Lobos | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Central Michigan Chippewas | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Mississippi Valley State Delta Devils at Sacramento State Hornets
+EVENT: 401866411
+============================================================
+
+home Sacramento State Hornets | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Mississippi Valley State Delta Devils | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+UCLA Bruins at California Golden Bears
+EVENT: 401858210
+============================================================
+
+home California Golden Bears | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away UCLA Bruins | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Western Kentucky Hilltoppers at Nevada Wolf Pack
+EVENT: 401864432
+============================================================
+
+home Nevada Wolf Pack | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Western Kentucky Hilltoppers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Washington State Cougars at Washington Huskies
+EVENT: 401858437
+============================================================
+
+home Washington Huskies | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Washington State Cougars | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Louisville Cardinals at Ole Miss Rebels
+EVENT: 401856661
+============================================================
+
+home Ole Miss Rebels | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Louisville Cardinals | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+Wisconsin Badgers at Notre Dame Fighting Irish
+EVENT: 401858438
+============================================================
+
+home Notre Dame Fighting Irish | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away Wisconsin Badgers | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+============================================================
+SMU Mustangs at Florida State Seminoles
+EVENT: 401858212
+============================================================
+
+home Florida State Seminoles | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}
+
+away SMU Mustangs | curatedRank: {"current":99}
+competitor ranking-like fields: {
+  "curatedRank": {
+    "current": 99
+  }
+}
+team ranking-like fields: {}

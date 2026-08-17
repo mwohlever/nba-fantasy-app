@@ -1,0 +1,3535 @@
+============================================================
+NCAA PICK 'EM — GRADING TEST COLLECTOR
+Generated: Mon Aug 17 12:44:09 PM EDT 2026
+============================================================
+
+
+============================================================
+FILE: app/api/refresh-stats-ncaa/route.ts
+============================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+import {
+  fetchNcaaPickEmWeek,
+} from "@/lib/providers/ncaa";
+
+type RefreshBody = {
+  weekId?: number;
+  season?: number;
+  week?: number;
+};
+
+type WeekRow = {
+  id: number;
+  season: number;
+  week_number: number;
+  status: "open" | "locked" | "final";
+};
+
+type GameRow = {
+  id: number;
+  espn_event_id: string;
+  included: boolean;
+};
+
+function positiveInteger(
+  value: unknown,
+): number | null {
+  const number = Number(value);
+
+  return (
+    Number.isInteger(number) &&
+    number > 0
+  )
+    ? number
+    : null;
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  try {
+    let body: RefreshBody = {};
+
+    try {
+      body =
+        await request.json();
+    } catch {
+      body = {};
+    }
+
+    const requestedWeekId =
+      positiveInteger(
+        body.weekId,
+      );
+
+    const requestedSeason =
+      positiveInteger(
+        body.season,
+      );
+
+    const requestedWeek =
+      positiveInteger(
+        body.week,
+      );
+
+    let weekQuery =
+      supabaseAdmin
+        .from(
+          "ncaa_pickem_weeks",
+        )
+        .select(
+          "id, season, week_number, status",
+        );
+
+    if (requestedWeekId) {
+      weekQuery =
+        weekQuery.eq(
+          "id",
+          requestedWeekId,
+        );
+    } else if (
+      requestedSeason &&
+      requestedWeek
+    ) {
+      weekQuery =
+        weekQuery
+          .eq(
+            "season",
+            requestedSeason,
+          )
+          .eq(
+            "week_number",
+            requestedWeek,
+          );
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            "weekId or season/week is required.",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
+    const {
+      data: weekData,
+      error: weekError,
+    } =
+      await weekQuery
+        .limit(1)
+        .maybeSingle();
+
+    if (weekError) {
+      return NextResponse.json(
+        {
+          error:
+            weekError.message,
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    if (!weekData) {
+      return NextResponse.json(
+        {
+          error:
+            "NCAA Pick 'Em week not found.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const week =
+      weekData as WeekRow;
+
+    const espnWeek =
+      await fetchNcaaPickEmWeek({
+        season:
+          Number(week.season),
+
+        week:
+          Number(
+            week.week_number,
+          ),
+      });
+
+    const {
+      data: existingGamesData,
+      error: existingGamesError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ncaa_pickem_games",
+        )
+        .select(
+          "id, espn_event_id, included",
+        )
+        .eq(
+          "week_id",
+          week.id,
+        );
+
+    if (existingGamesError) {
+      return NextResponse.json(
+        {
+          error:
+            existingGamesError.message,
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    const existingGames =
+      (existingGamesData ??
+        []) as GameRow[];
+
+    const localGameByEspnId =
+      new Map<
+        string,
+        GameRow
+      >();
+
+    for (
+      const game
+      of existingGames
+    ) {
+      localGameByEspnId.set(
+        String(
+          game.espn_event_id,
+        ),
+        game,
+      );
+    }
+
+    const now =
+      new Date()
+        .toISOString();
+
+    const gameUpdates =
+      espnWeek.scheduleGames
+        .map((espnGame) => {
+          const localGame =
+            localGameByEspnId.get(
+              espnGame.espnEventId,
+            );
+
+          if (!localGame) {
+            return null;
+          }
+
+          return {
+            id:
+              localGame.id,
+
+            week_id:
+              week.id,
+
+            espn_event_id:
+              espnGame.espnEventId,
+
+            kickoff_at:
+              espnGame.kickoffAt,
+
+            away_team_id:
+              espnGame.awayTeam.id,
+
+            away_team_name:
+              espnGame
+                .awayTeam
+                .displayName,
+
+            away_team_abbreviation:
+              espnGame
+                .awayTeam
+                .abbreviation,
+
+            away_team_logo_url:
+              espnGame
+                .awayTeam
+                .logo,
+
+            away_rank:
+              espnGame
+                .awayTeam
+                .rank,
+
+            away_record:
+              espnGame
+                .awayTeam
+                .record,
+
+            away_score:
+              espnGame
+                .awayTeam
+                .score,
+
+            home_team_id:
+              espnGame.homeTeam.id,
+
+            home_team_name:
+              espnGame
+                .homeTeam
+                .displayName,
+
+            home_team_abbreviation:
+              espnGame
+                .homeTeam
+                .abbreviation,
+
+            home_team_logo_url:
+              espnGame
+                .homeTeam
+                .logo,
+
+            home_rank:
+              espnGame
+                .homeTeam
+                .rank,
+
+            home_record:
+              espnGame
+                .homeTeam
+                .record,
+
+            home_score:
+              espnGame
+                .homeTeam
+                .score,
+
+            status:
+              espnGame.status,
+
+            status_detail:
+              espnGame.statusDetail,
+
+            winner_team_id:
+              espnGame.winnerTeamId,
+
+            included:
+              localGame.included,
+
+            updated_at:
+              now,
+          };
+        })
+        .filter(
+          (
+            row,
+          ): row is NonNullable<
+            typeof row
+          > =>
+            row !== null,
+        );
+
+    if (
+      gameUpdates.length > 0
+    ) {
+      const {
+        error: updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ncaa_pickem_games",
+          )
+          .upsert(
+            gameUpdates,
+            {
+              onConflict:
+                "espn_event_id",
+            },
+          );
+
+      if (updateError) {
+        return NextResponse.json(
+          {
+            error:
+              updateError.message,
+          },
+          {
+            status: 500,
+          },
+        );
+      }
+    }
+
+    const completedGames =
+      espnWeek.scheduleGames
+        .filter(
+          (game) =>
+            game.completed &&
+            Boolean(
+              game.winnerTeamId,
+            ),
+        );
+
+    let gradedPicks = 0;
+
+    for (
+      const completedGame
+      of completedGames
+    ) {
+      const localGame =
+        localGameByEspnId.get(
+          completedGame
+            .espnEventId,
+        );
+
+      if (
+        !localGame ||
+        !localGame.included ||
+        !completedGame
+          .winnerTeamId
+      ) {
+        continue;
+      }
+
+      const {
+        data: picks,
+        error: picksError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ncaa_pickem_picks",
+          )
+          .select(
+            "id, picked_team_id, is_correct",
+          )
+          .eq(
+            "week_id",
+            week.id,
+          )
+          .eq(
+            "game_id",
+            localGame.id,
+          );
+
+      if (picksError) {
+        return NextResponse.json(
+          {
+            error:
+              picksError.message,
+          },
+          {
+            status: 500,
+          },
+        );
+      }
+
+      for (
+        const pick
+        of picks ?? []
+      ) {
+        const isCorrect =
+          String(
+            pick.picked_team_id,
+          ) ===
+          String(
+            completedGame
+              .winnerTeamId,
+          );
+
+        if (
+          pick.is_correct ===
+          isCorrect
+        ) {
+          continue;
+        }
+
+        const {
+          error:
+            gradeError,
+        } =
+          await supabaseAdmin
+            .from(
+              "ncaa_pickem_picks",
+            )
+            .update({
+              is_correct:
+                isCorrect,
+
+              updated_at:
+                now,
+            })
+            .eq(
+              "id",
+              pick.id,
+            );
+
+        if (gradeError) {
+          return NextResponse.json(
+            {
+              error:
+                gradeError.message,
+            },
+            {
+              status: 500,
+            },
+          );
+        }
+
+        gradedPicks += 1;
+      }
+    }
+
+    const includedLocalIds =
+      new Set(
+        existingGames
+          .filter(
+            (game) =>
+              game.included,
+          )
+          .map(
+            (game) =>
+              String(
+                game.espn_event_id,
+              ),
+          ),
+      );
+
+    const includedEspnGames =
+      espnWeek.scheduleGames
+        .filter(
+          (game) =>
+            includedLocalIds.has(
+              game.espnEventId,
+            ),
+        );
+
+    const completedIncludedGames =
+      includedEspnGames
+        .filter(
+          (game) =>
+            game.completed,
+        )
+        .length;
+
+    const allIncludedGamesComplete =
+      includedEspnGames.length >
+        0 &&
+      completedIncludedGames ===
+        includedEspnGames.length;
+
+    return NextResponse.json({
+      success: true,
+
+      weekId:
+        week.id,
+
+      season:
+        week.season,
+
+      week:
+        week.week_number,
+
+      weekStatus:
+        week.status,
+
+      gamesFound:
+        espnWeek
+          .scheduleGames
+          .length,
+
+      localGames:
+        existingGames.length,
+
+      gamesUpdated:
+        gameUpdates.length,
+
+      includedGames:
+        includedEspnGames.length,
+
+      completedIncludedGames,
+
+      allIncludedGamesComplete,
+
+      gradedPicks,
+
+      checkedAt:
+        now,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to refresh NCAA Pick 'Em",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to refresh NCAA Pick 'Em.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+============================================================
+FILE: app/api/ncaa-pickem/standings/route.ts
+============================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+type PickRow = {
+  week_id: number;
+  game_id: number;
+  team_id: number;
+  is_correct: boolean | null;
+};
+
+type WeekRow = {
+  id: number;
+  season: number;
+  week_number: number;
+  status:
+    | "open"
+    | "locked"
+    | "final";
+};
+
+function numericParam(
+  value: string | null,
+): number | null {
+  if (!value) {
+    return null;
+  }
+
+  const number =
+    Number(value);
+
+  return (
+    Number.isInteger(number) &&
+    number > 0
+  )
+    ? number
+    : null;
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const {
+      searchParams,
+    } =
+      new URL(request.url);
+
+    const requestedSeason =
+      numericParam(
+        searchParams.get(
+          "season",
+        ),
+      );
+
+    const [
+      weeksResult,
+      teamsResult,
+      usersResult,
+    ] =
+      await Promise.all([
+        supabaseAdmin
+          .from(
+            "ncaa_pickem_weeks",
+          )
+          .select(
+            "id, season, week_number, status",
+          )
+          .order(
+            "season",
+            {
+              ascending:
+                false,
+            },
+          )
+          .order(
+            "week_number",
+            {
+              ascending:
+                false,
+            },
+          ),
+
+        supabaseAdmin
+          .from("teams")
+          .select(
+            "id, name",
+          )
+          .order(
+            "id",
+            {
+              ascending:
+                true,
+            },
+          ),
+
+        supabaseAdmin
+          .from(
+            "app_users",
+          )
+          .select(
+            "team_id, display_name, avatar_url",
+          )
+          .eq(
+            "is_active",
+            true,
+          ),
+      ]);
+
+    if (weeksResult.error) {
+      throw new Error(
+        weeksResult
+          .error
+          .message,
+      );
+    }
+
+    if (teamsResult.error) {
+      throw new Error(
+        teamsResult
+          .error
+          .message,
+      );
+    }
+
+    if (usersResult.error) {
+      throw new Error(
+        usersResult
+          .error
+          .message,
+      );
+    }
+
+    const allWeeks =
+      (weeksResult.data ??
+        []) as WeekRow[];
+
+    const seasons =
+      Array.from(
+        new Set(
+          allWeeks.map(
+            (week) =>
+              Number(
+                week.season,
+              ),
+          ),
+        ),
+      ).sort(
+        (a, b) =>
+          b - a,
+      );
+
+    const selectedSeason =
+      requestedSeason ??
+      seasons[0] ??
+      null;
+
+    const weeks =
+      selectedSeason ===
+      null
+        ? []
+        : allWeeks.filter(
+            (week) =>
+              Number(
+                week.season,
+              ) ===
+              selectedSeason,
+          );
+
+    const weekIds =
+      weeks.map(
+        (week) =>
+          Number(week.id),
+      );
+
+    let picks:
+      PickRow[] = [];
+
+    if (
+      weekIds.length > 0
+    ) {
+      const {
+        data,
+        error,
+      } =
+        await supabaseAdmin
+          .from(
+            "ncaa_pickem_picks",
+          )
+          .select(
+            "week_id, game_id, team_id, is_correct",
+          )
+          .in(
+            "week_id",
+            weekIds,
+          )
+          .not(
+            "is_correct",
+            "is",
+            null,
+          );
+
+      if (error) {
+        throw new Error(
+          error.message,
+        );
+      }
+
+      picks =
+        (data ??
+          []) as PickRow[];
+    }
+
+    const userByTeamId =
+      new Map<
+        number,
+        {
+          displayName:
+            string;
+          avatarUrl:
+            string | null;
+        }
+      >();
+
+    for (
+      const appUser
+      of usersResult.data ??
+      []
+    ) {
+      userByTeamId.set(
+        Number(
+          appUser.team_id,
+        ),
+        {
+          displayName:
+            String(
+              appUser
+                .display_name ??
+              "",
+            ),
+
+          avatarUrl:
+            appUser
+              .avatar_url ??
+            null,
+        },
+      );
+    }
+
+    const rows =
+      (teamsResult.data ??
+        []).map(
+        (team) => {
+          const teamId =
+            Number(team.id);
+
+          const appUser =
+            userByTeamId.get(
+              teamId,
+            );
+
+          const teamPicks =
+            picks.filter(
+              (pick) =>
+                Number(
+                  pick.team_id,
+                ) ===
+                teamId,
+            );
+
+          const correct =
+            teamPicks.filter(
+              (pick) =>
+                pick.is_correct ===
+                true,
+            ).length;
+
+          const incorrect =
+            teamPicks.filter(
+              (pick) =>
+                pick.is_correct ===
+                false,
+            ).length;
+
+          const graded =
+            correct +
+            incorrect;
+
+          const pickPct =
+            graded > 0
+              ? correct /
+                graded
+              : null;
+
+          const picksByWeek =
+            new Map<
+              number,
+              PickRow[]
+            >();
+
+          for (
+            const pick
+            of teamPicks
+          ) {
+            const weekId =
+              Number(
+                pick.week_id,
+              );
+
+            const bucket =
+              picksByWeek.get(
+                weekId,
+              ) ??
+              [];
+
+            bucket.push(
+              pick,
+            );
+
+            picksByWeek.set(
+              weekId,
+              bucket,
+            );
+          }
+
+          let perfectWeeks =
+            0;
+
+          for (
+            const weekPicks
+            of picksByWeek.values()
+          ) {
+            if (
+              weekPicks.length >
+                0 &&
+              weekPicks.every(
+                (pick) =>
+                  pick.is_correct ===
+                  true,
+              )
+            ) {
+              perfectWeeks +=
+                1;
+            }
+          }
+
+          const chronological =
+            [...teamPicks]
+              .sort(
+                (a, b) => {
+                  const weekA =
+                    weeks.find(
+                      (week) =>
+                        Number(
+                          week.id,
+                        ) ===
+                        Number(
+                          a.week_id,
+                        ),
+                    );
+
+                  const weekB =
+                    weeks.find(
+                      (week) =>
+                        Number(
+                          week.id,
+                        ) ===
+                        Number(
+                          b.week_id,
+                        ),
+                    );
+
+                  const weekDiff =
+                    Number(
+                      weekA
+                        ?.week_number ??
+                      0,
+                    ) -
+                    Number(
+                      weekB
+                        ?.week_number ??
+                      0,
+                    );
+
+                  if (
+                    weekDiff !==
+                    0
+                  ) {
+                    return weekDiff;
+                  }
+
+                  return (
+                    Number(
+                      a.game_id,
+                    ) -
+                    Number(
+                      b.game_id,
+                    )
+                  );
+                },
+              );
+
+          let bestStreak =
+            0;
+
+          let runningStreak =
+            0;
+
+          for (
+            const pick
+            of chronological
+          ) {
+            if (
+              pick.is_correct ===
+              true
+            ) {
+              runningStreak +=
+                1;
+
+              bestStreak =
+                Math.max(
+                  bestStreak,
+                  runningStreak,
+                );
+            } else {
+              runningStreak =
+                0;
+            }
+          }
+
+          let currentStreak =
+            0;
+
+          for (
+            let index =
+              chronological.length -
+              1;
+            index >= 0;
+            index -= 1
+          ) {
+            if (
+              chronological[index]
+                .is_correct !==
+              true
+            ) {
+              break;
+            }
+
+            currentStreak +=
+              1;
+          }
+
+          return {
+            teamId,
+
+            name:
+              appUser
+                ?.displayName ||
+              String(
+                team.name,
+              ),
+
+            avatarUrl:
+              appUser
+                ?.avatarUrl ??
+              null,
+
+            correct,
+            incorrect,
+            graded,
+            pickPct,
+            perfectWeeks,
+            currentStreak,
+            bestStreak,
+          };
+        },
+      )
+      .sort(
+        (a, b) =>
+          b.correct -
+            a.correct ||
+          (
+            b.pickPct ??
+            -1
+          ) -
+            (
+              a.pickPct ??
+              -1
+            ) ||
+          b.perfectWeeks -
+            a.perfectWeeks ||
+          a.name.localeCompare(
+            b.name,
+          ),
+      )
+      .map(
+        (row, index) => ({
+          ...row,
+          rank:
+            index + 1,
+        }),
+      );
+
+    return NextResponse.json({
+      success: true,
+
+      viewerTeamId:
+        user.teamId,
+
+      seasons,
+
+      selectedSeason,
+
+      standings:
+        rows,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to load NCAA Pick 'Em standings",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load NCAA Pick 'Em standings.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+============================================================
+FILE: app/api/ncaa-pickem/picks/route.ts
+============================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+type SubmittedPick = {
+  gameId: number;
+  pickedTeamId: string;
+};
+
+function submittedPicks(
+  value: unknown,
+): SubmittedPick[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry: any) => ({
+      gameId:
+        Number(entry?.gameId),
+
+      pickedTeamId:
+        String(
+          entry?.pickedTeamId ??
+            "",
+        ).trim(),
+    }))
+    .filter(
+      (entry) =>
+        Number.isInteger(
+          entry.gameId,
+        ) &&
+        entry.gameId > 0 &&
+        entry.pickedTeamId.length >
+          0,
+    );
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  try {
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const body =
+      await request.json();
+
+    const weekId =
+      Number(body?.weekId);
+
+    const picks =
+      submittedPicks(
+        body?.picks,
+      );
+
+    if (
+      !Number.isInteger(weekId) ||
+      weekId <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid weekId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: week,
+      error: weekError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .select(
+        "id, lock_at, status",
+      )
+      .eq("id", weekId)
+      .maybeSingle();
+
+    if (weekError || !week) {
+      return NextResponse.json(
+        {
+          error:
+            weekError?.message ??
+            "Pick 'Em week not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const lockTime =
+      week.lock_at
+        ? new Date(
+            week.lock_at,
+          ).getTime()
+        : null;
+
+    const locked =
+      week.status !== "open" ||
+      (
+        lockTime !== null &&
+        Number.isFinite(lockTime) &&
+        Date.now() >= lockTime
+      );
+
+    if (locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This week's picks are locked.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const {
+      data: games,
+      error: gamesError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_games")
+      .select(
+        "id, away_team_id, home_team_id",
+      )
+      .eq("week_id", weekId)
+      .eq("included", true);
+
+    if (gamesError) {
+      return NextResponse.json(
+        {
+          error:
+            gamesError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const gameById =
+      new Map(
+        (games ?? []).map(
+          (game) => [
+            Number(game.id),
+            game,
+          ],
+        ),
+      );
+
+    if (
+      picks.length !==
+      gameById.size
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Please make a pick for every game before saving.",
+        },
+        { status: 400 },
+      );
+    }
+
+    for (const pick of picks) {
+      const game =
+        gameById.get(
+          pick.gameId,
+        );
+
+      if (!game) {
+        return NextResponse.json(
+          {
+            error:
+              "One of the submitted games is not part of this week's card.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const validTeamIds =
+        new Set([
+          String(
+            game.away_team_id,
+          ),
+          String(
+            game.home_team_id,
+          ),
+        ]);
+
+      if (
+        !validTeamIds.has(
+          pick.pickedTeamId,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "One of the submitted picks does not belong to that matchup.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const rows =
+      picks.map(
+        (pick) => ({
+          week_id: weekId,
+
+          game_id:
+            pick.gameId,
+
+          team_id:
+            user.teamId,
+
+          picked_team_id:
+            pick.pickedTeamId,
+
+          updated_at:
+            new Date().toISOString(),
+        }),
+      );
+
+    const {
+      error: saveError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_picks")
+      .upsert(
+        rows,
+        {
+          onConflict:
+            "game_id,team_id",
+        },
+      );
+
+    if (saveError) {
+      return NextResponse.json(
+        {
+          error:
+            saveError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      saved:
+        rows.length,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to save NCAA Pick 'Em picks",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Unable to save NCAA Pick 'Em picks.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+============================================================
+FILE: app/api/player-league-profile/route.ts
+============================================================
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getStatColumns } from "@/lib/statColumns";
+
+type PlayerRow = {
+  id: number;
+  name: string;
+  position_group: string | null;
+};
+
+type LineupPlayerRow = {
+  lineup_id: number;
+  player_id: number;
+  projected_fantasy_points: number | null;
+  projection_confidence: string | null;
+  projection_source: string | null;
+  projected_at: string | null;
+};
+
+type LineupRow = {
+  id: number;
+  slate_id: number;
+  team_id: number;
+};
+
+type TeamRow = {
+  id: number;
+  name: string;
+};
+
+type SlateRow = {
+  id: number;
+  date: string | null;
+  start_date: string | null;
+  end_date: string | null;
+};
+
+type TeamResultRow = {
+  slate_id: number;
+  team_id: number;
+  finish_position: number | null;
+};
+
+type PlayerStatRow = {
+  slate_id: number;
+  player_id: number;
+  fantasy_points: number | null;
+  [key: string]: unknown;
+};
+
+type DraftedRow = {
+  lineup: LineupRow;
+  lineupPlayer: LineupPlayerRow;
+};
+
+type RecentHistoryRow = {
+  slateId: number;
+  slateLabel: string;
+  slateStartDate: string;
+  season: number | null;
+  teamName: string;
+  finishPosition: number | null;
+  stats: Record<string, number>;
+  fantasyPoints: number | null;
+  projectedFantasyPoints: number | null;
+  projectionDifference: number | null;
+  projectionConfidence: string | null;
+  projectionSource: string | null;
+  projectedAt: string | null;
+};
+
+function round(value: number, digits = 1) {
+  return Number(value.toFixed(digits));
+}
+
+function numberOrNull(value: unknown) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function numberOrZero(value: unknown) {
+  return numberOrNull(value) ?? 0;
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+
+    const playerId = Number(searchParams.get("playerId"));
+    const seasonParam = searchParams.get("season") ?? "all";
+    const isAllTime = seasonParam === "all";
+    const sportParam = searchParams.get("sport");
+    const sport =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
+
+    if (!Number.isFinite(playerId) || playerId <= 0) {
+      return NextResponse.json(
+        { error: "Missing or invalid playerId." },
+        { status: 400 },
+      );
+    }
+
+    const selectedSeason = isAllTime ? null : Number(seasonParam);
+
+    if (
+      !isAllTime &&
+      (!Number.isFinite(selectedSeason) || selectedSeason === null)
+    ) {
+      return NextResponse.json({ error: "Invalid season." }, { status: 400 });
+    }
+
+    if (sport === "golf") {
+      const db =
+        supabaseAdmin as any;
+
+      const {
+        data: golfer,
+        error: golferError,
+      } = await db
+        .from("golf_players")
+        .select(
+          "id, display_name, country, owgr_rank, owgr_updated_at, espn_player_id, headshot_url",
+        )
+        .eq(
+          "id",
+          playerId,
+        )
+        .maybeSingle();
+
+      if (golferError) {
+        return NextResponse.json(
+          {
+            error:
+              golferError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      if (!golfer) {
+        return NextResponse.json(
+          {
+            error:
+              "Golfer not found.",
+          },
+          { status: 404 },
+        );
+      }
+
+      const {
+        data: golfSlates,
+        error:
+          golfSlatesError,
+      } = await db
+        .from("slates")
+        .select(
+          "id, start_date, date, end_date, display_name, is_locked",
+        )
+        .eq(
+          "sport",
+          "golf",
+        );
+
+      if (
+        golfSlatesError
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              golfSlatesError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const filteredGolfSlates =
+        (
+          golfSlates ??
+          []
+        ).filter(
+          (slate: any) => {
+            if (
+              isAllTime
+            ) {
+              return true;
+            }
+
+            const date =
+              slate.start_date ??
+              slate.date ??
+              "";
+
+            return (
+              Number(
+                String(
+                  date,
+                ).slice(
+                  0,
+                  4,
+                ),
+              ) ===
+              selectedSeason
+            );
+          },
+        );
+
+      const filteredGolfSlateIds =
+        filteredGolfSlates.map(
+          (slate: any) =>
+            Number(
+              slate.id,
+            ),
+        );
+
+      const slateById =
+        new Map<
+          number,
+          {
+            id: number;
+            start_date: string | null;
+            date: string | null;
+            end_date: string | null;
+            display_name: string | null;
+            is_locked: boolean | null;
+          }
+        >(
+          filteredGolfSlates.map(
+            (slate: any) => [
+              Number(
+                slate.id,
+              ),
+              {
+                id:
+                  Number(
+                    slate.id,
+                  ),
+                start_date:
+                  slate.start_date ??
+                  null,
+                date:
+                  slate.date ??
+                  null,
+                end_date:
+                  slate.end_date ??
+                  null,
+                display_name:
+                  slate.display_name ??
+                  null,
+                is_locked:
+                  slate.is_locked ??
+                  null,
+              },
+            ],
+          ),
+        );
+
+      let matchingLineups:
+        any[] = [];
+
+      if (
+        filteredGolfSlateIds.length >
+        0
+      ) {
+        const {
+          data: lineups,
+          error: lineupsError,
+        } = await db
+          .from("lineups")
+          .select(
+            "id, team_id, slate_id",
+          )
+          .in(
+            "slate_id",
+            filteredGolfSlateIds,
+          );
+
+        if (
+          lineupsError
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                lineupsError.message,
+            },
+            { status: 500 },
+          );
+        }
+
+        matchingLineups =
+          lineups ??
+          [];
+      }
+
+      const lineupIds =
+        matchingLineups.map(
+          (lineup: any) =>
+            Number(
+              lineup.id,
+            ),
+        );
+
+      let golferLineupPlayers:
+        any[] = [];
+
+      if (
+        lineupIds.length >
+        0
+      ) {
+        const {
+          data:
+            lineupPlayers,
+          error:
+            lineupPlayersError,
+        } = await db
+          .from(
+            "lineup_players",
+          )
+          .select(
+            "lineup_id, player_id",
+          )
+          .eq(
+            "player_id",
+            playerId,
+          )
+          .in(
+            "lineup_id",
+            lineupIds,
+          );
+
+        if (
+          lineupPlayersError
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                lineupPlayersError.message,
+            },
+            { status: 500 },
+          );
+        }
+
+        golferLineupPlayers =
+          lineupPlayers ??
+          [];
+      }
+
+      const ownedLineupIds =
+        new Set(
+          golferLineupPlayers.map(
+            (row: any) =>
+              Number(
+                row.lineup_id,
+              ),
+          ),
+        );
+
+      const ownedLineups =
+        matchingLineups.filter(
+          (lineup: any) =>
+            ownedLineupIds.has(
+              Number(
+                lineup.id,
+              ),
+            ),
+        );
+
+      const teamIds = [
+        ...new Set(
+          ownedLineups.map(
+            (lineup: any) =>
+              Number(
+                lineup.team_id,
+              ),
+          ),
+        ),
+      ];
+
+      let teamRows:
+        any[] = [];
+
+      if (
+        teamIds.length >
+        0
+      ) {
+        const {
+          data: teams,
+          error: teamsError,
+        } = await db
+          .from("teams")
+          .select(
+            "id, name",
+          )
+          .in(
+            "id",
+            teamIds,
+          );
+
+        if (
+          teamsError
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                teamsError.message,
+            },
+            { status: 500 },
+          );
+        }
+
+        teamRows =
+          teams ??
+          [];
+      }
+
+      const teamNameById =
+        new Map(
+          teamRows.map(
+            (team: any) => [
+              Number(
+                team.id,
+              ),
+              String(
+                team.name,
+              ),
+            ],
+          ),
+        );
+
+      const ownedSlateIds = [
+        ...new Set(
+          ownedLineups.map(
+            (lineup: any) =>
+              Number(
+                lineup.slate_id,
+              ),
+          ),
+        ),
+      ];
+
+      let results:
+        any[] = [];
+
+      let eventPlayers:
+        any[] = [];
+
+      if (
+        ownedSlateIds.length >
+        0
+      ) {
+        const [
+          resultResponse,
+          eventResponse,
+        ] = await Promise.all([
+          db
+            .from(
+              "team_slate_results",
+            )
+            .select(
+              "slate_id, team_id, fantasy_points, finish_position",
+            )
+            .in(
+              "slate_id",
+              ownedSlateIds,
+            ),
+
+          db
+            .from(
+              "golf_event_players",
+            )
+            .select(
+              `
+              id,
+              slate_id,
+              player_id,
+              leaderboard_order,
+              official_score_to_par,
+              fantasy_score,
+              penalty_strokes,
+              status,
+              rounds_completed,
+              holes_completed,
+              current_round,
+              golf_rounds (
+                id,
+                round_number,
+                score_to_par,
+                strokes,
+                holes_completed,
+                status,
+                golf_holes (
+                  hole_number,
+                  strokes,
+                  relative_to_par
+                )
+              )
+            `,
+            )
+            .eq(
+              "player_id",
+              playerId,
+            )
+            .in(
+              "slate_id",
+              ownedSlateIds,
+            ),
+        ]);
+
+        const dataError =
+          resultResponse.error ??
+          eventResponse.error;
+
+        if (
+          dataError
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                dataError.message,
+            },
+            { status: 500 },
+          );
+        }
+
+        results =
+          resultResponse.data ??
+          [];
+
+        eventPlayers =
+          eventResponse.data ??
+          [];
+      }
+
+      const resultBySlateTeam =
+        new Map<string, any>();
+
+      results.forEach(
+        (result: any) => {
+          resultBySlateTeam.set(
+            `${Number(
+              result.slate_id,
+            )}:${Number(
+              result.team_id,
+            )}`,
+            result,
+          );
+        },
+      );
+
+      const eventPlayerBySlateId =
+        new Map<number, any>();
+
+      eventPlayers.forEach(
+        (eventPlayer: any) => {
+          eventPlayerBySlateId.set(
+            Number(
+              eventPlayer.slate_id,
+            ),
+            eventPlayer,
+          );
+        },
+      );
+
+      const draftedByCount =
+        new Map<
+          string,
+          number
+        >();
+
+      const history =
+        ownedLineups.map(
+          (lineup: any) => {
+            const slateId =
+              Number(
+                lineup.slate_id,
+              );
+
+            const teamId =
+              Number(
+                lineup.team_id,
+              );
+
+            const slate =
+              slateById.get(
+                slateId,
+              );
+
+            const teamName =
+              teamNameById.get(
+                teamId,
+              ) ??
+              "Unknown";
+
+            draftedByCount.set(
+              teamName,
+              (
+                draftedByCount.get(
+                  teamName,
+                ) ??
+                0
+              ) +
+                1,
+            );
+
+            const result =
+              resultBySlateTeam.get(
+                `${slateId}:${teamId}`,
+              );
+
+            const eventPlayer =
+              eventPlayerBySlateId.get(
+                slateId,
+              );
+
+            let birdies =
+              0;
+            let eagles =
+              0;
+            let albatrosses =
+              0;
+            let holesInOne =
+              0;
+            let pars =
+              0;
+            let bogeys =
+              0;
+            let doubleBogeysOrWorse =
+              0;
+            let roundsUnderPar =
+              0;
+            let completedRounds =
+              0;
+
+            for (
+              const round
+              of eventPlayer?.golf_rounds ??
+              []
+            ) {
+              const score =
+                numberOrNull(
+                  round.score_to_par,
+                );
+
+              const holesCompleted =
+                Number(
+                  round.holes_completed ??
+                    0,
+                );
+
+              if (
+                holesCompleted >=
+                18
+              ) {
+                completedRounds +=
+                  1;
+
+                if (
+                  score !== null &&
+                  score < 0
+                ) {
+                  roundsUnderPar +=
+                    1;
+                }
+              }
+
+              for (
+                const hole
+                of round.golf_holes ??
+                []
+              ) {
+                const relative =
+                  numberOrNull(
+                    hole.relative_to_par,
+                  );
+
+                const strokes =
+                  numberOrNull(
+                    hole.strokes,
+                  );
+
+                if (
+                  strokes === 1
+                ) {
+                  holesInOne +=
+                    1;
+                }
+
+                if (
+                  relative ===
+                  null
+                ) {
+                  continue;
+                }
+
+                if (
+                  relative <= -3
+                ) {
+                  albatrosses +=
+                    1;
+                } else if (
+                  relative === -2
+                ) {
+                  eagles +=
+                    1;
+                } else if (
+                  relative === -1
+                ) {
+                  birdies +=
+                    1;
+                } else if (
+                  relative === 0
+                ) {
+                  pars +=
+                    1;
+                } else if (
+                  relative === 1
+                ) {
+                  bogeys +=
+                    1;
+                } else if (
+                  relative >= 2
+                ) {
+                  doubleBogeysOrWorse +=
+                    1;
+                }
+              }
+            }
+
+            const status =
+              String(
+                eventPlayer?.status ??
+                  "",
+              ).toLowerCase();
+
+            const reachedCutDecision =
+              Number(
+                eventPlayer?.rounds_completed ??
+                  0,
+              ) >=
+                2 ||
+              Number(
+                eventPlayer?.holes_completed ??
+                  0,
+              ) >=
+                36 ||
+              [
+                "cut",
+                "finished",
+              ].includes(
+                status,
+              );
+
+            const madeCut =
+              reachedCutDecision
+                ? ![
+                    "cut",
+                    "withdrawn",
+                    "disqualified",
+                    "did_not_start",
+                  ].includes(
+                    status,
+                  )
+                : null;
+
+            const startDate =
+              slate?.start_date ??
+              slate?.date ??
+              "";
+
+            const endDate =
+              slate?.end_date ??
+              slate?.date ??
+              "";
+
+            const slateLabel =
+              slate?.display_name?.trim() ||
+              (
+                startDate &&
+                endDate &&
+                startDate !==
+                  endDate
+                  ? `${startDate} - ${endDate}`
+                  : startDate ||
+                    "Unknown Tournament"
+              );
+
+            return {
+              slateId,
+              slateLabel,
+              teamName,
+
+              /*
+               * team_slate_results is the authoritative source
+               * for a team's recorded finish.
+               *
+               * Do not require slates.is_locked here. A completed
+               * golf tournament can already have its finalized
+               * team result while that slate flag has not been
+               * flipped yet. Requiring is_locked caused legitimate
+               * finishes (and therefore podiums) to disappear from
+               * golfer League History.
+               */
+              finishPosition:
+                numberOrNull(
+                  result?.finish_position,
+                ),
+
+              fantasyPoints:
+                numberOrNull(
+                  eventPlayer?.official_score_to_par,
+                ),
+
+              golferScore:
+                numberOrNull(
+                  eventPlayer?.official_score_to_par,
+                ),
+
+              status:
+                eventPlayer?.status ??
+                null,
+
+              madeCut,
+
+              stats: {
+                birdies,
+                eagles,
+                albatrosses,
+                holesInOne,
+                pars,
+                bogeys,
+                doubleBogeysOrWorse,
+                roundsUnderPar,
+                completedRounds,
+              },
+
+              projectedFantasyPoints:
+                null,
+              projectionDifference:
+                null,
+              projectionConfidence:
+                null,
+              projectionSource:
+                null,
+              projectedAt:
+                null,
+
+              slateStartDate:
+                startDate,
+            };
+          },
+        );
+
+      const draftedByBreakdown =
+        Array.from(
+          draftedByCount.entries(),
+        )
+          .map(
+            (
+              [
+                teamName,
+                count,
+              ],
+            ) => ({
+              teamName,
+              count,
+            }),
+          )
+          .sort(
+            (a, b) =>
+              b.count -
+                a.count ||
+              a.teamName.localeCompare(
+                b.teamName,
+              ),
+          );
+
+      const completedHistory =
+        history.filter(
+          (row: any) =>
+            row.golferScore !==
+            null,
+        );
+
+      const finishedHistory =
+        history.filter(
+          (row: any) =>
+            row.finishPosition !==
+            null,
+        );
+
+      const scores =
+        completedHistory.map(
+          (row: any) =>
+            Number(
+              row.golferScore,
+            ),
+        );
+
+      const finishes =
+        finishedHistory.map(
+          (row: any) =>
+            Number(
+              row.finishPosition,
+            ),
+        );
+
+      const wins =
+        finishes.filter(
+          (finish) =>
+            finish === 1,
+        ).length;
+
+      const runnerUps =
+        finishes.filter(
+          (finish) =>
+            finish === 2,
+        ).length;
+
+      const podiums =
+        finishes.filter(
+          (finish) =>
+            finish >= 1 &&
+            finish <= 3,
+        ).length;
+
+      const cutRows =
+        history.filter(
+          (row: any) =>
+            row.madeCut !==
+            null,
+        );
+
+      const cutsMade =
+        cutRows.filter(
+          (row: any) =>
+            row.madeCut ===
+            true,
+        ).length;
+
+      const aggregateStats =
+        history.reduce(
+          (
+            totals: any,
+            row: any,
+          ) => {
+            for (
+              const key
+              of [
+                "birdies",
+                "eagles",
+                "albatrosses",
+                "holesInOne",
+                "pars",
+                "bogeys",
+                "doubleBogeysOrWorse",
+                "roundsUnderPar",
+                "completedRounds",
+              ]
+            ) {
+              totals[key] +=
+                Number(
+                  row.stats?.[
+                    key
+                  ] ??
+                    0,
+                );
+            }
+
+            return totals;
+          },
+          {
+            birdies: 0,
+            eagles: 0,
+            albatrosses: 0,
+            holesInOne: 0,
+            pars: 0,
+            bogeys: 0,
+            doubleBogeysOrWorse:
+              0,
+            roundsUnderPar:
+              0,
+            completedRounds:
+              0,
+          },
+        );
+
+      const recentHistory =
+        [...history]
+          .sort(
+            (a: any, b: any) =>
+              String(
+                b.slateStartDate ??
+                  "",
+              ).localeCompare(
+                String(
+                  a.slateStartDate ??
+                    "",
+                ),
+              ),
+          )
+          .slice(
+            0,
+            12,
+          )
+          .map(
+            ({
+              slateStartDate:
+                _slateStartDate,
+              ...row
+            }: any) =>
+              row,
+          );
+
+      return NextResponse.json({
+        success: true,
+
+        selectedSeason:
+          isAllTime
+            ? "all"
+            : selectedSeason,
+
+        player: {
+          id:
+            Number(
+              golfer.id,
+            ),
+          name:
+            golfer.display_name,
+          position_group:
+            "GOLFER",
+          country:
+            golfer.country ??
+            null,
+          owgrRank:
+            golfer.owgr_rank ??
+            null,
+          owgrUpdatedAt:
+            golfer.owgr_updated_at ??
+            null,
+          espnGolfPlayerId:
+            golfer.espn_player_id ??
+            null,
+          headshotUrl:
+            golfer.headshot_url ??
+            null,
+        },
+
+        summary: {
+          timesDrafted:
+            ownedLineups.length,
+
+          wins,
+          runnerUps,
+          podiums,
+
+          winRate:
+            finishedHistory.length >
+            0
+              ? round(
+                  (
+                    wins /
+                    finishedHistory.length
+                  ) *
+                    100,
+                )
+              : null,
+
+          draftedMostBy:
+            draftedByBreakdown[
+              0
+            ] ??
+            null,
+
+          draftedByBreakdown,
+
+          averageFantasyPoints:
+            scores.length >
+            0
+              ? round(
+                  scores.reduce(
+                    (
+                      sum,
+                      score,
+                    ) =>
+                      sum +
+                      score,
+                    0,
+                  ) /
+                    scores.length,
+                )
+              : null,
+
+          bestFantasyPoints:
+            scores.length >
+            0
+              ? round(
+                  Math.min(
+                    ...scores,
+                  ),
+                )
+              : null,
+
+          worstFantasyPoints:
+            scores.length >
+            0
+              ? round(
+                  Math.max(
+                    ...scores,
+                  ),
+                )
+              : null,
+
+          averageFinish:
+            finishes.length >
+            0
+              ? round(
+                  finishes.reduce(
+                    (
+                      sum,
+                      finish,
+                    ) =>
+                      sum +
+                      finish,
+                    0,
+                  ) /
+                    finishes.length,
+                )
+              : null,
+
+          cutsMade,
+          cutOpportunities:
+            cutRows.length,
+
+          cutsMadePct:
+            cutRows.length >
+            0
+              ? round(
+                  (
+                    cutsMade /
+                    cutRows.length
+                  ) *
+                    100,
+                )
+              : null,
+
+          ...aggregateStats,
+
+          projectionSampleSize:
+            0,
+          averageProjectionDifference:
+            null,
+          exceededProjectionCount:
+            0,
+          missedProjectionCount:
+            0,
+          matchedProjectionCount:
+            0,
+        },
+
+        recentHistory,
+      });
+    }
+
+    const playersTable = sport === "nfl" ? "players_nfl" : "players";
+    const playersSelect =
+      sport === "nfl" ? "id, name, position_group:position" : "id, name, position_group";
+    const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
+    const statColumns = getStatColumns(sport);
+    const statsSelect = `slate_id, player_id, fantasy_points, ${statColumns
+      .map((column) => column.key)
+      .join(", ")}`;
+
+    /*
+     * The generated Supabase Database type has not yet been refreshed with
+     * the new projection snapshot columns. Using a local untyped client here
+     * prevents those stale generated types from turning valid select fields
+     * into GenericStringError.
+     */
+    const db = supabaseAdmin as any;
+
+    const [
+      playerResponse,
+      lineupPlayersResponse,
+      lineupsResponse,
+      teamsResponse,
+      slatesResponse,
+      resultsResponse,
+      statsResponse,
+    ] = await Promise.all([
+      db
+        .from(playersTable)
+        .select(playersSelect)
+        .eq("id", playerId)
+        .maybeSingle(),
+
+      db
+        .from("lineup_players")
+        .select(
+          "lineup_id, player_id, projected_fantasy_points, projection_confidence, projection_source, projected_at",
+        )
+        .eq("player_id", playerId),
+
+      db.from("lineups").select("id, slate_id, team_id"),
+
+      db.from("teams").select("id, name"),
+
+      db.from("slates").select("id, date, start_date, end_date").eq("sport", sport),
+
+      db
+        .from("team_slate_results")
+        .select("slate_id, team_id, finish_position"),
+
+      db
+        .from(statsTable)
+        .select(statsSelect)
+        .eq("player_id", playerId),
+    ]);
+
+    const queryError =
+      playerResponse.error ??
+      lineupPlayersResponse.error ??
+      lineupsResponse.error ??
+      teamsResponse.error ??
+      slatesResponse.error ??
+      resultsResponse.error ??
+      statsResponse.error;
+
+    if (queryError) {
+      console.error("Failed to load player league profile:", queryError);
+
+      return NextResponse.json(
+        {
+          error: queryError.message ?? "Failed to load player league profile.",
+        },
+        { status: 500 },
+      );
+    }
+
+    const player = (playerResponse.data as PlayerRow | null) ?? null;
+
+    const lineupPlayers = (lineupPlayersResponse.data ??
+      []) as LineupPlayerRow[];
+
+    const lineups = (lineupsResponse.data ?? []) as LineupRow[];
+
+    const teams = (teamsResponse.data ?? []) as TeamRow[];
+
+    const slates = (slatesResponse.data ?? []) as SlateRow[];
+
+    const results = (resultsResponse.data ?? []) as TeamResultRow[];
+
+    const stats = (statsResponse.data ?? []) as PlayerStatRow[];
+
+    const lineupById = new Map<number, LineupRow>(
+      lineups.map((lineup) => [lineup.id, lineup]),
+    );
+
+    const teamById = new Map<number, TeamRow>(
+      teams.map((team) => [team.id, team]),
+    );
+
+    const slateById = new Map<number, SlateRow>(
+      slates.map((slate) => [slate.id, slate]),
+    );
+
+    const resultBySlateAndTeam = new Map<string, TeamResultRow>(
+      results.map((result) => [`${result.slate_id}:${result.team_id}`, result]),
+    );
+
+    const statBySlateId = new Map<number, PlayerStatRow>(
+      stats.map((stat) => [stat.slate_id, stat]),
+    );
+
+    const draftedRows: DraftedRow[] = lineupPlayers
+      .map((lineupPlayer): DraftedRow | null => {
+        const lineup = lineupById.get(lineupPlayer.lineup_id);
+
+        if (!lineup) {
+          return null;
+        }
+
+        return {
+          lineup,
+          lineupPlayer,
+        };
+      })
+      .filter((row): row is DraftedRow => row !== null);
+
+    const allHistory: RecentHistoryRow[] = draftedRows
+      .filter(({ lineup }) => slateById.has(lineup.slate_id))
+      .map(({ lineup, lineupPlayer }) => {
+        const team = teamById.get(lineup.team_id);
+        const slate = slateById.get(lineup.slate_id);
+
+        const result = resultBySlateAndTeam.get(
+          `${lineup.slate_id}:${lineup.team_id}`,
+        );
+
+        const stat = statBySlateId.get(lineup.slate_id);
+
+        const startDate = slate?.start_date ?? slate?.date ?? "";
+
+        const endDate = slate?.end_date ?? slate?.date ?? "";
+
+        const slateLabel =
+          startDate && endDate && startDate !== endDate
+            ? `${startDate} - ${endDate}`
+            : startDate || "Unknown slate";
+
+        const season = startDate ? Number(startDate.slice(0, 4)) : null;
+
+        const fantasyPoints = numberOrNull(stat?.fantasy_points);
+
+        const projectedFantasyPoints = numberOrNull(
+          lineupPlayer.projected_fantasy_points,
+        );
+
+        const projectionDifference =
+          fantasyPoints !== null && projectedFantasyPoints !== null
+            ? round(fantasyPoints - projectedFantasyPoints)
+            : null;
+
+        const statsObj: Record<string, number> = {};
+        statColumns.forEach((column) => {
+          statsObj[column.key] = numberOrZero(stat?.[column.key]);
+        });
+
+        return {
+          slateId: lineup.slate_id,
+          slateLabel,
+          slateStartDate: startDate,
+          season: season !== null && Number.isFinite(season) ? season : null,
+          teamName: team?.name ?? "Unknown",
+          finishPosition: numberOrNull(result?.finish_position),
+          stats: statsObj,
+          fantasyPoints,
+          projectedFantasyPoints,
+          projectionDifference,
+          projectionConfidence: lineupPlayer.projection_confidence ?? null,
+          projectionSource: lineupPlayer.projection_source ?? null,
+          projectedAt: lineupPlayer.projected_at ?? null,
+        };
+      });
+
+    const filteredHistory = allHistory.filter((row) => {
+      if (isAllTime) {
+        return true;
+      }
+
+      return row.season === selectedSeason;
+    });
+
+    const completedScores = filteredHistory
+      .map((row) => row.fantasyPoints)
+      .filter((score): score is number => score !== null);
+
+    const finishes = filteredHistory
+      .map((row) => row.finishPosition)
+      .filter((finish): finish is number => finish !== null);
+
+    const projectionRows = filteredHistory.filter(
+      (
+        row,
+      ): row is RecentHistoryRow & {
+        fantasyPoints: number;
+        projectedFantasyPoints: number;
+        projectionDifference: number;
+      } =>
+        row.fantasyPoints !== null &&
+        row.projectedFantasyPoints !== null &&
+        row.projectionDifference !== null,
+    );
+
+    const draftedByCount = new Map<string, number>();
+
+    for (const row of filteredHistory) {
+      draftedByCount.set(
+        row.teamName,
+        (draftedByCount.get(row.teamName) ?? 0) + 1,
+      );
+    }
+
+    const draftedByBreakdown = Array.from(draftedByCount.entries())
+      .map(([teamName, count]) => ({
+        teamName,
+        count,
+      }))
+      .sort(
+        (a, b) => b.count - a.count || a.teamName.localeCompare(b.teamName),
+      );
+
+    const wins = filteredHistory.filter(
+      (row) => row.finishPosition === 1,
+    ).length;
+
+    const runnerUps = filteredHistory.filter(
+      (row) => row.finishPosition === 2,
+    ).length;
+
+    const averageFantasyPoints =
+      completedScores.length > 0
+        ? round(
+            completedScores.reduce((sum, score) => sum + score, 0) /
+              completedScores.length,
+          )
+        : null;
+
+    const averageFinish =
+      finishes.length > 0
+        ? round(
+            finishes.reduce((sum, finish) => sum + finish, 0) / finishes.length,
+          )
+        : null;
+
+    const averageProjectionDifference =
+      projectionRows.length > 0
+        ? round(
+            projectionRows.reduce(
+              (sum, row) => sum + row.projectionDifference,
+              0,
+            ) / projectionRows.length,
+          )
+        : null;
+
+    const exceededProjectionCount = projectionRows.filter(
+      (row) => row.projectionDifference > 0,
+    ).length;
+
+    const missedProjectionCount = projectionRows.filter(
+      (row) => row.projectionDifference < 0,
+    ).length;
+
+    const matchedProjectionCount = projectionRows.filter(
+      (row) => row.projectionDifference === 0,
+    ).length;
+
+    const recentHistory = [...filteredHistory]
+      .sort((a, b) => b.slateStartDate.localeCompare(a.slateStartDate))
+      .slice(0, 8)
+      .map(({ slateStartDate: _slateStartDate, ...row }) => row);
+
+    return NextResponse.json({
+      success: true,
+
+      selectedSeason: isAllTime ? "all" : selectedSeason,
+
+      player: {
+        id: player?.id ?? playerId,
+        name: player?.name ?? "Unknown Player",
+        position_group: player?.position_group ?? null,
+      },
+
+      summary: {
+        timesDrafted: filteredHistory.length,
+        wins,
+        runnerUps,
+
+        winRate:
+          filteredHistory.length > 0
+            ? round((wins / filteredHistory.length) * 100)
+            : null,
+
+        draftedMostBy: draftedByBreakdown[0] ?? null,
+
+        draftedByBreakdown,
+
+        averageFantasyPoints,
+
+        bestFantasyPoints:
+          completedScores.length > 0
+            ? round(Math.max(...completedScores))
+            : null,
+
+        worstFantasyPoints:
+          completedScores.length > 0
+            ? round(Math.min(...completedScores))
+            : null,
+
+        averageFinish,
+
+        projectionSampleSize: projectionRows.length,
+        averageProjectionDifference,
+        exceededProjectionCount,
+        missedProjectionCount,
+        matchedProjectionCount,
+      },
+
+      recentHistory,
+    });
+  } catch (error) {
+    console.error("Unexpected player profile error:", error);
+
+    return NextResponse.json(
+      {
+        error: "Unexpected server error while loading player profile.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+============================================================
+FILE: components/profile/NcaaPickEmProfileOverview.tsx
+============================================================
+"use client";
+
+type SeasonValue =
+  number | "all";
+
+type PickSummary = {
+  weeksPlayed: number;
+  correct: number;
+  incorrect: number;
+  total: number;
+  pickPct: number | null;
+  perfectWeeks: number;
+  currentCorrectStreak: number;
+  longestCorrectStreak: number;
+
+  bestWeek: {
+    weekId: number;
+    season: number;
+    weekNumber: number;
+    label: string;
+    correct: number;
+    total: number;
+    pickPct: number | null;
+  } | null;
+};
+
+type WeekRow = {
+  weekId: number;
+  season: number;
+  weekNumber: number;
+  label: string;
+  correct: number;
+  incorrect: number;
+  total: number;
+  pickPct: number | null;
+  perfect: boolean;
+  complete: boolean;
+};
+
+type Props = {
+  profile: {
+    ncaaPickEm?: {
+      selectedSummary: PickSummary;
+      careerSummary: PickSummary;
+      recentWeeks: WeekRow[];
+      availableSeasons: number[];
+    };
+  };
+
+  season:
+    SeasonValue;
+
+  availableSeasons:
+    number[];
+
+  onSeasonChange:
+    (
+      season:
+        SeasonValue,
+    ) => void;
+};
+
+function percent(
+  value:
+    number | null,
+) {
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return "—";
+  }
+
+  return `${Number(
+    value,
+  ).toFixed(1)}%`;
+}
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  detail,
+  featured = false,
+}: {
+  icon: string;
+  label: string;
+  value:
+    string | number;
+  detail?: string;
+  featured?: boolean;
+}) {
+  return (
+    <article
+      className={`rounded-2xl border p-4 shadow-sm ${
+        featured
+          ? "border-blue-500/50 bg-blue-950/35"
+          : "border-slate-700 bg-slate-900"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">
+          {label}
+        </div>
+
+        <div className="text-2xl">
+          {icon}
+        </div>
+      </div>
+
+      <div className="mt-3 text-3xl font-black tracking-tight text-white">
+        {value}
+      </div>
+
+      {detail ? (
+        <div className="mt-1 text-xs leading-5 text-slate-500">
+          {detail}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+export default function NcaaPickEmProfileOverview({
+  profile,
+  season,
+  availableSeasons,
+  onSeasonChange,
+}: Props) {
+  const ncaa =
+    profile.ncaaPickEm;
+
+  if (!ncaa) {
+    return (
+      <section className="rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-sm">
+        <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-10 text-center text-sm text-slate-500">
+          NCAA Pick &apos;Em profile data is unavailable.
+        </div>
+      </section>
+    );
+  }
+
+  const summary =
+    ncaa.selectedSummary;
+
+  const career =
+    ncaa.careerSummary;
+
+  const label =
+    season === "all"
+      ? "All-Time"
+      : `${season} Season`;
+
+  const seasons =
+    ncaa.availableSeasons
+      .length > 0
+      ? ncaa.availableSeasons
+      : availableSeasons;
+
+  return (
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-blue-300">
+              NCAA Pick &apos;Em Résumé
+            </div>
+
+            <h2 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
+              {summary.correct} correct across{" "}
+              {summary.total} graded picks
+            </h2>
+
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+              Accuracy, perfect weeks, streaks, and recent Pick &apos;Em form.
+            </p>
+          </div>
+
+          <label className="block w-full lg:w-auto">
+            <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">
+              Stat view
+            </span>
+
+            <select
+              value={
+                season
+              }
+              onChange={(
+                event,
+              ) =>
+                onSeasonChange(
+                  event.target
+                    .value ===
+                    "all"
+                    ? "all"
+                    : Number(
+                        event
+                          .target
+                          .value,
+                      ),
+                )
+              }
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm font-bold text-slate-100 outline-none focus:border-blue-500 lg:min-w-[180px]"
+            >
+              <option value="all">
+                All-Time
+              </option>
+
+              {seasons.map(
+                (year) => (
+                  <option
+                    key={year}
+                    value={year}
+                  >
+                    {year}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <MetricCard
+            icon="✅"
+            label="Correct"
+            value={
+              summary.correct
+            }
+            detail={label}
+            featured
+          />
+
+          <MetricCard
+            icon="❌"
+            label="Incorrect"
+            value={
+              summary.incorrect
+            }
+            detail={`${summary.total} graded picks`}
+          />
+
+          <MetricCard
+            icon="🎯"
+            label="Pick %"
+            value={percent(
+              summary.pickPct,
+            )}
+            detail={label}
+          />
+
+          <MetricCard
+            icon="💯"
+            label="Perfect Weeks"
+            value={
+              summary.perfectWeeks
+            }
+            detail={`${summary.weeksPlayed} completed weeks`}
+          />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm sm:p-6">
+        <div>
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
+            Streaks
+          </div>
+
+          <h2 className="mt-1 text-2xl font-black text-white">
+            How hot is the picker?
+          </h2>
+        </div>
+
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <MetricCard
+            icon="🔥"
+            label="Current Streak"
+            value={
+              summary.currentCorrectStreak
+            }
+            detail="Correct picks in a row"
+            featured
+          />
+
+          <MetricCard
+            icon="👑"
+            label="Best Streak"
+            value={
+              summary.longestCorrectStreak
+            }
+            detail="Longest correct-pick streak"
+          />
+
+          <MetricCard
+            icon="📈"
+            label="Career Pick %"
+            value={percent(
+              career.pickPct,
+            )}
+            detail={`${career.total} career graded picks`}
+          />
+
+          <MetricCard
+            icon="🧹"
+            label="Career Perfect Weeks"
+            value={
+              career.perfectWeeks
+            }
+            detail={`${career.weeksPlayed} completed weeks`}
+          />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm sm:p-6">
+        <div>
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
+            Best Week
+          </div>
+
+          <h2 className="mt-1 text-2xl font-black text-white">
+            Peak Pick &apos;Em performance
+          </h2>
+        </div>
+
+        {summary.bestWeek ? (
+          <div className="mt-5 rounded-2xl border border-blue-500/30 bg-blue-950/30 p-5">
+            <div className="text-xs font-bold uppercase tracking-wider text-blue-300">
+              {summary.bestWeek.season} ·{" "}
+              {summary.bestWeek.label}
+            </div>
+
+            <div className="mt-2 text-4xl font-black text-white">
+              {summary.bestWeek.correct}
+              <span className="text-xl text-slate-400">
+                /{summary.bestWeek.total}
+              </span>
+            </div>
+
+            <div className="mt-1 text-sm font-semibold text-slate-400">
+              {percent(
+                summary.bestWeek
+                  .pickPct,
+              )}{" "}
+              correct
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+            Best week will appear after completed Pick &apos;Em results are graded.
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm sm:p-6">
+        <div>
+          <div className="text-xs font-black uppercase tracking-[0.16em] text-blue-300">
+            Recent Form
+          </div>
+
+          <h2 className="mt-1 text-2xl font-black text-white">
+            Last eight completed weeks
+          </h2>
+        </div>
+
+        {ncaa.recentWeeks.length ===
+        0 ? (
+          <div className="mt-5 rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-500">
+            No completed Pick &apos;Em weeks yet.
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {ncaa.recentWeeks.map(
+              (week) => (
+                <article
+                  key={
+                    week.weekId
+                  }
+                  className={`rounded-2xl border p-4 ${
+                    week.perfect
+                      ? "border-emerald-500/40 bg-emerald-950/30"
+                      : "border-slate-700 bg-slate-950/50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        {week.season}
+                      </div>
+
+                      <div className="mt-1 font-black text-slate-100">
+                        {week.label}
+                      </div>
+                    </div>
+
+                    <div className="text-2xl">
+                      {week.perfect
+                        ? "💯"
+                        : "🏈"}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 text-3xl font-black text-white">
+                    {week.correct}
+                    <span className="text-lg text-slate-400">
+                      /{week.total}
+                    </span>
+                  </div>
+
+                  <div className="mt-1 text-xs font-semibold text-slate-500">
+                    {percent(
+                      week.pickPct,
+                    )}{" "}
+                    correct
+                  </div>
+                </article>
+              ),
+            )}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+============================================================
+NCAA SCHEMA / TABLE REFERENCES
+============================================================
+app/api/refresh-stats-ncaa/route.ts:24:  status: "open" | "locked" | "final";
+app/api/refresh-stats-ncaa/route.ts:77:          "ncaa_pickem_weeks",
+app/api/refresh-stats-ncaa/route.ts:80:          "id, season, week_number, status",
+app/api/refresh-stats-ncaa/route.ts:110:          status: 400,
+app/api/refresh-stats-ncaa/route.ts:130:          status: 500,
+app/api/refresh-stats-ncaa/route.ts:142:          status: 404,
+app/api/refresh-stats-ncaa/route.ts:167:          "ncaa_pickem_games",
+app/api/refresh-stats-ncaa/route.ts:184:          status: 500,
+app/api/refresh-stats-ncaa/route.ts:268:            away_score:
+app/api/refresh-stats-ncaa/route.ts:301:            home_score:
+app/api/refresh-stats-ncaa/route.ts:306:            status:
+app/api/refresh-stats-ncaa/route.ts:307:              espnGame.status,
+app/api/refresh-stats-ncaa/route.ts:309:            status_detail:
+app/api/refresh-stats-ncaa/route.ts:310:              espnGame.statusDetail,
+app/api/refresh-stats-ncaa/route.ts:312:            winner_team_id:
+app/api/refresh-stats-ncaa/route.ts:313:              espnGame.winnerTeamId,
+app/api/refresh-stats-ncaa/route.ts:339:            "ncaa_pickem_games",
+app/api/refresh-stats-ncaa/route.ts:356:            status: 500,
+app/api/refresh-stats-ncaa/route.ts:368:              game.winnerTeamId,
+app/api/refresh-stats-ncaa/route.ts:372:    let gradedPicks = 0;
+app/api/refresh-stats-ncaa/route.ts:388:          .winnerTeamId
+app/api/refresh-stats-ncaa/route.ts:399:            "ncaa_pickem_picks",
+app/api/refresh-stats-ncaa/route.ts:402:            "id, picked_team_id, is_correct",
+app/api/refresh-stats-ncaa/route.ts:420:            status: 500,
+app/api/refresh-stats-ncaa/route.ts:429:        const isCorrect =
+app/api/refresh-stats-ncaa/route.ts:435:              .winnerTeamId,
+app/api/refresh-stats-ncaa/route.ts:439:          pick.is_correct ===
+app/api/refresh-stats-ncaa/route.ts:440:          isCorrect
+app/api/refresh-stats-ncaa/route.ts:451:              "ncaa_pickem_picks",
+app/api/refresh-stats-ncaa/route.ts:454:              is_correct:
+app/api/refresh-stats-ncaa/route.ts:455:                isCorrect,
+app/api/refresh-stats-ncaa/route.ts:472:              status: 500,
+app/api/refresh-stats-ncaa/route.ts:477:        gradedPicks += 1;
+app/api/refresh-stats-ncaa/route.ts:531:      weekStatus:
+app/api/refresh-stats-ncaa/route.ts:532:        week.status,
+app/api/refresh-stats-ncaa/route.ts:552:      gradedPicks,
+app/api/refresh-stats-ncaa/route.ts:571:        status: 500,
+app/api/ncaa-pickem/week/route.ts:20:  status: "open" | "locked" | "final";
+app/api/ncaa-pickem/week/route.ts:42:  if (week.status !== "open") {
+app/api/ncaa-pickem/week/route.ts:74:        { status: 401 },
+app/api/ncaa-pickem/week/route.ts:99:      .from("ncaa_pickem_weeks")
+app/api/ncaa-pickem/week/route.ts:101:        "id, season, week_number, label, lock_at, status, analysis, show_analysis",
+app/api/ncaa-pickem/week/route.ts:122:        { status: 500 },
+app/api/ncaa-pickem/week/route.ts:195:            "ncaa_pickem_games",
+app/api/ncaa-pickem/week/route.ts:215:            "ncaa_pickem_picks",
+app/api/ncaa-pickem/week/route.ts:218:            "id, week_id, game_id, team_id, picked_team_id, is_correct",
+app/api/ncaa-pickem/week/route.ts:248:        { status: 500 },
+app/api/ncaa-pickem/week/route.ts:260:        { status: 500 },
+app/api/ncaa-pickem/week/route.ts:270:        { status: 500 },
+app/api/ncaa-pickem/week/route.ts:293:        { status: 500 },
+app/api/ncaa-pickem/week/route.ts:364:        is_correct:
+app/api/ncaa-pickem/week/route.ts:381:          "ncaa_pickem_picks",
+app/api/ncaa-pickem/week/route.ts:384:          "game_id, team_id, picked_team_id, is_correct",
+app/api/ncaa-pickem/week/route.ts:397:          { status: 500 },
+app/api/ncaa-pickem/week/route.ts:419:            is_correct:
+app/api/ncaa-pickem/week/route.ts:420:              row.is_correct ??
+app/api/ncaa-pickem/week/route.ts:469:      { status: 500 },
+app/api/ncaa-pickem/picks/route.ts:61:        { status: 401 },
+app/api/ncaa-pickem/picks/route.ts:85:        { status: 400 },
+app/api/ncaa-pickem/picks/route.ts:93:      .from("ncaa_pickem_weeks")
+app/api/ncaa-pickem/picks/route.ts:95:        "id, lock_at, status",
+app/api/ncaa-pickem/picks/route.ts:107:        { status: 404 },
+app/api/ncaa-pickem/picks/route.ts:119:      week.status !== "open" ||
+app/api/ncaa-pickem/picks/route.ts:132:        { status: 409 },
+app/api/ncaa-pickem/picks/route.ts:140:      .from("ncaa_pickem_games")
+app/api/ncaa-pickem/picks/route.ts:153:        { status: 500 },
+app/api/ncaa-pickem/picks/route.ts:176:        { status: 400 },
+app/api/ncaa-pickem/picks/route.ts:192:          { status: 400 },
+app/api/ncaa-pickem/picks/route.ts:216:          { status: 400 },
+app/api/ncaa-pickem/picks/route.ts:243:      .from("ncaa_pickem_picks")
+app/api/ncaa-pickem/picks/route.ts:258:        { status: 500 },
+app/api/ncaa-pickem/picks/route.ts:278:      { status: 500 },
+app/api/ncaa-pickem/standings/route.ts:18:  is_correct: boolean | null;
+app/api/ncaa-pickem/standings/route.ts:25:  status:
+app/api/ncaa-pickem/standings/route.ts:63:          status: 401,
+app/api/ncaa-pickem/standings/route.ts:88:            "ncaa_pickem_weeks",
+app/api/ncaa-pickem/standings/route.ts:91:            "id, season, week_number, status",
+app/api/ncaa-pickem/standings/route.ts:212:            "ncaa_pickem_picks",
+app/api/ncaa-pickem/standings/route.ts:215:            "week_id, game_id, team_id, is_correct",
+app/api/ncaa-pickem/standings/route.ts:222:            "is_correct",
+app/api/ncaa-pickem/standings/route.ts:295:          const correct =
+app/api/ncaa-pickem/standings/route.ts:298:                pick.is_correct ===
+app/api/ncaa-pickem/standings/route.ts:302:          const incorrect =
+app/api/ncaa-pickem/standings/route.ts:305:                pick.is_correct ===
+app/api/ncaa-pickem/standings/route.ts:309:          const graded =
+app/api/ncaa-pickem/standings/route.ts:310:            correct +
+app/api/ncaa-pickem/standings/route.ts:311:            incorrect;
+app/api/ncaa-pickem/standings/route.ts:314:            graded > 0
+app/api/ncaa-pickem/standings/route.ts:315:              ? correct /
+app/api/ncaa-pickem/standings/route.ts:316:                graded
+app/api/ncaa-pickem/standings/route.ts:362:                  pick.is_correct ===
+app/api/ncaa-pickem/standings/route.ts:438:              pick.is_correct ===
+app/api/ncaa-pickem/standings/route.ts:467:                .is_correct !==
+app/api/ncaa-pickem/standings/route.ts:492:            correct,
+app/api/ncaa-pickem/standings/route.ts:493:            incorrect,
+app/api/ncaa-pickem/standings/route.ts:494:            graded,
+app/api/ncaa-pickem/standings/route.ts:504:          b.correct -
+app/api/ncaa-pickem/standings/route.ts:505:            a.correct ||
+app/api/ncaa-pickem/standings/route.ts:555:        status: 500,
+app/api/player-league-profile/route.ts:107:        { status: 400 },
+app/api/player-league-profile/route.ts:117:      return NextResponse.json({ error: "Invalid season." }, { status: 400 });
+app/api/player-league-profile/route.ts:144:          { status: 500 },
+app/api/player-league-profile/route.ts:154:          { status: 404 },
+app/api/player-league-profile/route.ts:180:          { status: 500 },
+app/api/player-league-profile/route.ts:293:            { status: 500 },
+app/api/player-league-profile/route.ts:346:            { status: 500 },
+app/api/player-league-profile/route.ts:414:            { status: 500 },
+app/api/player-league-profile/route.ts:487:              status,
+app/api/player-league-profile/route.ts:497:                status,
+app/api/player-league-profile/route.ts:528:            { status: 500 },
+app/api/player-league-profile/route.ts:736:            const status =
+app/api/player-league-profile/route.ts:738:                eventPlayer?.status ??
+app/api/player-league-profile/route.ts:757:                status,
+app/api/player-league-profile/route.ts:768:                    status,
+app/api/player-league-profile/route.ts:825:              status:
+app/api/player-league-profile/route.ts:826:                eventPlayer?.status ??
+app/api/player-league-profile/route.ts:1242:        { status: 500 },
+app/api/player-league-profile/route.ts:1504:      { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:107:        { status: 400 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:117:      return NextResponse.json({ error: "Invalid season." }, { status: 400 });
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:144:          { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:154:          { status: 404 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:180:          { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:293:            { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:346:            { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:414:            { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:487:              status,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:497:                status,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:528:            { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:736:            const status =
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:738:                eventPlayer?.status ??
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:757:                status,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:768:                    status,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:816:              status:
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:817:                eventPlayer?.status ??
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:1233:        { status: 500 },
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:1495:      { status: 500 },
+components/profile/NcaaPickEmProfileOverview.tsx:8:  correct: number;
+components/profile/NcaaPickEmProfileOverview.tsx:9:  incorrect: number;
+components/profile/NcaaPickEmProfileOverview.tsx:13:  currentCorrectStreak: number;
+components/profile/NcaaPickEmProfileOverview.tsx:14:  longestCorrectStreak: number;
+components/profile/NcaaPickEmProfileOverview.tsx:21:    correct: number;
+components/profile/NcaaPickEmProfileOverview.tsx:32:  correct: number;
+components/profile/NcaaPickEmProfileOverview.tsx:33:  incorrect: number;
+components/profile/NcaaPickEmProfileOverview.tsx:170:              {summary.correct} correct across{" "}
+components/profile/NcaaPickEmProfileOverview.tsx:171:              {summary.total} graded picks
+components/profile/NcaaPickEmProfileOverview.tsx:226:            label="Correct"
+components/profile/NcaaPickEmProfileOverview.tsx:228:              summary.correct
+components/profile/NcaaPickEmProfileOverview.tsx:236:            label="Incorrect"
+components/profile/NcaaPickEmProfileOverview.tsx:238:              summary.incorrect
+components/profile/NcaaPickEmProfileOverview.tsx:240:            detail={`${summary.total} graded picks`}
+components/profile/NcaaPickEmProfileOverview.tsx:279:              summary.currentCorrectStreak
+components/profile/NcaaPickEmProfileOverview.tsx:281:            detail="Correct picks in a row"
+components/profile/NcaaPickEmProfileOverview.tsx:289:              summary.longestCorrectStreak
+components/profile/NcaaPickEmProfileOverview.tsx:291:            detail="Longest correct-pick streak"
+components/profile/NcaaPickEmProfileOverview.tsx:300:            detail={`${career.total} career graded picks`}
+components/profile/NcaaPickEmProfileOverview.tsx:333:              {summary.bestWeek.correct}
+components/profile/NcaaPickEmProfileOverview.tsx:344:              correct
+components/profile/NcaaPickEmProfileOverview.tsx:349:            Best week will appear after completed Pick &apos;Em results are graded.
+components/profile/NcaaPickEmProfileOverview.tsx:403:                    {week.correct}
+components/profile/NcaaPickEmProfileOverview.tsx:413:                    correct

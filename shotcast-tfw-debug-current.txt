@@ -1,0 +1,265 @@
+=== TOURCAST WORLD FILE FUNCTIONS ===
+
+=== HOLE ASSET BLOCK ===
+494-          "object"
+495-          ? detail.holeInfo
+496-          : {};
+497-
+498-      const header =
+499-        headersByHole.get(
+500-          holeNumber,
+501-        );
+502-
+503-      const officialImageUrl =
+504-        normalizeUrl(
+505-          detail.holeImageLandscape,
+506-        ) ??
+507-        normalizeUrl(
+508-          detail.holeImage,
+509-        );
+510-
+511-      const alignedMapUrl =
+512-        normalizeUrl(
+513-          holeInfo
+514-            .holePickleBottomToTop,
+515-        );
+516-
+517-      const alignedGreenUrl =
+518-        normalizeUrl(
+519-          holeInfo
+520-            .holePickleGreenBottomToTop,
+521-        );
+522-
+523-      const [
+524:        alignedMapAvailable,
+525-        alignedGreenAvailable,
+526-      ] = await Promise.all([
+527-        imageIsAvailable(
+528-          alignedMapUrl,
+529-        ),
+530-        imageIsAvailable(
+531-          alignedGreenUrl,
+532-        ),
+533-      ]);
+534-
+535-      return {
+536-        holeNumber,
+537-        available: true,
+538-
+539-        detailsId:
+540-          detail.id ?? null,
+541-
+542-        statsAvailability:
+543-          detail.statsAvailability ??
+544-          null,
+545-
+546-        par: numberOrNull(
+547-          holeInfo.par ??
+548-            header?.par,
+549-        ),
+550-
+551-        yards:
+552-          numberOrNull(
+553-            holeInfo.yards,
+554-          ),
+555-
+556-        rank:
+557-          numberOrNull(
+558-            holeInfo.rank,
+559-          ),
+560-
+561-        scoringAverageDiff:
+562-          numberOrNull(
+563-            holeInfo
+564-              .scoringAverageDiff,
+565-          ),
+566-
+567-        aboutThisHole:
+568-          typeof holeInfo
+569-            .aboutThisHole ===
+570-          "string"
+571-            ? holeInfo
+572-                .aboutThisHole
+573-                .trim() || null
+574-            : null,
+575-
+576-        officialImageUrl,
+577-
+578-        /*
+579-         * The browser may use the official PGA URL directly.
+580-         * No Vercel filesystem write is required.
+581-         */
+582-        localImageUrl:
+583-          officialImageUrl,
+584-
+585-        alignedMapUrl,
+586-
+587-        localAlignedMapUrl:
+588:          alignedMapAvailable
+589-            ? alignedMapUrl
+590-            : null,
+591-
+592-        alignedMapError:
+593-          alignedMapUrl &&
+594:          !alignedMapAvailable
+595-            ? "Asset is not currently published."
+596-            : null,
+597-
+598-        alignedGreenUrl,
+599-
+600-        localAlignedGreenUrl:
+601-          alignedGreenAvailable
+602-            ? alignedGreenUrl
+603-            : null,
+604-
+605-        alignedGreenError:
+606-          alignedGreenUrl &&
+607-          !alignedGreenAvailable
+608-            ? "Asset is not currently published."
+609-            : null,
+610-
+611-        tourcast: {
+612-          uri:
+613-            normalizeUrl(
+614-              detail.tourcastURI,
+615-            ),
+616-          url:
+617-            normalizeUrl(
+618-              detail.tourcastURL,
+619-            ),
+620-          urlWeb:
+621-            normalizeUrl(
+622-              detail.tourcastURLWeb,
+623-            ),
+624-        },
+625-
+626-        assets: {
+627-          leftToRight:
+628-            cleanAsset(
+629-              holeInfo
+630-                .holePickleLeftToRightAsset,
+631-            ),
+632-          bottomToTop:
+633-            cleanAsset(
+634-              holeInfo
+635-                .holePickleBottomToTopAsset,
+636-            ),
+637-          greenLeftToRight:
+638-            cleanAsset(
+639-              holeInfo
+640-                .holePickleGreenLeftToRightAsset,
+641-            ),
+642-          greenBottomToTop:
+643-            cleanAsset(
+644-              holeInfo
+645-                .holePickleGreenBottomToTopAsset,
+646-            ),
+647-        },
+648-
+649-        legacyAssets: {
+650-          holePickle:
+651-            normalizeUrl(
+652-              holeInfo.holePickle,
+653-            ),
+654-          holePickleBottomToTop:
+655-            alignedMapUrl,
+656-          holePickleGreenBottomToTop:
+657-            alignedGreenUrl,
+658-          greenPickle:
+659-            normalizeUrl(
+660-              holeInfo.greenPickle,
+661-            ),
+662-        },
+663-
+664-        pinGreen:
+665-          cleanPinGreen(
+666-            holeInfo.pinGreen,
+667-          ),
+668-
+669-        calibration: null,
+670-      };
+671-    }),
+672-  );
+673-
+674-  const holesAvailable =
+675-    holes.filter(
+676-      (hole) => hole.available,
+677-    ).length;
+678-
+679-  const photos =
+680-    holes.filter(
+681-      (hole: any) =>
+682-        hole.available &&
+683-        hole.localImageUrl,
+684-    ).length;
+685-
+686-  const alignedMaps =
+687-    holes.filter(
+688-      (hole: any) =>
+689-        hole.available &&
+690-        hole.localAlignedMapUrl,
+691-    ).length;
+692-
+693-  const alignedGreens =
+694-    holes.filter(
+695-      (hole: any) =>
+696-        hole.available &&
+697-        hole.localAlignedGreenUrl,
+698-    ).length;
+699-
+700-  return {
+701-    schemaVersion: 2,
+702-
+703-    generatedAt:
+704-      new Date().toISOString(),
+705-
+706-    source:
+707-      "PGA TOUR HoleDetails",
+708-
+709-    tournament: {
+710-      id:
+711-        normalizedTournamentId,
+712-      name:
+713-        leaderboard
+714-          .tournamentName ??
+715-        null,
+716-      currentRound:
+717-        numberOrNull(
+718-          leaderboard
+719-            .currentRound,
+720-        ),
+721-      requestedRound: round,
+722-    },
+723-
+724-    course: {
+725-      id: courseId,
+726-      name:
+727-        String(
+728-          course?.courseName ??
+729-            "Unknown course",
+730-        ),
+731-      code:
+732-        course?.courseCode ??
+733-        null,
+734-      hostCourse:
+735-        course?.hostCourse === true,
+736-      scoringLevel:
+737-        course?.scoringLevel ??
+738-        null,
+739-      enabled:
+740-        course?.enabled !== false,
+741-    },
+742-
+743-    summary: {
+744-      holesRequested: 18,
+745-      holesAvailable,
+746-      localImages: photos,
+747-      alignedMaps,
+748-      alignedGreens,
+749-      holesFailed:
+750-        18 - holesAvailable,
+751-    },
+752-
+753-    holes,
+754-  };
+755-}

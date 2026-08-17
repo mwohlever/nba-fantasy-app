@@ -1,0 +1,2284 @@
+===== GOLF SEASON =====
+                    <option value="golf_birdie_rate">
+                      Birdie %
+                    </option>
+
+                    <option value="golf_bogey_rate">
+                      Bogey %
+                    </option>
+
+                    <option value="golf_gir">
+                      GIR %
+                    </option>
+
+                    <option value="golf_drive_acc">
+                      Driving Accuracy
+                    </option>
+
+                    <option value="golf_drive_dist">
+                      Driving Distance
+                    </option>
+
+                    <option value="golf_putts_gir">
+                      Putts / GIR
+                    </option>
+
+                    <option value="golf_events">
+                      Events Played
+                    </option>
+
+                    <option value="player_name">
+                      Golfer Name
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection(
+                      (
+                        previous,
+                      ) =>
+                        previous ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    )
+                  }
+                  className="flex h-[46px] w-[52px] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl font-black text-emerald-800"
+                  aria-label="Reverse sort direction"
+                >
+                  {sortDirection ===
+                  "asc"
+                    ? "↑"
+                    : "↓"}
+                </button>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => {
+                    const selected =
+                      isCompareSelected(
+                        row,
+                      );
+
+                    const dynamicStat =
+                      sortKey ===
+                        "golf_wins"
+                        ? {
+                            label:
+                              "WINS",
+                            value:
+                              String(
+                                row.golf_season_wins ??
+                                  0,
+                              ),
+                            key:
+                              "golf_wins" as SortKey,
+                          }
+                        : sortKey ===
+                            "golf_top5"
+                          ? {
+                              label:
+                                "TOP 5",
+                              value:
+                                String(
+                                  row.golf_season_top_5 ??
+                                    0,
+                                ),
+                              key:
+                                "golf_top5" as SortKey,
+                            }
+                          : sortKey ===
+                              "golf_birdie_rate"
+                            ? {
+                                label:
+                                  "BIRD %",
+                                value:
+                                  row.golf_season_birdie_rate ===
+                                    null ||
+                                  row.golf_season_birdie_rate ===
+                                    undefined
+                                    ? "—"
+                                    : `${fmt(
+                                        row.golf_season_birdie_rate,
+                                        1,
+                                      )}%`,
+                                key:
+                                  "golf_birdie_rate" as SortKey,
+                              }
+                            : sortKey ===
+                                "golf_bogey_rate"
+                              ? {
+                                  label:
+                                    "BOGEY %",
+                                  value:
+                                    row.golf_season_bogey_rate ===
+                                      null ||
+                                    row.golf_season_bogey_rate ===
+                                      undefined
+                                      ? "—"
+                                      : `${fmt(
+                                          row.golf_season_bogey_rate,
+                                          1,
+                                        )}%`,
+                                  key:
+                                    "golf_bogey_rate" as SortKey,
+                                }
+                              : sortKey ===
+                                  "golf_drive_acc"
+                                ? {
+                                    label:
+                                      "DRV ACC",
+                                    value:
+                                      row.golf_season_driving_accuracy_pct ===
+                                        null ||
+                                      row.golf_season_driving_accuracy_pct ===
+                                        undefined
+                                        ? "—"
+                                        : `${fmt(
+                                            row.golf_season_driving_accuracy_pct,
+                                            1,
+                                          )}%`,
+                                    key:
+                                      "golf_drive_acc" as SortKey,
+                                  }
+                                : sortKey ===
+                                    "golf_drive_dist"
+                                  ? {
+                                      label:
+                                        "DRV DIST",
+                                      value:
+                                        row.golf_season_driving_distance ===
+                                          null ||
+                                        row.golf_season_driving_distance ===
+                                          undefined
+                                          ? "—"
+                                          : fmt(
+                                              row.golf_season_driving_distance,
+                                              1,
+                                            ),
+                                      key:
+                                        "golf_drive_dist" as SortKey,
+                                    }
+                                  : sortKey ===
+                                      "golf_putts_gir"
+                                    ? {
+                                        label:
+                                          "PUTTS/GIR",
+                                        value:
+                                          fmt(
+                                            row.golf_season_putts_per_gir,
+                                            2,
+                                          ),
+                                        key:
+                                          "golf_putts_gir" as SortKey,
+                                      }
+                                    : sortKey ===
+                                        "golf_events"
+                                      ? {
+                                          label:
+                                            "EVENTS",
+                                          value:
+                                            String(
+                                              row.golf_season_tournaments_played ??
+                                                0,
+                                            ),
+                                          key:
+                                            "golf_events" as SortKey,
+                                        }
+                                      : {
+                                          label:
+                                            "GIR",
+                                          value:
+                                            row.golf_season_gir_pct ===
+                                              null ||
+                                            row.golf_season_gir_pct ===
+                                              undefined
+                                              ? "—"
+                                              : `${fmt(
+                                                  row.golf_season_gir_pct,
+                                                  1,
+                                                )}%`,
+                                          key:
+                                            "golf_gir" as SortKey,
+                                        };
+
+                    const scoringActive =
+                      sortKey ===
+                      "golf_scoring_avg";
+
+                    const cutsActive =
+                      sortKey ===
+                      "golf_cuts_pct";
+
+                    const top10Active =
+                      sortKey ===
+                      "golf_top10";
+
+                    const birdiesActive =
+                      sortKey ===
+                      "golf_birdies_round";
+
+                    const dynamicActive =
+                      dynamicStat.key ===
+                      sortKey;
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                          selected
+                            ? "border-emerald-400 ring-2 ring-emerald-300/50"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        {compareMode &&
+                        selected ? (
+                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-black text-white">
+                            ✓
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                            {row.headshot_url ||
+                            row.espn_golf_player_id ? (
+                              <img
+                                src={
+                                  row.headshot_url ??
+                                  `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                                }
+                                alt={
+                                  row.player_name
+                                }
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                ⛳
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate pr-7 font-black text-slate-950">
+                              {
+                                row.player_name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              {row.owgr_rank
+                                ? `OWGR #${row.owgr_rank}`
+                                : "OWGR —"}
+                              {" · "}
+                              {
+                                row.golf_season_tournaments_played ??
+                                0
+                              }{" "}
+                              events
+                            </div>
+                          </div>
+
+                          <div
+                            className={`rounded-xl px-2 py-1.5 text-right ${
+                              scoringActive
+                                ? "border border-emerald-400 bg-emerald-50"
+                                : ""
+                            }`}
+                          >
+                            <div
+                              className={`text-xl font-black ${
+                                scoringActive
+                                  ? "text-emerald-700"
+                                  : "text-slate-950"
+                              }`}
+                            >
+                              {fmt(
+                                row.golf_season_scoring_average,
+                                2,
+                              )}
+                            </div>
+
+                            <div
+                              className={`text-[9px] font-bold uppercase ${
+                                scoringActive
+                                  ? "text-emerald-700"
+                                  : "text-slate-400"
+                              }`}
+                            >
+                              AVG
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-4 gap-1 text-center">
+                          <div
+                            className={`rounded-lg px-1 py-1.5 ${
+                              cutsActive
+                                ? "border border-emerald-400 bg-emerald-50"
+                                : ""
+                            }`}
+                          >
+                            <div
+                              className={`text-[13px] font-black ${
+                                cutsActive
+                                  ? "text-emerald-700"
+                                  : "text-slate-900"
+                              }`}
+                            >
+                              {row.golf_season_cuts_made_pct ===
+                                null ||
+                              row.golf_season_cuts_made_pct ===
+                                undefined
+                                ? "—"
+                                : `${fmt(
+                                    row.golf_season_cuts_made_pct,
+                                    0,
+                                  )}%`}
+                            </div>
+
+                            <div className="text-[9px] font-bold uppercase text-slate-400">
+                              CUTS
+                            </div>
+                          </div>
+
+                          <div
+                            className={`rounded-lg px-1 py-1.5 ${
+                              top10Active
+                                ? "border border-emerald-400 bg-emerald-50"
+                                : ""
+                            }`}
+                          >
+                            <div
+                              className={`text-[13px] font-black ${
+                                top10Active
+                                  ? "text-emerald-700"
+                                  : "text-slate-900"
+                              }`}
+                            >
+                              {
+                                row.golf_season_top_10 ??
+                                0
+                              }
+                            </div>
+
+                            <div className="text-[9px] font-bold uppercase text-slate-400">
+                              TOP 10
+                            </div>
+                          </div>
+
+                          <div
+                            className={`rounded-lg px-1 py-1.5 ${
+                              birdiesActive
+                                ? "border border-emerald-400 bg-emerald-50"
+                                : ""
+                            }`}
+                          >
+                            <div
+                              className={`text-[13px] font-black ${
+                                birdiesActive
+                                  ? "text-emerald-700"
+                                  : "text-slate-900"
+                              }`}
+                            >
+                              {fmt(
+                                row.golf_season_birdies_per_round,
+                                2,
+                              )}
+                            </div>
+
+                            <div className="text-[9px] font-bold uppercase text-slate-400">
+                              BIRD/R
+                            </div>
+                          </div>
+
+                          <div
+                            className={`rounded-lg px-1 py-1.5 ${
+                              dynamicActive
+                                ? "border border-emerald-400 bg-emerald-50"
+                                : ""
+                            }`}
+                          >
+                            <div
+                              className={`text-[13px] font-black ${
+                                dynamicActive
+                                  ? "text-emerald-700"
+                                  : "text-slate-900"
+                              }`}
+                            >
+                              {
+                                dynamicStat.value
+                              }
+                            </div>
+
+                            <div className="text-[9px] font-bold uppercase text-slate-400">
+                              {
+                                dynamicStat.label
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[1450px] w-full border-collapse text-sm">
+                  <thead className="bg-emerald-950 text-left text-white">
+                    <tr>
+                      <th className="px-4 py-3">
+                        {headerButton(
+                          "Golfer",
+                          "player_name",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        OWGR
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Avg",
+                          "golf_scoring_avg",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Cuts %",
+                          "golf_cuts_pct",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Wins",
+                          "golf_wins",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Top 5",
+                          "golf_top5",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Top 10",
+                          "golf_top10",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Bird/R",
+                          "golf_birdies_round",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Bird %",
+                          "golf_birdie_rate",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Bogey %",
+                          "golf_bogey_rate",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "GIR %",
+                          "golf_gir",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Drv Acc",
+                          "golf_drive_acc",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Drv Dist",
+                          "golf_drive_dist",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Putts/GIR",
+                          "golf_putts_gir",
+                        )}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredRows.map(
+                      (
+                        row,
+                      ) => (
+                        <tr
+                          key={
+                            row.player_id
+                          }
+                          className={`border-t border-slate-100 ${
+                            isCompareSelected(
+                              row,
+                            )
+                              ? "bg-emerald-50"
+                              : "hover:bg-emerald-50/40"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePlayerHistoryRowClick(
+                                  row,
+                                )
+                              }
+                              className="flex items-center gap-2 font-bold text-emerald-800"
+                            >
+                              <div className="h-8 w-8 overflow-hidden rounded-full bg-slate-100">
+                                {row.headshot_url ||
+                                row.espn_golf_player_id ? (
+                                  <img
+                                    src={
+                                      row.headshot_url ??
+                                      `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                                    }
+                                    alt={
+                                      row.player_name
+                                    }
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+
+===== NFL SEASON =====
+                              ? "asc"
+                              : "desc",
+                        );
+                      }
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300"
+                  >
+                    <option value="nfl_fp">
+                      Fantasy Points / Game
+                    </option>
+
+                    <option value="nfl_pass_yd">
+                      Pass Yards / Game
+                    </option>
+
+                    <option value="nfl_pass_td">
+                      Pass TD / Game
+                    </option>
+
+                    <option value="nfl_int">
+                      INT / Game
+                    </option>
+
+                    <option value="nfl_rush_yd">
+                      Rush Yards / Game
+                    </option>
+
+                    <option value="nfl_rush_td">
+                      Rush TD / Game
+                    </option>
+
+                    <option value="nfl_targets">
+                      Targets / Game
+                    </option>
+
+                    <option value="nfl_receptions">
+                      Receptions / Game
+                    </option>
+
+                    <option value="nfl_rec_yd">
+                      Receiving Yards / Game
+                    </option>
+
+                    <option value="nfl_rec_td">
+                      Receiving TD / Game
+                    </option>
+
+                    <option value="player_name">
+                      Player Name
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection(
+                      (
+                        previous,
+                      ) =>
+                        previous ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700"
+                >
+                  {sortDirection ===
+                  "asc"
+                    ? "↑"
+                    : "↓"}
+                </button>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => {
+                    const position =
+                      String(
+                        row.position_group ??
+                          "",
+                      ).toUpperCase();
+
+                    const selected =
+                      isCompareSelected(
+                        row,
+                      );
+
+                    const stats =
+                      position ===
+                      "QB"
+                        ? [
+                            {
+                              label:
+                                "PASS",
+                              value:
+                                row.nfl_passing_yards_per_game,
+                              key:
+                                "nfl_pass_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "P TD",
+                              value:
+                                row.nfl_passing_tds_per_game,
+                              key:
+                                "nfl_pass_td" as SortKey,
+                            },
+                            {
+                              label:
+                                "INT",
+                              value:
+                                row.nfl_passing_ints_per_game,
+                              key:
+                                "nfl_int" as SortKey,
+                            },
+                            {
+                              label:
+                                "RUSH",
+                              value:
+                                row.nfl_rushing_yards_per_game,
+                              key:
+                                "nfl_rush_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "R TD",
+                              value:
+                                row.nfl_rushing_tds_per_game,
+                              key:
+                                "nfl_rush_td" as SortKey,
+                            },
+                          ]
+                        : [
+                            {
+                              label:
+                                "TGT",
+                              value:
+                                row.nfl_receiving_targets_per_game,
+                              key:
+                                "nfl_targets" as SortKey,
+                            },
+                            {
+                              label:
+                                "REC",
+                              value:
+                                row.nfl_receptions_per_game,
+                              key:
+                                "nfl_receptions" as SortKey,
+                            },
+                            {
+                              label:
+                                "REC YD",
+                              value:
+                                row.nfl_receiving_yards_per_game,
+                              key:
+                                "nfl_rec_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "RUSH",
+                              value:
+                                row.nfl_rushing_yards_per_game,
+                              key:
+                                "nfl_rush_yd" as SortKey,
+                            },
+                            {
+                              label:
+                                "TD",
+                              value:
+                                (
+                                  row.nfl_receiving_tds_per_game ??
+                                  0
+                                ) +
+                                (
+                                  row.nfl_rushing_tds_per_game ??
+                                  0
+                                ),
+                              key:
+                                sortKey ===
+                                "nfl_rush_td"
+                                  ? "nfl_rush_td" as SortKey
+                                  : "nfl_rec_td" as SortKey,
+                            },
+                          ];
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-3.5 text-left shadow-sm transition ${
+                          selected
+                            ? "border-sky-400 ring-2 ring-sky-300/60"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <PlayerHeadshot
+                            nbaPlayerId={
+                              null
+                            }
+                            nflPlayerId={
+                              row.nfl_player_id
+                            }
+                            playerName={
+                              row.player_name
+                            }
+                            size="md"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-black text-slate-950">
+                              {
+                                row.player_name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              {[
+                                row.team_abbreviation,
+                                row.position_group,
+                                row.nfl_games_played
+                                  ? `${row.nfl_games_played} GP`
+                                  : null,
+                              ]
+                                .filter(
+                                  Boolean,
+                                )
+                                .join(" · ")}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className={`text-xl font-black ${
+                              sortKey ===
+                              "nfl_fp"
+                                ? "text-sky-800"
+                                : "text-slate-950"
+                            }`}>
+                              {fmt(
+                                row.nfl_fantasy_points_per_game,
+                                2,
+                              )}
+                            </div>
+
+                            <div className="text-[10px] font-bold uppercase text-slate-400">
+                              FP/G
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-5 gap-1 text-center">
+                          {stats.map(
+                            (
+                              stat,
+                            ) => {
+                              const active =
+                                stat.key ===
+                                sortKey;
+
+                              return (
+                                <div
+                                  key={
+                                    stat.label
+                                  }
+                                  className={`rounded-lg px-1 py-1.5 ${
+                                    active
+                                      ? "border border-sky-300 bg-sky-50"
+                                      : ""
+                                  }`}
+                                >
+                                  <div className={`text-[13px] font-black ${
+                                    active
+                                      ? "text-sky-800"
+                                      : "text-slate-900"
+                                  }`}>
+                                    {fmt(
+                                      stat.value,
+                                      stat.label.includes(
+                                        "TD",
+                                      ) ||
+                                      stat.label ===
+                                        "INT"
+                                        ? 2
+                                        : 1,
+                                    )}
+                                  </div>
+
+                                  <div className={`text-[9px] font-bold uppercase ${
+                                    active
+                                      ? "text-sky-700"
+                                      : "text-slate-400"
+                                  }`}>
+                                    {
+                                      stat.label
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[1100px] w-full border-collapse text-sm">
+                  <thead className="bg-sky-50 text-slate-700">
+                    <tr className="text-left">
+                      <th className="px-4 py-3">
+                        {headerButton(
+                          "Player",
+                          "player_name",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        Pos
+                      </th>
+
+                      <th className="px-3 py-3">
+                        GP
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "FP/G",
+                          "nfl_fp",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Pass Yd/G",
+                          "nfl_pass_yd",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Pass TD/G",
+                          "nfl_pass_td",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "INT/G",
+                          "nfl_int",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rush Yd/G",
+                          "nfl_rush_yd",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rush TD/G",
+                          "nfl_rush_td",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "TGT/G",
+                          "nfl_targets",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "REC/G",
+                          "nfl_receptions",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rec Yd/G",
+                          "nfl_rec_yd",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rec TD/G",
+                          "nfl_rec_td",
+                        )}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="bg-white text-slate-800">
+                    {filteredRows.map(
+                      (
+                        row,
+                      ) => (
+                        <tr
+                          key={
+                            row.player_id
+                          }
+                          className={`border-t border-slate-100 ${
+                            isCompareSelected(
+                              row,
+                            )
+                              ? "bg-sky-50"
+                              : "hover:bg-sky-50/40"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePlayerHistoryRowClick(
+                                  row,
+                                )
+                              }
+                              className="flex items-center gap-2 font-bold text-sky-800"
+                            >
+                              <PlayerHeadshot
+                                nbaPlayerId={
+                                  null
+                                }
+                                nflPlayerId={
+                                  row.nfl_player_id
+                                }
+                                playerName={
+                                  row.player_name
+                                }
+                                size="xs"
+                              />
+
+                              {
+                                row.player_name
+                              }
+                            </button>
+                          </td>
+
+                          <td className="px-3 py-3 font-bold">
+                            {
+                              row.position_group ??
+                              "—"
+                            }
+                          </td>
+
+                          <td className="px-3 py-3">
+                            {
+                              row.nfl_games_played ??
+                              "—"
+                            }
+                          </td>
+
+                          <td className="px-3 py-3 font-black text-sky-800">
+                            {fmt(
+
+===== NBA SEASON =====
+
+                        setSortKey(
+                          nextKey,
+                        );
+
+                        setSortDirection(
+                          nextKey ===
+                            "player_name"
+                            ? "asc"
+                            : "desc",
+                        );
+                      }
+                    }
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-sky-300"
+                  >
+                    <option value="season_fantasy_points">
+                      Fantasy Points
+                    </option>
+
+                    <option value="season_points">
+                      Points
+                    </option>
+
+                    <option value="season_rebounds">
+                      Rebounds
+                    </option>
+
+                    <option value="season_assists">
+                      Assists
+                    </option>
+
+                    <option value="season_steals">
+                      Steals
+                    </option>
+
+                    <option value="season_blocks">
+                      Blocks
+                    </option>
+
+                    <option value="season_turnovers">
+                      Turnovers
+                    </option>
+
+                    <option value="player_name">
+                      Player Name
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection(
+                      (
+                        previous,
+                      ) =>
+                        previous ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    )
+                  }
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-black text-slate-700"
+                  aria-label="Reverse sort direction"
+                >
+                  {sortDirection ===
+                  "asc"
+                    ? "↑"
+                    : "↓"}
+                </button>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => {
+                    const selected =
+                      isCompareSelected(
+                        row,
+                      );
+
+                    /*
+                     * PTS / REB / AST already have permanent
+                     * quick-stat slots.
+                     *
+                     * Only replace the fourth slot when sorting
+                     * by a stat that is not already visible there.
+                     */
+                    const dynamicStat =
+                      sortKey ===
+                      "season_steals"
+                        ? {
+                            label:
+                              "STL",
+                            value:
+                              row.season_steals,
+                            key:
+                              "season_steals" as SortKey,
+                          }
+                        : sortKey ===
+                            "season_blocks"
+                          ? {
+                              label:
+                                "BLK",
+                              value:
+                                row.season_blocks,
+                              key:
+                                "season_blocks" as SortKey,
+                            }
+                          : sortKey ===
+                              "season_turnovers"
+                            ? {
+                                label:
+                                  "TO",
+                                value:
+                                  row.season_turnovers,
+                                key:
+                                  "season_turnovers" as SortKey,
+                              }
+                            : {
+                                label:
+                                  "FP",
+                                value:
+                                  row.season_fantasy_points,
+                                key:
+                                  "season_fantasy_points" as SortKey,
+                              };
+
+                    return (
+                      <button
+                        key={
+                          row.player_id
+                        }
+                        type="button"
+                        onClick={() =>
+                          handlePlayerHistoryRowClick(
+                            row,
+                          )
+                        }
+                        className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                          selected
+                            ? "border-sky-400 ring-2 ring-sky-300/60"
+                            : "border-slate-200"
+                        }`}
+                      >
+                        {compareMode &&
+                        selected ? (
+                          <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-xs font-black text-white">
+                            ✓
+                          </div>
+                        ) : null}
+
+                        <div className="flex items-center gap-3">
+                          <PlayerHeadshot
+                            nbaPlayerId={
+                              row.nba_player_id
+                            }
+                            nflPlayerId={
+                              null
+                            }
+                            playerName={
+                              row.player_name
+                            }
+                            size="md"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-black text-slate-950">
+                              {
+                                row.player_name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs font-medium text-slate-500">
+                              {[
+                                row.team_abbreviation,
+                                row.position_group,
+                              ]
+                                .filter(
+                                  Boolean,
+                                )
+                                .join(" · ") ||
+                                "NBA"}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div
+                              className={`text-xl font-black ${
+                                sortKey ===
+                                "season_fantasy_points"
+                                  ? "text-sky-800"
+                                  : "text-slate-950"
+                              }`}
+                            >
+                              {fmt(
+                                row.season_fantasy_points,
+                                1,
+                              )}
+                            </div>
+
+                            <div className="text-[10px] font-bold uppercase text-slate-400">
+                              FP
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                          {[
+                            {
+                              label:
+                                "PTS",
+                              value:
+                                row.season_points,
+                              key:
+                                "season_points" as SortKey,
+                            },
+                            {
+                              label:
+                                "REB",
+                              value:
+                                row.season_rebounds,
+                              key:
+                                "season_rebounds" as SortKey,
+                            },
+                            {
+                              label:
+                                "AST",
+                              value:
+                                row.season_assists,
+                              key:
+                                "season_assists" as SortKey,
+                            },
+                            {
+                              label:
+                                dynamicStat.label,
+                              value:
+                                dynamicStat.value,
+                              key:
+                                dynamicStat.key,
+                            },
+                          ].map(
+                            (
+                              stat,
+                              index,
+                            ) => {
+                              const active =
+                                stat.key ===
+                                sortKey;
+
+                              return (
+                                <div
+                                  key={`${row.player_id}-${stat.label}-${index}`}
+                                  className={`rounded-xl px-1.5 py-1.5 ${
+                                    active
+                                      ? "border border-sky-300 bg-sky-50"
+                                      : ""
+                                  }`}
+                                >
+                                  <div
+                                    className={`font-black ${
+                                      active
+                                        ? "text-sky-800"
+                                        : "text-slate-900"
+                                    }`}
+                                  >
+                                    {fmt(
+                                      stat.value,
+                                      1,
+                                    )}
+                                  </div>
+
+                                  <div
+                                    className={`text-[10px] font-bold uppercase ${
+                                      active
+                                        ? "text-sky-700"
+                                        : "text-slate-400"
+                                    }`}
+                                  >
+                                    {
+                                      stat.label
+                                    }
+                                  </div>
+                                </div>
+                              );
+                            },
+                          )}
+                        </div>
+
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-center text-xs">
+                          <div>
+                            <span className="font-bold text-slate-900">
+                              {fmt(
+                                row.season_steals,
+                                1,
+                              )}
+                            </span>{" "}
+                            <span className="text-slate-400">
+                              STL
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="font-bold text-slate-900">
+                              {fmt(
+                                row.season_blocks,
+                                1,
+                              )}
+                            </span>{" "}
+                            <span className="text-slate-400">
+                              BLK
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="font-bold text-slate-900">
+                              {fmt(
+                                row.season_turnovers,
+                                1,
+                              )}
+                            </span>{" "}
+                            <span className="text-slate-400">
+                              TO
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[900px] w-full border-collapse text-sm">
+                  <thead className="bg-sky-50 text-slate-700">
+                    <tr className="text-left">
+                      <th className="px-4 py-3">
+                        {headerButton(
+                          "Player",
+                          "player_name",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "FP",
+                          "season_fantasy_points",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "PTS",
+                          "season_points",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "REB",
+                          "season_rebounds",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "AST",
+                          "season_assists",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "STL",
+                          "season_steals",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "BLK",
+                          "season_blocks",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "TO",
+                          "season_turnovers",
+                        )}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="bg-white text-slate-800">
+                    {filteredRows.map(
+                      (
+                        row,
+                      ) => (
+                        <tr
+                          key={
+                            row.player_id
+                          }
+                          className={`border-t border-slate-100 transition ${
+                            isCompareSelected(
+                              row,
+                            )
+                              ? "bg-sky-50"
+                              : "hover:bg-sky-50/40"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePlayerHistoryRowClick(
+                                  row,
+                                )
+                              }
+                              className={`flex items-center gap-3 rounded-xl px-2 py-1 text-left font-bold transition ${
+                                isCompareSelected(
+                                  row,
+                                )
+                                  ? "bg-sky-100 text-sky-950 ring-2 ring-sky-300"
+                                  : "text-sky-800"
+                              }`}
+                            >
+                              <PlayerHeadshot
+                                nbaPlayerId={
+                                  row.nba_player_id
+                                }
+                                nflPlayerId={
+                                  null
+                                }
+                                playerName={
+                                  row.player_name
+                                }
+                                size="xs"
+                              />
+
+                              <span>
+                                <span className="block">
+                                  {
+                                    row.player_name
+                                  }
+                                </span>
+
+                                <span className="block text-[10px] font-medium text-slate-400">
+                                  {[
+                                    row.team_abbreviation,
+
+===== GOLF LEAGUE =====
+
+                    <option value="birdies">
+                      Birdies
+                    </option>
+
+                    <option value="eagles">
+                      Eagles
+                    </option>
+
+                    <option value="albatrosses">
+                      Albatrosses
+                    </option>
+
+                    <option value="holes_in_one">
+                      Aces
+                    </option>
+
+                    <option value="rounds_under_par">
+                      Rounds Under Par
+                    </option>
+
+                    <option value="player_name">
+                      Golfer Name
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection(
+                      (
+                        previous,
+                      ) =>
+                        previous ===
+                        "asc"
+                          ? "desc"
+                          : "asc",
+                    )
+                  }
+                  className="flex h-[46px] w-[52px] shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl font-black text-emerald-800 transition hover:bg-emerald-50"
+                  aria-label={
+                    sortDirection ===
+                    "asc"
+                      ? "Sort descending"
+                      : "Sort ascending"
+                  }
+                  title={
+                    sortDirection ===
+                    "asc"
+                      ? "Ascending"
+                      : "Descending"
+                  }
+                >
+                  {sortDirection ===
+                  "asc"
+                    ? "↑"
+                    : "↓"}
+                </button>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredRows.map(
+                  (
+                    row,
+                  ) => (
+                    <button
+                      key={
+                        row.player_id
+                      }
+                      type="button"
+                      onClick={() =>
+                        handlePlayerHistoryRowClick(
+                          row,
+                        )
+                      }
+                      className={`relative w-full rounded-2xl border bg-white p-4 text-left shadow-sm transition ${
+                        isCompareSelected(
+                          row,
+                        )
+                          ? "border-emerald-400 ring-2 ring-emerald-300/50"
+                          : "border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40"
+                      }`}
+                    >
+                      {compareMode &&
+                      isCompareSelected(
+                        row,
+                      ) ? (
+                        <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs font-black text-white">
+                          ✓
+                        </div>
+                      ) : null}
+
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                          {row.headshot_url ||
+                          row.espn_golf_player_id ? (
+                            <img
+                              src={
+                                row.headshot_url ??
+                                `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                              }
+                              alt={
+                                row.player_name
+                              }
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              ⛳
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-base font-black text-slate-950">
+                            {
+                              row.player_name
+                            }
+                          </div>
+
+                          <div className="mt-0.5 text-xs text-slate-500">
+                            Drafted{" "}
+                            {
+                              row.times_drafted
+                            }
+                            x
+                            {row.owgr_rank
+                              ? ` · OWGR #${row.owgr_rank}`
+                              : ""}
+                          </div>
+                        </div>
+
+                        <div
+                          className={`rounded-xl px-2 py-1 text-right ${
+                            isVisibleSortSlotActive(
+                              "avg",
+                            )
+                              ? "border border-emerald-300/60 bg-emerald-50"
+                              : ""
+                          }`}
+                        >
+                          <div
+                            className={`text-xl font-black ${
+                              isVisibleSortSlotActive(
+                                "avg",
+                              )
+                                ? "text-emerald-800"
+                                : "text-emerald-800"
+                            }`}
+                          >
+                            {golfScore(
+                              row.avg_score,
+                            )}
+                          </div>
+
+                          <div
+                            className={`text-[10px] font-bold uppercase tracking-wide ${
+                              isVisibleSortSlotActive(
+                                "avg",
+                              )
+                                ? "text-emerald-700"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            Avg
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-4 gap-2 border-t border-slate-100 pt-3 text-center">
+                        <div
+                          className={`rounded-xl px-1.5 py-1.5 ${
+                            isVisibleSortSlotActive(
+                              "best",
+                            )
+                              ? "border border-emerald-300/60 bg-emerald-50"
+                              : ""
+                          }`}
+                        >
+                          <div
+                            className={`font-black ${
+                              isVisibleSortSlotActive(
+                                "best",
+                              )
+                                ? "text-emerald-800"
+                                : "text-slate-900"
+                            }`}
+                          >
+                            {golfScore(
+                              row.high_score,
+                            )}
+                          </div>
+
+                          <div
+                            className={`text-[10px] uppercase ${
+                              isVisibleSortSlotActive(
+                                "best",
+                              )
+                                ? "font-bold text-emerald-700"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            Best
+                          </div>
+                        </div>
+
+                        <div
+                          className={`rounded-xl px-1.5 py-1.5 ${
+                            isVisibleSortSlotActive(
+                              "wins",
+                            )
+                              ? "border border-emerald-300/60 bg-emerald-50"
+                              : ""
+                          }`}
+                        >
+                          <div
+                            className={`font-black ${
+                              isVisibleSortSlotActive(
+                                "wins",
+                              )
+                                ? "text-emerald-800"
+                                : "text-slate-900"
+                            }`}
+                          >
+                            {
+                              row.winning_lineups
+                            }
+                          </div>
+
+                          <div
+                            className={`text-[10px] uppercase ${
+                              isVisibleSortSlotActive(
+                                "wins",
+                              )
+                                ? "font-bold text-emerald-700"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            Wins
+                          </div>
+                        </div>
+
+                        <div
+                          className={`rounded-xl px-1.5 py-1.5 ${
+                            isVisibleSortSlotActive(
+                              "cuts",
+                            )
+                              ? "border border-emerald-300/60 bg-emerald-50"
+                              : ""
+                          }`}
+                        >
+                          <div
+                            className={`font-black ${
+                              isVisibleSortSlotActive(
+                                "cuts",
+                              )
+                                ? "text-emerald-800"
+                                : "text-slate-900"
+                            }`}
+                          >
+                            {cutDisplay(
+                              row.cuts_made,
+                              row.cut_opportunities,
+                            )}
+                          </div>
+
+                          <div
+                            className={`text-[10px] uppercase ${
+                              isVisibleSortSlotActive(
+                                "cuts",
+                              )
+                                ? "font-bold text-emerald-700"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            Cuts
+                          </div>
+                        </div>
+
+                        <div
+                          className={`rounded-xl px-1.5 py-1.5 ${
+                            isVisibleSortSlotActive(
+                              "dynamic",
+                            )
+                              ? "border border-emerald-300/60 bg-emerald-50"
+                              : ""
+                          }`}
+                        >
+                          <div
+                            className={`font-black ${
+                              isVisibleSortSlotActive(
+                                "dynamic",
+                              )
+                                ? "text-emerald-800"
+                                : "text-slate-900"
+                            }`}
+                          >
+                            {
+                              getGolfMobileDynamicStat(
+                                row,
+                              ).value
+                            }
+                          </div>
+
+                          <div
+                            className={`text-[10px] uppercase ${
+                              isVisibleSortSlotActive(
+                                "dynamic",
+                              )
+                                ? "font-bold text-emerald-700"
+                                : "text-slate-400"
+                            }`}
+                          >
+                            {
+                              getGolfMobileDynamicStat(
+                                row,
+                              ).label
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      {(row.albatrosses ??
+                        0) >
+                        0 ||
+                      (row.holes_in_one ??
+                        0) >
+                        0 ? (
+                        <div className="mt-3 flex gap-2">
+                          {(row.albatrosses ??
+                            0) >
+                          0 ? (
+                            <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold text-violet-800">
+                              🦅{" "}
+                              {
+                                row.albatrosses
+                              }{" "}
+                              Albatross
+                            </span>
+                          ) : null}
+
+                          {(row.holes_in_one ??
+                            0) >
+                          0 ? (
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                              ⛳{" "}
+                              {
+                                row.holes_in_one
+                              }{" "}
+                              Ace
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </button>
+                  ),
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[1250px] border-collapse text-sm">
+                  <thead className="bg-emerald-50 text-slate-700">
+                    <tr className="text-left">
+                      <th className="px-4 py-3">
+                        {headerButton(
+                          "Golfer",
+                          "player_name",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Drafted",
+                          "times_drafted",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Avg",
+                          "avg_score",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Best",
+                          "high_score",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Wins",
+                          "winning_lineups",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Podiums",
+                          "podium_lineups",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Avg Finish",
+                          "avg_finish",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Cuts",
+                          "cuts_made_pct",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Birdies",
+                          "birdies",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Eagles",
+                          "eagles",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Albatross",
+                          "albatrosses",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Aces",
+                          "holes_in_one",
+                        )}
+                      </th>
+
+                      <th className="px-3 py-3">
+                        {headerButton(
+                          "Rds Under",
+                          "rounds_under_par",
+                        )}
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="bg-white text-slate-800">
+                    {filteredRows.map(
+                      (
+                        row,
+                      ) => (
+                        <tr
+                          key={
+                            row.player_id
+                          }
+                          className="border-t border-slate-100 transition hover:bg-emerald-50/40"
+                        >
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePlayerHistoryRowClick(
+                                  row,
+                                )
+                              }
+                              className={`flex items-center gap-3 rounded-xl px-2 py-1 text-left font-bold transition ${
+                                isCompareSelected(
+                                  row,
+                                )
+                                  ? "bg-emerald-100 text-emerald-950 ring-2 ring-emerald-300"
+                                  : "text-emerald-800 hover:text-emerald-950"
+                              }`}
+                            >
+                              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                                {row.headshot_url ||
+                                row.espn_golf_player_id ? (
+                                  <img
+                                    src={
+                                      row.headshot_url ??
+                                      `https://a.espncdn.com/i/headshots/golf/players/full/${row.espn_golf_player_id}.png`
+                                    }
+                                    alt={
+                                      row.player_name
+                                    }
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-sm">
+                                    ⛳
+                                  </div>
+                                )}
+                              </div>
+
+                              <div>
+                                <div>
+                                  {
+                                    row.player_name
+                                  }
+                                </div>
+
+                                {row.owgr_rank ? (
+                                  <div className="text-[10px] font-medium text-slate-400">
+                                    OWGR #
+                                    {
+                                      row.owgr_rank
+                                    }
+                                  </div>
+                                ) : null}
+                              </div>
+                            </button>
+
+===== NBA NFL LEAGUE =====
+              </div>
+            </>
+          ) : (
+            <div className="-mx-4 overflow-x-auto px-4">
+              <table className="min-w-full border-collapse text-sm">
+                <thead className="bg-slate-100 text-slate-700">
+                  <tr className="text-left">
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "Player",
+                        "player_name",
+                      )}
+                    </th>
+
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "Times Drafted",
+                        "times_drafted",
+                      )}
+                    </th>
+
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "Avg Score",
+                        "avg_score",
+                      )}
+                    </th>
+
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "High Score",
+                        "high_score",
+                      )}
+                    </th>
+
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "Low Score",
+                        "low_score",
+                      )}
+                    </th>
+
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "Winning Lineups",
+                        "winning_lineups",
+                      )}
+                    </th>
+
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "Runner-up Lineups",
+                        "runner_up_lineups",
+                      )}
+                    </th>
+
+                    <th className="px-4 py-3">
+                      {headerButton(
+                        "Avg Finish",
+                        "avg_finish",
+                      )}
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody className="bg-white text-slate-800">
+                  {filteredRows.map(
+                    (
+                      row,
+                    ) => (
+                      <tr
+                        key={
+                          row.player_id
+                        }
+                        className={`border-t border-slate-100 transition ${
+                          isCompareSelected(
+                            row,
+                          )
+                            ? "bg-sky-50"
+                            : ""
+                        }`}
+                      >
+                        <td className="px-4 py-3 font-medium">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handlePlayerHistoryRowClick(
+                                row,
+                              )
+                            }
+                            className={`flex items-center gap-2 rounded-xl px-2 py-1 font-medium transition ${
+                              isCompareSelected(
+                                row,
+                              )
+                                ? "bg-sky-100 text-sky-950 ring-2 ring-sky-300"
+                                : "text-sky-700 underline-offset-2 hover:text-sky-900 hover:underline"
+                            }`}
+                          >
+                            <PlayerHeadshot
+                              nbaPlayerId={
+                                row.nba_player_id
+                              }
+                              nflPlayerId={
+                                row.nfl_player_id
+                              }
+                              playerName={
+                                row.player_name
+                              }
+                              size="xs"
+                            />
+
+                            <span>
+                              {
+                                row.player_name
+                              }
+                            </span>
+                          </button>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {
+                            row.times_drafted
+                          }
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {row.avg_score.toFixed(
+                            2,
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {row.high_score.toFixed(
+                            2,
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {row.low_score.toFixed(
+                            2,
+                          )}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {
+                            row.winning_lineups
+                          }
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {
+                            row.runner_up_lineups
+                          }
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {row.avg_finish
+                            ? row.avg_finish.toFixed(
+                                2,
+                              )
+                            : "—"}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+
+      <PlayerResearchModal
+        player={
+          isGolf
+            ? golfProfileRow
+              ? {
+                  id:
+                    golfProfileRow.player_id,
+
+                  name:
+                    golfProfileRow.player_name,
+
+                  espnGolfPlayerId:
+                    golfProfileRow.espn_golf_player_id ??
+                    null,
+
+                  headshotUrl:
+                    golfProfileRow.headshot_url ??
+                    null,
+
+                  owgrRank:
+                    golfProfileRow.owgr_rank ??
+                    null,
+
+                  country:
+                    golfProfileRow.country ??
+                    null,
+                }
+              : null
+            : profilePlayer
+              ? {
+                  id:
+                    profilePlayer.id,
+
+                  name:
+                    profilePlayer.name,
+
+                  nbaPlayerId:
+                    profilePlayer.nba_player_id ??
+                    null,
+
+                  nflPlayerId:
+                    profilePlayer.nfl_player_id ??
+                    null,
+
+                  positionGroup:
+                    profilePlayer.position_group ??
+                    null,
+
+                  teamAbbreviation:
+                    rows.find(
+                      (row) =>
+                        row.player_id ===
+                        profilePlayer.id,
+                    )
+                      ?.team_abbreviation ??
+                    null,
+                }
+              : null
+        }
+        sport={
+          selectedSport as
+            | "nba"
+            | "nfl"
+            | "golf"
+        }
+        season={
+          season
+        }
+        defaultMode={
+          historyMode
+        }
+        onClose={() => {
+          setProfilePlayer(
+            null,
+          );
+
+          setGolfProfileRow(
+            null,
+          );

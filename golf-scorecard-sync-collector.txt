@@ -1,0 +1,3495 @@
+111 SPORTS — GOLF SCORECARD / SHOTCAST SYNC
+==========================================================================================
+
+FILES INCLUDED
+------------------------------------------------------------------------------------------
+app/api/golf/hole-replay/route.ts
+components/lineups/GolfHoleReplayPanel.tsx
+components/lineups/GolfPlayerModal.tsx
+components/lineups/GolfTournamentView.tsx
+lib/providers/pgaTourShots.ts
+
+==========================================================================================
+FILE: app/api/golf/hole-replay/route.ts
+==========================================================================================
+
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+};
+
+type PlayerRow = {
+  id: number;
+  display_name: string;
+};
+
+function positiveInteger(value: string | null) {
+  if (!value) return null;
+
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "private, no-store, max-age=0",
+  };
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const slateId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+    const playerId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "playerId",
+      ),
+    );
+
+    const roundNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "round",
+      ),
+    );
+
+    const holeNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "hole",
+      ),
+    );
+
+    if (
+      !slateId ||
+      !playerId ||
+      !roundNumber ||
+      roundNumber > 4 ||
+      !holeNumber ||
+      holeNumber > 18
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid slateId, playerId, round, and hole parameters are required.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const [
+      {
+        data: slateData,
+        error: slateError,
+      },
+      {
+        data: playerData,
+        error: playerError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select(
+          "id, sport, display_name, start_date",
+        )
+        .eq("id", slateId)
+        .single(),
+
+      supabaseAdmin
+        .from("golf_players")
+        .select("id, display_name")
+        .eq("id", playerId)
+        .single(),
+    ]);
+
+    if (
+      slateError ||
+      !slateData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf slate was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    if (
+      playerError ||
+      !playerData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf player was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const slate =
+      slateData as SlateRow;
+
+    const player =
+      playerData as PlayerRow;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "Hole replay is only available for Golf slates.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const tournamentName =
+      slate.display_name?.trim();
+
+    if (!tournamentName) {
+      return NextResponse.json(
+        {
+          error:
+            "This Golf slate does not have a tournament name.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const year = Number(
+      slate.start_date.slice(0, 4),
+    );
+
+    const refreshToken =
+      request.nextUrl.searchParams.get(
+        "refresh",
+      );
+
+    const replay =
+      await fetchGolfHoleReplay({
+        year,
+        tournamentName,
+        playerName:
+          player.display_name,
+        roundNumber,
+        holeNumber,
+        cacheBust:
+          refreshToken?.trim() || null,
+      });
+
+    if (!replay) {
+      return NextResponse.json(
+        {
+          success: true,
+          available: false,
+          message:
+            "Shot tracking is not available for this hole yet.",
+          replay: null,
+        },
+        {
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        available:
+          replay.shots.length > 0,
+        replay,
+      },
+      {
+        headers: noStoreHeaders(),
+      },
+    );
+  } catch (error) {
+    console.error(
+      "Unable to load Golf hole replay",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load hole replay.",
+      },
+      {
+        status: 502,
+        headers: noStoreHeaders(),
+      },
+    );
+  }
+}
+
+
+==========================================================================================
+FILE: components/lineups/GolfHoleReplayPanel.tsx
+==========================================================================================
+
+"use client";
+
+import dynamic from "next/dynamic";
+const GolfHoleMap2D = dynamic(
+  () =>
+    import(
+      "@/components/lineups/GolfHoleMap2D"
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-8 text-center text-xs font-semibold text-slate-400">
+        Loading ShotCast…
+      </div>
+    ),
+  },
+);
+
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type ReplayShot = {
+  strokeNumber: number;
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+  leftToRight: CoordinateSet | null;
+  bottomToTop: CoordinateSet | null;
+};
+
+type Replay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+  shots: ReplayShot[];
+};
+
+type ResponseBody = {
+  success?: boolean;
+  available?: boolean;
+  message?: string;
+  replay?: Replay | null;
+  error?: string;
+};
+
+type ShotCastCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+  verified?: boolean;
+};
+
+type ShotCastManifestHole = {
+  holeNumber: number;
+  available: boolean;
+  par: number | null;
+  yards: number | null;
+  aboutThisHole: string | null;
+  localImageUrl: string | null;
+  alignedMapUrl?: string | null;
+  localAlignedMapUrl?: string | null;
+  calibration?: ShotCastCalibration | null;
+};
+
+type ShotCastManifest = {
+  tournament: {
+    id: string;
+    name: string | null;
+  };
+  course: {
+    id: string;
+    name: string | null;
+  };
+  holes: ShotCastManifestHole[];
+};
+
+type ActiveShotCastConfig = {
+  title: string;
+  imageUrl: string;
+  imageFit: "fill" | "contain";
+  calibration: ShotCastCalibration;
+  calibrationVerified: boolean;
+  aboutThisHole: string | null;
+};
+
+type Props = {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  fallbackPar: number | null;
+  fallbackYardage: number | null;
+  fallbackResult: string;
+  onClose: () => void;
+};
+
+const IDENTITY_CALIBRATION: ShotCastCalibration = {
+  xScale: 1,
+  xOffset: 0,
+  yScale: 1,
+  yOffset: 0,
+  verified: false,
+};
+
+const DETROIT_HOLE_8_CALIBRATION: ShotCastCalibration = {
+  xScale: 2.488624,
+  xOffset: -0.748272,
+  yScale: 0.974452,
+  yOffset: 0.127478,
+  verified: true,
+};
+
+function titleCase(
+  value: string | null | undefined,
+) {
+  if (!value) return "";
+
+  return value
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) =>
+      letter.toUpperCase(),
+    );
+}
+
+function locationLabel(
+  value: string | null | undefined,
+) {
+  return value?.trim() || "Unknown lie";
+}
+
+function resultToneClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle") ||
+    normalized.includes("birdie")
+  ) {
+    return "text-emerald-300";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "text-red-400";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "text-red-300";
+  }
+
+  if (
+    normalized === "par" ||
+    normalized.includes("even")
+  ) {
+    return "text-slate-200";
+  }
+
+  return "text-slate-300";
+}
+
+function resultBadgeClass(
+  result: string | null | undefined,
+) {
+  const normalized =
+    result?.trim().toLowerCase() ?? "";
+
+  if (
+    normalized.includes("albatross") ||
+    normalized.includes("eagle")
+  ) {
+    return "border-emerald-500 bg-emerald-700 text-white";
+  }
+
+  if (normalized.includes("birdie")) {
+    return "border-emerald-400 bg-emerald-600 text-white";
+  }
+
+  if (
+    normalized.includes("double") ||
+    normalized.includes("triple") ||
+    normalized.includes("quad") ||
+    /^\+\d+/.test(normalized)
+  ) {
+    return "border-red-500 bg-red-700 text-white";
+  }
+
+  if (normalized.includes("bogey")) {
+    return "border-red-400 bg-red-600 text-white";
+  }
+
+  return "border-slate-500 bg-slate-700 text-white";
+}
+
+function shotSummary(
+  shot: ReplayShot,
+  holeResult: string,
+) {
+  const pieces: string[] = [];
+
+  if (shot.distance) {
+    pieces.push(shot.distance);
+  }
+
+  if (shot.finalStroke) {
+    pieces.push("In the hole");
+
+    if (holeResult) {
+      pieces.push(holeResult);
+    }
+  } else if (shot.distanceRemaining) {
+    pieces.push(
+      `${shot.distanceRemaining} remaining`,
+    );
+  }
+
+  return pieces.join(" · ");
+}
+
+export default function GolfHoleReplayPanel({
+  slateId,
+  playerId,
+  roundNumber,
+  holeNumber,
+  fallbackPar,
+  fallbackYardage,
+  fallbackResult,
+  onClose,
+}: Props) {
+  const [replay, setReplay] =
+    useState<Replay | null>(null);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isLoading, setIsLoading] =
+    useState(true);
+
+  const [isRefreshing, setIsRefreshing] =
+    useState(false);
+
+  const [lastUpdatedAt, setLastUpdatedAt] =
+    useState<Date | null>(null);
+
+  const [
+    selectedStrokeNumber,
+    setSelectedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    isShotCastOpen,
+    setIsShotCastOpen,
+  ] = useState(false);
+
+  const [
+    shotCastManifest,
+    setShotCastManifest,
+  ] = useState<ShotCastManifest | null>(
+    null,
+  );
+
+  const [
+    isManifestLoading,
+    setIsManifestLoading,
+  ] = useState(false);
+
+  const loadReplay = useCallback(
+    async ({
+      forceRefresh = false,
+      signal,
+    }: {
+      forceRefresh?: boolean;
+      signal?: AbortSignal;
+    } = {}) => {
+      try {
+        if (forceRefresh) {
+          setIsRefreshing(true);
+        } else {
+          setIsLoading(true);
+          setReplay(null);
+        }
+
+        setMessage("");
+
+        const query =
+          new URLSearchParams({
+            slateId: String(slateId),
+            playerId: String(playerId),
+            round: String(roundNumber),
+            hole: String(holeNumber),
+          });
+
+        if (forceRefresh) {
+          query.set(
+            "refresh",
+            String(Date.now()),
+          );
+        }
+
+        const response = await fetch(
+          `/api/golf/hole-replay?${query}`,
+          {
+            cache: "no-store",
+            signal,
+          },
+        );
+
+        const result =
+          (await response.json()) as ResponseBody;
+
+        if (!response.ok) {
+          setMessage(
+            result.error ||
+              "Unable to load shot tracking.",
+          );
+          return;
+        }
+
+        if (!result.replay) {
+          setMessage(
+            result.message ||
+              "Shot tracking is not available for this hole yet.",
+          );
+          return;
+        }
+
+        setReplay(result.replay);
+
+        if (!result.available) {
+          setMessage(
+            result.message ||
+              "This hole has not started yet.",
+          );
+        }
+
+        setSelectedStrokeNumber(
+          result.replay.shots[0]
+            ?.strokeNumber ?? null,
+        );
+        setLastUpdatedAt(new Date());
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.error(
+          "Unable to load Golf hole replay",
+          error,
+        );
+
+        setMessage(
+          "Unable to load shot tracking.",
+        );
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [
+      slateId,
+      playerId,
+      roundNumber,
+      holeNumber,
+    ],
+  );
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    void loadReplay({
+      signal: controller.signal,
+    });
+
+    return () => controller.abort();
+  }, [loadReplay]);
+
+  useEffect(() => {
+    const tournamentId =
+      replay?.tournamentId?.trim() ?? "";
+
+    if (!tournamentId) {
+      setShotCastManifest(null);
+      return;
+    }
+
+    const controller =
+      new AbortController();
+
+    async function loadManifest() {
+      try {
+        setIsManifestLoading(true);
+
+        const databaseResponse =
+          await fetch(
+            `/api/golf/shotcast-manifest?tournamentId=${encodeURIComponent(
+              tournamentId,
+            )}`,
+            {
+              cache: "no-store",
+              signal:
+                controller.signal,
+            },
+          );
+
+        if (databaseResponse.ok) {
+          const manifest =
+            (await databaseResponse.json()) as ShotCastManifest;
+
+          setShotCastManifest(
+            manifest,
+          );
+
+          return;
+        }
+
+        /*
+         * Preserve previously committed static manifests,
+         * including the current Wyndham checkpoint.
+         */
+        const staticResponse =
+          await fetch(
+            `/shotcast/${encodeURIComponent(
+              tournamentId,
+            )}/manifest.json`,
+            {
+              cache: "no-store",
+              signal:
+                controller.signal,
+            },
+          );
+
+        if (!staticResponse.ok) {
+          setShotCastManifest(null);
+          return;
+        }
+
+        const manifest =
+          (await staticResponse.json()) as ShotCastManifest;
+
+        setShotCastManifest(manifest);
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        console.warn(
+          "Unable to load ShotCast manifest",
+          error,
+        );
+
+        setShotCastManifest(null);
+      } finally {
+        setIsManifestLoading(false);
+      }
+    }
+
+    void loadManifest();
+
+    return () => controller.abort();
+  }, [replay?.tournamentId]);
+
+  const activeShotCastConfig =
+    useMemo<ActiveShotCastConfig | null>(
+      () => {
+        /*
+         * Preserve the verified Rocket Classic proof of
+         * concept until that event has its own manifest.
+         */
+        if (
+          slateId === 161 &&
+          holeNumber === 8
+        ) {
+          return {
+            title:
+              "Detroit Golf Club · Hole 8",
+            imageUrl:
+              "/tourcast/rocket-classic/hole-8/terrain08-web.jpg",
+            imageFit: "fill",
+            calibration:
+              DETROIT_HOLE_8_CALIBRATION,
+            calibrationVerified: true,
+            aboutThisHole: null,
+          };
+        }
+
+        const manifestHole =
+          shotCastManifest?.holes.find(
+            (hole) =>
+              Number(
+                hole.holeNumber,
+              ) === holeNumber,
+          ) ?? null;
+
+        const imageUrl =
+          manifestHole
+            ?.localAlignedMapUrl ||
+          manifestHole
+            ?.localImageUrl ||
+          null;
+
+        if (!imageUrl) {
+          return null;
+        }
+
+        const calibration =
+          manifestHole?.calibration &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.xOffset,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yScale,
+          ) &&
+          Number.isFinite(
+            manifestHole
+              .calibration.yOffset,
+          )
+            ? manifestHole.calibration
+            : IDENTITY_CALIBRATION;
+
+        return {
+          title: `${
+            shotCastManifest?.course
+              .name ||
+            "Golf course"
+          } · Hole ${holeNumber}`,
+
+          imageUrl,
+
+          imageFit:
+            manifestHole
+              ?.localAlignedMapUrl
+              ? "fill"
+              : "contain",
+
+          calibration,
+
+          calibrationVerified:
+            calibration.verified ===
+            true,
+
+          aboutThisHole:
+            manifestHole
+              ?.aboutThisHole ??
+            null,
+        };
+      },
+      [
+        holeNumber,
+        shotCastManifest,
+        slateId,
+      ],
+    );
+
+  const isHoleComplete = useMemo(
+    () =>
+      Boolean(
+        replay?.shots.some(
+          (shot) => shot.finalStroke,
+        ),
+      ),
+    [replay],
+  );
+
+  const completedResult =
+    isHoleComplete
+      ? titleCase(replay?.holeStatus) ||
+        fallbackResult
+      : "";
+
+  const displayStatus =
+    isHoleComplete
+      ? completedResult || "Complete"
+      : replay?.shots.length
+        ? "In progress"
+        : replay
+          ? "Not started"
+          : "";
+
+  const par =
+    replay?.par ?? fallbackPar;
+
+  const yardage =
+    replay?.yardage ??
+    fallbackYardage;
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-xl">
+      <header className="flex items-start justify-between gap-4 border-b border-slate-800 px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-400">
+              Hole replay
+            </div>
+
+            {!isHoleComplete &&
+            replay?.shots.length ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/10 px-2 py-0.5 text-[9px] font-black uppercase text-red-300">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+                Live
+              </span>
+            ) : null}
+          </div>
+
+          <h4 className="mt-1 text-lg font-black">
+            Hole {holeNumber}
+          </h4>
+
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-slate-400">
+            <span>
+              {par === null
+                ? "Par —"
+                : `Par ${par}`}
+            </span>
+
+            {yardage !== null ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{yardage} yards</span>
+              </>
+            ) : null}
+
+            {displayStatus ? (
+              <>
+                <span aria-hidden="true">·</span>
+
+                <strong
+                  className={
+                    isHoleComplete
+                      ? resultToneClass(
+                          completedResult,
+                        )
+                      : "text-amber-300"
+                  }
+                >
+                  {displayStatus}
+                </strong>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              void loadReplay({
+                forceRefresh: true,
+              })
+            }
+            disabled={isRefreshing}
+            className="inline-flex h-9 items-center justify-center rounded-xl border border-emerald-700 bg-emerald-950 px-3 text-[11px] font-bold text-emerald-200 transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Refresh this hole's shot tracking"
+          >
+            {isRefreshing
+              ? "Refreshing…"
+              : "↻ Refresh hole"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800"
+            aria-label="Close hole replay"
+          >
+            ×
+          </button>
+        </div>
+      </header>
+
+      {isLoading ? (
+        <div className="px-4 py-7 text-center">
+          <div className="text-sm font-bold text-emerald-300">
+            Loading shot tracking…
+          </div>
+
+          <div className="mt-1 text-xs text-slate-500">
+            Loaded only when you open a hole.
+          </div>
+        </div>
+      ) : message && !replay ? (
+        <div className="px-4 py-6 text-center">
+          <div className="text-sm font-bold text-slate-200">
+            Shot tracking unavailable
+          </div>
+
+          <div className="mt-1 text-xs leading-5 text-slate-500">
+            {message}
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              void loadReplay({
+                forceRefresh: true,
+              })
+            }
+            disabled={isRefreshing}
+            className="mt-4 rounded-xl border border-emerald-700 bg-emerald-950 px-4 py-2 text-xs font-bold text-emerald-200 disabled:opacity-60"
+          >
+            Try again
+          </button>
+        </div>
+      ) : replay ? (
+        <div className="p-3 sm:p-4">
+          {message ? (
+            <div className="mb-3 rounded-xl border border-amber-700/60 bg-amber-950/40 px-3 py-2 text-xs text-amber-200">
+              {message}
+            </div>
+          ) : null}
+
+          {activeShotCastConfig ? (
+            <div className="mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-xs font-bold text-slate-200">
+                      ShotCast
+                    </div>
+
+                    {!activeShotCastConfig
+                      .calibrationVerified ? (
+                      <span className="rounded-full border border-amber-700/60 bg-amber-950/50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wide text-amber-300">
+                        Layout preview
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-0.5 text-[10px] text-slate-500">
+                    {activeShotCastConfig
+                      .calibrationVerified
+                      ? "Interactive aerial shot replay"
+                      : "Interactive hole layout · shot alignment pending"}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setIsShotCastOpen(
+                      (current) =>
+                        !current,
+                    )
+                  }
+                  aria-expanded={
+                    isShotCastOpen
+                  }
+                  className={`rounded-lg border px-3 py-1.5 text-[10px] font-bold transition ${
+                    isShotCastOpen
+                      ? "border-slate-600 bg-slate-950 text-slate-300"
+                      : "border-emerald-600 bg-emerald-950 text-emerald-200 hover:bg-emerald-900"
+                  }`}
+                >
+                  {isShotCastOpen
+                    ? "Hide ShotCast"
+                    : "Open ShotCast"}
+                </button>
+              </div>
+
+              {isShotCastOpen ? (
+                <div className="mt-3">
+                  <GolfHoleMap2D
+                    title={
+                      activeShotCastConfig
+                        .title
+                    }
+                    imageUrl={
+                      activeShotCastConfig
+                        .imageUrl
+                    }
+                    imageFit={
+                      activeShotCastConfig
+                        .imageFit
+                    }
+                    calibration={
+                      activeShotCastConfig
+                        .calibration
+                    }
+                    showShotOverlay={
+                      activeShotCastConfig
+                        .calibrationVerified
+                    }
+                    emptyStateLabel={
+                      replay.shots.length === 0
+                        ? "This hole has not started. The course layout is available now, and shot paths will appear once play begins and alignment is verified."
+                        : activeShotCastConfig
+                              .calibrationVerified
+                          ? "No plottable shot coordinates were returned."
+                          : "Shot data is available, but its placement is hidden until this hole’s map alignment is verified."
+                    }
+                    shots={replay.shots}
+                    selectedStrokeNumber={
+                      selectedStrokeNumber
+                    }
+                    onSelectStroke={
+                      setSelectedStrokeNumber
+                    }
+                  />
+
+                  {activeShotCastConfig
+                    .aboutThisHole ? (
+                    <div className="mt-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2.5">
+                      <div className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                        About this hole
+                      </div>
+
+                      <div className="mt-1 text-xs leading-5 text-slate-400">
+                        {
+                          activeShotCastConfig
+                            .aboutThisHole
+                        }
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : isManifestLoading ? (
+            <div className="mb-3 rounded-xl border border-slate-800 bg-slate-900 px-3 py-3 text-xs text-slate-500">
+              Checking for ShotCast course assets…
+            </div>
+          ) : null}
+
+          <div className="overflow-hidden rounded-xl border border-slate-800">
+            {replay.shots.map(
+              (shot, index) => {
+                const summary =
+                  shotSummary(
+                    shot,
+                    completedResult,
+                  );
+
+                const isCurrentBall =
+                  !isHoleComplete &&
+                  index ===
+                    replay.shots.length - 1;
+
+                const isSelectedShot =
+                  shot.strokeNumber ===
+                  selectedStrokeNumber;
+
+                return (
+                  <button
+                    type="button"
+                    key={shot.strokeNumber}
+                    onClick={() =>
+                      setSelectedStrokeNumber(
+                        shot.strokeNumber,
+                      )
+                    }
+                    className={`block w-full px-3 py-3 text-left transition sm:px-4 ${
+                      index > 0
+                        ? "border-t border-slate-800"
+                        : ""
+                    } ${
+                      isSelectedShot
+                        ? "bg-emerald-500/10"
+                        : isCurrentBall
+                          ? "bg-amber-500/5"
+                          : "hover:bg-slate-900/70"
+                    }`}
+                  >
+                    <div className="flex gap-3">
+                      <span
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
+                          shot.finalStroke
+                            ? resultBadgeClass(
+                                completedResult,
+                              )
+                            : isCurrentBall
+                              ? "border-amber-500 bg-amber-950 text-amber-200"
+                              : "border-slate-600 bg-slate-800 text-slate-200"
+                        }`}
+                      >
+                        {shot.strokeNumber}
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <strong className="text-sm text-white">
+                            Shot {shot.strokeNumber}
+                          </strong>
+
+                          {summary ? (
+                            <>
+                              <span
+                                aria-hidden="true"
+                                className="text-slate-600"
+                              >
+                                ·
+                              </span>
+
+                              <span
+                                className={`text-sm font-bold ${
+                                  shot.finalStroke
+                                    ? resultToneClass(
+                                        completedResult,
+                                      )
+                                    : "text-slate-200"
+                                }`}
+                              >
+                                {summary}
+                              </span>
+                            </>
+                          ) : null}
+
+                          {isCurrentBall ? (
+                            <span className="rounded-full border border-amber-700/60 bg-amber-950 px-2 py-0.5 text-[9px] font-black uppercase text-amber-300">
+                              Current ball
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-400">
+                          {locationLabel(
+                            shot.fromLocation,
+                          )}
+
+                          <span
+                            aria-hidden="true"
+                            className="mx-2 text-slate-600"
+                          >
+                            →
+                          </span>
+
+                          {shot.finalStroke
+                            ? "Hole"
+                            : locationLabel(
+                                shot.toLocation,
+                              )}
+                        </div>
+
+                        {shot.playByPlay ? (
+                          <div className="mt-1.5 text-[11px] leading-4 text-slate-600">
+                            {shot.playByPlay}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-600">
+            <span>
+              Shot data provided on demand from PGA TOUR tracking.
+            </span>
+
+            {lastUpdatedAt ? (
+              <span>
+                Updated{" "}
+                {lastUpdatedAt.toLocaleTimeString(
+                  [],
+                  {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  },
+                )}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+
+==========================================================================================
+FILE: components/lineups/GolfPlayerModal.tsx
+==========================================================================================
+
+"use client";
+
+import { useState } from "react";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
+import type {
+  GolfHoleStat,
+  GolfRoundStat,
+  Player,
+  PlayerStat,
+} from "@/components/lineups/types";
+
+type Props = {
+  player: Player;
+  stat: PlayerStat | null;
+  slateId: number | null;
+  onClose: () => void;
+};
+
+function formatToPar(value: number | null | undefined) {
+  if (value === null || value === undefined) return "—";
+  if (value === 0) return "E";
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function formatPosition(value: number | null | undefined) {
+  if (!value) return "—";
+  return `T${value}`;
+}
+
+function statusLabel(stat: PlayerStat | null) {
+  const status = stat?.status ?? "scheduled";
+
+  if (status === "active") {
+    return stat?.last_hole
+      ? `Round ${stat.current_round ?? "—"} · Thru ${stat.last_hole}`
+      : `Round ${stat?.current_round ?? "—"}`;
+  }
+
+  if (status === "finished") return "Tournament complete";
+  if (status === "cut") return "Missed cut";
+  if (status === "withdrawn") return "Withdrawn";
+  if (status === "disqualified") return "Disqualified";
+  if (status === "did_not_start") return "Did not start";
+
+  return stat?.tee_time_raw || "Scheduled";
+}
+
+function holeClass(hole: GolfHoleStat) {
+  const relative = hole.relative_to_par;
+
+  if (relative === null) {
+    return "border-slate-200 bg-slate-50 text-slate-400";
+  }
+
+  if (relative <= -2) {
+    return "border-emerald-700 bg-emerald-700 text-white ring-2 ring-emerald-200";
+  }
+
+  if (relative === -1) {
+    return "border-emerald-300 bg-emerald-100 text-emerald-900";
+  }
+
+  if (relative === 0) {
+    return "border-slate-200 bg-white text-slate-700";
+  }
+
+  if (relative === 1) {
+    return "border-red-300 bg-red-100 text-red-900";
+  }
+
+  return "border-red-700 bg-red-700 text-white ring-2 ring-red-200";
+}
+
+function holeValue(hole: GolfHoleStat) {
+  if (hole.relative_to_par === null) return "—";
+  if (hole.relative_to_par === 0) return "E";
+  return hole.relative_to_par > 0
+    ? `+${hole.relative_to_par}`
+    : String(hole.relative_to_par);
+}
+
+function holePar(hole: GolfHoleStat | null | undefined) {
+  if (
+    hole?.par !== null &&
+    hole?.par !== undefined &&
+    Number.isFinite(Number(hole.par))
+  ) {
+    return Number(hole.par);
+  }
+
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined ||
+    hole.relative_to_par === null ||
+    hole.relative_to_par === undefined
+  ) {
+    return null;
+  }
+
+  const par =
+    Number(hole.strokes) -
+    Number(hole.relative_to_par);
+
+  return Number.isFinite(par) ? par : null;
+}
+
+function holeResultName(
+  relative: number | null | undefined,
+) {
+  if (relative === null || relative === undefined) {
+    return "Not played";
+  }
+
+  if (relative <= -3) return "Albatross or better";
+  if (relative === -2) return "Eagle";
+  if (relative === -1) return "Birdie";
+  if (relative === 0) return "Par";
+  if (relative === 1) return "Bogey";
+  if (relative === 2) return "Double bogey";
+  return `+${relative}`;
+}
+
+function holeTitle(
+  holeNumber: number,
+  hole: GolfHoleStat,
+) {
+  const par = holePar(hole);
+  const yardage =
+    hole.yards === null ||
+    hole.yards === undefined
+      ? null
+      : Number(hole.yards);
+
+  const courseDetail = [
+    `Hole ${holeNumber}`,
+    par === null ? null : `Par ${par}`,
+    yardage === null ? null : `${yardage} yards`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  if (hole.strokes === null) {
+    return `${courseDetail} · Not played`;
+  }
+
+  return `${courseDetail} · ${hole.strokes} strokes (${holeValue(
+    hole,
+  )})`;
+}
+
+function PenaltyRound({
+  roundNumber,
+  score,
+  status,
+}: {
+  roundNumber: number;
+  score: number;
+  status: string;
+}) {
+  const label =
+    status === "cut"
+      ? "Missed-cut penalty"
+      : status === "withdrawn"
+        ? "Withdrawal penalty"
+        : status === "disqualified"
+          ? "Disqualification penalty"
+          : "Penalty round";
+
+  return (
+    <section className="rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-bold uppercase tracking-wider text-amber-800">
+            Round {roundNumber}
+          </span>
+
+          <div className="mt-1 text-sm text-amber-800">
+            {label}
+          </div>
+        </div>
+
+        <strong className="text-2xl font-black text-amber-950">
+          {formatToPar(score)}
+        </strong>
+      </header>
+
+      <div className="mt-4 rounded-xl border border-dashed border-amber-300 bg-white/60 px-4 py-4 text-sm text-amber-900">
+        No holes played. This round score was added under the league penalty
+        rule.
+      </div>
+    </section>
+  );
+}
+
+function formatGolfTeeTime(
+  value: string | null | undefined,
+) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function RoundScorecard({
+  round,
+  contextLabel,
+  isExpanded,
+  onToggle,
+  slateId,
+  playerId,
+}: {
+  round: GolfRoundStat;
+  contextLabel: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  slateId: number | null;
+  playerId: number;
+}) {
+  const holesByNumber = new Map(
+    round.holes.map((hole) => [hole.hole_number, hole]),
+  );
+
+  const [selectedHoleNumber, setSelectedHoleNumber] =
+    useState<number | null>(null);
+
+  const roundProgress =
+    round.holes_completed >= 18
+      ? "Complete"
+      : round.holes_completed > 0
+        ? `Thru ${round.holes_completed}`
+        : formatGolfTeeTime(
+            round.tee_time ?? round.tee_time_raw,
+          ) ?? "Not started";
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isExpanded}
+        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-slate-50"
+      >
+        <div className="min-w-0">
+          <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-700">
+            {contextLabel}
+          </span>
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <strong className="text-base text-slate-950">
+              Round {round.round_number}
+            </strong>
+
+            <span className="text-sm text-slate-500">
+              {roundProgress}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <div className="text-right">
+            <strong className="block text-xl font-black text-slate-950">
+              {formatToPar(round.score_to_par)}
+            </strong>
+
+            <span className="block text-[10px] font-bold uppercase text-slate-500">
+              {round.strokes ?? "—"} strokes
+            </span>
+          </div>
+
+          <span
+            aria-hidden="true"
+            className={`flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-lg font-bold text-slate-600 transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+          >
+            ⌄
+          </span>
+        </div>
+      </button>
+
+      {isExpanded ? (
+        <div className="border-t border-slate-200 px-4 pb-4 pt-4">
+          <div className="overflow-x-auto pb-2">
+            <div className="grid min-w-[700px] grid-cols-18 gap-1.5">
+              {Array.from({ length: 18 }, (_, index) => index + 1).map(
+                (holeNumber) => (
+                  <div
+                    key={`number-${holeNumber}`}
+                    className="text-center text-[10px] font-bold text-slate-400"
+                  >
+                    {holeNumber}
+                  </div>
+                ),
+              )}
+
+              {Array.from({ length: 18 }, (_, index) => index + 1).map(
+                (holeNumber) => (
+                  <div
+                    key={`par-${holeNumber}`}
+                    className={
+                      holeNumber === 1
+                        ? "relative text-center text-[9px] font-bold text-slate-500 before:absolute before:right-full before:mr-2 before:content-['Par']"
+                        : "text-center text-[9px] font-bold text-slate-500"
+                    }
+                  >
+                    {holePar(
+                      holesByNumber.get(holeNumber),
+                    ) ?? "—"}
+                  </div>
+                ),
+              )}
+
+              {Array.from({ length: 18 }, (_, index) => index + 1).map(
+                (holeNumber) => {
+                  const hole =
+                    holesByNumber.get(holeNumber) ??
+                    ({
+                      hole_number: holeNumber,
+                      strokes: null,
+                      relative_to_par: null,
+                      score_display: null,
+                    } satisfies GolfHoleStat);
+
+                  const isSelected =
+                    selectedHoleNumber === holeNumber;
+
+                  const par = holePar(hole);
+
+                  const yardage =
+                    hole.yards === null ||
+                    hole.yards === undefined
+                      ? null
+                      : Number(hole.yards);
+
+                  return (
+                    <div
+                      key={`score-${holeNumber}`}
+                      className="relative"
+                    >
+                      <button
+                        type="button"
+                        className={`flex h-9 w-full items-center justify-center rounded-lg border text-xs font-black ${holeClass(
+                          hole,
+                        )}`}
+                        title={holeTitle(holeNumber, hole)}
+                        aria-label={holeTitle(
+                          holeNumber,
+                          hole,
+                        )}
+                        aria-expanded={isSelected}
+                        onClick={() =>
+                          setSelectedHoleNumber(
+                            isSelected
+                              ? null
+                              : holeNumber,
+                          )
+                        }
+                      >
+                        {holeValue(hole)}
+                      </button>
+
+                    </div>
+                  );
+                },
+              )}
+            </div>
+          </div>
+
+          {selectedHoleNumber !== null ? (() => {
+            const selectedHole =
+              holesByNumber.get(
+                selectedHoleNumber,
+              );
+
+            const selectedPar =
+              holePar(selectedHole);
+
+            const selectedYardage =
+              selectedHole?.yards === null ||
+              selectedHole?.yards === undefined
+                ? null
+                : Number(selectedHole.yards);
+
+            return slateId ? (
+              <GolfHoleReplayPanel
+                slateId={slateId}
+                playerId={playerId}
+                roundNumber={round.round_number}
+                holeNumber={selectedHoleNumber}
+                fallbackPar={selectedPar}
+                fallbackYardage={
+                  selectedYardage
+                }
+                fallbackResult={holeResultName(
+                  selectedHole
+                    ?.relative_to_par,
+                )}
+                onClose={() =>
+                  setSelectedHoleNumber(null)
+                }
+              />
+            ) : (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                Shot tracking is unavailable because
+                this scorecard is not connected to a
+                Golf slate.
+              </div>
+            );
+          })() : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+export default function GolfPlayerModal({
+  player,
+  stat,
+  slateId,
+  onClose,
+}: Props) {
+  const persistedRounds = [
+    ...(stat?.rounds ?? []),
+  ].sort(
+    (a, b) =>
+      a.round_number -
+      b.round_number,
+  );
+
+  const scheduledFallbackRound: GolfRoundStat = {
+    round_number: Math.min(
+      4,
+      Math.max(
+        1,
+        Number(
+          stat?.current_round ??
+            Number(
+              stat?.rounds_completed ??
+                0,
+            ) +
+              1,
+        ),
+      ),
+    ),
+    score_to_par: null,
+    score_display: null,
+    strokes: null,
+    holes_completed: 0,
+    tee_time:
+      stat?.tee_time ?? null,
+    tee_time_raw:
+      stat?.tee_time_raw ?? null,
+    status: "scheduled",
+    holes: [],
+  };
+
+  const rounds =
+    persistedRounds.length > 0
+      ? persistedRounds
+      : stat?.status === "scheduled"
+        ? [scheduledFallbackRound]
+        : [];
+
+  const activelyPlayingRound =
+    rounds
+      .filter(
+        (round) =>
+          round.holes_completed > 0 &&
+          round.holes_completed < 18,
+      )
+      .at(-1) ?? null;
+
+  const mostRecentPlayedRound =
+    rounds
+      .filter(
+        (round) =>
+          round.holes_completed > 0 ||
+          round.strokes !== null,
+      )
+      .at(-1) ?? null;
+
+  const upcomingRound =
+    rounds.find(
+      (round) =>
+        round.status ===
+          "scheduled" ||
+        (
+          round.holes_completed ===
+            0 &&
+          round.strokes === null
+        ),
+    ) ?? null;
+
+  const primaryRound =
+    activelyPlayingRound ??
+    mostRecentPlayedRound ??
+    upcomingRound;
+
+  /*
+   * Every returned round is meaningful. In particular, a
+   * scheduled round must remain visible even when PGA has not
+   * published a tee time yet.
+   */
+  const visibleRounds = rounds;
+
+  const [expandedRoundNumbers, setExpandedRoundNumbers] =
+    useState<number[]>(() =>
+      primaryRound ? [primaryRound.round_number] : [],
+    );
+
+  function toggleRound(roundNumber: number) {
+    setExpandedRoundNumbers((current) =>
+      current.includes(roundNumber)
+        ? current.filter(
+            (value) => value !== roundNumber,
+          )
+        : [...current, roundNumber],
+    );
+  }
+
+  const completedRoundNumbers = new Set(
+    rounds
+      .filter(
+        (round) =>
+          round.holes_completed > 0 ||
+          round.strokes !== null,
+      )
+      .map((round) => round.round_number),
+  );
+
+  const missingRoundNumbers = [1, 2, 3, 4].filter(
+    (roundNumber) =>
+      !completedRoundNumbers.has(roundNumber),
+  );
+
+  const totalPenalty = Number(
+    stat?.penalty_strokes ?? 0,
+  );
+
+  const penaltyRoundNumbers =
+    totalPenalty > 0
+      ? missingRoundNumbers
+      : [];
+
+  const penaltyPerRound =
+    penaltyRoundNumbers.length > 0
+      ? totalPenalty / penaltyRoundNumbers.length
+      : 0;
+
+  return (
+    <div
+      className="golf-player-modal-overlay mobile-modal-safe fixed inset-0 z-[11000] flex items-end justify-center bg-slate-950/60 px-1 py-1 backdrop-blur-sm sm:items-center sm:px-3 sm:py-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${player.name} Golf scorecard`}
+        className="golf-player-modal-shell mobile-modal-panel-safe flex max-h-[97dvh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-slate-50 shadow-2xl sm:max-h-[94dvh] sm:rounded-3xl"
+      >
+        <header className="relative border-b border-slate-200 bg-slate-950 px-4 py-5 text-white sm:px-6 sm:py-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-2xl transition hover:bg-white/20"
+            aria-label="Close Golf scorecard"
+          >
+            ×
+          </button>
+
+          <div className="flex items-center gap-4 pr-12">
+            <PlayerHeadshot
+              espnGolfPlayerId={player.espn_player_id}
+              imageUrl={player.headshot_url}
+              playerName={player.name}
+              size="xl"
+              className="border-white/20 bg-white/10"
+            />
+
+            <div className="min-w-0">
+              <div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
+                Tournament scorecard
+              </div>
+
+              <h2 className="mt-2 truncate text-3xl font-black">
+                {player.name}
+              </h2>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-300">
+                {player.country ? <span>{player.country}</span> : null}
+
+                <span>{statusLabel(stat)}</span>
+
+                <span>
+                  OWGR{" "}
+                  {player.owgr_rank
+                    ? `#${player.owgr_rank}`
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white/10 p-3">
+              <span className="block text-xs uppercase text-slate-400">
+                Position
+              </span>
+
+              <strong className="mt-1 block text-2xl">
+                {formatPosition(stat?.leaderboard_order)}
+              </strong>
+            </div>
+
+            <div className="rounded-2xl bg-emerald-500/20 p-3">
+              <span className="block text-xs uppercase text-emerald-200">
+                Score
+              </span>
+
+              <strong className="mt-1 block text-2xl">
+                {formatToPar(stat?.fantasy_points)}
+              </strong>
+            </div>
+          </div>
+
+          {Number(stat?.penalty_strokes ?? 0) > 0 ? (
+            <div className="mt-4 rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+              Includes +{stat?.penalty_strokes} from unplayed-round
+              penalties.
+            </div>
+          ) : null}
+        </header>
+
+        <div className="space-y-4 overflow-y-auto p-4 sm:p-5">
+          {rounds.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center text-sm text-slate-500">
+              No completed holes are available yet.
+            </div>
+          ) : (
+            <>
+              {[...visibleRounds]
+                .sort((a, b) => {
+                  const aIsPrimary =
+                    a.round_number ===
+                    primaryRound?.round_number;
+
+                  const bIsPrimary =
+                    b.round_number ===
+                    primaryRound?.round_number;
+
+                  if (aIsPrimary) return -1;
+                  if (bIsPrimary) return 1;
+
+                  const aIsUpcoming =
+                    a.holes_completed === 0 &&
+                    a.strokes === null;
+
+                  const bIsUpcoming =
+                    b.holes_completed === 0 &&
+                    b.strokes === null;
+
+                  if (aIsUpcoming && bIsUpcoming) {
+                    return a.round_number - b.round_number;
+                  }
+
+                  if (aIsUpcoming) return -1;
+                  if (bIsUpcoming) return 1;
+
+                  return b.round_number - a.round_number;
+                })
+                .map((round) => {
+                  const isPrimary =
+                    round.round_number ===
+                    primaryRound?.round_number;
+
+                  const isUpcoming =
+                    round.holes_completed === 0 &&
+                    round.strokes === null;
+
+                  const contextLabel = isPrimary
+                    ? activelyPlayingRound
+                      ? "Current round"
+                      : "Most recent round"
+                    : isUpcoming
+                      ? "Upcoming round"
+                      : "Previous round";
+
+                  return (
+                    <RoundScorecard
+                      key={`played-${round.round_number}`}
+                      round={round}
+                      contextLabel={contextLabel}
+                      isExpanded={expandedRoundNumbers.includes(
+                        round.round_number,
+                      )}
+                      onToggle={() =>
+                        toggleRound(round.round_number)
+                      }
+                      slateId={slateId}
+                      playerId={player.id}
+                    />
+                  );
+                })}
+
+              {penaltyRoundNumbers.map(
+                (roundNumber) => (
+                  <PenaltyRound
+                    key={`penalty-${roundNumber}`}
+                    roundNumber={roundNumber}
+                    score={penaltyPerRound}
+                    status={stat?.status ?? ""}
+                  />
+                ),
+              )}
+            </>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+
+==========================================================================================
+FILE: components/lineups/GolfTournamentView.tsx
+==========================================================================================
+
+"use client";
+
+import { Fragment, useMemo, useState } from "react";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import { getGolfStatusMeta } from "@/lib/golf/status";
+import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+import TeamAvatar from "@/components/ui/TeamAvatar";
+import type {
+  OrderedTeam,
+  Player,
+  PlayerStat,
+} from "@/components/lineups/types";
+
+type Props = {
+  players: Player[];
+  teams: OrderedTeam[];
+  getPlayersForTeam: (teamId: number) => Player[];
+  getRawPlayerStat: (playerId: number) => PlayerStat | null;
+  setProfilePlayer: (player: Player | null) => void;
+};
+
+type TournamentRow = {
+  player: Player;
+  stat: PlayerStat;
+  owner: OrderedTeam | null;
+};
+
+function formatGolfScore(
+  value: number | null | undefined,
+) {
+  if (value === null || value === undefined) {
+    return "—";
+  }
+
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) return "—";
+  if (numeric === 0) return "E";
+
+  return numeric > 0
+    ? `+${numeric}`
+    : String(numeric);
+}
+
+function formatPosition(
+  value: number | null | undefined,
+) {
+  if (!value) return "—";
+  return `T${value}`;
+}
+
+function tournamentStatus(
+  stat: PlayerStat,
+) {
+  const meta =
+    getGolfStatusMeta(stat);
+
+  const className =
+    meta.state === "playing"
+      ? "border-emerald-700 bg-emerald-950 text-emerald-200"
+      : meta.state === "upcoming"
+        ? "border-sky-700 bg-sky-950 text-sky-200"
+        : meta.state === "cut" ||
+            meta.state === "disqualified"
+          ? "border-red-800 bg-red-950 text-red-200"
+          : meta.state === "withdrawn"
+            ? "border-amber-700 bg-amber-950 text-amber-200"
+            : "border-slate-600 bg-slate-800 text-slate-200";
+
+  return {
+    ...meta,
+    className,
+  };
+}
+
+export default function GolfTournamentView({
+  players,
+  teams,
+  getPlayersForTeam,
+  getRawPlayerStat,
+  setProfilePlayer,
+}: Props) {
+  const [searchTerm, setSearchTerm] =
+    useState("");
+
+  const [draftedOnly, setDraftedOnly] =
+    useState(false);
+
+  const [playingNowOnly, setPlayingNowOnly] =
+    useState(false);
+
+  const [
+    selectedOwnerTeamId,
+    setSelectedOwnerTeamId,
+  ] = useState<number | "drafted" | null>(null);
+
+  const fantasyTeams = useMemo(
+    () =>
+      teams.filter(
+        (team) =>
+          team.is_participating !== false,
+      ),
+    [teams],
+  );
+
+  const ownerByPlayerId = useMemo(() => {
+    const map =
+      new Map<number, OrderedTeam>();
+
+    teams
+      .filter(
+        (team) =>
+          team.is_participating !== false,
+      )
+      .forEach((team) => {
+        getPlayersForTeam(team.id).forEach(
+          (player) => {
+            map.set(player.id, team);
+          },
+        );
+      });
+
+    return map;
+  }, [teams, getPlayersForTeam]);
+
+  const rows = useMemo<TournamentRow[]>(() => {
+    const normalizedSearch =
+      searchTerm.trim().toLowerCase();
+
+    return players
+      .map((player) => {
+        const stat =
+          getRawPlayerStat(player.id);
+
+        if (!stat) return null;
+
+        return {
+          player,
+          stat,
+          owner:
+            ownerByPlayerId.get(player.id) ??
+            null,
+        };
+      })
+      .filter(
+        (
+          row,
+        ): row is TournamentRow =>
+          row !== null,
+      )
+      .filter((row) => {
+        if (
+          draftedOnly &&
+          !row.owner
+        ) {
+          return false;
+        }
+
+        if (
+          normalizedSearch &&
+          !row.player.name
+            .toLowerCase()
+            .includes(normalizedSearch)
+        ) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const aPosition =
+          Number(
+            a.stat.leaderboard_order ??
+              9999,
+          );
+
+        const bPosition =
+          Number(
+            b.stat.leaderboard_order ??
+              9999,
+          );
+
+        if (aPosition !== bPosition) {
+          return aPosition - bPosition;
+        }
+
+        const aStatus =
+          tournamentStatus(a.stat).order;
+
+        const bStatus =
+          tournamentStatus(b.stat).order;
+
+        if (aStatus !== bStatus) {
+          return aStatus - bStatus;
+        }
+
+        return a.player.name.localeCompare(
+          b.player.name,
+        );
+      });
+  }, [
+    players,
+    getRawPlayerStat,
+    ownerByPlayerId,
+    searchTerm,
+    draftedOnly,
+  ]);
+
+  const cutLine = useMemo(
+    () =>
+      calculateGolfCutLine(
+        players.flatMap((player) => {
+          const stat =
+            getRawPlayerStat(
+              player.id,
+            );
+
+          if (!stat) {
+            return [];
+          }
+
+          return [
+            {
+              score:
+                stat.official_score_to_par ??
+                stat.fantasy_points,
+              status: stat.status,
+              position:
+                stat.leaderboard_order,
+              holesCompleted:
+                stat.holes_completed,
+            },
+          ];
+        }),
+      ),
+    [
+      players,
+      getRawPlayerStat,
+    ],
+  );
+
+  const draftedCount = useMemo(
+    () =>
+      players.filter((player) =>
+        ownerByPlayerId.has(player.id),
+      ).length,
+    [players, ownerByPlayerId],
+  );
+
+  function getCurrentGolfRound(
+    row: TournamentRow,
+  ) {
+    const rounds =
+      [...(row.stat.rounds ?? [])]
+        .sort(
+          (a, b) =>
+            a.round_number -
+            b.round_number,
+        );
+
+    const statedCurrentRound =
+      Number(
+        row.stat.current_round ?? 0,
+      );
+
+    if (statedCurrentRound > 0) {
+      const matchingRound =
+        rounds.find(
+          (round) =>
+            Number(
+              round.round_number,
+            ) === statedCurrentRound,
+        );
+
+      if (matchingRound) {
+        return matchingRound;
+      }
+    }
+
+    return (
+      rounds
+        .filter(
+          (round) =>
+            Number(
+              round.holes_completed ?? 0,
+            ) > 0 ||
+            round.strokes !== null,
+        )
+        .at(-1) ??
+      null
+    );
+  }
+
+  function isGolferPlayingNow(
+    row: TournamentRow,
+  ) {
+    if (
+      row.stat.status !== "active"
+    ) {
+      return false;
+    }
+
+    const currentRound =
+      getCurrentGolfRound(row);
+
+    if (!currentRound) {
+      return false;
+    }
+
+    const holesCompleted =
+      Number(
+        currentRound.holes_completed ?? 0,
+      );
+
+    return (
+      holesCompleted > 0 &&
+      holesCompleted < 18
+    );
+  }
+
+  const playingNowCount = useMemo(
+    () =>
+      rows.filter(
+        isGolferPlayingNow,
+      ).length,
+    [rows],
+  );
+
+  const visibleRows = useMemo(() => {
+    if (!playingNowOnly) {
+      return rows;
+    }
+
+    /*
+     * The main rows array is already sorted by the provider's
+     * leaderboard order. Filtering preserves that display order.
+     */
+    return rows.filter(
+      isGolferPlayingNow,
+    );
+  }, [playingNowOnly, rows]);
+
+  /*
+   * The projected cut is score-based, while the provider's displayed
+   * leaderboard order can temporarily contain golfers with no usable
+   * score (for example, an upcoming/stale row mixed among leaders).
+   *
+   * Never use simple adjacent rows to locate the cut divider.
+   * Instead find the first DISPLAYED golfer who:
+   *
+   *   1. has a real score, and
+   *   2. is worse than the cut score.
+   *
+   * Unscored golfers therefore cannot accidentally pull the cut line
+   * toward the top of the leaderboard.
+   */
+  const firstOutsideCutPlayerId =
+    useMemo(() => {
+      if (!cutLine) {
+        return null;
+      }
+
+      const outsideRow =
+        visibleRows.find((row) => {
+          const rawScore =
+            row.stat.official_score_to_par ??
+            row.stat.fantasy_points;
+
+          if (
+            rawScore === null ||
+            rawScore === undefined
+          ) {
+            return false;
+          }
+
+          const score =
+            Number(rawScore);
+
+          return (
+            Number.isFinite(score) &&
+            score > cutLine.score
+          );
+        });
+
+      return (
+        outsideRow?.player.id ??
+        null
+      );
+    }, [
+      cutLine,
+      visibleRows,
+    ]);
+
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-950 shadow-sm">
+      <header className="border-b border-slate-800 bg-gradient-to-r from-emerald-950 to-slate-950 px-5 py-5 text-white">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">
+              Tournament view
+            </span>
+
+            <h3 className="mt-1 text-2xl font-black">
+              Official Leaderboard
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-300">
+              Full field with fantasy ownership highlighted.
+            </p>
+          </div>
+
+          <div className="rounded-full border border-white/10 bg-white/10 px-3 py-1.5 text-xs font-bold text-slate-200">
+            {rows.length} golfers
+          </div>
+        </div>
+      </header>
+
+      {cutLine ? (
+        <div className="border-b border-amber-500/30 bg-amber-950/30 px-4 py-3 text-white">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-300">
+                {cutLine.official
+                  ? "Cut line"
+                  : "Projected cut"}
+              </span>
+
+              <div className="mt-1 flex items-baseline gap-2">
+                <strong className="text-3xl font-black">
+                  {cutLine.display}
+                </strong>
+
+                <span className="text-xs font-semibold text-amber-200/80">
+                  {cutLine.ruleLabel}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-5 text-right text-[11px] text-slate-300 sm:grid-cols-3">
+              <div>
+                <strong className="block text-base text-white">
+                  {cutLine.inside}
+                </strong>
+                inside
+              </div>
+
+              <div>
+                <strong className="block text-base text-white">
+                  {cutLine.tiedAtCut}
+                </strong>
+                tied
+              </div>
+
+              <div className="hidden sm:block">
+                <strong className="block text-base text-white">
+                  {cutLine.outside}
+                </strong>
+                outside
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="border-b border-slate-800 bg-slate-900 p-3">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">
+              Search golfers
+            </span>
+
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) =>
+                setSearchTerm(
+                  event.target.value,
+                )
+              }
+              placeholder="Search golfers..."
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-emerald-500"
+            />
+          </label>
+
+          <button
+            type="button"
+            onClick={() =>
+              setDraftedOnly(
+                (current) => !current,
+              )
+            }
+            aria-pressed={draftedOnly}
+            className={`rounded-xl border px-4 py-2.5 text-sm font-bold transition ${
+              draftedOnly
+                ? "border-emerald-500 bg-emerald-900 text-emerald-100"
+                : "border-slate-700 bg-slate-950 text-slate-300 hover:border-emerald-700"
+            }`}
+          >
+            {draftedOnly
+              ? `✓ Drafted only (${draftedCount})`
+              : `Drafted only (${draftedCount})`}
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setPlayingNowOnly(
+                (current) => !current,
+              )
+            }
+            aria-pressed={playingNowOnly}
+            className={`rounded-xl border px-3 py-2 text-xs font-bold transition ${
+              playingNowOnly
+                ? "border-amber-400 bg-amber-400 text-slate-950"
+                : "border-slate-700 bg-slate-900 text-slate-300 hover:border-amber-600 hover:text-amber-200"
+            }`}
+          >
+            {playingNowOnly
+              ? `✓ Playing now (${playingNowCount})`
+              : `Playing now (${playingNowCount})`}
+          </button>
+
+        </div>
+      </div>
+
+      <div className="border-b border-slate-800 bg-slate-950 px-3 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+              Fantasy overlay
+            </span>
+
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              Highlight all drafted golfers or isolate one fantasy team.
+            </p>
+          </div>
+
+          {selectedOwnerTeamId !== null ? (
+            <button
+              type="button"
+              onClick={() =>
+                setSelectedOwnerTeamId(null)
+              }
+              className="shrink-0 rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-[11px] font-bold text-slate-300 transition hover:border-emerald-700 hover:text-white"
+            >
+              Clear overlay
+            </button>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <button
+            type="button"
+            onClick={() =>
+              setSelectedOwnerTeamId(
+                selectedOwnerTeamId === "drafted"
+                  ? null
+                  : "drafted",
+              )
+            }
+            aria-pressed={
+              selectedOwnerTeamId === "drafted"
+            }
+            className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-black transition ${
+              selectedOwnerTeamId === "drafted"
+                ? "border-emerald-500 bg-emerald-900 text-emerald-100"
+                : "border-slate-700 bg-slate-900 text-slate-400 hover:border-emerald-700"
+            }`}
+          >
+            All drafted
+
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+                selectedOwnerTeamId === "drafted"
+                  ? "bg-emerald-700 text-white"
+                  : "bg-slate-800 text-slate-500"
+              }`}
+            >
+              {draftedCount}
+            </span>
+          </button>
+
+          {fantasyTeams.map((team) => {
+            const isSelected =
+              selectedOwnerTeamId ===
+              team.id;
+
+            const golferCount =
+              getPlayersForTeam(
+                team.id,
+              ).length;
+
+            return (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() =>
+                  setSelectedOwnerTeamId(
+                    isSelected
+                      ? null
+                      : team.id,
+                  )
+                }
+                aria-pressed={isSelected}
+                className={`flex shrink-0 items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-black transition ${
+                  isSelected
+                    ? "border-emerald-400 bg-emerald-900 text-emerald-100 shadow-sm"
+                    : "border-slate-700 bg-slate-900 text-slate-300 hover:border-emerald-700"
+                }`}
+              >
+                <TeamAvatar
+                  teamName={team.name}
+                  size="xs"
+                />
+
+                <span>{team.name}</span>
+
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+                    isSelected
+                      ? "bg-emerald-700 text-white"
+                      : "bg-slate-800 text-slate-500"
+                  }`}
+                >
+                  {golferCount}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedOwnerTeamId !== null ? (
+          <div className="mt-3 rounded-xl border border-emerald-800 bg-emerald-950/60 px-3 py-2 text-xs text-emerald-200">
+            {selectedOwnerTeamId === "drafted" ? (
+              <>
+                Highlighting{" "}
+                <strong>
+                  all {draftedCount} drafted golfers
+                </strong>
+                . Undrafted golfers remain visible but are faded.
+              </>
+            ) : (
+              <>
+                Highlighting{" "}
+                <strong>
+                  {fantasyTeams.find(
+                    (team) =>
+                      team.id === selectedOwnerTeamId,
+                  )?.name ?? "selected team"}
+                </strong>
+                . Other golfers remain visible but are faded.
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="hidden grid-cols-[70px_minmax(220px,1fr)_150px_100px_180px] border-b border-slate-800 bg-slate-900 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500 md:grid">
+        <div>Pos</div>
+        <div>Golfer</div>
+        <div>Owner</div>
+        <div className="text-right">
+          Score
+        </div>
+        <div className="text-right">
+          Status
+        </div>
+      </div>
+
+      <div className="divide-y divide-slate-800">
+        {visibleRows.map((row) => {
+          const status =
+            tournamentStatus(row.stat);
+
+          const showCutDivider =
+            Boolean(cutLine) &&
+            row.player.id ===
+              firstOutsideCutPlayerId;
+
+          return (
+            <Fragment key={row.player.id}>
+              {showCutDivider ? (
+                <div className="flex items-center gap-3 border-y border-amber-500/50 bg-amber-950/40 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-amber-300">
+                  <span className="h-px flex-1 bg-amber-500/40" />
+
+                  <span>
+                    {cutLine?.official
+                      ? "Cut line"
+                      : "Projected cut"}{" "}
+                    {cutLine?.display}
+                  </span>
+
+                  <span className="h-px flex-1 bg-amber-500/40" />
+                </div>
+              ) : null}
+
+            <button
+              key={row.player.id}
+              type="button"
+              onClick={() =>
+                setProfilePlayer(row.player)
+              }
+              className={`grid w-full grid-cols-[54px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-900 md:grid-cols-[70px_minmax(220px,1fr)_150px_100px_180px] ${
+                selectedOwnerTeamId === null ||
+                (selectedOwnerTeamId === "drafted"
+                  ? Boolean(row.owner)
+                  : row.owner?.id === selectedOwnerTeamId)
+                  ? "opacity-100"
+                  : "opacity-30 grayscale"
+              } ${
+                (selectedOwnerTeamId === "drafted" &&
+                  row.owner) ||
+                (typeof selectedOwnerTeamId === "number" &&
+                  row.owner?.id === selectedOwnerTeamId)
+                  ? "bg-emerald-950/30"
+                  : ""
+              }`}
+              aria-label={`Open ${row.player.name} tournament scorecard`}
+            >
+              <div className="text-sm font-black text-slate-200">
+                {formatPosition(
+                  row.stat.leaderboard_order,
+                )}
+              </div>
+
+              <div className="flex min-w-0 items-center gap-3">
+                <PlayerHeadshot
+                  espnGolfPlayerId={
+                    row.player.espn_player_id
+                  }
+                  imageUrl={
+                    row.player.headshot_url
+                  }
+                  playerName={row.player.name}
+                  size="sm"
+                />
+
+                <div className="min-w-0">
+                  <strong className="block truncate text-sm text-white sm:text-base">
+                    {row.player.name}
+                  </strong>
+
+                  <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-slate-500 md:hidden">
+                    <span>{status.detail}</span>
+
+                    {row.owner ? (
+                      <span className="text-emerald-300">
+                        {row.owner.name}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden md:block">
+                {row.owner ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-800 bg-emerald-950 px-2 py-1 text-xs font-bold text-emerald-200">
+                    <TeamAvatar
+                      teamName={
+                        row.owner.name
+                      }
+                      size="xs"
+                    />
+                    {row.owner.name}
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-600">
+                    —
+                  </span>
+                )}
+              </div>
+
+              <div className="text-right">
+                <strong className="block text-xl font-black text-white">
+                  {formatGolfScore(
+                    row.stat.official_score_to_par ??
+                      row.stat.fantasy_points,
+                  )}
+                </strong>
+
+                {row.owner ? (
+                  <span className="mt-0.5 block text-[9px] font-black uppercase text-emerald-400 md:hidden">
+                    Drafted
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="hidden text-right md:block">
+                <span
+                  className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase ${status.className}`}
+                >
+                  {status.label}
+                </span>
+
+                <div className="mt-1 text-xs text-slate-500">
+                  {status.detail}
+                </div>
+              </div>
+            </button>
+            </Fragment>
+          );
+        })}
+
+        {visibleRows.length === 0 ? (
+          <div className="px-5 py-12 text-center text-sm text-slate-500">
+            No golfers match the current filters.
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+
+==========================================================================================
+FILE: lib/providers/pgaTourShots.ts
+==========================================================================================
+
+import "server-only";
+
+import { gunzipSync } from "node:zlib";
+import { unstable_cache } from "next/cache";
+
+const PGA_GRAPHQL_URL =
+  "https://orchestrator.pgatour.com/graphql";
+
+const PGA_REST_URL =
+  "https://data-api.pgatour.com";
+
+/**
+ * This is the public web-client key currently used by PGATOUR.com.
+ * PGA_TOUR_API_KEY can override it if PGA TOUR rotates the key.
+ */
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_ATTEMPTS = 3;
+
+type JsonObject = Record<string, unknown>;
+
+type PgaScheduleTournament = {
+  tournamentId?: string | null;
+  name?: string | null;
+};
+
+type PgaPlayer = {
+  id?: string | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+type PgaCoordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type RawShotCoordinateGroup = {
+  fromCoords?: Partial<PgaCoordinate> | null;
+  toCoords?: Partial<PgaCoordinate> | null;
+};
+
+type RawStroke = {
+  strokeNumber?: number | null;
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+  context: string,
+): Promise<JsonObject> {
+  let lastError: unknown = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...requestHeaders(),
+          ...(init.headers ?? {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const bodyText = await response.text();
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (
+          retryable &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await sleep(300 * 2 ** (attempt - 1));
+          continue;
+        }
+
+        throw new Error(
+          `${context} failed (${response.status}): ` +
+            bodyText.slice(0, 250),
+        );
+      }
+
+      try {
+        return JSON.parse(bodyText) as JsonObject;
+      } catch {
+        throw new Error(
+          `${context} returned invalid JSON: ` +
+            bodyText.slice(0, 250),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= MAX_ATTEMPTS) {
+        break;
+      }
+
+      await sleep(300 * 2 ** (attempt - 1));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: JsonObject,
+) {
+  const body = await requestJson(
+    PGA_GRAPHQL_URL,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        operationName,
+        query,
+        variables,
+      }),
+    },
+    `PGA TOUR ${operationName}`,
+  );
+
+  const errors = Array.isArray(body.errors)
+    ? body.errors
+    : [];
+
+  if (errors.length > 0) {
+    const message = errors
+      .map((error) => {
+        if (
+          error &&
+          typeof error === "object" &&
+          "message" in error
+        ) {
+          return String(error.message);
+        }
+
+        return String(error);
+      })
+      .join("; ");
+
+    throw new Error(
+      `PGA TOUR GraphQL error: ${message}`,
+    );
+  }
+
+  return (
+    body.data &&
+    typeof body.data === "object"
+      ? body.data
+      : {}
+  ) as JsonObject;
+}
+
+function decompressPayload<T>(
+  payload: unknown,
+): T {
+  if (
+    typeof payload !== "string" ||
+    payload.length === 0
+  ) {
+    throw new Error(
+      "PGA TOUR returned an empty compressed payload.",
+    );
+  }
+
+  const compressed = Buffer.from(
+    payload,
+    "base64",
+  );
+
+  const decompressed = gunzipSync(
+    compressed,
+  ).toString("utf8");
+
+  return JSON.parse(decompressed) as T;
+}
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function chooseBestNameMatch<T>(
+  rows: T[],
+  target: string,
+  getName: (row: T) => string,
+) {
+  const normalizedTarget =
+    normalizeName(target);
+
+  const exact = rows.find(
+    (row) =>
+      normalizeName(getName(row)) ===
+      normalizedTarget,
+  );
+
+  if (exact) return exact;
+
+  const targetTokens = new Set(
+    normalizedTarget.split(" "),
+  );
+
+  return (
+    rows
+      .map((row) => {
+        const normalized =
+          normalizeName(getName(row));
+
+        const tokens =
+          normalized.split(" ");
+
+        const overlap = tokens.filter(
+          (token) => targetTokens.has(token),
+        ).length;
+
+        return {
+          row,
+          score:
+            overlap * 10 -
+            Math.abs(
+              normalized.length -
+                normalizedTarget.length,
+            ),
+        };
+      })
+      .sort(
+        (a, b) => b.score - a.score,
+      )[0]?.row ?? null
+  );
+}
+
+function coordinate(
+  value:
+    | Partial<PgaCoordinate>
+    | null
+    | undefined,
+): PgaCoordinate {
+  function numberOrNull(input: unknown) {
+    const numeric = Number(input);
+
+    return Number.isFinite(numeric)
+      ? numeric
+      : null;
+  }
+
+  return {
+    x: numberOrNull(value?.x),
+    y: numberOrNull(value?.y),
+    tourcastX: numberOrNull(
+      value?.tourcastX,
+    ),
+    tourcastY: numberOrNull(
+      value?.tourcastY,
+    ),
+    tourcastZ: numberOrNull(
+      value?.tourcastZ,
+    ),
+  };
+}
+
+function coordinateSet(
+  value:
+    | RawShotCoordinateGroup
+    | null
+    | undefined,
+): GolfShotCoordinateSet | null {
+  if (
+    !value?.fromCoords ||
+    !value?.toCoords
+  ) {
+    return null;
+  }
+
+  return {
+    from: coordinate(value.fromCoords),
+    to: coordinate(value.toCoords),
+  };
+}
+
+const loadSchedule = unstable_cache(
+  async (year: number) => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/schedule/R/${year}`,
+      {
+        method: "GET",
+      },
+      `PGA TOUR ${year} schedule`,
+    );
+
+    return Array.isArray(body.tournaments)
+      ? (body.tournaments as PgaScheduleTournament[])
+      : [];
+  },
+  ["pga-tour-schedule-v1"],
+  {
+    revalidate: 60 * 60,
+  },
+);
+
+const loadPlayers = unstable_cache(
+  async () => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/player/list/R`,
+      {
+        method: "GET",
+      },
+      "PGA TOUR player directory",
+    );
+
+    return Array.isArray(body.players)
+      ? (body.players as PgaPlayer[])
+      : [];
+  },
+  ["pga-tour-player-directory-v1"],
+  {
+    revalidate: 24 * 60 * 60,
+  },
+);
+
+const loadRoundShots = unstable_cache(
+  async (
+    tournamentId: string,
+    pgaPlayerId: string,
+    roundNumber: number,
+    _cacheBust: string | null,
+  ) => {
+    const operationName =
+      "shotDetailsV4Compressed";
+
+    const query =
+      "query shotDetailsV4Compressed(" +
+      "$tournamentId: ID!, " +
+      "$playerId: ID!, " +
+      "$round: Int!, " +
+      "$includeRadar: Boolean" +
+      ") { " +
+      "shotDetailsV4Compressed(" +
+      "tournamentId: $tournamentId, " +
+      "playerId: $playerId, " +
+      "round: $round, " +
+      "includeRadar: $includeRadar" +
+      ") { id payload } }";
+
+    const data = await graphqlRequest(
+      operationName,
+      query,
+      {
+        tournamentId,
+        playerId: pgaPlayerId,
+        round: roundNumber,
+        includeRadar: false,
+      },
+    );
+
+    const response =
+      data.shotDetailsV4Compressed;
+
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("payload" in response)
+    ) {
+      return {
+        holes: [],
+      } satisfies RawShotPayload;
+    }
+
+    return decompressPayload<RawShotPayload>(
+      response.payload,
+    );
+  },
+  ["pga-tour-round-shots-v1"],
+  {
+    // Live holes can change, but repeated taps should not
+    // hammer the upstream API.
+    revalidate: 120,
+  },
+);
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+    cacheBust?: string | null;
+  },
+): Promise<GolfHoleReplay | null> {
+  const tournaments = await loadSchedule(
+    input.year,
+  );
+
+  const tournament = chooseBestNameMatch(
+    tournaments.filter(
+      (row) =>
+        typeof row.tournamentId ===
+          "string" &&
+        typeof row.name === "string",
+    ),
+    input.tournamentName,
+    (row) => row.name ?? "",
+  );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  if (!tournamentId) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const players = await loadPlayers();
+
+  const player = chooseBestNameMatch(
+    players.filter(
+      (row) =>
+        typeof row.id === "string" &&
+        typeof row.displayName === "string",
+    ),
+    input.playerName,
+    (row) => row.displayName ?? "",
+  );
+
+  const pgaPlayerId =
+    player?.id?.trim();
+
+  if (!pgaPlayerId) {
+    throw new Error(
+      `Could not match "${input.playerName}" ` +
+        "to the PGA TOUR player directory.",
+    );
+  }
+
+  const payload = await loadRoundShots(
+    tournamentId,
+    pgaPlayerId,
+    input.roundNumber,
+    input.cacheBust ?? null,
+  );
+
+  const hole = (payload.holes ?? []).find(
+    (row) =>
+      Number(row.holeNumber) ===
+      input.holeNumber,
+  );
+
+  if (!hole) {
+    return null;
+  }
+
+  const shots = (hole.strokes ?? [])
+    .map((shot) => ({
+      strokeNumber: Number(
+        shot.strokeNumber ?? 0,
+      ),
+      playByPlay:
+        shot.playByPlay ?? null,
+      distance:
+        shot.distance ?? null,
+      distanceRemaining:
+        shot.distanceRemaining ?? null,
+      strokeType:
+        shot.strokeType ?? null,
+      fromLocation:
+        shot.fromLocation ?? null,
+      toLocation:
+        shot.toLocation ?? null,
+      fromLocationCode:
+        shot.fromLocationCode ?? null,
+      toLocationCode:
+        shot.toLocationCode ?? null,
+      finalStroke:
+        Boolean(shot.finalStroke),
+      leftToRight: coordinateSet(
+        shot.overview?.leftToRightCoords,
+      ),
+      bottomToTop: coordinateSet(
+        shot.overview?.bottomToTopCoords,
+      ),
+    }))
+    .filter(
+      (shot) => shot.strokeNumber > 0,
+    )
+    .sort(
+      (a, b) =>
+        a.strokeNumber -
+        b.strokeNumber,
+    );
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+    shots,
+  };
+}
+

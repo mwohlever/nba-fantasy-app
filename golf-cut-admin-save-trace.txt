@@ -1,0 +1,1127 @@
+============================================================
+GOLF CUT ADMIN SAVE TRACE
+Generated: Thu Aug 13 04:17:27 PM EDT 2026
+============================================================
+
+============================================================
+1. ADMIN SLATE PAGE - SAVE/UPDATE FUNCTIONS
+============================================================
+1-"use client";
+2-
+3-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+4-
+5-import { useEffect, useMemo, useState } from "react";
+6-import Link from "next/link";
+7-import AppNav from "@/components/AppNav";
+8-import { useSelectedSport } from "@/components/providers/SportProvider";
+9-
+10-type SportKey = "nba" | "nfl" | "golf";
+11-
+12-type SlateListRow = {
+13-  id: number;
+14-  date: string;
+15-  start_date: string | null;
+16-  end_date: string | null;
+17-  is_locked: boolean;
+18-  label: string;
+19-  sport?: SportKey;
+20-  display_name?: string | null;
+21-  external_event_id?: string | null;
+22-  cut_penalty_per_round?: number | null;
+23:  has_cut?: boolean;
+24-  nba_team_abbreviations?: string[] | null;
+25-};
+26-
+27-type SlateTeamRow = {
+28-  team_id: number;
+29-  team_name: string;
+30-  draft_order: number;
+31-  is_participating: boolean;
+32-};
+33-
+34-type GolfFieldSummary = {
+35-  golferCount: number;
+36-  lastRefreshedAt: string | null;
+37-};
+38-
+39-type ShotCastSummary = {
+40-  tournamentId: string;
+41-  generatedAt: string | null;
+42-  updatedAt: string | null;
+43-  summary: {
+44-    holesRequested?: number;
+45-    holesAvailable?: number;
+46-    localImages?: number;
+47-    alignedMaps?: number;
+48-    alignedGreens?: number;
+49-    holesFailed?: number;
+50-  } | null;
+51-  course: {
+52-    id?: string;
+53-    name?: string | null;
+54-  } | null;
+55-};
+56-
+57-type SlateDetailResponse = {
+58-  success: boolean;
+59-  slate: SlateListRow;
+60-  teams: SlateTeamRow[];
+61-  golfField?: GolfFieldSummary | null;
+62-};
+63-
+64-type SelectedSlateState = SlateListRow & {
+65-  nbaTeamsInput: string;
+66-};
+67-
+68-function normalizeTeamOrder(rows: SlateTeamRow[]) {
+69-  const participating = rows
+70-    .filter((team) => team.is_participating)
+71-    .sort(
+72-      (a, b) =>
+73-        a.draft_order - b.draft_order ||
+74-        a.team_name.localeCompare(b.team_name),
+75-    );
+76-
+77-  const inactive = rows
+78-    .filter((team) => !team.is_participating)
+79-    .sort(
+80-      (a, b) =>
+81-        a.draft_order - b.draft_order ||
+82-        a.team_name.localeCompare(b.team_name),
+83-    );
+84-
+85-  return [...participating, ...inactive].map((team, index) => ({
+86-    ...team,
+87-    draft_order: index + 1,
+88-  }));
+89-}
+90-
+91-function formatDateRange(
+92-  startDate: string | null,
+93-  endDate: string | null,
+94-) {
+95-  if (!startDate) return "Dates unavailable";
+96-  if (!endDate || startDate === endDate) return startDate;
+97-  return `${startDate} – ${endDate}`;
+98-}
+99-
+100-function formatRefreshTime(value: string | null) {
+101-  if (!value) return "Not loaded yet";
+102-
+103-  const date = new Date(value);
+104-
+105-  if (Number.isNaN(date.getTime())) {
+106-    return "Unavailable";
+107-  }
+108-
+109-  return date.toLocaleString([], {
+110-    month: "short",
+111-    day: "numeric",
+112-    hour: "numeric",
+113-    minute: "2-digit",
+114-  });
+115-}
+116-
+117-export default function AdminSlatesPage() {
+118-  const { selectedSport } = useSelectedSport();
+119-
+120-  const [slates, setSlates] = useState<SlateListRow[]>([]);
+121-  const [selectedSlateId, setSelectedSlateId] =
+122-    useState<number | "">("");
+123-  const [selectedSlate, setSelectedSlate] =
+124-    useState<SelectedSlateState | null>(null);
+125-  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+126-  const [golfField, setGolfField] =
+127-    useState<GolfFieldSummary | null>(null);
+128-
+129-  const [
+130-    shotCast,
+131-    setShotCast,
+132-  ] = useState<ShotCastSummary | null>(
+133-    null,
+134-  );
+135-
+136-  const [
+137-    shotCastTournamentId,
+138-    setShotCastTournamentId,
+139-  ] = useState("");
+140-
+141-  const [isLoading, setIsLoading] = useState(true);
+142-  const [isSaving, setIsSaving] = useState(false);
+143-  const [isReseeding, setIsReseeding] = useState(false);
+--
+419-  function moveTeam(
+420-    teamId: number,
+421-    direction: "up" | "down",
+422-  ) {
+423-    setTeams((current) => {
+424-      const normalized = normalizeTeamOrder(current);
+425-      const team = normalized.find(
+426-        (row) => row.team_id === teamId,
+427-      );
+428-
+429-      if (!team) return normalized;
+430-
+431-      const sameSection = normalized.filter(
+432-        (row) =>
+433-          row.is_participating === team.is_participating,
+434-      );
+435-
+436-      const currentIndex = sameSection.findIndex(
+437-        (row) => row.team_id === teamId,
+438-      );
+439-
+440-      const targetIndex =
+441-        direction === "up"
+442-          ? currentIndex - 1
+443-          : currentIndex + 1;
+444-
+445-      if (
+446-        targetIndex < 0 ||
+447-        targetIndex >= sameSection.length
+448-      ) {
+449-        return normalized;
+450-      }
+451-
+452-      const reorderedSection = [...sameSection];
+453-      const [moved] = reorderedSection.splice(currentIndex, 1);
+454-      reorderedSection.splice(targetIndex, 0, moved);
+455-
+456-      const otherSection = normalized.filter(
+457-        (row) =>
+458-          row.is_participating !== team.is_participating,
+459-      );
+460-
+461-      return normalizeTeamOrder(
+462-        team.is_participating
+463-          ? [...reorderedSection, ...otherSection]
+464-          : [...otherSection, ...reorderedSection],
+465-      );
+466-    });
+467-  }
+468-
+469:  async function handleSave() {
+470-    if (!selectedSlateId || !selectedSlate) return;
+471-
+472-    const normalizedTeams = normalizeTeamOrder(teams);
+473-
+474-    if (
+475-      selectedSlate.sport === "golf" &&
+476-      (
+477-        !Number.isInteger(
+478-          selectedSlate.cut_penalty_per_round,
+479-        ) ||
+480-        Number(selectedSlate.cut_penalty_per_round) < 0 ||
+481-        Number(selectedSlate.cut_penalty_per_round) > 100
+482-      )
+483-    ) {
+484-      setMessage(
+485-        "Cut penalty must be a whole number from 0 through 100.",
+486-      );
+487-      return;
+488-    }
+489-
+490-    try {
+491-      setIsSaving(true);
+492-      setMessage("");
+493-
+494-      const response = await fetch(
+495-        `/api/admin/slates/${selectedSlateId}`,
+496-        {
+497:          method: "PATCH",
+498-          headers: {
+499-            "Content-Type": "application/json",
+500-          },
+501-          body: JSON.stringify({
+502-            is_locked: selectedSlate.is_locked,
+503-            cut_penalty_per_round:
+504-              selectedSlate.sport === "golf"
+505-                ? Number(
+506-                    selectedSlate.cut_penalty_per_round,
+507-                  )
+508-                : undefined,
+509:            has_cut:
+510-              selectedSlate.sport === "golf"
+511:                ? selectedSlate.has_cut !== false
+512-                : undefined,
+513-            nba_team_abbreviations:
+514-              selectedSlate.nbaTeamsInput
+515-                .split(",")
+516-                .map((value) =>
+517-                  value.trim().toUpperCase(),
+518-                )
+519-                .filter(Boolean),
+520-            teams: normalizedTeams.map(
+521-              (team, index) => ({
+522-                team_id: team.team_id,
+523-                draft_order: index + 1,
+524-                is_participating:
+525-                  team.is_participating,
+526-              }),
+527-            ),
+528-          }),
+529-        },
+530-      );
+531-
+532-      const result = await response.json();
+533-
+534-      if (!response.ok) {
+535-        setMessage(
+536-          result.error || "Failed to save slate.",
+537-        );
+538-        return;
+539-      }
+540-
+541-      setMessage("Slate updated successfully.");
+542-      await loadSlateDetail(Number(selectedSlateId));
+543-      await loadSlates();
+544-    } catch (error) {
+545-      console.error(error);
+546-      setMessage(
+547-        "Something went wrong while saving the slate.",
+548-      );
+549-    } finally {
+550-      setIsSaving(false);
+551-    }
+552-  }
+553-
+554-  async function handleRefreshGolfField() {
+555-    if (!selectedSlateId || !selectedSlate) return;
+556-
+557-    try {
+558-      setIsRefreshingGolfField(true);
+559-      setMessage("");
+560-
+561-      await refreshGolfFromBrowser(
+562-        Number(selectedSlateId),
+563-      );
+564-
+565-      await loadSlateDetail(Number(selectedSlateId));
+566-
+567-      setMessage(
+568-        "Tournament field, scores, rounds, and hole data refreshed successfully.",
+569-      );
+570-    } catch (error) {
+571-      const errorMessage =
+572-        error instanceof Error
+573-          ? error.message
+574-          : String(error);
+575-
+576-      const isWaitingForField =
+577-        errorMessage
+578-          .toLowerCase()
+579-          .includes(
+580-            "tournament field is not available yet",
+581-          );
+582-
+583-      if (isWaitingForField) {
+584-        setMessage(
+585-          "Tournament found. ESPN has not published the field yet. Automatic refresh will keep checking.",
+586-        );
+587-      } else {
+588-        console.error(error);
+589-        setMessage(
+590-          "Something went wrong while refreshing the tournament field.",
+591-        );
+592-      }
+593-    } finally {
+594-      setIsRefreshingGolfField(false);
+595-    }
+596-  }
+597-
+598-  async function handleImportPgaTourField() {
+599-    if (!selectedSlateId || !selectedSlate) return;
+600-
+601-    try {
+602-      setIsImportingGolfField(true);
+603-      setMessage("");
+604-
+605-      const response = await fetch(
+606-        "/api/admin/golf/import-field",
+607-        {
+608-          method: "POST",
+609-          headers: {
+610-            "Content-Type": "application/json",
+611-          },
+612-          cache: "no-store",
+613-          body: JSON.stringify({
+614-            slateId: Number(selectedSlateId),
+615-          }),
+616-        },
+617-      );
+618-
+619-      const result = await response.json();
+620-
+621-      if (!response.ok) {
+622-        setMessage(
+623-          result?.error ||
+624-            "PGA Tour field import failed.",
+625-        );
+626-        return;
+627-      }
+628-
+629-      await loadSlateDetail(
+630-        Number(selectedSlateId),
+631-      );
+--
+1007-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+1008-                    <label
+1009-                      htmlFor="cut-penalty"
+1010-                      className="block text-xs font-semibold uppercase tracking-wide text-slate-300"
+1011-                    >
+1012-                      Cut Penalty
+1013-                    </label>
+1014-
+1015-                    <div className="mt-2 flex items-center gap-2">
+1016-                      <input
+1017-                        id="cut-penalty"
+1018-                        type="number"
+1019-                        min={0}
+1020-                        max={100}
+1021-                        step={1}
+1022-                        value={
+1023-                          selectedSlate.cut_penalty_per_round ??
+1024-                          5
+1025-                        }
+1026-                        onChange={(event) =>
+1027-                          setSelectedSlate((current) =>
+1028-                            current
+1029-                              ? {
+1030-                                  ...current,
+1031-                                  cut_penalty_per_round:
+1032-                                    Number(
+1033-                                      event.target.value,
+1034-                                    ),
+1035-                                }
+1036-                              : current,
+1037-                          )
+1038-                        }
+1039-                        disabled={isBusy}
+1040-                        className="w-24 rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-lg font-bold text-white outline-none focus:border-emerald-400"
+1041-                      />
+1042-
+1043-                      <span className="text-sm text-slate-400">
+1044-                        per missed round
+1045-                      </span>
+1046-                    </div>
+1047-                  </div>
+1048-
+1049-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+1050-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+1051-                      Tournament Cut
+1052-                    </div>
+1053-
+1054-                    <label className="mt-3 flex items-center gap-3 text-sm font-medium text-white">
+1055-                      <input
+1056-                        type="checkbox"
+1057:                        checked={selectedSlate.has_cut !== false}
+1058-                        onChange={(event) =>
+1059-                          setSelectedSlate((current) =>
+1060-                            current
+1061-                              ? {
+1062-                                  ...current,
+1063:                                  has_cut: event.target.checked,
+1064-                                }
+1065-                              : current,
+1066-                          )
+1067-                        }
+1068-                        disabled={isBusy}
+1069-                        className="h-4 w-4 rounded border-slate-500"
+1070-                      />
+1071-                      36-hole cut
+1072-                    </label>
+1073-
+1074-                    <div className="mt-2 text-xs leading-5 text-slate-400">
+1075-                      Turn this off for no-cut tournaments. Projected cut,
+1076-                      CUT statuses, and cut penalties will be disabled.
+1077-                    </div>
+1078-                  </div>
+1079-
+1080-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+1081-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+1082-                      Last Field Refresh
+1083-                    </div>
+1084-
+1085-                    <div className="mt-2 text-sm font-semibold text-white">
+1086-                      {formatRefreshTime(
+1087-                        golfField?.lastRefreshedAt ?? null,
+1088-                      )}
+1089-                    </div>
+1090-                  </div>
+1091-
+1092-                  <div className="rounded-2xl border border-violet-800 bg-violet-950/35 p-4">
+1093-                    <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+1094-                      ShotCast Assets
+1095-                    </div>
+1096-
+1097-                    <div className="mt-2 text-sm font-bold text-white">
+1098-                      {shotCast
+1099-                        ? `${
+1100-                            shotCast.summary
+1101-                              ?.localImages ?? 0
+1102-                          } photos · ${
+1103-                            shotCast.summary
+1104-                              ?.alignedMaps ?? 0
+1105-                          } maps`
+1106-                        : "Not imported"}
+1107-                    </div>
+1108-
+1109-                    <div className="mt-1 text-xs text-violet-200/80">
+1110-                      {shotCast
+1111-                        ? formatRefreshTime(
+1112-                            shotCast.updatedAt,
+1113-                          )
+1114-                        : "Enter the PGA ID below"}
+1115-                    </div>
+1116-                  </div>
+1117-                </div>
+1118-              ) : null}
+1119-
+1120-              {selectedSlate.sport === "nba" ? (
+1121-                <div className="max-w-xl">
+1122-                  <label
+1123-                    htmlFor="nba-team-codes"
+1124-                    className="mb-1 block text-xs font-medium text-slate-300"
+1125-                  >
+1126-                    NBA Team Codes
+1127-                  </label>
+1128-
+1129-                  <input
+1130-                    id="nba-team-codes"
+1131-                    type="text"
+1132-                    value={selectedSlate.nbaTeamsInput}
+1133-                    onChange={(event) =>
+1134-                      setSelectedSlate((current) =>
+1135-                        current
+1136-                          ? {
+1137-                              ...current,
+1138-                              nbaTeamsInput:
+1139-                                event.target.value,
+1140-                            }
+1141-                          : current,
+1142-                      )
+1143-                    }
+1144-                    disabled={isBusy}
+1145-                    placeholder="BOS, CLE, NYK"
+1146-                    className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm text-slate-100 outline-none focus:border-sky-400"
+1147-                  />
+1148-                </div>
+1149-              ) : null}
+1150-
+1151-              {selectedSlate.sport === "golf" ? (
+1152-                <div className="rounded-2xl border border-violet-800 bg-violet-950/25 p-4">
+1153-                  <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+1154-                    ShotCast Course Importer
+1155-                  </div>
+1156-
+1157-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+1158-                    <div className="flex-1">
+1159-                      <label
+1160-                        htmlFor="shotcast-tournament-id"
+1161-                        className="mb-1 block text-xs font-medium text-slate-300"
+1162-                      >
+1163-                        PGA Tournament ID
+1164-                      </label>
+1165-
+1166-                      <input
+1167-                        id="shotcast-tournament-id"
+1168-                        type="text"
+1169-                        value={
+1170-                          shotCastTournamentId
+1171-                        }
+1172-                        onChange={(event) =>
+1173-                          setShotCastTournamentId(
+1174-                            event.target.value
+1175-                              .toUpperCase(),
+1176-                          )
+1177-                        }
+1178-                        disabled={isBusy}
+1179-                        placeholder="R2026013"
+1180-                        className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm font-bold uppercase text-white outline-none focus:border-violet-400"
+1181-                      />
+1182-                    </div>
+1183-
+--
+1206-              <div className="overflow-hidden rounded-2xl border border-slate-700">
+1207-                <div className="overflow-x-auto">
+1208-                  <table className="min-w-full border-collapse text-sm">
+1209-                    <thead className="bg-slate-800 text-slate-200">
+1210-                      <tr className="text-left">
+1211-                        <th className="px-4 py-3">
+1212-                          Team
+1213-                        </th>
+1214-                        <th className="px-4 py-3">
+1215-                          Participating
+1216-                        </th>
+1217-                        <th className="px-4 py-3">
+1218-                          Draft Order
+1219-                        </th>
+1220-                      </tr>
+1221-                    </thead>
+1222-
+1223-                    <tbody className="bg-slate-900">
+1224-                      {participatingTeams.map((team) =>
+1225-                        renderTeamRow(
+1226-                          team,
+1227-                          participatingTeams,
+1228-                        ),
+1229-                      )}
+1230-
+1231-                      {inactiveTeams.length > 0 ? (
+1232-                        <tr className="border-t border-slate-700 bg-slate-950/60">
+1233-                          <td
+1234-                            colSpan={3}
+1235-                            className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500"
+1236-                          >
+1237-                            Not participating
+1238-                          </td>
+1239-                        </tr>
+1240-                      ) : null}
+1241-
+1242-                      {inactiveTeams.map((team) =>
+1243-                        renderTeamRow(
+1244-                          team,
+1245-                          inactiveTeams,
+1246-                        ),
+1247-                      )}
+1248-                    </tbody>
+1249-                  </table>
+1250-                </div>
+1251-              </div>
+1252-
+1253-              <div className="flex flex-wrap gap-3">
+1254-                <button
+1255-                  type="button"
+1256:                  onClick={() => void handleSave()}
+1257-                  disabled={isBusy}
+1258-                  className="rounded-xl border border-emerald-500 bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+1259-                >
+1260-                  {isSaving ? "Saving..." : "Save Slate"}
+1261-                </button>
+1262-
+1263-                {selectedSlate.sport === "golf" ? (
+1264-                  <>
+1265-                    <button
+1266-                      type="button"
+1267-                      onClick={() =>
+1268-                        void handleRefreshGolfField()
+1269-                      }
+1270-                      disabled={
+1271-                        isBusy || selectedSlate.is_locked
+1272-                      }
+1273-                      title={
+1274-                        selectedSlate.is_locked
+1275-                          ? "Unlock and save the slate before refreshing the field."
+1276-                          : "Reload the field, leaderboard, rounds, and holes from ESPN."
+1277-                      }
+1278-                      className="rounded-xl border border-sky-500 bg-sky-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+1279-                    >
+1280-                      {isRefreshingGolfField
+1281-                        ? "Refreshing Field..."
+1282-                        : "Refresh Tournament Field"}
+1283-                    </button>
+1284-
+1285-                    <button
+1286-                      type="button"
+1287-                      onClick={() =>
+1288-                        void handleImportPgaTourField()
+1289-                      }
+1290-                      disabled={
+1291-                        isBusy || selectedSlate.is_locked
+1292-                      }
+1293-                      title={
+1294-                        selectedSlate.is_locked
+1295-                          ? "Unlock and save the slate before importing the field."
+1296-                          : "Load the tournament field directly from PGA Tour when ESPN has not published its field yet."
+1297-                      }
+1298-                      className="rounded-xl border border-emerald-400 bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+1299-                    >
+1300-                      {isImportingGolfField
+1301-                        ? "Importing PGA Field..."
+1302-                        : "Import PGA Tour Field"}
+1303-                    </button>
+1304-
+1305-                    <button
+1306-                      type="button"
+1307-                      onClick={() =>
+1308-                        void handleSyncGolfRankings()
+1309-                      }
+1310-                      disabled={isBusy}
+1311-                      className="rounded-xl border border-emerald-500 bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+1312-                    >
+1313-                      {isSyncingGolfRankings
+1314-                        ? "Syncing OWGR..."
+1315-                        : "Sync OWGR"}
+1316-                    </button>
+1317-                  </>
+1318-                ) : null}
+1319-
+1320-                <button
+1321-                  type="button"
+1322-                  onClick={() => void handleReseed()}
+1323-                  disabled={isBusy}
+1324-                  className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+1325-                >
+1326-                  {isReseeding
+1327-                    ? "Reseeding..."
+1328-                    : "Reseed From Previous Slate"}
+1329-                </button>
+1330-
+1331-                <button
+1332-                  type="button"
+1333-                  onClick={() => void handleDelete()}
+1334-                  disabled={isBusy}
+1335-                  className="rounded-xl border border-red-600 bg-red-900 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+1336-                >
+1337-                  {isDeleting
+1338-                    ? "Deleting..."
+1339-                    : "Delete Slate"}
+1340-                </button>
+1341-              </div>
+1342-            </div>
+1343-          )}
+1344-        </section>
+1345-      </div>
+1346-    </main>
+1347-  );
+1348-}
+
+============================================================
+2. ADMIN CHECKBOX AREA
+============================================================
+                      className="block text-xs font-semibold uppercase tracking-wide text-slate-300"
+                    >
+                      Cut Penalty
+                    </label>
+
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        id="cut-penalty"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={
+                          selectedSlate.cut_penalty_per_round ??
+                          5
+                        }
+                        onChange={(event) =>
+                          setSelectedSlate((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  cut_penalty_per_round:
+                                    Number(
+                                      event.target.value,
+                                    ),
+                                }
+                              : current,
+                          )
+                        }
+                        disabled={isBusy}
+                        className="w-24 rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-lg font-bold text-white outline-none focus:border-emerald-400"
+                      />
+
+                      <span className="text-sm text-slate-400">
+                        per missed round
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      Tournament Cut
+                    </div>
+
+                    <label className="mt-3 flex items-center gap-3 text-sm font-medium text-white">
+                      <input
+                        type="checkbox"
+                        checked={selectedSlate.has_cut !== false}
+                        onChange={(event) =>
+                          setSelectedSlate((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  has_cut: event.target.checked,
+                                }
+                              : current,
+                          )
+                        }
+                        disabled={isBusy}
+                        className="h-4 w-4 rounded border-slate-500"
+                      />
+                      36-hole cut
+                    </label>
+
+                    <div className="mt-2 text-xs leading-5 text-slate-400">
+                      Turn this off for no-cut tournaments. Projected cut,
+                      CUT statuses, and cut penalties will be disabled.
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      Last Field Refresh
+                    </div>
+
+                    <div className="mt-2 text-sm font-semibold text-white">
+                      {formatRefreshTime(
+                        golfField?.lastRefreshedAt ?? null,
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-violet-800 bg-violet-950/35 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+                      ShotCast Assets
+                    </div>
+
+                    <div className="mt-2 text-sm font-bold text-white">
+                      {shotCast
+                        ? `${
+                            shotCast.summary
+
+============================================================
+3. ADMIN SLATE API - UPDATE PATH
+============================================================
+            }
+          : null,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading slate details." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const { slateId: slateIdParam } = await context.params;
+    const slateId = Number(slateIdParam);
+    const body = (await request.json()) as UpdateSlateBody;
+
+    if (!Number.isFinite(slateId)) {
+      return NextResponse.json(
+        { error: "Invalid slate id." },
+        { status: 400 }
+      );
+    }
+
+    const teams = body.teams ?? [];
+    const isLocked = body.is_locked;
+    const rawCutPenalty = Number(body.cut_penalty_per_round);
+    const hasCut = body.has_cut;
+    const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
+      .map((value) => normalizeNbaTeamCode(value))
+      .filter(Boolean);
+
+    if (!Array.isArray(teams) || teams.length === 0) {
+      return NextResponse.json(
+        { error: "At least one team config is required." },
+        { status: 400 }
+      );
+    }
+
+    const normalizedTeams = [...teams]
+      .sort((a, b) => {
+        if (a.is_participating !== b.is_participating) {
+          return a.is_participating ? -1 : 1;
+        }
+
+        return a.draft_order - b.draft_order;
+      })
+      .map((team, index) => ({
+        ...team,
+        draft_order: index + 1,
+      }));
+
+    const { data: existingSlate, error: existingSlateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, sport")
+      .eq("id", slateId)
+      .single();
+
+    if (existingSlateError || !existingSlate) {
+      return NextResponse.json(
+        { error: "Slate not found." },
+        { status: 404 }
+      );
+    }
+
+    if (
+      existingSlate.sport === "golf" &&
+      (
+        !Number.isInteger(rawCutPenalty) ||
+        rawCutPenalty < 0 ||
+        rawCutPenalty > 100
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Cut penalty must be a whole number from 0 through 100.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const slateUpdatePayload: {
+      is_locked?: boolean;
+      nba_team_abbreviations?: string[];
+      cut_penalty_per_round?: number;
+      has_cut?: boolean;
+    } = {
+      nba_team_abbreviations: nbaTeamAbbreviations,
+    };
+
+    if (existingSlate.sport === "golf") {
+      slateUpdatePayload.cut_penalty_per_round =
+        rawCutPenalty;
+
+      if (typeof hasCut === "boolean") {
+        slateUpdatePayload.has_cut = hasCut;
+      }
+    }
+
+    if (typeof isLocked === "boolean") {
+      slateUpdatePayload.is_locked = isLocked;
+    }
+
+    const { error: slateUpdateError } = await supabaseAdmin
+      .from("slates")
+      .update(slateUpdatePayload)
+      .eq("id", slateId);
+
+    if (slateUpdateError) {
+      return NextResponse.json(
+        { error: `Failed to update slate: ${slateUpdateError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const payload = normalizedTeams.map((team) => ({
+      slate_id: slateId,
+      team_id: team.team_id,
+      draft_order: team.draft_order,
+      is_participating: team.is_participating,
+    }));
+
+============================================================
+4. ADMIN SLATE LOAD/MAPPING
+============================================================
+"use client";
+
+import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import AppNav from "@/components/AppNav";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+type SportKey = "nba" | "nfl" | "golf";
+
+type SlateListRow = {
+  id: number;
+  date: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_locked: boolean;
+  label: string;
+  sport?: SportKey;
+  display_name?: string | null;
+  external_event_id?: string | null;
+  cut_penalty_per_round?: number | null;
+  has_cut?: boolean;
+  nba_team_abbreviations?: string[] | null;
+};
+
+type SlateTeamRow = {
+  team_id: number;
+  team_name: string;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+type GolfFieldSummary = {
+  golferCount: number;
+  lastRefreshedAt: string | null;
+};
+
+type ShotCastSummary = {
+  tournamentId: string;
+  generatedAt: string | null;
+  updatedAt: string | null;
+  summary: {
+    holesRequested?: number;
+    holesAvailable?: number;
+    localImages?: number;
+    alignedMaps?: number;
+    alignedGreens?: number;
+    holesFailed?: number;
+  } | null;
+  course: {
+    id?: string;
+    name?: string | null;
+  } | null;
+};
+
+type SlateDetailResponse = {
+  success: boolean;
+  slate: SlateListRow;
+  teams: SlateTeamRow[];
+  golfField?: GolfFieldSummary | null;
+};
+
+type SelectedSlateState = SlateListRow & {
+  nbaTeamsInput: string;
+};
+
+function normalizeTeamOrder(rows: SlateTeamRow[]) {
+  const participating = rows
+    .filter((team) => team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  const inactive = rows
+    .filter((team) => !team.is_participating)
+    .sort(
+      (a, b) =>
+        a.draft_order - b.draft_order ||
+        a.team_name.localeCompare(b.team_name),
+    );
+
+  return [...participating, ...inactive].map((team, index) => ({
+    ...team,
+    draft_order: index + 1,
+  }));
+}
+
+function formatDateRange(
+  startDate: string | null,
+  endDate: string | null,
+) {
+  if (!startDate) return "Dates unavailable";
+  if (!endDate || startDate === endDate) return startDate;
+  return `${startDate} – ${endDate}`;
+}
+
+function formatRefreshTime(value: string | null) {
+  if (!value) return "Not loaded yet";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unavailable";
+  }
+
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export default function AdminSlatesPage() {
+  const { selectedSport } = useSelectedSport();
+
+  const [slates, setSlates] = useState<SlateListRow[]>([]);
+      }
+
+      const reorderedSection = [...sameSection];
+      const [moved] = reorderedSection.splice(currentIndex, 1);
+      reorderedSection.splice(targetIndex, 0, moved);
+
+      const otherSection = normalized.filter(
+        (row) =>
+          row.is_participating !== team.is_participating,
+      );
+
+      return normalizeTeamOrder(
+        team.is_participating
+          ? [...reorderedSection, ...otherSection]
+          : [...otherSection, ...reorderedSection],
+      );
+    });
+  }
+
+  async function handleSave() {
+    if (!selectedSlateId || !selectedSlate) return;
+
+    const normalizedTeams = normalizeTeamOrder(teams);
+
+    if (
+      selectedSlate.sport === "golf" &&
+      (
+        !Number.isInteger(
+          selectedSlate.cut_penalty_per_round,
+        ) ||
+        Number(selectedSlate.cut_penalty_per_round) < 0 ||
+        Number(selectedSlate.cut_penalty_per_round) > 100
+      )
+    ) {
+      setMessage(
+        "Cut penalty must be a whole number from 0 through 100.",
+      );
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            is_locked: selectedSlate.is_locked,
+            cut_penalty_per_round:
+              selectedSlate.sport === "golf"
+                ? Number(
+                    selectedSlate.cut_penalty_per_round,
+                  )
+                : undefined,
+            has_cut:
+              selectedSlate.sport === "golf"
+                ? selectedSlate.has_cut !== false
+                : undefined,
+            nba_team_abbreviations:
+              selectedSlate.nbaTeamsInput
+                .split(",")
+                .map((value) =>
+                  value.trim().toUpperCase(),
+                )
+                .filter(Boolean),
+            teams: normalizedTeams.map(
+              (team, index) => ({
+                team_id: team.team_id,
+                draft_order: index + 1,
+                is_participating:
+                  team.is_participating,
+              }),
+            ),
+          }),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          result.error || "Failed to save slate.",
+        );
+        return;
+      }
+

@@ -1,0 +1,536 @@
+============================================================
+RORY R3 — PGA RADAR FLIGHT CURVATURE RANKING
+============================================================
+
+Slate: 163
+Player: 737 (Rory McIlroy)
+Round: 3
+Radar-tracked shots found: 31
+
+------------------------------------------------------------
+RANK #1
+------------------------------------------------------------
+Hole: 5
+Stroke: 2
+Shot: Fairway -> Left Bunker
+Distance: 212 yds
+Radar type: Incoming
+Flight time: 7.085
+Z start: 8.920740
+Z end: 118.891000
+Net lateral: 109.970260
+Lateral range: 109.970260
+MAX CURVE FROM ENDPOINT LINE: 23.274957
+Max curve sample: 35/100
+zFit: [8.92074, 39.604805, -8.796933, 1.501256, -0.161748, 0.009956, -0.000262]
+
+------------------------------------------------------------
+RANK #2
+------------------------------------------------------------
+Hole: 3
+Stroke: 2
+Shot: Primary Rough -> Left Rough
+Distance: 278 yds
+Radar type: Incoming
+Flight time: 6.794
+Z start: 18.277996
+Z end: -89.938165
+Net lateral: -108.216161
+Lateral range: 108.216161
+MAX CURVE FROM ENDPOINT LINE: -23.143846
+Max curve sample: 39/100
+zFit: [18.277996, -37.530137, 7.001351, -1.063893, 0.113863, -0.007297, 0.000206]
+
+------------------------------------------------------------
+RANK #3
+------------------------------------------------------------
+Hole: 13
+Stroke: 2
+Shot: Intermediate Rough -> Left Green
+Distance: 140 yds
+Radar type: Incoming
+Flight time: 6.081
+Z start: -7.187003
+Z end: 69.949393
+Net lateral: 77.136396
+Lateral range: 77.136396
+MAX CURVE FROM ENDPOINT LINE: 12.936068
+Max curve sample: 34/100
+zFit: [-7.187003, 29.69097, -8.174951, 1.924484, -0.276058, 0.021437, -0.000685]
+
+------------------------------------------------------------
+RANK #4
+------------------------------------------------------------
+Hole: 6
+Stroke: 2
+Shot: Primary Rough -> Left Green
+Distance: 177 yds
+Radar type: Incoming
+Flight time: 6.681
+Z start: 30.758897
+Z end: -64.527076
+Net lateral: -95.285973
+Lateral range: 95.285973
+MAX CURVE FROM ENDPOINT LINE: -11.368760
+Max curve sample: 36/100
+zFit: [30.758897, -25.814828, 3.981867, -0.594899, 0.057169, -0.003351, 8.5e-05]
+
+------------------------------------------------------------
+RANK #5
+------------------------------------------------------------
+Hole: 1
+Stroke: 2
+Shot: Intermediate Rough -> Right Green
+Distance: 125 yds
+Radar type: Incoming
+Flight time: 6.064
+Z start: 3.354155
+Z end: -63.489875
+Net lateral: -66.844030
+Lateral range: 66.844030
+MAX CURVE FROM ENDPOINT LINE: -7.200013
+Max curve sample: 34/100
+zFit: [3.354155, -19.883276, 3.773296, -0.727662, 0.091255, -0.007012, 0.000228]
+
+------------------------------------------------------------
+RANK #6
+------------------------------------------------------------
+Hole: 3
+Stroke: 1
+Shot: Tee Box -> Right Rough
+Distance: 319 yds
+Radar type: Broadcast
+Flight time: 8.009
+Z start: 1.728366
+Z end: 16.476527
+Net lateral: 14.748161
+Lateral range: 17.558224
+MAX CURVE FROM ENDPOINT LINE: -6.750589
+Max curve sample: 36/100
+zFit: [1.728366, -3.92657, 1.567342, -0.12694, -0.005242, 0.001449, -5.8e-05]
+
+------------------------------------------------------------
+RANK #7
+------------------------------------------------------------
+Hole: 18
+Stroke: 3
+Shot: Primary Rough -> Right Intermediate
+Distance: 192 yds
+Radar type: Incoming
+Flight time: 5.304
+Z start: -10.168619
+Z end: -94.240110
+Net lateral: -84.071491
+Lateral range: 84.071491
+MAX CURVE FROM ENDPOINT LINE: -6.269714
+Max curve sample: 43/100
+zFit: [-10.168619, -22.700577, 2.754, -0.637036, 0.123294, -0.013495, 0.000583]
+
+------------------------------------------------------------
+RANK #8
+------------------------------------------------------------
+Hole: 9
+Stroke: 1
+Shot: Tee Box -> Right Rough
+Distance: 319 yds
+Radar type: Broadcast
+Flight time: 7.229
+Z start: 0.706074
+Z end: 19.997482
+Net lateral: 19.291408
+Lateral range: 20.885580
+MAX CURVE FROM ENDPOINT LINE: -6.196166
+Max curve sample: 36/100
+zFit: [0.706074, -3.212294, 1.805913, -0.185191, -0.000198, 0.001443, -6.9e-05]
+
+------------------------------------------------------------
+RANK #9
+------------------------------------------------------------
+Hole: 16
+Stroke: 2
+Shot: Other -> Left Fairway
+Distance: 103 yds
+Radar type: Incoming
+Flight time: 5.226
+Z start: 73.706193
+Z end: -3.882130
+Net lateral: -77.588323
+Lateral range: 77.588323
+MAX CURVE FROM ENDPOINT LINE: -5.772369
+Max curve sample: 42/100
+zFit: [73.706193, -18.851123, -0.687424, 1.025736, -0.241997, 0.023491, -0.000872]
+
+------------------------------------------------------------
+RANK #10
+------------------------------------------------------------
+Hole: 10
+Stroke: 2
+Shot: Fairway -> Right Green
+Distance: 169 yds
+Radar type: Incoming
+Flight time: 6.331
+Z start: -7.815075
+Z end: -45.489635
+Net lateral: -37.674560
+Lateral range: 37.674560
+MAX CURVE FROM ENDPOINT LINE: -5.762857
+Max curve sample: 32/100
+zFit: [-7.815075, -13.694335, 3.812829, -0.922268, 0.136229, -0.010999, 0.000361]
+
+------------------------------------------------------------
+RANK #11
+------------------------------------------------------------
+Hole: 2
+Stroke: 1
+Shot: Tee Box -> Right Rough
+Distance: 320 yds
+Radar type: Broadcast
+Flight time: 7.955
+Z start: 0.069610
+Z end: 20.279472
+Net lateral: 20.209862
+Lateral range: 20.889094
+MAX CURVE FROM ENDPOINT LINE: -5.162372
+Max curve sample: 38/100
+zFit: [0.06961, -1.664246, 1.090018, -0.083001, -0.004228, 0.001046, -4e-05]
+
+------------------------------------------------------------
+RANK #12
+------------------------------------------------------------
+Hole: 17
+Stroke: 1
+Shot: Tee Box -> Right Fairway
+Distance: 319 yds
+Radar type: Broadcast
+Flight time: 7.322
+Z start: 1.245311
+Z end: 0.701211
+Net lateral: -0.544100
+Lateral range: 5.301772
+MAX CURVE FROM ENDPOINT LINE: -5.074424
+Max curve sample: 41/100
+zFit: [1.245311, -4.236933, 1.17083, -0.147897, 0.012243, -0.000543, 1.3e-05]
+
+------------------------------------------------------------
+RANK #13
+------------------------------------------------------------
+Hole: 16
+Stroke: 1
+Shot: Tee Box -> Right Dirt Outline
+Distance: 330 yds
+Radar type: Broadcast
+Flight time: 8.204
+Z start: 0.673910
+Z end: 29.776022
+Net lateral: 29.102112
+Lateral range: 29.102112
+MAX CURVE FROM ENDPOINT LINE: -4.098214
+Max curve sample: 42/100
+zFit: [0.67391, 0.95625, 0.337401, 0.084839, -0.027198, 0.002754, -9e-05]
+
+------------------------------------------------------------
+RANK #14
+------------------------------------------------------------
+Hole: 8
+Stroke: 1
+Shot: Tee Box -> Left Bunker
+Distance: 157 yds
+Radar type: Incoming
+Flight time: 6.681
+Z start: 0.654073
+Z end: -4.856905
+Net lateral: -5.510978
+Lateral range: 7.306304
+MAX CURVE FROM ENDPOINT LINE: 3.258486
+Max curve sample: 34/100
+zFit: [0.654073, 3.097769, -1.733419, 0.370121, -0.045422, 0.002885, -8e-05]
+
+------------------------------------------------------------
+RANK #15
+------------------------------------------------------------
+Hole: 6
+Stroke: 1
+Shot: Tee Box -> Right Rough
+Distance: 267 yds
+Radar type: Broadcast
+Flight time: 7.475
+Z start: 0.985605
+Z end: 30.692934
+Net lateral: 29.707329
+Lateral range: 29.707329
+MAX CURVE FROM ENDPOINT LINE: 3.250943
+Max curve sample: 31/100
+zFit: [0.985605, 7.707165, -1.54202, 0.307695, -0.038911, 0.002793, -8e-05]
+
+------------------------------------------------------------
+RANK #16
+------------------------------------------------------------
+Hole: 12
+Stroke: 2
+Shot: Primary Rough -> Right Fairway
+Distance: 63 yds
+Radar type: Incoming
+Flight time: 3.326
+Z start: 7.176309
+Z end: 59.365271
+Net lateral: 52.188962
+Lateral range: 52.188962
+MAX CURVE FROM ENDPOINT LINE: 2.768101
+Max curve sample: 49/100
+zFit: [7.176309, 19.433403, -1.57439, 0.284505, -0.064009, 0.006595, -0.000258]
+
+------------------------------------------------------------
+RANK #17
+------------------------------------------------------------
+Hole: 9
+Stroke: 2
+Shot: Primary Rough -> Right Green
+Distance: 129 yds
+Radar type: Incoming
+Flight time: 4.658
+Z start: 25.593444
+Z end: 67.145034
+Net lateral: 41.551590
+Lateral range: 41.551590
+MAX CURVE FROM ENDPOINT LINE: 2.740275
+Max curve sample: 49/100
+zFit: [25.593444, 11.540086, -1.026508, 0.394963, -0.138712, 0.021725, -0.001193]
+
+------------------------------------------------------------
+RANK #18
+------------------------------------------------------------
+Hole: 15
+Stroke: 1
+Shot: Tee Box -> Right Rough
+Distance: 301 yds
+Radar type: Broadcast
+Flight time: 7.497
+Z start: 0.854898
+Z end: 7.012322
+Net lateral: 6.157424
+Lateral range: 6.382862
+MAX CURVE FROM ENDPOINT LINE: 2.347817
+Max curve sample: 50/100
+zFit: [0.854898, 1.771645, 0.088116, -0.079245, 0.011167, -0.000717, 1.7e-05]
+
+------------------------------------------------------------
+RANK #19
+------------------------------------------------------------
+Hole: 18
+Stroke: 1
+Shot: Tee Box -> Left Water
+Distance: 281 yds
+Radar type: Broadcast
+Flight time: 6.136
+Z start: 2.045936
+Z end: -25.683542
+Net lateral: -27.729478
+Lateral range: 27.729478
+MAX CURVE FROM ENDPOINT LINE: 2.077029
+Max curve sample: 30/100
+zFit: [2.045936, -1.836165, -1.058301, 0.101185, 0.013292, -0.003092, 0.000151]
+
+------------------------------------------------------------
+RANK #20
+------------------------------------------------------------
+Hole: 4
+Stroke: 1
+Shot: Tee Box -> Left Green
+Distance: 202 yds
+Radar type: Incoming
+Flight time: 6.485
+Z start: -0.435601
+Z end: -4.990112
+Net lateral: -4.554511
+Lateral range: 5.637804
+MAX CURVE FROM ENDPOINT LINE: 2.037945
+Max curve sample: 28/100
+zFit: [-0.435601, 2.506647, -1.882233, 0.536216, -0.084652, 0.006843, -0.000224]
+
+------------------------------------------------------------
+RANK #21
+------------------------------------------------------------
+Hole: 1
+Stroke: 1
+Shot: Tee Box -> Right Intermediate
+Distance: 306 yds
+Radar type: Broadcast
+Flight time: 8.026
+Z start: 0.824233
+Z end: 8.748773
+Net lateral: 7.924540
+Lateral range: 8.258714
+MAX CURVE FROM ENDPOINT LINE: -1.938764
+Max curve sample: 31/100
+zFit: [0.824233, -0.738477, 0.401602, 0.018532, -0.014504, 0.0016, -5.5e-05]
+
+------------------------------------------------------------
+RANK #22
+------------------------------------------------------------
+Hole: 11
+Stroke: 1
+Shot: Tee Box -> Right Green
+Distance: 172 yds
+Radar type: Incoming
+Flight time: 6.252
+Z start: 0.662554
+Z end: 8.626419
+Net lateral: 7.963865
+Lateral range: 7.963865
+MAX CURVE FROM ENDPOINT LINE: 1.925888
+Max curve sample: 35/100
+zFit: [0.662554, 3.673485, -1.090319, 0.238006, -0.030067, 0.00193, -5.1e-05]
+
+------------------------------------------------------------
+RANK #23
+------------------------------------------------------------
+Hole: 14
+Stroke: 1
+Shot: Tee Box -> Left Green
+Distance: 196 yds
+Radar type: Incoming
+Flight time: 6.969
+Z start: -0.437578
+Z end: 0.335142
+Net lateral: 0.772720
+Lateral range: 1.955038
+MAX CURVE FROM ENDPOINT LINE: 1.680150
+Max curve sample: 33/100
+zFit: [-0.437578, 2.142172, -0.907632, 0.19851, -0.025279, 0.001688, -4.7e-05]
+
+------------------------------------------------------------
+RANK #24
+------------------------------------------------------------
+Hole: 10
+Stroke: 1
+Shot: Tee Box -> Left Fairway
+Distance: 292 yds
+Radar type: Broadcast
+Flight time: 7.158
+Z start: 0.590847
+Z end: -6.546381
+Net lateral: -7.137228
+Lateral range: 7.241235
+MAX CURVE FROM ENDPOINT LINE: 1.265422
+Max curve sample: 33/100
+zFit: [0.590847, 0.501821, -0.663081, 0.143477, -0.017308, 0.001048, -2.7e-05]
+
+------------------------------------------------------------
+RANK #25
+------------------------------------------------------------
+Hole: 17
+Stroke: 2
+Shot: Fairway -> Left Fairway
+Distance: 183 yds
+Radar type: Incoming
+Flight time: 7.155
+Z start: 4.847208
+Z end: -18.677001
+Net lateral: -23.524209
+Lateral range: 23.524209
+MAX CURVE FROM ENDPOINT LINE: -1.188642
+Max curve sample: 26/100
+zFit: [4.847208, -4.89829, 0.755354, -0.161888, 0.023089, -0.001956, 6.2e-05]
+
+------------------------------------------------------------
+RANK #26
+------------------------------------------------------------
+Hole: 12
+Stroke: 1
+Shot: Tee Box -> Left Rough
+Distance: 330 yds
+Radar type: Broadcast
+Flight time: 7.502
+Z start: -0.669375
+Z end: 7.097767
+Net lateral: 7.767142
+Lateral range: 7.767142
+MAX CURVE FROM ENDPOINT LINE: 1.182864
+Max curve sample: 44/100
+zFit: [-0.669375, 1.75896, -0.10066, -0.008137, 0.001902, -0.000114, 2e-06]
+
+------------------------------------------------------------
+RANK #27
+------------------------------------------------------------
+Hole: 7
+Stroke: 1
+Shot: Tee Box -> Right Fairway
+Distance: 331 yds
+Radar type: Broadcast
+Flight time: 6.524
+Z start: -0.008532
+Z end: 2.088029
+Net lateral: 2.096561
+Lateral range: 2.678019
+MAX CURVE FROM ENDPOINT LINE: -1.094327
+Max curve sample: 30/100
+zFit: [-0.008532, -0.968264, 0.44175, -0.021241, -0.009879, 0.001591, -7e-05]
+
+------------------------------------------------------------
+RANK #28
+------------------------------------------------------------
+Hole: 5
+Stroke: 1
+Shot: Tee Box -> Left Fairway
+Distance: 328 yds
+Radar type: Broadcast
+Flight time: 7.705
+Z start: -0.539749
+Z end: 7.154404
+Net lateral: 7.694153
+Lateral range: 7.694926
+MAX CURVE FROM ENDPOINT LINE: -0.660764
+Max curve sample: 20/100
+zFit: [-0.539749, -0.051846, 0.551186, -0.111376, 0.010783, -0.000492, 8e-06]
+
+------------------------------------------------------------
+RANK #29
+------------------------------------------------------------
+Hole: 7
+Stroke: 2
+Shot: Fairway -> Right Green
+Distance: 147 yds
+Radar type: Incoming
+Flight time: 5.661
+Z start: -3.032692
+Z end: 1.292264
+Net lateral: 4.324956
+Lateral range: 4.324956
+MAX CURVE FROM ENDPOINT LINE: 0.651962
+Max curve sample: 33/100
+zFit: [-3.032692, 1.674362, -0.458259, 0.111333, -0.016895, 0.001433, -5e-05]
+
+------------------------------------------------------------
+RANK #30
+------------------------------------------------------------
+Hole: 13
+Stroke: 1
+Shot: Tee Box -> Left Intermediate
+Distance: 332 yds
+Radar type: Broadcast
+Flight time: 6.792
+Z start: -0.768862
+Z end: -3.083583
+Net lateral: -2.314721
+Lateral range: 2.375555
+MAX CURVE FROM ENDPOINT LINE: 0.539637
+Max curve sample: 33/100
+zFit: [-0.768862, 0.17539, -0.120837, -0.012303, 0.006655, -0.000767, 2.9e-05]
+
+------------------------------------------------------------
+RANK #31
+------------------------------------------------------------
+Hole: 2
+Stroke: 2
+Shot: Primary Rough -> Left Fairway
+Distance: 65 yds
+Radar type: Incoming
+Flight time: 2.770
+Z start: 26.060457
+Z end: 45.548453
+Net lateral: 19.487996
+Lateral range: 19.487996
+MAX CURVE FROM ENDPOINT LINE: 0.526407
+Max curve sample: 43/100
+zFit: [26.060457, 7.944533, -0.383763, -0.043315, 0.037321, -0.006281, 0.000385]
+

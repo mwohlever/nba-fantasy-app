@@ -1,0 +1,195 @@
+===== SCORES PAGE TOP / DATA LOAD =====
+export const dynamic = "force-dynamic";
+
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import AppNav from "@/components/AppNav";
+import LineupBuilder from "@/components/lineups/LineupBuilder";
+import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+type Slate = {
+  id: number;
+  date: string;
+  start_date?: string;
+  end_date?: string;
+  label?: string;
+  is_locked: boolean;
+  sport?: string;
+  has_cut?: boolean;
+};
+
+type SavedLineup = {
+  team_id: number;
+  player_ids: number[];
+  pregame_projected_points: number | null;
+};
+
+type SlateTeamConfig = {
+  slate_id: number;
+  team_id: number;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+export default async function ScoresLineupsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sport?: string | string[] }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const sportParam = Array.isArray(resolvedSearchParams?.sport)
+    ? resolvedSearchParams.sport[0]
+    : resolvedSearchParams?.sport;
+  const sport =
+    sportParam === "nfl"
+      ? "nfl"
+      : sportParam === "golf"
+        ? "golf"
+        : "nba";
+
+  const today = getTodayDateString();
+
+  const playersTable =
+    sport === "nfl"
+      ? "players_nfl"
+      : sport === "golf"
+        ? "golf_players"
+        : "players";
+
+  const playersSelect =
+    sport === "nfl"
+      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id"
+      : sport === "golf"
+        ? "id, display_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
+        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+
+  const statsTable =
+    sport === "nfl"
+      ? "player_nfl_slate_stats"
+      : "player_slate_stats";
+
+  const [
+    { data: rawPlayers, error: playersError },
+    { data: teams, error: teamsError },
+    { data: slates, error: slatesError },
+    { data: slateTeams, error: slateTeamsError },
+    { data: allPlayerStats, error: allPlayerStatsError },
+  ] = await Promise.all([
+    supabaseAdmin
+      .from(playersTable)
+      .select(playersSelect)
+      .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
+    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+    supabaseAdmin
+      .from("slates")
+      .select(
+        "id, date, start_date, end_date, is_locked, sport, display_name, has_cut",
+      )
+      .eq("sport", sport)
+      .order("start_date", { ascending: false })
+      .order("end_date", { ascending: false }),
+    supabaseAdmin
+      .from("slate_teams")
+      .select("slate_id, team_id, draft_order, is_participating")
+      .order("slate_id", { ascending: true })
+      .order("draft_order", { ascending: true }),
+    sport === "golf"
+      ? supabaseAdmin
+          .from("golf_event_players")
+          .select("player_id, fantasy_score")
+      : supabaseAdmin
+          .from(statsTable)
+          .select("player_id, fantasy_points"),
+  ]);
+
+  if (
+    playersError ||
+    teamsError ||
+    slatesError ||
+    slateTeamsError ||
+    allPlayerStatsError
+  ) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+        <div className="mx-auto max-w-[1600px] space-y-6">
+          <AppNav />
+
+          <section className="rounded-3xl border border-red-200 bg-red-50 px-5 py-6 shadow-sm">
+            <h1 className="text-3xl font-bold tracking-tight">Live Scores</h1>
+            <div className="mt-4 rounded-2xl border border-red-200 bg-white px-4 py-4 text-red-700">
+              Failed to load page data.
+              <div className="mt-2 text-sm text-red-600">
+                {playersError?.message ||
+                  teamsError?.message ||
+                  slatesError?.message ||
+                  slateTeamsError?.message ||
+                  allPlayerStatsError?.message}
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  const normalizedPlayers = (rawPlayers ?? []).map((p: any) => {
+    if (sport === "nfl") {
+      return {
+        id: p.id,
+        name: p.name,
+        position_group: p.position,
+        is_active: p.is_active,
+        is_playing_today: p.is_playing_this_week,
+        nba_player_id: null,
+        nfl_player_id: p.nfl_player_id,
+      };
+    }
+
+    if (sport === "golf") {
+      return {
+        id: p.id,
+        name: p.display_name,
+        position_group: "GOLFER",
+        is_active: p.is_active,
+        is_playing_today: null,
+        nba_player_id: null,
+        nfl_player_id: null,
+        espn_player_id: p.espn_player_id,
+        country: p.country,
+        country_flag_url: p.country_flag_url,
+        headshot_url: p.headshot_url,
+        owgr_player_id: p.owgr_player_id,
+        owgr_rank:
+          p.owgr_rank === null
+            ? null
+            : Number(p.owgr_rank),
+        owgr_points:
+          p.owgr_points === null
+            ? null
+            : Number(p.owgr_points),
+        owgr_updated_at: p.owgr_updated_at,
+      };
+    }
+
+    return {
+      id: p.id,
+      name: p.name,
+      position_group: p.position_group,
+      is_active: p.is_active,
+      is_playing_today: p.is_playing_today,
+      nba_player_id: p.nba_player_id,
+      nfl_player_id: null,
+    };
+  });
+
+
+===== LINEUP BUILDER TEAM TYPES =====
+
+===== ORDERED TEAM CREATION =====

@@ -1,0 +1,5290 @@
+============================================================
+PGA BALL TRAJECTORY — RAW SHAPE PROOF
+============================================================
+
+############################################################
+FILE: tmp/collectors/rory-r3-hole-replay-proof.txt
+############################################################
+
+===== TERM: "ballTrajectory" =====
+NO MATCHES
+
+===== TERM: ballTrajectory: =====
+NO MATCHES
+
+===== TERM: "xFit" =====
+NO MATCHES
+
+===== TERM: "timeStart" =====
+NO MATCHES
+
+===== TERM: "timeEnd" =====
+NO MATCHES
+
+############################################################
+FILE: tmp/collectors/pga-2d-ball-flight-exact.txt
+############################################################
+
+===== TERM: "ballTrajectory" =====
+
+--- HIT 1 @ CHAR 288505 ---
+-            </div>
+4259-          ) : null}
+4260-
+4261-
+4262-          <div
+4263-            ref={videoPanelRef}
+4264-            className={`mt-3 ${
+4265-              isVideoPanelOpen
+4266-                ? "sm:mt-0 sm:min-h-0 sm:flex-1"
+4267-                : ""
+4268-            }`}
+4269-          >
+
+===== 7. RAW PGA POLYNOMIAL EXAMPLES ALREADY CAPTURED =====
+tmp/collectors/shotcast-radar-green-raw.txt-203-    }
+tmp/collectors/shotcast-radar-green-raw.txt-204-  }
+tmp/collectors/shotcast-radar-green-raw.txt-205-}
+tmp/collectors/shotcast-radar-green-raw.txt-206-
+tmp/collectors/shotcast-radar-green-raw.txt-207-videoId:
+tmp/collectors/shotcast-radar-green-raw.txt-208-"6403104847112"
+tmp/collectors/shotcast-radar-green-raw.txt-209-
+tmp/collectors/shotcast-radar-green-raw.txt-210-radarData:
+tmp/collectors/shotcast-radar-green-raw.txt-211-{
+tmp/collectors/shotcast-radar-green-raw.txt-212-  "apexHeight": 83.5,
+tmp/collectors/shotcast-radar-green-raw.txt-213-  "apexRange": 601.08,
+tmp/collectors/shotcast-radar-green-raw.txt-214-  "apexSide": 14.86,
+tmp/collectors/shotcast-radar-green-raw.txt-215-  "clubSpeed": 124.89,
+tmp/collectors/shotcast-radar-green-raw.txt-216-  "ballSpeed": 185.92,
+tmp/collectors/shotcast-radar-green-raw.txt-217-  "smashFactor": 1.49,
+tmp/collectors/shotcast-radar-green-raw.txt-218-  "launchSpin": 2620.59,
+tmp/collectors/shotcast-radar-green-raw.txt-219-  "spinAxis": 2.02,
+tmp/collectors/shotcast-radar-green-raw.txt-220-  "verticalLaunchAngle": 6.35,
+tmp/collectors/shotcast-radar-green-raw.txt-221-  "horizontalLaunchAngle": 0.87,
+tmp/collectors/shotcast-radar-green-raw.txt-222-  "actualFlightTime": 7,
+tmp/collectors/shotcast-radar-green-raw.txt-223-  "ballImpactMeasured": "2026-08-09T12:14:22.2940000",
+tmp/collectors/shotcast-radar-green-raw.txt-224-  "ballTrajectory": [
+tmp/collectors/shotcast-radar-green-raw.txt-225-    {
+tmp/collectors/shotcast-radar-green-raw.txt-226-      "__typename": "RadarBallTracjectory",
+tmp/collectors/shotcast-radar-green-raw.txt-227-      "kind": "Flight",
+tmp/collectors/shotcast-radar-green-raw.txt:228:      "xFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-229-        0.332668,
+tmp/collectors/shotcast-radar-green-raw.txt-230-        82.565204,
+tmp/collectors/shotcast-radar-green-raw.txt-231-        -15.04966,
+tmp/collectors/shotcast-radar-green-raw.txt-232-        2.828093,
+tmp/collectors/shotcast-radar-green-raw.txt-233-        -0.377762,
+tmp/collectors/shotcast-radar-green-raw.txt-234-        0.028803,
+tmp/collectors/shotcast-radar-green-raw.txt-235-        -0.000907
+tmp/collectors/shotcast-radar-green-raw.txt-236-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:237:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-238-        0.087575,
+tmp/collectors/shotcast-radar-green-raw.txt-239-        9.460155,
+tmp/collectors/shotcast-radar-green-raw.txt-240-        2.216424,
+tmp/collectors/shotcast-radar-green-raw.txt-241-        -1.379495,
+tmp/collectors/shotcast-radar-green-raw.txt-242-        0.216479,
+tmp/collectors/shotcast-radar-green-raw.txt-243-        -0.01756,
+tmp/collectors/shotcast-radar-green-raw.txt-244-        0.000586
+tmp/collectors/shotcast-radar-green-raw.txt-245-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:246:      "zFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-247-        -0.412633,
+tmp/collectors/shotcast-radar-green-raw.txt-248-        1.201724,
+tmp/collectors/shotcast-radar-green-raw.txt-249-        -0.006734,
+tmp/collectors/shotcast-radar-green-raw.txt-250-        0.035228,
+tmp/collectors/shotcast-radar-green-raw.txt-251-        -0.011429,
+tmp/collectors/shotcast-radar-green-raw.txt-252-        0.001296,
+tmp/collectors/shotcast-radar-green-raw.txt-253-        -0.00005
+tmp/collectors/shotcast-radar-green-raw.txt-254-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-255-      "spinRateFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-256-        2620.581063,
+tmp/collectors/shotcast-radar-green-raw.txt-257-        -78.948059,
+tmp/collectors/shotcast-radar-green-raw.txt-258-        1.147847,
+tmp/collectors/shotcast-radar-green-raw.txt-259-        -0.009502
+tmp/collectors/shotcast-radar-green-raw.txt-260-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-261-      "timeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-262-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-263-        6.7
+tmp/collectors/shotcast-radar-green-raw.txt-264-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-265-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-266-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-267-        8.283
+tmp/collectors/shotcast-radar-green-raw.txt-268-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-269-      "measuredTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-270-        0.082,
+tmp/collectors/shotcast-radar-green-raw.txt-271-        6.17
+tmp/collectors/shotcast-radar-green-raw.txt-272-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-273-      "type": "Broadcast"
+tmp/collectors/shotcast-radar-green-raw.txt-274-    }
+tmp/collectors/shotcast-radar-green-raw.txt-275-  ],
+tmp/collectors/shotcast-radar-green-raw.txt-276-  "normalizedTrajectory": [
+tmp/collectors/shotcast-radar-green-raw.txt-277-    {
+tmp/collectors/shotcast-radar-green-raw.txt-278-      "valid": true,
+tmp/collectors/shotcast-radar-green-raw.txt:279:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-280-        0.087575,
+tmp/collectors/shotcast-radar-green-raw.txt-281-        9.46,
+tmp/collectors/shotcast-radar-green-raw.txt-282-        2.02175,
+tmp/collectors/shotcast-radar-green-raw.txt-283-        -1.185986,
+tmp/collectors/shotcast-radar-green-raw.txt-284-        0.175471,
+tmp/collectors/shotcast-radar-green-raw.txt-285-        -0.014122,
+tmp/collectors/shotcast-radar-green-raw.txt-286-        0.000484
+tmp/collectors/shotcast-radar-green-raw.txt-287-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-288-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-289-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-290-        6.962
+tmp/collectors/shotcast-radar-green-raw.txt-291-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-292-      "curve": 4.62,
+tmp/collectors/shotcast-radar-green-raw.txt-293-      "maxHeight": 26.94,
+tmp/collectors/shotcast-radar-green-raw.txt-294-      "spinAxis": 2.02,
+tmp/collectors/shotcast-radar-green-raw.txt-295-      "timeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-296-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-297-        6.962
+tmp/collectors/shotcast-radar-green-raw.txt-298-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-299-      "carrySide": 8.72,
+tmp/collectors/shotcast-radar-green-raw.txt-300-      "carry": 281.92,
+tmp/collectors/shotcast-radar-green-raw.txt-301-      "windVelocity": [
+tmp/collectors/shotcast-radar-green-raw.txt-302-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-303-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-304-        0
+tmp/collectors/shotcast-radar-green-raw.txt-305-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:306:      "zFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-307-        0.332668,
+tmp/collectors/shotcast-radar-green-raw.txt-308-        82.565,
+tmp/collectors/shotcast-radar-green-raw.txt-309-        -13.408714,
+tmp/collectors/shotcast-radar-green-raw.txt-310-        2.002313,
+tmp/collectors/shotcast-radar-green-raw.txt-311-        -0.21673,
+tmp/collectors/shotcast-radar-green-raw.txt-312-        0.014803,
+tmp/collectors/shotcast-radar-green-raw.txt-313-        -0.000454
+tmp/collectors/shotcast-radar-green-raw.txt-314-      ]
+tmp/collectors/shotcast-radar-green-raw.txt-315-    }
+tmp/collectors/shotcast-radar-green-raw.txt-316-  ],
+tmp/collectors/shotcast-radar-green-raw.txt-317-  "normalizedTrajectoryV2": [
+tmp/collectors/shotcast-radar-green-raw.txt-318-    {
+tmp/collectors/shotcast-radar-green-raw.txt-319-      "valid": true,
+tmp/collectors/shotcast-radar-green-raw.txt:320:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-321-        0.087575,
+tmp/collectors/shotcast-radar-green-raw.txt-322-        9.46,
+tmp/collectors/shotcast-radar-green-raw.txt-323-        2.02175,
+tmp/collectors/shotcast-radar-green-raw.txt-324-        -1.185986,
+tmp/collectors/shotcast-radar-green-raw.txt-325-        0.175471,
+tmp/collectors/shotcast-radar-green-raw.txt-326-        -0.014122,
+tmp/collectors/shotcast-radar-green-raw.txt-327-        0.000484
+tmp/collectors/shotcast-radar-green-raw.txt-328-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-329-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-330-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-331-        6.962
+tmp/collectors/shotcast-radar-green-raw.txt-332-    
+
+--- HIT 2 @ CHAR 302866 ---
+dar-green-raw.txt-410-      "tourcastX": 10268.896,
+tmp/collectors/shotcast-radar-green-raw.txt-411-      "tourcastY": 7297.987,
+tmp/collectors/shotcast-radar-green-raw.txt-412-      "tourcastZ": 805.402,
+tmp/collectors/shotcast-radar-green-raw.txt-413-      "enhancedX": 0.5526599384089659,
+tmp/collectors/shotcast-radar-green-raw.txt-414-      "enhancedY": 0.5089696193261812
+tmp/collectors/shotcast-radar-green-raw.txt-415-    }
+tmp/collectors/shotcast-radar-green-raw.txt-416-  }
+tmp/collectors/shotcast-radar-green-raw.txt-417-}
+tmp/collectors/shotcast-radar-green-raw.txt-418-
+tmp/collectors/shotcast-radar-green-raw.txt-419-videoId:
+tmp/collectors/shotcast-radar-green-raw.txt-420-"6403106402112"
+tmp/collectors/shotcast-radar-green-raw.txt-421-
+tmp/collectors/shotcast-radar-green-raw.txt-422-radarData:
+tmp/collectors/shotcast-radar-green-raw.txt-423-{
+tmp/collectors/shotcast-radar-green-raw.txt-424-  "apexHeight": 97.41,
+tmp/collectors/shotcast-radar-green-raw.txt-425-  "apexRange": 332.71,
+tmp/collectors/shotcast-radar-green-raw.txt-426-  "apexSide": 6.86,
+tmp/collectors/shotcast-radar-green-raw.txt-427-  "clubSpeed": 0,
+tmp/collectors/shotcast-radar-green-raw.txt-428-  "ballSpeed": 126.82,
+tmp/collectors/shotcast-radar-green-raw.txt-429-  "smashFactor": 0,
+tmp/collectors/shotcast-radar-green-raw.txt-430-  "launchSpin": 0,
+tmp/collectors/shotcast-radar-green-raw.txt-431-  "spinAxis": -1.56,
+tmp/collectors/shotcast-radar-green-raw.txt-432-  "verticalLaunchAngle": 15.14,
+tmp/collectors/shotcast-radar-green-raw.txt-433-  "horizontalLaunchAngle": 1.49,
+tmp/collectors/shotcast-radar-green-raw.txt-434-  "actualFlightTime": 6,
+tmp/collectors/shotcast-radar-green-raw.txt-435-  "ballImpactMeasured": "2026-08-09T12:20:10.7290000",
+tmp/collectors/shotcast-radar-green-raw.txt-436-  "ballTrajectory": [
+tmp/collectors/shotcast-radar-green-raw.txt-437-    {
+tmp/collectors/shotcast-radar-green-raw.txt-438-      "__typename": "RadarBallTracjectory",
+tmp/collectors/shotcast-radar-green-raw.txt-439-      "kind": "Flight",
+tmp/collectors/shotcast-radar-green-raw.txt:440:      "xFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-441-        323.232516,
+tmp/collectors/shotcast-radar-green-raw.txt-442-        51.045573,
+tmp/collectors/shotcast-radar-green-raw.txt-443-        -11.782799,
+tmp/collectors/shotcast-radar-green-raw.txt-444-        2.393588,
+tmp/collectors/shotcast-radar-green-raw.txt-445-        -0.313897,
+tmp/collectors/shotcast-radar-green-raw.txt-446-        0.023447,
+tmp/collectors/shotcast-radar-green-raw.txt-447-        -0.000734
+tmp/collectors/shotcast-radar-green-raw.txt-448-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:449:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-450-        -8.337555,
+tmp/collectors/shotcast-radar-green-raw.txt-451-        14.806131,
+tmp/collectors/shotcast-radar-green-raw.txt-452-        0.799123,
+tmp/collectors/shotcast-radar-green-raw.txt-453-        -1.317657,
+tmp/collectors/shotcast-radar-green-raw.txt-454-        0.2122,
+tmp/collectors/shotcast-radar-green-raw.txt-455-        -0.016521,
+tmp/collectors/shotcast-radar-green-raw.txt-456-        0.000545
+tmp/collectors/shotcast-radar-green-raw.txt-457-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:458:      "zFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-459-        6.139166,
+tmp/collectors/shotcast-radar-green-raw.txt-460-        -19.713195,
+tmp/collectors/shotcast-radar-green-raw.txt-461-        4.251617,
+tmp/collectors/shotcast-radar-green-raw.txt-462-        -0.773052,
+tmp/collectors/shotcast-radar-green-raw.txt-463-        0.088604,
+tmp/collectors/shotcast-radar-green-raw.txt-464-        -0.00594,
+tmp/collectors/shotcast-radar-green-raw.txt-465-        0.000168
+tmp/collectors/shotcast-radar-green-raw.txt-466-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-467-      "spinRateFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-468-        5838.91313,
+tmp/collectors/shotcast-radar-green-raw.txt-469-        -169.334417,
+tmp/collectors/shotcast-radar-green-raw.txt-470-        2.278402,
+tmp/collectors/shotcast-radar-green-raw.txt-471-        -0.016363
+tmp/collectors/shotcast-radar-green-raw.txt-472-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-473-      "timeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-474-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-475-        6.295
+tmp/collectors/shotcast-radar-green-raw.txt-476-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-477-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-478-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-479-        7.413
+tmp/collectors/shotcast-radar-green-raw.txt-480-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-481-      "measuredTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-482-        0.02,
+tmp/collectors/shotcast-radar-green-raw.txt-483-        6.213
+tmp/collectors/shotcast-radar-green-raw.txt-484-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-485-      "type": "Incoming"
+tmp/collectors/shotcast-radar-green-raw.txt-486-    }
+tmp/collectors/shotcast-radar-green-raw.txt-487-  ],
+tmp/collectors/shotcast-radar-green-raw.txt-488-  "normalizedTrajectory": [],
+tmp/collectors/shotcast-radar-green-raw.txt-489-  "normalizedTrajectoryV2": []
+tmp/collectors/shotcast-radar-green-raw.txt-490-}
+tmp/collectors/shotcast-radar-green-raw.txt-491-
+tmp/collectors/shotcast-radar-green-raw.txt-492-----------------------------------------
+tmp/collectors/shotcast-radar-green-raw.txt-493-SHOT 3
+tmp/collectors/shotcast-radar-green-raw.txt-494-TOP-LEVEL KEYS: __typename, ballPath, distance, distanceRemaining, finalStroke, fromLocation, fromLocationCode, green, groupShowMarker, markerText, overview, playByPlay, playByPlayLabel, showMarker, strokeNumber, strokeType, toLocation, toLocationCode
+tmp/collectors/shotcast-radar-green-raw.txt-495-
+tmp/collectors/shotcast-radar-green-raw.txt-496-green:
+tmp/collectors/shotcast-radar-green-raw.txt-497-{
+tmp/collectors/shotcast-radar-green-raw.txt-498-  "__typename": "ShotLinkCoordWrapper",
+tmp/collectors/shotcast-radar-green-raw.txt-499-  "leftToRightCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-500-    "__typename": "ShotLinkCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-501-    "fromCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-502-      "__typename": "StrokeCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-503-      "x": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-504-      "y": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-505-      "z": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-506-      "tourcastX": 10268.896,
+tmp/collectors/shotcast-radar-green-raw.txt-507-      "tourcastY": 7297.987,
+tmp/collectors/shotcast-radar-green-raw.txt-508-      "tourcastZ": 805.402,
+tmp/collectors/shotcast-radar-green-raw.txt-509-      "enhancedX": 0.49087892312338843,
+tmp/collectors/shotcast-radar-green-raw.txt-510-      "enhancedY": 0.47367598096882546
+tmp/collectors/shotcast-radar-green-raw.txt-511-    },
+tmp/collectors/shotcast-radar-green-raw.txt-512-    "toCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-513-      "__typename": "StrokeCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-514-      "x": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-515-      "y": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-516-      "z": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-517-      "tourcastX": 10285.956,
+tmp/collectors/shotcast-radar-green-raw.txt-518-      "tourcastY": 7323.294,
+tmp/collectors/shotcast-radar-green-raw.txt-519-      "tourcastZ": 806.731,
+tmp/collectors/shotcast-radar-green-raw.txt-520-      "enhancedX": 0.5508654449274882,
+tmp/collectors/shotcast-radar-green-raw.txt-521-      "enhancedY": 0.28060550720448363
+tmp/collectors/shotcast-radar-green-raw.txt-522-    }
+tmp/collectors/shotcast-radar-green-raw.txt-523-  },
+tmp/collectors/shotcast-radar-green-raw.txt-524-  "bottomToTopCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-525-    "__typename": "ShotLinkCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-526-    "fromCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-527-      "__typename": "StrokeCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-528-      "x": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-529-      "y": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-530-      "z": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-531-      "tourcastX": 10268.896,
+tmp/collectors/shotcast-radar-green-raw.txt-532-      "tourcastY": 7297.987,
+tmp/collectors/shotcast-radar-green-raw.txt-533-      "tourcastZ": 805.402,
+tmp/collectors/shotcast-radar-green-raw.txt-534-      "enhancedX": 0.5526599384089659,
+tmp/collectors/shotcast-radar-green-raw.txt-535-      "enhancedY": 0
+
+===== TERM: ballTrajectory: =====
+NO MATCHES
+
+===== TERM: "xFit" =====
+
+--- HIT 1 @ CHAR 288797 ---
+-          >
+
+===== 7. RAW PGA POLYNOMIAL EXAMPLES ALREADY CAPTURED =====
+tmp/collectors/shotcast-radar-green-raw.txt-203-    }
+tmp/collectors/shotcast-radar-green-raw.txt-204-  }
+tmp/collectors/shotcast-radar-green-raw.txt-205-}
+tmp/collectors/shotcast-radar-green-raw.txt-206-
+tmp/collectors/shotcast-radar-green-raw.txt-207-videoId:
+tmp/collectors/shotcast-radar-green-raw.txt-208-"6403104847112"
+tmp/collectors/shotcast-radar-green-raw.txt-209-
+tmp/collectors/shotcast-radar-green-raw.txt-210-radarData:
+tmp/collectors/shotcast-radar-green-raw.txt-211-{
+tmp/collectors/shotcast-radar-green-raw.txt-212-  "apexHeight": 83.5,
+tmp/collectors/shotcast-radar-green-raw.txt-213-  "apexRange": 601.08,
+tmp/collectors/shotcast-radar-green-raw.txt-214-  "apexSide": 14.86,
+tmp/collectors/shotcast-radar-green-raw.txt-215-  "clubSpeed": 124.89,
+tmp/collectors/shotcast-radar-green-raw.txt-216-  "ballSpeed": 185.92,
+tmp/collectors/shotcast-radar-green-raw.txt-217-  "smashFactor": 1.49,
+tmp/collectors/shotcast-radar-green-raw.txt-218-  "launchSpin": 2620.59,
+tmp/collectors/shotcast-radar-green-raw.txt-219-  "spinAxis": 2.02,
+tmp/collectors/shotcast-radar-green-raw.txt-220-  "verticalLaunchAngle": 6.35,
+tmp/collectors/shotcast-radar-green-raw.txt-221-  "horizontalLaunchAngle": 0.87,
+tmp/collectors/shotcast-radar-green-raw.txt-222-  "actualFlightTime": 7,
+tmp/collectors/shotcast-radar-green-raw.txt-223-  "ballImpactMeasured": "2026-08-09T12:14:22.2940000",
+tmp/collectors/shotcast-radar-green-raw.txt-224-  "ballTrajectory": [
+tmp/collectors/shotcast-radar-green-raw.txt-225-    {
+tmp/collectors/shotcast-radar-green-raw.txt-226-      "__typename": "RadarBallTracjectory",
+tmp/collectors/shotcast-radar-green-raw.txt-227-      "kind": "Flight",
+tmp/collectors/shotcast-radar-green-raw.txt:228:      "xFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-229-        0.332668,
+tmp/collectors/shotcast-radar-green-raw.txt-230-        82.565204,
+tmp/collectors/shotcast-radar-green-raw.txt-231-        -15.04966,
+tmp/collectors/shotcast-radar-green-raw.txt-232-        2.828093,
+tmp/collectors/shotcast-radar-green-raw.txt-233-        -0.377762,
+tmp/collectors/shotcast-radar-green-raw.txt-234-        0.028803,
+tmp/collectors/shotcast-radar-green-raw.txt-235-        -0.000907
+tmp/collectors/shotcast-radar-green-raw.txt-236-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:237:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-238-        0.087575,
+tmp/collectors/shotcast-radar-green-raw.txt-239-        9.460155,
+tmp/collectors/shotcast-radar-green-raw.txt-240-        2.216424,
+tmp/collectors/shotcast-radar-green-raw.txt-241-        -1.379495,
+tmp/collectors/shotcast-radar-green-raw.txt-242-        0.216479,
+tmp/collectors/shotcast-radar-green-raw.txt-243-        -0.01756,
+tmp/collectors/shotcast-radar-green-raw.txt-244-        0.000586
+tmp/collectors/shotcast-radar-green-raw.txt-245-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:246:      "zFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-247-        -0.412633,
+tmp/collectors/shotcast-radar-green-raw.txt-248-        1.201724,
+tmp/collectors/shotcast-radar-green-raw.txt-249-        -0.006734,
+tmp/collectors/shotcast-radar-green-raw.txt-250-        0.035228,
+tmp/collectors/shotcast-radar-green-raw.txt-251-        -0.011429,
+tmp/collectors/shotcast-radar-green-raw.txt-252-        0.001296,
+tmp/collectors/shotcast-radar-green-raw.txt-253-        -0.00005
+tmp/collectors/shotcast-radar-green-raw.txt-254-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-255-      "spinRateFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-256-        2620.581063,
+tmp/collectors/shotcast-radar-green-raw.txt-257-        -78.948059,
+tmp/collectors/shotcast-radar-green-raw.txt-258-        1.147847,
+tmp/collectors/shotcast-radar-green-raw.txt-259-        -0.009502
+tmp/collectors/shotcast-radar-green-raw.txt-260-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-261-      "timeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-262-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-263-        6.7
+tmp/collectors/shotcast-radar-green-raw.txt-264-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-265-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-266-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-267-        8.283
+tmp/collectors/shotcast-radar-green-raw.txt-268-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-269-      "measuredTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-270-        0.082,
+tmp/collectors/shotcast-radar-green-raw.txt-271-        6.17
+tmp/collectors/shotcast-radar-green-raw.txt-272-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-273-      "type": "Broadcast"
+tmp/collectors/shotcast-radar-green-raw.txt-274-    }
+tmp/collectors/shotcast-radar-green-raw.txt-275-  ],
+tmp/collectors/shotcast-radar-green-raw.txt-276-  "normalizedTrajectory": [
+tmp/collectors/shotcast-radar-green-raw.txt-277-    {
+tmp/collectors/shotcast-radar-green-raw.txt-278-      "valid": true,
+tmp/collectors/shotcast-radar-green-raw.txt:279:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-280-        0.087575,
+tmp/collectors/shotcast-radar-green-raw.txt-281-        9.46,
+tmp/collectors/shotcast-radar-green-raw.txt-282-        2.02175,
+tmp/collectors/shotcast-radar-green-raw.txt-283-        -1.185986,
+tmp/collectors/shotcast-radar-green-raw.txt-284-        0.175471,
+tmp/collectors/shotcast-radar-green-raw.txt-285-        -0.014122,
+tmp/collectors/shotcast-radar-green-raw.txt-286-        0.000484
+tmp/collectors/shotcast-radar-green-raw.txt-287-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-288-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-289-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-290-        6.962
+tmp/collectors/shotcast-radar-green-raw.txt-291-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-292-      "curve": 4.62,
+tmp/collectors/shotcast-radar-green-raw.txt-293-      "maxHeight": 26.94,
+tmp/collectors/shotcast-radar-green-raw.txt-294-      "spinAxis": 2.02,
+tmp/collectors/shotcast-radar-green-raw.txt-295-      "timeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-296-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-297-        6.962
+tmp/collectors/shotcast-radar-green-raw.txt-298-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-299-      "carrySide": 8.72,
+tmp/collectors/shotcast-radar-green-raw.txt-300-      "carry": 281.92,
+tmp/collectors/shotcast-radar-green-raw.txt-301-      "windVelocity": [
+tmp/collectors/shotcast-radar-green-raw.txt-302-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-303-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-304-        0
+tmp/collectors/shotcast-radar-green-raw.txt-305-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:306:      "zFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-307-        0.332668,
+tmp/collectors/shotcast-radar-green-raw.txt-308-        82.565,
+tmp/collectors/shotcast-radar-green-raw.txt-309-        -13.408714,
+tmp/collectors/shotcast-radar-green-raw.txt-310-        2.002313,
+tmp/collectors/shotcast-radar-green-raw.txt-311-        -0.21673,
+tmp/collectors/shotcast-radar-green-raw.txt-312-        0.014803,
+tmp/collectors/shotcast-radar-green-raw.txt-313-        -0.000454
+tmp/collectors/shotcast-radar-green-raw.txt-314-      ]
+tmp/collectors/shotcast-radar-green-raw.txt-315-    }
+tmp/collectors/shotcast-radar-green-raw.txt-316-  ],
+tmp/collectors/shotcast-radar-green-raw.txt-317-  "normalizedTrajectoryV2": [
+tmp/collectors/shotcast-radar-green-raw.txt-318-    {
+tmp/collectors/shotcast-radar-green-raw.txt-319-      "valid": true,
+tmp/collectors/shotcast-radar-green-raw.txt:320:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-321-        0.087575,
+tmp/collectors/shotcast-radar-green-raw.txt-322-        9.46,
+tmp/collectors/shotcast-radar-green-raw.txt-323-        2.02175,
+tmp/collectors/shotcast-radar-green-raw.txt-324-        -1.185986,
+tmp/collectors/shotcast-radar-green-raw.txt-325-        0.175471,
+tmp/collectors/shotcast-radar-green-raw.txt-326-        -0.014122,
+tmp/collectors/shotcast-radar-green-raw.txt-327-        0.000484
+tmp/collectors/shotcast-radar-green-raw.txt-328-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-329-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-330-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-331-        6.962
+tmp/collectors/shotcast-radar-green-raw.txt-332-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-333-      "curve": 4.62,
+tmp/collectors/shotcast-radar-green-raw.txt-334-      "maxHeight": 26.94,
+tmp/collectors/shotcast-radar-green-raw.txt-335-      "spinAxis": 2.02,
+tmp/collectors/shotcast-radar-green-raw.txt-336-      "timeInterval": [
+
+
+--- HIT 2 @ CHAR 303158 ---
+tmp/collectors/shotcast-radar-green-raw.txt-414-      "enhancedY": 0.5089696193261812
+tmp/collectors/shotcast-radar-green-raw.txt-415-    }
+tmp/collectors/shotcast-radar-green-raw.txt-416-  }
+tmp/collectors/shotcast-radar-green-raw.txt-417-}
+tmp/collectors/shotcast-radar-green-raw.txt-418-
+tmp/collectors/shotcast-radar-green-raw.txt-419-videoId:
+tmp/collectors/shotcast-radar-green-raw.txt-420-"6403106402112"
+tmp/collectors/shotcast-radar-green-raw.txt-421-
+tmp/collectors/shotcast-radar-green-raw.txt-422-radarData:
+tmp/collectors/shotcast-radar-green-raw.txt-423-{
+tmp/collectors/shotcast-radar-green-raw.txt-424-  "apexHeight": 97.41,
+tmp/collectors/shotcast-radar-green-raw.txt-425-  "apexRange": 332.71,
+tmp/collectors/shotcast-radar-green-raw.txt-426-  "apexSide": 6.86,
+tmp/collectors/shotcast-radar-green-raw.txt-427-  "clubSpeed": 0,
+tmp/collectors/shotcast-radar-green-raw.txt-428-  "ballSpeed": 126.82,
+tmp/collectors/shotcast-radar-green-raw.txt-429-  "smashFactor": 0,
+tmp/collectors/shotcast-radar-green-raw.txt-430-  "launchSpin": 0,
+tmp/collectors/shotcast-radar-green-raw.txt-431-  "spinAxis": -1.56,
+tmp/collectors/shotcast-radar-green-raw.txt-432-  "verticalLaunchAngle": 15.14,
+tmp/collectors/shotcast-radar-green-raw.txt-433-  "horizontalLaunchAngle": 1.49,
+tmp/collectors/shotcast-radar-green-raw.txt-434-  "actualFlightTime": 6,
+tmp/collectors/shotcast-radar-green-raw.txt-435-  "ballImpactMeasured": "2026-08-09T12:20:10.7290000",
+tmp/collectors/shotcast-radar-green-raw.txt-436-  "ballTrajectory": [
+tmp/collectors/shotcast-radar-green-raw.txt-437-    {
+tmp/collectors/shotcast-radar-green-raw.txt-438-      "__typename": "RadarBallTracjectory",
+tmp/collectors/shotcast-radar-green-raw.txt-439-      "kind": "Flight",
+tmp/collectors/shotcast-radar-green-raw.txt:440:      "xFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-441-        323.232516,
+tmp/collectors/shotcast-radar-green-raw.txt-442-        51.045573,
+tmp/collectors/shotcast-radar-green-raw.txt-443-        -11.782799,
+tmp/collectors/shotcast-radar-green-raw.txt-444-        2.393588,
+tmp/collectors/shotcast-radar-green-raw.txt-445-        -0.313897,
+tmp/collectors/shotcast-radar-green-raw.txt-446-        0.023447,
+tmp/collectors/shotcast-radar-green-raw.txt-447-        -0.000734
+tmp/collectors/shotcast-radar-green-raw.txt-448-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:449:      "yFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-450-        -8.337555,
+tmp/collectors/shotcast-radar-green-raw.txt-451-        14.806131,
+tmp/collectors/shotcast-radar-green-raw.txt-452-        0.799123,
+tmp/collectors/shotcast-radar-green-raw.txt-453-        -1.317657,
+tmp/collectors/shotcast-radar-green-raw.txt-454-        0.2122,
+tmp/collectors/shotcast-radar-green-raw.txt-455-        -0.016521,
+tmp/collectors/shotcast-radar-green-raw.txt-456-        0.000545
+tmp/collectors/shotcast-radar-green-raw.txt-457-      ],
+tmp/collectors/shotcast-radar-green-raw.txt:458:      "zFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-459-        6.139166,
+tmp/collectors/shotcast-radar-green-raw.txt-460-        -19.713195,
+tmp/collectors/shotcast-radar-green-raw.txt-461-        4.251617,
+tmp/collectors/shotcast-radar-green-raw.txt-462-        -0.773052,
+tmp/collectors/shotcast-radar-green-raw.txt-463-        0.088604,
+tmp/collectors/shotcast-radar-green-raw.txt-464-        -0.00594,
+tmp/collectors/shotcast-radar-green-raw.txt-465-        0.000168
+tmp/collectors/shotcast-radar-green-raw.txt-466-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-467-      "spinRateFit": [
+tmp/collectors/shotcast-radar-green-raw.txt-468-        5838.91313,
+tmp/collectors/shotcast-radar-green-raw.txt-469-        -169.334417,
+tmp/collectors/shotcast-radar-green-raw.txt-470-        2.278402,
+tmp/collectors/shotcast-radar-green-raw.txt-471-        -0.016363
+tmp/collectors/shotcast-radar-green-raw.txt-472-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-473-      "timeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-474-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-475-        6.295
+tmp/collectors/shotcast-radar-green-raw.txt-476-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-477-      "validTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-478-        0,
+tmp/collectors/shotcast-radar-green-raw.txt-479-        7.413
+tmp/collectors/shotcast-radar-green-raw.txt-480-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-481-      "measuredTimeInterval": [
+tmp/collectors/shotcast-radar-green-raw.txt-482-        0.02,
+tmp/collectors/shotcast-radar-green-raw.txt-483-        6.213
+tmp/collectors/shotcast-radar-green-raw.txt-484-      ],
+tmp/collectors/shotcast-radar-green-raw.txt-485-      "type": "Incoming"
+tmp/collectors/shotcast-radar-green-raw.txt-486-    }
+tmp/collectors/shotcast-radar-green-raw.txt-487-  ],
+tmp/collectors/shotcast-radar-green-raw.txt-488-  "normalizedTrajectory": [],
+tmp/collectors/shotcast-radar-green-raw.txt-489-  "normalizedTrajectoryV2": []
+tmp/collectors/shotcast-radar-green-raw.txt-490-}
+tmp/collectors/shotcast-radar-green-raw.txt-491-
+tmp/collectors/shotcast-radar-green-raw.txt-492-----------------------------------------
+tmp/collectors/shotcast-radar-green-raw.txt-493-SHOT 3
+tmp/collectors/shotcast-radar-green-raw.txt-494-TOP-LEVEL KEYS: __typename, ballPath, distance, distanceRemaining, finalStroke, fromLocation, fromLocationCode, green, groupShowMarker, markerText, overview, playByPlay, playByPlayLabel, showMarker, strokeNumber, strokeType, toLocation, toLocationCode
+tmp/collectors/shotcast-radar-green-raw.txt-495-
+tmp/collectors/shotcast-radar-green-raw.txt-496-green:
+tmp/collectors/shotcast-radar-green-raw.txt-497-{
+tmp/collectors/shotcast-radar-green-raw.txt-498-  "__typename": "ShotLinkCoordWrapper",
+tmp/collectors/shotcast-radar-green-raw.txt-499-  "leftToRightCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-500-    "__typename": "ShotLinkCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-501-    "fromCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-502-      "__typename": "StrokeCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-503-      "x": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-504-      "y": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-505-      "z": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-506-      "tourcastX": 10268.896,
+tmp/collectors/shotcast-radar-green-raw.txt-507-      "tourcastY": 7297.987,
+tmp/collectors/shotcast-radar-green-raw.txt-508-      "tourcastZ": 805.402,
+tmp/collectors/shotcast-radar-green-raw.txt-509-      "enhancedX": 0.49087892312338843,
+tmp/collectors/shotcast-radar-green-raw.txt-510-      "enhancedY": 0.47367598096882546
+tmp/collectors/shotcast-radar-green-raw.txt-511-    },
+tmp/collectors/shotcast-radar-green-raw.txt-512-    "toCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-513-      "__typename": "StrokeCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-514-      "x": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-515-      "y": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-516-      "z": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-517-      "tourcastX": 10285.956,
+tmp/collectors/shotcast-radar-green-raw.txt-518-      "tourcastY": 7323.294,
+tmp/collectors/shotcast-radar-green-raw.txt-519-      "tourcastZ": 806.731,
+tmp/collectors/shotcast-radar-green-raw.txt-520-      "enhancedX": 0.5508654449274882,
+tmp/collectors/shotcast-radar-green-raw.txt-521-      "enhancedY": 0.28060550720448363
+tmp/collectors/shotcast-radar-green-raw.txt-522-    }
+tmp/collectors/shotcast-radar-green-raw.txt-523-  },
+tmp/collectors/shotcast-radar-green-raw.txt-524-  "bottomToTopCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-525-    "__typename": "ShotLinkCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-526-    "fromCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-527-      "__typename": "StrokeCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-528-      "x": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-529-      "y": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-530-      "z": -1,
+tmp/collectors/shotcast-radar-green-raw.txt-531-      "tourcastX": 10268.896,
+tmp/collectors/shotcast-radar-green-raw.txt-532-      "tourcastY": 7297.987,
+tmp/collectors/shotcast-radar-green-raw.txt-533-      "tourcastZ": 805.402,
+tmp/collectors/shotcast-radar-green-raw.txt-534-      "enhancedX": 0.5526599384089659,
+tmp/collectors/shotcast-radar-green-raw.txt-535-      "enhancedY": 0.5089696193261812
+tmp/collectors/shotcast-radar-green-raw.txt-536-    },
+tmp/collectors/shotcast-radar-green-raw.txt-537-    "toCoords": {
+tmp/collectors/shotcast-radar-green-raw.txt-538-      "__typename": "StrokeCoordinates",
+tmp/collectors/shotcast-radar-green-raw.txt-539-      "x": -1,
+t
+
+===== TERM: "timeStart" =====
+NO MATCHES
+
+===== TERM: "timeEnd" =====
+NO MATCHES
+
+############################################################
+FILE: tmp/collectors/pga-green-slope-render-trace.txt
+############################################################
+
+===== TERM: "ballTrajectory" =====
+NO MATCHES
+
+===== TERM: ballTrajectory: =====
+NO MATCHES
+
+===== TERM: "xFit" =====
+NO MATCHES
+
+===== TERM: "timeStart" =====
+NO MATCHES
+
+===== TERM: "timeEnd" =====
+NO MATCHES
+
+============================================================
+CURRENT PROVIDER QUERY / RAW PAYLOAD FIELD REQUEST
+============================================================
+
+===== PROVIDER TERM: ballTrajectory =====
+
+--- HIT 1 @ CHAR 2085 ---
+import "server-only";
+
+import { gunzipSync } from "node:zlib";
+import { unstable_cache } from "next/cache";
+
+const PGA_GRAPHQL_URL =
+  "https://orchestrator.pgatour.com/graphql";
+
+const PGA_REST_URL =
+  "https://data-api.pgatour.com";
+
+/**
+ * This is the public web-client key currently used by PGATOUR.com.
+ * PGA_TOUR_API_KEY can override it if PGA TOUR rotates the key.
+ */
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_ATTEMPTS = 3;
+
+type JsonObject = Record<string, unknown>;
+
+type PgaScheduleTournament = {
+  tournamentId?: string | null;
+  name?: string | null;
+};
+
+type PgaPlayer = {
+  id?: string | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+type PgaCoordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+
+  /*
+   * TOURCAST V3 supplies these normalized coordinates
+   * specifically for the matching enhancedPickle image.
+   */
+  enhancedX?: number | null;
+  enhancedY?: number | null;
+};
+
+type RawShotCoordinateGroup = {
+  fromCoords?: Partial<PgaCoordinate> | null;
+  toCoords?: Partial<PgaCoordinate> | null;
+};
+
+type RawRadarTrajectory = {
+  carry?: number | null;
+  carrySide?: number | null;
+  maxHeight?: number | null;
+  curve?: number | null;
+  spinAxis?: number | null;
+  valid?: boolean | null;
+};
+
+type RawRadarData = {
+  apexHeight?: number | null;
+  apexRange?: number | null;
+  apexSide?: number | null;
+  clubSpeed?: number | null;
+  ballSpeed?: number | null;
+  smashFactor?: number | null;
+  launchSpin?: number | null;
+  spinAxis?: number | null;
+  verticalLaunchAngle?: number | null;
+  horizontalLaunchAngle?: number | null;
+  actualFlightTime?: number | null;
+  ballImpactMeasured?: string | null;
+
+  normalizedTrajectory?: RawRadarTrajectory[] | null;
+  normalizedTrajectoryV2?: RawRadarTrajectory[] | null;
+
+  /*
+   * Keep the polynomial trajectory payload available for the
+   * next ShotCast phase without making the UI depend on it yet.
+   */
+  ballTrajectory?: unknown[] | null;
+};
+
+type RawBallPathPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  secondsSinceStart?: number | null;
+};
+
+type RawBallPath = {
+  isLipOut?: boolean | null;
+  path?: RawBallPathPoint[] | null;
+  reconstructionType?: string | null;
+  totalDistanceInches?: number | null;
+};
+
+type RawStroke = {
+  strokeNumber?: number | null;
+
+  /*
+   * PGA TOURCAST's native shot position.
+   *
+   * Their Golf Engine constructs each shot as:
+   *   position = new Vector3(shot.x, shot.y, 0)
+   *
+   * Do not confuse these with overview.bottomToTopCoords
+   * or overview.*.tourcastX/tourcastY.
+   */
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+
+  /*
+   * TOURCAST V3 enrichments.
+   */
+  videoId?: string | null;
+  radarData?: RawRadarData | null;
+  ballPath?: RawBallPath | null;
+
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+
+  /*
+   * TOURCAST V3 also provides a second coordinate frame
+   * specifically for the dedicated Green View image.
+   */
+  green?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawWorldPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+};
+
+/*
+ * ShotDetailsCompressedV3 point-of-interest coordinates.
+ *
+ * PGA supplies ordinary x/y as -1 sentinels for the enhanced
+ * pickle path while preserving:
+ *
+ * - tourcastX/Y/Z for native TOURCAST world space
+ * - enhancedX/Y for the normalized image coordinate space
+ */
+type RawPointOfInterestCoordinate = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+  enhancedX?: number | null;
+  enhancedY?: number | null;
+};
+
+type RawPointOfInterestCoords = {
+  leftToRightCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+  bottomToTopCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+};
+
+type RawEnhancedPickle = {
+  leftToRight?: string | null;
+  bottomToTop?: string | null;
+  greenLeftToRight?: string | null;
+  greenBottomToTop?: string | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+
+  /*
+   * Legacy/raw player-hole endpoints.
+   */
+  tee?: RawWorldPoint | null;
+  pin?: RawWorldPoint | null;
+
+  /*
+   * ShotDetailsCompressedV3 supplies the authoritative pin
+   * independently in both the overview and Green View frames.
+   *
+   * These are round-specific because the V3 request itself is
+   * scoped to the requested round.
+   */
+  pinOverview?: RawPointOfInterestCoords | null;
+  pinGreen?: RawPointOfInterestCoords | null;
+
+  enhancedPickle?: RawEnhancedPickle | null;
+
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+export type GolfWorldPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+};
+
+export type GolfShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+export type GolfBallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+export type GolfBallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: GolfBallPathPoint[];
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+
+  /*
+   * Native PGA TOURCAST world positions.
+   *
+   * worldFrom is the tee for shot 1 and the previous
+   * landing position after that.
+   *
+   * worldTo is this stroke's raw PGA x/y position.
+   */
+  worldFrom: GolfWorldPoint | null;
+  worldTo: GolfWorldPoint | null;
+
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+
+  /*
+   * Rich TOURCAST shot data.
+   */
+  videoId: string | null;
+  radarData: GolfShotRadarData | null;
+  ballPath: GolfBallPath | null;
+
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+
+  /*
+   * Same stroke projected onto PGA's dedicated green image.
+   * May be null for shots that are nowhere near the green.
+   */
+  greenBottomToTop:
+    GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+
+  /*
+   * PGA's actual pin in native TOURCAST world coordinates.
+   * This exists independently of whether the golfer has
+   * completed the hole.
+   */
+  pinWorld: GolfWorldPoint | null;
+
+  /*
+   * PGA's round-specific pin on the dedicated Green View
+   * image, already normalized into the same 0..1 coordinate
+   * frame used by stroke.green.bottomToTopCoords.
+   */
+  greenPin: {
+    x: number;
+    y: number;
+  } | null;
+
+  /*
+   * PGA TOURCAST V3 supplies a hole image and coordinates
+   * that already share the same normalized coordinate frame.
+   *
+   * No terrain TFW calibration is required for this path.
+   */
+  shotcast: {
+    imageUrl: string;
+
+    /*
+     * Purpose-built PGA Green View crop.
+     * Coordinates come from stroke.green.bottomToTopCoords.
+     */
+    greenImageUrl: string | null;
+
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+  context: string,
+): Promise<JsonObject> {
+  let lastError: unknown = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...requestHeaders(),
+          ...(init.headers ?? {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const bodyText = await response.text();
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (
+          retryable &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await sleep(300 * 2 ** (attempt - 1));
+          continue;
+        }
+
+        throw new Error(
+          `${context} failed (${response.status}): ` +
+            bodyText.slice(0, 250),
+        );
+      }
+
+      try {
+        return JSON.parse(bodyText) as JsonObject;
+      } catch {
+        throw new Error(
+          `${context} returned invalid JSON: ` +
+            bodyText.slice(0, 250),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= MAX_ATTEMPTS) {
+        break;
+      }
+
+      await sleep(300 * 2 ** (attempt - 1));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: JsonObject,
+) {
+  const body = await requestJson(
+    PGA_GRAPHQL_URL,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        operationName,
+        query,
+        variables,
+      }),
+    },
+    `PGA TOUR ${operationName}`,
+  );
+
+  const errors = Array.isArray(body.errors)
+    ? body.errors
+    : [];
+
+  if (errors.length > 0) {
+    const message = errors
+ 
+
+--- HIT 2 @ CHAR 22046 ---
+ame,
+      query,
+      {
+        tournamentId,
+        playerId: pgaPlayerId,
+        round: roundNumber,
+        includeRadar: true,
+      },
+    );
+
+    const response =
+      data.shotDetailsCompressedV3;
+
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("payload" in response)
+    ) {
+      return {
+        holes: [],
+      } satisfies RawShotPayload;
+    }
+
+    return decompressPayload<RawShotPayload>(
+      response.payload,
+    );
+  },
+  ["pga-tour-round-shots-tourcast-v3"],
+  {
+    // Live holes can change, but repeated taps should not
+    // hammer the upstream API.
+    revalidate: 120,
+  },
+);
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+    cacheBust?: string | null;
+  },
+): Promise<GolfHoleReplay | null> {
+  const tournaments = await loadSchedule(
+    input.year,
+  );
+
+  const tournament = chooseBestNameMatch(
+    tournaments.filter(
+      (row) =>
+        typeof row.tournamentId ===
+          "string" &&
+        typeof row.name === "string",
+    ),
+    input.tournamentName,
+    (row) => row.name ?? "",
+  );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  if (!tournamentId) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const players = await loadPlayers();
+
+  const player = chooseBestNameMatch(
+    players.filter(
+      (row) =>
+        typeof row.id === "string" &&
+        typeof row.displayName === "string",
+    ),
+    input.playerName,
+    (row) => row.displayName ?? "",
+  );
+
+  const pgaPlayerId =
+    player?.id?.trim();
+
+  if (!pgaPlayerId) {
+    throw new Error(
+      `Could not match "${input.playerName}" ` +
+        "to the PGA TOUR player directory.",
+    );
+  }
+
+  const payload = await loadRoundShots(
+    tournamentId,
+    pgaPlayerId,
+    input.roundNumber,
+    input.cacheBust ?? null,
+  );
+
+  const hole = (payload.holes ?? []).find(
+    (row) =>
+      Number(row.holeNumber) ===
+      input.holeNumber,
+  );
+
+  if (!hole) {
+    return null;
+  }
+
+  const rawStrokeCandidates =
+    [...(hole.strokes ?? [])]
+      .filter(
+        (shot) =>
+          Number(shot.strokeNumber ?? 0) > 0,
+      );
+
+  function strokeRichness(
+    shot: RawStroke,
+  ) {
+    let score = 0;
+
+    if (
+      shot.videoId?.trim()
+    ) {
+      score += 1000;
+    }
+
+    if (
+      shot.radarData
+        ?.ballTrajectory
+        ?.length
+    ) {
+      score += 500;
+    }
+
+    if (
+      shot.ballPath
+        ?.path
+        ?.length
+    ) {
+      score +=
+        200 +
+        shot.ballPath.path.length;
+    }
+
+    if (shot.radarData) {
+      score += 100;
+    }
+
+    if (
+      shot.green
+        ?.bottomToTopCoords
+    ) {
+      score += 50;
+    }
+
+    if (
+      shot.overview
+        ?.bottomToTopCoords
+    ) {
+      score += 25;
+    }
+
+    if (
+      Number.isFinite(
+        Number(shot.x),
+      ) &&
+      Number.isFinite(
+        Number(shot.y),
+      )
+    ) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  const bestStrokeByNumber =
+    new Map<number, RawStroke>();
+
+  for (
+    const shot
+    of rawStrokeCandidates
+  ) {
+    const strokeNumber =
+      Number(
+        shot.strokeNumber ?? 0,
+      );
+
+    const existing =
+      bestStrokeByNumber.get(
+        strokeNumber,
+      );
+
+    if (
+      !existing ||
+      strokeRichness(shot) >
+        strokeRichness(existing)
+    ) {
+      bestStrokeByNumber.set(
+        strokeNumber,
+        shot,
+      );
+    }
+  }
+
+  const orderedRawStrokes =
+    [...bestStrokeByNumber.values()]
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+          shot.distance ?? null,
+        distanceRemaining:
+          shot.distanceRemaining ?? null,
+        strokeType:
+          shot.strokeType ?? null,
+        fromLocation:
+          shot.fromLocation ?? null,
+        toLocation:
+          shot.toLocation ?? null,
+        fromLocationCode:
+          shot.fromLocationCode ?? null,
+        toLocationCode:
+          shot.toLocationCode ?? null,
+        finalStroke:
+          Boolean(shot.finalStroke),
+
+        videoId:
+          typeof shot.videoId === "string" &&
+          shot.videoId.trim()
+            ? shot.videoId.trim()
+            : null,
+
+        radarData:
+          radarData(
+            shot.radarData,
+          ),
+
+
+        ballPath:
+          ballPath(
+            shot.ballPath,
+          ),
+
+        leftToRight: coordinateSet(
+          shot.overview?.leftToRightCoords,
+        ),
+        bottomToTop: coordinateSet(
+          shot.overview?.bottomToTopCoords,
+        ),
+
+        greenBottomToTop:
+          coordinateSet(
+            shot.green?.bottomToTopCoords,
+          ),
+      };
+
+      if (landingWorldPoint) {
+        previousWorldPoint =
+          landingWorldPoint;
+      }
+
+      return mappedShot;
+    },
+  );
+
+  /*
+   * PGA's live/round-specific cup comes directly from the
+   * ShotDetailsCompressedV3 hole object.
+   *
+   * Green View uses enhancedX/enhancedY.
+   * Native 3D/course space uses tourcastX/Y/Z.
+   */
+  const rawGreenPin =
+    hole.pinGreen
+      ?.bottomToTopCoords ??
+    null;
+
+  const greenPinX =
+    rawGreenPin?.enhancedX;
+  const greenPinY =
+    rawGreenPin?.enhancedY;
+
+  const greenPin =
+    typeof greenPinX === "number" &&
+    typeof greenPinY === "number" &&
+    Number.isFinite(greenPinX) &&
+    Number.isFinite(greenPinY) &&
+    greenPinX >= 0 &&
+    greenPinX <= 1 &&
+    greenPinY >= 0 &&
+    greenPinY <= 1
+      ? {
+          x: greenPinX,
+          y: greenPinY,
+        }
+      : null;
+
+  /*
+   * pinGreen and pinOverview describe the same physical cup
+   * in different image projections. Prefer pinGreen's native
+   * TOURCAST coordinates because that is the same object
+   * driving Green View.
+   */
+  const rawPinWorld =
+    rawGreenPin ??
+    hole.pinOverview
+      ?.bottomToTopCoords ??
+    null;
+
+  const pinTourcastX =
+    rawPinWorld?.tourcastX;
+  const pinTourcastY =
+    rawPinWorld?.tourcastY;
+  const pinTourcastZ =
+    rawPinWorld?.tourcastZ;
+
+  const livePinWorld =
+    typeof pinTourcastX === "number" &&
+    typeof pinTourcastY === "number" &&
+    Number.isFinite(pinTourcastX) &&
+    Number.isFinite(pinTourcastY)
+      ? {
+          x: pinTourcastX,
+          y: pinTourcastY,
+          z:
+            typeof pinTourcastZ ===
+              "number" &&
+            Number.isFinite(
+              pinTourcastZ,
+            )
+              ? pinTourcastZ
+              : null,
+        }
+      : null;
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+
+    /*
+     * PGA's authoritative round-specific hole pin comes from
+     * ShotDetailsCompressedV3 pinGreen/pinOverview.
+     *
+     * Keep the legacy hole.pin fallback only for payloads that
+     * do not expose the newer V3 point-of-interest fields.
+     */
+    pinWorld:
+      livePinWorld ??
+      worldPoint(
+        hole.pin,
+      ),
+
+    greenPin,
+
+    shotcast:
+      typeof hole.enhancedPickle
+        ?.bottomToTop === "string" &&
+      hole.enhancedPickle
+        .bottomToTop.trim()
+        ? {
+            imageUrl:
+              highResolutionTourcastUrl(
+                hole.enhancedPickle
+                  .bottomToTop.trim(),
+              ),
+
+            greenImageUrl:
+              typeof hole.enhancedPickle
+                ?.greenBottomToTop ===
+                "string" &&
+              hole.enhancedPickle
+                .greenBottomToTop
+                .trim()
+                ? highResolutionTourcastUrl(
+                    hole.enhancedPickle
+                      .greenBottomToTop
+                      .trim(),
+                  )
+                : null,
+
+            orientation:
+              "bottomToTop",
+            source:
+              "pga-tourcast-v3-enhanced",
+            verified: true,
+          }
+        : null,
+
+    shots,
+  };
+}
+
+
+===== PROVIDER TERM: normalizedTrajectoryV2 =====
+
+--- HIT 1 @ CHAR 1890 ---
+import "server-only";
+
+import { gunzipSync } from "node:zlib";
+import { unstable_cache } from "next/cache";
+
+const PGA_GRAPHQL_URL =
+  "https://orchestrator.pgatour.com/graphql";
+
+const PGA_REST_URL =
+  "https://data-api.pgatour.com";
+
+/**
+ * This is the public web-client key currently used by PGATOUR.com.
+ * PGA_TOUR_API_KEY can override it if PGA TOUR rotates the key.
+ */
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_ATTEMPTS = 3;
+
+type JsonObject = Record<string, unknown>;
+
+type PgaScheduleTournament = {
+  tournamentId?: string | null;
+  name?: string | null;
+};
+
+type PgaPlayer = {
+  id?: string | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+type PgaCoordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+
+  /*
+   * TOURCAST V3 supplies these normalized coordinates
+   * specifically for the matching enhancedPickle image.
+   */
+  enhancedX?: number | null;
+  enhancedY?: number | null;
+};
+
+type RawShotCoordinateGroup = {
+  fromCoords?: Partial<PgaCoordinate> | null;
+  toCoords?: Partial<PgaCoordinate> | null;
+};
+
+type RawRadarTrajectory = {
+  carry?: number | null;
+  carrySide?: number | null;
+  maxHeight?: number | null;
+  curve?: number | null;
+  spinAxis?: number | null;
+  valid?: boolean | null;
+};
+
+type RawRadarData = {
+  apexHeight?: number | null;
+  apexRange?: number | null;
+  apexSide?: number | null;
+  clubSpeed?: number | null;
+  ballSpeed?: number | null;
+  smashFactor?: number | null;
+  launchSpin?: number | null;
+  spinAxis?: number | null;
+  verticalLaunchAngle?: number | null;
+  horizontalLaunchAngle?: number | null;
+  actualFlightTime?: number | null;
+  ballImpactMeasured?: string | null;
+
+  normalizedTrajectory?: RawRadarTrajectory[] | null;
+  normalizedTrajectoryV2?: RawRadarTrajectory[] | null;
+
+  /*
+   * Keep the polynomial trajectory payload available for the
+   * next ShotCast phase without making the UI depend on it yet.
+   */
+  ballTrajectory?: unknown[] | null;
+};
+
+type RawBallPathPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  secondsSinceStart?: number | null;
+};
+
+type RawBallPath = {
+  isLipOut?: boolean | null;
+  path?: RawBallPathPoint[] | null;
+  reconstructionType?: string | null;
+  totalDistanceInches?: number | null;
+};
+
+type RawStroke = {
+  strokeNumber?: number | null;
+
+  /*
+   * PGA TOURCAST's native shot position.
+   *
+   * Their Golf Engine constructs each shot as:
+   *   position = new Vector3(shot.x, shot.y, 0)
+   *
+   * Do not confuse these with overview.bottomToTopCoords
+   * or overview.*.tourcastX/tourcastY.
+   */
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+
+  /*
+   * TOURCAST V3 enrichments.
+   */
+  videoId?: string | null;
+  radarData?: RawRadarData | null;
+  ballPath?: RawBallPath | null;
+
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+
+  /*
+   * TOURCAST V3 also provides a second coordinate frame
+   * specifically for the dedicated Green View image.
+   */
+  green?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawWorldPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+};
+
+/*
+ * ShotDetailsCompressedV3 point-of-interest coordinates.
+ *
+ * PGA supplies ordinary x/y as -1 sentinels for the enhanced
+ * pickle path while preserving:
+ *
+ * - tourcastX/Y/Z for native TOURCAST world space
+ * - enhancedX/Y for the normalized image coordinate space
+ */
+type RawPointOfInterestCoordinate = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+  enhancedX?: number | null;
+  enhancedY?: number | null;
+};
+
+type RawPointOfInterestCoords = {
+  leftToRightCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+  bottomToTopCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+};
+
+type RawEnhancedPickle = {
+  leftToRight?: string | null;
+  bottomToTop?: string | null;
+  greenLeftToRight?: string | null;
+  greenBottomToTop?: string | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+
+  /*
+   * Legacy/raw player-hole endpoints.
+   */
+  tee?: RawWorldPoint | null;
+  pin?: RawWorldPoint | null;
+
+  /*
+   * ShotDetailsCompressedV3 supplies the authoritative pin
+   * independently in both the overview and Green View frames.
+   *
+   * These are round-specific because the V3 request itself is
+   * scoped to the requested round.
+   */
+  pinOverview?: RawPointOfInterestCoords | null;
+  pinGreen?: RawPointOfInterestCoords | null;
+
+  enhancedPickle?: RawEnhancedPickle | null;
+
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+export type GolfWorldPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+};
+
+export type GolfShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+export type GolfBallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+export type GolfBallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: GolfBallPathPoint[];
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+
+  /*
+   * Native PGA TOURCAST world positions.
+   *
+   * worldFrom is the tee for shot 1 and the previous
+   * landing position after that.
+   *
+   * worldTo is this stroke's raw PGA x/y position.
+   */
+  worldFrom: GolfWorldPoint | null;
+  worldTo: GolfWorldPoint | null;
+
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+
+  /*
+   * Rich TOURCAST shot data.
+   */
+  videoId: string | null;
+  radarData: GolfShotRadarData | null;
+  ballPath: GolfBallPath | null;
+
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+
+  /*
+   * Same stroke projected onto PGA's dedicated green image.
+   * May be null for shots that are nowhere near the green.
+   */
+  greenBottomToTop:
+    GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+
+  /*
+   * PGA's actual pin in native TOURCAST world coordinates.
+   * This exists independently of whether the golfer has
+   * completed the hole.
+   */
+  pinWorld: GolfWorldPoint | null;
+
+  /*
+   * PGA's round-specific pin on the dedicated Green View
+   * image, already normalized into the same 0..1 coordinate
+   * frame used by stroke.green.bottomToTopCoords.
+   */
+  greenPin: {
+    x: number;
+    y: number;
+  } | null;
+
+  /*
+   * PGA TOURCAST V3 supplies a hole image and coordinates
+   * that already share the same normalized coordinate frame.
+   *
+   * No terrain TFW calibration is required for this path.
+   */
+  shotcast: {
+    imageUrl: string;
+
+    /*
+     * Purpose-built PGA Green View crop.
+     * Coordinates come from stroke.green.bottomToTopCoords.
+     */
+    greenImageUrl: string | null;
+
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+  context: string,
+): Promise<JsonObject> {
+  let lastError: unknown = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...requestHeaders(),
+          ...(init.headers ?? {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const bodyText = await response.text();
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (
+          retryable &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await sleep(300 * 2 ** (attempt - 1));
+          continue;
+        }
+
+        throw new Error(
+          `${context} failed (${response.status}): ` +
+            bodyText.slice(0, 250),
+        );
+      }
+
+      try {
+        return JSON.parse(bodyText) as JsonObject;
+      } catch {
+        throw new Error(
+          `${context} returned invalid JSON: ` +
+            bodyText.slice(0, 250),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= MAX_ATTEMPTS) {
+        break;
+      }
+
+      await sleep(300 * 2 ** (attempt - 1));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: JsonObject,
+) {
+  const body = await requestJson(
+    PGA_GRAPHQL_URL,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        operationName,
+        query,
+        
+
+--- HIT 2 @ CHAR 14794 ---
+
+) {
+  const normalizedTarget =
+    normalizeName(target);
+
+  const exact = rows.find(
+    (row) =>
+      normalizeName(getName(row)) ===
+      normalizedTarget,
+  );
+
+  if (exact) return exact;
+
+  const targetTokens = new Set(
+    normalizedTarget.split(" "),
+  );
+
+  return (
+    rows
+      .map((row) => {
+        const normalized =
+          normalizeName(getName(row));
+
+        const tokens =
+          normalized.split(" ");
+
+        const overlap = tokens.filter(
+          (token) => targetTokens.has(token),
+        ).length;
+
+        return {
+          row,
+          score:
+            overlap * 10 -
+            Math.abs(
+              normalized.length -
+                normalizedTarget.length,
+            ),
+        };
+      })
+      .sort(
+        (a, b) => b.score - a.score,
+      )[0]?.row ?? null
+  );
+}
+
+function coordinate(
+  value:
+    | Partial<PgaCoordinate>
+    | null
+    | undefined,
+): PgaCoordinate {
+  function numberOrNull(input: unknown) {
+    const numeric = Number(input);
+
+    return Number.isFinite(numeric)
+      ? numeric
+      : null;
+  }
+
+  const enhancedX =
+    numberOrNull(
+      value?.enhancedX,
+    );
+
+  const enhancedY =
+    numberOrNull(
+      value?.enhancedY,
+    );
+
+  return {
+    /*
+     * IMPORTANT:
+     *
+     * When TOURCAST V3 supplies enhanced coordinates,
+     * those coordinates correspond directly to the
+     * enhancedPickle image returned for the same hole.
+     *
+     * Preserve legacy x/y only as fallback.
+     */
+    x:
+      enhancedX !== null
+        ? enhancedX
+        : numberOrNull(value?.x),
+
+    y:
+      enhancedY !== null
+        ? enhancedY
+        : numberOrNull(value?.y),
+
+    tourcastX: numberOrNull(
+      value?.tourcastX,
+    ),
+    tourcastY: numberOrNull(
+      value?.tourcastY,
+    ),
+    tourcastZ: numberOrNull(
+      value?.tourcastZ,
+    ),
+
+    enhancedX,
+    enhancedY,
+  };
+}
+
+function coordinateSet(
+  value:
+    | RawShotCoordinateGroup
+    | null
+    | undefined,
+): GolfShotCoordinateSet | null {
+  if (
+    !value?.fromCoords ||
+    !value?.toCoords
+  ) {
+    return null;
+  }
+
+  return {
+    from: coordinate(value.fromCoords),
+    to: coordinate(value.toCoords),
+  };
+}
+
+function finiteNumber(
+  value: unknown,
+): number | null {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric)
+    ? numeric
+    : null;
+}
+
+function radarData(
+  value: RawRadarData | null | undefined,
+): GolfShotRadarData | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized =
+    value.normalizedTrajectoryV2?.find(
+      (row) => row?.valid !== false,
+    ) ??
+    value.normalizedTrajectory?.find(
+      (row) => row?.valid !== false,
+    ) ??
+    null;
+
+  const result: GolfShotRadarData = {
+    apexHeight:
+      finiteNumber(value.apexHeight),
+    clubSpeed:
+      finiteNumber(value.clubSpeed),
+    ballSpeed:
+      finiteNumber(value.ballSpeed),
+    smashFactor:
+      finiteNumber(value.smashFactor),
+    launchSpin:
+      finiteNumber(value.launchSpin),
+    spinAxis:
+      finiteNumber(value.spinAxis),
+    verticalLaunchAngle:
+      finiteNumber(
+        value.verticalLaunchAngle,
+      ),
+    horizontalLaunchAngle:
+      finiteNumber(
+        value.horizontalLaunchAngle,
+      ),
+    actualFlightTime:
+      finiteNumber(
+        value.actualFlightTime,
+      ),
+    carry:
+      finiteNumber(
+        normalized?.carry,
+      ),
+    carrySide:
+      finiteNumber(
+        normalized?.carrySide,
+      ),
+  };
+
+  /*
+   * PGA sometimes sends zeroes for measurements that were not
+   * actually captured (for example club speed on an approach).
+   * Preserve them here; the UI decides whether a value is useful.
+   */
+  return result;
+}
+
+function ballPath(
+  value: RawBallPath | null | undefined,
+): GolfBallPath | null {
+  if (!value?.path?.length) {
+    return null;
+  }
+
+  const points =
+    value.path
+      .map((point) => {
+        const x =
+          finiteNumber(point.x);
+        const y =
+          finiteNumber(point.y);
+        const secondsSinceStart =
+          finiteNumber(
+            point.secondsSinceStart,
+          );
+
+        if (
+          x === null ||
+          y === null ||
+          secondsSinceStart === null
+        ) {
+          return null;
+        }
+
+        return {
+          x,
+          y,
+          z:
+            finiteNumber(point.z),
+          secondsSinceStart,
+        };
+      })
+      .filter(
+        (
+          point,
+        ): point is GolfBallPathPoint =>
+          point !== null,
+      );
+
+  if (points.length < 2) {
+    return null;
+  }
+
+  return {
+    isLipOut:
+      Boolean(value.isLipOut),
+    reconstructionType:
+      value.reconstructionType ??
+      null,
+    totalDistanceInches:
+      finiteNumber(
+        value.totalDistanceInches,
+      ),
+    path: points,
+  };
+}
+
+function highResolutionTourcastUrl(
+  value: string,
+) {
+  /*
+   * PGA currently returns its enhanced TOURCAST portrait
+   * image with a Cloudinary width transform of w_500.
+   *
+   * The underlying source supports a substantially larger
+   * render, so request a sharper version for pinch/zoom.
+   */
+  return value.replace(
+    /\bw_500\b/,
+    "w_1400",
+  );
+}
+
+function worldPoint(
+  value:
+    | RawWorldPoint
+    | RawStroke
+    | null
+    | undefined,
+): GolfWorldPoint | null {
+  const x = Number(value?.x);
+  const y = Number(value?.y);
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y)
+  ) {
+    return null;
+  }
+
+  const z = Number(value?.z);
+
+  return {
+    x,
+    y,
+    z: Number.isFinite(z)
+      ? z
+      : null,
+  };
+}
+
+
+const loadSchedule = unstable_cache(
+  async (year: number) => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/schedule/R/${year}`,
+      {
+        method: "GET",
+      },
+      `PGA TOUR ${year} schedule`,
+    );
+
+    return Array.isArray(body.tournaments)
+      ? (body.tournaments as PgaScheduleTournament[])
+      : [];
+  },
+  ["pga-tour-schedule-v1"],
+  {
+    revalidate: 60 * 60,
+  },
+);
+
+const loadPlayers = unstable_cache(
+  async () => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/player/list/R`,
+      {
+        method: "GET",
+      },
+      "PGA TOUR player directory",
+    );
+
+    return Array.isArray(body.players)
+      ? (body.players as PgaPlayer[])
+      : [];
+  },
+  ["pga-tour-player-directory-v1"],
+  {
+    revalidate: 24 * 60 * 60,
+  },
+);
+
+const loadRoundShots = unstable_cache(
+  async (
+    tournamentId: string,
+    pgaPlayerId: string,
+    roundNumber: number,
+    _cacheBust: string | null,
+  ) => {
+    /*
+     * Use the same compressed shot model consumed by
+     * PGA TOURCAST itself.
+     *
+     * V3 includes:
+     * - enhancedPickle hole imagery
+     * - enhancedX/enhancedY shot coordinates
+     * - tee/pin overview coordinates
+     * - radar data when available
+     */
+    const operationName =
+      "ShotDetailsCompressedV3";
+
+    const query =
+      "query ShotDetailsCompressedV3(" +
+      "$tournamentId: ID!, " +
+      "$playerId: ID!, " +
+      "$round: Int!, " +
+      "$includeRadar: Boolean" +
+      ") { " +
+      "shotDetailsCompressedV3(" +
+      "tournamentId: $tournamentId, " +
+      "playerId: $playerId, " +
+      "round: $round, " +
+      "includeRadar: $includeRadar" +
+      ") { id payload } }";
+
+    const data = await graphqlRequest(
+      operationName,
+      query,
+      {
+        tournamentId,
+        playerId: pgaPlayerId,
+        round: roundNumber,
+        includeRadar: true,
+      },
+    );
+
+    const response =
+      data.shotDetailsCompressedV3;
+
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("payload" in response)
+    ) {
+      return {
+        holes: [],
+      } satisfies RawShotPayload;
+    }
+
+    return decompressPayload<RawShotPayload>(
+      response.payload,
+    );
+  },
+  ["pga-tour-round-shots-tourcast-v3"],
+  {
+    // Live holes can change, but repeated taps should not
+    // hammer the upstream API.
+    revalidate: 120,
+  },
+);
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+    cacheBust?: string | null;
+  },
+): Promise<GolfHoleReplay | null> {
+  const tournaments = await loadSchedule(
+    input.year,
+  );
+
+  const tournament = chooseBestNameMatch(
+    tournaments.filter(
+      (row) =>
+        typeof row.tournamentId ===
+          "string" &&
+        typeof row.name === "string",
+    ),
+    input.tournamentName,
+    (row) => row.name ?? "",
+  );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  if (!tournamentId) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const players = await loadPlayers();
+
+  const player = chooseBestNameMatch(
+    players.filter(
+      (row) =>
+        typeof row.id === "string" &&
+        typeof row.displayName === "string",
+    ),
+    input.playerName,
+    (row) => row.displayName ?? "",
+  );
+
+  const pgaPlayerId =
+    player?.id?.trim();
+
+  if (!pgaPlayerId) {
+    throw new Error(
+      `Could not match "${input.playerName}" ` +
+        "to the PGA TOUR player directory.",
+    );
+  }
+
+  const payload = await loadRoundShots(
+    tournamentId,
+    pgaPlayerId,
+    input.roundNumber,
+    input.cacheBust ?? null,
+  );
+
+  const hole = (payload.holes ?? []).find(
+    (row) =>
+      Number(row.holeNumber) ===
+      input.holeNumber,
+  );
+
+  if (!hole) {
+    return null;
+  }
+
+  const rawStrokeCandidates =
+    [...(hole.strokes ?? [])]
+      .filter(
+        (shot) =>
+          Number(shot.strokeNumber ?? 0) > 0,
+      );
+
+  function strokeRichness(
+    shot: RawStroke,
+  ) {
+    let score = 0;
+
+    if (
+      shot.videoId?.trim()
+    ) {
+      score += 1000;
+    }
+
+    if (
+      shot.radarData
+        ?.ballTrajectory
+        ?.length
+    ) {
+      score += 500;
+    }
+
+    if (
+      shot.ballPath
+        ?.path
+        ?.length
+    ) {
+      score +=
+        200 +
+        shot.ballPath.path.length;
+    }
+
+    if (shot.radarData) {
+      score += 100;
+    }
+
+    if (
+      shot.green
+        ?.bottomToTopCoords
+    ) {
+      score += 50;
+    }
+
+    if (
+      shot.overview
+        ?.bottomToTopCoords
+    ) {
+      score += 25;
+    }
+
+    if (
+      Number.isFinite(
+        Number(shot.x),
+      ) &&
+      Number.isFinite(
+        Number(shot.y),
+      )
+    ) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  const bestStrokeByNumber =
+    new Map<number, RawStroke>();
+
+  for (
+    const shot
+    of rawStrokeCandidates
+  ) {
+    const strokeNumber =
+      Number(
+        shot.strokeNumber ?? 0,
+      );
+
+    const existing =
+      bestStrokeByNumber.get(
+        strokeNumber,
+      );
+
+    if (
+      !existing ||
+      strokeRichness(shot) >
+        strokeRichness(existing)
+    ) {
+      bestStrokeByNumber.set(
+        strokeNumber,
+        shot,
+      );
+    }
+  }
+
+  const orderedRawStrokes =
+    [...bestStrokeByNumber.values()]
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+        
+
+===== PROVIDER TERM: ShotDetailsCompressedV3 =====
+
+--- HIT 1 @ CHAR 3716 ---
+ | null;
+};
+
+type RawRadarTrajectory = {
+  carry?: number | null;
+  carrySide?: number | null;
+  maxHeight?: number | null;
+  curve?: number | null;
+  spinAxis?: number | null;
+  valid?: boolean | null;
+};
+
+type RawRadarData = {
+  apexHeight?: number | null;
+  apexRange?: number | null;
+  apexSide?: number | null;
+  clubSpeed?: number | null;
+  ballSpeed?: number | null;
+  smashFactor?: number | null;
+  launchSpin?: number | null;
+  spinAxis?: number | null;
+  verticalLaunchAngle?: number | null;
+  horizontalLaunchAngle?: number | null;
+  actualFlightTime?: number | null;
+  ballImpactMeasured?: string | null;
+
+  normalizedTrajectory?: RawRadarTrajectory[] | null;
+  normalizedTrajectoryV2?: RawRadarTrajectory[] | null;
+
+  /*
+   * Keep the polynomial trajectory payload available for the
+   * next ShotCast phase without making the UI depend on it yet.
+   */
+  ballTrajectory?: unknown[] | null;
+};
+
+type RawBallPathPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  secondsSinceStart?: number | null;
+};
+
+type RawBallPath = {
+  isLipOut?: boolean | null;
+  path?: RawBallPathPoint[] | null;
+  reconstructionType?: string | null;
+  totalDistanceInches?: number | null;
+};
+
+type RawStroke = {
+  strokeNumber?: number | null;
+
+  /*
+   * PGA TOURCAST's native shot position.
+   *
+   * Their Golf Engine constructs each shot as:
+   *   position = new Vector3(shot.x, shot.y, 0)
+   *
+   * Do not confuse these with overview.bottomToTopCoords
+   * or overview.*.tourcastX/tourcastY.
+   */
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+
+  /*
+   * TOURCAST V3 enrichments.
+   */
+  videoId?: string | null;
+  radarData?: RawRadarData | null;
+  ballPath?: RawBallPath | null;
+
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+
+  /*
+   * TOURCAST V3 also provides a second coordinate frame
+   * specifically for the dedicated Green View image.
+   */
+  green?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawWorldPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+};
+
+/*
+ * ShotDetailsCompressedV3 point-of-interest coordinates.
+ *
+ * PGA supplies ordinary x/y as -1 sentinels for the enhanced
+ * pickle path while preserving:
+ *
+ * - tourcastX/Y/Z for native TOURCAST world space
+ * - enhancedX/Y for the normalized image coordinate space
+ */
+type RawPointOfInterestCoordinate = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+  enhancedX?: number | null;
+  enhancedY?: number | null;
+};
+
+type RawPointOfInterestCoords = {
+  leftToRightCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+  bottomToTopCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+};
+
+type RawEnhancedPickle = {
+  leftToRight?: string | null;
+  bottomToTop?: string | null;
+  greenLeftToRight?: string | null;
+  greenBottomToTop?: string | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+
+  /*
+   * Legacy/raw player-hole endpoints.
+   */
+  tee?: RawWorldPoint | null;
+  pin?: RawWorldPoint | null;
+
+  /*
+   * ShotDetailsCompressedV3 supplies the authoritative pin
+   * independently in both the overview and Green View frames.
+   *
+   * These are round-specific because the V3 request itself is
+   * scoped to the requested round.
+   */
+  pinOverview?: RawPointOfInterestCoords | null;
+  pinGreen?: RawPointOfInterestCoords | null;
+
+  enhancedPickle?: RawEnhancedPickle | null;
+
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+export type GolfWorldPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+};
+
+export type GolfShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+export type GolfBallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+export type GolfBallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: GolfBallPathPoint[];
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+
+  /*
+   * Native PGA TOURCAST world positions.
+   *
+   * worldFrom is the tee for shot 1 and the previous
+   * landing position after that.
+   *
+   * worldTo is this stroke's raw PGA x/y position.
+   */
+  worldFrom: GolfWorldPoint | null;
+  worldTo: GolfWorldPoint | null;
+
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+
+  /*
+   * Rich TOURCAST shot data.
+   */
+  videoId: string | null;
+  radarData: GolfShotRadarData | null;
+  ballPath: GolfBallPath | null;
+
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+
+  /*
+   * Same stroke projected onto PGA's dedicated green image.
+   * May be null for shots that are nowhere near the green.
+   */
+  greenBottomToTop:
+    GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+
+  /*
+   * PGA's actual pin in native TOURCAST world coordinates.
+   * This exists independently of whether the golfer has
+   * completed the hole.
+   */
+  pinWorld: GolfWorldPoint | null;
+
+  /*
+   * PGA's round-specific pin on the dedicated Green View
+   * image, already normalized into the same 0..1 coordinate
+   * frame used by stroke.green.bottomToTopCoords.
+   */
+  greenPin: {
+    x: number;
+    y: number;
+  } | null;
+
+  /*
+   * PGA TOURCAST V3 supplies a hole image and coordinates
+   * that already share the same normalized coordinate frame.
+   *
+   * No terrain TFW calibration is required for this path.
+   */
+  shotcast: {
+    imageUrl: string;
+
+    /*
+     * Purpose-built PGA Green View crop.
+     * Coordinates come from stroke.green.bottomToTopCoords.
+     */
+    greenImageUrl: string | null;
+
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+  context: string,
+): Promise<JsonObject> {
+  let lastError: unknown = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...requestHeaders(),
+          ...(init.headers ?? {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const bodyText = await response.text();
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (
+          retryable &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await sleep(300 * 2 ** (attempt - 1));
+          continue;
+        }
+
+        throw new Error(
+          `${context} failed (${response.status}): ` +
+            bodyText.slice(0, 250),
+        );
+      }
+
+      try {
+        return JSON.parse(bodyText) as JsonObject;
+      } catch {
+        throw new Error(
+          `${context} returned invalid JSON: ` +
+            bodyText.slice(0, 250),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= MAX_ATTEMPTS) {
+        break;
+      }
+
+      await sleep(300 * 2 ** (attempt - 1));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: JsonObject,
+) {
+  const body = await requestJson(
+    PGA_GRAPHQL_URL,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        operationName,
+        query,
+        variables,
+      }),
+    },
+    `PGA TOUR ${operationName}`,
+  );
+
+  const errors = Array.isArray(body.errors)
+    ? body.errors
+    : [];
+
+  if (errors.length > 0) {
+    const message = errors
+      .map((error) => {
+        if (
+          error &&
+          typeof error === "object" &&
+          "message" in error
+        ) {
+          return String(error.message);
+        }
+
+        return String(error);
+      })
+      .join("; ");
+
+    throw new Error(
+      `PGA TOUR GraphQL error: ${message}`,
+    );
+  }
+
+  return (
+    body.data &&
+    typeof body.data === "object"
+      ? body.data
+      : {}
+  ) as JsonObject;
+}
+
+function decompressPayload<T>(
+  payload: unknown,
+): T {
+  if (
+    typeof payload !== "string" ||
+    payload.length === 0
+  ) {
+    throw new Error(
+      "PGA TOUR returned an empty compressed payload.",
+    );
+  }
+
+  const compressed = Buffer.from(
+    payload,
+    "base64",
+  );
+
+  const decompressed = gunzipSync(
+    compressed,
+  ).toString("utf8");
+
+  return JSON.parse(decompressed) as T;
+}
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function chooseBestNameMatch<T>(
+  rows: T[],
+  target: string,
+  getName: (row: T) => string,
+) {
+  const normalizedTarget =
+    normalizeName(target);
+
+  const exact = rows.find(
+    (row) =>
+      normalizeName(getName(row)) ===
+      normalizedTarget,
+  );
+
+  if (exact) return exact;
+
+  const targetTokens = new Set(
+    normalizedTarget.split(" "),
+  );
+
+  return (
+    rows
+      .map((row) => {
+        const normalized =
+          normalizeName(getName(row));
+
+        const tokens =
+          normalized.sp
+
+--- HIT 2 @ CHAR 4856 ---
+Type?: string | null;
+  totalDistanceInches?: number | null;
+};
+
+type RawStroke = {
+  strokeNumber?: number | null;
+
+  /*
+   * PGA TOURCAST's native shot position.
+   *
+   * Their Golf Engine constructs each shot as:
+   *   position = new Vector3(shot.x, shot.y, 0)
+   *
+   * Do not confuse these with overview.bottomToTopCoords
+   * or overview.*.tourcastX/tourcastY.
+   */
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+
+  /*
+   * TOURCAST V3 enrichments.
+   */
+  videoId?: string | null;
+  radarData?: RawRadarData | null;
+  ballPath?: RawBallPath | null;
+
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+
+  /*
+   * TOURCAST V3 also provides a second coordinate frame
+   * specifically for the dedicated Green View image.
+   */
+  green?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawWorldPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+};
+
+/*
+ * ShotDetailsCompressedV3 point-of-interest coordinates.
+ *
+ * PGA supplies ordinary x/y as -1 sentinels for the enhanced
+ * pickle path while preserving:
+ *
+ * - tourcastX/Y/Z for native TOURCAST world space
+ * - enhancedX/Y for the normalized image coordinate space
+ */
+type RawPointOfInterestCoordinate = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+  enhancedX?: number | null;
+  enhancedY?: number | null;
+};
+
+type RawPointOfInterestCoords = {
+  leftToRightCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+  bottomToTopCoords?:
+    | RawPointOfInterestCoordinate
+    | null;
+};
+
+type RawEnhancedPickle = {
+  leftToRight?: string | null;
+  bottomToTop?: string | null;
+  greenLeftToRight?: string | null;
+  greenBottomToTop?: string | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+
+  /*
+   * Legacy/raw player-hole endpoints.
+   */
+  tee?: RawWorldPoint | null;
+  pin?: RawWorldPoint | null;
+
+  /*
+   * ShotDetailsCompressedV3 supplies the authoritative pin
+   * independently in both the overview and Green View frames.
+   *
+   * These are round-specific because the V3 request itself is
+   * scoped to the requested round.
+   */
+  pinOverview?: RawPointOfInterestCoords | null;
+  pinGreen?: RawPointOfInterestCoords | null;
+
+  enhancedPickle?: RawEnhancedPickle | null;
+
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+export type GolfWorldPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+};
+
+export type GolfShotRadarData = {
+  apexHeight: number | null;
+  clubSpeed: number | null;
+  ballSpeed: number | null;
+  smashFactor: number | null;
+  launchSpin: number | null;
+  spinAxis: number | null;
+  verticalLaunchAngle: number | null;
+  horizontalLaunchAngle: number | null;
+  actualFlightTime: number | null;
+  carry: number | null;
+  carrySide: number | null;
+};
+
+export type GolfBallPathPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+  secondsSinceStart: number;
+};
+
+export type GolfBallPath = {
+  isLipOut: boolean;
+  reconstructionType: string | null;
+  totalDistanceInches: number | null;
+  path: GolfBallPathPoint[];
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+
+  /*
+   * Native PGA TOURCAST world positions.
+   *
+   * worldFrom is the tee for shot 1 and the previous
+   * landing position after that.
+   *
+   * worldTo is this stroke's raw PGA x/y position.
+   */
+  worldFrom: GolfWorldPoint | null;
+  worldTo: GolfWorldPoint | null;
+
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+
+  /*
+   * Rich TOURCAST shot data.
+   */
+  videoId: string | null;
+  radarData: GolfShotRadarData | null;
+  ballPath: GolfBallPath | null;
+
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+
+  /*
+   * Same stroke projected onto PGA's dedicated green image.
+   * May be null for shots that are nowhere near the green.
+   */
+  greenBottomToTop:
+    GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+
+  /*
+   * PGA's actual pin in native TOURCAST world coordinates.
+   * This exists independently of whether the golfer has
+   * completed the hole.
+   */
+  pinWorld: GolfWorldPoint | null;
+
+  /*
+   * PGA's round-specific pin on the dedicated Green View
+   * image, already normalized into the same 0..1 coordinate
+   * frame used by stroke.green.bottomToTopCoords.
+   */
+  greenPin: {
+    x: number;
+    y: number;
+  } | null;
+
+  /*
+   * PGA TOURCAST V3 supplies a hole image and coordinates
+   * that already share the same normalized coordinate frame.
+   *
+   * No terrain TFW calibration is required for this path.
+   */
+  shotcast: {
+    imageUrl: string;
+
+    /*
+     * Purpose-built PGA Green View crop.
+     * Coordinates come from stroke.green.bottomToTopCoords.
+     */
+    greenImageUrl: string | null;
+
+    orientation: "bottomToTop";
+    source: "pga-tourcast-v3-enhanced";
+    verified: true;
+  } | null;
+
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+  context: string,
+): Promise<JsonObject> {
+  let lastError: unknown = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...requestHeaders(),
+          ...(init.headers ?? {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const bodyText = await response.text();
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (
+          retryable &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await sleep(300 * 2 ** (attempt - 1));
+          continue;
+        }
+
+        throw new Error(
+          `${context} failed (${response.status}): ` +
+            bodyText.slice(0, 250),
+        );
+      }
+
+      try {
+        return JSON.parse(bodyText) as JsonObject;
+      } catch {
+        throw new Error(
+          `${context} returned invalid JSON: ` +
+            bodyText.slice(0, 250),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= MAX_ATTEMPTS) {
+        break;
+      }
+
+      await sleep(300 * 2 ** (attempt - 1));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: JsonObject,
+) {
+  const body = await requestJson(
+    PGA_GRAPHQL_URL,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        operationName,
+        query,
+        variables,
+      }),
+    },
+    `PGA TOUR ${operationName}`,
+  );
+
+  const errors = Array.isArray(body.errors)
+    ? body.errors
+    : [];
+
+  if (errors.length > 0) {
+    const message = errors
+      .map((error) => {
+        if (
+          error &&
+          typeof error === "object" &&
+          "message" in error
+        ) {
+          return String(error.message);
+        }
+
+        return String(error);
+      })
+      .join("; ");
+
+    throw new Error(
+      `PGA TOUR GraphQL error: ${message}`,
+    );
+  }
+
+  return (
+    body.data &&
+    typeof body.data === "object"
+      ? body.data
+      : {}
+  ) as JsonObject;
+}
+
+function decompressPayload<T>(
+  payload: unknown,
+): T {
+  if (
+    typeof payload !== "string" ||
+    payload.length === 0
+  ) {
+    throw new Error(
+      "PGA TOUR returned an empty compressed payload.",
+    );
+  }
+
+  const compressed = Buffer.from(
+    payload,
+    "base64",
+  );
+
+  const decompressed = gunzipSync(
+    compressed,
+  ).toString("utf8");
+
+  return JSON.parse(decompressed) as T;
+}
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function chooseBestNameMatch<T>(
+  rows: T[],
+  target: string,
+  getName: (row: T) => string,
+) {
+  const normalizedTarget =
+    normalizeName(target);
+
+  const exact = rows.find(
+    (row) =>
+      normalizeName(getName(row)) ===
+      normalizedTarget,
+  );
+
+  if (exact) return exact;
+
+  const targetTokens = new Set(
+    normalizedTarget.split(" "),
+  );
+
+  return (
+    rows
+      .map((row) => {
+        const normalized =
+          normalizeName(getName(row));
+
+        const tokens =
+          normalized.split(" ");
+
+        const overlap = tokens.filter(
+          (token) => targetTokens.has(token),
+        ).length;
+
+        return {
+          row,
+          score:
+            overlap * 10 -
+            Math.abs(
+              normalized.length -
+                normalizedTarget.length,
+            ),
+        };
+      })
+      .sort(
+        (a, b) => b.score - a.score,
+      )[0]?.row ?? null
+  );
+}
+
+function coordinate(
+  value:
+    | Partial<PgaCoordinate>
+    | null
+    | undefined,
+): PgaCoordinate {
+  function numberOrNull(input: unknown) {
+    const numeric = Number(input);
+
+    return Number.isFinite(numeric)
+      ? numeric
+      : null;
+  }
+
+  const enhancedX =
+    numberOrNull(
+      value?.enhancedX,
+    );
+
+  const enhancedY =
+    numberOrNull(
+      value?.enhancedY,
+    );
+
+  return {
+    /*
+     * IMPORTANT:
+     *
+     * When TOURCAST V3 supplies enhanced coordinates,
+     * those coordinates correspond directly to the
+     * enhancedPickle image returned for the same hole.
+     *
+     * Preserve legacy x/y only as fallback.
+     */
+    x:
+      enhancedX !== null
+        ? enhancedX
+        : numberOrNull
+
+--- HIT 3 @ CHAR 19074 ---
+ finiteNumber(point.z),
+          secondsSinceStart,
+        };
+      })
+      .filter(
+        (
+          point,
+        ): point is GolfBallPathPoint =>
+          point !== null,
+      );
+
+  if (points.length < 2) {
+    return null;
+  }
+
+  return {
+    isLipOut:
+      Boolean(value.isLipOut),
+    reconstructionType:
+      value.reconstructionType ??
+      null,
+    totalDistanceInches:
+      finiteNumber(
+        value.totalDistanceInches,
+      ),
+    path: points,
+  };
+}
+
+function highResolutionTourcastUrl(
+  value: string,
+) {
+  /*
+   * PGA currently returns its enhanced TOURCAST portrait
+   * image with a Cloudinary width transform of w_500.
+   *
+   * The underlying source supports a substantially larger
+   * render, so request a sharper version for pinch/zoom.
+   */
+  return value.replace(
+    /\bw_500\b/,
+    "w_1400",
+  );
+}
+
+function worldPoint(
+  value:
+    | RawWorldPoint
+    | RawStroke
+    | null
+    | undefined,
+): GolfWorldPoint | null {
+  const x = Number(value?.x);
+  const y = Number(value?.y);
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y)
+  ) {
+    return null;
+  }
+
+  const z = Number(value?.z);
+
+  return {
+    x,
+    y,
+    z: Number.isFinite(z)
+      ? z
+      : null,
+  };
+}
+
+
+const loadSchedule = unstable_cache(
+  async (year: number) => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/schedule/R/${year}`,
+      {
+        method: "GET",
+      },
+      `PGA TOUR ${year} schedule`,
+    );
+
+    return Array.isArray(body.tournaments)
+      ? (body.tournaments as PgaScheduleTournament[])
+      : [];
+  },
+  ["pga-tour-schedule-v1"],
+  {
+    revalidate: 60 * 60,
+  },
+);
+
+const loadPlayers = unstable_cache(
+  async () => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/player/list/R`,
+      {
+        method: "GET",
+      },
+      "PGA TOUR player directory",
+    );
+
+    return Array.isArray(body.players)
+      ? (body.players as PgaPlayer[])
+      : [];
+  },
+  ["pga-tour-player-directory-v1"],
+  {
+    revalidate: 24 * 60 * 60,
+  },
+);
+
+const loadRoundShots = unstable_cache(
+  async (
+    tournamentId: string,
+    pgaPlayerId: string,
+    roundNumber: number,
+    _cacheBust: string | null,
+  ) => {
+    /*
+     * Use the same compressed shot model consumed by
+     * PGA TOURCAST itself.
+     *
+     * V3 includes:
+     * - enhancedPickle hole imagery
+     * - enhancedX/enhancedY shot coordinates
+     * - tee/pin overview coordinates
+     * - radar data when available
+     */
+    const operationName =
+      "ShotDetailsCompressedV3";
+
+    const query =
+      "query ShotDetailsCompressedV3(" +
+      "$tournamentId: ID!, " +
+      "$playerId: ID!, " +
+      "$round: Int!, " +
+      "$includeRadar: Boolean" +
+      ") { " +
+      "shotDetailsCompressedV3(" +
+      "tournamentId: $tournamentId, " +
+      "playerId: $playerId, " +
+      "round: $round, " +
+      "includeRadar: $includeRadar" +
+      ") { id payload } }";
+
+    const data = await graphqlRequest(
+      operationName,
+      query,
+      {
+        tournamentId,
+        playerId: pgaPlayerId,
+        round: roundNumber,
+        includeRadar: true,
+      },
+    );
+
+    const response =
+      data.shotDetailsCompressedV3;
+
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("payload" in response)
+    ) {
+      return {
+        holes: [],
+      } satisfies RawShotPayload;
+    }
+
+    return decompressPayload<RawShotPayload>(
+      response.payload,
+    );
+  },
+  ["pga-tour-round-shots-tourcast-v3"],
+  {
+    // Live holes can change, but repeated taps should not
+    // hammer the upstream API.
+    revalidate: 120,
+  },
+);
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+    cacheBust?: string | null;
+  },
+): Promise<GolfHoleReplay | null> {
+  const tournaments = await loadSchedule(
+    input.year,
+  );
+
+  const tournament = chooseBestNameMatch(
+    tournaments.filter(
+      (row) =>
+        typeof row.tournamentId ===
+          "string" &&
+        typeof row.name === "string",
+    ),
+    input.tournamentName,
+    (row) => row.name ?? "",
+  );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  if (!tournamentId) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const players = await loadPlayers();
+
+  const player = chooseBestNameMatch(
+    players.filter(
+      (row) =>
+        typeof row.id === "string" &&
+        typeof row.displayName === "string",
+    ),
+    input.playerName,
+    (row) => row.displayName ?? "",
+  );
+
+  const pgaPlayerId =
+    player?.id?.trim();
+
+  if (!pgaPlayerId) {
+    throw new Error(
+      `Could not match "${input.playerName}" ` +
+        "to the PGA TOUR player directory.",
+    );
+  }
+
+  const payload = await loadRoundShots(
+    tournamentId,
+    pgaPlayerId,
+    input.roundNumber,
+    input.cacheBust ?? null,
+  );
+
+  const hole = (payload.holes ?? []).find(
+    (row) =>
+      Number(row.holeNumber) ===
+      input.holeNumber,
+  );
+
+  if (!hole) {
+    return null;
+  }
+
+  const rawStrokeCandidates =
+    [...(hole.strokes ?? [])]
+      .filter(
+        (shot) =>
+          Number(shot.strokeNumber ?? 0) > 0,
+      );
+
+  function strokeRichness(
+    shot: RawStroke,
+  ) {
+    let score = 0;
+
+    if (
+      shot.videoId?.trim()
+    ) {
+      score += 1000;
+    }
+
+    if (
+      shot.radarData
+        ?.ballTrajectory
+        ?.length
+    ) {
+      score += 500;
+    }
+
+    if (
+      shot.ballPath
+        ?.path
+        ?.length
+    ) {
+      score +=
+        200 +
+        shot.ballPath.path.length;
+    }
+
+    if (shot.radarData) {
+      score += 100;
+    }
+
+    if (
+      shot.green
+        ?.bottomToTopCoords
+    ) {
+      score += 50;
+    }
+
+    if (
+      shot.overview
+        ?.bottomToTopCoords
+    ) {
+      score += 25;
+    }
+
+    if (
+      Number.isFinite(
+        Number(shot.x),
+      ) &&
+      Number.isFinite(
+        Number(shot.y),
+      )
+    ) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  const bestStrokeByNumber =
+    new Map<number, RawStroke>();
+
+  for (
+    const shot
+    of rawStrokeCandidates
+  ) {
+    const strokeNumber =
+      Number(
+        shot.strokeNumber ?? 0,
+      );
+
+    const existing =
+      bestStrokeByNumber.get(
+        strokeNumber,
+      );
+
+    if (
+      !existing ||
+      strokeRichness(shot) >
+        strokeRichness(existing)
+    ) {
+      bestStrokeByNumber.set(
+        strokeNumber,
+        shot,
+      );
+    }
+  }
+
+  const orderedRawStrokes =
+    [...bestStrokeByNumber.values()]
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+          shot.distance ?? null,
+        distanceRemaining:
+          shot.distanceRemaining ?? null,
+        strokeType:
+          shot.strokeType ?? null,
+        fromLocation:
+          shot.fromLocation ?? null,
+        toLocation:
+          shot.toLocation ?? null,
+        fromLocationCode:
+          shot.fromLocationCode ?? null,
+        toLocationCode:
+          shot.toLocationCode ?? null,
+        finalStroke:
+          Boolean(shot.finalStroke),
+
+        videoId:
+          typeof shot.videoId === "string" &&
+          shot.videoId.trim()
+            ? shot.videoId.trim()
+            : null,
+
+        radarData:
+          radarData(
+            shot.radarData,
+          ),
+
+
+        ballPath:
+          ballPath(
+            shot.ballPath,
+          ),
+
+        leftToRight: coordinateSet(
+          shot.overview?.leftToRightCoords,
+        ),
+        bottomToTop: coordinateSet(
+          shot.overview?.bottomToTopCoords,
+        ),
+
+        greenBottomToTop:
+          coordinateSet(
+            shot.green?.bottomToTopCoords,
+          ),
+      };
+
+      if (landingWorldPoint) {
+        previousWorldPoint =
+          landingWorldPoint;
+      }
+
+      return mappedShot;
+    },
+  );
+
+  /*
+   * PGA's live/round-specific cup comes directly from the
+   * ShotDetailsCompressedV3 hole object.
+   *
+   * Green View uses enhancedX/enhancedY.
+   * Native 3D/course space uses tourcastX/Y/Z.
+   */
+  const rawGreenPin =
+    hole.pinGreen
+      ?.bottomToTopCoords ??
+    null;
+
+  const greenPinX =
+    rawGreenPin?.enhancedX;
+  const greenPinY =
+    rawGreenPin?.enhancedY;
+
+  const greenPin =
+    typeof greenPinX === "number" &&
+    typeof greenPinY === "number" &&
+    Number.isFinite(greenPinX) &&
+    Number.isFinite(greenPinY) &&
+    greenPinX >= 0 &&
+    greenPinX <= 1 &&
+    greenPinY >= 0 &&
+    greenPinY <= 1
+      ? {
+          x: greenPinX,
+          y: greenPinY,
+        }
+      : null;
+
+  /*
+   * pinGreen and pinOverview describe the same physical cup
+   * in different image projections. Prefer pinGreen's native
+   * TOURCAST coordinates because that is the same object
+   * driving Green View.
+   */
+  const rawPinWorld =
+    rawGreenPin ??
+    hole.pinOverview
+      ?.bottomToTopCoords ??
+    null;
+
+  const pinTourcastX =
+    rawPinWorld?.tourcastX;
+  const pinTourcastY =
+    rawPinWorld?.tourcastY;
+  const pinTourcastZ =
+    rawPinWorld?.tourcastZ;
+
+  const livePinWorld =
+    typeof pinTourcastX === "number" &&
+    typeof pinTourcastY === "number" &&
+    Number.isFinite(pinTourcastX) &&
+    Number.isFinite(pinTourcastY)
+      ? {
+          x: pinTourcastX,
+          y: pinTourcastY,
+          z:
+            typeof pinTourcastZ ===
+              "number" &&
+            Number.isFinite(
+              pinTourcastZ,
+            )
+              ? pinTourcastZ
+              : null,
+        }
+      : null;
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+
+    /*
+     * PGA's authoritative round-specific hole pin comes from
+     * ShotDetailsCompressedV3 pinGreen/pinOverview.
+     *
+     * Keep the legacy hole.pin fallback only for payloads that
+     * do not expose the newer V3 point-of-interest fields.
+     */
+    pinWorld:
+      livePinWorld ??
+      worldPoint(
+        hole.pin,
+      ),
+
+    greenPin,
+
+    shotcast:
+      typeof hole.enhancedPickle
+        ?.bottomToTop === "string" &&
+      hole.enhancedPickle
+        .bottomToTop.trim()
+        ? {
+            imageUrl:
+              highResolutionTourcastUrl(
+                hole.enhancedPickle
+                  .bottomToTop.trim(),
+              ),
+
+            greenImageUrl:
+              typeof hole.enhancedPickle
+                ?.greenBottomToTop ===
+                "string" &&
+              hole.enhancedPickle
+                .gree
+
+--- HIT 4 @ CHAR 19132 ---
+   };
+      })
+      .filter(
+        (
+          point,
+        ): point is GolfBallPathPoint =>
+          point !== null,
+      );
+
+  if (points.length < 2) {
+    return null;
+  }
+
+  return {
+    isLipOut:
+      Boolean(value.isLipOut),
+    reconstructionType:
+      value.reconstructionType ??
+      null,
+    totalDistanceInches:
+      finiteNumber(
+        value.totalDistanceInches,
+      ),
+    path: points,
+  };
+}
+
+function highResolutionTourcastUrl(
+  value: string,
+) {
+  /*
+   * PGA currently returns its enhanced TOURCAST portrait
+   * image with a Cloudinary width transform of w_500.
+   *
+   * The underlying source supports a substantially larger
+   * render, so request a sharper version for pinch/zoom.
+   */
+  return value.replace(
+    /\bw_500\b/,
+    "w_1400",
+  );
+}
+
+function worldPoint(
+  value:
+    | RawWorldPoint
+    | RawStroke
+    | null
+    | undefined,
+): GolfWorldPoint | null {
+  const x = Number(value?.x);
+  const y = Number(value?.y);
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y)
+  ) {
+    return null;
+  }
+
+  const z = Number(value?.z);
+
+  return {
+    x,
+    y,
+    z: Number.isFinite(z)
+      ? z
+      : null,
+  };
+}
+
+
+const loadSchedule = unstable_cache(
+  async (year: number) => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/schedule/R/${year}`,
+      {
+        method: "GET",
+      },
+      `PGA TOUR ${year} schedule`,
+    );
+
+    return Array.isArray(body.tournaments)
+      ? (body.tournaments as PgaScheduleTournament[])
+      : [];
+  },
+  ["pga-tour-schedule-v1"],
+  {
+    revalidate: 60 * 60,
+  },
+);
+
+const loadPlayers = unstable_cache(
+  async () => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/player/list/R`,
+      {
+        method: "GET",
+      },
+      "PGA TOUR player directory",
+    );
+
+    return Array.isArray(body.players)
+      ? (body.players as PgaPlayer[])
+      : [];
+  },
+  ["pga-tour-player-directory-v1"],
+  {
+    revalidate: 24 * 60 * 60,
+  },
+);
+
+const loadRoundShots = unstable_cache(
+  async (
+    tournamentId: string,
+    pgaPlayerId: string,
+    roundNumber: number,
+    _cacheBust: string | null,
+  ) => {
+    /*
+     * Use the same compressed shot model consumed by
+     * PGA TOURCAST itself.
+     *
+     * V3 includes:
+     * - enhancedPickle hole imagery
+     * - enhancedX/enhancedY shot coordinates
+     * - tee/pin overview coordinates
+     * - radar data when available
+     */
+    const operationName =
+      "ShotDetailsCompressedV3";
+
+    const query =
+      "query ShotDetailsCompressedV3(" +
+      "$tournamentId: ID!, " +
+      "$playerId: ID!, " +
+      "$round: Int!, " +
+      "$includeRadar: Boolean" +
+      ") { " +
+      "shotDetailsCompressedV3(" +
+      "tournamentId: $tournamentId, " +
+      "playerId: $playerId, " +
+      "round: $round, " +
+      "includeRadar: $includeRadar" +
+      ") { id payload } }";
+
+    const data = await graphqlRequest(
+      operationName,
+      query,
+      {
+        tournamentId,
+        playerId: pgaPlayerId,
+        round: roundNumber,
+        includeRadar: true,
+      },
+    );
+
+    const response =
+      data.shotDetailsCompressedV3;
+
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("payload" in response)
+    ) {
+      return {
+        holes: [],
+      } satisfies RawShotPayload;
+    }
+
+    return decompressPayload<RawShotPayload>(
+      response.payload,
+    );
+  },
+  ["pga-tour-round-shots-tourcast-v3"],
+  {
+    // Live holes can change, but repeated taps should not
+    // hammer the upstream API.
+    revalidate: 120,
+  },
+);
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+    cacheBust?: string | null;
+  },
+): Promise<GolfHoleReplay | null> {
+  const tournaments = await loadSchedule(
+    input.year,
+  );
+
+  const tournament = chooseBestNameMatch(
+    tournaments.filter(
+      (row) =>
+        typeof row.tournamentId ===
+          "string" &&
+        typeof row.name === "string",
+    ),
+    input.tournamentName,
+    (row) => row.name ?? "",
+  );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  if (!tournamentId) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const players = await loadPlayers();
+
+  const player = chooseBestNameMatch(
+    players.filter(
+      (row) =>
+        typeof row.id === "string" &&
+        typeof row.displayName === "string",
+    ),
+    input.playerName,
+    (row) => row.displayName ?? "",
+  );
+
+  const pgaPlayerId =
+    player?.id?.trim();
+
+  if (!pgaPlayerId) {
+    throw new Error(
+      `Could not match "${input.playerName}" ` +
+        "to the PGA TOUR player directory.",
+    );
+  }
+
+  const payload = await loadRoundShots(
+    tournamentId,
+    pgaPlayerId,
+    input.roundNumber,
+    input.cacheBust ?? null,
+  );
+
+  const hole = (payload.holes ?? []).find(
+    (row) =>
+      Number(row.holeNumber) ===
+      input.holeNumber,
+  );
+
+  if (!hole) {
+    return null;
+  }
+
+  const rawStrokeCandidates =
+    [...(hole.strokes ?? [])]
+      .filter(
+        (shot) =>
+          Number(shot.strokeNumber ?? 0) > 0,
+      );
+
+  function strokeRichness(
+    shot: RawStroke,
+  ) {
+    let score = 0;
+
+    if (
+      shot.videoId?.trim()
+    ) {
+      score += 1000;
+    }
+
+    if (
+      shot.radarData
+        ?.ballTrajectory
+        ?.length
+    ) {
+      score += 500;
+    }
+
+    if (
+      shot.ballPath
+        ?.path
+        ?.length
+    ) {
+      score +=
+        200 +
+        shot.ballPath.path.length;
+    }
+
+    if (shot.radarData) {
+      score += 100;
+    }
+
+    if (
+      shot.green
+        ?.bottomToTopCoords
+    ) {
+      score += 50;
+    }
+
+    if (
+      shot.overview
+        ?.bottomToTopCoords
+    ) {
+      score += 25;
+    }
+
+    if (
+      Number.isFinite(
+        Number(shot.x),
+      ) &&
+      Number.isFinite(
+        Number(shot.y),
+      )
+    ) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  const bestStrokeByNumber =
+    new Map<number, RawStroke>();
+
+  for (
+    const shot
+    of rawStrokeCandidates
+  ) {
+    const strokeNumber =
+      Number(
+        shot.strokeNumber ?? 0,
+      );
+
+    const existing =
+      bestStrokeByNumber.get(
+        strokeNumber,
+      );
+
+    if (
+      !existing ||
+      strokeRichness(shot) >
+        strokeRichness(existing)
+    ) {
+      bestStrokeByNumber.set(
+        strokeNumber,
+        shot,
+      );
+    }
+  }
+
+  const orderedRawStrokes =
+    [...bestStrokeByNumber.values()]
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+          shot.distance ?? null,
+        distanceRemaining:
+          shot.distanceRemaining ?? null,
+        strokeType:
+          shot.strokeType ?? null,
+        fromLocation:
+          shot.fromLocation ?? null,
+        toLocation:
+          shot.toLocation ?? null,
+        fromLocationCode:
+          shot.fromLocationCode ?? null,
+        toLocationCode:
+          shot.toLocationCode ?? null,
+        finalStroke:
+          Boolean(shot.finalStroke),
+
+        videoId:
+          typeof shot.videoId === "string" &&
+          shot.videoId.trim()
+            ? shot.videoId.trim()
+            : null,
+
+        radarData:
+          radarData(
+            shot.radarData,
+          ),
+
+
+        ballPath:
+          ballPath(
+            shot.ballPath,
+          ),
+
+        leftToRight: coordinateSet(
+          shot.overview?.leftToRightCoords,
+        ),
+        bottomToTop: coordinateSet(
+          shot.overview?.bottomToTopCoords,
+        ),
+
+        greenBottomToTop:
+          coordinateSet(
+            shot.green?.bottomToTopCoords,
+          ),
+      };
+
+      if (landingWorldPoint) {
+        previousWorldPoint =
+          landingWorldPoint;
+      }
+
+      return mappedShot;
+    },
+  );
+
+  /*
+   * PGA's live/round-specific cup comes directly from the
+   * ShotDetailsCompressedV3 hole object.
+   *
+   * Green View uses enhancedX/enhancedY.
+   * Native 3D/course space uses tourcastX/Y/Z.
+   */
+  const rawGreenPin =
+    hole.pinGreen
+      ?.bottomToTopCoords ??
+    null;
+
+  const greenPinX =
+    rawGreenPin?.enhancedX;
+  const greenPinY =
+    rawGreenPin?.enhancedY;
+
+  const greenPin =
+    typeof greenPinX === "number" &&
+    typeof greenPinY === "number" &&
+    Number.isFinite(greenPinX) &&
+    Number.isFinite(greenPinY) &&
+    greenPinX >= 0 &&
+    greenPinX <= 1 &&
+    greenPinY >= 0 &&
+    greenPinY <= 1
+      ? {
+          x: greenPinX,
+          y: greenPinY,
+        }
+      : null;
+
+  /*
+   * pinGreen and pinOverview describe the same physical cup
+   * in different image projections. Prefer pinGreen's native
+   * TOURCAST coordinates because that is the same object
+   * driving Green View.
+   */
+  const rawPinWorld =
+    rawGreenPin ??
+    hole.pinOverview
+      ?.bottomToTopCoords ??
+    null;
+
+  const pinTourcastX =
+    rawPinWorld?.tourcastX;
+  const pinTourcastY =
+    rawPinWorld?.tourcastY;
+  const pinTourcastZ =
+    rawPinWorld?.tourcastZ;
+
+  const livePinWorld =
+    typeof pinTourcastX === "number" &&
+    typeof pinTourcastY === "number" &&
+    Number.isFinite(pinTourcastX) &&
+    Number.isFinite(pinTourcastY)
+      ? {
+          x: pinTourcastX,
+          y: pinTourcastY,
+          z:
+            typeof pinTourcastZ ===
+              "number" &&
+            Number.isFinite(
+              pinTourcastZ,
+            )
+              ? pinTourcastZ
+              : null,
+        }
+      : null;
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+
+    /*
+     * PGA's authoritative round-specific hole pin comes from
+     * ShotDetailsCompressedV3 pinGreen/pinOverview.
+     *
+     * Keep the legacy hole.pin fallback only for payloads that
+     * do not expose the newer V3 point-of-interest fields.
+     */
+    pinWorld:
+      livePinWorld ??
+      worldPoint(
+        hole.pin,
+      ),
+
+    greenPin,
+
+    shotcast:
+      typeof hole.enhancedPickle
+        ?.bottomToTop === "string" &&
+      hole.enhancedPickle
+        .bottomToTop.trim()
+        ? {
+            imageUrl:
+              highResolutionTourcastUrl(
+                hole.enhancedPickle
+                  .bottomToTop.trim(),
+              ),
+
+            greenImageUrl:
+              typeof hole.enhancedPickle
+                ?.greenBottomToTop ===
+                "string" &&
+              hole.enhancedPickle
+                .greenBottomToTop
+                .trim()
+                ? hig
+
+--- HIT 5 @ CHAR 25061 ---
+ber.isFinite(
+        Number(shot.y),
+      )
+    ) {
+      score += 10;
+    }
+
+    return score;
+  }
+
+  const bestStrokeByNumber =
+    new Map<number, RawStroke>();
+
+  for (
+    const shot
+    of rawStrokeCandidates
+  ) {
+    const strokeNumber =
+      Number(
+        shot.strokeNumber ?? 0,
+      );
+
+    const existing =
+      bestStrokeByNumber.get(
+        strokeNumber,
+      );
+
+    if (
+      !existing ||
+      strokeRichness(shot) >
+        strokeRichness(existing)
+    ) {
+      bestStrokeByNumber.set(
+        strokeNumber,
+        shot,
+      );
+    }
+  }
+
+  const orderedRawStrokes =
+    [...bestStrokeByNumber.values()]
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+          shot.distance ?? null,
+        distanceRemaining:
+          shot.distanceRemaining ?? null,
+        strokeType:
+          shot.strokeType ?? null,
+        fromLocation:
+          shot.fromLocation ?? null,
+        toLocation:
+          shot.toLocation ?? null,
+        fromLocationCode:
+          shot.fromLocationCode ?? null,
+        toLocationCode:
+          shot.toLocationCode ?? null,
+        finalStroke:
+          Boolean(shot.finalStroke),
+
+        videoId:
+          typeof shot.videoId === "string" &&
+          shot.videoId.trim()
+            ? shot.videoId.trim()
+            : null,
+
+        radarData:
+          radarData(
+            shot.radarData,
+          ),
+
+
+        ballPath:
+          ballPath(
+            shot.ballPath,
+          ),
+
+        leftToRight: coordinateSet(
+          shot.overview?.leftToRightCoords,
+        ),
+        bottomToTop: coordinateSet(
+          shot.overview?.bottomToTopCoords,
+        ),
+
+        greenBottomToTop:
+          coordinateSet(
+            shot.green?.bottomToTopCoords,
+          ),
+      };
+
+      if (landingWorldPoint) {
+        previousWorldPoint =
+          landingWorldPoint;
+      }
+
+      return mappedShot;
+    },
+  );
+
+  /*
+   * PGA's live/round-specific cup comes directly from the
+   * ShotDetailsCompressedV3 hole object.
+   *
+   * Green View uses enhancedX/enhancedY.
+   * Native 3D/course space uses tourcastX/Y/Z.
+   */
+  const rawGreenPin =
+    hole.pinGreen
+      ?.bottomToTopCoords ??
+    null;
+
+  const greenPinX =
+    rawGreenPin?.enhancedX;
+  const greenPinY =
+    rawGreenPin?.enhancedY;
+
+  const greenPin =
+    typeof greenPinX === "number" &&
+    typeof greenPinY === "number" &&
+    Number.isFinite(greenPinX) &&
+    Number.isFinite(greenPinY) &&
+    greenPinX >= 0 &&
+    greenPinX <= 1 &&
+    greenPinY >= 0 &&
+    greenPinY <= 1
+      ? {
+          x: greenPinX,
+          y: greenPinY,
+        }
+      : null;
+
+  /*
+   * pinGreen and pinOverview describe the same physical cup
+   * in different image projections. Prefer pinGreen's native
+   * TOURCAST coordinates because that is the same object
+   * driving Green View.
+   */
+  const rawPinWorld =
+    rawGreenPin ??
+    hole.pinOverview
+      ?.bottomToTopCoords ??
+    null;
+
+  const pinTourcastX =
+    rawPinWorld?.tourcastX;
+  const pinTourcastY =
+    rawPinWorld?.tourcastY;
+  const pinTourcastZ =
+    rawPinWorld?.tourcastZ;
+
+  const livePinWorld =
+    typeof pinTourcastX === "number" &&
+    typeof pinTourcastY === "number" &&
+    Number.isFinite(pinTourcastX) &&
+    Number.isFinite(pinTourcastY)
+      ? {
+          x: pinTourcastX,
+          y: pinTourcastY,
+          z:
+            typeof pinTourcastZ ===
+              "number" &&
+            Number.isFinite(
+              pinTourcastZ,
+            )
+              ? pinTourcastZ
+              : null,
+        }
+      : null;
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+
+    /*
+     * PGA's authoritative round-specific hole pin comes from
+     * ShotDetailsCompressedV3 pinGreen/pinOverview.
+     *
+     * Keep the legacy hole.pin fallback only for payloads that
+     * do not expose the newer V3 point-of-interest fields.
+     */
+    pinWorld:
+      livePinWorld ??
+      worldPoint(
+        hole.pin,
+      ),
+
+    greenPin,
+
+    shotcast:
+      typeof hole.enhancedPickle
+        ?.bottomToTop === "string" &&
+      hole.enhancedPickle
+        .bottomToTop.trim()
+        ? {
+            imageUrl:
+              highResolutionTourcastUrl(
+                hole.enhancedPickle
+                  .bottomToTop.trim(),
+              ),
+
+            greenImageUrl:
+              typeof hole.enhancedPickle
+                ?.greenBottomToTop ===
+                "string" &&
+              hole.enhancedPickle
+                .greenBottomToTop
+                .trim()
+                ? highResolutionTourcastUrl(
+                    hole.enhancedPickle
+                      .greenBottomToTop
+                      .trim(),
+                  )
+                : null,
+
+            orientation:
+              "bottomToTop",
+            source:
+              "pga-tourcast-v3-enhanced",
+            verified: true,
+          }
+        : null,
+
+    shots,
+  };
+}
+
+
+--- HIT 6 @ CHAR 27295 ---
+       shot.green?.bottomToTopCoords,
+          ),
+      };
+
+      if (landingWorldPoint) {
+        previousWorldPoint =
+          landingWorldPoint;
+      }
+
+      return mappedShot;
+    },
+  );
+
+  /*
+   * PGA's live/round-specific cup comes directly from the
+   * ShotDetailsCompressedV3 hole object.
+   *
+   * Green View uses enhancedX/enhancedY.
+   * Native 3D/course space uses tourcastX/Y/Z.
+   */
+  const rawGreenPin =
+    hole.pinGreen
+      ?.bottomToTopCoords ??
+    null;
+
+  const greenPinX =
+    rawGreenPin?.enhancedX;
+  const greenPinY =
+    rawGreenPin?.enhancedY;
+
+  const greenPin =
+    typeof greenPinX === "number" &&
+    typeof greenPinY === "number" &&
+    Number.isFinite(greenPinX) &&
+    Number.isFinite(greenPinY) &&
+    greenPinX >= 0 &&
+    greenPinX <= 1 &&
+    greenPinY >= 0 &&
+    greenPinY <= 1
+      ? {
+          x: greenPinX,
+          y: greenPinY,
+        }
+      : null;
+
+  /*
+   * pinGreen and pinOverview describe the same physical cup
+   * in different image projections. Prefer pinGreen's native
+   * TOURCAST coordinates because that is the same object
+   * driving Green View.
+   */
+  const rawPinWorld =
+    rawGreenPin ??
+    hole.pinOverview
+      ?.bottomToTopCoords ??
+    null;
+
+  const pinTourcastX =
+    rawPinWorld?.tourcastX;
+  const pinTourcastY =
+    rawPinWorld?.tourcastY;
+  const pinTourcastZ =
+    rawPinWorld?.tourcastZ;
+
+  const livePinWorld =
+    typeof pinTourcastX === "number" &&
+    typeof pinTourcastY === "number" &&
+    Number.isFinite(pinTourcastX) &&
+    Number.isFinite(pinTourcastY)
+      ? {
+          x: pinTourcastX,
+          y: pinTourcastY,
+          z:
+            typeof pinTourcastZ ===
+              "number" &&
+            Number.isFinite(
+              pinTourcastZ,
+            )
+              ? pinTourcastZ
+              : null,
+        }
+      : null;
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+
+    /*
+     * PGA's authoritative round-specific hole pin comes from
+     * ShotDetailsCompressedV3 pinGreen/pinOverview.
+     *
+     * Keep the legacy hole.pin fallback only for payloads that
+     * do not expose the newer V3 point-of-interest fields.
+     */
+    pinWorld:
+      livePinWorld ??
+      worldPoint(
+        hole.pin,
+      ),
+
+    greenPin,
+
+    shotcast:
+      typeof hole.enhancedPickle
+        ?.bottomToTop === "string" &&
+      hole.enhancedPickle
+        .bottomToTop.trim()
+        ? {
+            imageUrl:
+              highResolutionTourcastUrl(
+                hole.enhancedPickle
+                  .bottomToTop.trim(),
+              ),
+
+            greenImageUrl:
+              typeof hole.enhancedPickle
+                ?.greenBottomToTop ===
+                "string" &&
+              hole.enhancedPickle
+                .greenBottomToTop
+                .trim()
+                ? highResolutionTourcastUrl(
+                    hole.enhancedPickle
+                      .greenBottomToTop
+                      .trim(),
+                  )
+                : null,
+
+            orientation:
+              "bottomToTop",
+            source:
+              "pga-tourcast-v3-enhanced",
+            verified: true,
+          }
+        : null,
+
+    shots,
+  };
+}
+

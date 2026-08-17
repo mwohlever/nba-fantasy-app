@@ -1,0 +1,4803 @@
+
+================================================================================
+FILE: lib/providers/pgaTourShots.ts
+================================================================================
+import "server-only";
+
+import { gunzipSync } from "node:zlib";
+import { unstable_cache } from "next/cache";
+
+const PGA_GRAPHQL_URL =
+  "https://orchestrator.pgatour.com/graphql";
+
+const PGA_REST_URL =
+  "https://data-api.pgatour.com";
+
+/**
+ * This is the public web-client key currently used by PGATOUR.com.
+ * PGA_TOUR_API_KEY can override it if PGA TOUR rotates the key.
+ */
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+const REQUEST_TIMEOUT_MS = 20_000;
+const MAX_ATTEMPTS = 3;
+
+type JsonObject = Record<string, unknown>;
+
+type PgaScheduleTournament = {
+  tournamentId?: string | null;
+  name?: string | null;
+};
+
+type PgaPlayer = {
+  id?: string | null;
+  displayName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+};
+
+type PgaCoordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX: number | null;
+  tourcastY: number | null;
+  tourcastZ: number | null;
+};
+
+type RawShotCoordinateGroup = {
+  fromCoords?: Partial<PgaCoordinate> | null;
+  toCoords?: Partial<PgaCoordinate> | null;
+};
+
+type RawStroke = {
+  strokeNumber?: number | null;
+
+  /*
+   * PGA TOURCAST's native shot position.
+   *
+   * Their Golf Engine constructs each shot as:
+   *   position = new Vector3(shot.x, shot.y, 0)
+   *
+   * Do not confuse these with overview.bottomToTopCoords
+   * or overview.*.tourcastX/tourcastY.
+   */
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+
+  playByPlay?: string | null;
+  distance?: string | null;
+  distanceRemaining?: string | null;
+  strokeType?: string | null;
+  fromLocation?: string | null;
+  toLocation?: string | null;
+  fromLocationCode?: string | null;
+  toLocationCode?: string | null;
+  finalStroke?: boolean | null;
+  overview?: {
+    leftToRightCoords?: RawShotCoordinateGroup | null;
+    bottomToTopCoords?: RawShotCoordinateGroup | null;
+  } | null;
+};
+
+type RawWorldPoint = {
+  x?: number | null;
+  y?: number | null;
+  z?: number | null;
+};
+
+type RawHole = {
+  holeNumber?: number | null;
+  par?: number | null;
+  yardage?: number | null;
+  status?: string | null;
+  score?: string | number | null;
+
+  /*
+   * TOURCAST uses the player/hole tee and pin positions
+   * as world-coordinate endpoints surrounding the shots.
+   */
+  tee?: RawWorldPoint | null;
+  pin?: RawWorldPoint | null;
+
+  strokes?: RawStroke[] | null;
+};
+
+type RawShotPayload = {
+  holes?: RawHole[] | null;
+};
+
+export type GolfShotCoordinateSet = {
+  from: PgaCoordinate;
+  to: PgaCoordinate;
+};
+
+export type GolfWorldPoint = {
+  x: number;
+  y: number;
+  z: number | null;
+};
+
+export type GolfHoleReplayShot = {
+  strokeNumber: number;
+
+  /*
+   * Native PGA TOURCAST world positions.
+   *
+   * worldFrom is the tee for shot 1 and the previous
+   * landing position after that.
+   *
+   * worldTo is this stroke's raw PGA x/y position.
+   */
+  worldFrom: GolfWorldPoint | null;
+  worldTo: GolfWorldPoint | null;
+
+  playByPlay: string | null;
+  distance: string | null;
+  distanceRemaining: string | null;
+  strokeType: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  fromLocationCode: string | null;
+  toLocationCode: string | null;
+  finalStroke: boolean;
+  leftToRight: GolfShotCoordinateSet | null;
+  bottomToTop: GolfShotCoordinateSet | null;
+};
+
+export type GolfHoleReplay = {
+  tournamentId: string;
+  pgaPlayerId: string;
+  playerName: string;
+  roundNumber: number;
+  holeNumber: number;
+  par: number | null;
+  yardage: number | null;
+  holeStatus: string | null;
+  holeScore: string | null;
+  shots: GolfHoleReplayShot[];
+};
+
+function apiKey() {
+  return (
+    process.env.PGA_TOUR_API_KEY?.trim() ||
+    DEFAULT_PGA_API_KEY
+  );
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key": apiKey(),
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function sleep(milliseconds: number) {
+  return new Promise((resolve) =>
+    setTimeout(resolve, milliseconds),
+  );
+}
+
+async function requestJson(
+  url: string,
+  init: RequestInit,
+  context: string,
+): Promise<JsonObject> {
+  let lastError: unknown = null;
+
+  for (
+    let attempt = 1;
+    attempt <= MAX_ATTEMPTS;
+    attempt += 1
+  ) {
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
+
+    try {
+      const response = await fetch(url, {
+        ...init,
+        headers: {
+          ...requestHeaders(),
+          ...(init.headers ?? {}),
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+
+      const bodyText = await response.text();
+
+      if (!response.ok) {
+        const retryable =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (
+          retryable &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await sleep(300 * 2 ** (attempt - 1));
+          continue;
+        }
+
+        throw new Error(
+          `${context} failed (${response.status}): ` +
+            bodyText.slice(0, 250),
+        );
+      }
+
+      try {
+        return JSON.parse(bodyText) as JsonObject;
+      } catch {
+        throw new Error(
+          `${context} returned invalid JSON: ` +
+            bodyText.slice(0, 250),
+        );
+      }
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= MAX_ATTEMPTS) {
+        break;
+      }
+
+      await sleep(300 * 2 ** (attempt - 1));
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  throw new Error(
+    `${context} failed after ${MAX_ATTEMPTS} attempts: ${
+      lastError instanceof Error
+        ? lastError.message
+        : String(lastError)
+    }`,
+  );
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: JsonObject,
+) {
+  const body = await requestJson(
+    PGA_GRAPHQL_URL,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        operationName,
+        query,
+        variables,
+      }),
+    },
+    `PGA TOUR ${operationName}`,
+  );
+
+  const errors = Array.isArray(body.errors)
+    ? body.errors
+    : [];
+
+  if (errors.length > 0) {
+    const message = errors
+      .map((error) => {
+        if (
+          error &&
+          typeof error === "object" &&
+          "message" in error
+        ) {
+          return String(error.message);
+        }
+
+        return String(error);
+      })
+      .join("; ");
+
+    throw new Error(
+      `PGA TOUR GraphQL error: ${message}`,
+    );
+  }
+
+  return (
+    body.data &&
+    typeof body.data === "object"
+      ? body.data
+      : {}
+  ) as JsonObject;
+}
+
+function decompressPayload<T>(
+  payload: unknown,
+): T {
+  if (
+    typeof payload !== "string" ||
+    payload.length === 0
+  ) {
+    throw new Error(
+      "PGA TOUR returned an empty compressed payload.",
+    );
+  }
+
+  const compressed = Buffer.from(
+    payload,
+    "base64",
+  );
+
+  const decompressed = gunzipSync(
+    compressed,
+  ).toString("utf8");
+
+  return JSON.parse(decompressed) as T;
+}
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function chooseBestNameMatch<T>(
+  rows: T[],
+  target: string,
+  getName: (row: T) => string,
+) {
+  const normalizedTarget =
+    normalizeName(target);
+
+  const exact = rows.find(
+    (row) =>
+      normalizeName(getName(row)) ===
+      normalizedTarget,
+  );
+
+  if (exact) return exact;
+
+  const targetTokens = new Set(
+    normalizedTarget.split(" "),
+  );
+
+  return (
+    rows
+      .map((row) => {
+        const normalized =
+          normalizeName(getName(row));
+
+        const tokens =
+          normalized.split(" ");
+
+        const overlap = tokens.filter(
+          (token) => targetTokens.has(token),
+        ).length;
+
+        return {
+          row,
+          score:
+            overlap * 10 -
+            Math.abs(
+              normalized.length -
+                normalizedTarget.length,
+            ),
+        };
+      })
+      .sort(
+        (a, b) => b.score - a.score,
+      )[0]?.row ?? null
+  );
+}
+
+function coordinate(
+  value:
+    | Partial<PgaCoordinate>
+    | null
+    | undefined,
+): PgaCoordinate {
+  function numberOrNull(input: unknown) {
+    const numeric = Number(input);
+
+    return Number.isFinite(numeric)
+      ? numeric
+      : null;
+  }
+
+  return {
+    x: numberOrNull(value?.x),
+    y: numberOrNull(value?.y),
+    tourcastX: numberOrNull(
+      value?.tourcastX,
+    ),
+    tourcastY: numberOrNull(
+      value?.tourcastY,
+    ),
+    tourcastZ: numberOrNull(
+      value?.tourcastZ,
+    ),
+  };
+}
+
+function coordinateSet(
+  value:
+    | RawShotCoordinateGroup
+    | null
+    | undefined,
+): GolfShotCoordinateSet | null {
+  if (
+    !value?.fromCoords ||
+    !value?.toCoords
+  ) {
+    return null;
+  }
+
+  return {
+    from: coordinate(value.fromCoords),
+    to: coordinate(value.toCoords),
+  };
+}
+
+function worldPoint(
+  value:
+    | RawWorldPoint
+    | RawStroke
+    | null
+    | undefined,
+): GolfWorldPoint | null {
+  const x = Number(value?.x);
+  const y = Number(value?.y);
+
+  if (
+    !Number.isFinite(x) ||
+    !Number.isFinite(y)
+  ) {
+    return null;
+  }
+
+  const z = Number(value?.z);
+
+  return {
+    x,
+    y,
+    z: Number.isFinite(z)
+      ? z
+      : null,
+  };
+}
+
+
+const loadSchedule = unstable_cache(
+  async (year: number) => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/schedule/R/${year}`,
+      {
+        method: "GET",
+      },
+      `PGA TOUR ${year} schedule`,
+    );
+
+    return Array.isArray(body.tournaments)
+      ? (body.tournaments as PgaScheduleTournament[])
+      : [];
+  },
+  ["pga-tour-schedule-v1"],
+  {
+    revalidate: 60 * 60,
+  },
+);
+
+const loadPlayers = unstable_cache(
+  async () => {
+    const body = await requestJson(
+      `${PGA_REST_URL}/player/list/R`,
+      {
+        method: "GET",
+      },
+      "PGA TOUR player directory",
+    );
+
+    return Array.isArray(body.players)
+      ? (body.players as PgaPlayer[])
+      : [];
+  },
+  ["pga-tour-player-directory-v1"],
+  {
+    revalidate: 24 * 60 * 60,
+  },
+);
+
+const loadRoundShots = unstable_cache(
+  async (
+    tournamentId: string,
+    pgaPlayerId: string,
+    roundNumber: number,
+    _cacheBust: string | null,
+  ) => {
+    const operationName =
+      "shotDetailsV4Compressed";
+
+    const query =
+      "query shotDetailsV4Compressed(" +
+      "$tournamentId: ID!, " +
+      "$playerId: ID!, " +
+      "$round: Int!, " +
+      "$includeRadar: Boolean" +
+      ") { " +
+      "shotDetailsV4Compressed(" +
+      "tournamentId: $tournamentId, " +
+      "playerId: $playerId, " +
+      "round: $round, " +
+      "includeRadar: $includeRadar" +
+      ") { id payload } }";
+
+    const data = await graphqlRequest(
+      operationName,
+      query,
+      {
+        tournamentId,
+        playerId: pgaPlayerId,
+        round: roundNumber,
+        includeRadar: false,
+      },
+    );
+
+    const response =
+      data.shotDetailsV4Compressed;
+
+    if (
+      !response ||
+      typeof response !== "object" ||
+      !("payload" in response)
+    ) {
+      return {
+        holes: [],
+      } satisfies RawShotPayload;
+    }
+
+    return decompressPayload<RawShotPayload>(
+      response.payload,
+    );
+  },
+  ["pga-tour-round-shots-v1"],
+  {
+    // Live holes can change, but repeated taps should not
+    // hammer the upstream API.
+    revalidate: 120,
+  },
+);
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+    cacheBust?: string | null;
+  },
+): Promise<GolfHoleReplay | null> {
+  const tournaments = await loadSchedule(
+    input.year,
+  );
+
+  const tournament = chooseBestNameMatch(
+    tournaments.filter(
+      (row) =>
+        typeof row.tournamentId ===
+          "string" &&
+        typeof row.name === "string",
+    ),
+    input.tournamentName,
+    (row) => row.name ?? "",
+  );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  if (!tournamentId) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const players = await loadPlayers();
+
+  const player = chooseBestNameMatch(
+    players.filter(
+      (row) =>
+        typeof row.id === "string" &&
+        typeof row.displayName === "string",
+    ),
+    input.playerName,
+    (row) => row.displayName ?? "",
+  );
+
+  const pgaPlayerId =
+    player?.id?.trim();
+
+  if (!pgaPlayerId) {
+    throw new Error(
+      `Could not match "${input.playerName}" ` +
+        "to the PGA TOUR player directory.",
+    );
+  }
+
+  const payload = await loadRoundShots(
+    tournamentId,
+    pgaPlayerId,
+    input.roundNumber,
+    input.cacheBust ?? null,
+  );
+
+  const hole = (payload.holes ?? []).find(
+    (row) =>
+      Number(row.holeNumber) ===
+      input.holeNumber,
+  );
+
+  if (!hole) {
+    return null;
+  }
+
+  const orderedRawStrokes =
+    [...(hole.strokes ?? [])]
+      .filter(
+        (shot) =>
+          Number(shot.strokeNumber ?? 0) > 0,
+      )
+      .sort(
+        (a, b) =>
+          Number(a.strokeNumber ?? 0) -
+          Number(b.strokeNumber ?? 0),
+      );
+
+  let previousWorldPoint =
+    worldPoint(hole.tee);
+
+  const shots = orderedRawStrokes.map(
+    (shot) => {
+      const landingWorldPoint =
+        worldPoint(shot);
+
+      const mappedShot:
+        GolfHoleReplayShot = {
+        strokeNumber: Number(
+          shot.strokeNumber ?? 0,
+        ),
+
+        worldFrom:
+          previousWorldPoint,
+
+        worldTo:
+          landingWorldPoint,
+
+        playByPlay:
+          shot.playByPlay ?? null,
+        distance:
+          shot.distance ?? null,
+        distanceRemaining:
+          shot.distanceRemaining ?? null,
+        strokeType:
+          shot.strokeType ?? null,
+        fromLocation:
+          shot.fromLocation ?? null,
+        toLocation:
+          shot.toLocation ?? null,
+        fromLocationCode:
+          shot.fromLocationCode ?? null,
+        toLocationCode:
+          shot.toLocationCode ?? null,
+        finalStroke:
+          Boolean(shot.finalStroke),
+        leftToRight: coordinateSet(
+          shot.overview?.leftToRightCoords,
+        ),
+        bottomToTop: coordinateSet(
+          shot.overview?.bottomToTopCoords,
+        ),
+      };
+
+      if (landingWorldPoint) {
+        previousWorldPoint =
+          landingWorldPoint;
+      }
+
+      return mappedShot;
+    },
+  );
+
+  return {
+    tournamentId,
+    pgaPlayerId,
+    playerName:
+      player?.displayName ??
+      input.playerName,
+    roundNumber: input.roundNumber,
+    holeNumber: input.holeNumber,
+    par:
+      hole.par === null ||
+      hole.par === undefined
+        ? null
+        : Number(hole.par),
+    yardage:
+      hole.yardage === null ||
+      hole.yardage === undefined
+        ? null
+        : Number(hole.yardage),
+    holeStatus:
+      hole.status ?? null,
+    holeScore:
+      hole.score === null ||
+      hole.score === undefined
+        ? null
+        : String(hole.score),
+    shots,
+  };
+}
+
+================================================================================
+FILE: app/api/golf/hole-replay/route.ts
+================================================================================
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+};
+
+type PlayerRow = {
+  id: number;
+  display_name: string;
+};
+
+function positiveInteger(value: string | null) {
+  if (!value) return null;
+
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "private, no-store, max-age=0",
+  };
+}
+
+function relativeScoreDisplay(
+  relativeToPar: number,
+) {
+  if (relativeToPar === 0) {
+    return "E";
+  }
+
+  return relativeToPar > 0
+    ? `+${relativeToPar}`
+    : String(relativeToPar);
+}
+
+async function reconcileCompletedReplayHole(input: {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  replay: {
+    par: number | null;
+    shots: Array<{
+      strokeNumber: number;
+      finalStroke: boolean;
+    }>;
+  };
+}) {
+  /*
+   * Only persist a hole when PGA explicitly identifies a final
+   * stroke. A live/current-ball hole must never be promoted to
+   * a completed scorecard result.
+   */
+  const finalShot =
+    input.replay.shots.find(
+      (shot) => shot.finalStroke,
+    ) ?? null;
+
+  if (!finalShot) {
+    return null;
+  }
+
+  const strokes = Math.max(
+    ...input.replay.shots.map(
+      (shot) => Number(shot.strokeNumber ?? 0),
+    ),
+  );
+
+  if (
+    !Number.isFinite(strokes) ||
+    strokes <= 0 ||
+    input.replay.par === null ||
+    !Number.isFinite(Number(input.replay.par))
+  ) {
+    return null;
+  }
+
+  const par = Number(input.replay.par);
+  const relativeToPar =
+    strokes - par;
+
+  const {
+    data: eventPlayer,
+    error: eventPlayerError,
+  } = await supabaseAdmin
+    .from("golf_event_players")
+    .select(
+      "id, status, rounds_completed",
+    )
+    .eq("slate_id", input.slateId)
+    .eq("player_id", input.playerId)
+    .maybeSingle();
+
+  if (
+    eventPlayerError ||
+    !eventPlayer
+  ) {
+    if (eventPlayerError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve event player",
+        eventPlayerError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const {
+    data: round,
+    error: roundError,
+  } = await supabaseAdmin
+    .from("golf_rounds")
+    .select("id")
+    .eq(
+      "event_player_id",
+      Number(eventPlayer.id),
+    )
+    .eq(
+      "round_number",
+      input.roundNumber,
+    )
+    .maybeSingle();
+
+  if (
+    roundError ||
+    !round
+  ) {
+    if (roundError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve Golf round",
+        roundError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const roundId =
+    Number(round.id);
+
+  const {
+    data: existingHole,
+    error: existingHoleError,
+  } = await supabaseAdmin
+    .from("golf_holes")
+    .select("round_id, hole_number")
+    .eq("round_id", roundId)
+    .eq(
+      "hole_number",
+      input.holeNumber,
+    )
+    .maybeSingle();
+
+  if (existingHoleError) {
+    console.warn(
+      "ShotCast reconciliation could not inspect existing hole",
+      existingHoleError.message,
+    );
+
+    return null;
+  }
+
+  const holeRow = {
+    round_id: roundId,
+    hole_number:
+      input.holeNumber,
+    strokes,
+    relative_to_par:
+      relativeToPar,
+    score_display:
+      relativeScoreDisplay(
+        relativeToPar,
+      ),
+    updated_at:
+      new Date().toISOString(),
+  };
+
+  /*
+   * Use one idempotent write for both the initial insert and later
+   * refreshes. Hole Replay can issue overlapping requests while a
+   * hole is live; upsert prevents two completed-hole requests from
+   * racing into the golf_holes unique constraint.
+   */
+  const holeMutation =
+    await supabaseAdmin
+      .from("golf_holes")
+      .upsert(
+        holeRow,
+        {
+          onConflict:
+            "round_id,hole_number",
+        },
+      );
+
+  if (holeMutation.error) {
+    console.warn(
+      "ShotCast reconciliation could not persist completed hole",
+      holeMutation.error.message,
+    );
+
+    return null;
+  }
+
+  /*
+   * Recalculate the round from every persisted completed hole.
+   * This lets the scorecard immediately advance from ESPN's
+   * stale "Thru 7" to PGA's authoritative Hole 8 result.
+   */
+  const {
+    data: roundHoles,
+    error: roundHolesError,
+  } = await supabaseAdmin
+    .from("golf_holes")
+    .select(
+      "hole_number, strokes, relative_to_par",
+    )
+    .eq("round_id", roundId);
+
+  if (roundHolesError) {
+    console.warn(
+      "ShotCast reconciliation could not recalculate round",
+      roundHolesError.message,
+    );
+
+    return null;
+  }
+
+  const completedHoles =
+    (roundHoles ?? []).filter(
+      (hole) =>
+        hole.strokes !== null &&
+        hole.strokes !== undefined,
+    );
+
+  const holesCompleted =
+    completedHoles.length;
+
+  const roundStrokes =
+    completedHoles.reduce(
+      (sum, hole) =>
+        sum +
+        Number(
+          hole.strokes ?? 0,
+        ),
+      0,
+    );
+
+  const roundToPar =
+    completedHoles.reduce(
+      (sum, hole) =>
+        sum +
+        Number(
+          hole.relative_to_par ?? 0,
+        ),
+      0,
+    );
+
+  const roundFinished =
+    holesCompleted >= 18;
+
+  const {
+    error: roundUpdateError,
+  } = await supabaseAdmin
+    .from("golf_rounds")
+    .update({
+      strokes:
+        holesCompleted > 0
+          ? roundStrokes
+          : null,
+      score_to_par:
+        holesCompleted > 0
+          ? roundToPar
+          : null,
+      score_display:
+        holesCompleted > 0
+          ? relativeScoreDisplay(
+              roundToPar,
+            )
+          : null,
+      holes_completed:
+        holesCompleted,
+      status:
+        roundFinished
+          ? "finished"
+          : "active",
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq("id", roundId);
+
+  if (roundUpdateError) {
+    console.warn(
+      "ShotCast reconciliation could not update Golf round",
+      roundUpdateError.message,
+    );
+  }
+
+  const terminalStatuses =
+    new Set([
+      "finished",
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  if (
+    !terminalStatuses.has(
+      String(
+        eventPlayer.status ?? "",
+      ).toLowerCase(),
+    )
+  ) {
+    const {
+      data: allRounds,
+      error: allRoundsError,
+    } = await supabaseAdmin
+      .from("golf_rounds")
+      .select(
+        "round_number, holes_completed",
+      )
+      .eq(
+        "event_player_id",
+        Number(eventPlayer.id),
+      );
+
+    if (!allRoundsError) {
+      const totalHoles =
+        (allRounds ?? []).reduce(
+          (sum, row) =>
+            sum +
+            Number(
+              row.holes_completed ?? 0,
+            ),
+          0,
+        );
+
+      const roundsCompleted =
+        (allRounds ?? []).filter(
+          (row) =>
+            Number(
+              row.holes_completed ?? 0,
+            ) >= 18,
+        ).length;
+
+      await supabaseAdmin
+        .from("golf_event_players")
+        .update({
+          holes_completed:
+            totalHoles,
+          rounds_completed:
+            Math.max(
+              roundsCompleted,
+              Number(
+                eventPlayer.rounds_completed ??
+                  0,
+              ),
+            ),
+          current_round:
+            input.roundNumber,
+          last_hole:
+            input.holeNumber,
+          status:
+            roundFinished
+              ? "round_complete"
+              : "active",
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "id",
+          Number(
+            eventPlayer.id,
+          ),
+        );
+    }
+  }
+
+  console.log(
+    "ShotCast completed-hole reconciliation",
+    {
+      slateId:
+        input.slateId,
+      playerId:
+        input.playerId,
+      round:
+        input.roundNumber,
+      hole:
+        input.holeNumber,
+      strokes,
+      relativeToPar,
+      holesCompleted,
+    },
+  );
+
+  return {
+    hole_number:
+      input.holeNumber,
+    strokes,
+    relative_to_par:
+      relativeToPar,
+    score_display:
+      relativeScoreDisplay(
+        relativeToPar,
+      ),
+    holes_completed:
+      holesCompleted,
+    round_score_to_par:
+      roundToPar,
+    round_strokes:
+      roundStrokes,
+  };
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const slateId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+    const playerId = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "playerId",
+      ),
+    );
+
+    const roundNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "round",
+      ),
+    );
+
+    const holeNumber = positiveInteger(
+      request.nextUrl.searchParams.get(
+        "hole",
+      ),
+    );
+
+    if (
+      !slateId ||
+      !playerId ||
+      !roundNumber ||
+      roundNumber > 4 ||
+      !holeNumber ||
+      holeNumber > 18
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid slateId, playerId, round, and hole parameters are required.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const [
+      {
+        data: slateData,
+        error: slateError,
+      },
+      {
+        data: playerData,
+        error: playerError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from("slates")
+        .select(
+          "id, sport, display_name, start_date",
+        )
+        .eq("id", slateId)
+        .single(),
+
+      supabaseAdmin
+        .from("golf_players")
+        .select("id, display_name")
+        .eq("id", playerId)
+        .single(),
+    ]);
+
+    if (
+      slateError ||
+      !slateData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf slate was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    if (
+      playerError ||
+      !playerData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf player was not found.",
+        },
+        {
+          status: 404,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const slate =
+      slateData as SlateRow;
+
+    const player =
+      playerData as PlayerRow;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "Hole replay is only available for Golf slates.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const tournamentName =
+      slate.display_name?.trim();
+
+    if (!tournamentName) {
+      return NextResponse.json(
+        {
+          error:
+            "This Golf slate does not have a tournament name.",
+        },
+        {
+          status: 400,
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const year = Number(
+      slate.start_date.slice(0, 4),
+    );
+
+    const refreshToken =
+      request.nextUrl.searchParams.get(
+        "refresh",
+      );
+
+    const replay =
+      await fetchGolfHoleReplay({
+        year,
+        tournamentName,
+        playerName:
+          player.display_name,
+        roundNumber,
+        holeNumber,
+        cacheBust:
+          refreshToken?.trim() || null,
+      });
+
+    if (!replay) {
+      return NextResponse.json(
+        {
+          success: true,
+          available: false,
+          message:
+            "Shot tracking is not available for this hole yet.",
+          replay: null,
+        },
+        {
+          headers: noStoreHeaders(),
+        },
+      );
+    }
+
+    const reconciledHole =
+      await reconcileCompletedReplayHole({
+        slateId,
+        playerId,
+        roundNumber,
+        holeNumber,
+        replay,
+      });
+
+    return NextResponse.json(
+      {
+        success: true,
+        available:
+          replay.shots.length > 0,
+        replay,
+        reconciledHole,
+      },
+      {
+        headers: noStoreHeaders(),
+      },
+    );
+  } catch (error) {
+    console.error(
+      "Unable to load Golf hole replay",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load hole replay.",
+      },
+      {
+        status: 502,
+        headers: noStoreHeaders(),
+      },
+    );
+  }
+}
+
+================================================================================
+FILE: app/api/golf/shotcast-manifest/route.ts
+================================================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+export const dynamic =
+  "force-dynamic";
+
+export async function GET(
+  request: NextRequest,
+) {
+  const tournamentId =
+    request.nextUrl.searchParams
+      .get("tournamentId")
+      ?.trim()
+      .toUpperCase() ?? "";
+
+  if (
+    !/^R\d{7}$/.test(
+      tournamentId,
+    )
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid tournamentId is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("shotcast_manifests")
+    .select("manifest")
+    .eq(
+      "tournament_id",
+      tournamentId,
+    )
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 },
+    );
+  }
+
+  if (!data?.manifest) {
+    return NextResponse.json(
+      {
+        error:
+          "ShotCast manifest not found.",
+      },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json(
+    data.manifest,
+    {
+      headers: {
+        "Cache-Control":
+          "no-store, max-age=0",
+      },
+    },
+  );
+}
+
+================================================================================
+FILE: components/lineups/GolfHoleMap2D.tsx
+================================================================================
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+type Coordinate = {
+  x: number | null;
+  y: number | null;
+  tourcastX?: number | null;
+  tourcastY?: number | null;
+  tourcastZ?: number | null;
+};
+
+type CoordinateSet = {
+  from: Coordinate;
+  to: Coordinate;
+};
+
+type WorldPoint = {
+  x: number;
+  y: number;
+  z?: number | null;
+};
+
+type MapShot = {
+  strokeNumber: number;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  finalStroke: boolean;
+
+  worldFrom?: WorldPoint | null;
+  worldTo?: WorldPoint | null;
+
+  bottomToTop: CoordinateSet | null;
+};
+
+type Props = {
+  title: string;
+  imageUrl: string;
+  shots: MapShot[];
+  selectedStrokeNumber: number | null;
+  onSelectStroke: (
+    strokeNumber: number,
+  ) => void;
+  calibration: MapCalibration;
+  showShotOverlay?: boolean;
+  imageFit?: "fill" | "contain";
+  emptyStateLabel?: string;
+};
+
+type PlotPoint = {
+  x: number;
+  y: number;
+};
+
+type PlotShot = {
+  strokeNumber: number;
+  from: PlotPoint;
+  to: PlotPoint;
+  finalStroke: boolean;
+  distance: string | null;
+  distanceRemaining: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+};
+
+type TransformState = {
+  scale: number;
+  x: number;
+  y: number;
+  rotation: number;
+};
+
+type PointerPosition = {
+  x: number;
+  y: number;
+};
+
+type GestureSnapshot = {
+  distance: number;
+  angle: number;
+  midpoint: PointerPosition;
+  transform: TransformState;
+};
+
+export type MapCalibration = {
+  xScale: number;
+  xOffset: number;
+  yScale: number;
+  yOffset: number;
+  verified?: boolean;
+  source?: string;
+  affine?: {
+    pxX: number;
+    rotX: number;
+    rotY: number;
+    pxY: number;
+    coordX: number;
+    coordY: number;
+    dimX: number;
+    dimY: number;
+  };
+};
+
+const VIEWBOX_SIZE = 1000;
+const MIN_SCALE = 1;
+const MAX_SCALE = 5;
+
+/*
+ * Calibration is supplied by the tournament/hole configuration.
+ * The map engine itself is no longer tied to one course.
+ */
+
+const DEFAULT_TRANSFORM: TransformState = {
+  scale: 1,
+  x: 0,
+  y: 0,
+  rotation: 0,
+};
+
+function clamp(
+  value: number,
+  minimum: number,
+  maximum: number,
+) {
+  return Math.min(
+    maximum,
+    Math.max(minimum, value),
+  );
+}
+
+function clampNormalized(
+  value: number,
+) {
+  return clamp(value, 0, 1);
+}
+
+function validPoint(
+  coordinate: Coordinate | null | undefined,
+): coordinate is {
+  x: number;
+  y: number;
+} {
+  return (
+    coordinate?.x !== null &&
+    coordinate?.x !== undefined &&
+    coordinate?.y !== null &&
+    coordinate?.y !== undefined &&
+    Number.isFinite(coordinate.x) &&
+    Number.isFinite(coordinate.y)
+  );
+}
+
+function validTourcastPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+): coordinate is Coordinate & {
+  tourcastX: number;
+  tourcastY: number;
+} {
+  return (
+    coordinate?.tourcastX !== null &&
+    coordinate?.tourcastX !== undefined &&
+    coordinate?.tourcastY !== null &&
+    coordinate?.tourcastY !== undefined &&
+    Number.isFinite(
+      coordinate.tourcastX,
+    ) &&
+    Number.isFinite(
+      coordinate.tourcastY,
+    )
+  );
+}
+
+function canPlotPoint(
+  coordinate:
+    | Coordinate
+    | null
+    | undefined,
+  calibration: MapCalibration,
+) {
+  if (
+    calibration.affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    return true;
+  }
+
+  return validPoint(coordinate);
+}
+
+function worldToPlotPoint(
+  world: WorldPoint,
+  calibration: MapCalibration,
+): PlotPoint | null {
+  const affine =
+    calibration.affine;
+
+  if (!affine) {
+    return null;
+  }
+
+  const {
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  } = affine;
+
+  /*
+   * This is the same hole-texture UV conversion used by
+   * PGA TOURCAST's Golf Engine.
+   *
+   * Their source:
+   *
+   *   j = rotX * rotY - pxX * pxY
+   *   pixelY =
+   *     (rotX*(x-coordX) -
+   *      pxX*(y-coordY)) / j
+   *
+   *   v = pixelY / dimY
+   *
+   *   pixelX =
+   *     (x - rotY*pixelY - coordX) / pxX
+   *
+   *   u = pixelX / dimX
+   */
+  const determinant =
+    rotX * rotY -
+    pxX * pxY;
+
+  if (
+    Math.abs(determinant) < 1e-12 ||
+    Math.abs(pxX) < 1e-12 ||
+    dimX <= 0 ||
+    dimY <= 0
+  ) {
+    return null;
+  }
+
+  const pixelY =
+    (
+      rotX *
+        (world.x - coordX) -
+      pxX *
+        (world.y - coordY)
+    ) /
+    determinant;
+
+  const pixelX =
+    (
+      world.x -
+      rotY * pixelY -
+      coordX
+    ) /
+    pxX;
+
+  const normalizedX =
+    pixelX / dimX;
+
+  const normalizedY =
+    pixelY / dimY;
+
+  /*
+   * Do NOT clamp invalid native coordinates to an edge.
+   * If PGA did not supply coordinates in this TFW frame,
+   * return null so we fall back to the visible normalized
+   * bottomToTop placement.
+   */
+  if (
+    !Number.isFinite(normalizedX) ||
+    !Number.isFinite(normalizedY) ||
+    normalizedX < 0 ||
+    normalizedX > 1 ||
+    normalizedY < 0 ||
+    normalizedY > 1
+  ) {
+    return null;
+  }
+
+  return {
+    x:
+      normalizedX *
+      VIEWBOX_SIZE,
+    y:
+      normalizedY *
+      VIEWBOX_SIZE,
+  };
+}
+
+function toPlotPoint(
+  coordinate: Coordinate,
+  calibration: MapCalibration,
+): PlotPoint {
+  /*
+   * PGA already supplies normalized bottomToTop x/y
+   * coordinates for every shot.
+   *
+   * These map directly onto the vertical TOURCAST
+   * terrain image:
+   *
+   *   0,0 = top-left
+   *   1,1 = bottom-right
+   *
+   * Prefer these authoritative placement coordinates
+   * whenever they are available.
+   */
+  if (validPoint(coordinate)) {
+    return {
+      x:
+        clampNormalized(
+          coordinate.x,
+        ) * VIEWBOX_SIZE,
+      y:
+        clampNormalized(
+          coordinate.y,
+        ) * VIEWBOX_SIZE,
+    };
+  }
+
+  /*
+   * Fallback for future PGA payloads that provide only
+   * TOURCAST world coordinates.
+   */
+  const affine =
+    calibration.affine;
+
+  if (
+    affine &&
+    validTourcastPoint(coordinate)
+  ) {
+    const {
+      pxX,
+      rotX,
+      rotY,
+      pxY,
+      coordX,
+      coordY,
+      dimX,
+      dimY,
+    } = affine;
+
+    const determinant =
+      pxX * pxY -
+      rotY * rotX;
+
+    if (
+      Math.abs(determinant) > 1e-12 &&
+      dimX > 0 &&
+      dimY > 0
+    ) {
+      const deltaX =
+        coordinate.tourcastX -
+        coordX;
+
+      const deltaY =
+        coordinate.tourcastY -
+        coordY;
+
+      const pixelX =
+        (
+          pxY * deltaX -
+          rotY * deltaY
+        ) /
+        determinant;
+
+      const pixelY =
+        (
+          -rotX * deltaX +
+          pxX * deltaY
+        ) /
+        determinant;
+
+      return {
+        x:
+          clampNormalized(
+            pixelX / dimX,
+          ) * VIEWBOX_SIZE,
+        y:
+          clampNormalized(
+            pixelY / dimY,
+          ) * VIEWBOX_SIZE,
+      };
+    }
+  }
+
+  return {
+    x: 0,
+    y: 0,
+  };
+}
+
+function curveControlPoint(
+  from: PlotPoint,
+  to: PlotPoint,
+): PlotPoint {
+  const midpointX =
+    (from.x + to.x) / 2;
+
+  const midpointY =
+    (from.y + to.y) / 2;
+
+  const distance = Math.hypot(
+    to.x - from.x,
+    to.y - from.y,
+  );
+
+  const curveAmount =
+    Math.min(42, distance * 0.075);
+
+  return {
+    x: midpointX + curveAmount,
+    y: midpointY,
+  };
+}
+
+function curvePath(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  const control =
+    curveControlPoint(from, to);
+
+  return [
+    `M ${from.x} ${from.y}`,
+    `Q ${control.x} ${control.y}`,
+    `${to.x} ${to.y}`,
+  ].join(" ");
+}
+
+function pointOnQuadraticCurve(
+  from: PlotPoint,
+  to: PlotPoint,
+  progress: number,
+): PlotPoint {
+  const control =
+    curveControlPoint(from, to);
+
+  const t = clamp(progress, 0, 1);
+  const inverse = 1 - t;
+
+  return {
+    x:
+      inverse * inverse * from.x +
+      2 * inverse * t * control.x +
+      t * t * to.x,
+    y:
+      inverse * inverse * from.y +
+      2 * inverse * t * control.y +
+      t * t * to.y,
+  };
+}
+
+function approximateCurveLength(
+  from: PlotPoint,
+  to: PlotPoint,
+) {
+  let length = 0;
+  let previous = from;
+
+  for (
+    let index = 1;
+    index <= 24;
+    index += 1
+  ) {
+    const point =
+      pointOnQuadraticCurve(
+        from,
+        to,
+        index / 24,
+      );
+
+    length += Math.hypot(
+      point.x - previous.x,
+      point.y - previous.y,
+    );
+
+    previous = point;
+  }
+
+  return Math.max(length, 1);
+}
+
+function easeInOutCubic(
+  value: number,
+) {
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 -
+        Math.pow(
+          -2 * value + 2,
+          3,
+        ) /
+          2;
+}
+
+function shotDescription(
+  shot: PlotShot,
+) {
+  return [
+    shot.distance,
+    shot.finalStroke
+      ? "In the hole"
+      : shot.distanceRemaining
+        ? `${shot.distanceRemaining} remaining`
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function pointerDistance(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return Math.hypot(
+    second.x - first.x,
+    second.y - first.y,
+  );
+}
+
+function pointerAngle(
+  first: PointerPosition,
+  second: PointerPosition,
+) {
+  return (
+    Math.atan2(
+      second.y - first.y,
+      second.x - first.x,
+    ) *
+    (180 / Math.PI)
+  );
+}
+
+function pointerMidpoint(
+  first: PointerPosition,
+  second: PointerPosition,
+): PointerPosition {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+}
+
+export default function GolfHoleMap2D({
+  title,
+  imageUrl,
+  shots,
+  selectedStrokeNumber,
+  onSelectStroke,
+  calibration,
+  showShotOverlay = true,
+  imageFit = "fill",
+  emptyStateLabel = "No shot data is available yet.",
+}: Props) {
+  const viewportRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const pointersRef =
+    useRef(
+      new Map<number, PointerPosition>(),
+    );
+
+  const dragStartRef =
+    useRef<{
+      pointer: PointerPosition;
+      transform: TransformState;
+    } | null>(null);
+
+  const gestureStartRef =
+    useRef<GestureSnapshot | null>(
+      null,
+    );
+
+  const [transform, setTransform] =
+    useState<TransformState>(
+      DEFAULT_TRANSFORM,
+    );
+
+  const [isInteracting, setIsInteracting] =
+    useState(false);
+
+  const [isPlaying, setIsPlaying] =
+    useState(false);
+
+  const [
+    animatedStrokeNumber,
+    setAnimatedStrokeNumber,
+  ] = useState<number | null>(null);
+
+  const [
+    animationProgress,
+    setAnimationProgress,
+  ] = useState(1);
+
+  const [
+    revealedStrokeCount,
+    setRevealedStrokeCount,
+  ] = useState<number | null>(0);
+
+  const animationFrameRef =
+    useRef<number | null>(null);
+
+  const animationResolveRef =
+    useRef<(() => void) | null>(null);
+
+  const plottedShots = useMemo(
+    () => {
+      if (!showShotOverlay) {
+        return [];
+      }
+
+      return shots
+        .map((shot): PlotShot | null => {
+          if (
+            !shot.bottomToTop ||
+            !canPlotPoint(
+              shot.bottomToTop.from,
+              calibration,
+            ) ||
+            !canPlotPoint(
+              shot.bottomToTop.to,
+              calibration,
+            )
+          ) {
+            return null;
+          }
+
+          const nativeFrom =
+            shot.worldFrom
+              ? worldToPlotPoint(
+                  shot.worldFrom,
+                  calibration,
+                )
+              : null;
+
+          const nativeTo =
+            shot.worldTo
+              ? worldToPlotPoint(
+                  shot.worldTo,
+                  calibration,
+                )
+              : null;
+
+          /*
+           * Use PGA's real TOURCAST world frame only when
+           * BOTH endpoints successfully land inside this
+           * hole terrain image. Otherwise preserve the
+           * current bottomToTop placement.
+           */
+          const useNativeWorld =
+            nativeFrom !== null &&
+            nativeTo !== null;
+
+          return {
+            strokeNumber:
+              shot.strokeNumber,
+            from:
+              useNativeWorld
+                ? nativeFrom
+                : toPlotPoint(
+                    shot.bottomToTop.from,
+                    calibration,
+                  ),
+            to:
+              useNativeWorld
+                ? nativeTo
+                : toPlotPoint(
+                    shot.bottomToTop.to,
+                    calibration,
+                  ),
+            finalStroke:
+              shot.finalStroke,
+            distance: shot.distance,
+            distanceRemaining:
+              shot.distanceRemaining,
+            fromLocation:
+              shot.fromLocation,
+            toLocation:
+              shot.toLocation,
+          };
+        })
+        .filter(
+          (
+            shot,
+          ): shot is PlotShot =>
+            shot !== null,
+        );
+    },
+    [
+      calibration,
+      shots,
+      showShotOverlay,
+    ],
+  );
+
+  const selectedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        selectedStrokeNumber,
+    ) ??
+    plottedShots[0] ??
+    null;
+
+  const constrainTransform =
+    useCallback(
+      (
+        next: TransformState,
+      ): TransformState => {
+        const viewport =
+          viewportRef.current;
+
+        const width =
+          viewport?.clientWidth ?? 400;
+
+        const height =
+          viewport?.clientHeight ?? 400;
+
+        const scale =
+          clamp(
+            next.scale,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        const maxX =
+          Math.max(
+            width * 0.85,
+            ((scale - 1) * width) / 2 +
+              width * 0.35,
+          );
+
+        const maxY =
+          Math.max(
+            height * 0.85,
+            ((scale - 1) * height) / 2 +
+              height * 0.35,
+          );
+
+        return {
+          scale,
+          x: clamp(
+            next.x,
+            -maxX,
+            maxX,
+          ),
+          y: clamp(
+            next.y,
+            -maxY,
+            maxY,
+          ),
+          rotation:
+            ((next.rotation + 180) %
+              360) -
+            180,
+        };
+      },
+      [],
+    );
+
+  const updateTransform =
+    useCallback(
+      (
+        updater:
+          | TransformState
+          | ((
+              current: TransformState,
+            ) => TransformState),
+      ) => {
+        setTransform((current) => {
+          const next =
+            typeof updater ===
+            "function"
+              ? updater(current)
+              : updater;
+
+          return constrainTransform(
+            next,
+          );
+        });
+      },
+      [constrainTransform],
+    );
+
+  const cancelShotAnimation =
+    useCallback(() => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+
+        animationFrameRef.current =
+          null;
+      }
+
+      animationResolveRef.current?.();
+      animationResolveRef.current =
+        null;
+
+      setAnimatedStrokeNumber(null);
+      setAnimationProgress(1);
+    }, []);
+
+  const animateShot =
+    useCallback(
+      (
+        shot: PlotShot,
+      ) =>
+        new Promise<void>((resolve) => {
+          cancelShotAnimation();
+
+          const prefersReducedMotion =
+            window.matchMedia(
+              "(prefers-reduced-motion: reduce)",
+            ).matches;
+
+          if (prefersReducedMotion) {
+            setAnimatedStrokeNumber(
+              shot.strokeNumber,
+            );
+            setAnimationProgress(1);
+
+            window.setTimeout(() => {
+              setAnimatedStrokeNumber(
+                null,
+              );
+              resolve();
+            }, 150);
+
+            return;
+          }
+
+          const duration =
+            shot.finalStroke
+              ? 1150
+              : shot.strokeNumber === 1
+                ? 2200
+                : 1550;
+
+          const startedAt =
+            performance.now();
+
+          setAnimatedStrokeNumber(
+            shot.strokeNumber,
+          );
+          setAnimationProgress(0);
+
+          animationResolveRef.current =
+            resolve;
+
+          const tick = (
+            now: number,
+          ) => {
+            const rawProgress =
+              clamp(
+                (now - startedAt) /
+                  duration,
+                0,
+                1,
+              );
+
+            setAnimationProgress(
+              easeInOutCubic(
+                rawProgress,
+              ),
+            );
+
+            if (rawProgress >= 1) {
+              animationFrameRef.current =
+                null;
+
+              animationResolveRef.current =
+                null;
+
+              window.setTimeout(() => {
+                setAnimatedStrokeNumber(
+                  null,
+                );
+                resolve();
+              }, 300);
+
+              return;
+            }
+
+            animationFrameRef.current =
+              window.requestAnimationFrame(
+                tick,
+              );
+          };
+
+          animationFrameRef.current =
+            window.requestAnimationFrame(
+              tick,
+            );
+        }),
+      [cancelShotAnimation],
+    );
+
+  const resetView =
+    useCallback(() => {
+      cancelShotAnimation();
+      setIsPlaying(false);
+      setRevealedStrokeCount(0);
+      setTransform(
+        DEFAULT_TRANSFORM,
+      );
+    }, [cancelShotAnimation]);
+
+  const focusShot =
+    useCallback(
+      (
+        shot: PlotShot | null,
+      ) => {
+        if (!shot) {
+          resetView();
+          return;
+        }
+
+        const viewport =
+          viewportRef.current;
+
+        if (!viewport) {
+          return;
+        }
+
+        const width =
+          viewport.clientWidth;
+
+        const height =
+          viewport.clientHeight;
+
+        const targetScale =
+          shot.strokeNumber === 1
+            ? 1.55
+            : shot.finalStroke
+              ? 3.75
+              : 3;
+
+        const targetX =
+          (shot.to.x /
+            VIEWBOX_SIZE) *
+          width;
+
+        const targetY =
+          (shot.to.y /
+            VIEWBOX_SIZE) *
+          height;
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+
+        updateTransform({
+          scale: targetScale,
+          x:
+            (centerX - targetX) *
+            targetScale,
+          y:
+            (centerY - targetY) *
+            targetScale,
+          rotation: 0,
+        });
+      },
+      [
+        resetView,
+        updateTransform,
+      ],
+    );
+
+  function zoomAroundPoint(
+    clientX: number,
+    clientY: number,
+    scaleMultiplier: number,
+  ) {
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    const rect =
+      viewport.getBoundingClientRect();
+
+    const localX =
+      clientX - rect.left;
+
+    const localY =
+      clientY - rect.top;
+
+    updateTransform(
+      (current) => {
+        const nextScale =
+          clamp(
+            current.scale *
+              scaleMultiplier,
+            MIN_SCALE,
+            MAX_SCALE,
+          );
+
+        const ratio =
+          nextScale /
+          current.scale;
+
+        const centerX =
+          rect.width / 2;
+
+        const centerY =
+          rect.height / 2;
+
+        return {
+          ...current,
+          scale: nextScale,
+          x:
+            localX -
+            centerX -
+            (localX -
+              centerX -
+              current.x) *
+              ratio,
+          y:
+            localY -
+            centerY -
+            (localY -
+              centerY -
+              current.y) *
+              ratio,
+        };
+      },
+    );
+  }
+
+  function handleWheel(
+    event: React.WheelEvent<HTMLDivElement>,
+  ) {
+    event.preventDefault();
+
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      event.deltaY < 0
+        ? 1.12
+        : 0.89,
+    );
+  }
+
+  function handleDoubleClick(
+    event: React.MouseEvent<HTMLDivElement>,
+  ) {
+    zoomAroundPoint(
+      event.clientX,
+      event.clientY,
+      transform.scale >= 2.5
+        ? 0.5
+        : 1.75,
+    );
+  }
+
+  function handlePointerDown(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    const target =
+      event.target as Element | null;
+
+    /*
+     * Shot markers control replay selection. Do not let the
+     * pan/zoom layer capture those presses as drag gestures.
+     */
+    if (
+      target?.closest(
+        '[data-shotcast-marker="true"]',
+      )
+    ) {
+      return;
+    }
+
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    viewport.setPointerCapture(
+      event.pointerId,
+    );
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    setIsInteracting(true);
+    setIsPlaying(false);
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 1) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    } else if (
+      pointers.length >= 2
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      gestureStartRef.current = {
+        distance:
+          pointerDistance(
+            first,
+            second,
+          ),
+        angle:
+          pointerAngle(
+            first,
+            second,
+          ),
+        midpoint:
+          pointerMidpoint(
+            first,
+            second,
+          ),
+        transform: {
+          ...transform,
+        },
+      };
+
+      dragStartRef.current =
+        null;
+    }
+  }
+
+  function handlePointerMove(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    if (
+      !pointersRef.current.has(
+        event.pointerId,
+      )
+    ) {
+      return;
+    }
+
+    pointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      },
+    );
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (
+      pointers.length === 1 &&
+      dragStartRef.current
+    ) {
+      const pointer =
+        pointers[0];
+
+      const start =
+        dragStartRef.current;
+
+      updateTransform({
+        ...start.transform,
+        x:
+          start.transform.x +
+          pointer.x -
+          start.pointer.x,
+        y:
+          start.transform.y +
+          pointer.y -
+          start.pointer.y,
+      });
+
+      return;
+    }
+
+    if (
+      pointers.length >= 2 &&
+      gestureStartRef.current
+    ) {
+      const first = pointers[0];
+      const second = pointers[1];
+
+      const distance =
+        pointerDistance(
+          first,
+          second,
+        );
+
+      const angle =
+        pointerAngle(
+          first,
+          second,
+        );
+
+      const midpoint =
+        pointerMidpoint(
+          first,
+          second,
+        );
+
+      const start =
+        gestureStartRef.current;
+
+      const distanceRatio =
+        start.distance > 0
+          ? distance /
+            start.distance
+          : 1;
+
+      updateTransform({
+        scale:
+          start.transform.scale *
+          distanceRatio,
+        rotation:
+          start.transform.rotation +
+          angle -
+          start.angle,
+        x:
+          start.transform.x +
+          midpoint.x -
+          start.midpoint.x,
+        y:
+          start.transform.y +
+          midpoint.y -
+          start.midpoint.y,
+      });
+    }
+  }
+
+  function releasePointer(
+    event: React.PointerEvent<HTMLDivElement>,
+  ) {
+    pointersRef.current.delete(
+      event.pointerId,
+    );
+
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId,
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId,
+      );
+    }
+
+    const pointers = [
+      ...pointersRef.current.values(),
+    ];
+
+    if (pointers.length === 0) {
+      dragStartRef.current =
+        null;
+
+      gestureStartRef.current =
+        null;
+
+      setIsInteracting(false);
+    } else if (
+      pointers.length === 1
+    ) {
+      dragStartRef.current = {
+        pointer: pointers[0],
+        transform: {
+          ...transform,
+        },
+      };
+
+      gestureStartRef.current =
+        null;
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (
+        animationFrameRef.current !==
+        null
+      ) {
+        window.cancelAnimationFrame(
+          animationFrameRef.current,
+        );
+      }
+
+      animationResolveRef.current?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function runReplay() {
+      if (
+        plottedShots.length === 0
+      ) {
+        setIsPlaying(false);
+        return;
+      }
+
+      for (
+        const [
+          shotIndex,
+          shot,
+        ] of plottedShots.entries()
+      ) {
+        if (cancelled) {
+          return;
+        }
+
+        onSelectStroke(
+          shot.strokeNumber,
+        );
+
+        /*
+         * Keep the entire hole visible while the tracer
+         * travels. Do not move the camera between shots.
+         */
+        setTransform(
+          DEFAULT_TRANSFORM,
+        );
+
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              200,
+            );
+          },
+        );
+
+        if (cancelled) {
+          return;
+        }
+
+        await animateShot(shot);
+
+        if (cancelled) {
+          return;
+        }
+
+        /*
+         * Reveal the completed path and numbered landing
+         * marker only after the ball arrives.
+         */
+        setRevealedStrokeCount(
+          shotIndex + 1,
+        );
+
+        await new Promise<void>(
+          (resolve) => {
+            window.setTimeout(
+              resolve,
+              500,
+            );
+          },
+        );
+      }
+
+      if (!cancelled) {
+        /*
+         * Exit progressive-reveal mode after the complete
+         * replay so every finished path and landing marker
+         * remains available for inspection.
+         */
+        setRevealedStrokeCount(null);
+        setIsPlaying(false);
+      }
+    }
+
+    void runReplay();
+
+    return () => {
+      cancelled = true;
+      cancelShotAnimation();
+    };
+  }, [
+    animateShot,
+    cancelShotAnimation,
+    focusShot,
+    isPlaying,
+    onSelectStroke,
+    plottedShots,
+  ]);
+
+  function startPlayback() {
+    if (!plottedShots[0]) {
+      return;
+    }
+
+    cancelShotAnimation();
+
+    /*
+     * Playback always begins from the complete hole.
+     * Manual Focus Shot remains available separately.
+     */
+    setTransform(
+      DEFAULT_TRANSFORM,
+    );
+
+    setRevealedStrokeCount(0);
+
+    onSelectStroke(
+      plottedShots[0].strokeNumber,
+    );
+
+    setIsPlaying(true);
+  }
+
+  async function selectShot(
+    strokeNumber: number,
+  ) {
+    setIsPlaying(false);
+    setRevealedStrokeCount(null);
+    cancelShotAnimation();
+
+    const shot =
+      plottedShots.find(
+        (candidate) =>
+          candidate.strokeNumber ===
+          strokeNumber,
+      ) ?? null;
+
+    if (!shot) {
+      return;
+    }
+
+    onSelectStroke(
+      strokeNumber,
+    );
+
+    focusShot(shot);
+
+    await new Promise<void>(
+      (resolve) => {
+        window.setTimeout(
+          resolve,
+          500,
+        );
+      },
+    );
+
+    await animateShot(shot);
+  }
+
+  const cupPoint =
+    [...plottedShots]
+      .reverse()
+      .find(
+        (shot) =>
+          shot.finalStroke,
+      )?.to ??
+    plottedShots[
+      plottedShots.length - 1
+    ]?.to ??
+    null;
+
+  const animatedShot =
+    plottedShots.find(
+      (shot) =>
+        shot.strokeNumber ===
+        animatedStrokeNumber,
+    ) ?? null;
+
+  const animatedBallPoint =
+    animatedShot
+      ? pointOnQuadraticCurve(
+          animatedShot.from,
+          animatedShot.to,
+          animationProgress,
+        )
+      : null;
+
+  const inverseScale =
+    1 / transform.scale;
+
+  const markerRadius =
+    25 * inverseScale;
+
+  const markerStroke =
+    Math.max(
+      3,
+      7 * inverseScale,
+    );
+
+  const markerFontSize =
+    Math.max(
+      12,
+      29 * inverseScale,
+    );
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700 px-3 py-2.5">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.16em] text-emerald-400">
+            ShotCast replay
+          </div>
+
+          <div className="mt-0.5 text-xs font-bold text-slate-200">
+            {title}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          {plottedShots.length > 0 ? (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  focusShot(
+                    selectedShot,
+                  )
+                }
+                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+              >
+                Focus shot
+              </button>
+
+              <button
+                type="button"
+                onClick={startPlayback}
+                disabled={isPlaying}
+                className="rounded-lg border border-emerald-600 bg-emerald-950 px-3 py-1.5 text-[10px] font-bold text-emerald-200 disabled:opacity-50"
+              >
+                {isPlaying
+                  ? "Playing…"
+                  : "▶ Play"}
+              </button>
+            </>
+          ) : null}
+
+          <button
+            type="button"
+            onClick={resetView}
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-[10px] font-bold text-slate-400"
+          >
+            Reset
+          </button>
+        </div>
+      </header>
+
+      <div className="grid gap-3 p-3 sm:grid-cols-[minmax(260px,430px)_1fr]">
+        <div className="mx-auto w-full max-w-[430px]">
+          <div
+            ref={viewportRef}
+            className={`relative aspect-square overflow-hidden rounded-xl border border-slate-700 bg-slate-950 select-none ${
+              isInteracting
+                ? "cursor-grabbing"
+                : "cursor-grab"
+            }`}
+            style={{
+              touchAction: "none",
+            }}
+            onWheel={handleWheel}
+            onDoubleClick={
+              handleDoubleClick
+            }
+            onPointerDown={
+              handlePointerDown
+            }
+            onPointerMove={
+              handlePointerMove
+            }
+            onPointerUp={
+              releasePointer
+            }
+            onPointerCancel={
+              releasePointer
+            }
+          >
+            <div
+              className="absolute inset-0 will-change-transform"
+              style={{
+                transform: [
+                  `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+                  `scale(${transform.scale})`,
+                  `rotate(${transform.rotation}deg)`,
+                ].join(" "),
+                transformOrigin:
+                  "50% 50%",
+                transition:
+                  isInteracting
+                    ? "none"
+                    : "transform 650ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            >
+              <img
+                src={imageUrl}
+                alt={`${title} aerial hole layout`}
+                draggable={false}
+                className={`absolute inset-0 h-full w-full ${
+                  imageFit === "contain"
+                    ? "object-contain"
+                    : "object-fill"
+                }`}
+              />
+
+              <svg
+                viewBox={`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`}
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full"
+                role="img"
+                aria-label={`${title} shot paths`}
+              >
+                <defs>
+                  <filter
+                    id="shot-path-shadow"
+                    x="-40%"
+                    y="-40%"
+                    width="180%"
+                    height="180%"
+                  >
+                    <feDropShadow
+                      dx="0"
+                      dy="2"
+                      stdDeviation={
+                        3 *
+                        inverseScale
+                      }
+                      floodColor="#020617"
+                      floodOpacity="0.95"
+                    />
+                  </filter>
+                </defs>
+
+                {plottedShots.map(
+                  (shot) => {
+                    const isSelected =
+                      shot.strokeNumber ===
+                      selectedShot
+                        ?.strokeNumber;
+
+                    const isAnimating =
+                      shot.strokeNumber ===
+                      animatedStrokeNumber;
+
+                    const shotIndex =
+                      plottedShots.findIndex(
+                        (candidate) =>
+                          candidate.strokeNumber ===
+                          shot.strokeNumber,
+                      );
+
+                    const isRevealMode =
+                      revealedStrokeCount !==
+                      null;
+
+                    const wasRevealed =
+                      !isRevealMode ||
+                      shotIndex <
+                        revealedStrokeCount;
+
+                    const showPath =
+                      wasRevealed ||
+                      isAnimating;
+
+                    const pathLength =
+                      approximateCurveLength(
+                        shot.from,
+                        shot.to,
+                      );
+
+                    const showLandingMarker =
+                      wasRevealed ||
+                      (isAnimating &&
+                        animationProgress >=
+                          0.98);
+
+                    return (
+                      <g
+                        key={`path-${shot.strokeNumber}`}
+                        data-shotcast-marker="true"
+                        className={
+                          showLandingMarker
+                            ? "cursor-pointer"
+                            : "pointer-events-none"
+                        }
+                        onPointerDown={(event) => {
+                          event.stopPropagation();
+                        }}
+                        onClick={(event) => {
+                          event.stopPropagation();
+
+                          selectShot(
+                            shot.strokeNumber,
+                          );
+                        }}
+                      >
+                        <circle
+                          cx={shot.to.x}
+                          cy={shot.to.y}
+                          r={
+                            markerRadius *
+                            1.85
+                          }
+                          fill="transparent"
+                          stroke="transparent"
+                          pointerEvents="all"
+                        />
+
+                        <path
+                          d={curvePath(
+                            shot.from,
+                            shot.to,
+                          )}
+                          fill="none"
+                          visibility={
+                            showPath
+                              ? "visible"
+                              : "hidden"
+                          }
+                          stroke={
+                            isSelected
+                              ? "#facc15"
+                              : "#f8fafc"
+                          }
+                          strokeWidth={
+                            (isSelected
+                              ? 11
+                              : 7) *
+                            inverseScale
+                          }
+                          strokeLinecap="round"
+                          strokeDasharray={
+                            isAnimating
+                              ? `${pathLength} ${pathLength}`
+                              : isSelected
+                                ? "0"
+                                : `${18 * inverseScale} ${13 * inverseScale}`
+                          }
+                          strokeDashoffset={
+                            isAnimating
+                              ? pathLength *
+                                (1 -
+                                  animationProgress)
+                              : 0
+                          }
+                          opacity={
+                            isSelected
+                              ? 1
+                              : 0.75
+                          }
+                          filter="url(#shot-path-shadow)"
+                        />
+
+                        {showLandingMarker ? (
+                          <>
+                            <circle
+                              cx={shot.to.x}
+                              cy={shot.to.y}
+                              r={
+                                isSelected
+                                  ? markerRadius *
+                                    1.2
+                                  : markerRadius
+                              }
+                              fill={
+                                shot.finalStroke
+                                  ? "#10b981"
+                                  : isSelected
+                                    ? "#facc15"
+                                    : "#0f172a"
+                              }
+                              stroke="#ffffff"
+                              strokeWidth={
+                                markerStroke
+                              }
+                              filter="url(#shot-path-shadow)"
+                            />
+
+                            <text
+                              x={shot.to.x}
+                              y={
+                                shot.to.y +
+                                markerFontSize *
+                                  0.34
+                              }
+                              textAnchor="middle"
+                              fontSize={
+                                markerFontSize
+                              }
+                              fontWeight="900"
+                              fill={
+                                isSelected &&
+                                !shot.finalStroke
+                                  ? "#111827"
+                                  : "#ffffff"
+                              }
+                              className="pointer-events-none select-none"
+                            >
+                              {
+                                shot.strokeNumber
+                              }
+                            </text>
+                          </>
+                        ) : null}
+                      </g>
+                    );
+                  },
+                )}
+
+                {cupPoint ? (
+                  <g className="pointer-events-none">
+                    <line
+                      x1={cupPoint.x}
+                      y1={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      x2={cupPoint.x}
+                      y2={
+                        cupPoint.y -
+                        48 * inverseScale
+                      }
+                      stroke="#f8fafc"
+                      strokeWidth={
+                        5 * inverseScale
+                      }
+                      strokeLinecap="round"
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <path
+                      d={[
+                        `M ${cupPoint.x} ${
+                          cupPoint.y -
+                          48 * inverseScale
+                        }`,
+                        `L ${
+                          cupPoint.x +
+                          35 * inverseScale
+                        } ${
+                          cupPoint.y -
+                          36 * inverseScale
+                        }`,
+                        `L ${cupPoint.x} ${
+                          cupPoint.y -
+                          24 * inverseScale
+                        }`,
+                        "Z",
+                      ].join(" ")}
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        2.5 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <ellipse
+                      cx={cupPoint.x}
+                      cy={
+                        cupPoint.y +
+                        5 * inverseScale
+                      }
+                      rx={
+                        10 *
+                        inverseScale
+                      }
+                      ry={
+                        4 *
+                        inverseScale
+                      }
+                      fill="#020617"
+                      opacity="0.85"
+                    />
+                  </g>
+                ) : null}
+
+                {animatedBallPoint ? (
+                  <g className="pointer-events-none">
+                    <circle
+                      cx={
+                        animatedBallPoint.x
+                      }
+                      cy={
+                        animatedBallPoint.y
+                      }
+                      r={
+                        13 *
+                        inverseScale
+                      }
+                      fill="#ffffff"
+                      stroke="#0f172a"
+                      strokeWidth={
+                        4 *
+                        inverseScale
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <circle
+                      cx={
+                        animatedBallPoint.x -
+                        3 *
+                          inverseScale
+                      }
+                      cy={
+                        animatedBallPoint.y -
+                        3 *
+                          inverseScale
+                      }
+                      r={
+                        2.2 *
+                        inverseScale
+                      }
+                      fill="#94a3b8"
+                    />
+                  </g>
+                ) : null}
+
+                {plottedShots[0] ? (
+                  <g>
+                    <circle
+                      cx={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      cy={
+                        plottedShots[0]
+                          .from.y
+                      }
+                      r={
+                        21 *
+                        inverseScale
+                      }
+                      fill="#0f172a"
+                      stroke="#ffffff"
+                      strokeWidth={
+                        markerStroke
+                      }
+                      filter="url(#shot-path-shadow)"
+                    />
+
+                    <text
+                      x={
+                        plottedShots[0]
+                          .from.x
+                      }
+                      y={
+                        plottedShots[0]
+                          .from.y +
+                        markerFontSize *
+                          0.3
+                      }
+                      textAnchor="middle"
+                      fontSize={
+                        markerFontSize *
+                        0.86
+                      }
+                      fontWeight="900"
+                      fill="#ffffff"
+                      className="pointer-events-none select-none"
+                    >
+                      T
+                    </text>
+                  </g>
+                ) : null}
+              </svg>
+            </div>
+
+            <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              Drag · Pinch · Twist · Scroll
+            </div>
+
+            <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              {transform.scale.toFixed(
+                1,
+              )}
+              × ·{" "}
+              {Math.round(
+                transform.rotation,
+              )}
+              °
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          {selectedShot ? (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black ${
+                    selectedShot.finalStroke
+                      ? "border-emerald-400 bg-emerald-700 text-white"
+                      : "border-yellow-400 bg-yellow-300 text-slate-950"
+                  }`}
+                >
+                  {
+                    selectedShot.strokeNumber
+                  }
+                </span>
+
+                <div className="min-w-0">
+                  <div className="text-sm font-black text-white">
+                    Shot{" "}
+                    {
+                      selectedShot.strokeNumber
+                    }
+                  </div>
+
+                  <div className="mt-0.5 text-xs font-bold text-slate-300">
+                    {shotDescription(
+                      selectedShot,
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+                {selectedShot.fromLocation ||
+                  "Unknown lie"}
+
+                <span className="mx-2 text-slate-600">
+                  →
+                </span>
+
+                {selectedShot.finalStroke
+                  ? "Hole"
+                  : selectedShot.toLocation ||
+                    "Unknown lie"}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="text-sm font-black text-slate-200">
+                Hole layout
+              </div>
+
+              <div className="mt-1 text-xs leading-5 text-slate-500">
+                {emptyStateLabel}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 text-[10px] leading-4 text-slate-500">
+            {plottedShots.length > 0
+              ? "Press Play to reveal the round shot by shot. Drag or pinch for a closer view, and twist with two fingers to rotate the course."
+              : "Drag or pinch for a closer view, and twist with two fingers to rotate the course."}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+================================================================================
+FILE: lib/shotcast/importShotCastManifest.ts
+================================================================================
+const PGA_GRAPHQL_URL =
+  "https://orchestrator.pgatour.com/graphql";
+
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+const REQUEST_TIMEOUT_MS = 20_000;
+
+type ImportOptions = {
+  tournamentId: string;
+  round?: number;
+};
+
+type AssetReference = {
+  imageOrg: string | null;
+  imagePath: string | null;
+  resolvedUrl: string | null;
+} | null;
+
+function numberOrNull(value: unknown) {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric)
+    ? numeric
+    : null;
+}
+
+function normalizeUrl(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function cleanAsset(value: any): AssetReference {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const imageOrg =
+    typeof value.imageOrg === "string"
+      ? value.imageOrg.trim()
+      : "";
+
+  const imagePath =
+    typeof value.imagePath === "string"
+      ? value.imagePath.trim()
+      : "";
+
+  if (!imageOrg && !imagePath) {
+    return null;
+  }
+
+  return {
+    imageOrg: imageOrg || null,
+    imagePath: imagePath || null,
+    resolvedUrl: null,
+  };
+}
+
+function cleanCoordinate(value: any) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return {
+    x: numberOrNull(value.x),
+    y: numberOrNull(value.y),
+    z: numberOrNull(value.z),
+    tourcastX: numberOrNull(value.tourcastX),
+    tourcastY: numberOrNull(value.tourcastY),
+    tourcastZ: numberOrNull(value.tourcastZ),
+  };
+}
+
+function cleanPinGreen(value: any) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return {
+    leftToRight:
+      cleanCoordinate(
+        value.leftToRightCoords,
+      ),
+    bottomToTop:
+      cleanCoordinate(
+        value.bottomToTopCoords,
+      ),
+  };
+}
+
+function requestHeaders() {
+  return {
+    Accept:
+      "application/graphql-response+json, application/json",
+    "Content-Type": "application/json",
+    "x-api-key":
+      process.env.PGA_TOUR_API_KEY?.trim() ||
+      DEFAULT_PGA_API_KEY,
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+async function graphqlRequest(
+  operationName: string,
+  query: string,
+  variables: Record<string, unknown>,
+) {
+  const controller =
+    new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(
+      PGA_GRAPHQL_URL,
+      {
+        method: "POST",
+        headers: requestHeaders(),
+        body: JSON.stringify({
+          operationName,
+          query,
+          variables,
+        }),
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    );
+
+    const text = await response.text();
+
+    let body: any;
+
+    try {
+      body = JSON.parse(text);
+    } catch {
+      throw new Error(
+        `PGA TOUR returned invalid JSON (${response.status}).`,
+      );
+    }
+
+    if (
+      !response.ok ||
+      body.errors?.length
+    ) {
+      const details =
+        body.errors
+          ?.map(
+            (error: any) =>
+              error?.message ||
+              String(error),
+          )
+          .join("; ") ||
+        text.slice(0, 300);
+
+      throw new Error(
+        `${operationName} failed: ${details}`,
+      );
+    }
+
+    return body.data ?? {};
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+type TourcastWorldFile = {
+  pxX: number;
+  rotX: number;
+  rotY: number;
+  pxY: number;
+  coordX: number;
+  coordY: number;
+  dimX: number;
+  dimY: number;
+};
+
+function tourcastTerrainUrls(
+  tournamentId: string,
+  holeNumber: number,
+) {
+  const holeToken =
+    String(holeNumber).padStart(2, "0");
+
+  const root =
+    `https://tourcast.pgatour.com/models/` +
+    `${tournamentId}/3D_Assets/terrain`;
+
+  return {
+    imageUrl:
+      `${root}/terrain${holeToken}.jpg`,
+    worldFileUrl:
+      `${root}/terrain${holeToken}.tfw`,
+    glbUrl:
+      `${root}/cutGlb/terrain${holeToken}.glb`,
+  };
+}
+
+function parseTourcastWorldFile(
+  raw: string,
+): TourcastWorldFile | null {
+  const values = raw
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+
+  if (
+    values.length < 8 ||
+    values
+      .slice(0, 8)
+      .some((value) => !Number.isFinite(value))
+  ) {
+    return null;
+  }
+
+  const [
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  ] = values;
+
+  const determinant =
+    pxX * pxY -
+    rotY * rotX;
+
+  if (
+    Math.abs(determinant) < 1e-12 ||
+    dimX <= 0 ||
+    dimY <= 0
+  ) {
+    return null;
+  }
+
+  return {
+    pxX,
+    rotX,
+    rotY,
+    pxY,
+    coordX,
+    coordY,
+    dimX,
+    dimY,
+  };
+}
+
+async function loadTourcastWorldFile(
+  tournamentId: string,
+  holeNumber: number,
+): Promise<TourcastWorldFile | null> {
+  const { worldFileUrl } =
+    tourcastTerrainUrls(
+      tournamentId,
+      holeNumber,
+    );
+
+  const controller =
+    new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    8_000,
+  );
+
+  try {
+    const response = await fetch(
+      worldFileUrl,
+      {
+        method: "GET",
+        headers: {
+          Accept: "*/*",
+          Referer:
+            `https://tourcast.pgatour.com/` +
+            `tourcast.html?id=${tournamentId}`,
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 15; Pixel 9) " +
+            "AppleWebKit/537.36 (KHTML, like Gecko) " +
+            "Chrome/150.0.0.0 Mobile Safari/537.36",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "Sec-CH-UA":
+            '"Not;A=Brand";v="8", ' +
+            '"Chromium";v="150", ' +
+            '"Google Chrome";v="150"',
+          "Sec-CH-UA-Mobile": "?1",
+          "Sec-CH-UA-Platform": '"Android"',
+        },
+        cache: "no-store",
+        redirect: "follow",
+        signal: controller.signal,
+      },
+    );
+
+    if (!response.ok) {
+      console.warn(
+        `[ShotCast] Hole ${holeNumber} TFW returned ` +
+        `${response.status}: ${worldFileUrl}`,
+      );
+      return null;
+    }
+
+    const raw =
+      await response.text();
+
+    const parsed =
+      parseTourcastWorldFile(raw);
+
+    if (!parsed) {
+      console.warn(
+        `[ShotCast] Hole ${holeNumber} TFW could not be parsed.`,
+      );
+    } else {
+      console.log(
+        `[ShotCast] Hole ${holeNumber} TFW loaded.`,
+      );
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn(
+      `[ShotCast] Hole ${holeNumber} TFW request failed:`,
+      error,
+    );
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function imageIsAvailable(
+  url: string | null,
+) {
+  if (!url) return false;
+
+  const controller =
+    new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    8_000,
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "image/*",
+        Range: "bytes=0-0",
+        Referer:
+          "https://www.pgatour.com/",
+        "User-Agent": "111 Sports",
+      },
+      cache: "no-store",
+      redirect: "follow",
+      signal: controller.signal,
+    });
+
+    return (
+      response.ok &&
+      (
+        response.headers
+          .get("content-type")
+          ?.toLowerCase()
+          .startsWith("image/") ??
+        false
+      )
+    );
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const LEADERBOARD_QUERY = `
+  query LeaderboardHoleByHole(
+    $tournamentId: ID!,
+    $round: Int!
+  ) {
+    leaderboardHoleByHole(
+      tournamentId: $tournamentId,
+      round: $round
+    ) {
+      tournamentId
+      tournamentName
+      currentRound
+      courses {
+        id
+        courseName
+        courseCode
+        hostCourse
+        scoringLevel
+        enabled
+      }
+      courseHoleHeaders {
+        courseId
+        holeHeaders {
+          holeNumber
+          order
+          displayValue
+          par
+        }
+      }
+    }
+  }
+`;
+
+const HOLE_DETAILS_QUERY = `
+  query HoleDetails(
+    $tournamentId: ID!,
+    $courseId: ID!,
+    $hole: Int!
+  ) {
+    holeDetails(
+      tournamentId: $tournamentId,
+      courseId: $courseId,
+      hole: $hole
+    ) {
+      id
+      tournamentId
+      statsAvailability
+      holeNum
+      courseId
+      holeImage
+      holeImageLandscape
+      tourcastURI
+      tourcastURL
+      tourcastURLWeb
+      holeInfo {
+        holeNum
+        par
+        yards
+        scoringAverageDiff
+        aboutThisHole
+        rounds
+        rank
+        holePickle
+        holePickleBottomToTop
+        holePickleGreenBottomToTop
+        greenPickle
+
+        holePickleLeftToRightAsset {
+          imageOrg
+          imagePath
+        }
+
+        holePickleBottomToTopAsset {
+          imageOrg
+          imagePath
+        }
+
+        holePickleGreenLeftToRightAsset {
+          imageOrg
+          imagePath
+        }
+
+        holePickleGreenBottomToTopAsset {
+          imageOrg
+          imagePath
+        }
+
+        pinGreen {
+          leftToRightCoords {
+            x
+            y
+            z
+            tourcastX
+            tourcastY
+            tourcastZ
+          }
+
+          bottomToTopCoords {
+            x
+            y
+            z
+            tourcastX
+            tourcastY
+            tourcastZ
+          }
+        }
+      }
+    }
+  }
+`;
+
+export async function importShotCastManifest({
+  tournamentId,
+  round = 1,
+}: ImportOptions) {
+  const normalizedTournamentId =
+    tournamentId.trim().toUpperCase();
+
+  if (
+    !/^R\d{7}$/.test(
+      normalizedTournamentId,
+    )
+  ) {
+    throw new Error(
+      "PGA tournament ID must look like R2026013.",
+    );
+  }
+
+  if (
+    !Number.isInteger(round) ||
+    round < 1 ||
+    round > 4
+  ) {
+    throw new Error(
+      "Round must be from 1 through 4.",
+    );
+  }
+
+  const leaderboardData =
+    await graphqlRequest(
+      "LeaderboardHoleByHole",
+      LEADERBOARD_QUERY,
+      {
+        tournamentId:
+          normalizedTournamentId,
+        round,
+      },
+    );
+
+  const leaderboard =
+    leaderboardData
+      ?.leaderboardHoleByHole;
+
+  if (!leaderboard) {
+    throw new Error(
+      "PGA TOUR returned no course information.",
+    );
+  }
+
+  const courses =
+    Array.isArray(leaderboard.courses)
+      ? leaderboard.courses
+      : [];
+
+  const course =
+    courses.find(
+      (row: any) =>
+        row?.hostCourse === true &&
+        row?.enabled !== false,
+    ) ??
+    courses.find(
+      (row: any) =>
+        row?.enabled !== false,
+    ) ??
+    courses[0];
+
+  const courseId =
+    String(course?.id ?? "").trim();
+
+  if (!courseId) {
+    throw new Error(
+      "No enabled PGA course was returned.",
+    );
+  }
+
+  const headerRows =
+    (
+      Array.isArray(
+        leaderboard.courseHoleHeaders,
+      )
+        ? leaderboard.courseHoleHeaders
+        : []
+    ).find(
+      (row: any) =>
+        String(row?.courseId ?? "") ===
+        courseId,
+    )?.holeHeaders ?? [];
+
+  const headersByHole =
+    new Map<number, any>(
+      (
+        Array.isArray(headerRows)
+          ? headerRows
+          : []
+      )
+        .filter((row: any) =>
+          Number.isInteger(
+            Number(row?.holeNumber),
+          ),
+        )
+        .map((row: any) => [
+          Number(row.holeNumber),
+          row,
+        ]),
+    );
+
+  const details = await Promise.all(
+    Array.from(
+      { length: 18 },
+      (_, index) => index + 1,
+    ).map(async (holeNumber) => {
+      try {
+        const holeData =
+          await graphqlRequest(
+            "HoleDetails",
+            HOLE_DETAILS_QUERY,
+            {
+              tournamentId:
+                normalizedTournamentId,
+              courseId,
+              hole: holeNumber,
+            },
+          );
+
+        return {
+          holeNumber,
+          detail:
+            holeData?.holeDetails ??
+            null,
+          error: null,
+        };
+      } catch (error) {
+        return {
+          holeNumber,
+          detail: null,
+          error:
+            error instanceof Error
+              ? error.message
+              : String(error),
+        };
+      }
+    }),
+  );
+
+  const holes = await Promise.all(
+    details.map(async ({
+      holeNumber,
+      detail,
+      error,
+    }) => {
+      if (!detail) {
+        return {
+          holeNumber,
+          available: false,
+          error:
+            error ||
+            "No HoleDetails payload returned.",
+        };
+      }
+
+      const holeInfo =
+        detail.holeInfo &&
+        typeof detail.holeInfo ===
+          "object"
+          ? detail.holeInfo
+          : {};
+
+      const header =
+        headersByHole.get(
+          holeNumber,
+        );
+
+      const officialImageUrl =
+        normalizeUrl(
+          detail.holeImageLandscape,
+        ) ??
+        normalizeUrl(
+          detail.holeImage,
+        );
+
+      const alignedMapUrl =
+        normalizeUrl(
+          holeInfo
+            .holePickleBottomToTop,
+        );
+
+      const alignedGreenUrl =
+        normalizeUrl(
+          holeInfo
+            .holePickleGreenBottomToTop,
+        );
+
+      const [
+        alignedMapAvailable,
+        alignedGreenAvailable,
+        tourcastWorldFile,
+      ] = await Promise.all([
+        imageIsAvailable(
+          alignedMapUrl,
+        ),
+        imageIsAvailable(
+          alignedGreenUrl,
+        ),
+        loadTourcastWorldFile(
+          normalizedTournamentId,
+          holeNumber,
+        ),
+      ]);
+
+      const tourcastTerrain =
+        tourcastTerrainUrls(
+          normalizedTournamentId,
+          holeNumber,
+        );
+
+      /*
+       * Modern PGA TOURCAST:
+       *
+       * terrainNN.jpg = the overhead terrain image
+       * terrainNN.tfw = affine world-file calibration
+       *
+       * If the TFW exists, the terrain package is authoritative.
+       * The older Cloudinary pickle remains as a fallback.
+       */
+      const hasTourcastTerrain =
+        tourcastWorldFile !== null;
+
+      const resolvedAlignedMapUrl =
+        hasTourcastTerrain
+          ? tourcastTerrain.imageUrl
+          : alignedMapAvailable
+            ? alignedMapUrl
+            : null;
+
+      const calibration =
+        tourcastWorldFile
+          ? {
+              xScale: 1,
+              xOffset: 0,
+              yScale: 1,
+              yOffset: 0,
+              verified: true,
+              source:
+                "pga-tourcast-world-file",
+              affine:
+                tourcastWorldFile,
+            }
+          : null;
+
+      return {
+        holeNumber,
+        available: true,
+
+        detailsId:
+          detail.id ?? null,
+
+        statsAvailability:
+          detail.statsAvailability ??
+          null,
+
+        par: numberOrNull(
+          holeInfo.par ??
+            header?.par,
+        ),
+
+        yards:
+          numberOrNull(
+            holeInfo.yards,
+          ),
+
+        rank:
+          numberOrNull(
+            holeInfo.rank,
+          ),
+
+        scoringAverageDiff:
+          numberOrNull(
+            holeInfo
+              .scoringAverageDiff,
+          ),
+
+        aboutThisHole:
+          typeof holeInfo
+            .aboutThisHole ===
+          "string"
+            ? holeInfo
+                .aboutThisHole
+                .trim() || null
+            : null,
+
+        officialImageUrl,
+
+        /*
+         * The browser may use the official PGA URL directly.
+         * No Vercel filesystem write is required.
+         */
+        localImageUrl:
+          officialImageUrl,
+
+        alignedMapUrl:
+          resolvedAlignedMapUrl,
+
+        localAlignedMapUrl:
+          resolvedAlignedMapUrl,
+
+        alignedMapError:
+          !resolvedAlignedMapUrl
+            ? "No aligned PGA TOURCAST terrain asset was found."
+            : null,
+
+        tourcastTerrain: {
+          imageUrl:
+            tourcastTerrain.imageUrl,
+          worldFileUrl:
+            tourcastTerrain.worldFileUrl,
+          glbUrl:
+            tourcastTerrain.glbUrl,
+          available:
+            hasTourcastTerrain,
+        },
+
+        alignedGreenUrl,
+
+        localAlignedGreenUrl:
+          alignedGreenAvailable
+            ? alignedGreenUrl
+            : null,
+
+        alignedGreenError:
+          alignedGreenUrl &&
+          !alignedGreenAvailable
+            ? "Asset is not currently published."
+            : null,
+
+        tourcast: {
+          uri:
+            normalizeUrl(
+              detail.tourcastURI,
+            ),
+          url:
+            normalizeUrl(
+              detail.tourcastURL,
+            ),
+          urlWeb:
+            normalizeUrl(
+              detail.tourcastURLWeb,
+            ),
+        },
+
+        assets: {
+          leftToRight:
+            cleanAsset(
+              holeInfo
+                .holePickleLeftToRightAsset,
+            ),
+          bottomToTop:
+            cleanAsset(
+              holeInfo
+                .holePickleBottomToTopAsset,
+            ),
+          greenLeftToRight:
+            cleanAsset(
+              holeInfo
+                .holePickleGreenLeftToRightAsset,
+            ),
+          greenBottomToTop:
+            cleanAsset(
+              holeInfo
+                .holePickleGreenBottomToTopAsset,
+            ),
+        },
+
+        legacyAssets: {
+          holePickle:
+            normalizeUrl(
+              holeInfo.holePickle,
+            ),
+          holePickleBottomToTop:
+            alignedMapUrl,
+          holePickleGreenBottomToTop:
+            alignedGreenUrl,
+          greenPickle:
+            normalizeUrl(
+              holeInfo.greenPickle,
+            ),
+        },
+
+        pinGreen:
+          cleanPinGreen(
+            holeInfo.pinGreen,
+          ),
+
+        calibration,
+      };
+    }),
+  );
+
+  const holesAvailable =
+    holes.filter(
+      (hole) => hole.available,
+    ).length;
+
+  const photos =
+    holes.filter(
+      (hole: any) =>
+        hole.available &&
+        hole.localImageUrl,
+    ).length;
+
+  const alignedMaps =
+    holes.filter(
+      (hole: any) =>
+        hole.available &&
+        hole.localAlignedMapUrl,
+    ).length;
+
+  const alignedGreens =
+    holes.filter(
+      (hole: any) =>
+        hole.available &&
+        hole.localAlignedGreenUrl,
+    ).length;
+
+  return {
+    schemaVersion: 2,
+
+    generatedAt:
+      new Date().toISOString(),
+
+    source:
+      "PGA TOUR HoleDetails",
+
+    tournament: {
+      id:
+        normalizedTournamentId,
+      name:
+        leaderboard
+          .tournamentName ??
+        null,
+      currentRound:
+        numberOrNull(
+          leaderboard
+            .currentRound,
+        ),
+      requestedRound: round,
+    },
+
+    course: {
+      id: courseId,
+      name:
+        String(
+          course?.courseName ??
+            "Unknown course",
+        ),
+      code:
+        course?.courseCode ??
+        null,
+      hostCourse:
+        course?.hostCourse === true,
+      scoringLevel:
+        course?.scoringLevel ??
+        null,
+      enabled:
+        course?.enabled !== false,
+    },
+
+    summary: {
+      holesRequested: 18,
+      holesAvailable,
+      localImages: photos,
+      alignedMaps,
+      alignedGreens,
+      holesFailed:
+        18 - holesAvailable,
+    },
+
+    holes,
+  };
+}
+
+================================================================================
+FILE: app/api/admin/golf/shotcast/route.ts
+================================================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  importShotCastManifest,
+} from "@/lib/shotcast/importShotCastManifest";
+
+import {
+  requireAdminApi,
+} from "@/lib/requireAdminApi";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+function parseSlateId(value: unknown) {
+  const slateId = Number(value);
+
+  return Number.isInteger(slateId) &&
+    slateId > 0
+    ? slateId
+    : null;
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  const authError =
+    await requireAdminApi();
+
+  if (authError) {
+    return authError;
+  }
+
+  const slateId =
+    parseSlateId(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+  if (!slateId) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid slateId is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("shotcast_manifests")
+    .select(
+      "tournament_id, manifest, generated_at, updated_at",
+    )
+    .eq("slate_id", slateId)
+    .order(
+      "updated_at",
+      {
+        ascending: false,
+      },
+    )
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    shotcast: data
+      ? {
+          tournamentId:
+            data.tournament_id,
+          generatedAt:
+            data.generated_at,
+          updatedAt:
+            data.updated_at,
+          summary:
+            (data.manifest as any)
+              ?.summary ?? null,
+          course:
+            (data.manifest as any)
+              ?.course ?? null,
+        }
+      : null,
+  });
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  const authError =
+    await requireAdminApi();
+
+  if (authError) {
+    return authError;
+  }
+
+  try {
+    const body = await request.json();
+
+    const slateId =
+      parseSlateId(body?.slateId);
+
+    const tournamentId =
+      String(
+        body?.tournamentId ?? "",
+      )
+        .trim()
+        .toUpperCase();
+
+    const round =
+      Number(body?.round ?? 1);
+
+    if (!slateId) {
+      return NextResponse.json(
+        {
+          error:
+            "A valid slateId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      !/^R\d{7}$/.test(
+        tournamentId,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Enter a PGA tournament ID such as R2026013.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: slate,
+      error: slateError,
+    } = await supabaseAdmin
+      .from("slates")
+      .select(
+        "id, sport, display_name",
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (
+      slateError ||
+      !slate
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            slateError?.message ||
+            "Slate not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "ShotCast is only available for Golf slates.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const manifest =
+      await importShotCastManifest({
+        tournamentId,
+        round,
+      });
+
+    const timestamp =
+      new Date().toISOString();
+
+    const {
+      error: upsertError,
+    } = await supabaseAdmin
+      .from("shotcast_manifests")
+      .upsert(
+        {
+          tournament_id:
+            tournamentId,
+          slate_id: slateId,
+          manifest,
+          generated_at:
+            manifest.generatedAt,
+          updated_at: timestamp,
+        },
+        {
+          onConflict:
+            "tournament_id",
+        },
+      );
+
+    if (upsertError) {
+      return NextResponse.json(
+        {
+          error:
+            "ShotCast was imported but could not be saved: " +
+            upsertError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      tournamentId,
+      course:
+        manifest.course,
+      summary:
+        manifest.summary,
+      generatedAt:
+        manifest.generatedAt,
+    });
+  } catch (error) {
+    console.error(
+      "Admin ShotCast refresh failed:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected ShotCast import error.",
+      },
+      { status: 500 },
+    );
+  }
+}

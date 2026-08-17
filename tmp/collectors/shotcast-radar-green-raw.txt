@@ -1,0 +1,882 @@
+◇ injected env (9) from .env.local // tip: ⌘ override existing { override: true }
+TOURNAMENT: R2026013
+PGA PLAYER: 57366
+GRAPHQL HTTP: 200
+
+========================================
+HOLE-LEVEL INTERESTING FIELDS
+========================================
+
+green:
+true
+
+teeGreen:
+{
+  "__typename": "PointOfInterestCoords",
+  "leftToRightCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 8733.16,
+    "tourcastY": 7283.47,
+    "tourcastZ": 834.04,
+    "enhancedX": -4.644491479557845,
+    "enhancedY": 0.1675120869060771
+  },
+  "bottomToTopCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 8733.16,
+    "tourcastY": 7283.47,
+    "tourcastZ": 834.04,
+    "enhancedX": 0.3509519677676028,
+    "enhancedY": 5.780943872098484
+  }
+}
+
+pinGreen:
+{
+  "__typename": "PointOfInterestCoords",
+  "leftToRightCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 10285.38,
+    "tourcastY": 7321.16,
+    "tourcastZ": 806.69,
+    "enhancedX": 0.5486905389631025,
+    "enhancedY": 0.2971217481787539
+  },
+  "bottomToTopCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 10285.38,
+    "tourcastY": 7321.16,
+    "tourcastZ": 806.69,
+    "enhancedX": 0.43634185035389,
+    "enhancedY": 0.4496201809166879
+  }
+}
+
+holePickleBottomToTop:
+"https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_5.jpg"
+
+holePickleLeftToRight:
+"https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_5.jpg"
+
+holePickleGreenBottomToTop:
+"https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_5.jpg"
+
+holePickleGreenLeftToRight:
+"https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_5.jpg"
+
+holePickleBottomToTopAsset:
+{
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_full_5",
+  "assetType": "image"
+}
+
+holePickleLeftToRightAsset:
+{
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_full_5",
+  "assetType": "image"
+}
+
+holePickleGreenBottomToTopAsset:
+{
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_green_5",
+  "assetType": "image"
+}
+
+holePickleGreenLeftToRightAsset:
+{
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_green_5",
+  "assetType": "image"
+}
+
+enhancedPickle:
+{
+  "__typename": "HolePickle",
+  "leftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_land.png",
+  "bottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_port.png",
+  "greenLeftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_land.png",
+  "greenBottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_port.png",
+  "leftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_full_5_land",
+    "assetType": "image"
+  },
+  "bottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_full_5_port",
+    "assetType": "image"
+  },
+  "greenLeftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_green_5_land",
+    "assetType": "image"
+  },
+  "greenBottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_green_5_port",
+    "assetType": "image"
+  }
+}
+
+========================================
+SHOT-LEVEL STRUCTURE
+========================================
+
+----------------------------------------
+SHOT 1
+TOP-LEVEL KEYS: __typename, distance, distanceRemaining, finalStroke, fromLocation, fromLocationCode, green, groupShowMarker, markerText, overview, playByPlay, playByPlayLabel, radarData, showMarker, strokeNumber, strokeType, toLocation, toLocationCode, videoId
+
+green:
+{
+  "__typename": "ShotLinkCoordWrapper",
+  "leftToRightCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 8733.155,
+      "tourcastY": 7283.467,
+      "tourcastZ": 834.041,
+      "enhancedX": -4.644508544283191,
+      "enhancedY": 0.16753416076408623
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9771.416,
+      "tourcastY": 7165.469,
+      "tourcastZ": 807.025,
+      "enhancedX": -1.1875924290672808,
+      "enhancedY": 1.3731606679264852
+    }
+  },
+  "bottomToTopCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 8733.155,
+      "tourcastY": 7283.467,
+      "tourcastZ": 834.041,
+      "enhancedX": 0.3509665105453334,
+      "enhancedY": 5.780961390755459
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9771.416,
+      "tourcastY": 7165.469,
+      "tourcastZ": 807.025,
+      "enhancedX": 1.1452616455694529,
+      "enhancedY": 2.232089288305569
+    }
+  }
+}
+
+videoId:
+"6403104847112"
+
+radarData:
+{
+  "apexHeight": 83.5,
+  "apexRange": 601.08,
+  "apexSide": 14.86,
+  "clubSpeed": 124.89,
+  "ballSpeed": 185.92,
+  "smashFactor": 1.49,
+  "launchSpin": 2620.59,
+  "spinAxis": 2.02,
+  "verticalLaunchAngle": 6.35,
+  "horizontalLaunchAngle": 0.87,
+  "actualFlightTime": 7,
+  "ballImpactMeasured": "2026-08-09T12:14:22.2940000",
+  "ballTrajectory": [
+    {
+      "__typename": "RadarBallTracjectory",
+      "kind": "Flight",
+      "xFit": [
+        0.332668,
+        82.565204,
+        -15.04966,
+        2.828093,
+        -0.377762,
+        0.028803,
+        -0.000907
+      ],
+      "yFit": [
+        0.087575,
+        9.460155,
+        2.216424,
+        -1.379495,
+        0.216479,
+        -0.01756,
+        0.000586
+      ],
+      "zFit": [
+        -0.412633,
+        1.201724,
+        -0.006734,
+        0.035228,
+        -0.011429,
+        0.001296,
+        -0.00005
+      ],
+      "spinRateFit": [
+        2620.581063,
+        -78.948059,
+        1.147847,
+        -0.009502
+      ],
+      "timeInterval": [
+        0,
+        6.7
+      ],
+      "validTimeInterval": [
+        0,
+        8.283
+      ],
+      "measuredTimeInterval": [
+        0.082,
+        6.17
+      ],
+      "type": "Broadcast"
+    }
+  ],
+  "normalizedTrajectory": [
+    {
+      "valid": true,
+      "yFit": [
+        0.087575,
+        9.46,
+        2.02175,
+        -1.185986,
+        0.175471,
+        -0.014122,
+        0.000484
+      ],
+      "validTimeInterval": [
+        0,
+        6.962
+      ],
+      "curve": 4.62,
+      "maxHeight": 26.94,
+      "spinAxis": 2.02,
+      "timeInterval": [
+        0,
+        6.962
+      ],
+      "carrySide": 8.72,
+      "carry": 281.92,
+      "windVelocity": [
+        0,
+        0,
+        0
+      ],
+      "zFit": [
+        0.332668,
+        82.565,
+        -13.408714,
+        2.002313,
+        -0.21673,
+        0.014803,
+        -0.000454
+      ]
+    }
+  ],
+  "normalizedTrajectoryV2": [
+    {
+      "valid": true,
+      "yFit": [
+        0.087575,
+        9.46,
+        2.02175,
+        -1.185986,
+        0.175471,
+        -0.014122,
+        0.000484
+      ],
+      "validTimeInterval": [
+        0,
+        6.962
+      ],
+      "curve": 4.62,
+      "maxHeight": 26.94,
+      "spinAxis": 2.02,
+      "timeInterval": [
+        0,
+        6.962
+      ],
+      "carrySide": 8.72,
+      "carry": 281.92,
+      "windVelocity": [
+        0,
+        0,
+        0
+      ],
+      "zFit": [
+        0.332668,
+        82.565,
+        -13.408714,
+        2.002313,
+        -0.21673,
+        0.014803,
+        -0.000454
+      ]
+    }
+  ]
+}
+
+----------------------------------------
+SHOT 2
+TOP-LEVEL KEYS: __typename, distance, distanceRemaining, finalStroke, fromLocation, fromLocationCode, green, groupShowMarker, markerText, overview, playByPlay, playByPlayLabel, radarData, showMarker, strokeNumber, strokeType, toLocation, toLocationCode, videoId
+
+green:
+{
+  "__typename": "ShotLinkCoordWrapper",
+  "leftToRightCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9771.416,
+      "tourcastY": 7165.469,
+      "tourcastZ": 807.025,
+      "enhancedX": -1.1875924290672808,
+      "enhancedY": 1.3731606679264852
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10268.896,
+      "tourcastY": 7297.987,
+      "tourcastZ": 805.402,
+      "enhancedX": 0.49087892312338843,
+      "enhancedY": 0.47367598096882546
+    }
+  },
+  "bottomToTopCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 9771.416,
+      "tourcastY": 7165.469,
+      "tourcastZ": 807.025,
+      "enhancedX": 1.1452616455694529,
+      "enhancedY": 2.232089288305569
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10268.896,
+      "tourcastY": 7297.987,
+      "tourcastZ": 805.402,
+      "enhancedX": 0.5526599384089659,
+      "enhancedY": 0.5089696193261812
+    }
+  }
+}
+
+videoId:
+"6403106402112"
+
+radarData:
+{
+  "apexHeight": 97.41,
+  "apexRange": 332.71,
+  "apexSide": 6.86,
+  "clubSpeed": 0,
+  "ballSpeed": 126.82,
+  "smashFactor": 0,
+  "launchSpin": 0,
+  "spinAxis": -1.56,
+  "verticalLaunchAngle": 15.14,
+  "horizontalLaunchAngle": 1.49,
+  "actualFlightTime": 6,
+  "ballImpactMeasured": "2026-08-09T12:20:10.7290000",
+  "ballTrajectory": [
+    {
+      "__typename": "RadarBallTracjectory",
+      "kind": "Flight",
+      "xFit": [
+        323.232516,
+        51.045573,
+        -11.782799,
+        2.393588,
+        -0.313897,
+        0.023447,
+        -0.000734
+      ],
+      "yFit": [
+        -8.337555,
+        14.806131,
+        0.799123,
+        -1.317657,
+        0.2122,
+        -0.016521,
+        0.000545
+      ],
+      "zFit": [
+        6.139166,
+        -19.713195,
+        4.251617,
+        -0.773052,
+        0.088604,
+        -0.00594,
+        0.000168
+      ],
+      "spinRateFit": [
+        5838.91313,
+        -169.334417,
+        2.278402,
+        -0.016363
+      ],
+      "timeInterval": [
+        0,
+        6.295
+      ],
+      "validTimeInterval": [
+        0,
+        7.413
+      ],
+      "measuredTimeInterval": [
+        0.02,
+        6.213
+      ],
+      "type": "Incoming"
+    }
+  ],
+  "normalizedTrajectory": [],
+  "normalizedTrajectoryV2": []
+}
+
+----------------------------------------
+SHOT 3
+TOP-LEVEL KEYS: __typename, ballPath, distance, distanceRemaining, finalStroke, fromLocation, fromLocationCode, green, groupShowMarker, markerText, overview, playByPlay, playByPlayLabel, showMarker, strokeNumber, strokeType, toLocation, toLocationCode
+
+green:
+{
+  "__typename": "ShotLinkCoordWrapper",
+  "leftToRightCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10268.896,
+      "tourcastY": 7297.987,
+      "tourcastZ": 805.402,
+      "enhancedX": 0.49087892312338843,
+      "enhancedY": 0.47367598096882546
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10285.956,
+      "tourcastY": 7323.294,
+      "tourcastZ": 806.731,
+      "enhancedX": 0.5508654449274882,
+      "enhancedY": 0.28060550720448363
+    }
+  },
+  "bottomToTopCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10268.896,
+      "tourcastY": 7297.987,
+      "tourcastZ": 805.402,
+      "enhancedX": 0.5526599384089659,
+      "enhancedY": 0.5089696193261812
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10285.956,
+      "tourcastY": 7323.294,
+      "tourcastZ": 806.731,
+      "enhancedX": 0.4254605616988066,
+      "enhancedY": 0.4473874211985106
+    }
+  }
+}
+
+ballPath:
+{
+  "isLipOut": false,
+  "path": [
+    {
+      "x": 10268.896,
+      "y": 7297.987,
+      "z": 805.4018,
+      "secondsSinceStart": 0
+    },
+    {
+      "x": 10269.791,
+      "y": 7299.292,
+      "z": 805.41486,
+      "secondsSinceStart": 0.125
+    },
+    {
+      "x": 10270.662,
+      "y": 7300.5684,
+      "z": 805.4441,
+      "secondsSinceStart": 0.25
+    },
+    {
+      "x": 10271.507,
+      "y": 7301.8096,
+      "z": 805.4875,
+      "secondsSinceStart": 0.375
+    },
+    {
+      "x": 10272.325,
+      "y": 7303.0166,
+      "z": 805.5403,
+      "secondsSinceStart": 0.5
+    },
+    {
+      "x": 10273.116,
+      "y": 7304.1846,
+      "z": 805.6064,
+      "secondsSinceStart": 0.625
+    },
+    {
+      "x": 10273.879,
+      "y": 7305.314,
+      "z": 805.6915,
+      "secondsSinceStart": 0.75
+    },
+    {
+      "x": 10274.61,
+      "y": 7306.3984,
+      "z": 805.7849,
+      "secondsSinceStart": 0.875
+    },
+    {
+      "x": 10275.313,
+      "y": 7307.4375,
+      "z": 805.87787,
+      "secondsSinceStart": 1
+    },
+    {
+      "x": 10275.984,
+      "y": 7308.4277,
+      "z": 805.9735,
+      "secondsSinceStart": 1.125
+    },
+    {
+      "x": 10276.625,
+      "y": 7309.3716,
+      "z": 806.0672,
+      "secondsSinceStart": 1.25
+    },
+    {
+      "x": 10277.232,
+      "y": 7310.266,
+      "z": 806.15356,
+      "secondsSinceStart": 1.375
+    },
+    {
+      "x": 10277.812,
+      "y": 7311.1167,
+      "z": 806.22906,
+      "secondsSinceStart": 1.5
+    },
+    {
+      "x": 10278.466,
+      "y": 7312.0786,
+      "z": 806.3081,
+      "secondsSinceStart": 1.6500000000000001
+    },
+    {
+      "x": 10279.079,
+      "y": 7312.9814,
+      "z": 806.3735,
+      "secondsSinceStart": 1.8
+    },
+    {
+      "x": 10279.654,
+      "y": 7313.831,
+      "z": 806.4248,
+      "secondsSinceStart": 1.9500000000000002
+    },
+    {
+      "x": 10280.194,
+      "y": 7314.6323,
+      "z": 806.4671,
+      "secondsSinceStart": 2.1
+    },
+    {
+      "x": 10280.7,
+      "y": 7315.3887,
+      "z": 806.5035,
+      "secondsSinceStart": 2.25
+    },
+    {
+      "x": 10281.174,
+      "y": 7316.1035,
+      "z": 806.5347,
+      "secondsSinceStart": 2.4000000000000004
+    },
+    {
+      "x": 10281.619,
+      "y": 7316.7773,
+      "z": 806.5587,
+      "secondsSinceStart": 2.5500000000000003
+    },
+    {
+      "x": 10282.036,
+      "y": 7317.414,
+      "z": 806.5777,
+      "secondsSinceStart": 2.7
+    },
+    {
+      "x": 10282.428,
+      "y": 7318.015,
+      "z": 806.59296,
+      "secondsSinceStart": 2.85
+    },
+    {
+      "x": 10282.795,
+      "y": 7318.5835,
+      "z": 806.6073,
+      "secondsSinceStart": 3
+    },
+    {
+      "x": 10283.139,
+      "y": 7319.1196,
+      "z": 806.6198,
+      "secondsSinceStart": 3.1500000000000004
+    },
+    {
+      "x": 10283.613,
+      "y": 7319.864,
+      "z": 806.63806,
+      "secondsSinceStart": 3.375
+    },
+    {
+      "x": 10283.992,
+      "y": 7320.4653,
+      "z": 806.6565,
+      "secondsSinceStart": 3.575
+    },
+    {
+      "x": 10284.334,
+      "y": 7321.007,
+      "z": 806.6739,
+      "secondsSinceStart": 3.7750000000000004
+    },
+    {
+      "x": 10284.675,
+      "y": 7321.542,
+      "z": 806.6899,
+      "secondsSinceStart": 4
+    },
+    {
+      "x": 10284.942,
+      "y": 7321.952,
+      "z": 806.70074,
+      "secondsSinceStart": 4.2
+    },
+    {
+      "x": 10285.232,
+      "y": 7322.381,
+      "z": 806.71063,
+      "secondsSinceStart": 4.45
+    },
+    {
+      "x": 10285.472,
+      "y": 7322.719,
+      "z": 806.71844,
+      "secondsSinceStart": 4.7
+    },
+    {
+      "x": 10285.662,
+      "y": 7322.971,
+      "z": 806.724,
+      "secondsSinceStart": 4.95
+    },
+    {
+      "x": 10285.885,
+      "y": 7323.2266,
+      "z": 806.72955,
+      "secondsSinceStart": 5.45
+    },
+    {
+      "x": 10285.956,
+      "y": 7323.2944,
+      "z": 806.731,
+      "secondsSinceStart": 5.65
+    }
+  ],
+  "roundNumber": 4,
+  "holeSequence": 5,
+  "reconstructionType": "simulation",
+  "totalDistanceInches": 366.34470422557087,
+  "holeNumber": 5,
+  "strokeNumber": 3,
+  "playerId": 57366
+}
+
+----------------------------------------
+SHOT 4
+TOP-LEVEL KEYS: __typename, distance, distanceRemaining, finalStroke, fromLocation, fromLocationCode, green, groupShowMarker, markerText, overview, playByPlay, playByPlayLabel, showMarker, strokeNumber, strokeType, toLocation, toLocationCode, videoId
+
+green:
+{
+  "__typename": "ShotLinkCoordWrapper",
+  "leftToRightCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10285.956,
+      "tourcastY": 7323.294,
+      "tourcastZ": 806.731,
+      "enhancedX": 0.5508654449274882,
+      "enhancedY": 0.28060550720448363
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10285.38,
+      "tourcastY": 7321.16,
+      "tourcastZ": 806.69,
+      "enhancedX": 0.5486905389631025,
+      "enhancedY": 0.2971217481787539
+    }
+  },
+  "bottomToTopCoords": {
+    "__typename": "ShotLinkCoordinates",
+    "fromCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10285.956,
+      "tourcastY": 7323.294,
+      "tourcastZ": 806.731,
+      "enhancedX": 0.4254605616988066,
+      "enhancedY": 0.4473874211985106
+    },
+    "toCoords": {
+      "__typename": "StrokeCoordinates",
+      "x": -1,
+      "y": -1,
+      "z": -1,
+      "tourcastX": 10285.38,
+      "tourcastY": 7321.16,
+      "tourcastZ": 806.69,
+      "enhancedX": 0.43634185035389,
+      "enhancedY": 0.4496201809166879
+    }
+  }
+}
+
+videoId:
+"6403106411112"
+
+========================================
+RECURSIVE FIELD PATH SEARCH
+========================================
+hole.holePickleBottomToTopAsset.imagePath = /holes_2026_r_013_752_overhead_full_5
+hole.holePickleLeftToRightAsset.imagePath = /holes_2026_r_013_752_overhead_full_5
+hole.holePickleGreenBottomToTopAsset.imagePath = /holes_2026_r_013_752_overhead_green_5
+hole.holePickleGreenLeftToRightAsset.imagePath = /holes_2026_r_013_752_overhead_green_5
+hole.strokes[0].videoId = 6403104847112
+hole.strokes[0].radarData = [object]
+hole.strokes[0].radarData.apexHeight = 83.5
+hole.strokes[0].radarData.apexRange = 601.08
+hole.strokes[0].radarData.apexSide = 14.86
+hole.strokes[0].radarData.clubSpeed = 124.89
+hole.strokes[0].radarData.ballSpeed = 185.92
+hole.strokes[0].radarData.launchSpin = 2620.59
+hole.strokes[0].radarData.spinAxis = 2.02
+hole.strokes[0].radarData.verticalLaunchAngle = 6.35
+hole.strokes[0].radarData.horizontalLaunchAngle = 0.87
+hole.strokes[0].radarData.ballImpactMeasured = 2026-08-09T12:14:22.2940000
+hole.strokes[0].radarData.ballTrajectory = [array:1]
+hole.strokes[0].radarData.ballTrajectory[0].spinRateFit = [array:4]
+hole.strokes[0].radarData.normalizedTrajectory = [array:1]
+hole.strokes[0].radarData.normalizedTrajectory[0].spinAxis = 2.02
+hole.strokes[0].radarData.normalizedTrajectory[0].carrySide = 8.72
+hole.strokes[0].radarData.normalizedTrajectory[0].carry = 281.92
+hole.strokes[0].radarData.normalizedTrajectoryV2 = [array:1]
+hole.strokes[0].radarData.normalizedTrajectoryV2[0].spinAxis = 2.02
+hole.strokes[0].radarData.normalizedTrajectoryV2[0].carrySide = 8.72
+hole.strokes[0].radarData.normalizedTrajectoryV2[0].carry = 281.92
+hole.strokes[1].videoId = 6403106402112
+hole.strokes[1].radarData = [object]
+hole.strokes[1].radarData.apexHeight = 97.41
+hole.strokes[1].radarData.apexRange = 332.71
+hole.strokes[1].radarData.apexSide = 6.86
+hole.strokes[1].radarData.clubSpeed = 0
+hole.strokes[1].radarData.ballSpeed = 126.82
+hole.strokes[1].radarData.launchSpin = 0
+hole.strokes[1].radarData.spinAxis = -1.56
+hole.strokes[1].radarData.verticalLaunchAngle = 15.14
+hole.strokes[1].radarData.horizontalLaunchAngle = 1.49
+hole.strokes[1].radarData.ballImpactMeasured = 2026-08-09T12:20:10.7290000
+hole.strokes[1].radarData.ballTrajectory = [array:1]
+hole.strokes[1].radarData.ballTrajectory[0].spinRateFit = [array:4]
+hole.strokes[1].radarData.normalizedTrajectory = [array:0]
+hole.strokes[1].radarData.normalizedTrajectoryV2 = [array:0]
+hole.strokes[2].ballPath = [object]
+hole.strokes[2].ballPath.path = [array:34]
+hole.strokes[3].videoId = 6403106411112
+hole.enhancedPickle.leftToRightAsset.imagePath = /tourcastPickle/holes_2026_r_013_752_overhead_full_5_land
+hole.enhancedPickle.bottomToTopAsset.imagePath = /tourcastPickle/holes_2026_r_013_752_overhead_full_5_port
+hole.enhancedPickle.greenLeftToRightAsset.imagePath = /tourcastPickle/holes_2026_r_013_752_overhead_green_5_land
+hole.enhancedPickle.greenBottomToTopAsset.imagePath = /tourcastPickle/holes_2026_r_013_752_overhead_green_5_port

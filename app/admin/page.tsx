@@ -1,134 +1,433 @@
 "use client";
 
 import Link from "next/link";
+
 import AppNav from "@/components/AppNav";
 
-const adminGroups = [
-  {
-    title: "Slates & Draft",
-    description: "Create, configure, and maintain fantasy slates.",
-    cards: [
+import {
+  useSelectedSport,
+} from "@/components/providers/SportProvider";
+
+import {
+  getSportConfig,
+} from "@/lib/sports";
+
+type AdminCard = {
+  href: string;
+  title: string;
+  description: string;
+};
+
+type AdminGroup = {
+  title: string;
+  description: string;
+  cards: AdminCard[];
+};
+
+const NOTIFICATION_CARDS:
+  AdminCard[] = [
+    {
+      href:
+        "/admin/notification-templates",
+
+      title:
+        "Notification Templates",
+
+      description:
+        "Control notification wording, timing, and sport-specific message settings.",
+    },
+    {
+      href:
+        "/admin/notification-history",
+
+      title:
+        "Notification Monitor",
+
+      description:
+        "Audit delivery results, failures, recipients, devices, and notification diagnostics.",
+    },
+  ];
+
+const FANTASY_SLATE_CARDS:
+  AdminCard[] = [
+    {
+      href:
+        "/slates/new",
+
+      title:
+        "Create Slate",
+
+      description:
+        "Choose dates, participating teams, and the initial draft order.",
+    },
+    {
+      href:
+        "/admin/slates",
+
+      title:
+        "Manage Slates",
+
+      description:
+        "Edit slate settings, participation, order, lock status, and reseeding.",
+    },
+    {
+      href:
+        "/admin/corrections",
+
+      title:
+        "Corrections",
+
+      description:
+        "Fix historical rosters, stats, totals, and finish positions.",
+    },
+  ];
+
+function getAdminGroups(
+  sport: string,
+): AdminGroup[] {
+  if (
+    sport === "ncaa"
+  ) {
+    return [
       {
-        href: "/slates/new",
-        title: "Create Slate",
+        title:
+          "Pick 'Em Operations",
+
         description:
-          "Choose dates, participating teams, and the initial draft order.",
+          "Manage the weekly NCAA Pick 'Em card and commissioner controls.",
+
+        cards: [
+          {
+            href:
+              "/admin/ncaa-pickem",
+
+            title:
+              "NCAA Pick 'Em",
+
+            description:
+              "Refresh weekly games, choose commissioner-added matchups, and control the weekly lock.",
+          },
+        ],
       },
       {
-        href: "/admin/slates",
-        title: "Manage Slates",
+        title:
+          "Notifications",
+
         description:
-          "Edit slate settings, participation, order, lock status, and reseeding.",
+          "Control Pick 'Em reminders and review delivery results.",
+
+        cards:
+          NOTIFICATION_CARDS,
+      },
+    ];
+  }
+
+  if (
+    sport === "nfl"
+  ) {
+    return [
+      {
+        title:
+          "Slates & Draft",
+
+        description:
+          "Create, configure, and maintain NFL fantasy slates.",
+
+        cards:
+          FANTASY_SLATE_CARDS,
       },
       {
-        href: "/admin/slate-games",
-        title: "Slate NBA Games",
+        title:
+          "Notifications",
+
         description:
-          "Attach exact NBA game IDs for reliable multi-day refreshes.",
+          "Control NFL push notification wording and review delivery results.",
+
+        cards:
+          NOTIFICATION_CARDS,
       },
       {
-        href: "/admin/corrections",
-        title: "Corrections",
+        title:
+          "Players & League",
+
         description:
-          "Fix historical rosters, stats, totals, and finish positions.",
+          "Maintain NFL player records and league settings.",
+
+        cards: [
+          {
+            href:
+              "/admin/players-nfl",
+
+            title:
+              "Manage NFL Players",
+
+            description:
+              "Edit positions, teams, active status, and availability for NFL players.",
+          },
+          {
+            href:
+              "/admin/league-awards",
+
+            title:
+              "League Awards",
+
+            description:
+              "Create and manage custom seasonal awards for each league member.",
+          },
+        ],
       },
-    ],
-  },
-  {
-    title: "Notifications",
-    description:
-      "Control push notification wording and review delivery results.",
-    cards: [
+    ];
+  }
+
+  if (
+    sport === "golf"
+  ) {
+    return [
       {
-        href: "/admin/notification-templates",
-        title: "Notification Templates",
+        title:
+          "Slates & Draft",
+
         description:
-          "Edit draft-turn, final-pick, and player-finished messages.",
+          "Create, configure, and maintain Golf tournament slates.",
+
+        cards:
+          FANTASY_SLATE_CARDS,
       },
       {
-        href: "/admin/notification-history",
-        title: "Notification Monitor",
+        title:
+          "Notifications",
+
         description:
-          "Audit delivery results, failures, recipients, devices, and notification diagnostics.",
-      },
-    ],
-  },
-  {
-    title: "Players & League",
-    description: "Maintain player records and future league settings.",
-    cards: [
-      {
-        href: "/admin/players",
-        title: "Manage NBA Players",
-        description:
-          "Edit names, NBA IDs, teams, active status, and availability.",
+          "Control Golf push notification wording and review delivery results.",
+
+        cards:
+          NOTIFICATION_CARDS,
       },
       {
-        href: "/admin/players-nfl",
-        title: "Manage NFL Players",
+        title:
+          "League",
+
         description:
-          "Edit positions, teams, and active status for NFL players.",
+          "Manage Golf league awards and season recognition.",
+
+        cards: [
+          {
+            href:
+              "/admin/league-awards",
+
+            title:
+              "League Awards",
+
+            description:
+              "Create and manage custom seasonal awards for each league member.",
+          },
+        ],
       },
-      {
-        href: "/admin/league-awards",
-        title: "League Awards",
-        description:
-          "Create and manage custom seasonal awards for each league member.",
-      },
-    ],
-  },
-];
+    ];
+  }
+
+  /*
+   * NBA is the default sport.
+   */
+  return [
+    {
+      title:
+        "Slates & Draft",
+
+      description:
+        "Create, configure, and maintain NBA fantasy slates.",
+
+      cards: [
+        {
+          href:
+            "/slates/new",
+
+          title:
+            "Create Slate",
+
+          description:
+            "Choose dates, participating teams, and the initial draft order.",
+        },
+        {
+          href:
+            "/admin/slates",
+
+          title:
+            "Manage Slates",
+
+          description:
+            "Edit slate settings, participation, order, lock status, and reseeding.",
+        },
+        {
+          href:
+            "/admin/slate-games",
+
+          title:
+            "Slate NBA Games",
+
+          description:
+            "Attach exact NBA game IDs for reliable multi-day refreshes.",
+        },
+        {
+          href:
+            "/admin/corrections",
+
+          title:
+            "Corrections",
+
+          description:
+            "Fix historical rosters, stats, totals, and finish positions.",
+        },
+      ],
+    },
+    {
+      title:
+        "Notifications",
+
+      description:
+        "Control NBA push notification wording and review delivery results.",
+
+      cards:
+        NOTIFICATION_CARDS,
+    },
+    {
+      title:
+        "Players & League",
+
+      description:
+        "Maintain NBA player records and league settings.",
+
+      cards: [
+        {
+          href:
+            "/admin/players",
+
+          title:
+            "Manage NBA Players",
+
+          description:
+            "Edit names, NBA IDs, teams, active status, and availability.",
+        },
+        {
+          href:
+            "/admin/league-awards",
+
+          title:
+            "League Awards",
+
+          description:
+            "Create and manage custom seasonal awards for each league member.",
+        },
+      ],
+    },
+  ];
+}
 
 export default function AdminPage() {
+  const {
+    selectedSport,
+    isHydrated,
+  } =
+    useSelectedSport();
+
+  const sport =
+    getSportConfig(
+      selectedSport,
+    );
+
+  const adminGroups =
+    getAdminGroups(
+      selectedSport,
+    );
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
       <div className="mx-auto max-w-[1600px] space-y-6">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Commissioner Control Center
-          </h1>
+        {!isHydrated ? (
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 text-sm text-slate-500 shadow-sm">
+            Loading commissioner controls…
+          </section>
+        ) : (
+          <>
+            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">
+                {sport.emoji} {sport.label}
+              </div>
 
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Manage slates, players, notifications, corrections, and league
-            operations.
-          </p>
-        </section>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight">
+                Commissioner Control Center
+              </h1>
 
-        {adminGroups.map((group) => (
-          <section
-            key={group.title}
-            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <h2 className="text-xl font-semibold">{group.title}</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              {group.description}
-            </p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                {selectedSport ===
+                "ncaa"
+                  ? "Manage weekly Pick 'Em games, reminders, and commissioner operations."
+                  : `Manage ${sport.label} slates, players, notifications, corrections, and league operations.`}
+              </p>
+            </section>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {group.cards.map((card) => (
-                <Link
-                  key={card.href}
-                  href={card.href}
-                  className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-sky-300 hover:bg-sky-50"
+            {adminGroups.map(
+              (
+                group,
+              ) => (
+                <section
+                  key={
+                    group.title
+                  }
+                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
                 >
-                  <h3 className="font-semibold text-slate-950">
-                    {card.title}
-                  </h3>
+                  <h2 className="text-xl font-semibold">
+                    {
+                      group.title
+                    }
+                  </h2>
 
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {card.description}
+                  <p className="mt-1 text-sm text-slate-600">
+                    {
+                      group.description
+                    }
                   </p>
 
-                  <div className="mt-4 text-sm font-semibold text-sky-700">
-                    Open →
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    {group.cards.map(
+                      (
+                        card,
+                      ) => (
+                        <Link
+                          key={
+                            card.href
+                          }
+                          href={
+                            card.href
+                          }
+                          className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-sky-300 hover:bg-sky-50"
+                        >
+                          <h3 className="font-semibold text-slate-950">
+                            {
+                              card.title
+                            }
+                          </h3>
+
+                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                            {
+                              card.description
+                            }
+                          </p>
+
+                          <div className="mt-4 text-sm font-semibold text-sky-700">
+                            Open →
+                          </div>
+                        </Link>
+                      ),
+                    )}
                   </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ))}
+                </section>
+              ),
+            )}
+          </>
+        )}
       </div>
     </main>
   );

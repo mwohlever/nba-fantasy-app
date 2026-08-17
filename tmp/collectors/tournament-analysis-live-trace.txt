@@ -1,0 +1,486 @@
+============================================================
+TOURNAMENT ANALYSIS — LIVE DATA TRACE
+============================================================
+
+===== HOME SUMMARY RESPONSE =====
+
+===== CURRENT HOME-SUMMARY SLATE QUERY =====
+179-      { data: players, error: playersError },
+180-      { data: playerSlateStats, error: playerSlateStatsError },
+181-      { data: seasonTeamSummary, error: seasonTeamSummaryError },
+182-      { data: slateTeams, error: slateTeamsError },
+183-      { data: nbaSeasonAverages, error: nbaSeasonAveragesError },
+184-    ] = await Promise.all([
+185-      supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+186-      supabaseAdmin
+187:        .from("slates")
+188-        .select(
+189:          "id, date, start_date, end_date, is_locked, first_game_start_time, tournament_analysis, show_tournament_analysis"
+190-        )
+191-        .eq("sport", sport)
+192-        .order("start_date", { ascending: false })
+193-        .order("end_date", { ascending: false }),
+194-      supabaseAdmin
+195-        .from("team_slate_results")
+196-        .select(
+197-          "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining"
+198-        ),
+199-      supabaseAdmin
+200-        .from("lineups")
+201-        .select("id, slate_id, team_id")
+202-        .range(0, 20000),
+203-      supabaseAdmin
+204-        .from("lineup_players")
+205-        .select("lineup_id, player_id, projected_fantasy_points")
+206-        .range(0, 20000),
+207-      supabaseAdmin.from(playersTable).select(playersSelect).order("name", { ascending: true }),
+--
+1313-        ? {
+1314-            id: latestSlate.id,
+1315-            date: latestSlate.date,
+1316-            start_date: latestSlate.start_date,
+1317-            end_date: latestSlate.end_date,
+1318-            label: formatSlateLabel(latestSlate.start_date, latestSlate.end_date),
+1319-            is_locked: latestSlate.is_locked,
+1320-            first_game_start_time: latestSlate.first_game_start_time,
+1321:            tournament_analysis:
+1322:              (latestSlate as any).tournament_analysis ?? null,
+1323:            show_tournament_analysis:
+1324:              (latestSlate as any).show_tournament_analysis === true,
+1325-          }
+1326-        : null,
+1327-      nextSlate: nextSlate
+1328-        ? {
+1329-            id: nextSlate.id,
+1330-            date: nextSlate.date,
+1331-            start_date: nextSlate.start_date,
+1332-            end_date: nextSlate.end_date,
+1333-            label: formatSlateLabel(nextSlate.start_date, nextSlate.end_date),
+1334-            is_locked: nextSlate.is_locked,
+1335-            first_game_start_time: nextSlate.first_game_start_time,
+1336-          }
+1337-        : null,
+1338-      latestSlateRows,
+1339-      seasonSnapshot,
+1340-      funFacts: finalFunFacts,
+1341-      latestSeason,
+1342-    });
+
+===== CURRENT HOME RENDER BLOCK =====
+23-import type { GolfCutLine } from "@/lib/golf/cutLine";
+24-
+25-type LatestSlate = {
+26-  id: number;
+27-  date: string;
+28-  start_date: string;
+29-  end_date: string;
+30-  label: string;
+31-  display_name?: string | null;
+32-  is_locked: boolean;
+33-  first_game_start_time: string | null;
+34-  tournament_analysis?: string | null;
+35:  show_tournament_analysis?: boolean;
+36-};
+37-
+38-type LatestSlateRow = {
+39-  slate_id: number;
+40-  team_id: number;
+41-  teamName: string;
+42-  avatarUrl: string | null;
+43-  fantasy_points: number | null;
+44-  finish_position: number | null;
+45-  games_completed: number | null;
+46-  games_in_progress: number | null;
+47-  games_remaining: number | null;
+48-  projected_points?: number | null;
+49-  pregame_projected_points?: number | null;
+50-  win_probability?: number | null;
+51-  golf_status_label?: string | null;
+52-};
+53-
+54-type SeasonSnapshotRow = {
+55-  team_id: number;
+56-  name: string;
+57-  wins: number;
+58-  runner_ups: number;
+59-  avg_finish: number | null;
+60-  avg_score: number | null;
+61-  slates_played: number;
+62-};
+63-
+64-type FunFact = {
+65-  label: string;
+66-  value: string;
+67-  detail?: string;
+68-};
+69-
+70-type SeasonAwardsResponse = {
+--
+949-              </div>
+950-            </div>
+951-
+952-            <Link
+953-              href={`/lineups/scores?sport=${sport}`}
+954-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+955-            >
+956-              View Scores
+957-            </Link>
+958-          </div>
+959-
+960-          {isGolf &&
+961:          latestSlate?.show_tournament_analysis === true &&
+962-          latestSlate.tournament_analysis?.trim() ? (
+963-            <details className="group mb-4 overflow-hidden rounded-2xl border border-emerald-800/70 bg-emerald-950/25">
+964-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold text-emerald-100 [&::-webkit-details-marker]:hidden">
+965-                <span className="flex items-center gap-2">
+966-                  <span aria-hidden="true">📝</span>
+967:                  Tournament Analysis
+968-                </span>
+969-
+970-                <span
+971-                  aria-hidden="true"
+972-                  className="text-xs text-emerald-300 transition-transform group-open:rotate-180"
+973-                >
+974-                  ▼
+975-                </span>
+976-              </summary>
+977-
+978-              <div className="border-t border-emerald-900/70 px-4 py-4">
+979-                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">
+980-                  {latestSlate.tournament_analysis.trim()}
+981-                </p>
+982-              </div>
+983-            </details>
+984-          ) : null}
+985-
+986-          {isLoading ? (
+987-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+988-              Loading current slate...
+989-            </div>
+990-          ) : latestSlateRows.length === 0 ? (
+991-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+992-              No current slate data available yet.
+993-            </div>
+994-          ) : (
+995-            <>
+996-              <div
+997-                className={`mb-3 overflow-hidden rounded-2xl border ${
+998-                  isGolf
+999-                    ? "border-emerald-700/60 bg-slate-950/70"
+1000-                    : "border-slate-200 bg-slate-50"
+1001-                }`}
+1002-              >
+
+===== CURRENT ADMIN SAVE PLUMBING =====
+app/admin/slates/page.tsx-14-  date: string;
+app/admin/slates/page.tsx-15-  start_date: string | null;
+app/admin/slates/page.tsx-16-  end_date: string | null;
+app/admin/slates/page.tsx-17-  is_locked: boolean;
+app/admin/slates/page.tsx-18-  label: string;
+app/admin/slates/page.tsx-19-  sport?: SportKey;
+app/admin/slates/page.tsx-20-  display_name?: string | null;
+app/admin/slates/page.tsx-21-  external_event_id?: string | null;
+app/admin/slates/page.tsx-22-  cut_penalty_per_round?: number | null;
+app/admin/slates/page.tsx-23-  has_cut?: boolean;
+app/admin/slates/page.tsx:24:  tournament_analysis?: string | null;
+app/admin/slates/page.tsx:25:  show_tournament_analysis?: boolean;
+app/admin/slates/page.tsx-26-  nba_team_abbreviations?: string[] | null;
+app/admin/slates/page.tsx-27-};
+app/admin/slates/page.tsx-28-
+app/admin/slates/page.tsx-29-type SlateTeamRow = {
+app/admin/slates/page.tsx-30-  team_id: number;
+app/admin/slates/page.tsx-31-  team_name: string;
+app/admin/slates/page.tsx-32-  draft_order: number;
+app/admin/slates/page.tsx-33-  is_participating: boolean;
+app/admin/slates/page.tsx-34-};
+app/admin/slates/page.tsx-35-
+app/admin/slates/page.tsx-36-type GolfFieldSummary = {
+app/admin/slates/page.tsx-37-  golferCount: number;
+app/admin/slates/page.tsx-38-  lastRefreshedAt: string | null;
+app/admin/slates/page.tsx-39-};
+app/admin/slates/page.tsx-40-
+app/admin/slates/page.tsx-41-type ShotCastSummary = {
+app/admin/slates/page.tsx-42-  tournamentId: string;
+app/admin/slates/page.tsx-43-  generatedAt: string | null;
+app/admin/slates/page.tsx-44-  updatedAt: string | null;
+app/admin/slates/page.tsx-45-  summary: {
+--
+app/admin/slates/page.tsx-505-            cut_penalty_per_round:
+app/admin/slates/page.tsx-506-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx-507-                ? Number(
+app/admin/slates/page.tsx-508-                    selectedSlate.cut_penalty_per_round,
+app/admin/slates/page.tsx-509-                  )
+app/admin/slates/page.tsx-510-                : undefined,
+app/admin/slates/page.tsx-511-            has_cut:
+app/admin/slates/page.tsx-512-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx-513-                ? selectedSlate.has_cut !== false
+app/admin/slates/page.tsx-514-                : undefined,
+app/admin/slates/page.tsx:515:            tournament_analysis:
+app/admin/slates/page.tsx-516-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx:517:                ? selectedSlate.tournament_analysis ?? ""
+app/admin/slates/page.tsx-518-                : undefined,
+app/admin/slates/page.tsx:519:            show_tournament_analysis:
+app/admin/slates/page.tsx-520-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx:521:                ? selectedSlate.show_tournament_analysis === true
+app/admin/slates/page.tsx-522-                : undefined,
+app/admin/slates/page.tsx-523-            nba_team_abbreviations:
+app/admin/slates/page.tsx-524-              selectedSlate.nbaTeamsInput
+app/admin/slates/page.tsx-525-                .split(",")
+app/admin/slates/page.tsx-526-                .map((value) =>
+app/admin/slates/page.tsx-527-                  value.trim().toUpperCase(),
+app/admin/slates/page.tsx-528-                )
+app/admin/slates/page.tsx-529-                .filter(Boolean),
+app/admin/slates/page.tsx-530-            teams: normalizedTeams.map(
+app/admin/slates/page.tsx-531-              (team, index) => ({
+app/admin/slates/page.tsx-532-                team_id: team.team_id,
+app/admin/slates/page.tsx-533-                draft_order: index + 1,
+app/admin/slates/page.tsx-534-                is_participating:
+app/admin/slates/page.tsx-535-                  team.is_participating,
+app/admin/slates/page.tsx-536-              }),
+app/admin/slates/page.tsx-537-            ),
+app/admin/slates/page.tsx-538-          }),
+app/admin/slates/page.tsx-539-        },
+app/admin/slates/page.tsx-540-      );
+app/admin/slates/page.tsx-541-
+--
+app/admin/slates/page.tsx-1170-                        Write a short tournament commentary for the Home page.
+app/admin/slates/page.tsx-1171-                        Keep it hidden while drafting, then turn it on whenever
+app/admin/slates/page.tsx-1172-                        you want everyone to see it.
+app/admin/slates/page.tsx-1173-                      </p>
+app/admin/slates/page.tsx-1174-                    </div>
+app/admin/slates/page.tsx-1175-
+app/admin/slates/page.tsx-1176-                    <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/60 px-3 py-2">
+app/admin/slates/page.tsx-1177-                      <input
+app/admin/slates/page.tsx-1178-                        type="checkbox"
+app/admin/slates/page.tsx-1179-                        checked={
+app/admin/slates/page.tsx:1180:                          selectedSlate.show_tournament_analysis === true
+app/admin/slates/page.tsx-1181-                        }
+app/admin/slates/page.tsx-1182-                        onChange={(event) =>
+app/admin/slates/page.tsx-1183-                          setSelectedSlate((current) =>
+app/admin/slates/page.tsx-1184-                            current
+app/admin/slates/page.tsx-1185-                              ? {
+app/admin/slates/page.tsx-1186-                                  ...current,
+app/admin/slates/page.tsx:1187:                                  show_tournament_analysis:
+app/admin/slates/page.tsx-1188-                                    event.target.checked,
+app/admin/slates/page.tsx-1189-                                }
+app/admin/slates/page.tsx-1190-                              : current,
+app/admin/slates/page.tsx-1191-                          )
+app/admin/slates/page.tsx-1192-                        }
+app/admin/slates/page.tsx-1193-                        disabled={isBusy}
+app/admin/slates/page.tsx-1194-                        className="h-4 w-4 rounded border-slate-500"
+app/admin/slates/page.tsx-1195-                      />
+app/admin/slates/page.tsx-1196-
+app/admin/slates/page.tsx-1197-                      <span className="text-sm font-semibold text-slate-200">
+app/admin/slates/page.tsx:1198:                        {selectedSlate.show_tournament_analysis
+app/admin/slates/page.tsx-1199-                          ? "Showing on Home"
+app/admin/slates/page.tsx-1200-                          : "Hidden"}
+app/admin/slates/page.tsx-1201-                      </span>
+app/admin/slates/page.tsx-1202-                    </label>
+app/admin/slates/page.tsx-1203-                  </div>
+app/admin/slates/page.tsx-1204-
+app/admin/slates/page.tsx-1205-                  <textarea
+app/admin/slates/page.tsx-1206-                    value={
+app/admin/slates/page.tsx:1207:                      selectedSlate.tournament_analysis ?? ""
+app/admin/slates/page.tsx-1208-                    }
+app/admin/slates/page.tsx-1209-                    onChange={(event) =>
+app/admin/slates/page.tsx-1210-                      setSelectedSlate((current) =>
+app/admin/slates/page.tsx-1211-                        current
+app/admin/slates/page.tsx-1212-                          ? {
+app/admin/slates/page.tsx-1213-                              ...current,
+app/admin/slates/page.tsx:1214:                              tournament_analysis:
+app/admin/slates/page.tsx-1215-                                event.target.value,
+app/admin/slates/page.tsx-1216-                            }
+app/admin/slates/page.tsx-1217-                          : current,
+app/admin/slates/page.tsx-1218-                      )
+app/admin/slates/page.tsx-1219-                    }
+app/admin/slates/page.tsx-1220-                    disabled={isBusy}
+app/admin/slates/page.tsx-1221-                    maxLength={4000}
+app/admin/slates/page.tsx-1222-                    rows={5}
+app/admin/slates/page.tsx-1223-                    placeholder="Example: Mark's Sunday charge remains technically possible, assuming the other three teams voluntarily withdraw."
+app/admin/slates/page.tsx-1224-                    className="mt-4 w-full resize-y rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm leading-6 text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-emerald-400 disabled:opacity-60"
+app/admin/slates/page.tsx-1225-                  />
+app/admin/slates/page.tsx-1226-
+app/admin/slates/page.tsx-1227-                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
+app/admin/slates/page.tsx-1228-                    <span>
+app/admin/slates/page.tsx-1229-                      Saved with the selected tournament.
+app/admin/slates/page.tsx-1230-                    </span>
+app/admin/slates/page.tsx-1231-
+app/admin/slates/page.tsx-1232-                    <span>
+app/admin/slates/page.tsx-1233-                      {
+app/admin/slates/page.tsx-1234-                        (
+app/admin/slates/page.tsx:1235:                          selectedSlate.tournament_analysis ??
+app/admin/slates/page.tsx-1236-                          ""
+app/admin/slates/page.tsx-1237-                        ).length
+app/admin/slates/page.tsx-1238-                      }/4000
+app/admin/slates/page.tsx-1239-                    </span>
+app/admin/slates/page.tsx-1240-                  </div>
+app/admin/slates/page.tsx-1241-                </div>
+app/admin/slates/page.tsx-1242-              ) : null}
+app/admin/slates/page.tsx-1243-
+app/admin/slates/page.tsx-1244-              {selectedSlate.sport === "golf" ? (
+app/admin/slates/page.tsx-1245-                <div className="rounded-2xl border border-violet-800 bg-violet-950/25 p-4">
+app/admin/slates/page.tsx-1246-                  <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+app/admin/slates/page.tsx-1247-                    ShotCast Course Importer
+app/admin/slates/page.tsx-1248-                  </div>
+app/admin/slates/page.tsx-1249-
+app/admin/slates/page.tsx-1250-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+app/admin/slates/page.tsx-1251-                    <div className="flex-1">
+app/admin/slates/page.tsx-1252-                      <label
+app/admin/slates/page.tsx-1253-                        htmlFor="shotcast-tournament-id"
+app/admin/slates/page.tsx-1254-                        className="mb-1 block text-xs font-medium text-slate-300"
+app/admin/slates/page.tsx-1255-                      >
+--
+app/api/admin/slates/[slateId]/route.ts-15-  draft_order: number;
+app/api/admin/slates/[slateId]/route.ts-16-  is_participating: boolean;
+app/api/admin/slates/[slateId]/route.ts-17-};
+app/api/admin/slates/[slateId]/route.ts-18-
+app/api/admin/slates/[slateId]/route.ts-19-type UpdateSlateBody = {
+app/api/admin/slates/[slateId]/route.ts-20-  is_locked?: boolean;
+app/api/admin/slates/[slateId]/route.ts-21-  teams?: SlateTeamUpdate[];
+app/api/admin/slates/[slateId]/route.ts-22-  nba_team_abbreviations?: string[];
+app/api/admin/slates/[slateId]/route.ts-23-  cut_penalty_per_round?: number;
+app/api/admin/slates/[slateId]/route.ts-24-  has_cut?: boolean;
+app/api/admin/slates/[slateId]/route.ts:25:  tournament_analysis?: string;
+app/api/admin/slates/[slateId]/route.ts:26:  show_tournament_analysis?: boolean;
+app/api/admin/slates/[slateId]/route.ts-27-};
+app/api/admin/slates/[slateId]/route.ts-28-
+app/api/admin/slates/[slateId]/route.ts-29-type RouteContext = {
+app/api/admin/slates/[slateId]/route.ts-30-  params: Promise<{
+app/api/admin/slates/[slateId]/route.ts-31-    slateId: string;
+app/api/admin/slates/[slateId]/route.ts-32-  }>;
+app/api/admin/slates/[slateId]/route.ts-33-};
+app/api/admin/slates/[slateId]/route.ts-34-
+app/api/admin/slates/[slateId]/route.ts-35-export async function GET(_: NextRequest, context: RouteContext) {
+app/api/admin/slates/[slateId]/route.ts-36-  const authError = await requireAdminApi();
+app/api/admin/slates/[slateId]/route.ts-37-  if (authError) return authError;
+app/api/admin/slates/[slateId]/route.ts-38-
+app/api/admin/slates/[slateId]/route.ts-39-  try {
+app/api/admin/slates/[slateId]/route.ts-40-    const { slateId: slateIdParam } = await context.params;
+app/api/admin/slates/[slateId]/route.ts-41-    const slateId = Number(slateIdParam);
+app/api/admin/slates/[slateId]/route.ts-42-
+app/api/admin/slates/[slateId]/route.ts-43-    if (!Number.isFinite(slateId)) {
+app/api/admin/slates/[slateId]/route.ts-44-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-45-        { error: "Invalid slate id." },
+app/api/admin/slates/[slateId]/route.ts-46-        { status: 400 }
+--
+app/api/admin/slates/[slateId]/route.ts-53-      { data: slateTeams, error: slateTeamsError },
+app/api/admin/slates/[slateId]/route.ts-54-      {
+app/api/admin/slates/[slateId]/route.ts-55-        data: golfFieldRows,
+app/api/admin/slates/[slateId]/route.ts-56-        error: golfFieldError,
+app/api/admin/slates/[slateId]/route.ts-57-        count: golfFieldCount,
+app/api/admin/slates/[slateId]/route.ts-58-      },
+app/api/admin/slates/[slateId]/route.ts-59-    ] = await Promise.all([
+app/api/admin/slates/[slateId]/route.ts-60-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-61-        .from("slates")
+app/api/admin/slates/[slateId]/route.ts-62-        .select(
+app/api/admin/slates/[slateId]/route.ts:63:          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, tournament_analysis, show_tournament_analysis, nba_team_abbreviations"
+app/api/admin/slates/[slateId]/route.ts-64-        )
+app/api/admin/slates/[slateId]/route.ts-65-        .eq("id", slateId)
+app/api/admin/slates/[slateId]/route.ts-66-        .single(),
+app/api/admin/slates/[slateId]/route.ts-67-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-68-        .from("teams")
+app/api/admin/slates/[slateId]/route.ts-69-        .select("id, name")
+app/api/admin/slates/[slateId]/route.ts-70-        .order("name", { ascending: true }),
+app/api/admin/slates/[slateId]/route.ts-71-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-72-        .from("slate_teams")
+app/api/admin/slates/[slateId]/route.ts-73-        .select("slate_id, team_id, draft_order, is_participating")
+app/api/admin/slates/[slateId]/route.ts-74-        .eq("slate_id", slateId),
+app/api/admin/slates/[slateId]/route.ts-75-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-76-        .from("golf_event_players")
+app/api/admin/slates/[slateId]/route.ts-77-        .select("updated_at", {
+app/api/admin/slates/[slateId]/route.ts-78-          count: "exact",
+app/api/admin/slates/[slateId]/route.ts-79-        })
+app/api/admin/slates/[slateId]/route.ts-80-        .eq("slate_id", slateId)
+app/api/admin/slates/[slateId]/route.ts-81-        .order("updated_at", {
+app/api/admin/slates/[slateId]/route.ts-82-          ascending: false,
+app/api/admin/slates/[slateId]/route.ts-83-        })
+--
+app/api/admin/slates/[slateId]/route.ts-186-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-187-      );
+app/api/admin/slates/[slateId]/route.ts-188-    }
+app/api/admin/slates/[slateId]/route.ts-189-
+app/api/admin/slates/[slateId]/route.ts-190-    const teams = body.teams ?? [];
+app/api/admin/slates/[slateId]/route.ts-191-    const isLocked = body.is_locked;
+app/api/admin/slates/[slateId]/route.ts-192-    const rawCutPenalty = Number(body.cut_penalty_per_round);
+app/api/admin/slates/[slateId]/route.ts-193-    const hasCut = body.has_cut;
+app/api/admin/slates/[slateId]/route.ts-194-
+app/api/admin/slates/[slateId]/route.ts-195-    const tournamentAnalysis =
+app/api/admin/slates/[slateId]/route.ts:196:      typeof body.tournament_analysis === "string"
+app/api/admin/slates/[slateId]/route.ts:197:        ? body.tournament_analysis.trim()
+app/api/admin/slates/[slateId]/route.ts-198-        : "";
+app/api/admin/slates/[slateId]/route.ts-199-
+app/api/admin/slates/[slateId]/route.ts-200-    const showTournamentAnalysis =
+app/api/admin/slates/[slateId]/route.ts:201:      body.show_tournament_analysis;
+app/api/admin/slates/[slateId]/route.ts-202-
+app/api/admin/slates/[slateId]/route.ts-203-    const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
+app/api/admin/slates/[slateId]/route.ts-204-      .map((value) => normalizeNbaTeamCode(value))
+app/api/admin/slates/[slateId]/route.ts-205-      .filter(Boolean);
+app/api/admin/slates/[slateId]/route.ts-206-
+app/api/admin/slates/[slateId]/route.ts-207-    if (!Array.isArray(teams) || teams.length === 0) {
+app/api/admin/slates/[slateId]/route.ts-208-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-209-        { error: "At least one team config is required." },
+app/api/admin/slates/[slateId]/route.ts-210-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-211-      );
+app/api/admin/slates/[slateId]/route.ts-212-    }
+app/api/admin/slates/[slateId]/route.ts-213-
+app/api/admin/slates/[slateId]/route.ts-214-    if (tournamentAnalysis.length > 4000) {
+app/api/admin/slates/[slateId]/route.ts-215-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-216-        {
+app/api/admin/slates/[slateId]/route.ts-217-          error:
+app/api/admin/slates/[slateId]/route.ts-218-            "Tournament Analysis must be 4,000 characters or fewer.",
+app/api/admin/slates/[slateId]/route.ts-219-        },
+app/api/admin/slates/[slateId]/route.ts-220-        { status: 400 },
+app/api/admin/slates/[slateId]/route.ts-221-      );
+--
+app/api/admin/slates/[slateId]/route.ts-262-        },
+app/api/admin/slates/[slateId]/route.ts-263-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-264-      );
+app/api/admin/slates/[slateId]/route.ts-265-    }
+app/api/admin/slates/[slateId]/route.ts-266-
+app/api/admin/slates/[slateId]/route.ts-267-    const slateUpdatePayload: {
+app/api/admin/slates/[slateId]/route.ts-268-      is_locked?: boolean;
+app/api/admin/slates/[slateId]/route.ts-269-      nba_team_abbreviations?: string[];
+app/api/admin/slates/[slateId]/route.ts-270-      cut_penalty_per_round?: number;
+app/api/admin/slates/[slateId]/route.ts-271-      has_cut?: boolean;
+app/api/admin/slates/[slateId]/route.ts:272:      tournament_analysis?: string | null;
+app/api/admin/slates/[slateId]/route.ts:273:      show_tournament_analysis?: boolean;
+app/api/admin/slates/[slateId]/route.ts-274-    } = {
+app/api/admin/slates/[slateId]/route.ts-275-      nba_team_abbreviations: nbaTeamAbbreviations,
+app/api/admin/slates/[slateId]/route.ts-276-    };
+app/api/admin/slates/[slateId]/route.ts-277-
+app/api/admin/slates/[slateId]/route.ts-278-    if (existingSlate.sport === "golf") {
+app/api/admin/slates/[slateId]/route.ts-279-      slateUpdatePayload.cut_penalty_per_round =
+app/api/admin/slates/[slateId]/route.ts-280-        rawCutPenalty;
+app/api/admin/slates/[slateId]/route.ts-281-
+app/api/admin/slates/[slateId]/route.ts-282-      if (typeof hasCut === "boolean") {
+app/api/admin/slates/[slateId]/route.ts-283-        slateUpdatePayload.has_cut = hasCut;
+app/api/admin/slates/[slateId]/route.ts-284-      }
+app/api/admin/slates/[slateId]/route.ts-285-
+app/api/admin/slates/[slateId]/route.ts:286:      slateUpdatePayload.tournament_analysis =
+app/api/admin/slates/[slateId]/route.ts-287-        tournamentAnalysis || null;
+app/api/admin/slates/[slateId]/route.ts-288-
+app/api/admin/slates/[slateId]/route.ts-289-      if (
+app/api/admin/slates/[slateId]/route.ts-290-        typeof showTournamentAnalysis ===
+app/api/admin/slates/[slateId]/route.ts-291-        "boolean"
+app/api/admin/slates/[slateId]/route.ts-292-      ) {
+app/api/admin/slates/[slateId]/route.ts:293:        slateUpdatePayload.show_tournament_analysis =
+app/api/admin/slates/[slateId]/route.ts-294-          showTournamentAnalysis;
+app/api/admin/slates/[slateId]/route.ts-295-      }
+app/api/admin/slates/[slateId]/route.ts-296-    }
+app/api/admin/slates/[slateId]/route.ts-297-
+app/api/admin/slates/[slateId]/route.ts-298-    if (typeof isLocked === "boolean") {
+app/api/admin/slates/[slateId]/route.ts-299-      slateUpdatePayload.is_locked = isLocked;
+app/api/admin/slates/[slateId]/route.ts-300-    }
+app/api/admin/slates/[slateId]/route.ts-301-
+app/api/admin/slates/[slateId]/route.ts-302-    const { error: slateUpdateError } = await supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-303-      .from("slates")
+app/api/admin/slates/[slateId]/route.ts-304-      .update(slateUpdatePayload)
+app/api/admin/slates/[slateId]/route.ts-305-      .eq("id", slateId);
+app/api/admin/slates/[slateId]/route.ts-306-
+app/api/admin/slates/[slateId]/route.ts-307-    if (slateUpdateError) {
+app/api/admin/slates/[slateId]/route.ts-308-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-309-        { error: `Failed to update slate: ${slateUpdateError.message}` },
+app/api/admin/slates/[slateId]/route.ts-310-        { status: 500 }
+app/api/admin/slates/[slateId]/route.ts-311-      );
+app/api/admin/slates/[slateId]/route.ts-312-    }
+app/api/admin/slates/[slateId]/route.ts-313-

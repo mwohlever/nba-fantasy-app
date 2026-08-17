@@ -1,0 +1,1612 @@
+============================================================
+NOTIFICATION LEDGER DESIGN COLLECTOR
+Generated: Thu Aug 13 08:49:52 PM EDT 2026
+============================================================
+
+============================================================
+1. CURRENT NOTIFICATION HISTORY SCHEMA / SQL
+============================================================
+supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./lib/notifications.ts:40:    .from("notification_history")
+./lib/notifications.ts:77:        .from("notification_history")
+./lib/notifications.ts:106:        .from("notification_history")
+./lib/notifications.ts:140:        .from("notification_history")
+./lib/notifications.ts:168:        .from("notification_history")
+./supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./golf-admin-notifications-modal-current.txt:9704:      .from("notification_history")
+./golf-admin-notifications-modal-current.txt:10972:    .from("notification_history")
+./golf-admin-notifications-modal-current.txt:11009:        .from("notification_history")
+./golf-admin-notifications-modal-current.txt:11038:        .from("notification_history")
+./golf-admin-notifications-modal-current.txt:11072:        .from("notification_history")
+./golf-admin-notifications-modal-current.txt:11100:        .from("notification_history")
+./golf-admin-notifications-modal-current.txt:13617:      .from("notification_history")
+./golf-admin-notifications-modal-current.txt:32244:    .from("notification_history")
+./golf-admin-notifications-modal-current.txt:32281:        .from("notification_history")
+./golf-admin-notifications-modal-current.txt:32310:        .from("notification_history")
+./golf-admin-notifications-modal-current.txt:32344:        .from("notification_history")
+./golf-admin-notifications-modal-current.txt:32372:        .from("notification_history")
+./golf-notifications-current.txt:1695:      .from("notification_history")
+./golf-notifications-current.txt:2963:    .from("notification_history")
+./golf-notifications-current.txt:3000:        .from("notification_history")
+./golf-notifications-current.txt:3029:        .from("notification_history")
+./golf-notifications-current.txt:3063:        .from("notification_history")
+./golf-notifications-current.txt:3091:        .from("notification_history")
+./golf-notifications-current.txt:4166:      .from("notification_history")
+./golf-notifications-current.txt:5035:    .from("notification_history")
+./golf-notifications-current.txt:5072:        .from("notification_history")
+./golf-notifications-current.txt:5101:        .from("notification_history")
+./golf-notifications-current.txt:5135:        .from("notification_history")
+./golf-notifications-current.txt:5163:        .from("notification_history")
+./golf-round-finished-notification-current.txt:5247:      .from("notification_history")
+./golf-round-finished-notification-current.txt:10639:    .from("notification_history")
+./golf-round-finished-notification-current.txt:10676:        .from("notification_history")
+./golf-round-finished-notification-current.txt:10705:        .from("notification_history")
+./golf-round-finished-notification-current.txt:10739:        .from("notification_history")
+./golf-round-finished-notification-current.txt:10767:        .from("notification_history")
+./golf-background-finalization-current.txt:49689:app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./golf-background-finalization-current.txt:49743:lib/notifications.ts:40:    .from("notification_history")
+./golf-background-finalization-current.txt:49746:lib/notifications.ts:77:        .from("notification_history")
+./golf-background-finalization-current.txt:49747:lib/notifications.ts:106:        .from("notification_history")
+./golf-background-finalization-current.txt:49748:lib/notifications.ts:140:        .from("notification_history")
+./golf-background-finalization-current.txt:49749:lib/notifications.ts:168:        .from("notification_history")
+./tmp/golf-notification-bug-collector.txt:469:app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./tmp/golf-notification-bug-collector.txt:481:lib/notifications.ts:40:    .from("notification_history")
+./tmp/golf-notification-bug-collector.txt:482:lib/notifications.ts:77:        .from("notification_history")
+./tmp/golf-notification-bug-collector.txt:483:lib/notifications.ts:106:        .from("notification_history")
+./tmp/golf-notification-bug-collector.txt:484:lib/notifications.ts:140:        .from("notification_history")
+./tmp/golf-notification-bug-collector.txt:485:lib/notifications.ts:168:        .from("notification_history")
+./tmp/notification-system-full-collector.txt:44:    .from("notification_history")
+./tmp/notification-system-full-collector.txt:81:        .from("notification_history")
+./tmp/notification-system-full-collector.txt:110:        .from("notification_history")
+./tmp/notification-system-full-collector.txt:144:        .from("notification_history")
+./tmp/notification-system-full-collector.txt:172:        .from("notification_history")
+./tmp/notification-system-full-collector.txt:516:      .from("notification_history")
+./tmp/notification-system-full-collector.txt:1671:supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./tmp/notification-system-full-collector.txt:1675:./supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./tmp/notification-system-full-collector.txt:1679:./golf-final-notification-collector.txt:25942:supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./tmp/notification-system-full-collector.txt:1683:./golf-final-notification-collector.txt:26523:./supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./tmp/notification-ledger-design-collector.txt:9:supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./tmp/notification-ledger-design-collector.txt:10:./app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:11:./lib/notifications.ts:40:    .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:12:./lib/notifications.ts:77:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:13:./lib/notifications.ts:106:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:14:./lib/notifications.ts:140:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:15:./lib/notifications.ts:168:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:16:./supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./tmp/notification-ledger-design-collector.txt:17:./golf-admin-notifications-modal-current.txt:9704:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:18:./golf-admin-notifications-modal-current.txt:10972:    .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:19:./golf-admin-notifications-modal-current.txt:11009:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:20:./golf-admin-notifications-modal-current.txt:11038:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:21:./golf-admin-notifications-modal-current.txt:11072:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:22:./golf-admin-notifications-modal-current.txt:11100:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:23:./golf-admin-notifications-modal-current.txt:13617:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:24:./golf-admin-notifications-modal-current.txt:32244:    .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:25:./golf-admin-notifications-modal-current.txt:32281:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:26:./golf-admin-notifications-modal-current.txt:32310:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:27:./golf-admin-notifications-modal-current.txt:32344:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:28:./golf-admin-notifications-modal-current.txt:32372:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:29:./golf-notifications-current.txt:1695:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:30:./golf-notifications-current.txt:2963:    .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:31:./golf-notifications-current.txt:3000:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:32:./golf-notifications-current.txt:3029:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:33:./golf-notifications-current.txt:3063:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:34:./golf-notifications-current.txt:3091:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:35:./golf-notifications-current.txt:4166:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:36:./golf-notifications-current.txt:5035:    .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:37:./golf-notifications-current.txt:5072:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:38:./golf-notifications-current.txt:5101:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:39:./golf-notifications-current.txt:5135:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:40:./golf-notifications-current.txt:5163:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:41:./golf-round-finished-notification-current.txt:5247:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:42:./golf-round-finished-notification-current.txt:10639:    .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:43:./golf-round-finished-notification-current.txt:10676:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:44:./golf-round-finished-notification-current.txt:10705:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:45:./golf-round-finished-notification-current.txt:10739:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:46:./golf-round-finished-notification-current.txt:10767:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:47:./golf-background-finalization-current.txt:49689:app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:48:./golf-background-finalization-current.txt:49743:lib/notifications.ts:40:    .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:49:./golf-background-finalization-current.txt:49746:lib/notifications.ts:77:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:50:./golf-background-finalization-current.txt:49747:lib/notifications.ts:106:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:51:./golf-background-finalization-current.txt:49748:lib/notifications.ts:140:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:52:./golf-background-finalization-current.txt:49749:lib/notifications.ts:168:        .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:53:./tmp/golf-notification-bug-collector.txt:469:app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./tmp/notification-ledger-design-collector.txt:54:./tmp/golf-notification-bug-collector.txt:481:lib/notifications.ts:40:    .from("notification_history")
+./golf-standings-history-collector.txt:655:      .from("notification_history")
+./golf-season-stats-next-collector.txt:4656:      .from("notification_history")
+./golf-final-notification-collector.txt:206:app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./golf-final-notification-collector.txt:328:lib/notifications.ts:40:    .from("notification_history")
+./golf-final-notification-collector.txt:329:lib/notifications.ts:77:        .from("notification_history")
+./golf-final-notification-collector.txt:330:lib/notifications.ts:106:        .from("notification_history")
+./golf-final-notification-collector.txt:332:lib/notifications.ts:140:        .from("notification_history")
+./golf-final-notification-collector.txt:333:lib/notifications.ts:168:        .from("notification_history")
+./golf-final-notification-collector.txt:7386:      .from("notification_history")
+./golf-final-notification-collector.txt:22784:    .from("notification_history")
+./golf-final-notification-collector.txt:22821:        .from("notification_history")
+./golf-final-notification-collector.txt:22850:        .from("notification_history")
+./golf-final-notification-collector.txt:22884:        .from("notification_history")
+./golf-final-notification-collector.txt:22912:        .from("notification_history")
+./golf-final-notification-collector.txt:25942:supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./golf-final-notification-collector.txt:26150:./app/api/admin/notification-history/route.ts:55:      .from("notification_history")
+./golf-final-notification-collector.txt:26396:./lib/notifications.ts:40:    .from("notification_history")
+./golf-final-notification-collector.txt:26400:./lib/notifications.ts:77:        .from("notification_history")
+./golf-final-notification-collector.txt:26401:./lib/notifications.ts:106:        .from("notification_history")
+./golf-final-notification-collector.txt:26402:./lib/notifications.ts:140:        .from("notification_history")
+./golf-final-notification-collector.txt:26404:./lib/notifications.ts:168:        .from("notification_history")
+./golf-final-notification-collector.txt:26523:./supabase/notification-preferences.sql:1:create table if not exists public.notification_preferences (
+./golf-final-notification-collector.txt:27075:./golf-admin-notifications-modal-current.txt:9704:      .from("notification_history")
+./golf-final-notification-collector.txt:27131:./golf-admin-notifications-modal-current.txt:10972:    .from("notification_history")
+./golf-final-notification-collector.txt:27135:./golf-admin-notifications-modal-current.txt:11009:        .from("notification_history")
+./golf-final-notification-collector.txt:27136:./golf-admin-notifications-modal-current.txt:11038:        .from("notification_history")
+./golf-final-notification-collector.txt:27137:./golf-admin-notifications-modal-current.txt:11072:        .from("notification_history")
+./golf-final-notification-collector.txt:27139:./golf-admin-notifications-modal-current.txt:11100:        .from("notification_history")
+./golf-final-notification-collector.txt:27175:./golf-admin-notifications-modal-current.txt:13617:      .from("notification_history")
+./golf-final-notification-collector.txt:27322:./golf-admin-notifications-modal-current.txt:32244:    .from("notification_history")
+./golf-final-notification-collector.txt:27326:./golf-admin-notifications-modal-current.txt:32281:        .from("notification_history")
+./golf-final-notification-collector.txt:27327:./golf-admin-notifications-modal-current.txt:32310:        .from("notification_history")
+./golf-final-notification-collector.txt:27328:./golf-admin-notifications-modal-current.txt:32344:        .from("notification_history")
+./golf-final-notification-collector.txt:27330:./golf-admin-notifications-modal-current.txt:32372:        .from("notification_history")
+./golf-final-notification-collector.txt:27447:./golf-notifications-current.txt:1695:      .from("notification_history")
+./golf-final-notification-collector.txt:27503:./golf-notifications-current.txt:2963:    .from("notification_history")
+./golf-final-notification-collector.txt:27507:./golf-notifications-current.txt:3000:        .from("notification_history")
+./golf-final-notification-collector.txt:27508:./golf-notifications-current.txt:3029:        .from("notification_history")
+./golf-final-notification-collector.txt:27509:./golf-notifications-current.txt:3063:        .from("notification_history")
+./golf-final-notification-collector.txt:27511:./golf-notifications-current.txt:3091:        .from("notification_history")
+./golf-final-notification-collector.txt:27571:./golf-notifications-current.txt:4166:      .from("notification_history")
+./golf-final-notification-collector.txt:27614:./golf-notifications-current.txt:5035:    .from("notification_history")
+./golf-final-notification-collector.txt:27618:./golf-notifications-current.txt:5072:        .from("notification_history")
+./golf-final-notification-collector.txt:27619:./golf-notifications-current.txt:5101:        .from("notification_history")
+./golf-final-notification-collector.txt:27620:./golf-notifications-current.txt:5135:        .from("notification_history")
+./golf-final-notification-collector.txt:27622:./golf-notifications-current.txt:5163:        .from("notification_history")
+
+============================================================
+2. GOLF EVENT PLAYER / ROUND SCHEMA REFERENCES
+============================================================
+supabase/golf-foundation.sql:35:create table if not exists public.golf_event_players (
+supabase/golf-foundation.sql:51:  rounds_completed integer not null default 0,
+supabase/golf-foundation.sql:52:  holes_completed integer not null default 0,
+supabase/golf-foundation.sql:53:  current_round integer,
+supabase/golf-foundation.sql:63:  constraint golf_event_players_unique
+supabase/golf-foundation.sql:66:  constraint golf_event_players_status_check
+supabase/golf-foundation.sql:79:  constraint golf_event_players_penalty_check
+supabase/golf-foundation.sql:82:  constraint golf_event_players_rounds_completed_check
+supabase/golf-foundation.sql:83:    check (rounds_completed between 0 and 10),
+supabase/golf-foundation.sql:85:  constraint golf_event_players_holes_completed_check
+supabase/golf-foundation.sql:86:    check (holes_completed between 0 and 180),
+supabase/golf-foundation.sql:88:  constraint golf_event_players_current_round_check
+supabase/golf-foundation.sql:90:      current_round is null
+supabase/golf-foundation.sql:91:      or current_round between 1 and 10
+supabase/golf-foundation.sql:94:  constraint golf_event_players_last_hole_check
+supabase/golf-foundation.sql:101:create index if not exists golf_event_players_slate_id_idx
+supabase/golf-foundation.sql:102:  on public.golf_event_players (slate_id);
+supabase/golf-foundation.sql:104:create index if not exists golf_event_players_player_id_idx
+supabase/golf-foundation.sql:105:  on public.golf_event_players (player_id);
+supabase/golf-foundation.sql:107:create index if not exists golf_event_players_leaderboard_idx
+supabase/golf-foundation.sql:108:  on public.golf_event_players (slate_id, leaderboard_order);
+supabase/golf-foundation.sql:110:create table if not exists public.golf_rounds (
+supabase/golf-foundation.sql:113:    references public.golf_event_players(id)
+supabase/golf-foundation.sql:120:  holes_completed integer not null default 0,
+supabase/golf-foundation.sql:128:  constraint golf_rounds_unique
+supabase/golf-foundation.sql:131:  constraint golf_rounds_round_number_check
+supabase/golf-foundation.sql:134:  constraint golf_rounds_holes_completed_check
+supabase/golf-foundation.sql:135:    check (holes_completed between 0 and 18),
+supabase/golf-foundation.sql:137:  constraint golf_rounds_status_check
+supabase/golf-foundation.sql:148:create index if not exists golf_rounds_event_player_id_idx
+supabase/golf-foundation.sql:149:  on public.golf_rounds (event_player_id);
+supabase/golf-foundation.sql:154:    references public.golf_rounds(id)
+supabase/golf-foundation.sql:182:alter table public.golf_event_players enable row level security;
+supabase/golf-foundation.sql:183:alter table public.golf_rounds enable row level security;
+app/lineups/draft/page.tsx:373:          .from("golf_event_players")
+app/lineups/draft/page.tsx:382:            rounds_completed,
+app/lineups/draft/page.tsx:383:            holes_completed,
+app/lineups/draft/page.tsx:384:            current_round,
+app/lineups/draft/page.tsx:416:        rounds_completed: Number(row.rounds_completed ?? 0),
+app/lineups/draft/page.tsx:417:        holes_completed: Number(row.holes_completed ?? 0),
+app/lineups/draft/page.tsx:418:        current_round:
+app/lineups/draft/page.tsx:419:          row.current_round === null
+app/lineups/draft/page.tsx:421:            : Number(row.current_round),
+app/lineups/scores/page.tsx:104:          .from("golf_event_players")
+app/lineups/scores/page.tsx:258:            .from("golf_event_players")
+app/lineups/scores/page.tsx:367:            .from("golf_event_players")
+app/lineups/scores/page.tsx:376:              rounds_completed,
+app/lineups/scores/page.tsx:377:              holes_completed,
+app/lineups/scores/page.tsx:378:              current_round,
+app/lineups/scores/page.tsx:383:              golf_rounds (
+app/lineups/scores/page.tsx:388:                holes_completed,
+app/lineups/scores/page.tsx:430:            rounds_completed: Number(row.rounds_completed ?? 0),
+app/lineups/scores/page.tsx:431:            holes_completed: Number(row.holes_completed ?? 0),
+app/lineups/scores/page.tsx:432:            current_round:
+app/lineups/scores/page.tsx:433:              row.current_round === null
+app/lineups/scores/page.tsx:435:                : Number(row.current_round),
+app/lineups/scores/page.tsx:441:            rounds: (row.golf_rounds ?? [])
+app/lineups/scores/page.tsx:451:                holes_completed: Number(round.holes_completed ?? 0),
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:103:          .from("golf_event_players")
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:253:            .from("golf_event_players")
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:362:            .from("golf_event_players")
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:371:              rounds_completed,
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:372:              holes_completed,
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:373:              current_round,
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:378:              golf_rounds (
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:383:                holes_completed,
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:425:            rounds_completed: Number(row.rounds_completed ?? 0),
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:426:            holes_completed: Number(row.holes_completed ?? 0),
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:427:            current_round:
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:428:              row.current_round === null
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:430:                : Number(row.current_round),
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:436:            rounds: (row.golf_rounds ?? [])
+app/lineups/scores/page.tsx.bak-before-has-cut-fix:446:                holes_completed: Number(round.holes_completed ?? 0),
+app/api/lineups/route.ts:475:          .from("golf_event_players")
+app/api/player-stats/route.ts:109:        .from("golf_event_players")
+app/api/player-stats/route.ts:118:          rounds_completed,
+app/api/player-stats/route.ts:119:          holes_completed,
+app/api/player-stats/route.ts:120:          current_round,
+app/api/player-stats/route.ts:125:          golf_rounds (
+app/api/player-stats/route.ts:130:            holes_completed,
+app/api/player-stats/route.ts:211:        rounds_completed: Number(row.rounds_completed ?? 0),
+app/api/player-stats/route.ts:212:        holes_completed: Number(row.holes_completed ?? 0),
+app/api/player-stats/route.ts:213:        current_round:
+app/api/player-stats/route.ts:214:          row.current_round === null ? null : Number(row.current_round),
+app/api/player-stats/route.ts:219:        rounds: (row.golf_rounds ?? [])
+app/api/player-stats/route.ts:229:            holes_completed: Number(round.holes_completed ?? 0),
+app/api/slate-availability/route.ts:85:          .from("golf_event_players")
+app/api/slate-availability/route.ts:109:          source: "golf_event_players",
+app/api/player-history/route.ts:226:        "golf_event_players",
+app/api/player-history/route.ts:238:        rounds_completed,
+app/api/player-history/route.ts:239:        holes_completed,
+app/api/player-history/route.ts:240:        current_round,
+app/api/player-history/route.ts:241:        golf_rounds (
+app/api/player-history/route.ts:246:          holes_completed,
+app/api/player-history/route.ts:540:            eventPlayer.rounds_completed ??
+app/api/player-history/route.ts:546:            eventPlayer.holes_completed ??
+app/api/player-history/route.ts:587:          of eventPlayer.golf_rounds ??
+app/api/player-history/route.ts:597:              round.holes_completed ??
+app/api/admin/slates/[slateId]/route.ts:74:        .from("golf_event_players")
+app/api/admin/golf/import-field/route.ts:509:          rounds_completed: 0,
+app/api/admin/golf/import-field/route.ts:510:          holes_completed: 0,
+app/api/admin/golf/import-field/route.ts:511:          current_round: null,
+app/api/admin/golf/import-field/route.ts:525:      .from("golf_event_players")
+app/api/admin/golf/import-field/route.ts.before-course-metadata-sync:471:          rounds_completed: 0,
+app/api/admin/golf/import-field/route.ts.before-course-metadata-sync:472:          holes_completed: 0,
+app/api/admin/golf/import-field/route.ts.before-course-metadata-sync:473:          current_round: null,
+app/api/admin/golf/import-field/route.ts.before-course-metadata-sync:487:      .from("golf_event_players")
+app/api/player-league-profile/route.ts:476:              "golf_event_players",
+app/api/player-league-profile/route.ts:488:              rounds_completed,
+app/api/player-league-profile/route.ts:489:              holes_completed,
+app/api/player-league-profile/route.ts:490:              current_round,
+app/api/player-league-profile/route.ts:491:              golf_rounds (
+app/api/player-league-profile/route.ts:496:                holes_completed,
+app/api/player-league-profile/route.ts:643:              of eventPlayer?.golf_rounds ??
+app/api/player-league-profile/route.ts:653:                  round.holes_completed ??
+app/api/player-league-profile/route.ts:744:                eventPlayer?.rounds_completed ??
+app/api/player-league-profile/route.ts:749:                eventPlayer?.holes_completed ??
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:476:              "golf_event_players",
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:488:              rounds_completed,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:489:              holes_completed,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:490:              current_round,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:491:              golf_rounds (
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:496:                holes_completed,
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:643:              of eventPlayer?.golf_rounds ??
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:653:                  round.holes_completed ??
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:744:                eventPlayer?.rounds_completed ??
+app/api/player-league-profile/route.ts.before-final-profile-cleanup:749:                eventPlayer?.holes_completed ??
+app/api/team-slate-roster/route.ts:219:          .from("golf_event_players")
+app/api/team-slate-roster/route.ts:221:            "id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed",
+app/api/team-slate-roster/route.ts:254:        holes_completed: number;
+app/api/team-slate-roster/route.ts:263:          .from("golf_rounds")
+app/api/team-slate-roster/route.ts:265:            "event_player_id, round_number, score_to_par, score_display, strokes, holes_completed, status",
+app/api/team-slate-roster/route.ts:363:                    round?.holes_completed ??
+app/api/team-slate-roster/route.ts:416:                    ?.current_round ??
+app/api/team-slate-roster/route.ts:420:                    ?.holes_completed ??
+app/api/team-slate-roster/route.ts:424:                    ?.rounds_completed ??
+app/api/team-slate-roster/route.ts:429:                ?.current_round ??
+app/api/team-slate-roster/route.ts:436:                ?.holes_completed ??
+app/api/team-stats/route.ts:39:     *   golf_event_players
+app/api/team-stats/route.ts:40:     *   golf_rounds
+app/api/golf/hole-replay/route.ts:100:    .from("golf_event_players")
+app/api/golf/hole-replay/route.ts:102:      "id, status, rounds_completed",
+app/api/golf/hole-replay/route.ts:126:    .from("golf_rounds")
+app/api/golf/hole-replay/route.ts:278:    .from("golf_rounds")
+app/api/golf/hole-replay/route.ts:294:      holes_completed:
+app/api/golf/hole-replay/route.ts:332:      .from("golf_rounds")
+app/api/golf/hole-replay/route.ts:334:        "round_number, holes_completed",
+app/api/golf/hole-replay/route.ts:347:              row.holes_completed ?? 0,
+app/api/golf/hole-replay/route.ts:356:              row.holes_completed ?? 0,
+app/api/golf/hole-replay/route.ts:361:        .from("golf_event_players")
+app/api/golf/hole-replay/route.ts:363:          holes_completed:
+app/api/golf/hole-replay/route.ts:365:          rounds_completed:
+app/api/golf/hole-replay/route.ts:369:                eventPlayer.rounds_completed ??
+app/api/golf/hole-replay/route.ts:373:          current_round:
+app/api/golf/hole-replay/route.ts:420:    holes_completed:
+app/api/refresh-stats-golf/route.ts:1224:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts:1226:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts:1259:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts:1276:     * golf_event_players forever if ESPN simply REMOVES that golfer from
+app/api/refresh-stats-golf/route.ts:1296:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts:1298:          "id, player_id, leaderboard_order, official_score_to_par, official_score_display, penalty_strokes, fantasy_score, rounds_completed, holes_completed, current_round, last_hole, status, tee_time, tee_time_raw",
+app/api/refresh-stats-golf/route.ts:1393:                  row.holes_completed ?? 0,
+app/api/refresh-stats-golf/route.ts:1398:                  row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts:1494:            rounds_completed:
+app/api/refresh-stats-golf/route.ts:1496:            holes_completed:
+app/api/refresh-stats-golf/route.ts:1498:            current_round:
+app/api/refresh-stats-golf/route.ts:1537:            rounds_completed: 0,
+app/api/refresh-stats-golf/route.ts:1538:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts:1539:            current_round: null,
+app/api/refresh-stats-golf/route.ts:1558:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts:1609:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts:1749:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts:1929:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts:1951:            holes_completed:
+app/api/refresh-stats-golf/route.ts:2009:          holes_completed: 0,
+app/api/refresh-stats-golf/route.ts:2039:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:405:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:406:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:407:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:418:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:469:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:507:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:533:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-notifications:546:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:405:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:406:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:407:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:418:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:469:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:507:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:533:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-continuation:546:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:405:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:406:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:407:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:418:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:469:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:507:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:533:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-complete-final:546:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:395:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:397:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:430:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:461:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:462:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:463:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:474:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:525:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:563:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:589:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-notification-tournament-name:602:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:395:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:397:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:430:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:461:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:462:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:463:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:474:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:525:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:563:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:589:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-round-score-continuation:602:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:395:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:397:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:430:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:461:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:462:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:463:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:474:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:525:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:563:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:589:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-golf-finalization:602:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:396:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:398:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:431:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:462:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:463:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:464:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:475:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:526:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:564:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:590:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-pga-field-reconciliation:603:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:614:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:616:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:649:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:680:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:681:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:682:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:693:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:744:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:782:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:808:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-scheduled-round-fallback:821:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:614:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:616:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:649:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:680:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:681:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:682:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:693:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:744:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:782:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:830:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:845:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-scheduled-status-literal-fix:858:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:614:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:616:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:649:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:680:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:681:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:682:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:693:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:744:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:782:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:830:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:845:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-github-ingestion:858:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:673:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:675:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:708:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:739:        rounds_completed: competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:740:        holes_completed: competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:741:        current_round: competitor.currentRound,
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:752:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:803:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:841:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:889:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:904:        holes_completed: round.holesCompleted,
+app/api/refresh-stats-golf/route.ts.before-browser-refresh:917:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1212:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1214:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1247:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1264:     * golf_event_players forever if ESPN simply REMOVES that golfer from
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1284:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1286:          "id, player_id, leaderboard_order, official_score_to_par, official_score_display, penalty_strokes, fantasy_score, rounds_completed, holes_completed, current_round, last_hole, status, tee_time, tee_time_raw",
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1381:                  row.holes_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1386:                  row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1482:            rounds_completed:
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1484:            holes_completed:
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1486:            current_round:
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1525:            rounds_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1526:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1527:            current_round: null,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1546:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1597:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1737:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1917:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1939:            holes_completed:
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:1997:          holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-final-round-settlement:2027:          .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1212:          .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1214:            "player_id, rounds_completed, status",
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1247:                row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1264:     * golf_event_players forever if ESPN simply REMOVES that golfer from
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1284:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1286:          "id, player_id, leaderboard_order, official_score_to_par, official_score_display, penalty_strokes, fantasy_score, rounds_completed, holes_completed, current_round, last_hole, status, tee_time, tee_time_raw",
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1381:                  row.holes_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1386:                  row.rounds_completed ?? 0,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1482:            rounds_completed:
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1484:            holes_completed:
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1486:            current_round:
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1525:            rounds_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1526:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1527:            current_round: null,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1546:        .from("golf_event_players")
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1597:        .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1737:      .from("golf_rounds")
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1917:            holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1939:            holes_completed:
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:1997:          holes_completed: 0,
+app/api/refresh-stats-golf/route.ts.before-course-metadata-refresh-fix:2027:          .from("golf_rounds")
+app/api/golf-standings/route.ts:46:  holes_completed: number | null;
+app/api/golf-standings/route.ts:55:  rounds_completed: number | null;
+app/api/golf-standings/route.ts:56:  holes_completed: number | null;
+app/api/golf-standings/route.ts:57:  golf_rounds: GolfRoundRow[] | null;
+app/api/golf-standings/route.ts:199:          row.rounds_completed ?? 0,
+app/api/golf-standings/route.ts:202:          row.holes_completed ?? 0,
+app/api/golf-standings/route.ts:220:          row.holes_completed ?? 0,
+app/api/golf-standings/route.ts:223:          row.rounds_completed ?? 0,
+app/api/golf-standings/route.ts:450:          "golf_event_players",
+app/api/golf-standings/route.ts:458:          rounds_completed,
+app/api/golf-standings/route.ts:459:          holes_completed,
+app/api/golf-standings/route.ts:460:          golf_rounds (
+app/api/golf-standings/route.ts:462:            holes_completed,
+app/api/golf-standings/route.ts:841:        eventPlayer.golf_rounds ??
+app/api/golf-standings/route.ts:854:            round.holes_completed ??
+app/api/golf-standings/route.ts.before-r4-final-state:46:  holes_completed: number | null;
+app/api/golf-standings/route.ts.before-r4-final-state:55:  rounds_completed: number | null;
+app/api/golf-standings/route.ts.before-r4-final-state:56:  holes_completed: number | null;
+app/api/golf-standings/route.ts.before-r4-final-state:57:  golf_rounds: GolfRoundRow[] | null;
+app/api/golf-standings/route.ts.before-r4-final-state:195:          row.holes_completed ?? 0,
+app/api/golf-standings/route.ts.before-r4-final-state:198:          row.rounds_completed ?? 0,
+app/api/golf-standings/route.ts.before-r4-final-state:422:          "golf_event_players",
+app/api/golf-standings/route.ts.before-r4-final-state:430:          rounds_completed,
+app/api/golf-standings/route.ts.before-r4-final-state:431:          holes_completed,
+app/api/golf-standings/route.ts.before-r4-final-state:432:          golf_rounds (
+app/api/golf-standings/route.ts.before-r4-final-state:434:            holes_completed,
+app/api/golf-standings/route.ts.before-r4-final-state:813:        eventPlayer.golf_rounds ??
+app/api/golf-standings/route.ts.before-r4-final-state:826:            round.holes_completed ??
+lib/statColumns.ts:28:    { key: "current_round", label: "ROUND" },
+lib/home/golfHomeSummary.ts:37:  current_round: number | null;
+lib/home/golfHomeSummary.ts:39:  holes_completed: number | null;
+lib/home/golfHomeSummary.ts:40:  rounds_completed: number | null;
+lib/home/golfHomeSummary.ts:280:   * Final Golf state is resolved later from golf_event_players, where we have
+lib/home/golfHomeSummary.ts:386:        .from("golf_event_players")
+lib/home/golfHomeSummary.ts:388:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed, tee_time, tee_time_raw",
+lib/home/golfHomeSummary.ts:438:        .from("golf_rounds")
+lib/home/golfHomeSummary.ts:596:          player.current_round ??
+lib/home/golfHomeSummary.ts:598:              Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts:611:          player.holes_completed ?? 0,
+lib/home/golfHomeSummary.ts:618:          player.rounds_completed ?? 0,
+lib/home/golfHomeSummary.ts:625:          player.current_round ??
+lib/home/golfHomeSummary.ts:635:       * golf_event_players.holes_completed is cumulative for the
+lib/home/golfHomeSummary.ts:809:        player.rounds_completed ?? 0,
+lib/home/golfHomeSummary.ts:813:        player.holes_completed ?? 0,
+lib/home/golfHomeSummary.ts:817:        player.current_round ?? 0,
+lib/home/golfHomeSummary.ts:986:            player.current_round,
+lib/home/golfHomeSummary.ts:990:            player.holes_completed,
+lib/home/golfHomeSummary.ts:992:            player.rounds_completed,
+lib/home/golfHomeSummary.ts:1068:              player.holes_completed,
+lib/home/golfHomeSummary.ts:1070:              player.rounds_completed,
+lib/home/golfHomeSummary.ts:1072:              player.current_round,
+lib/home/golfHomeSummary.ts.before-round3-tee-times:34:  current_round: number | null;
+lib/home/golfHomeSummary.ts.before-round3-tee-times:36:  holes_completed: number | null;
+lib/home/golfHomeSummary.ts.before-round3-tee-times:37:  rounds_completed: number | null;
+lib/home/golfHomeSummary.ts.before-round3-tee-times:111:    player.current_round ??
+lib/home/golfHomeSummary.ts.before-round3-tee-times:113:        Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts.before-round3-tee-times:119:    Number(player.holes_completed ?? 0) % 18;
+lib/home/golfHomeSummary.ts.before-round3-tee-times:124:      Number(player.holes_completed ?? 0) > 0
+lib/home/golfHomeSummary.ts.before-round3-tee-times:409:        .from("golf_event_players")
+lib/home/golfHomeSummary.ts.before-round3-tee-times:411:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed",
+lib/home/golfHomeSummary.ts.before-round3-tee-times:580:          player.current_round ??
+lib/home/golfHomeSummary.ts.before-round3-tee-times:582:              Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts.before-round3-tee-times:593:        player.holes_completed ?? 0,
+lib/home/golfHomeSummary.ts.before-round3-tee-times:843:            player.current_round,
+lib/home/golfHomeSummary.ts.before-round3-tee-times:847:            player.holes_completed,
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:34:  current_round: number | null;
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:36:  holes_completed: number | null;
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:37:  rounds_completed: number | null;
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:134:    player.current_round ??
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:136:        Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:142:    Number(player.holes_completed ?? 0);
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:151:        Number(player.rounds_completed ?? 0) + 1,
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:152:        Number(player.current_round ?? 1),
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:170:      Number(player.holes_completed ?? 0) > 0
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:455:        .from("golf_event_players")
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:457:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed, tee_time, tee_time_raw",
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:626:          player.current_round ??
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:628:              Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:639:        player.holes_completed ?? 0,
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:889:            player.current_round,
+lib/home/golfHomeSummary.ts.before-raw-tee-time-fix:893:            player.holes_completed,
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:34:  current_round: number | null;
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:36:  holes_completed: number | null;
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:37:  rounds_completed: number | null;
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:173:    player.current_round ??
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:175:        Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:181:    Number(player.holes_completed ?? 0);
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:190:        Number(player.rounds_completed ?? 0) + 1,
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:191:        Number(player.current_round ?? 1),
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:209:      Number(player.holes_completed ?? 0) > 0
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:494:        .from("golf_event_players")
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:496:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed, tee_time, tee_time_raw",
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:665:          player.current_round ??
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:667:              Number(player.rounds_completed ?? 0),
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:678:        player.holes_completed ?? 0,
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:928:            player.current_round,
+lib/home/golfHomeSummary.ts.before-pga-raw-clock-fix:932:            player.holes_completed,
+lib/profile/golfTeamProfile.ts:364:        .from("golf_event_players")
+lib/profile/golfTeamProfile.ts:366:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, fantasy_score, penalty_strokes, status, rounds_completed, holes_completed",
+lib/profile/golfTeamProfile.ts:401:      .from("golf_rounds")
+lib/profile/golfTeamProfile.ts:403:        "id, event_player_id, round_number, score_to_par, strokes, holes_completed, status",
+lib/profile/golfTeamProfile.ts:933:          round.holes_completed ?? 0,
+lib/profile/golfTeamProfile.ts.before-locked-slate-completion-fix:326:        .from("golf_event_players")
+lib/profile/golfTeamProfile.ts.before-locked-slate-completion-fix:328:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, fantasy_score, penalty_strokes, status, rounds_completed, holes_completed",
+lib/profile/golfTeamProfile.ts.before-locked-slate-completion-fix:363:      .from("golf_rounds")
+lib/profile/golfTeamProfile.ts.before-locked-slate-completion-fix:365:        "id, event_player_id, round_number, score_to_par, strokes, holes_completed, status",
+lib/profile/golfTeamProfile.ts.before-locked-slate-completion-fix:862:          round.holes_completed ?? 0,
+lib/profile/golfTeamProfile.ts.before-albatross-cut-milestones:329:        .from("golf_event_players")
+lib/profile/golfTeamProfile.ts.before-albatross-cut-milestones:331:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, fantasy_score, penalty_strokes, status, rounds_completed, holes_completed",
+lib/profile/golfTeamProfile.ts.before-albatross-cut-milestones:366:      .from("golf_rounds")
+lib/profile/golfTeamProfile.ts.before-albatross-cut-milestones:368:        "id, event_player_id, round_number, score_to_par, strokes, holes_completed, status",
+lib/profile/golfTeamProfile.ts.before-albatross-cut-milestones:867:          round.holes_completed ?? 0,
+lib/profile/golfTeamProfile.ts.before-tournament-trophies:364:        .from("golf_event_players")
+lib/profile/golfTeamProfile.ts.before-tournament-trophies:366:          "id, slate_id, player_id, leaderboard_order, official_score_to_par, fantasy_score, penalty_strokes, status, rounds_completed, holes_completed",
+lib/profile/golfTeamProfile.ts.before-tournament-trophies:401:      .from("golf_rounds")
+lib/profile/golfTeamProfile.ts.before-tournament-trophies:403:        "id, event_player_id, round_number, score_to_par, strokes, holes_completed, status",
+lib/profile/golfTeamProfile.ts.before-tournament-trophies:914:          round.holes_completed ?? 0,
+lib/golf/status.ts:3:  holes_completed?: number | null;
+lib/golf/status.ts:12:  current_round?: number | null;
+lib/golf/status.ts:14:  holes_completed?: number | null;
+lib/golf/status.ts:15:  rounds_completed?: number | null;
+lib/golf/status.ts:149:  const total = Number(input.holes_completed ?? 0);
+lib/golf/status.ts:194:          Number(round.holes_completed ?? 0) > 0 &&
+lib/golf/status.ts:195:          Number(round.holes_completed ?? 0) < 18,
+lib/golf/status.ts:203:          Number(round.holes_completed ?? 0) >= 18 ||
+lib/golf/status.ts:209:          Number(round.holes_completed ?? 0) >= 18,
+lib/golf/status.ts:216:        Number(round.holes_completed ?? 0) === 0 &&
+lib/golf/status.ts:237:        Number(stat.current_round ?? 0) || null,
+lib/golf/status.ts:250:        Number(stat.current_round ?? 0) || null,
+lib/golf/status.ts:263:        Number(stat.current_round ?? 0) || null,
+lib/golf/status.ts:276:        Number(stat.current_round ?? 0) || null,
+lib/golf/status.ts:289:        Number(stat.current_round ?? 4) || 4,
+lib/golf/status.ts:301:        playingRound.holes_completed ?? 0,
+lib/golf/status.ts:322:      stat.current_round ??
+lib/golf/status.ts:325:            stat.rounds_completed ?? 0,
+lib/golf/status.ts:387:        stat.rounds_completed ?? 0,
+lib/golf/status.ts:395:          stat.current_round ??
+lib/golf/status.ts:397:              stat.rounds_completed ?? 0,
+lib/golf/status.ts:435:          stat.current_round ??
+lib/golf/status.ts:436:          stat.rounds_completed ??
+
+============================================================
+3. LINEUP + USER OWNERSHIP PATH
+============================================================
+app/api/refresh-stats-golf/route.ts:953:      is_active: true,
+app/api/refresh-stats-golf/route.ts:1115:            is_active: true,
+app/api/refresh-stats-golf/route.ts:2209:        .from("lineups")
+app/api/refresh-stats-golf/route.ts:2213:          team_id,
+app/api/refresh-stats-golf/route.ts:2349:                team_id:
+app/api/refresh-stats-golf/route.ts:2350:                  Number(lineup.team_id),
+app/api/refresh-stats-golf/route.ts:2411:        .select("team_id, draft_order")
+app/api/refresh-stats-golf/route.ts:2427:        Number(row.team_id),
+app/api/refresh-stats-golf/route.ts:2558:        team_id: Number(lineup.team_id),
+app/api/refresh-stats-golf/route.ts:2572:              Number(lineup.team_id),
+app/api/refresh-stats-golf/route.ts:2642:      return a.team_id - b.team_id;
+app/api/refresh-stats-golf/route.ts:2660:          onConflict: "slate_id,team_id",
+app/api/refresh-stats-golf/route.ts:2750:                  team_id:
+app/api/refresh-stats-golf/route.ts:2751:                    Number(row.team_id),
+app/api/refresh-stats-golf/route.ts:2813:            )?.team_id ?? null,
+lib/playerFinishedNotifications.ts:25:  team_id: number;
+lib/playerFinishedNotifications.ts:50:  team_id: number;
+lib/playerFinishedNotifications.ts:117:          return owner?.team_id ?? null;
+lib/playerFinishedNotifications.ts:126:      .from("app_users")
+lib/playerFinishedNotifications.ts:127:      .select("id, team_id")
+lib/playerFinishedNotifications.ts:128:      .in("team_id", teamIds)
+lib/playerFinishedNotifications.ts:129:      .eq("is_active", true),
+lib/playerFinishedNotifications.ts:150:    safeUsers.map((user) => [Number(user.team_id), user])
+lib/playerFinishedNotifications.ts:206:    const teamId = Number(owner.team_id);
+app/api/admin/notification-history/route.ts:62:          team_id,
+app/api/admin/notification-history/route.ts:122:          .map((row) => row.team_id)
+app/api/admin/notification-history/route.ts:144:            .from("app_users")
+app/api/admin/notification-history/route.ts:319:          teamName: row.team_id
+app/api/admin/notification-history/route.ts:320:            ? teamMap.get(Number(row.team_id)) ??
+app/api/admin/notification-history/route.ts:321:              `Team ${row.team_id}`
+
+============================================================
+4. CURRENT CRON / GOLF REFRESH TRIGGER
+============================================================
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  POST as refreshGolfStats,
+} from "@/app/api/refresh-stats-golf/route";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+type GolfSlateRow = {
+  id: number;
+  start_date: string;
+  end_date: string;
+  display_name: string | null;
+  external_event_id: string | null;
+};
+
+function isAuthorized(
+  request: Request,
+) {
+  const configuredSecret =
+    process.env.GOLF_CRON_SECRET?.trim();
+
+  if (!configuredSecret) {
+    console.error(
+      "GOLF_CRON_SECRET is not configured.",
+    );
+
+    return false;
+  }
+
+  const authorization =
+    request.headers.get(
+      "authorization",
+    );
+
+  return (
+    authorization ===
+    `Bearer ${configuredSecret}`
+  );
+}
+
+function dateOnly(
+  value: Date,
+) {
+  return value
+    .toISOString()
+    .slice(0, 10);
+}
+
+export async function GET(
+  request: Request,
+) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json(
+      {
+        error: "Unauthorized.",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  const today = new Date();
+
+  const earliestDate =
+    new Date(today);
+
+  earliestDate.setUTCDate(
+    earliestDate.getUTCDate() - 2,
+  );
+
+  const latestDate =
+    new Date(today);
+
+  latestDate.setUTCDate(
+    latestDate.getUTCDate() + 8,
+  );
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("slates")
+    .select(
+      [
+        "id",
+        "start_date",
+        "end_date",
+        "display_name",
+        "external_event_id",
+      ].join(","),
+    )
+    .eq("sport", "golf")
+    .eq("is_locked", false)
+    .not(
+      "external_event_id",
+      "is",
+      null,
+    )
+    .lte(
+      "start_date",
+      dateOnly(latestDate),
+    )
+    .gte(
+      "end_date",
+      dateOnly(earliestDate),
+    )
+    .order(
+      "start_date",
+      {
+        ascending: true,
+      },
+    );
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load active Golf slates: " +
+          error.message,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+
+  const rawSlateRows: unknown[] =
+    Array.isArray(data)
+      ? (data as unknown[])
+      : [];
+
+  const slates: GolfSlateRow[] =
+    rawSlateRows
+      .filter(
+        (row) =>
+          typeof row === "object" &&
+          row !== null,
+      )
+      .map((row) => {
+        const record =
+          row as Record<
+            string,
+            unknown
+          >;
+
+        return {
+          id: Number(record.id),
+          start_date:
+            String(
+              record.start_date ?? "",
+            ),
+          end_date:
+            String(
+              record.end_date ?? "",
+            ),
+          display_name:
+            record.display_name == null
+              ? null
+              : String(
+                  record.display_name,
+                ),
+          external_event_id:
+            record.external_event_id == null
+              ? null
+              : String(
+                  record.external_event_id,
+                ),
+        };
+      })
+      .filter(
+        (row) =>
+          Number.isInteger(row.id) &&
+          row.id > 0 &&
+          Boolean(row.start_date) &&
+          Boolean(row.end_date),
+      );
+
+  const results: Array<{
+    slateId: number;
+    tournament: string;
+    ok: boolean;
+    status: number;
+    state:
+      | "refreshed"
+      | "waiting_for_field"
+      | "failed";
+    result: unknown;
+  }> = [];
+
+  /*
+   * Process sequentially to avoid several large ESPN/Supabase
+   * refreshes competing for the same serverless resources.
+   */
+  for (const slate of slates) {
+    const refreshRequest =
+      new Request(
+        "http://internal/api/refresh-stats-golf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            slateId: slate.id,
+          }),
+        },
+      );
+
+    try {
+      const response =
+        await refreshGolfStats(
+          refreshRequest,
+        );
+
+      let result: unknown;
+
+      try {
+        result =
+          await response.json();
+      } catch {
+        result = {
+          error:
+            "Refresh returned an unreadable response.",
+        };
+      }
+
+      const resultRecord =
+        typeof result === "object" &&
+        result !== null
+          ? result as Record<
+              string,
+              unknown
+            >
+          : null;
+
+      const errorMessage =
+        typeof resultRecord?.error ===
+        "string"
+          ? resultRecord.error
+          : "";
+
+      const waitingForField =
+        response.status === 502 &&
+        errorMessage.includes(
+          "tournament field is not available yet",
+        );
+
+      results.push({
+        slateId: slate.id,
+        tournament:
+          slate.display_name ??
+          `Slate ${slate.id}`,
+        ok:
+          response.ok ||
+          waitingForField,
+        status:
+          waitingForField
+            ? 200
+            : response.status,
+        state:
+          waitingForField
+            ? "waiting_for_field"
+            : response.ok
+              ? "refreshed"
+              : "failed",
+        result:
+          waitingForField
+            ? {
+                success: true,
+                status:
+                  "waiting_for_field",
+                message:
+                  "Tournament found, but ESPN has not published the field yet.",
+                upstream: result,
+              }
+            : result,
+      });
+    } catch (refreshError) {
+      results.push({
+        slateId: slate.id,
+        tournament:
+          slate.display_name ??
+          `Slate ${slate.id}`,
+        ok: false,
+        status: 500,
+        state: "failed",
+        result: {
+          error:
+            refreshError instanceof Error
+              ? refreshError.message
+              : "Unexpected Golf refresh error.",
+        },
+      });
+    }
+  }
+
+  const failures =
+    results.filter(
+      (row) => !row.ok,
+    );
+
+  const waiting =
+    results.filter(
+      (row) =>
+        row.state ===
+        "waiting_for_field",
+    );
+
+  return NextResponse.json(
+    {
+      success:
+        failures.length === 0,
+      checkedAt:
+        new Date().toISOString(),
+      slatesFound:
+        slates.length,
+      processed:
+        results.length,
+      refreshed:
+        results.filter(
+          (row) =>
+            row.state ===
+            "refreshed",
+        ).length,
+      waiting:
+        waiting.length,
+      failures:
+        failures.length,
+      results,
+    },
+    {
+      status:
+        failures.length > 0
+          ? 207
+          : 200,
+      headers: {
+        "Cache-Control":
+          "no-store, max-age=0",
+      },
+    },
+  );
+}
+
+============================================================
+5. CURRENT REFRESH CONFIG
+============================================================
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  external_event_id: string | null;
+  start_date: string;
+  is_locked: boolean;
+};
+
+function parseSlateId(
+  value: string | null,
+): number | null {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  const user =
+    await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      {
+        error: "Login required.",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  const slateId =
+    parseSlateId(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+  if (!slateId) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid slateId is required.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("slates")
+    .select(
+      [
+        "id",
+        "sport",
+        "external_event_id",
+        "start_date",
+        "is_locked",
+      ].join(","),
+    )
+    .eq("id", slateId)
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json(
+      {
+        error: "Slate not found.",
+      },
+      {
+        status: 404,
+      },
+    );
+  }
+
+  const slate =
+    data as unknown as SlateRow;
+
+  if (slate.sport !== "golf") {
+    return NextResponse.json(
+      {
+        error:
+          "This slate is not a Golf slate.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  const eventId =
+    slate.external_event_id?.trim();
+
+  const year =
+    slate.start_date
+      ?.slice(0, 4)
+      .trim();
+
+  if (
+    !eventId ||
+    !/^\d+$/.test(eventId)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "This Golf slate does not have a valid ESPN event ID.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  if (
+    !year ||
+    !/^\d{4}$/.test(year)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "This Golf slate does not have a valid tournament year.",
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    slateId,
+    eventId,
+    year,
+    isLocked:
+      Boolean(slate.is_locked),
+  });
+}
+
+============================================================
+6. CURRENT GOLF REFRESH NOTIFICATION BLOCK
+============================================================
+2160-        "golf_holes",
+2161-        mergedHoleRows,
+2162-      );
+2163-
+2164-    if (
+2165-      preservedMissingHoles.length >
+2166-      0
+2167-    ) {
+2168-      console.log(
+2169-        "Preserved Golf holes while ESPN scoring feed lagged",
+2170-        {
+2171-          slateId,
+2172-          preserved:
+2173-            preservedMissingHoles.length,
+2174-        },
+2175-      );
+2176-    }
+2177-
+2178-    if (holesInsertError) {
+2179-      return NextResponse.json(
+2180-        {
+2181-          error: "Golf holes could not be saved: " + holesInsertError.message,
+2182-        },
+2183-        { status: 500 },
+2184-      );
+2185-    }
+2186-
+2187-    const statusCounts = competitors.reduce<
+2188-      Record<GolfCompetitorStatus, number>
+2189-    >(
+2190-      (counts, competitor) => {
+2191-        counts[competitor.status] += 1;
+2192-        return counts;
+2193-      },
+2194-      {
+2195-        scheduled: 0,
+2196-        active: 0,
+2197-        round_complete: 0,
+2198-        finished: 0,
+2199-        cut: 0,
+2200-        withdrawn:
+2201-          removedBeforeStartRows.length,
+2202-        disqualified: 0,
+2203-        did_not_start: 0,
+2204-      },
+2205-    );
+2206-
+2207-    const { data: lineupsData, error: lineupsError } =
+2208-      await supabaseAdmin
+2209-        .from("lineups")
+2210-        .select(
+2211-          `
+2212-          id,
+2213-          team_id,
+2214-          lineup_players (
+2215-            player_id
+2216-          )
+2217-        `,
+2218-        )
+2219-        .eq("slate_id", slateId);
+2220-
+2221-    if (lineupsError) {
+2222-      return NextResponse.json(
+2223-        {
+2224-          error:
+2225-            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
+2226-            lineupsError.message,
+2227-        },
+2228-        { status: 500 },
+2229-      );
+2230-    }
+2231-
+2232-    let playerFinishedNotifications = {
+2233-      attempted: 0,
+2234-      sent: 0,
+2235-      skipped: 0,
+2236-      failed: 0,
+2237-    };
+2238-
+2239-    try {
+2240:      const newlyCompletedRounds =
+2241-        competitors
+2242-          .map((competitor) => {
+2243-            const playerId =
+2244-              playerIdByEspnId.get(
+2245-                competitor.espnPlayerId,
+2246-              );
+2247-
+2248-            if (playerId === undefined) {
+2249-              return null;
+2250-            }
+2251-
+2252-            const previous =
+2253-              previousGolfProgressByPlayerId.get(
+2254-                playerId,
+2255-              ) ?? {
+2256-                roundsCompleted: 0,
+2257-                status: null,
+2258-              };
+2259-
+2260-            const currentCompleted =
+2261-              Number(
+2262-                competitor.roundsCompleted ?? 0,
+2263-              );
+2264-
+2265-            const completedAnotherRound =
+2266-              currentCompleted >
+2267-              previous.roundsCompleted;
+2268-
+2269-            /*
+2270-             * Repair the currently stored bad transition:
+2271-             *
+2272-             * active after Hole 18
+2273-             *          ↓
+2274-             * round_complete
+2275-             *
+2276-             * This allows the first refresh after this fix to send
+2277-             * the missed Round 3 notification.
+2278-             */
+2279-            const repairedCompletedRound =
+2280-              previous.status === "active" &&
+2281-              competitor.status ===
+2282-                "round_complete" &&
+2283-              currentCompleted > 0;
+2284-
+2285-            if (
+2286-              !completedAnotherRound &&
+2287-              !repairedCompletedRound
+2288-            ) {
+2289-              return null;
+2290-            }
+2291-
+2292-            const completedRound =
+2293-              competitor.rounds.find(
+2294-                (round) =>
+2295-                  Number(
+2296-                    round.roundNumber,
+2297-                  ) === currentCompleted,
+2298-              ) ?? null;
+2299-
+2300-            return {
+2301-              playerId,
+2302-              roundNumber:
+2303-                currentCompleted,
+2304-              roundScore:
+2305-                completedRound?.scoreToPar ??
+2306-                null,
+2307-              fantasyPoints:
+2308-                competitor.officialScoreToPar,
+2309-            };
+2310-          })
+2311-          .filter(
+2312-            (
+2313-              row,
+2314-            ): row is {
+2315-              playerId: number;
+2316-              roundNumber: number;
+2317-              roundScore: number | null;
+2318-              fantasyPoints: number | null;
+2319-            } => row !== null,
+2320-          );
+2321-
+2322-      playerFinishedNotifications =
+2323-        await notifyNewlyFinishedPlayers({
+2324-          slate: {
+2325-            id: slate.id,
+2326-            date: slate.start_date,
+2327-            start_date:
+2328-              slate.start_date,
+2329-            end_date:
+2330-              slate.end_date,
+2331-            sport: "golf",
+2332-            display_name:
+2333-              slate.display_name?.trim() ||
+2334-              tournament.name,
+2335-          },
+2336-          players: competitors.map(
+2337-            (competitor) => ({
+2338-              id:
+2339-                playerIdByEspnId.get(
+2340-                  competitor.espnPlayerId,
+2341-                )!,
+2342-              name:
+2343-                competitor.displayName,
+2344-            }),
+2345-          ),
+2346-          lineups:
+2347-            (lineupsData ?? []).map(
+2348-              (lineup: any) => ({
+2349-                team_id:
+2350-                  Number(lineup.team_id),
+2351-                lineup_players:
+2352-                  lineup.lineup_players ??
+2353-                  [],
+2354-              }),
+2355-            ),
+2356-          previousStatuses:
+2357:            newlyCompletedRounds.map(
+2358-              (row) => ({
+2359-                playerId:
+2360-                  row.playerId,
+2361-                gameStatus: 2,
+2362-              }),
+2363-            ),
+2364-          currentStats:
+2365:            newlyCompletedRounds.map(
+2366-              (row) => ({
+2367-                player_id:
+2368-                  row.playerId,
+2369-                fantasy_points:
+2370-                  row.fantasyPoints,
+2371-                game_status: 3,
+2372-                round_number:
+2373-                  row.roundNumber,
+2374-                round_score:
+2375-                  row.roundScore,
+2376-                event_key_suffix:
+2377-                  `round-${row.roundNumber}`,
+2378-              }),
+2379-            ),
+2380-        });
+2381-    } catch (notificationError) {
+2382-      console.error(
+2383-        "Golf stats saved, but round-complete notifications failed",
+2384-        notificationError,
+2385-      );
+2386-    }
+2387-
+2388-    const eventRowByPlayerId = new Map(
+2389-      eventPlayerRows.map((row) => [
+2390-        Number(row.player_id),
+2391-        row,
+2392-      ]),
+2393-    );
+2394-
+2395-    const competitorByPlayerId = new Map(
+2396-      competitors.map((competitor) => {
+2397-        const playerId = playerIdByEspnId.get(
+2398-          competitor.espnPlayerId,
+2399-        );
+2400-
+2401-        return [
+2402-          Number(playerId),
+2403-          competitor,
+2404-        ] as const;
+2405-      }),
+2406-    );
+2407-
+2408-    const { data: slateTeamData, error: slateTeamError } =
+2409-      await supabaseAdmin
+2410-        .from("slate_teams")
+2411-        .select("team_id, draft_order")
+2412-        .eq("slate_id", slateId);
+2413-
+2414-    if (slateTeamError) {
+2415-      return NextResponse.json(
+2416-        {
+2417-          error:
+2418-            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
+2419-            slateTeamError.message,
+2420-        },
+2421-        { status: 500 },
+2422-      );
+2423-    }
+2424-
+2425-    const draftOrderByTeamId = new Map(
+2426-      (slateTeamData ?? []).map((row) => [
+2427-        Number(row.team_id),
+2428-        Number(row.draft_order ?? 999),
+2429-      ]),
+2430-    );
+2431-
+2432-    const teamResultRows = (lineupsData ?? []).map((lineup: any) => {
+2433-      const playerIds = (lineup.lineup_players ?? []).map(
+2434-        (row: any) => Number(row.player_id),
+2435-      );
+2436-
+2437-      const golferRows = playerIds
+2438-        .map((playerId: number) => eventRowByPlayerId.get(playerId))
+2439-        .filter(Boolean) as typeof eventPlayerRows;
+2440-
+2441-      const fantasyPoints = golferRows.reduce(
+2442-        (sum, row) => sum + Number(row.fantasy_score ?? 0),
+2443-        0,
+2444-      );
+2445-
+2446-      const completedStatuses = new Set([
+2447-        "round_complete",
+2448-        "finished",
+2449-        "cut",
+2450-        "withdrawn",
+2451-        "disqualified",
+2452-      ]);
+2453-
+2454-      const gamesCompleted = golferRows.filter((row) =>
+2455-        completedStatuses.has(String(row.status)),
+2456-      ).length;
+2457-
+2458-      const gamesInProgress = golferRows.filter(
+2459-        (row) => row.status === "active",
+2460-      ).length;
+2461-
+2462-      const gamesRemaining = golferRows.filter((row) =>
+2463-        ["scheduled", "did_not_start"].includes(String(row.status)),
+2464-      ).length;
+2465-
+2466-      const golferCompetitors = playerIds
+2467-        .map((playerId: number) =>
+2468-          competitorByPlayerId.get(playerId),
+2469-        )
+2470-        .filter(Boolean);
+2471-
+2472-      const completedIndividualRounds =
+2473-        golferCompetitors.flatMap((competitor: any) =>
+2474-          (competitor.rounds ?? [])
+2475-            .filter(
+2476-              (round: any) =>
+2477-                Number(round.holesCompleted ?? 0) >= 18 &&
+2478-                round.scoreToPar !== null &&
+2479-                round.scoreToPar !== undefined,
+2480-            )
+2481-            .map((round: any) => ({
+2482-              roundNumber: Number(round.roundNumber),
+2483-              score: Number(round.scoreToPar),
+2484-            })),
+2485-        );
+2486-
+2487-      const bestIndividualRound =
+2488-        completedIndividualRounds.length > 0
+2489-          ? Math.min(
+2490-              ...completedIndividualRounds.map(
+2491-                (round: any) => round.score,
+2492-              ),
+2493-            )
+2494-          : Number.POSITIVE_INFINITY;
+2495-
+2496-      const teamRoundScores: number[] = [];
+2497-
+2498-      for (const roundNumber of [1, 2, 3, 4]) {
+2499-        const roundScores = golferCompetitors
+2500-          .map((competitor: any) =>
+2501-            (competitor.rounds ?? []).find(
+2502-              (round: any) =>
+2503-                Number(round.roundNumber) === roundNumber &&
+2504-                Number(round.holesCompleted ?? 0) >= 18 &&
+2505-                round.scoreToPar !== null &&
+2506-                round.scoreToPar !== undefined,
+2507-            ),
+2508-          )
+2509-          .filter(Boolean)
+2510-          .map((round: any) =>
+2511-            Number(round.scoreToPar),
+2512-          );
+2513-
+2514-        // A team round counts only after every drafted golfer has
+2515-        // completed that round.
+2516-        if (
+2517-          golferCompetitors.length > 0 &&
+2518-          roundScores.length === golferCompetitors.length
+2519-        ) {
+2520-          teamRoundScores.push(
+2521-            roundScores.reduce(
+2522-              (sum: number, score: number) =>
+2523-                sum + score,
+2524-              0,
+2525-            ),
+2526-          );
+2527-        }
+2528-      }
+2529-
+2530-      const bestTeamRound =
+2531-        teamRoundScores.length > 0
+2532-          ? Math.min(...teamRoundScores)
+2533-          : Number.POSITIVE_INFINITY;
+2534-
+2535-      const playedHoles =
+2536-        golferCompetitors.flatMap((competitor: any) =>
+2537-          (competitor.rounds ?? []).flatMap(
+2538-            (round: any) => round.holes ?? [],
+2539-          ),
+2540-        );
+2541-
+2542-      const birdiesOrBetter = playedHoles.filter(
+2543-        (hole: any) =>
+2544-          hole.relativeToPar !== null &&
+2545-          hole.relativeToPar !== undefined &&
+2546-          Number(hole.relativeToPar) <= -1,
+2547-      ).length;
+2548-
+2549-      const bogeysOrWorse = playedHoles.filter(
+2550-        (hole: any) =>
+2551-          hole.relativeToPar !== null &&
+2552-          hole.relativeToPar !== undefined &&
+2553-          Number(hole.relativeToPar) >= 1,
+2554-      ).length;
+2555-
+2556-      return {
+2557-        slate_id: slateId,
+2558-        team_id: Number(lineup.team_id),
+2559-        fantasy_points: fantasyPoints,
+2560-        finish_position: null as number | null,
+2561-        games_completed: gamesCompleted,
+2562-        games_in_progress: gamesInProgress,
+2563-        games_remaining: gamesRemaining,
+2564-
+2565-        _tiebreak: {
+2566-          bestTeamRound,
+2567-          bestIndividualRound,
+2568-          birdiesOrBetter,
+2569-          bogeysOrWorse,
+2570-          draftOrder:
+2571-            draftOrderByTeamId.get(
+2572-              Number(lineup.team_id),
+2573-            ) ?? 999,
+2574-        },
+2575-      };
+2576-    });
+2577-
+2578-    const compareGolfTeams = (
+2579-      a: (typeof teamResultRows)[number],
+2580-      b: (typeof teamResultRows)[number],
+2581-    ) => {
+2582-      // Lower tournament score wins.
+2583-      if (a.fantasy_points !== b.fantasy_points) {
+2584-        return a.fantasy_points - b.fantasy_points;
+2585-      }

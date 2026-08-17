@@ -1,0 +1,1234 @@
+============================================================
+LIVE HOLE REPLAY — REQUIRED ID RESOLUTION
+============================================================
+
+===== HOLE REPLAY ROUTE PARAMETER HANDLING =====
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+};
+
+type PlayerRow = {
+  id: number;
+  display_name: string;
+};
+
+function positiveInteger(value: string | null) {
+  if (!value) return null;
+
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function noStoreHeaders() {
+  return {
+    "Cache-Control":
+      "private, no-store, max-age=0",
+  };
+}
+
+function relativeScoreDisplay(
+  relativeToPar: number,
+) {
+  if (relativeToPar === 0) {
+    return "E";
+  }
+
+  return relativeToPar > 0
+    ? `+${relativeToPar}`
+    : String(relativeToPar);
+}
+
+async function reconcileCompletedReplayHole(input: {
+  slateId: number;
+  playerId: number;
+  roundNumber: number;
+  holeNumber: number;
+  replay: {
+    par: number | null;
+    shots: Array<{
+      strokeNumber: number;
+      finalStroke: boolean;
+    }>;
+  };
+}) {
+  /*
+   * Only persist a hole when PGA explicitly identifies a final
+   * stroke. A live/current-ball hole must never be promoted to
+   * a completed scorecard result.
+   */
+  const finalShot =
+    input.replay.shots.find(
+      (shot) => shot.finalStroke,
+    ) ?? null;
+
+  if (!finalShot) {
+    return null;
+  }
+
+  const strokes = Math.max(
+    ...input.replay.shots.map(
+      (shot) => Number(shot.strokeNumber ?? 0),
+    ),
+  );
+
+  if (
+    !Number.isFinite(strokes) ||
+    strokes <= 0 ||
+    input.replay.par === null ||
+    !Number.isFinite(Number(input.replay.par))
+  ) {
+    return null;
+  }
+
+  const par = Number(input.replay.par);
+  const relativeToPar =
+    strokes - par;
+
+  const {
+    data: eventPlayer,
+    error: eventPlayerError,
+  } = await supabaseAdmin
+    .from("golf_event_players")
+    .select(
+      "id, status, rounds_completed",
+    )
+    .eq("slate_id", input.slateId)
+    .eq("player_id", input.playerId)
+    .maybeSingle();
+
+  if (
+    eventPlayerError ||
+    !eventPlayer
+  ) {
+    if (eventPlayerError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve event player",
+        eventPlayerError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const {
+    data: round,
+    error: roundError,
+  } = await supabaseAdmin
+    .from("golf_rounds")
+    .select("id")
+    .eq(
+      "event_player_id",
+      Number(eventPlayer.id),
+    )
+    .eq(
+      "round_number",
+      input.roundNumber,
+    )
+    .maybeSingle();
+
+  if (
+    roundError ||
+    !round
+  ) {
+    if (roundError) {
+      console.warn(
+        "ShotCast reconciliation could not resolve Golf round",
+        roundError.message,
+      );
+    }
+
+    return null;
+  }
+
+  const roundId =
+    Number(round.id);
+
+  const {
+    data: existingHole,
+    error: existingHoleError,
+  } = await supabaseAdmin
+    .from("golf_holes")
+    .select("round_id, hole_number")
+    .eq("round_id", roundId)
+    .eq(
+      "hole_number",
+      input.holeNumber,
+    )
+    .maybeSingle();
+
+  if (existingHoleError) {
+    console.warn(
+      "ShotCast reconciliation could not inspect existing hole",
+      existingHoleError.message,
+    );
+
+    return null;
+  }
+
+  const holeRow = {
+    round_id: roundId,
+    hole_number:
+      input.holeNumber,
+
+===== SLATE 163 LINEUPS + GOLF PLAYER ID MAPPING =====
+{
+    "success": true,
+    "lineups": [
+        {
+            "team_id": 3,
+            "player_ids": [
+                743,
+                44,
+                736,
+                30
+            ],
+            "pregame_projected_points": null
+        },
+        {
+            "team_id": 1,
+            "player_ids": [
+                43,
+                751,
+                757,
+                13
+            ],
+            "pregame_projected_points": null
+        },
+        {
+            "team_id": 2,
+            "player_ids": [
+                745,
+                741,
+                739,
+                99
+            ],
+            "pregame_projected_points": null
+        },
+        {
+            "team_id": 4,
+            "player_ids": [
+                56,
+                737,
+                79,
+                25
+            ],
+            "pregame_projected_points": null
+        }
+    ]
+}
+
+===== PLAYER 28237 REFERENCES IN LOCAL SOURCE/DATA =====
+tmp/collectors/current-golf-course-espn.json-349968-                    }
+tmp/collectors/current-golf-course-espn.json-349969-                  ],
+tmp/collectors/current-golf-course-espn.json-349970-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-349971-                },
+tmp/collectors/current-golf-course-espn.json-349972-                {
+tmp/collectors/current-golf-course-espn.json-349973-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-349974-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-349975-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-349976-                  "order": 14,
+tmp/collectors/current-golf-course-espn.json-349977-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:349978:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:349979:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-349980-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-349981-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-349982-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-349983-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-349984-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-349985-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-349986-                      ]
+tmp/collectors/current-golf-course-espn.json-349987-                    }
+tmp/collectors/current-golf-course-espn.json-349988-                  },
+tmp/collectors/current-golf-course-espn.json-349989-                  "score": "-17",
+tmp/collectors/current-golf-course-espn.json-349990-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-349991-                    {
+tmp/collectors/current-golf-course-espn.json-349992-                      "value": 68,
+tmp/collectors/current-golf-course-espn.json-349993-                      "displayValue": "-4",
+tmp/collectors/current-golf-course-espn.json-349994-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-349995-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-349996-                        {
+tmp/collectors/current-golf-course-espn.json-349997-                          "value": 3,
+tmp/collectors/current-golf-course-espn.json-349998-                          "displayValue": "3",
+tmp/collectors/current-golf-course-espn.json-349999-                          "period": 10,
+--
+tmp/collectors/current-golf-course-espn.json-402977-                    }
+tmp/collectors/current-golf-course-espn.json-402978-                  ],
+tmp/collectors/current-golf-course-espn.json-402979-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-402980-                },
+tmp/collectors/current-golf-course-espn.json-402981-                {
+tmp/collectors/current-golf-course-espn.json-402982-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-402983-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-402984-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-402985-                  "order": 3,
+tmp/collectors/current-golf-course-espn.json-402986-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:402987:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:402988:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-402989-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-402990-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-402991-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-402992-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-402993-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-402994-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-402995-                      ]
+tmp/collectors/current-golf-course-espn.json-402996-                    }
+tmp/collectors/current-golf-course-espn.json-402997-                  },
+tmp/collectors/current-golf-course-espn.json-402998-                  "score": "-17",
+tmp/collectors/current-golf-course-espn.json-402999-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-403000-                    {
+tmp/collectors/current-golf-course-espn.json-403001-                      "value": 66,
+tmp/collectors/current-golf-course-espn.json-403002-                      "displayValue": "-5",
+tmp/collectors/current-golf-course-espn.json-403003-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-403004-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-403005-                        {
+tmp/collectors/current-golf-course-espn.json-403006-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-403007-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-403008-                          "period": 1,
+--
+tmp/collectors/current-golf-course-espn.json-568658-                    }
+tmp/collectors/current-golf-course-espn.json-568659-                  ],
+tmp/collectors/current-golf-course-espn.json-568660-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-568661-                },
+tmp/collectors/current-golf-course-espn.json-568662-                {
+tmp/collectors/current-golf-course-espn.json-568663-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-568664-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-568665-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-568666-                  "order": 71,
+tmp/collectors/current-golf-course-espn.json-568667-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:568668:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:568669:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-568670-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-568671-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-568672-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-568673-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-568674-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-568675-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-568676-                      ]
+tmp/collectors/current-golf-course-espn.json-568677-                    }
+tmp/collectors/current-golf-course-espn.json-568678-                  },
+tmp/collectors/current-golf-course-espn.json-568679-                  "score": "-4",
+tmp/collectors/current-golf-course-espn.json-568680-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-568681-                    {
+tmp/collectors/current-golf-course-espn.json-568682-                      "value": 72,
+tmp/collectors/current-golf-course-espn.json-568683-                      "displayValue": "E",
+tmp/collectors/current-golf-course-espn.json-568684-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-568685-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-568686-                        {
+tmp/collectors/current-golf-course-espn.json-568687-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-568688-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-568689-                          "period": 1,
+--
+tmp/collectors/current-golf-course-espn.json-676616-                    }
+tmp/collectors/current-golf-course-espn.json-676617-                  ],
+tmp/collectors/current-golf-course-espn.json-676618-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-676619-                },
+tmp/collectors/current-golf-course-espn.json-676620-                {
+tmp/collectors/current-golf-course-espn.json-676621-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-676622-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-676623-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-676624-                  "order": 46,
+tmp/collectors/current-golf-course-espn.json-676625-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:676626:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:676627:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-676628-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-676629-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-676630-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-676631-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-676632-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-676633-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-676634-                      ]
+tmp/collectors/current-golf-course-espn.json-676635-                    }
+tmp/collectors/current-golf-course-espn.json-676636-                  },
+tmp/collectors/current-golf-course-espn.json-676637-                  "score": "E",
+tmp/collectors/current-golf-course-espn.json-676638-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-676639-                    {
+tmp/collectors/current-golf-course-espn.json-676640-                      "value": 74,
+tmp/collectors/current-golf-course-espn.json-676641-                      "displayValue": "+2",
+tmp/collectors/current-golf-course-espn.json-676642-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-676643-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-676644-                        {
+tmp/collectors/current-golf-course-espn.json-676645-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-676646-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-676647-                          "period": 1,
+--
+tmp/collectors/current-golf-course-espn.json-957657-              "conferenceCompetition": false,
+tmp/collectors/current-golf-course-espn.json-957658-              "playByPlayAvailable": false,
+tmp/collectors/current-golf-course-espn.json-957659-              "recent": false,
+tmp/collectors/current-golf-course-espn.json-957660-              "competitors": [
+tmp/collectors/current-golf-course-espn.json-957661-                {
+tmp/collectors/current-golf-course-espn.json-957662-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-957663-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-957664-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-957665-                  "order": 1,
+tmp/collectors/current-golf-course-espn.json-957666-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:957667:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:957668:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-957669-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-957670-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-957671-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-957672-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-957673-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-957674-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-957675-                      ]
+tmp/collectors/current-golf-course-espn.json-957676-                    }
+tmp/collectors/current-golf-course-espn.json-957677-                  },
+tmp/collectors/current-golf-course-espn.json-957678-                  "score": "-12",
+tmp/collectors/current-golf-course-espn.json-957679-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-957680-                    {
+tmp/collectors/current-golf-course-espn.json-957681-                      "value": 67,
+tmp/collectors/current-golf-course-espn.json-957682-                      "displayValue": "-5",
+tmp/collectors/current-golf-course-espn.json-957683-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-957684-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-957685-                        {
+tmp/collectors/current-golf-course-espn.json-957686-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-957687-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-957688-                          "period": 1,
+--
+tmp/collectors/current-golf-course-espn.json-1192549-                    }
+tmp/collectors/current-golf-course-espn.json-1192550-                  ],
+tmp/collectors/current-golf-course-espn.json-1192551-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-1192552-                },
+tmp/collectors/current-golf-course-espn.json-1192553-                {
+tmp/collectors/current-golf-course-espn.json-1192554-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-1192555-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-1192556-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-1192557-                  "order": 21,
+tmp/collectors/current-golf-course-espn.json-1192558-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:1192559:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:1192560:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-1192561-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-1192562-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-1192563-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-1192564-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-1192565-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-1192566-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-1192567-                      ]
+tmp/collectors/current-golf-course-espn.json-1192568-                    }
+tmp/collectors/current-golf-course-espn.json-1192569-                  },
+tmp/collectors/current-golf-course-espn.json-1192570-                  "score": "-5",
+tmp/collectors/current-golf-course-espn.json-1192571-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-1192572-                    {
+tmp/collectors/current-golf-course-espn.json-1192573-                      "value": 70,
+tmp/collectors/current-golf-course-espn.json-1192574-                      "displayValue": "-1",
+tmp/collectors/current-golf-course-espn.json-1192575-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-1192576-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-1192577-                        {
+tmp/collectors/current-golf-course-espn.json-1192578-                          "value": 5,
+tmp/collectors/current-golf-course-espn.json-1192579-                          "displayValue": "5",
+tmp/collectors/current-golf-course-espn.json-1192580-                          "period": 10,
+--
+tmp/collectors/current-golf-course-espn.json-1315503-                    }
+tmp/collectors/current-golf-course-espn.json-1315504-                  ],
+tmp/collectors/current-golf-course-espn.json-1315505-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-1315506-                },
+tmp/collectors/current-golf-course-espn.json-1315507-                {
+tmp/collectors/current-golf-course-espn.json-1315508-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-1315509-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-1315510-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-1315511-                  "order": 9,
+tmp/collectors/current-golf-course-espn.json-1315512-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:1315513:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:1315514:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-1315515-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-1315516-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-1315517-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-1315518-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-1315519-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-1315520-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-1315521-                      ]
+tmp/collectors/current-golf-course-espn.json-1315522-                    }
+tmp/collectors/current-golf-course-espn.json-1315523-                  },
+tmp/collectors/current-golf-course-espn.json-1315524-                  "score": "-4",
+tmp/collectors/current-golf-course-espn.json-1315525-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-1315526-                    {
+tmp/collectors/current-golf-course-espn.json-1315527-                      "value": 74,
+tmp/collectors/current-golf-course-espn.json-1315528-                      "displayValue": "+4",
+tmp/collectors/current-golf-course-espn.json-1315529-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-1315530-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-1315531-                        {
+tmp/collectors/current-golf-course-espn.json-1315532-                          "value": 5,
+tmp/collectors/current-golf-course-espn.json-1315533-                          "displayValue": "5",
+tmp/collectors/current-golf-course-espn.json-1315534-                          "period": 10,
+--
+tmp/collectors/current-golf-course-espn.json-1574962-                    }
+tmp/collectors/current-golf-course-espn.json-1574963-                  ],
+tmp/collectors/current-golf-course-espn.json-1574964-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-1574965-                },
+tmp/collectors/current-golf-course-espn.json-1574966-                {
+tmp/collectors/current-golf-course-espn.json-1574967-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-1574968-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-1574969-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-1574970-                  "order": 13,
+tmp/collectors/current-golf-course-espn.json-1574971-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:1574972:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:1574973:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-1574974-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-1574975-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-1574976-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-1574977-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-1574978-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-1574979-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-1574980-                      ]
+tmp/collectors/current-golf-course-espn.json-1574981-                    }
+tmp/collectors/current-golf-course-espn.json-1574982-                  },
+tmp/collectors/current-golf-course-espn.json-1574983-                  "score": "-4",
+tmp/collectors/current-golf-course-espn.json-1574984-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-1574985-                    {
+tmp/collectors/current-golf-course-espn.json-1574986-                      "value": 71,
+tmp/collectors/current-golf-course-espn.json-1574987-                      "displayValue": "-1",
+tmp/collectors/current-golf-course-espn.json-1574988-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-1574989-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-1574990-                        {
+tmp/collectors/current-golf-course-espn.json-1574991-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-1574992-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-1574993-                          "period": 1,
+--
+tmp/collectors/current-golf-course-espn.json-1725585-                    }
+tmp/collectors/current-golf-course-espn.json-1725586-                  ],
+tmp/collectors/current-golf-course-espn.json-1725587-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-1725588-                },
+tmp/collectors/current-golf-course-espn.json-1725589-                {
+tmp/collectors/current-golf-course-espn.json-1725590-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-1725591-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-1725592-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-1725593-                  "order": 35,
+tmp/collectors/current-golf-course-espn.json-1725594-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:1725595:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:1725596:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-1725597-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-1725598-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-1725599-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-1725600-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-1725601-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-1725602-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-1725603-                      ]
+tmp/collectors/current-golf-course-espn.json-1725604-                    }
+tmp/collectors/current-golf-course-espn.json-1725605-                  },
+tmp/collectors/current-golf-course-espn.json-1725606-                  "score": "+6",
+tmp/collectors/current-golf-course-espn.json-1725607-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-1725608-                    {
+tmp/collectors/current-golf-course-espn.json-1725609-                      "value": 69,
+tmp/collectors/current-golf-course-espn.json-1725610-                      "displayValue": "-1",
+tmp/collectors/current-golf-course-espn.json-1725611-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-1725612-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-1725613-                        {
+tmp/collectors/current-golf-course-espn.json-1725614-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-1725615-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-1725616-                          "period": 10,
+--
+tmp/collectors/current-golf-course-espn.json-1936770-                    }
+tmp/collectors/current-golf-course-espn.json-1936771-                  ],
+tmp/collectors/current-golf-course-espn.json-1936772-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-1936773-                },
+tmp/collectors/current-golf-course-espn.json-1936774-                {
+tmp/collectors/current-golf-course-espn.json-1936775-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-1936776-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-1936777-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-1936778-                  "order": 7,
+tmp/collectors/current-golf-course-espn.json-1936779-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:1936780:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:1936781:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-1936782-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-1936783-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-1936784-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-1936785-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-1936786-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-1936787-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-1936788-                      ]
+tmp/collectors/current-golf-course-espn.json-1936789-                    }
+tmp/collectors/current-golf-course-espn.json-1936790-                  },
+tmp/collectors/current-golf-course-espn.json-1936791-                  "score": "-12",
+tmp/collectors/current-golf-course-espn.json-1936792-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-1936793-                    {
+tmp/collectors/current-golf-course-espn.json-1936794-                      "value": 65,
+tmp/collectors/current-golf-course-espn.json-1936795-                      "displayValue": "-5",
+tmp/collectors/current-golf-course-espn.json-1936796-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-1936797-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-1936798-                        {
+tmp/collectors/current-golf-course-espn.json-1936799-                          "value": 5,
+tmp/collectors/current-golf-course-espn.json-1936800-                          "displayValue": "5",
+tmp/collectors/current-golf-course-espn.json-1936801-                          "period": 10,
+--
+tmp/collectors/current-golf-course-espn.json-2134658-                    }
+tmp/collectors/current-golf-course-espn.json-2134659-                  ],
+tmp/collectors/current-golf-course-espn.json-2134660-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-2134661-                },
+tmp/collectors/current-golf-course-espn.json-2134662-                {
+tmp/collectors/current-golf-course-espn.json-2134663-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-2134664-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-2134665-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-2134666-                  "order": 44,
+tmp/collectors/current-golf-course-espn.json-2134667-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:2134668:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:2134669:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-2134670-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-2134671-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-2134672-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-2134673-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-2134674-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-2134675-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-2134676-                      ]
+tmp/collectors/current-golf-course-espn.json-2134677-                    }
+tmp/collectors/current-golf-course-espn.json-2134678-                  },
+tmp/collectors/current-golf-course-espn.json-2134679-                  "score": "-1",
+tmp/collectors/current-golf-course-espn.json-2134680-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-2134681-                    {
+tmp/collectors/current-golf-course-espn.json-2134682-                      "value": 72,
+tmp/collectors/current-golf-course-espn.json-2134683-                      "displayValue": "+2",
+tmp/collectors/current-golf-course-espn.json-2134684-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-2134685-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-2134686-                        {
+tmp/collectors/current-golf-course-espn.json-2134687-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-2134688-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-2134689-                          "period": 1,
+--
+tmp/collectors/current-golf-course-espn.json-2539067-                    }
+tmp/collectors/current-golf-course-espn.json-2539068-                  ],
+tmp/collectors/current-golf-course-espn.json-2539069-                  "statistics": []
+tmp/collectors/current-golf-course-espn.json-2539070-                },
+tmp/collectors/current-golf-course-espn.json-2539071-                {
+tmp/collectors/current-golf-course-espn.json-2539072-                  "id": "3470",
+tmp/collectors/current-golf-course-espn.json-2539073-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/current-golf-course-espn.json-2539074-                  "type": "athlete",
+tmp/collectors/current-golf-course-espn.json-2539075-                  "order": 18,
+tmp/collectors/current-golf-course-espn.json-2539076-                  "athlete": {
+tmp/collectors/current-golf-course-espn.json:2539077:                    "fullName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json:2539078:                    "displayName": "Rory McIlroy",
+tmp/collectors/current-golf-course-espn.json-2539079-                    "shortName": "R. McIlroy",
+tmp/collectors/current-golf-course-espn.json-2539080-                    "flag": {
+tmp/collectors/current-golf-course-espn.json-2539081-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/current-golf-course-espn.json-2539082-                      "alt": "Northern Ireland",
+tmp/collectors/current-golf-course-espn.json-2539083-                      "rel": [
+tmp/collectors/current-golf-course-espn.json-2539084-                        "country-flag"
+tmp/collectors/current-golf-course-espn.json-2539085-                      ]
+tmp/collectors/current-golf-course-espn.json-2539086-                    }
+tmp/collectors/current-golf-course-espn.json-2539087-                  },
+tmp/collectors/current-golf-course-espn.json-2539088-                  "score": "E",
+tmp/collectors/current-golf-course-espn.json-2539089-                  "linescores": [
+tmp/collectors/current-golf-course-espn.json-2539090-                    {
+tmp/collectors/current-golf-course-espn.json-2539091-                      "value": 46,
+tmp/collectors/current-golf-course-espn.json-2539092-                      "displayValue": "E",
+tmp/collectors/current-golf-course-espn.json-2539093-                      "period": 1,
+tmp/collectors/current-golf-course-espn.json-2539094-                      "linescores": [
+tmp/collectors/current-golf-course-espn.json-2539095-                        {
+tmp/collectors/current-golf-course-espn.json-2539096-                          "value": 4,
+tmp/collectors/current-golf-course-espn.json-2539097-                          "displayValue": "4",
+tmp/collectors/current-golf-course-espn.json-2539098-                          "period": 1,
+--
+tmp/collectors/tournament-analysis-raw-api-proof.txt-4-
+tmp/collectors/tournament-analysis-raw-api-proof.txt-5-===== RAW HOME SUMMARY =====
+tmp/collectors/tournament-analysis-raw-api-proof.txt-6-HTTP/1.1 200 OK
+tmp/collectors/tournament-analysis-raw-api-proof.txt-7-vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+tmp/collectors/tournament-analysis-raw-api-proof.txt-8-content-type: application/json
+tmp/collectors/tournament-analysis-raw-api-proof.txt-9-Date: Sun, 16 Aug 2026 11:22:44 GMT
+tmp/collectors/tournament-analysis-raw-api-proof.txt-10-Connection: keep-alive
+tmp/collectors/tournament-analysis-raw-api-proof.txt-11-Keep-Alive: timeout=5
+tmp/collectors/tournament-analysis-raw-api-proof.txt-12-Transfer-Encoding: chunked
+tmp/collectors/tournament-analysis-raw-api-proof.txt-13-
+tmp/collectors/tournament-analysis-raw-api-proof.txt:14:{"success":true,"latestSlate":{"id":163,"date":"2026-08-13","start_date":"2026-08-13","end_date":"2026-08-16","label":"FedEx St. Jude Championship","display_name":"FedEx St. Jude Championship","is_locked":false,"has_cut":false,"first_game_start_time":null},"latestGolfTournamentIsFinal":false,"nextSlate":null,"latestSlateRows":[{"slate_id":163,"team_id":2,"fantasy_points":-28,"finish_position":1,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Josh","avatarUrl":"https://oororafwujfliscjasur.supabase.co/storage/v1/object/public/profile-images/a4cc96f6-7a71-44e8-b9a5-17bdef4bbbe0/avatar-1786650979795.png?v=1786650980188","projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"},{"slate_id":163,"team_id":3,"fantasy_points":-24,"finish_position":2,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Jon","avatarUrl":null,"projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"},{"slate_id":163,"team_id":1,"fantasy_points":-10,"finish_position":3,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Andy","avatarUrl":null,"projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"},{"slate_id":163,"team_id":4,"fantasy_points":-6,"finish_position":4,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Mark","avatarUrl":null,"projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"}],"tournamentLeaderboard":[{"playerId":736,"name":"Scottie Scheffler","shortName":"S. Scheffler","espnGolfPlayerId":"9478","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9478.png","country":"USA","owgrRank":1,"position":1,"score":-13,"scoreDisplay":"-13","status":"scheduled","statusLabel":"R4 · Tee 1:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":745,"name":"Sam Burns","shortName":"S. Burns","espnGolfPlayerId":"9938","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9938.png","country":"USA","owgrRank":10,"position":2,"score":-11,"scoreDisplay":"-11","status":"scheduled","statusLabel":"R4 · Tee 1:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":24,"name":"Sungjae Im","shortName":"S. Im","espnGolfPlayerId":"11382","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11382.png","country":"South Korea","owgrRank":79,"position":3,"score":-11,"scoreDisplay":"-11","status":"scheduled","statusLabel":"R4 · Tee 1:30 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":81,"name":"Jake Knapp","shortName":"J. Knapp","espnGolfPlayerId":"9843","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9843.png","country":"USA","owgrRank":47,"position":4,"score":-8,"scoreDisplay":"-8","status":"scheduled","statusLabel":"R4 · Tee 1:30 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":741,"name":"Tommy Fleetwood","shortName":"T. Fleetwood","espnGolfPlayerId":"5539","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5539.png","country":"England","owgrRank":6,"position":5,"score":-8,"scoreDisplay":"-8","status":"scheduled","statusLabel":"R4 · Tee 1:20 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":44,"name":"Si Woo Kim","shortName":"S. Kim","espnGolfPlayerId":"7081","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/7081.png","country":"South Korea","owgrRank":18,"position":6,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:20 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":762,"name":"Alex Noren","shortName":"A. Noren","espnGolfPlayerId":"3832","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3832.png","country":"Sweden","owgrRank":27,"position":7,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:10 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":79,"name":"Hideki Matsuyama","shortName":"H. Matsuyama","espnGolfPlayerId":"5860","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5860.png","country":"Japan","owgrRank":25,"position":8,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:10 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":793,"name":"Brian Harman","shortName":"B. Harman","espnGolfPlayerId":"1225","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/1225.png","country":"USA","owgrRank":58,"position":9,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:00 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":770,"name":"Tom Kim","shortName":"T. Kim","espnGolfPlayerId":"4602673","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4602673.png","country":"South Korea","owgrRank":35,"position":10,"score":-6,"scoreDisplay":"-6","status":"scheduled","statusLabel":"R4 · Tee 1:00 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":772,"name":"Kurt Kitayama","shortName":"K. Kitayama","espnGolfPlayerId":"10364","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10364.png","country":"USA","owgrRank":37,"position":11,"score":-6,"scoreDisplay":"-6","status":"scheduled","statusLabel":"R4 · Tee 12:50 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":748,"name":"Viktor Hovland","shortName":"V. Hovland","espnGolfPlayerId":"4364873","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4364873.png","country":"Norway","owgrRank":13,"position":12,"score":-6,"scoreDisplay":"-6","status":"scheduled","statusLabel":"R4 · Tee 12:50 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":771,"name":"J.T. Poston","shortName":"J.T. Poston","espnGolfPlayerId":"10505","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10505.png","country":"USA","owgrRank":36,"position":13,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":784,"name":"Adam Scott","shortName":"A. Scott","espnGolfPlayerId":"388","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/388.png","country":"Australia","owgrRank":49,"position":14,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":30,"name":"Chris Gotterup","shortName":"C. Gotterup","espnGolfPlayerId":"4690755","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4690755.png","country":"USA","owgrRank":7,"position":15,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:25 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":99,"name":"Wyndham Clark","shortName":"W. Clark","espnGolfPlayerId":"11119","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11119.png","country":"USA","owgrRank":9,"position":16,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:25 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":25,"name":"Patrick Cantlay","shortName":"P. Cantlay","espnGolfPlayerId":"6007","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/6007.png","country":"USA","owgrRank":39,"position":17,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:15 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":122,"name":"Nico Echavarria","shortName":"N. Echavarria","espnGolfPlayerId":"4408316","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4408316.png","country":"Colombia","owgrRank":56,"position":18,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:15 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":739,"name":"Matt Fitzpatrick","shortName":"M. Fitzpatrick","espnGolfPlayerId":"9037","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9037.png","country":"England","owgrRank":4,"position":19,"score":-4,"scoreDisplay":"-4","status":"scheduled","statusLabel":"R4 · Tee 12:05 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":45,"name":"Nick Taylor","shortName":"N. Taylor","espnGolfPlayerId":"3792","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3792.png","country":"Canada","owgrRank":72,"position":20,"score":-4,"scoreDisplay":"-4","status":"scheduled","statusLabel":"R4 · Tee 12:05 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":60,"name":"Jordan Spieth","shortName":"J. Spieth","espnGolfPlayerId":"5467","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5467.png","country":"USA","owgrRank":57,"position":21,"score":-4,"scoreDisplay":"-4","status":"scheduled","statusLabel":"R4 · Tee 11:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":43,"name":"Jackson Koivun","shortName":"J. Koivun","espnGolfPlayerId":"5215013","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5215013.png","country":"USA","owgrRank":73,"position":22,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":2,"name":"Rickie Fowler","shortName":"R. Fowler","espnGolfPlayerId":"3702","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3702.png","country":"USA","owgrRank":41,"position":23,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":39,"name":"J.J. Spaun","shortName":"J.J. Spaun","espnGolfPlayerId":"10166","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10166.png","country":"USA","owgrRank":14,"position":24,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":86,"name":"Jacob Bridgeman","shortName":"J. Bridgeman","espnGolfPlayerId":"5054388","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5054388.png","country":"USA","owgrRank":31,"position":25,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":13,"name":"Xander Schauffele","shortName":"X. Schauffele","espnGolfPlayerId":"10140","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10140.png","country":"USA","owgrRank":15,"position":26,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":777,"name":"Maverick McNealy","shortName":"M. McNealy","espnGolfPlayerId":"9530","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9530.png","country":"USA","owgrRank":42,"position":27,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":70,"name":"Pierceson Coody","shortName":"P. Coody","espnGolfPlayerId":"4837368","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4837368.png","country":"USA","owgrRank":62,"position":28,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":778,"name":"Gary Woodland","shortName":"G. Woodland","espnGolfPlayerId":"3550","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3550.png","country":"USA","owgrRank":43,"position":29,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":106,"name":"Patrick Rodgers","shortName":"P. Rodgers","espnGolfPlayerId":"6825","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/6825.png","country":"USA","owgrRank":97,"position":30,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":806,"name":"Keith Mitchell","shortName":"K. Mitchell","espnGolfPlayerId":"8906","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8906.png","country":"USA","owgrRank":71,"position":31,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":751,"name":"Ludvig Åberg","shortName":"L. Åberg","espnGolfPlayerId":"4375972","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4375972.png","country":"Sweden","owgrRank":16,"position":32,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":78,"name":"Russell Henley","shortName":"R. Henley","espnGolfPlayerId":"5409","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5409.png","country":"USA","owgrRank":5,"position":33,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":123,"name":"Harry Hall","shortName":"H. Hall","espnGolfPlayerId":"4589438","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4589438.png","country":"England","owgrRank":86,"position":34,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:40 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":3,"name":"Ryan Gerard","shortName":"R. Gerard","espnGolfPlayerId":"5076021","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5076021.png","country":"USA","owgrRank":24,"position":35,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":775,"name":"Bud Cauley","shortName":"B. Cauley","espnGolfPlayerId":"5338","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5338.png","country":"USA","owgrRank":40,"position":36,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:40 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":780,"name":"Alex Smalley","shortName":"A. Smalley","espnGolfPlayerId":"9484","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9484.png","country":"USA","owgrRank":45,"position":37,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":813,"name":"Max Homa","shortName":"M. Homa","espnGolfPlayerId":"8973","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8973.png","country":"USA","owgrRank":78,"position":38,"score":-1,"scoreDisplay":"-1","status":"scheduled","statusLabel":"R4 · Tee 10:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":755,"name":"Aaron Rai","shortName":"A. Rai","espnGolfPlayerId":"10906","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10906.png","country":"England","owgrRank":20,"position":39,"score":-1,"scoreDisplay":"-1","status":"scheduled","statusLabel":"R4 · Tee 10:20 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":757,"name":"Justin Thomas","shortName":"J. Thomas","espnGolfPlayerId":"4848","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4848.png","country":"USA","owgrRank":22,"position":40,"score":-1,"scoreDisplay":"-1","status":"scheduled","statusLabel":"R4 · Tee 10:20 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":94,"name":"Matti Schmid","shortName":"M. Schmid","espnGolfPlayerId":"4566443","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4566443.png","country":"Germany","owgrRank":84,"position":41,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:10 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":125,"name":"Michael Brennan","shortName":"M. Brennan","espnGolfPlayerId":"4921329","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4921329.png","country":"USA","owgrRank":60,"position":42,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:10 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":34,"name":"Sam Stevens","shortName":"S. Stevens","espnGolfPlayerId":"4426181","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4426181.png","country":"USA","owgrRank":53,"position":43,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:00 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":53,"name":"Ryo Hisatsune","shortName":"R. Hisatsune","espnGolfPlayerId":"4858572","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4858572.png","country":"Japan","owgrRank":65,"position":44,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:00 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":56,"name":"Cameron Young","shortName":"C. Young","espnGolfPlayerId":"4425906","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4425906.png","country":"USA","owgrRank":3,"position":45,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 9:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":37,"name":"Jordan Smith","shortName":"J. Smith","espnGolfPlayerId":"9506","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9506.png","country":"England","owgrRank":76,"position":46,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":85,"name":"Nicolai Højgaard","shortName":"N. Højgaard","espnGolfPlayerId":"11250","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11250.png","country":"Denmark","owgrRank":38,"position":47,"score":1,"scoreDisplay":"+1","status":"round_complete","statusLabel":"R3 complete","currentRound":3,"lastHole":18,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":743,"name":"Collin Morikawa","shortName":"C. Morikawa","espnGolfPlayerId":"10592","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10592.png","country":"USA","owgrRank":8,"position":48,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:40 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":5,"name":"Michael Kim","shortName":"M. Kim","espnGolfPlayerId":"8974","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8974.png","country":"USA","owgrRank":55,"position":49,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":74,"name":"Sudarshan Yellamaraju","shortName":"S. Yellamaraju","espnGolfPlayerId":"5143175","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5143175.png","country":"Canada","owgrRank":103,"position":50,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":55,"name":"Corey Conners","shortName":"C. Conners","espnGolfPlayerId":"9126","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9126.png","country":"Canada","owgrRank":50,"position":51,"score":2,"scoreDisplay":"+2","status":"scheduled","statusLabel":"R4 · Tee 9:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":36,"name":"Michael Thorbjornsen","shortName":"M. Thorbjornsen","espnGolfPlayerId":"4425904","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4425904.png","country":"USA","owgrRank":68,"position":52,"score":2,"scoreDisplay":"+2","status":"scheduled","statusLabel":"R4 · Tee 9:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":40,"name":"Ben Griffin","shortName":"B. Griffin","espnGolfPlayerId":"4404992","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4404992.png","country":"USA","owgrRank":19,"position":53,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 9:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":783,"name":"Shane Lowry","shortName":"S. Lowry","espnGolfPlayerId":"4587","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4587.png","country":"Ireland","owgrRank":48,"position":54,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 8:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":761,"name":"Sepp Straka","shortName":"S. Straka","espnGolfPlayerId":"8961","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8961.png","country":"Austria","owgrRank":26,"position":55,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 9:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":764,"name":"Min Woo Lee","shortName":"M. Lee","espnGolfPlayerId":"4410932","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4410932.png","country":"Australia","owgrRank":29,"position":56,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 8:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":12,"name":"Ricky Castillo","shortName":"R. Castillo","espnGolfPlayerId":"4691931","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4691931.png","country":"USA","owgrRank":102,"position":57,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":17,"name":"Eric Cole","shortName":"E. Cole","espnGolfPlayerId":"10522","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10522.png","country":"USA","owgrRank":70,"position":58,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":82,"name":"Harris English","shortName":"H. English","espnGolfPlayerId":"5408","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5408.png","country":"USA","owgrRank":34,"position":59,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":136,"name":"Aldrich Potgieter","shortName":"A. Potgieter","espnGolfPlayerId":"5080439","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5080439.png","country":"South Africa","owgrRank":88,"position":60,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":801,"name":"Alex Fitzpatrick","shortName":"A. Fitzpatrick","espnGolfPlayerId":"4364865","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4364865.png","country":"England","owgrRank":66,"position":61,"score":5,"scoreDisplay":"+5","status":"scheduled","statusLabel":"R4 · Tee 8:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":54,"name":"Matt McCarty","shortName":"M. McCarty","espnGolfPlayerId":"4901368","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4901368.png","country":"USA","owgrRank":67,"position":62,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":737,"name":"Rory McIlroy","shortName":"R. McIlroy","espnGolfPlayerId":"3470","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3470.png","country":"Northern Ireland","owgrRank":2,"position":63,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":746,"name":"Justin Rose","shortName":"J. Rose","espnGolfPlayerId":"569","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/569.png","country":"England","owgrRank":11,"position":64,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":763,"name":"Kristoffer Reitan","shortName":"K. Reitan","espnGolfPlayerId":"4348470","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4348470.png","country":"Norway","owgrRank":28,"position":65,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":32,"name":"Akshay Bhatia","shortName":"A. Bhatia","espnGolfPlayerId":"4419142","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4419142.png","country":"USA","owgrRank":32,"position":66,"score":7,"scoreDisplay":"+7","status":"scheduled","statusLabel":"R4 · Tee 8:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":758,"name":"Ryan Fox","shortName":"R. Fox","espnGolfPlayerId":"4251","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4251.png","country":"New Zealand","owgrRank":23,"position":67,"score":8,"scoreDisplay":"+8","status":"scheduled","statusLabel":"R4 · Tee 7:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":816,"name":"Sahith Theegala","shortName":"S. Theegala","espnGolfPlayerId":"10980","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10980.png","country":"USA","owgrRank":81,"position":68,"score":10,"scoreDisplay":"+10","status":"scheduled","statusLabel":"R4 · Tee 7:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":752,"name":"Robert MacIntyre","shortName":"R. MacIntyre","espnGolfPlayerId":"11378","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11378.png","country":"Scotland","owgrRank":17,"position":69,"score":12,"scoreDisplay":"+12","status":"scheduled","statusLabel":"R3 · Tee 12:55 PM","currentRound":3,"lastHole":18,"holesCompleted":18,"roundsCompleted":1,"isDrafted":false,"draftedBy":[]}],"projectedCut":null,"seasonSnapshot":[{"team_id":4,"name":"Mark","wins":2,"runner_ups":0,"avg_finish":1,"avg_score":-38.5,"slates_played":2},{"team_id":2,"name":"Josh","wins":0,"runner_ups":2,"avg_finish":2,"avg_score":-37.5,"slates_played":2},{"team_id":1,"name":"Andy","wins":0,"runner_ups":0,"avg_finish":3,"avg_score":-26,"slates_played":1},{"team_id":3,"name":"Jon","wins":0,"runner_ups":0,"avg_finish":4,"avg_score":-13,"slates_played":1}],"funFacts":[{"label":"#1","value":"S. Scheffler* -13","detail":"R4 · Tee 1:40 PM"},{"label":"#2","value":"S. Burns* -11","detail":"R4 · Tee 1:40 PM"},{"label":"#3","value":"S. Im -11","detail":"R4 · Tee 1:30 PM"},{"label":"#4","value":"J. Knapp -8","detail":"R4 · Tee 1:30 PM"},{"label":"#5","value":"T. Fleetwood* -8","detail":"R4 · Tee 1:20 PM"},{"label":"#6","value":"S. Kim* -7","detail":"R4 · Tee 1:20 PM"},{"label":"#7","value":"A. Noren -7","detail":"R4 · Tee 1:10 PM"},{"label":"#8","value":"H. Matsuyama* -7","detail":"R4 · Tee 1:10 PM"},{"label":"#9","value":"B. Harman -7","detail":"R4 · Tee 1:00 PM"},{"label":"#10","value":"T. Kim -6","detail":"R4 · Tee 1:00 PM"},{"label":"#11","value":"K. Kitayama -6","detail":"R4 · Tee 12:50 PM"},{"label":"#12","value":"V. Hovland -6","detail":"R4 · Tee 12:50 PM"},{"label":"#13","value":"J.T. Poston -5","detail":"R4 · Tee 12:40 PM"},{"label":"#14","value":"A. Scott -5","detail":"R4 · Tee 12:40 PM"},{"label":"#15","value":"C. Gotterup* -5","detail":"R4 · Tee 12:25 PM"},{"label":"#16","value":"W. Clark* -5","detail":"R4 · Tee 12:25 PM"},{"label":"#17","value":"P. Cantlay* -5","detail":"R4 · Tee 12:15 PM"},{"label":"#18","value":"N. Echavarria -5","detail":"R4 · Tee 12:15 PM"},{"label":"#19","value":"M. Fitzpatrick* -4","detail":"R4 · Tee 12:05 PM"},{"label":"#20","value":"N. Taylor -4","detail":"R4 · Tee 12:05 PM"},{"label":"#21","value":"J. Spieth -4","detail":"R4 · Tee 11:55 AM"},{"label":"#22","value":"J. Koivun* -3","detail":"R4 · Tee 11:45 AM"},{"label":"#23","value":"R. Fowler -3","detail":"R4 · Tee 11:55 AM"},{"label":"#24","value":"J.J. Spaun -3","detail":"R4 · Tee 11:45 AM"},{"label":"#25","value":"J. Bridgeman -3","detail":"R4 · Tee 11:35 AM"}],"latestSeason":2026}
+tmp/collectors/tournament-analysis-raw-api-proof.txt-15-
+tmp/collectors/tournament-analysis-raw-api-proof.txt-16-===== CURRENT SLATE ID FROM ADMIN PAGE SOURCE =====
+tmp/collectors/tournament-analysis-raw-api-proof.txt-17-115-    minute: "2-digit",
+tmp/collectors/tournament-analysis-raw-api-proof.txt-18-116-  });
+tmp/collectors/tournament-analysis-raw-api-proof.txt-19-117-}
+tmp/collectors/tournament-analysis-raw-api-proof.txt-20-118-
+tmp/collectors/tournament-analysis-raw-api-proof.txt-21-119-export default function AdminSlatesPage() {
+tmp/collectors/tournament-analysis-raw-api-proof.txt-22-120-  const { selectedSport } = useSelectedSport();
+tmp/collectors/tournament-analysis-raw-api-proof.txt-23-121-
+tmp/collectors/tournament-analysis-raw-api-proof.txt-24-122-  const [slates, setSlates] = useState<SlateListRow[]>([]);
+tmp/collectors/tournament-analysis-raw-api-proof.txt-25-123:  const [selectedSlateId, setSelectedSlateId] =
+tmp/collectors/tournament-analysis-raw-api-proof.txt-26-124-    useState<number | "">("");
+tmp/collectors/tournament-analysis-raw-api-proof.txt-27-125:  const [selectedSlate, setSelectedSlate] =
+tmp/collectors/tournament-analysis-raw-api-proof.txt-28-126-    useState<SelectedSlateState | null>(null);
+tmp/collectors/tournament-analysis-raw-api-proof.txt-29-127-  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+tmp/collectors/tournament-analysis-raw-api-proof.txt-30-128-  const [golfField, setGolfField] =
+tmp/collectors/tournament-analysis-raw-api-proof.txt-31-129-    useState<GolfFieldSummary | null>(null);
+tmp/collectors/tournament-analysis-raw-api-proof.txt-32-130-
+tmp/collectors/tournament-analysis-raw-api-proof.txt-33-131-  const [
+tmp/collectors/tournament-analysis-raw-api-proof.txt-34-132-    shotCast,
+--
+tmp/collectors/pga-live-full-shot-raw-segments.txt-1-============================================================
+tmp/collectors/pga-live-full-shot-raw-segments.txt-2-PGA LIVE FULL-SHOT RAW SEGMENT AUDIT
+tmp/collectors/pga-live-full-shot-raw-segments.txt-3-============================================================
+tmp/collectors/pga-live-full-shot-raw-segments.txt-4-
+tmp/collectors/pga-live-full-shot-raw-segments.txt-5-Tournament: R2026027
+tmp/collectors/pga-live-full-shot-raw-segments.txt:6:Player: 28237
+tmp/collectors/pga-live-full-shot-raw-segments.txt-7-Round: 3
+tmp/collectors/pga-live-full-shot-raw-segments.txt-8-Holes: [1, 2, 3, 4, 5, 6]
+tmp/collectors/pga-live-full-shot-raw-segments.txt-9-
+tmp/collectors/pga-live-full-shot-raw-segments.txt-10-
+tmp/collectors/pga-live-full-shot-raw-segments.txt-11-============================================================
+tmp/collectors/pga-live-full-shot-raw-segments.txt-12-HOLE 1
+tmp/collectors/pga-live-full-shot-raw-segments.txt-13-============================================================
+tmp/collectors/pga-live-full-shot-raw-segments.txt-14-TOP-LEVEL KEYS:
+tmp/collectors/pga-live-full-shot-raw-segments.txt-15-['error']
+tmp/collectors/pga-live-full-shot-raw-segments.txt-16-
+tmp/collectors/pga-live-full-shot-raw-segments.txt-17-NO SHOTS ARRAY
+tmp/collectors/pga-live-full-shot-raw-segments.txt-18-{
+tmp/collectors/pga-live-full-shot-raw-segments.txt-19-  "error": "Valid slateId, playerId, round, and hole parameters are required."
+tmp/collectors/pga-live-full-shot-raw-segments.txt-20-}
+tmp/collectors/pga-live-full-shot-raw-segments.txt-21-
+tmp/collectors/pga-live-full-shot-raw-segments.txt-22-============================================================
+tmp/collectors/pga-live-full-shot-raw-segments.txt-23-HOLE 2
+tmp/collectors/pga-live-full-shot-raw-segments.txt-24-============================================================
+tmp/collectors/pga-live-full-shot-raw-segments.txt-25-TOP-LEVEL KEYS:
+tmp/collectors/pga-live-full-shot-raw-segments.txt-26-['error']
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-224-                56,
+tmp/collectors/pga-hole-replay-id-resolution.txt-225-                737,
+tmp/collectors/pga-hole-replay-id-resolution.txt-226-                79,
+tmp/collectors/pga-hole-replay-id-resolution.txt-227-                25
+tmp/collectors/pga-hole-replay-id-resolution.txt-228-            ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-229-            "pregame_projected_points": null
+tmp/collectors/pga-hole-replay-id-resolution.txt-230-        }
+tmp/collectors/pga-hole-replay-id-resolution.txt-231-    ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-232-}
+tmp/collectors/pga-hole-replay-id-resolution.txt-233-
+tmp/collectors/pga-hole-replay-id-resolution.txt:234:===== PLAYER 28237 REFERENCES IN LOCAL SOURCE/DATA =====
+tmp/collectors/pga-hole-replay-id-resolution.txt-235-tmp/collectors/current-golf-course-espn.json-349968-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-236-tmp/collectors/current-golf-course-espn.json-349969-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-237-tmp/collectors/current-golf-course-espn.json-349970-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-238-tmp/collectors/current-golf-course-espn.json-349971-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-239-tmp/collectors/current-golf-course-espn.json-349972-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-240-tmp/collectors/current-golf-course-espn.json-349973-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-241-tmp/collectors/current-golf-course-espn.json-349974-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-242-tmp/collectors/current-golf-course-espn.json-349975-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-243-tmp/collectors/current-golf-course-espn.json-349976-                  "order": 14,
+tmp/collectors/pga-hole-replay-id-resolution.txt-244-tmp/collectors/current-golf-course-espn.json-349977-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:245:tmp/collectors/current-golf-course-espn.json:349978:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:246:tmp/collectors/current-golf-course-espn.json:349979:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-247-tmp/collectors/current-golf-course-espn.json-349980-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-248-tmp/collectors/current-golf-course-espn.json-349981-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-249-tmp/collectors/current-golf-course-espn.json-349982-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-250-tmp/collectors/current-golf-course-espn.json-349983-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-251-tmp/collectors/current-golf-course-espn.json-349984-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-252-tmp/collectors/current-golf-course-espn.json-349985-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-253-tmp/collectors/current-golf-course-espn.json-349986-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-254-tmp/collectors/current-golf-course-espn.json-349987-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-255-tmp/collectors/current-golf-course-espn.json-349988-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-256-tmp/collectors/current-golf-course-espn.json-349989-                  "score": "-17",
+tmp/collectors/pga-hole-replay-id-resolution.txt-257-tmp/collectors/current-golf-course-espn.json-349990-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-258-tmp/collectors/current-golf-course-espn.json-349991-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-259-tmp/collectors/current-golf-course-espn.json-349992-                      "value": 68,
+tmp/collectors/pga-hole-replay-id-resolution.txt-260-tmp/collectors/current-golf-course-espn.json-349993-                      "displayValue": "-4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-261-tmp/collectors/current-golf-course-espn.json-349994-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-262-tmp/collectors/current-golf-course-espn.json-349995-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-263-tmp/collectors/current-golf-course-espn.json-349996-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-264-tmp/collectors/current-golf-course-espn.json-349997-                          "value": 3,
+tmp/collectors/pga-hole-replay-id-resolution.txt-265-tmp/collectors/current-golf-course-espn.json-349998-                          "displayValue": "3",
+tmp/collectors/pga-hole-replay-id-resolution.txt-266-tmp/collectors/current-golf-course-espn.json-349999-                          "period": 10,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-268-tmp/collectors/current-golf-course-espn.json-402977-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-269-tmp/collectors/current-golf-course-espn.json-402978-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-270-tmp/collectors/current-golf-course-espn.json-402979-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-271-tmp/collectors/current-golf-course-espn.json-402980-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-272-tmp/collectors/current-golf-course-espn.json-402981-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-273-tmp/collectors/current-golf-course-espn.json-402982-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-274-tmp/collectors/current-golf-course-espn.json-402983-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-275-tmp/collectors/current-golf-course-espn.json-402984-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-276-tmp/collectors/current-golf-course-espn.json-402985-                  "order": 3,
+tmp/collectors/pga-hole-replay-id-resolution.txt-277-tmp/collectors/current-golf-course-espn.json-402986-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:278:tmp/collectors/current-golf-course-espn.json:402987:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:279:tmp/collectors/current-golf-course-espn.json:402988:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-280-tmp/collectors/current-golf-course-espn.json-402989-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-281-tmp/collectors/current-golf-course-espn.json-402990-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-282-tmp/collectors/current-golf-course-espn.json-402991-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-283-tmp/collectors/current-golf-course-espn.json-402992-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-284-tmp/collectors/current-golf-course-espn.json-402993-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-285-tmp/collectors/current-golf-course-espn.json-402994-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-286-tmp/collectors/current-golf-course-espn.json-402995-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-287-tmp/collectors/current-golf-course-espn.json-402996-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-288-tmp/collectors/current-golf-course-espn.json-402997-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-289-tmp/collectors/current-golf-course-espn.json-402998-                  "score": "-17",
+tmp/collectors/pga-hole-replay-id-resolution.txt-290-tmp/collectors/current-golf-course-espn.json-402999-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-291-tmp/collectors/current-golf-course-espn.json-403000-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-292-tmp/collectors/current-golf-course-espn.json-403001-                      "value": 66,
+tmp/collectors/pga-hole-replay-id-resolution.txt-293-tmp/collectors/current-golf-course-espn.json-403002-                      "displayValue": "-5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-294-tmp/collectors/current-golf-course-espn.json-403003-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-295-tmp/collectors/current-golf-course-espn.json-403004-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-296-tmp/collectors/current-golf-course-espn.json-403005-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-297-tmp/collectors/current-golf-course-espn.json-403006-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-298-tmp/collectors/current-golf-course-espn.json-403007-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-299-tmp/collectors/current-golf-course-espn.json-403008-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-301-tmp/collectors/current-golf-course-espn.json-568658-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-302-tmp/collectors/current-golf-course-espn.json-568659-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-303-tmp/collectors/current-golf-course-espn.json-568660-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-304-tmp/collectors/current-golf-course-espn.json-568661-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-305-tmp/collectors/current-golf-course-espn.json-568662-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-306-tmp/collectors/current-golf-course-espn.json-568663-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-307-tmp/collectors/current-golf-course-espn.json-568664-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-308-tmp/collectors/current-golf-course-espn.json-568665-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-309-tmp/collectors/current-golf-course-espn.json-568666-                  "order": 71,
+tmp/collectors/pga-hole-replay-id-resolution.txt-310-tmp/collectors/current-golf-course-espn.json-568667-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:311:tmp/collectors/current-golf-course-espn.json:568668:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:312:tmp/collectors/current-golf-course-espn.json:568669:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-313-tmp/collectors/current-golf-course-espn.json-568670-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-314-tmp/collectors/current-golf-course-espn.json-568671-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-315-tmp/collectors/current-golf-course-espn.json-568672-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-316-tmp/collectors/current-golf-course-espn.json-568673-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-317-tmp/collectors/current-golf-course-espn.json-568674-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-318-tmp/collectors/current-golf-course-espn.json-568675-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-319-tmp/collectors/current-golf-course-espn.json-568676-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-320-tmp/collectors/current-golf-course-espn.json-568677-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-321-tmp/collectors/current-golf-course-espn.json-568678-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-322-tmp/collectors/current-golf-course-espn.json-568679-                  "score": "-4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-323-tmp/collectors/current-golf-course-espn.json-568680-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-324-tmp/collectors/current-golf-course-espn.json-568681-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-325-tmp/collectors/current-golf-course-espn.json-568682-                      "value": 72,
+tmp/collectors/pga-hole-replay-id-resolution.txt-326-tmp/collectors/current-golf-course-espn.json-568683-                      "displayValue": "E",
+tmp/collectors/pga-hole-replay-id-resolution.txt-327-tmp/collectors/current-golf-course-espn.json-568684-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-328-tmp/collectors/current-golf-course-espn.json-568685-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-329-tmp/collectors/current-golf-course-espn.json-568686-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-330-tmp/collectors/current-golf-course-espn.json-568687-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-331-tmp/collectors/current-golf-course-espn.json-568688-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-332-tmp/collectors/current-golf-course-espn.json-568689-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-334-tmp/collectors/current-golf-course-espn.json-676616-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-335-tmp/collectors/current-golf-course-espn.json-676617-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-336-tmp/collectors/current-golf-course-espn.json-676618-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-337-tmp/collectors/current-golf-course-espn.json-676619-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-338-tmp/collectors/current-golf-course-espn.json-676620-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-339-tmp/collectors/current-golf-course-espn.json-676621-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-340-tmp/collectors/current-golf-course-espn.json-676622-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-341-tmp/collectors/current-golf-course-espn.json-676623-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-342-tmp/collectors/current-golf-course-espn.json-676624-                  "order": 46,
+tmp/collectors/pga-hole-replay-id-resolution.txt-343-tmp/collectors/current-golf-course-espn.json-676625-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:344:tmp/collectors/current-golf-course-espn.json:676626:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:345:tmp/collectors/current-golf-course-espn.json:676627:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-346-tmp/collectors/current-golf-course-espn.json-676628-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-347-tmp/collectors/current-golf-course-espn.json-676629-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-348-tmp/collectors/current-golf-course-espn.json-676630-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-349-tmp/collectors/current-golf-course-espn.json-676631-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-350-tmp/collectors/current-golf-course-espn.json-676632-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-351-tmp/collectors/current-golf-course-espn.json-676633-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-352-tmp/collectors/current-golf-course-espn.json-676634-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-353-tmp/collectors/current-golf-course-espn.json-676635-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-354-tmp/collectors/current-golf-course-espn.json-676636-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-355-tmp/collectors/current-golf-course-espn.json-676637-                  "score": "E",
+tmp/collectors/pga-hole-replay-id-resolution.txt-356-tmp/collectors/current-golf-course-espn.json-676638-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-357-tmp/collectors/current-golf-course-espn.json-676639-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-358-tmp/collectors/current-golf-course-espn.json-676640-                      "value": 74,
+tmp/collectors/pga-hole-replay-id-resolution.txt-359-tmp/collectors/current-golf-course-espn.json-676641-                      "displayValue": "+2",
+tmp/collectors/pga-hole-replay-id-resolution.txt-360-tmp/collectors/current-golf-course-espn.json-676642-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-361-tmp/collectors/current-golf-course-espn.json-676643-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-362-tmp/collectors/current-golf-course-espn.json-676644-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-363-tmp/collectors/current-golf-course-espn.json-676645-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-364-tmp/collectors/current-golf-course-espn.json-676646-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-365-tmp/collectors/current-golf-course-espn.json-676647-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-367-tmp/collectors/current-golf-course-espn.json-957657-              "conferenceCompetition": false,
+tmp/collectors/pga-hole-replay-id-resolution.txt-368-tmp/collectors/current-golf-course-espn.json-957658-              "playByPlayAvailable": false,
+tmp/collectors/pga-hole-replay-id-resolution.txt-369-tmp/collectors/current-golf-course-espn.json-957659-              "recent": false,
+tmp/collectors/pga-hole-replay-id-resolution.txt-370-tmp/collectors/current-golf-course-espn.json-957660-              "competitors": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-371-tmp/collectors/current-golf-course-espn.json-957661-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-372-tmp/collectors/current-golf-course-espn.json-957662-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-373-tmp/collectors/current-golf-course-espn.json-957663-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-374-tmp/collectors/current-golf-course-espn.json-957664-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-375-tmp/collectors/current-golf-course-espn.json-957665-                  "order": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-376-tmp/collectors/current-golf-course-espn.json-957666-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:377:tmp/collectors/current-golf-course-espn.json:957667:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:378:tmp/collectors/current-golf-course-espn.json:957668:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-379-tmp/collectors/current-golf-course-espn.json-957669-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-380-tmp/collectors/current-golf-course-espn.json-957670-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-381-tmp/collectors/current-golf-course-espn.json-957671-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-382-tmp/collectors/current-golf-course-espn.json-957672-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-383-tmp/collectors/current-golf-course-espn.json-957673-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-384-tmp/collectors/current-golf-course-espn.json-957674-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-385-tmp/collectors/current-golf-course-espn.json-957675-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-386-tmp/collectors/current-golf-course-espn.json-957676-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-387-tmp/collectors/current-golf-course-espn.json-957677-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-388-tmp/collectors/current-golf-course-espn.json-957678-                  "score": "-12",
+tmp/collectors/pga-hole-replay-id-resolution.txt-389-tmp/collectors/current-golf-course-espn.json-957679-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-390-tmp/collectors/current-golf-course-espn.json-957680-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-391-tmp/collectors/current-golf-course-espn.json-957681-                      "value": 67,
+tmp/collectors/pga-hole-replay-id-resolution.txt-392-tmp/collectors/current-golf-course-espn.json-957682-                      "displayValue": "-5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-393-tmp/collectors/current-golf-course-espn.json-957683-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-394-tmp/collectors/current-golf-course-espn.json-957684-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-395-tmp/collectors/current-golf-course-espn.json-957685-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-396-tmp/collectors/current-golf-course-espn.json-957686-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-397-tmp/collectors/current-golf-course-espn.json-957687-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-398-tmp/collectors/current-golf-course-espn.json-957688-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-400-tmp/collectors/current-golf-course-espn.json-1192549-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-401-tmp/collectors/current-golf-course-espn.json-1192550-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-402-tmp/collectors/current-golf-course-espn.json-1192551-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-403-tmp/collectors/current-golf-course-espn.json-1192552-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-404-tmp/collectors/current-golf-course-espn.json-1192553-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-405-tmp/collectors/current-golf-course-espn.json-1192554-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-406-tmp/collectors/current-golf-course-espn.json-1192555-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-407-tmp/collectors/current-golf-course-espn.json-1192556-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-408-tmp/collectors/current-golf-course-espn.json-1192557-                  "order": 21,
+tmp/collectors/pga-hole-replay-id-resolution.txt-409-tmp/collectors/current-golf-course-espn.json-1192558-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:410:tmp/collectors/current-golf-course-espn.json:1192559:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:411:tmp/collectors/current-golf-course-espn.json:1192560:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-412-tmp/collectors/current-golf-course-espn.json-1192561-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-413-tmp/collectors/current-golf-course-espn.json-1192562-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-414-tmp/collectors/current-golf-course-espn.json-1192563-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-415-tmp/collectors/current-golf-course-espn.json-1192564-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-416-tmp/collectors/current-golf-course-espn.json-1192565-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-417-tmp/collectors/current-golf-course-espn.json-1192566-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-418-tmp/collectors/current-golf-course-espn.json-1192567-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-419-tmp/collectors/current-golf-course-espn.json-1192568-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-420-tmp/collectors/current-golf-course-espn.json-1192569-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-421-tmp/collectors/current-golf-course-espn.json-1192570-                  "score": "-5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-422-tmp/collectors/current-golf-course-espn.json-1192571-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-423-tmp/collectors/current-golf-course-espn.json-1192572-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-424-tmp/collectors/current-golf-course-espn.json-1192573-                      "value": 70,
+tmp/collectors/pga-hole-replay-id-resolution.txt-425-tmp/collectors/current-golf-course-espn.json-1192574-                      "displayValue": "-1",
+tmp/collectors/pga-hole-replay-id-resolution.txt-426-tmp/collectors/current-golf-course-espn.json-1192575-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-427-tmp/collectors/current-golf-course-espn.json-1192576-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-428-tmp/collectors/current-golf-course-espn.json-1192577-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-429-tmp/collectors/current-golf-course-espn.json-1192578-                          "value": 5,
+tmp/collectors/pga-hole-replay-id-resolution.txt-430-tmp/collectors/current-golf-course-espn.json-1192579-                          "displayValue": "5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-431-tmp/collectors/current-golf-course-espn.json-1192580-                          "period": 10,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-433-tmp/collectors/current-golf-course-espn.json-1315503-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-434-tmp/collectors/current-golf-course-espn.json-1315504-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-435-tmp/collectors/current-golf-course-espn.json-1315505-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-436-tmp/collectors/current-golf-course-espn.json-1315506-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-437-tmp/collectors/current-golf-course-espn.json-1315507-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-438-tmp/collectors/current-golf-course-espn.json-1315508-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-439-tmp/collectors/current-golf-course-espn.json-1315509-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-440-tmp/collectors/current-golf-course-espn.json-1315510-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-441-tmp/collectors/current-golf-course-espn.json-1315511-                  "order": 9,
+tmp/collectors/pga-hole-replay-id-resolution.txt-442-tmp/collectors/current-golf-course-espn.json-1315512-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:443:tmp/collectors/current-golf-course-espn.json:1315513:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:444:tmp/collectors/current-golf-course-espn.json:1315514:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-445-tmp/collectors/current-golf-course-espn.json-1315515-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-446-tmp/collectors/current-golf-course-espn.json-1315516-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-447-tmp/collectors/current-golf-course-espn.json-1315517-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-448-tmp/collectors/current-golf-course-espn.json-1315518-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-449-tmp/collectors/current-golf-course-espn.json-1315519-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-450-tmp/collectors/current-golf-course-espn.json-1315520-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-451-tmp/collectors/current-golf-course-espn.json-1315521-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-452-tmp/collectors/current-golf-course-espn.json-1315522-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-453-tmp/collectors/current-golf-course-espn.json-1315523-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-454-tmp/collectors/current-golf-course-espn.json-1315524-                  "score": "-4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-455-tmp/collectors/current-golf-course-espn.json-1315525-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-456-tmp/collectors/current-golf-course-espn.json-1315526-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-457-tmp/collectors/current-golf-course-espn.json-1315527-                      "value": 74,
+tmp/collectors/pga-hole-replay-id-resolution.txt-458-tmp/collectors/current-golf-course-espn.json-1315528-                      "displayValue": "+4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-459-tmp/collectors/current-golf-course-espn.json-1315529-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-460-tmp/collectors/current-golf-course-espn.json-1315530-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-461-tmp/collectors/current-golf-course-espn.json-1315531-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-462-tmp/collectors/current-golf-course-espn.json-1315532-                          "value": 5,
+tmp/collectors/pga-hole-replay-id-resolution.txt-463-tmp/collectors/current-golf-course-espn.json-1315533-                          "displayValue": "5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-464-tmp/collectors/current-golf-course-espn.json-1315534-                          "period": 10,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-466-tmp/collectors/current-golf-course-espn.json-1574962-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-467-tmp/collectors/current-golf-course-espn.json-1574963-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-468-tmp/collectors/current-golf-course-espn.json-1574964-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-469-tmp/collectors/current-golf-course-espn.json-1574965-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-470-tmp/collectors/current-golf-course-espn.json-1574966-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-471-tmp/collectors/current-golf-course-espn.json-1574967-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-472-tmp/collectors/current-golf-course-espn.json-1574968-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-473-tmp/collectors/current-golf-course-espn.json-1574969-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-474-tmp/collectors/current-golf-course-espn.json-1574970-                  "order": 13,
+tmp/collectors/pga-hole-replay-id-resolution.txt-475-tmp/collectors/current-golf-course-espn.json-1574971-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:476:tmp/collectors/current-golf-course-espn.json:1574972:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:477:tmp/collectors/current-golf-course-espn.json:1574973:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-478-tmp/collectors/current-golf-course-espn.json-1574974-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-479-tmp/collectors/current-golf-course-espn.json-1574975-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-480-tmp/collectors/current-golf-course-espn.json-1574976-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-481-tmp/collectors/current-golf-course-espn.json-1574977-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-482-tmp/collectors/current-golf-course-espn.json-1574978-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-483-tmp/collectors/current-golf-course-espn.json-1574979-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-484-tmp/collectors/current-golf-course-espn.json-1574980-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-485-tmp/collectors/current-golf-course-espn.json-1574981-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-486-tmp/collectors/current-golf-course-espn.json-1574982-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-487-tmp/collectors/current-golf-course-espn.json-1574983-                  "score": "-4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-488-tmp/collectors/current-golf-course-espn.json-1574984-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-489-tmp/collectors/current-golf-course-espn.json-1574985-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-490-tmp/collectors/current-golf-course-espn.json-1574986-                      "value": 71,
+tmp/collectors/pga-hole-replay-id-resolution.txt-491-tmp/collectors/current-golf-course-espn.json-1574987-                      "displayValue": "-1",
+tmp/collectors/pga-hole-replay-id-resolution.txt-492-tmp/collectors/current-golf-course-espn.json-1574988-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-493-tmp/collectors/current-golf-course-espn.json-1574989-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-494-tmp/collectors/current-golf-course-espn.json-1574990-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-495-tmp/collectors/current-golf-course-espn.json-1574991-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-496-tmp/collectors/current-golf-course-espn.json-1574992-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-497-tmp/collectors/current-golf-course-espn.json-1574993-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-499-tmp/collectors/current-golf-course-espn.json-1725585-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-500-tmp/collectors/current-golf-course-espn.json-1725586-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-501-tmp/collectors/current-golf-course-espn.json-1725587-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-502-tmp/collectors/current-golf-course-espn.json-1725588-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-503-tmp/collectors/current-golf-course-espn.json-1725589-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-504-tmp/collectors/current-golf-course-espn.json-1725590-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-505-tmp/collectors/current-golf-course-espn.json-1725591-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-506-tmp/collectors/current-golf-course-espn.json-1725592-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-507-tmp/collectors/current-golf-course-espn.json-1725593-                  "order": 35,
+tmp/collectors/pga-hole-replay-id-resolution.txt-508-tmp/collectors/current-golf-course-espn.json-1725594-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:509:tmp/collectors/current-golf-course-espn.json:1725595:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:510:tmp/collectors/current-golf-course-espn.json:1725596:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-511-tmp/collectors/current-golf-course-espn.json-1725597-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-512-tmp/collectors/current-golf-course-espn.json-1725598-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-513-tmp/collectors/current-golf-course-espn.json-1725599-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-514-tmp/collectors/current-golf-course-espn.json-1725600-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-515-tmp/collectors/current-golf-course-espn.json-1725601-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-516-tmp/collectors/current-golf-course-espn.json-1725602-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-517-tmp/collectors/current-golf-course-espn.json-1725603-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-518-tmp/collectors/current-golf-course-espn.json-1725604-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-519-tmp/collectors/current-golf-course-espn.json-1725605-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-520-tmp/collectors/current-golf-course-espn.json-1725606-                  "score": "+6",
+tmp/collectors/pga-hole-replay-id-resolution.txt-521-tmp/collectors/current-golf-course-espn.json-1725607-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-522-tmp/collectors/current-golf-course-espn.json-1725608-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-523-tmp/collectors/current-golf-course-espn.json-1725609-                      "value": 69,
+tmp/collectors/pga-hole-replay-id-resolution.txt-524-tmp/collectors/current-golf-course-espn.json-1725610-                      "displayValue": "-1",
+tmp/collectors/pga-hole-replay-id-resolution.txt-525-tmp/collectors/current-golf-course-espn.json-1725611-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-526-tmp/collectors/current-golf-course-espn.json-1725612-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-527-tmp/collectors/current-golf-course-espn.json-1725613-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-528-tmp/collectors/current-golf-course-espn.json-1725614-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-529-tmp/collectors/current-golf-course-espn.json-1725615-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-530-tmp/collectors/current-golf-course-espn.json-1725616-                          "period": 10,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-532-tmp/collectors/current-golf-course-espn.json-1936770-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-533-tmp/collectors/current-golf-course-espn.json-1936771-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-534-tmp/collectors/current-golf-course-espn.json-1936772-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-535-tmp/collectors/current-golf-course-espn.json-1936773-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-536-tmp/collectors/current-golf-course-espn.json-1936774-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-537-tmp/collectors/current-golf-course-espn.json-1936775-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-538-tmp/collectors/current-golf-course-espn.json-1936776-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-539-tmp/collectors/current-golf-course-espn.json-1936777-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-540-tmp/collectors/current-golf-course-espn.json-1936778-                  "order": 7,
+tmp/collectors/pga-hole-replay-id-resolution.txt-541-tmp/collectors/current-golf-course-espn.json-1936779-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:542:tmp/collectors/current-golf-course-espn.json:1936780:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:543:tmp/collectors/current-golf-course-espn.json:1936781:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-544-tmp/collectors/current-golf-course-espn.json-1936782-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-545-tmp/collectors/current-golf-course-espn.json-1936783-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-546-tmp/collectors/current-golf-course-espn.json-1936784-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-547-tmp/collectors/current-golf-course-espn.json-1936785-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-548-tmp/collectors/current-golf-course-espn.json-1936786-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-549-tmp/collectors/current-golf-course-espn.json-1936787-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-550-tmp/collectors/current-golf-course-espn.json-1936788-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-551-tmp/collectors/current-golf-course-espn.json-1936789-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-552-tmp/collectors/current-golf-course-espn.json-1936790-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-553-tmp/collectors/current-golf-course-espn.json-1936791-                  "score": "-12",
+tmp/collectors/pga-hole-replay-id-resolution.txt-554-tmp/collectors/current-golf-course-espn.json-1936792-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-555-tmp/collectors/current-golf-course-espn.json-1936793-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-556-tmp/collectors/current-golf-course-espn.json-1936794-                      "value": 65,
+tmp/collectors/pga-hole-replay-id-resolution.txt-557-tmp/collectors/current-golf-course-espn.json-1936795-                      "displayValue": "-5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-558-tmp/collectors/current-golf-course-espn.json-1936796-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-559-tmp/collectors/current-golf-course-espn.json-1936797-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-560-tmp/collectors/current-golf-course-espn.json-1936798-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-561-tmp/collectors/current-golf-course-espn.json-1936799-                          "value": 5,
+tmp/collectors/pga-hole-replay-id-resolution.txt-562-tmp/collectors/current-golf-course-espn.json-1936800-                          "displayValue": "5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-563-tmp/collectors/current-golf-course-espn.json-1936801-                          "period": 10,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-565-tmp/collectors/current-golf-course-espn.json-2134658-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-566-tmp/collectors/current-golf-course-espn.json-2134659-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-567-tmp/collectors/current-golf-course-espn.json-2134660-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-568-tmp/collectors/current-golf-course-espn.json-2134661-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-569-tmp/collectors/current-golf-course-espn.json-2134662-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-570-tmp/collectors/current-golf-course-espn.json-2134663-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-571-tmp/collectors/current-golf-course-espn.json-2134664-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-572-tmp/collectors/current-golf-course-espn.json-2134665-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-573-tmp/collectors/current-golf-course-espn.json-2134666-                  "order": 44,
+tmp/collectors/pga-hole-replay-id-resolution.txt-574-tmp/collectors/current-golf-course-espn.json-2134667-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:575:tmp/collectors/current-golf-course-espn.json:2134668:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:576:tmp/collectors/current-golf-course-espn.json:2134669:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-577-tmp/collectors/current-golf-course-espn.json-2134670-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-578-tmp/collectors/current-golf-course-espn.json-2134671-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-579-tmp/collectors/current-golf-course-espn.json-2134672-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-580-tmp/collectors/current-golf-course-espn.json-2134673-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-581-tmp/collectors/current-golf-course-espn.json-2134674-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-582-tmp/collectors/current-golf-course-espn.json-2134675-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-583-tmp/collectors/current-golf-course-espn.json-2134676-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-584-tmp/collectors/current-golf-course-espn.json-2134677-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-585-tmp/collectors/current-golf-course-espn.json-2134678-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-586-tmp/collectors/current-golf-course-espn.json-2134679-                  "score": "-1",
+tmp/collectors/pga-hole-replay-id-resolution.txt-587-tmp/collectors/current-golf-course-espn.json-2134680-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-588-tmp/collectors/current-golf-course-espn.json-2134681-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-589-tmp/collectors/current-golf-course-espn.json-2134682-                      "value": 72,
+tmp/collectors/pga-hole-replay-id-resolution.txt-590-tmp/collectors/current-golf-course-espn.json-2134683-                      "displayValue": "+2",
+tmp/collectors/pga-hole-replay-id-resolution.txt-591-tmp/collectors/current-golf-course-espn.json-2134684-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-592-tmp/collectors/current-golf-course-espn.json-2134685-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-593-tmp/collectors/current-golf-course-espn.json-2134686-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-594-tmp/collectors/current-golf-course-espn.json-2134687-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-595-tmp/collectors/current-golf-course-espn.json-2134688-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-596-tmp/collectors/current-golf-course-espn.json-2134689-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-598-tmp/collectors/current-golf-course-espn.json-2539067-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-599-tmp/collectors/current-golf-course-espn.json-2539068-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-600-tmp/collectors/current-golf-course-espn.json-2539069-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-601-tmp/collectors/current-golf-course-espn.json-2539070-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-602-tmp/collectors/current-golf-course-espn.json-2539071-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-603-tmp/collectors/current-golf-course-espn.json-2539072-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-604-tmp/collectors/current-golf-course-espn.json-2539073-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-605-tmp/collectors/current-golf-course-espn.json-2539074-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-606-tmp/collectors/current-golf-course-espn.json-2539075-                  "order": 18,
+tmp/collectors/pga-hole-replay-id-resolution.txt-607-tmp/collectors/current-golf-course-espn.json-2539076-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:608:tmp/collectors/current-golf-course-espn.json:2539077:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:609:tmp/collectors/current-golf-course-espn.json:2539078:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-610-tmp/collectors/current-golf-course-espn.json-2539079-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-611-tmp/collectors/current-golf-course-espn.json-2539080-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-612-tmp/collectors/current-golf-course-espn.json-2539081-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-613-tmp/collectors/current-golf-course-espn.json-2539082-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-614-tmp/collectors/current-golf-course-espn.json-2539083-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-615-tmp/collectors/current-golf-course-espn.json-2539084-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-616-tmp/collectors/current-golf-course-espn.json-2539085-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-617-tmp/collectors/current-golf-course-espn.json-2539086-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-618-tmp/collectors/current-golf-course-espn.json-2539087-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-619-tmp/collectors/current-golf-course-espn.json-2539088-                  "score": "E",
+tmp/collectors/pga-hole-replay-id-resolution.txt-620-tmp/collectors/current-golf-course-espn.json-2539089-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-621-tmp/collectors/current-golf-course-espn.json-2539090-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-622-tmp/collectors/current-golf-course-espn.json-2539091-                      "value": 46,
+tmp/collectors/pga-hole-replay-id-resolution.txt-623-tmp/collectors/current-golf-course-espn.json-2539092-                      "displayValue": "E",
+tmp/collectors/pga-hole-replay-id-resolution.txt-624-tmp/collectors/current-golf-course-espn.json-2539093-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-625-tmp/collectors/current-golf-course-espn.json-2539094-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-626-tmp/collectors/current-golf-course-espn.json-2539095-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-627-tmp/collectors/current-golf-course-espn.json-2539096-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-628-tmp/collectors/current-golf-course-espn.json-2539097-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-629-tmp/collectors/current-golf-course-espn.json-2539098-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-631-tmp/collectors/tournament-analysis-raw-api-proof.txt-4-
+tmp/collectors/pga-hole-replay-id-resolution.txt-632-tmp/collectors/tournament-analysis-raw-api-proof.txt-5-===== RAW HOME SUMMARY =====
+tmp/collectors/pga-hole-replay-id-resolution.txt-633-tmp/collectors/tournament-analysis-raw-api-proof.txt-6-HTTP/1.1 200 OK
+tmp/collectors/pga-hole-replay-id-resolution.txt-634-tmp/collectors/tournament-analysis-raw-api-proof.txt-7-vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+tmp/collectors/pga-hole-replay-id-resolution.txt-635-tmp/collectors/tournament-analysis-raw-api-proof.txt-8-content-type: application/json
+tmp/collectors/pga-hole-replay-id-resolution.txt-636-tmp/collectors/tournament-analysis-raw-api-proof.txt-9-Date: Sun, 16 Aug 2026 11:22:44 GMT
+tmp/collectors/pga-hole-replay-id-resolution.txt-637-tmp/collectors/tournament-analysis-raw-api-proof.txt-10-Connection: keep-alive
+tmp/collectors/pga-hole-replay-id-resolution.txt-638-tmp/collectors/tournament-analysis-raw-api-proof.txt-11-Keep-Alive: timeout=5
+tmp/collectors/pga-hole-replay-id-resolution.txt-639-tmp/collectors/tournament-analysis-raw-api-proof.txt-12-Transfer-Encoding: chunked
+tmp/collectors/pga-hole-replay-id-resolution.txt-640-tmp/collectors/tournament-analysis-raw-api-proof.txt-13-
+tmp/collectors/pga-hole-replay-id-resolution.txt:641:tmp/collectors/tournament-analysis-raw-api-proof.txt:14:{"success":true,"latestSlate":{"id":163,"date":"2026-08-13","start_date":"2026-08-13","end_date":"2026-08-16","label":"FedEx St. Jude Championship","display_name":"FedEx St. Jude Championship","is_locked":false,"has_cut":false,"first_game_start_time":null},"latestGolfTournamentIsFinal":false,"nextSlate":null,"latestSlateRows":[{"slate_id":163,"team_id":2,"fantasy_points":-28,"finish_position":1,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Josh","avatarUrl":"https://oororafwujfliscjasur.supabase.co/storage/v1/object/public/profile-images/a4cc96f6-7a71-44e8-b9a5-17bdef4bbbe0/avatar-1786650979795.png?v=1786650980188","projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"},{"slate_id":163,"team_id":3,"fantasy_points":-24,"finish_position":2,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Jon","avatarUrl":null,"projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"},{"slate_id":163,"team_id":1,"fantasy_points":-10,"finish_position":3,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Andy","avatarUrl":null,"projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"},{"slate_id":163,"team_id":4,"fantasy_points":-6,"finish_position":4,"games_completed":0,"games_in_progress":0,"games_remaining":4,"teamName":"Mark","avatarUrl":null,"projected_points":null,"pregame_projected_points":null,"win_probability":null,"golf_status_label":"R4 · 0/4 complete"}],"tournamentLeaderboard":[{"playerId":736,"name":"Scottie Scheffler","shortName":"S. Scheffler","espnGolfPlayerId":"9478","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9478.png","country":"USA","owgrRank":1,"position":1,"score":-13,"scoreDisplay":"-13","status":"scheduled","statusLabel":"R4 · Tee 1:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":745,"name":"Sam Burns","shortName":"S. Burns","espnGolfPlayerId":"9938","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9938.png","country":"USA","owgrRank":10,"position":2,"score":-11,"scoreDisplay":"-11","status":"scheduled","statusLabel":"R4 · Tee 1:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":24,"name":"Sungjae Im","shortName":"S. Im","espnGolfPlayerId":"11382","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11382.png","country":"South Korea","owgrRank":79,"position":3,"score":-11,"scoreDisplay":"-11","status":"scheduled","statusLabel":"R4 · Tee 1:30 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":81,"name":"Jake Knapp","shortName":"J. Knapp","espnGolfPlayerId":"9843","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9843.png","country":"USA","owgrRank":47,"position":4,"score":-8,"scoreDisplay":"-8","status":"scheduled","statusLabel":"R4 · Tee 1:30 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":741,"name":"Tommy Fleetwood","shortName":"T. Fleetwood","espnGolfPlayerId":"5539","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5539.png","country":"England","owgrRank":6,"position":5,"score":-8,"scoreDisplay":"-8","status":"scheduled","statusLabel":"R4 · Tee 1:20 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":44,"name":"Si Woo Kim","shortName":"S. Kim","espnGolfPlayerId":"7081","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/7081.png","country":"South Korea","owgrRank":18,"position":6,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:20 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":762,"name":"Alex Noren","shortName":"A. Noren","espnGolfPlayerId":"3832","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3832.png","country":"Sweden","owgrRank":27,"position":7,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:10 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":79,"name":"Hideki Matsuyama","shortName":"H. Matsuyama","espnGolfPlayerId":"5860","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5860.png","country":"Japan","owgrRank":25,"position":8,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:10 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":793,"name":"Brian Harman","shortName":"B. Harman","espnGolfPlayerId":"1225","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/1225.png","country":"USA","owgrRank":58,"position":9,"score":-7,"scoreDisplay":"-7","status":"scheduled","statusLabel":"R4 · Tee 1:00 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":770,"name":"Tom Kim","shortName":"T. Kim","espnGolfPlayerId":"4602673","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4602673.png","country":"South Korea","owgrRank":35,"position":10,"score":-6,"scoreDisplay":"-6","status":"scheduled","statusLabel":"R4 · Tee 1:00 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":772,"name":"Kurt Kitayama","shortName":"K. Kitayama","espnGolfPlayerId":"10364","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10364.png","country":"USA","owgrRank":37,"position":11,"score":-6,"scoreDisplay":"-6","status":"scheduled","statusLabel":"R4 · Tee 12:50 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":748,"name":"Viktor Hovland","shortName":"V. Hovland","espnGolfPlayerId":"4364873","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4364873.png","country":"Norway","owgrRank":13,"position":12,"score":-6,"scoreDisplay":"-6","status":"scheduled","statusLabel":"R4 · Tee 12:50 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":771,"name":"J.T. Poston","shortName":"J.T. Poston","espnGolfPlayerId":"10505","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10505.png","country":"USA","owgrRank":36,"position":13,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":784,"name":"Adam Scott","shortName":"A. Scott","espnGolfPlayerId":"388","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/388.png","country":"Australia","owgrRank":49,"position":14,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:40 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":30,"name":"Chris Gotterup","shortName":"C. Gotterup","espnGolfPlayerId":"4690755","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4690755.png","country":"USA","owgrRank":7,"position":15,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:25 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":99,"name":"Wyndham Clark","shortName":"W. Clark","espnGolfPlayerId":"11119","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11119.png","country":"USA","owgrRank":9,"position":16,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:25 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":25,"name":"Patrick Cantlay","shortName":"P. Cantlay","espnGolfPlayerId":"6007","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/6007.png","country":"USA","owgrRank":39,"position":17,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:15 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":122,"name":"Nico Echavarria","shortName":"N. Echavarria","espnGolfPlayerId":"4408316","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4408316.png","country":"Colombia","owgrRank":56,"position":18,"score":-5,"scoreDisplay":"-5","status":"scheduled","statusLabel":"R4 · Tee 12:15 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":739,"name":"Matt Fitzpatrick","shortName":"M. Fitzpatrick","espnGolfPlayerId":"9037","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9037.png","country":"England","owgrRank":4,"position":19,"score":-4,"scoreDisplay":"-4","status":"scheduled","statusLabel":"R4 · Tee 12:05 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Josh"]},{"playerId":45,"name":"Nick Taylor","shortName":"N. Taylor","espnGolfPlayerId":"3792","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3792.png","country":"Canada","owgrRank":72,"position":20,"score":-4,"scoreDisplay":"-4","status":"scheduled","statusLabel":"R4 · Tee 12:05 PM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":60,"name":"Jordan Spieth","shortName":"J. Spieth","espnGolfPlayerId":"5467","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5467.png","country":"USA","owgrRank":57,"position":21,"score":-4,"scoreDisplay":"-4","status":"scheduled","statusLabel":"R4 · Tee 11:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":43,"name":"Jackson Koivun","shortName":"J. Koivun","espnGolfPlayerId":"5215013","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5215013.png","country":"USA","owgrRank":73,"position":22,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":2,"name":"Rickie Fowler","shortName":"R. Fowler","espnGolfPlayerId":"3702","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3702.png","country":"USA","owgrRank":41,"position":23,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":39,"name":"J.J. Spaun","shortName":"J.J. Spaun","espnGolfPlayerId":"10166","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10166.png","country":"USA","owgrRank":14,"position":24,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":86,"name":"Jacob Bridgeman","shortName":"J. Bridgeman","espnGolfPlayerId":"5054388","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5054388.png","country":"USA","owgrRank":31,"position":25,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":13,"name":"Xander Schauffele","shortName":"X. Schauffele","espnGolfPlayerId":"10140","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10140.png","country":"USA","owgrRank":15,"position":26,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":777,"name":"Maverick McNealy","shortName":"M. McNealy","espnGolfPlayerId":"9530","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9530.png","country":"USA","owgrRank":42,"position":27,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":70,"name":"Pierceson Coody","shortName":"P. Coody","espnGolfPlayerId":"4837368","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4837368.png","country":"USA","owgrRank":62,"position":28,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":778,"name":"Gary Woodland","shortName":"G. Woodland","espnGolfPlayerId":"3550","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3550.png","country":"USA","owgrRank":43,"position":29,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":106,"name":"Patrick Rodgers","shortName":"P. Rodgers","espnGolfPlayerId":"6825","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/6825.png","country":"USA","owgrRank":97,"position":30,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":806,"name":"Keith Mitchell","shortName":"K. Mitchell","espnGolfPlayerId":"8906","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8906.png","country":"USA","owgrRank":71,"position":31,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":751,"name":"Ludvig Åberg","shortName":"L. Åberg","espnGolfPlayerId":"4375972","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4375972.png","country":"Sweden","owgrRank":16,"position":32,"score":-3,"scoreDisplay":"-3","status":"scheduled","statusLabel":"R4 · Tee 11:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":78,"name":"Russell Henley","shortName":"R. Henley","espnGolfPlayerId":"5409","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5409.png","country":"USA","owgrRank":5,"position":33,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":123,"name":"Harry Hall","shortName":"H. Hall","espnGolfPlayerId":"4589438","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4589438.png","country":"England","owgrRank":86,"position":34,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:40 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":3,"name":"Ryan Gerard","shortName":"R. Gerard","espnGolfPlayerId":"5076021","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5076021.png","country":"USA","owgrRank":24,"position":35,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":775,"name":"Bud Cauley","shortName":"B. Cauley","espnGolfPlayerId":"5338","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5338.png","country":"USA","owgrRank":40,"position":36,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:40 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":780,"name":"Alex Smalley","shortName":"A. Smalley","espnGolfPlayerId":"9484","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9484.png","country":"USA","owgrRank":45,"position":37,"score":-2,"scoreDisplay":"-2","status":"scheduled","statusLabel":"R4 · Tee 10:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":813,"name":"Max Homa","shortName":"M. Homa","espnGolfPlayerId":"8973","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8973.png","country":"USA","owgrRank":78,"position":38,"score":-1,"scoreDisplay":"-1","status":"scheduled","statusLabel":"R4 · Tee 10:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":755,"name":"Aaron Rai","shortName":"A. Rai","espnGolfPlayerId":"10906","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10906.png","country":"England","owgrRank":20,"position":39,"score":-1,"scoreDisplay":"-1","status":"scheduled","statusLabel":"R4 · Tee 10:20 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":757,"name":"Justin Thomas","shortName":"J. Thomas","espnGolfPlayerId":"4848","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4848.png","country":"USA","owgrRank":22,"position":40,"score":-1,"scoreDisplay":"-1","status":"scheduled","statusLabel":"R4 · Tee 10:20 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Andy"]},{"playerId":94,"name":"Matti Schmid","shortName":"M. Schmid","espnGolfPlayerId":"4566443","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4566443.png","country":"Germany","owgrRank":84,"position":41,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:10 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":125,"name":"Michael Brennan","shortName":"M. Brennan","espnGolfPlayerId":"4921329","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4921329.png","country":"USA","owgrRank":60,"position":42,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:10 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":34,"name":"Sam Stevens","shortName":"S. Stevens","espnGolfPlayerId":"4426181","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4426181.png","country":"USA","owgrRank":53,"position":43,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:00 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":53,"name":"Ryo Hisatsune","shortName":"R. Hisatsune","espnGolfPlayerId":"4858572","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4858572.png","country":"Japan","owgrRank":65,"position":44,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 10:00 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":56,"name":"Cameron Young","shortName":"C. Young","espnGolfPlayerId":"4425906","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4425906.png","country":"USA","owgrRank":3,"position":45,"score":0,"scoreDisplay":"E","status":"scheduled","statusLabel":"R4 · Tee 9:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":37,"name":"Jordan Smith","shortName":"J. Smith","espnGolfPlayerId":"9506","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9506.png","country":"England","owgrRank":76,"position":46,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:50 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":85,"name":"Nicolai Højgaard","shortName":"N. Højgaard","espnGolfPlayerId":"11250","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11250.png","country":"Denmark","owgrRank":38,"position":47,"score":1,"scoreDisplay":"+1","status":"round_complete","statusLabel":"R3 complete","currentRound":3,"lastHole":18,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":743,"name":"Collin Morikawa","shortName":"C. Morikawa","espnGolfPlayerId":"10592","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10592.png","country":"USA","owgrRank":8,"position":48,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:40 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Jon"]},{"playerId":5,"name":"Michael Kim","shortName":"M. Kim","espnGolfPlayerId":"8974","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8974.png","country":"USA","owgrRank":55,"position":49,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":74,"name":"Sudarshan Yellamaraju","shortName":"S. Yellamaraju","espnGolfPlayerId":"5143175","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5143175.png","country":"Canada","owgrRank":103,"position":50,"score":1,"scoreDisplay":"+1","status":"scheduled","statusLabel":"R4 · Tee 9:30 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":55,"name":"Corey Conners","shortName":"C. Conners","espnGolfPlayerId":"9126","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/9126.png","country":"Canada","owgrRank":50,"position":51,"score":2,"scoreDisplay":"+2","status":"scheduled","statusLabel":"R4 · Tee 9:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":36,"name":"Michael Thorbjornsen","shortName":"M. Thorbjornsen","espnGolfPlayerId":"4425904","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4425904.png","country":"USA","owgrRank":68,"position":52,"score":2,"scoreDisplay":"+2","status":"scheduled","statusLabel":"R4 · Tee 9:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":40,"name":"Ben Griffin","shortName":"B. Griffin","espnGolfPlayerId":"4404992","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4404992.png","country":"USA","owgrRank":19,"position":53,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 9:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":783,"name":"Shane Lowry","shortName":"S. Lowry","espnGolfPlayerId":"4587","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4587.png","country":"Ireland","owgrRank":48,"position":54,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 8:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":761,"name":"Sepp Straka","shortName":"S. Straka","espnGolfPlayerId":"8961","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/8961.png","country":"Austria","owgrRank":26,"position":55,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 9:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":764,"name":"Min Woo Lee","shortName":"M. Lee","espnGolfPlayerId":"4410932","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4410932.png","country":"Australia","owgrRank":29,"position":56,"score":3,"scoreDisplay":"+3","status":"scheduled","statusLabel":"R4 · Tee 8:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":12,"name":"Ricky Castillo","shortName":"R. Castillo","espnGolfPlayerId":"4691931","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4691931.png","country":"USA","owgrRank":102,"position":57,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":17,"name":"Eric Cole","shortName":"E. Cole","espnGolfPlayerId":"10522","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10522.png","country":"USA","owgrRank":70,"position":58,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:45 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":82,"name":"Harris English","shortName":"H. English","espnGolfPlayerId":"5408","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5408.png","country":"USA","owgrRank":34,"position":59,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":136,"name":"Aldrich Potgieter","shortName":"A. Potgieter","espnGolfPlayerId":"5080439","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/5080439.png","country":"South Africa","owgrRank":88,"position":60,"score":4,"scoreDisplay":"+4","status":"scheduled","statusLabel":"R4 · Tee 8:35 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":801,"name":"Alex Fitzpatrick","shortName":"A. Fitzpatrick","espnGolfPlayerId":"4364865","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4364865.png","country":"England","owgrRank":66,"position":61,"score":5,"scoreDisplay":"+5","status":"scheduled","statusLabel":"R4 · Tee 8:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":54,"name":"Matt McCarty","shortName":"M. McCarty","espnGolfPlayerId":"4901368","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4901368.png","country":"USA","owgrRank":67,"position":62,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:25 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":737,"name":"Rory McIlroy","shortName":"R. McIlroy","espnGolfPlayerId":"3470","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/3470.png","country":"Northern Ireland","owgrRank":2,"position":63,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":true,"draftedBy":["Mark"]},{"playerId":746,"name":"Justin Rose","shortName":"J. Rose","espnGolfPlayerId":"569","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/569.png","country":"England","owgrRank":11,"position":64,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":763,"name":"Kristoffer Reitan","shortName":"K. Reitan","espnGolfPlayerId":"4348470","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4348470.png","country":"Norway","owgrRank":28,"position":65,"score":6,"scoreDisplay":"+6","status":"scheduled","statusLabel":"R4 · Tee 8:15 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":32,"name":"Akshay Bhatia","shortName":"A. Bhatia","espnGolfPlayerId":"4419142","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4419142.png","country":"USA","owgrRank":32,"position":66,"score":7,"scoreDisplay":"+7","status":"scheduled","statusLabel":"R4 · Tee 8:05 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":758,"name":"Ryan Fox","shortName":"R. Fox","espnGolfPlayerId":"4251","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/4251.png","country":"New Zealand","owgrRank":23,"position":67,"score":8,"scoreDisplay":"+8","status":"scheduled","statusLabel":"R4 · Tee 7:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":816,"name":"Sahith Theegala","shortName":"S. Theegala","espnGolfPlayerId":"10980","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/10980.png","country":"USA","owgrRank":81,"position":68,"score":10,"scoreDisplay":"+10","status":"scheduled","statusLabel":"R4 · Tee 7:55 AM","currentRound":4,"lastHole":null,"holesCompleted":54,"roundsCompleted":3,"isDrafted":false,"draftedBy":[]},{"playerId":752,"name":"Robert MacIntyre","shortName":"R. MacIntyre","espnGolfPlayerId":"11378","headshotUrl":"https://a.espncdn.com/i/headshots/golf/players/full/11378.png","country":"Scotland","owgrRank":17,"position":69,"score":12,"scoreDisplay":"+12","status":"scheduled","statusLabel":"R3 · Tee 12:55 PM","currentRound":3,"lastHole":18,"holesCompleted":18,"roundsCompleted":1,"isDrafted":false,"draftedBy":[]}],"projectedCut":null,"seasonSnapshot":[{"team_id":4,"name":"Mark","wins":2,"runner_ups":0,"avg_finish":1,"avg_score":-38.5,"slates_played":2},{"team_id":2,"name":"Josh","wins":0,"runner_ups":2,"avg_finish":2,"avg_score":-37.5,"slates_played":2},{"team_id":1,"name":"Andy","wins":0,"runner_ups":0,"avg_finish":3,"avg_score":-26,"slates_played":1},{"team_id":3,"name":"Jon","wins":0,"runner_ups":0,"avg_finish":4,"avg_score":-13,"slates_played":1}],"funFacts":[{"label":"#1","value":"S. Scheffler* -13","detail":"R4 · Tee 1:40 PM"},{"label":"#2","value":"S. Burns* -11","detail":"R4 · Tee 1:40 PM"},{"label":"#3","value":"S. Im -11","detail":"R4 · Tee 1:30 PM"},{"label":"#4","value":"J. Knapp -8","detail":"R4 · Tee 1:30 PM"},{"label":"#5","value":"T. Fleetwood* -8","detail":"R4 · Tee 1:20 PM"},{"label":"#6","value":"S. Kim* -7","detail":"R4 · Tee 1:20 PM"},{"label":"#7","value":"A. Noren -7","detail":"R4 · Tee 1:10 PM"},{"label":"#8","value":"H. Matsuyama* -7","detail":"R4 · Tee 1:10 PM"},{"label":"#9","value":"B. Harman -7","detail":"R4 · Tee 1:00 PM"},{"label":"#10","value":"T. Kim -6","detail":"R4 · Tee 1:00 PM"},{"label":"#11","value":"K. Kitayama -6","detail":"R4 · Tee 12:50 PM"},{"label":"#12","value":"V. Hovland -6","detail":"R4 · Tee 12:50 PM"},{"label":"#13","value":"J.T. Poston -5","detail":"R4 · Tee 12:40 PM"},{"label":"#14","value":"A. Scott -5","detail":"R4 · Tee 12:40 PM"},{"label":"#15","value":"C. Gotterup* -5","detail":"R4 · Tee 12:25 PM"},{"label":"#16","value":"W. Clark* -5","detail":"R4 · Tee 12:25 PM"},{"label":"#17","value":"P. Cantlay* -5","detail":"R4 · Tee 12:15 PM"},{"label":"#18","value":"N. Echavarria -5","detail":"R4 · Tee 12:15 PM"},{"label":"#19","value":"M. Fitzpatrick* -4","detail":"R4 · Tee 12:05 PM"},{"label":"#20","value":"N. Taylor -4","detail":"R4 · Tee 12:05 PM"},{"label":"#21","value":"J. Spieth -4","detail":"R4 · Tee 11:55 AM"},{"label":"#22","value":"J. Koivun* -3","detail":"R4 · Tee 11:45 AM"},{"label":"#23","value":"R. Fowler -3","detail":"R4 · Tee 11:55 AM"},{"label":"#24","value":"J.J. Spaun -3","detail":"R4 · Tee 11:45 AM"},{"label":"#25","value":"J. Bridgeman -3","detail":"R4 · Tee 11:35 AM"}],"latestSeason":2026}
+tmp/collectors/pga-hole-replay-id-resolution.txt-642-tmp/collectors/tournament-analysis-raw-api-proof.txt-15-
+tmp/collectors/pga-hole-replay-id-resolution.txt-643-tmp/collectors/tournament-analysis-raw-api-proof.txt-16-===== CURRENT SLATE ID FROM ADMIN PAGE SOURCE =====
+tmp/collectors/pga-hole-replay-id-resolution.txt-644-tmp/collectors/tournament-analysis-raw-api-proof.txt-17-115-    minute: "2-digit",
+tmp/collectors/pga-hole-replay-id-resolution.txt-645-tmp/collectors/tournament-analysis-raw-api-proof.txt-18-116-  });
+tmp/collectors/pga-hole-replay-id-resolution.txt-646-tmp/collectors/tournament-analysis-raw-api-proof.txt-19-117-}
+tmp/collectors/pga-hole-replay-id-resolution.txt-647-tmp/collectors/tournament-analysis-raw-api-proof.txt-20-118-
+tmp/collectors/pga-hole-replay-id-resolution.txt-648-tmp/collectors/tournament-analysis-raw-api-proof.txt-21-119-export default function AdminSlatesPage() {
+tmp/collectors/pga-hole-replay-id-resolution.txt-649-tmp/collectors/tournament-analysis-raw-api-proof.txt-22-120-  const { selectedSport } = useSelectedSport();
+tmp/collectors/pga-hole-replay-id-resolution.txt-650-tmp/collectors/tournament-analysis-raw-api-proof.txt-23-121-
+tmp/collectors/pga-hole-replay-id-resolution.txt-651-tmp/collectors/tournament-analysis-raw-api-proof.txt-24-122-  const [slates, setSlates] = useState<SlateListRow[]>([]);
+tmp/collectors/pga-hole-replay-id-resolution.txt-652-tmp/collectors/tournament-analysis-raw-api-proof.txt-25-123:  const [selectedSlateId, setSelectedSlateId] =
+tmp/collectors/pga-hole-replay-id-resolution.txt-653-tmp/collectors/tournament-analysis-raw-api-proof.txt-26-124-    useState<number | "">("");
+tmp/collectors/pga-hole-replay-id-resolution.txt-654-tmp/collectors/tournament-analysis-raw-api-proof.txt-27-125:  const [selectedSlate, setSelectedSlate] =
+tmp/collectors/pga-hole-replay-id-resolution.txt-655-tmp/collectors/tournament-analysis-raw-api-proof.txt-28-126-    useState<SelectedSlateState | null>(null);
+tmp/collectors/pga-hole-replay-id-resolution.txt-656-tmp/collectors/tournament-analysis-raw-api-proof.txt-29-127-  const [teams, setTeams] = useState<SlateTeamRow[]>([]);
+tmp/collectors/pga-hole-replay-id-resolution.txt-657-tmp/collectors/tournament-analysis-raw-api-proof.txt-30-128-  const [golfField, setGolfField] =
+tmp/collectors/pga-hole-replay-id-resolution.txt-658-tmp/collectors/tournament-analysis-raw-api-proof.txt-31-129-    useState<GolfFieldSummary | null>(null);
+tmp/collectors/pga-hole-replay-id-resolution.txt-659-tmp/collectors/tournament-analysis-raw-api-proof.txt-32-130-
+tmp/collectors/pga-hole-replay-id-resolution.txt-660-tmp/collectors/tournament-analysis-raw-api-proof.txt-33-131-  const [
+tmp/collectors/pga-hole-replay-id-resolution.txt-661-tmp/collectors/tournament-analysis-raw-api-proof.txt-34-132-    shotCast,
+tmp/collectors/pga-hole-replay-id-resolution.txt-662---
+tmp/collectors/pga-hole-replay-id-resolution.txt-663-tmp/collectors/pga-live-full-shot-raw-segments.txt-1-============================================================
+tmp/collectors/pga-hole-replay-id-resolution.txt-664-tmp/collectors/pga-live-full-shot-raw-segments.txt-2-PGA LIVE FULL-SHOT RAW SEGMENT AUDIT
+tmp/collectors/pga-hole-replay-id-resolution.txt-665-tmp/collectors/pga-live-full-shot-raw-segments.txt-3-============================================================
+tmp/collectors/pga-hole-replay-id-resolution.txt-666-tmp/collectors/pga-live-full-shot-raw-segments.txt-4-
+tmp/collectors/pga-hole-replay-id-resolution.txt-667-tmp/collectors/pga-live-full-shot-raw-segments.txt-5-Tournament: R2026027
+tmp/collectors/pga-hole-replay-id-resolution.txt:668:tmp/collectors/pga-live-full-shot-raw-segments.txt:6:Player: 28237
+tmp/collectors/pga-hole-replay-id-resolution.txt-669-tmp/collectors/pga-live-full-shot-raw-segments.txt-7-Round: 3
+tmp/collectors/pga-hole-replay-id-resolution.txt-670-tmp/collectors/pga-live-full-shot-raw-segments.txt-8-Holes: [1, 2, 3, 4, 5, 6]
+tmp/collectors/pga-hole-replay-id-resolution.txt-671-tmp/collectors/pga-live-full-shot-raw-segments.txt-9-
+tmp/collectors/pga-hole-replay-id-resolution.txt-672-tmp/collectors/pga-live-full-shot-raw-segments.txt-10-
+tmp/collectors/pga-hole-replay-id-resolution.txt-673-tmp/collectors/pga-live-full-shot-raw-segments.txt-11-============================================================
+tmp/collectors/pga-hole-replay-id-resolution.txt-674-tmp/collectors/pga-live-full-shot-raw-segments.txt-12-HOLE 1
+tmp/collectors/pga-hole-replay-id-resolution.txt-675-tmp/collectors/pga-live-full-shot-raw-segments.txt-13-============================================================
+tmp/collectors/pga-hole-replay-id-resolution.txt-676-tmp/collectors/pga-live-full-shot-raw-segments.txt-14-TOP-LEVEL KEYS:
+tmp/collectors/pga-hole-replay-id-resolution.txt-677-tmp/collectors/pga-live-full-shot-raw-segments.txt-15-['error']
+tmp/collectors/pga-hole-replay-id-resolution.txt-678-tmp/collectors/pga-live-full-shot-raw-segments.txt-16-
+tmp/collectors/pga-hole-replay-id-resolution.txt-679-tmp/collectors/pga-live-full-shot-raw-segments.txt-17-NO SHOTS ARRAY
+tmp/collectors/pga-hole-replay-id-resolution.txt-680-tmp/collectors/pga-live-full-shot-raw-segments.txt-18-{
+tmp/collectors/pga-hole-replay-id-resolution.txt-681-tmp/collectors/pga-live-full-shot-raw-segments.txt-19-  "error": "Valid slateId, playerId, round, and hole parameters are required."
+tmp/collectors/pga-hole-replay-id-resolution.txt-682-tmp/collectors/pga-live-full-shot-raw-segments.txt-20-}
+tmp/collectors/pga-hole-replay-id-resolution.txt-683-tmp/collectors/pga-live-full-shot-raw-segments.txt-21-
+tmp/collectors/pga-hole-replay-id-resolution.txt-684-tmp/collectors/pga-live-full-shot-raw-segments.txt-22-============================================================
+tmp/collectors/pga-hole-replay-id-resolution.txt-685-tmp/collectors/pga-live-full-shot-raw-segments.txt-23-HOLE 2
+tmp/collectors/pga-hole-replay-id-resolution.txt-686-tmp/collectors/pga-live-full-shot-raw-segments.txt-24-============================================================
+tmp/collectors/pga-hole-replay-id-resolution.txt-687-tmp/collectors/pga-live-full-shot-raw-segments.txt-25-TOP-LEVEL KEYS:
+tmp/collectors/pga-hole-replay-id-resolution.txt-688-tmp/collectors/pga-live-full-shot-raw-segments.txt-26-['error']
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-690-tmp/collectors/pga-hole-replay-id-resolution.txt-224-                56,
+tmp/collectors/pga-hole-replay-id-resolution.txt-691-tmp/collectors/pga-hole-replay-id-resolution.txt-225-                737,
+tmp/collectors/pga-hole-replay-id-resolution.txt-692-tmp/collectors/pga-hole-replay-id-resolution.txt-226-                79,
+tmp/collectors/pga-hole-replay-id-resolution.txt-693-tmp/collectors/pga-hole-replay-id-resolution.txt-227-                25
+tmp/collectors/pga-hole-replay-id-resolution.txt-694-tmp/collectors/pga-hole-replay-id-resolution.txt-228-            ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-695-tmp/collectors/pga-hole-replay-id-resolution.txt-229-            "pregame_projected_points": null
+tmp/collectors/pga-hole-replay-id-resolution.txt-696-tmp/collectors/pga-hole-replay-id-resolution.txt-230-        }
+tmp/collectors/pga-hole-replay-id-resolution.txt-697-tmp/collectors/pga-hole-replay-id-resolution.txt-231-    ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-698-tmp/collectors/pga-hole-replay-id-resolution.txt-232-}
+tmp/collectors/pga-hole-replay-id-resolution.txt-699-tmp/collectors/pga-hole-replay-id-resolution.txt-233-
+tmp/collectors/pga-hole-replay-id-resolution.txt:700:tmp/collectors/pga-hole-replay-id-resolution.txt:234:===== PLAYER 28237 REFERENCES IN LOCAL SOURCE/DATA =====
+tmp/collectors/pga-hole-replay-id-resolution.txt-701-tmp/collectors/pga-hole-replay-id-resolution.txt-235-tmp/collectors/current-golf-course-espn.json-349968-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-702-tmp/collectors/pga-hole-replay-id-resolution.txt-236-tmp/collectors/current-golf-course-espn.json-349969-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-703-tmp/collectors/pga-hole-replay-id-resolution.txt-237-tmp/collectors/current-golf-course-espn.json-349970-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-704-tmp/collectors/pga-hole-replay-id-resolution.txt-238-tmp/collectors/current-golf-course-espn.json-349971-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-705-tmp/collectors/pga-hole-replay-id-resolution.txt-239-tmp/collectors/current-golf-course-espn.json-349972-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-706-tmp/collectors/pga-hole-replay-id-resolution.txt-240-tmp/collectors/current-golf-course-espn.json-349973-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-707-tmp/collectors/pga-hole-replay-id-resolution.txt-241-tmp/collectors/current-golf-course-espn.json-349974-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-708-tmp/collectors/pga-hole-replay-id-resolution.txt-242-tmp/collectors/current-golf-course-espn.json-349975-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-709-tmp/collectors/pga-hole-replay-id-resolution.txt-243-tmp/collectors/current-golf-course-espn.json-349976-                  "order": 14,
+tmp/collectors/pga-hole-replay-id-resolution.txt-710-tmp/collectors/pga-hole-replay-id-resolution.txt-244-tmp/collectors/current-golf-course-espn.json-349977-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:711:tmp/collectors/pga-hole-replay-id-resolution.txt:245:tmp/collectors/current-golf-course-espn.json:349978:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:712:tmp/collectors/pga-hole-replay-id-resolution.txt:246:tmp/collectors/current-golf-course-espn.json:349979:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-713-tmp/collectors/pga-hole-replay-id-resolution.txt-247-tmp/collectors/current-golf-course-espn.json-349980-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-714-tmp/collectors/pga-hole-replay-id-resolution.txt-248-tmp/collectors/current-golf-course-espn.json-349981-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-715-tmp/collectors/pga-hole-replay-id-resolution.txt-249-tmp/collectors/current-golf-course-espn.json-349982-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-716-tmp/collectors/pga-hole-replay-id-resolution.txt-250-tmp/collectors/current-golf-course-espn.json-349983-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-717-tmp/collectors/pga-hole-replay-id-resolution.txt-251-tmp/collectors/current-golf-course-espn.json-349984-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-718-tmp/collectors/pga-hole-replay-id-resolution.txt-252-tmp/collectors/current-golf-course-espn.json-349985-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-719-tmp/collectors/pga-hole-replay-id-resolution.txt-253-tmp/collectors/current-golf-course-espn.json-349986-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-720-tmp/collectors/pga-hole-replay-id-resolution.txt-254-tmp/collectors/current-golf-course-espn.json-349987-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-721-tmp/collectors/pga-hole-replay-id-resolution.txt-255-tmp/collectors/current-golf-course-espn.json-349988-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-722-tmp/collectors/pga-hole-replay-id-resolution.txt-256-tmp/collectors/current-golf-course-espn.json-349989-                  "score": "-17",
+tmp/collectors/pga-hole-replay-id-resolution.txt-723-tmp/collectors/pga-hole-replay-id-resolution.txt-257-tmp/collectors/current-golf-course-espn.json-349990-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-724-tmp/collectors/pga-hole-replay-id-resolution.txt-258-tmp/collectors/current-golf-course-espn.json-349991-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-725-tmp/collectors/pga-hole-replay-id-resolution.txt-259-tmp/collectors/current-golf-course-espn.json-349992-                      "value": 68,
+tmp/collectors/pga-hole-replay-id-resolution.txt-726-tmp/collectors/pga-hole-replay-id-resolution.txt-260-tmp/collectors/current-golf-course-espn.json-349993-                      "displayValue": "-4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-727-tmp/collectors/pga-hole-replay-id-resolution.txt-261-tmp/collectors/current-golf-course-espn.json-349994-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-728-tmp/collectors/pga-hole-replay-id-resolution.txt-262-tmp/collectors/current-golf-course-espn.json-349995-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-729-tmp/collectors/pga-hole-replay-id-resolution.txt-263-tmp/collectors/current-golf-course-espn.json-349996-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-730-tmp/collectors/pga-hole-replay-id-resolution.txt-264-tmp/collectors/current-golf-course-espn.json-349997-                          "value": 3,
+tmp/collectors/pga-hole-replay-id-resolution.txt-731-tmp/collectors/pga-hole-replay-id-resolution.txt-265-tmp/collectors/current-golf-course-espn.json-349998-                          "displayValue": "3",
+tmp/collectors/pga-hole-replay-id-resolution.txt-732-tmp/collectors/pga-hole-replay-id-resolution.txt-266-tmp/collectors/current-golf-course-espn.json-349999-                          "period": 10,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-734-tmp/collectors/pga-hole-replay-id-resolution.txt-268-tmp/collectors/current-golf-course-espn.json-402977-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-735-tmp/collectors/pga-hole-replay-id-resolution.txt-269-tmp/collectors/current-golf-course-espn.json-402978-                  ],
+tmp/collectors/pga-hole-replay-id-resolution.txt-736-tmp/collectors/pga-hole-replay-id-resolution.txt-270-tmp/collectors/current-golf-course-espn.json-402979-                  "statistics": []
+tmp/collectors/pga-hole-replay-id-resolution.txt-737-tmp/collectors/pga-hole-replay-id-resolution.txt-271-tmp/collectors/current-golf-course-espn.json-402980-                },
+tmp/collectors/pga-hole-replay-id-resolution.txt-738-tmp/collectors/pga-hole-replay-id-resolution.txt-272-tmp/collectors/current-golf-course-espn.json-402981-                {
+tmp/collectors/pga-hole-replay-id-resolution.txt-739-tmp/collectors/pga-hole-replay-id-resolution.txt-273-tmp/collectors/current-golf-course-espn.json-402982-                  "id": "3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-740-tmp/collectors/pga-hole-replay-id-resolution.txt-274-tmp/collectors/current-golf-course-espn.json-402983-                  "uid": "s:1100~l:1106~a:3470",
+tmp/collectors/pga-hole-replay-id-resolution.txt-741-tmp/collectors/pga-hole-replay-id-resolution.txt-275-tmp/collectors/current-golf-course-espn.json-402984-                  "type": "athlete",
+tmp/collectors/pga-hole-replay-id-resolution.txt-742-tmp/collectors/pga-hole-replay-id-resolution.txt-276-tmp/collectors/current-golf-course-espn.json-402985-                  "order": 3,
+tmp/collectors/pga-hole-replay-id-resolution.txt-743-tmp/collectors/pga-hole-replay-id-resolution.txt-277-tmp/collectors/current-golf-course-espn.json-402986-                  "athlete": {
+tmp/collectors/pga-hole-replay-id-resolution.txt:744:tmp/collectors/pga-hole-replay-id-resolution.txt:278:tmp/collectors/current-golf-course-espn.json:402987:                    "fullName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt:745:tmp/collectors/pga-hole-replay-id-resolution.txt:279:tmp/collectors/current-golf-course-espn.json:402988:                    "displayName": "Rory McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-746-tmp/collectors/pga-hole-replay-id-resolution.txt-280-tmp/collectors/current-golf-course-espn.json-402989-                    "shortName": "R. McIlroy",
+tmp/collectors/pga-hole-replay-id-resolution.txt-747-tmp/collectors/pga-hole-replay-id-resolution.txt-281-tmp/collectors/current-golf-course-espn.json-402990-                    "flag": {
+tmp/collectors/pga-hole-replay-id-resolution.txt-748-tmp/collectors/pga-hole-replay-id-resolution.txt-282-tmp/collectors/current-golf-course-espn.json-402991-                      "href": "https://a.espncdn.com/i/teamlogos/countries/500/nir.png",
+tmp/collectors/pga-hole-replay-id-resolution.txt-749-tmp/collectors/pga-hole-replay-id-resolution.txt-283-tmp/collectors/current-golf-course-espn.json-402992-                      "alt": "Northern Ireland",
+tmp/collectors/pga-hole-replay-id-resolution.txt-750-tmp/collectors/pga-hole-replay-id-resolution.txt-284-tmp/collectors/current-golf-course-espn.json-402993-                      "rel": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-751-tmp/collectors/pga-hole-replay-id-resolution.txt-285-tmp/collectors/current-golf-course-espn.json-402994-                        "country-flag"
+tmp/collectors/pga-hole-replay-id-resolution.txt-752-tmp/collectors/pga-hole-replay-id-resolution.txt-286-tmp/collectors/current-golf-course-espn.json-402995-                      ]
+tmp/collectors/pga-hole-replay-id-resolution.txt-753-tmp/collectors/pga-hole-replay-id-resolution.txt-287-tmp/collectors/current-golf-course-espn.json-402996-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-754-tmp/collectors/pga-hole-replay-id-resolution.txt-288-tmp/collectors/current-golf-course-espn.json-402997-                  },
+tmp/collectors/pga-hole-replay-id-resolution.txt-755-tmp/collectors/pga-hole-replay-id-resolution.txt-289-tmp/collectors/current-golf-course-espn.json-402998-                  "score": "-17",
+tmp/collectors/pga-hole-replay-id-resolution.txt-756-tmp/collectors/pga-hole-replay-id-resolution.txt-290-tmp/collectors/current-golf-course-espn.json-402999-                  "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-757-tmp/collectors/pga-hole-replay-id-resolution.txt-291-tmp/collectors/current-golf-course-espn.json-403000-                    {
+tmp/collectors/pga-hole-replay-id-resolution.txt-758-tmp/collectors/pga-hole-replay-id-resolution.txt-292-tmp/collectors/current-golf-course-espn.json-403001-                      "value": 66,
+tmp/collectors/pga-hole-replay-id-resolution.txt-759-tmp/collectors/pga-hole-replay-id-resolution.txt-293-tmp/collectors/current-golf-course-espn.json-403002-                      "displayValue": "-5",
+tmp/collectors/pga-hole-replay-id-resolution.txt-760-tmp/collectors/pga-hole-replay-id-resolution.txt-294-tmp/collectors/current-golf-course-espn.json-403003-                      "period": 1,
+tmp/collectors/pga-hole-replay-id-resolution.txt-761-tmp/collectors/pga-hole-replay-id-resolution.txt-295-tmp/collectors/current-golf-course-espn.json-403004-                      "linescores": [
+tmp/collectors/pga-hole-replay-id-resolution.txt-762-tmp/collectors/pga-hole-replay-id-resolution.txt-296-tmp/collectors/current-golf-course-espn.json-403005-                        {
+tmp/collectors/pga-hole-replay-id-resolution.txt-763-tmp/collectors/pga-hole-replay-id-resolution.txt-297-tmp/collectors/current-golf-course-espn.json-403006-                          "value": 4,
+tmp/collectors/pga-hole-replay-id-resolution.txt-764-tmp/collectors/pga-hole-replay-id-resolution.txt-298-tmp/collectors/current-golf-course-espn.json-403007-                          "displayValue": "4",
+tmp/collectors/pga-hole-replay-id-resolution.txt-765-tmp/collectors/pga-hole-replay-id-resolution.txt-299-tmp/collectors/current-golf-course-espn.json-403008-                          "period": 1,
+--
+tmp/collectors/pga-hole-replay-id-resolution.txt-767-tmp/collectors/pga-hole-replay-id-resolution.txt-301-tmp/collectors/current-golf-course-espn.json-568658-                    }
+tmp/collectors/pga-hole-replay-id-resolution.txt-768-tmp/collectors/pga-hole-replay-id-resolution.txt-302-tmp/collectors/current-golf-course-espn.json-568659-                  ],

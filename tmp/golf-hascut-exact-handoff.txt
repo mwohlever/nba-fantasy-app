@@ -1,0 +1,2613 @@
+============================================================
+EVERY GOLF TOURNAMENT VIEW CALL SITE
+============================================================
+components/lineups/GolfScoresDashboard.tsx-1158-
+components/lineups/GolfScoresDashboard.tsx-1159-                          </div>
+components/lineups/GolfScoresDashboard.tsx-1160-                        );
+components/lineups/GolfScoresDashboard.tsx-1161-                      })}
+components/lineups/GolfScoresDashboard.tsx-1162-                    </div>
+components/lineups/GolfScoresDashboard.tsx-1163-                  </div>
+components/lineups/GolfScoresDashboard.tsx-1164-
+components/lineups/GolfScoresDashboard.tsx-1165-                  {inlineHoleReplay &&
+components/lineups/GolfScoresDashboard.tsx-1166-                  selectedHoleKey?.startsWith(
+components/lineups/GolfScoresDashboard.tsx-1167-                    `${player.id}:${displayRound?.round_number ?? 0}:`,
+components/lineups/GolfScoresDashboard.tsx-1168-                  ) ? (
+components/lineups/GolfScoresDashboard.tsx-1169-                    <div className="mt-4">
+components/lineups/GolfScoresDashboard.tsx-1170-                      <GolfHoleReplayPanel
+components/lineups/GolfScoresDashboard.tsx-1171-                        slateId={selectedSlate?.id ?? null}
+components/lineups/GolfScoresDashboard.tsx-1172-                        replay={inlineHoleReplay}
+components/lineups/GolfScoresDashboard.tsx-1173-                        inline
+components/lineups/GolfScoresDashboard.tsx-1174-                        onClose={() => {
+components/lineups/GolfScoresDashboard.tsx-1175-                          setInlineHoleReplay(null);
+components/lineups/GolfScoresDashboard.tsx-1176-                          setSelectedHoleKey(null);
+components/lineups/GolfScoresDashboard.tsx-1177-                        }}
+components/lineups/GolfScoresDashboard.tsx-1178-                      />
+components/lineups/GolfScoresDashboard.tsx-1179-                    </div>
+components/lineups/GolfScoresDashboard.tsx-1180-                  ) : null}
+components/lineups/GolfScoresDashboard.tsx-1181-
+components/lineups/GolfScoresDashboard.tsx-1182-                  <button
+components/lineups/GolfScoresDashboard.tsx-1183-                    type="button"
+components/lineups/GolfScoresDashboard.tsx-1184-                    onClick={() =>
+components/lineups/GolfScoresDashboard.tsx-1185-                      setProfilePlayer(player)
+components/lineups/GolfScoresDashboard.tsx-1186-                    }
+components/lineups/GolfScoresDashboard.tsx-1187-                    className="mt-3 block w-full text-right text-xs font-semibold text-emerald-700 transition hover:text-emerald-900"
+components/lineups/GolfScoresDashboard.tsx-1188-                    aria-label={`Open ${player.name} full Golf scorecard`}
+components/lineups/GolfScoresDashboard.tsx-1189-                  >
+components/lineups/GolfScoresDashboard.tsx-1190-                    View full scorecard →
+components/lineups/GolfScoresDashboard.tsx-1191-                  </button>
+components/lineups/GolfScoresDashboard.tsx-1192-                </div>
+components/lineups/GolfScoresDashboard.tsx-1193-              </article>
+components/lineups/GolfScoresDashboard.tsx-1194-            );
+components/lineups/GolfScoresDashboard.tsx-1195-          })}
+components/lineups/GolfScoresDashboard.tsx-1196-        </div>
+components/lineups/GolfScoresDashboard.tsx-1197-          </section>
+components/lineups/GolfScoresDashboard.tsx-1198-        </>
+components/lineups/GolfScoresDashboard.tsx-1199-      ) : activeView === "league" ? (
+components/lineups/GolfScoresDashboard.tsx-1200-        <GolfLeagueView
+components/lineups/GolfScoresDashboard.tsx-1201-          slateId={selectedSlate?.id ?? null}
+components/lineups/GolfScoresDashboard.tsx-1202-          teams={participatingTeams}
+components/lineups/GolfScoresDashboard.tsx-1203-          getPlayersForTeam={getPlayersForTeam}
+components/lineups/GolfScoresDashboard.tsx-1204-          getRawPlayerStat={getRawPlayerStat}
+components/lineups/GolfScoresDashboard.tsx-1205-          setProfilePlayer={setProfilePlayer}
+components/lineups/GolfScoresDashboard.tsx-1206-        />
+components/lineups/GolfScoresDashboard.tsx-1207-      ) : (
+components/lineups/GolfScoresDashboard.tsx:1208:        <GolfTournamentView
+components/lineups/GolfScoresDashboard.tsx-1209-          players={allPlayers}
+components/lineups/GolfScoresDashboard.tsx-1210-          teams={participatingTeams}
+components/lineups/GolfScoresDashboard.tsx-1211-          hasCut={selectedSlate?.has_cut !== false}
+components/lineups/GolfScoresDashboard.tsx-1212-          getPlayersForTeam={getPlayersForTeam}
+components/lineups/GolfScoresDashboard.tsx-1213-          getRawPlayerStat={getRawPlayerStat}
+components/lineups/GolfScoresDashboard.tsx-1214-          setProfilePlayer={setProfilePlayer}
+components/lineups/GolfScoresDashboard.tsx-1215-        />
+components/lineups/GolfScoresDashboard.tsx-1216-      )}
+components/lineups/GolfScoresDashboard.tsx-1217-      
+components/lineups/GolfScoresDashboard.tsx-1218-    </section>
+components/lineups/GolfScoresDashboard.tsx-1219-  );
+components/lineups/GolfScoresDashboard.tsx-1220-}
+
+============================================================
+EVERY hasCut / has_cut REFERENCE
+============================================================
+app/lineups/scores/page.tsx-9-  const now = new Date();
+app/lineups/scores/page.tsx-10-  const year = now.getFullYear();
+app/lineups/scores/page.tsx-11-  const month = String(now.getMonth() + 1).padStart(2, "0");
+app/lineups/scores/page.tsx-12-  const day = String(now.getDate()).padStart(2, "0");
+app/lineups/scores/page.tsx-13-  return `${year}-${month}-${day}`;
+app/lineups/scores/page.tsx-14-}
+app/lineups/scores/page.tsx-15-
+app/lineups/scores/page.tsx-16-type Slate = {
+app/lineups/scores/page.tsx-17-  id: number;
+app/lineups/scores/page.tsx-18-  date: string;
+app/lineups/scores/page.tsx-19-  start_date?: string;
+app/lineups/scores/page.tsx-20-  end_date?: string;
+app/lineups/scores/page.tsx-21-  label?: string;
+app/lineups/scores/page.tsx-22-  is_locked: boolean;
+app/lineups/scores/page.tsx-23-  sport?: string;
+app/lineups/scores/page.tsx:24:  has_cut?: boolean;
+app/lineups/scores/page.tsx-25-};
+app/lineups/scores/page.tsx-26-
+app/lineups/scores/page.tsx-27-type SavedLineup = {
+app/lineups/scores/page.tsx-28-  team_id: number;
+app/lineups/scores/page.tsx-29-  player_ids: number[];
+app/lineups/scores/page.tsx-30-  pregame_projected_points: number | null;
+app/lineups/scores/page.tsx-31-};
+app/lineups/scores/page.tsx-32-
+app/lineups/scores/page.tsx-33-type SlateTeamConfig = {
+app/lineups/scores/page.tsx-34-  slate_id: number;
+app/lineups/scores/page.tsx-35-  team_id: number;
+app/lineups/scores/page.tsx-36-  draft_order: number;
+app/lineups/scores/page.tsx-37-  is_participating: boolean;
+app/lineups/scores/page.tsx-38-};
+app/lineups/scores/page.tsx-39-
+app/lineups/scores/page.tsx-40-export default async function ScoresLineupsPage({
+app/lineups/scores/page.tsx-41-  searchParams,
+app/lineups/scores/page.tsx-42-}: {
+app/lineups/scores/page.tsx-43-  searchParams: Promise<{ sport?: string | string[] }>;
+app/lineups/scores/page.tsx-44-}) {
+app/lineups/scores/page.tsx-45-  const resolvedSearchParams = await searchParams;
+app/lineups/scores/page.tsx-46-  const sportParam = Array.isArray(resolvedSearchParams?.sport)
+app/lineups/scores/page.tsx-47-    ? resolvedSearchParams.sport[0]
+app/lineups/scores/page.tsx-48-    : resolvedSearchParams?.sport;
+app/lineups/scores/page.tsx-49-  const sport =
+--
+app/lineups/scores/page.tsx-77-  const [
+app/lineups/scores/page.tsx-78-    { data: rawPlayers, error: playersError },
+app/lineups/scores/page.tsx-79-    { data: teams, error: teamsError },
+app/lineups/scores/page.tsx-80-    { data: slates, error: slatesError },
+app/lineups/scores/page.tsx-81-    { data: slateTeams, error: slateTeamsError },
+app/lineups/scores/page.tsx-82-    { data: allPlayerStats, error: allPlayerStatsError },
+app/lineups/scores/page.tsx-83-  ] = await Promise.all([
+app/lineups/scores/page.tsx-84-    supabaseAdmin
+app/lineups/scores/page.tsx-85-      .from(playersTable)
+app/lineups/scores/page.tsx-86-      .select(playersSelect)
+app/lineups/scores/page.tsx-87-      .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
+app/lineups/scores/page.tsx-88-    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+app/lineups/scores/page.tsx-89-    supabaseAdmin
+app/lineups/scores/page.tsx-90-      .from("slates")
+app/lineups/scores/page.tsx-91-      .select(
+app/lineups/scores/page.tsx:92:        "id, date, start_date, end_date, is_locked, sport, display_name, has_cut",
+app/lineups/scores/page.tsx-93-      )
+app/lineups/scores/page.tsx-94-      .eq("sport", sport)
+app/lineups/scores/page.tsx-95-      .order("start_date", { ascending: false })
+app/lineups/scores/page.tsx-96-      .order("end_date", { ascending: false }),
+app/lineups/scores/page.tsx-97-    supabaseAdmin
+app/lineups/scores/page.tsx-98-      .from("slate_teams")
+app/lineups/scores/page.tsx-99-      .select("slate_id, team_id, draft_order, is_participating")
+app/lineups/scores/page.tsx-100-      .order("slate_id", { ascending: true })
+app/lineups/scores/page.tsx-101-      .order("draft_order", { ascending: true }),
+app/lineups/scores/page.tsx-102-    sport === "golf"
+app/lineups/scores/page.tsx-103-      ? supabaseAdmin
+app/lineups/scores/page.tsx-104-          .from("golf_event_players")
+app/lineups/scores/page.tsx-105-          .select("player_id, fantasy_score")
+app/lineups/scores/page.tsx-106-      : supabaseAdmin
+app/lineups/scores/page.tsx-107-          .from(statsTable)
+app/lineups/scores/page.tsx-108-          .select("player_id, fantasy_points"),
+app/lineups/scores/page.tsx-109-  ]);
+app/lineups/scores/page.tsx-110-
+app/lineups/scores/page.tsx-111-  if (
+app/lineups/scores/page.tsx-112-    playersError ||
+app/lineups/scores/page.tsx-113-    teamsError ||
+app/lineups/scores/page.tsx-114-    slatesError ||
+app/lineups/scores/page.tsx-115-    slateTeamsError ||
+app/lineups/scores/page.tsx-116-    allPlayerStatsError
+app/lineups/scores/page.tsx-117-  ) {
+--
+app/lineups/scores/page.tsx-195-
+app/lineups/scores/page.tsx-196-      return {
+app/lineups/scores/page.tsx-197-        id: slate.id,
+app/lineups/scores/page.tsx-198-        date: slate.date,
+app/lineups/scores/page.tsx-199-        start_date: startDate,
+app/lineups/scores/page.tsx-200-        end_date: endDate,
+app/lineups/scores/page.tsx-201-        label:
+app/lineups/scores/page.tsx-202-          sport === "golf" && (slate as any).display_name
+app/lineups/scores/page.tsx-203-            ? String((slate as any).display_name)
+app/lineups/scores/page.tsx-204-            : formatSlateDateLabel({
+app/lineups/scores/page.tsx-205-                start_date: startDate,
+app/lineups/scores/page.tsx-206-                end_date: endDate,
+app/lineups/scores/page.tsx-207-              }),
+app/lineups/scores/page.tsx-208-        is_locked: slate.is_locked,
+app/lineups/scores/page.tsx-209-        sport: slate.sport ?? "nba",
+app/lineups/scores/page.tsx:210:        has_cut:
+app/lineups/scores/page.tsx-211-          sport === "golf"
+app/lineups/scores/page.tsx:212:            ? slate.has_cut !== false
+app/lineups/scores/page.tsx-213-            : true,
+app/lineups/scores/page.tsx-214-      };
+app/lineups/scores/page.tsx-215-    }) ?? [];
+app/lineups/scores/page.tsx-216-
+app/lineups/scores/page.tsx-217-  const safeSlateTeams = (slateTeams ?? []) as SlateTeamConfig[];
+app/lineups/scores/page.tsx-218-
+app/lineups/scores/page.tsx-219-  const safeAllPlayerStats = allPlayerStats ?? [];
+app/lineups/scores/page.tsx-220-  const playerAverageMap = new Map<number, { total: number; count: number }>();
+app/lineups/scores/page.tsx-221-
+app/lineups/scores/page.tsx-222-  safeAllPlayerStats.forEach((row) => {
+app/lineups/scores/page.tsx-223-    const playerId = Number(row.player_id);
+app/lineups/scores/page.tsx-224-    const fantasyPoints = Number(
+app/lineups/scores/page.tsx-225-      sport === "golf"
+app/lineups/scores/page.tsx-226-        ? (row as any).fantasy_score ?? 0
+app/lineups/scores/page.tsx-227-        : (row as any).fantasy_points ?? 0,
+app/lineups/scores/page.tsx-228-    );
+app/lineups/scores/page.tsx-229-
+app/lineups/scores/page.tsx-230-    if (!Number.isFinite(playerId)) return;
+app/lineups/scores/page.tsx-231-    if (sport === "golf") return;
+app/lineups/scores/page.tsx-232-    if (!Number.isFinite(fantasyPoints) || fantasyPoints <= 0) return;
+app/lineups/scores/page.tsx-233-
+app/lineups/scores/page.tsx-234-    const existing = playerAverageMap.get(playerId) ?? { total: 0, count: 0 };
+app/lineups/scores/page.tsx-235-    playerAverageMap.set(playerId, {
+app/lineups/scores/page.tsx-236-      total: existing.total + fantasyPoints,
+app/lineups/scores/page.tsx-237-      count: existing.count + 1,
+--
+app/api/slates/route.ts-495-          ? "golf"
+app/api/slates/route.ts-496-          : "nba";
+app/api/slates/route.ts-497-
+app/api/slates/route.ts-498-    const displayName =
+app/api/slates/route.ts-499-      typeof body?.displayName === "string"
+app/api/slates/route.ts-500-        ? body.displayName.trim()
+app/api/slates/route.ts-501-        : "";
+app/api/slates/route.ts-502-
+app/api/slates/route.ts-503-    const externalEventId =
+app/api/slates/route.ts-504-      typeof body?.externalEventId === "string"
+app/api/slates/route.ts-505-        ? body.externalEventId.trim()
+app/api/slates/route.ts-506-        : "";
+app/api/slates/route.ts-507-
+app/api/slates/route.ts-508-    const rawCutPenalty = Number(body?.cutPenaltyPerRound);
+app/api/slates/route.ts-509-
+app/api/slates/route.ts:510:    const hasCut =
+app/api/slates/route.ts-511-      sport === "golf"
+app/api/slates/route.ts:512:        ? body?.hasCut !== false
+app/api/slates/route.ts-513-        : true;
+app/api/slates/route.ts-514-
+app/api/slates/route.ts-515-    const cutPenaltyPerRound =
+app/api/slates/route.ts-516-      sport === "golf" && Number.isInteger(rawCutPenalty)
+app/api/slates/route.ts-517-        ? rawCutPenalty
+app/api/slates/route.ts-518-        : null;
+app/api/slates/route.ts-519-
+app/api/slates/route.ts-520-    const teamConfigs = Array.isArray(body?.teamSelections)
+app/api/slates/route.ts-521-      ? body.teamSelections
+app/api/slates/route.ts-522-      : Array.isArray(body?.teamConfigs)
+app/api/slates/route.ts-523-        ? body.teamConfigs
+app/api/slates/route.ts-524-        : [];
+app/api/slates/route.ts-525-
+app/api/slates/route.ts-526-    if (!startDate || !endDate) {
+app/api/slates/route.ts-527-      return NextResponse.json(
+app/api/slates/route.ts-528-        { error: "Start date and end date are required." },
+app/api/slates/route.ts-529-        { status: 400 }
+app/api/slates/route.ts-530-      );
+app/api/slates/route.ts-531-    }
+app/api/slates/route.ts-532-
+app/api/slates/route.ts-533-    if (endDate < startDate) {
+app/api/slates/route.ts-534-      return NextResponse.json(
+app/api/slates/route.ts-535-        { error: "End date cannot be earlier than start date." },
+app/api/slates/route.ts-536-        { status: 400 }
+app/api/slates/route.ts-537-      );
+--
+app/api/slates/route.ts-654-
+app/api/slates/route.ts-655-    const { data: newSlate, error: insertSlateError } = await supabaseAdmin
+app/api/slates/route.ts-656-      .from("slates")
+app/api/slates/route.ts-657-      .insert({
+app/api/slates/route.ts-658-        date: startDate,
+app/api/slates/route.ts-659-        start_date: startDate,
+app/api/slates/route.ts-660-        end_date: endDate,
+app/api/slates/route.ts-661-        is_locked: false,
+app/api/slates/route.ts-662-        sport,
+app/api/slates/route.ts-663-        display_name:
+app/api/slates/route.ts-664-          sport === "golf" ? displayName : null,
+app/api/slates/route.ts-665-        external_event_id:
+app/api/slates/route.ts-666-          sport === "golf" ? externalEventId : null,
+app/api/slates/route.ts-667-        cut_penalty_per_round:
+app/api/slates/route.ts-668-          sport === "golf" ? cutPenaltyPerRound : null,
+app/api/slates/route.ts:669:        has_cut:
+app/api/slates/route.ts:670:          sport === "golf" ? hasCut : true,
+app/api/slates/route.ts-671-        nba_team_abbreviations:
+app/api/slates/route.ts-672-          sport === "nba" ? nbaTeamAbbreviations : [],
+app/api/slates/route.ts-673-        first_game_start_time:
+app/api/slates/route.ts-674-          sport === "nba" ? firstGameStartTime : null,
+app/api/slates/route.ts-675-      })
+app/api/slates/route.ts-676-      .select(
+app/api/slates/route.ts:677:        "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations, first_game_start_time"
+app/api/slates/route.ts-678-      )
+app/api/slates/route.ts-679-      .single();
+app/api/slates/route.ts-680-
+app/api/slates/route.ts-681-    if (insertSlateError || !newSlate) {
+app/api/slates/route.ts-682-      return NextResponse.json(
+app/api/slates/route.ts-683-        { error: insertSlateError?.message || "Failed to create slate." },
+app/api/slates/route.ts-684-        { status: 500 }
+app/api/slates/route.ts-685-      );
+app/api/slates/route.ts-686-    }
+app/api/slates/route.ts-687-
+app/api/slates/route.ts-688-    const slateTeamRows = normalizedTeamConfigs.map((config) => ({
+app/api/slates/route.ts-689-      slate_id: newSlate.id,
+app/api/slates/route.ts-690-      team_id: config.team_id,
+app/api/slates/route.ts-691-      draft_order: config.draft_order,
+app/api/slates/route.ts-692-      is_participating: config.is_participating,
+app/api/slates/route.ts-693-    }));
+app/api/slates/route.ts-694-
+app/api/slates/route.ts-695-    const { error: insertSlateTeamsError } = await supabaseAdmin
+app/api/slates/route.ts-696-      .from("slate_teams")
+app/api/slates/route.ts-697-      .insert(slateTeamRows);
+app/api/slates/route.ts-698-
+app/api/slates/route.ts-699-    if (insertSlateTeamsError) {
+app/api/slates/route.ts-700-      await supabaseAdmin.from("slates").delete().eq("id", newSlate.id);
+app/api/slates/route.ts-701-
+app/api/slates/route.ts-702-      return NextResponse.json(
+--
+app/api/admin/slates/[slateId]/route.ts-9-}
+app/api/admin/slates/[slateId]/route.ts-10-
+app/api/admin/slates/[slateId]/route.ts-11-
+app/api/admin/slates/[slateId]/route.ts-12-
+app/api/admin/slates/[slateId]/route.ts-13-type SlateTeamUpdate = {
+app/api/admin/slates/[slateId]/route.ts-14-  team_id: number;
+app/api/admin/slates/[slateId]/route.ts-15-  draft_order: number;
+app/api/admin/slates/[slateId]/route.ts-16-  is_participating: boolean;
+app/api/admin/slates/[slateId]/route.ts-17-};
+app/api/admin/slates/[slateId]/route.ts-18-
+app/api/admin/slates/[slateId]/route.ts-19-type UpdateSlateBody = {
+app/api/admin/slates/[slateId]/route.ts-20-  is_locked?: boolean;
+app/api/admin/slates/[slateId]/route.ts-21-  teams?: SlateTeamUpdate[];
+app/api/admin/slates/[slateId]/route.ts-22-  nba_team_abbreviations?: string[];
+app/api/admin/slates/[slateId]/route.ts-23-  cut_penalty_per_round?: number;
+app/api/admin/slates/[slateId]/route.ts:24:  has_cut?: boolean;
+app/api/admin/slates/[slateId]/route.ts-25-};
+app/api/admin/slates/[slateId]/route.ts-26-
+app/api/admin/slates/[slateId]/route.ts-27-type RouteContext = {
+app/api/admin/slates/[slateId]/route.ts-28-  params: Promise<{
+app/api/admin/slates/[slateId]/route.ts-29-    slateId: string;
+app/api/admin/slates/[slateId]/route.ts-30-  }>;
+app/api/admin/slates/[slateId]/route.ts-31-};
+app/api/admin/slates/[slateId]/route.ts-32-
+app/api/admin/slates/[slateId]/route.ts-33-export async function GET(_: NextRequest, context: RouteContext) {
+app/api/admin/slates/[slateId]/route.ts-34-  const authError = await requireAdminApi();
+app/api/admin/slates/[slateId]/route.ts-35-  if (authError) return authError;
+app/api/admin/slates/[slateId]/route.ts-36-
+app/api/admin/slates/[slateId]/route.ts-37-  try {
+app/api/admin/slates/[slateId]/route.ts-38-    const { slateId: slateIdParam } = await context.params;
+app/api/admin/slates/[slateId]/route.ts-39-    const slateId = Number(slateIdParam);
+app/api/admin/slates/[slateId]/route.ts-40-
+app/api/admin/slates/[slateId]/route.ts-41-    if (!Number.isFinite(slateId)) {
+app/api/admin/slates/[slateId]/route.ts-42-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-43-        { error: "Invalid slate id." },
+app/api/admin/slates/[slateId]/route.ts-44-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-45-      );
+app/api/admin/slates/[slateId]/route.ts-46-    }
+app/api/admin/slates/[slateId]/route.ts-47-
+app/api/admin/slates/[slateId]/route.ts-48-    const [
+app/api/admin/slates/[slateId]/route.ts-49-      { data: slate, error: slateError },
+app/api/admin/slates/[slateId]/route.ts-50-      { data: teams, error: teamsError },
+app/api/admin/slates/[slateId]/route.ts-51-      { data: slateTeams, error: slateTeamsError },
+app/api/admin/slates/[slateId]/route.ts-52-      {
+app/api/admin/slates/[slateId]/route.ts-53-        data: golfFieldRows,
+app/api/admin/slates/[slateId]/route.ts-54-        error: golfFieldError,
+app/api/admin/slates/[slateId]/route.ts-55-        count: golfFieldCount,
+app/api/admin/slates/[slateId]/route.ts-56-      },
+app/api/admin/slates/[slateId]/route.ts-57-    ] = await Promise.all([
+app/api/admin/slates/[slateId]/route.ts-58-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-59-        .from("slates")
+app/api/admin/slates/[slateId]/route.ts-60-        .select(
+app/api/admin/slates/[slateId]/route.ts:61:          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations"
+app/api/admin/slates/[slateId]/route.ts-62-        )
+app/api/admin/slates/[slateId]/route.ts-63-        .eq("id", slateId)
+app/api/admin/slates/[slateId]/route.ts-64-        .single(),
+app/api/admin/slates/[slateId]/route.ts-65-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-66-        .from("teams")
+app/api/admin/slates/[slateId]/route.ts-67-        .select("id, name")
+app/api/admin/slates/[slateId]/route.ts-68-        .order("name", { ascending: true }),
+app/api/admin/slates/[slateId]/route.ts-69-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-70-        .from("slate_teams")
+app/api/admin/slates/[slateId]/route.ts-71-        .select("slate_id, team_id, draft_order, is_participating")
+app/api/admin/slates/[slateId]/route.ts-72-        .eq("slate_id", slateId),
+app/api/admin/slates/[slateId]/route.ts-73-      supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-74-        .from("golf_event_players")
+app/api/admin/slates/[slateId]/route.ts-75-        .select("updated_at", {
+app/api/admin/slates/[slateId]/route.ts-76-          count: "exact",
+app/api/admin/slates/[slateId]/route.ts-77-        })
+app/api/admin/slates/[slateId]/route.ts-78-        .eq("slate_id", slateId)
+app/api/admin/slates/[slateId]/route.ts-79-        .order("updated_at", {
+app/api/admin/slates/[slateId]/route.ts-80-          ascending: false,
+app/api/admin/slates/[slateId]/route.ts-81-        })
+app/api/admin/slates/[slateId]/route.ts-82-        .limit(1),
+app/api/admin/slates/[slateId]/route.ts-83-    ]);
+app/api/admin/slates/[slateId]/route.ts-84-
+app/api/admin/slates/[slateId]/route.ts-85-    if (slateError || !slate) {
+app/api/admin/slates/[slateId]/route.ts-86-      return NextResponse.json(
+--
+app/api/admin/slates/[slateId]/route.ts-176-  try {
+app/api/admin/slates/[slateId]/route.ts-177-    const { slateId: slateIdParam } = await context.params;
+app/api/admin/slates/[slateId]/route.ts-178-    const slateId = Number(slateIdParam);
+app/api/admin/slates/[slateId]/route.ts-179-    const body = (await request.json()) as UpdateSlateBody;
+app/api/admin/slates/[slateId]/route.ts-180-
+app/api/admin/slates/[slateId]/route.ts-181-    if (!Number.isFinite(slateId)) {
+app/api/admin/slates/[slateId]/route.ts-182-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-183-        { error: "Invalid slate id." },
+app/api/admin/slates/[slateId]/route.ts-184-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-185-      );
+app/api/admin/slates/[slateId]/route.ts-186-    }
+app/api/admin/slates/[slateId]/route.ts-187-
+app/api/admin/slates/[slateId]/route.ts-188-    const teams = body.teams ?? [];
+app/api/admin/slates/[slateId]/route.ts-189-    const isLocked = body.is_locked;
+app/api/admin/slates/[slateId]/route.ts-190-    const rawCutPenalty = Number(body.cut_penalty_per_round);
+app/api/admin/slates/[slateId]/route.ts:191:    const hasCut = body.has_cut;
+app/api/admin/slates/[slateId]/route.ts-192-    const nbaTeamAbbreviations = (body.nba_team_abbreviations ?? [])
+app/api/admin/slates/[slateId]/route.ts-193-      .map((value) => normalizeNbaTeamCode(value))
+app/api/admin/slates/[slateId]/route.ts-194-      .filter(Boolean);
+app/api/admin/slates/[slateId]/route.ts-195-
+app/api/admin/slates/[slateId]/route.ts-196-    if (!Array.isArray(teams) || teams.length === 0) {
+app/api/admin/slates/[slateId]/route.ts-197-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-198-        { error: "At least one team config is required." },
+app/api/admin/slates/[slateId]/route.ts-199-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-200-      );
+app/api/admin/slates/[slateId]/route.ts-201-    }
+app/api/admin/slates/[slateId]/route.ts-202-
+app/api/admin/slates/[slateId]/route.ts-203-    const normalizedTeams = [...teams]
+app/api/admin/slates/[slateId]/route.ts-204-      .sort((a, b) => {
+app/api/admin/slates/[slateId]/route.ts-205-        if (a.is_participating !== b.is_participating) {
+app/api/admin/slates/[slateId]/route.ts-206-          return a.is_participating ? -1 : 1;
+app/api/admin/slates/[slateId]/route.ts-207-        }
+app/api/admin/slates/[slateId]/route.ts-208-
+app/api/admin/slates/[slateId]/route.ts-209-        return a.draft_order - b.draft_order;
+app/api/admin/slates/[slateId]/route.ts-210-      })
+app/api/admin/slates/[slateId]/route.ts-211-      .map((team, index) => ({
+app/api/admin/slates/[slateId]/route.ts-212-        ...team,
+app/api/admin/slates/[slateId]/route.ts-213-        draft_order: index + 1,
+app/api/admin/slates/[slateId]/route.ts-214-      }));
+app/api/admin/slates/[slateId]/route.ts-215-
+app/api/admin/slates/[slateId]/route.ts-216-    const { data: existingSlate, error: existingSlateError } = await supabaseAdmin
+--
+app/api/admin/slates/[slateId]/route.ts-235-      )
+app/api/admin/slates/[slateId]/route.ts-236-    ) {
+app/api/admin/slates/[slateId]/route.ts-237-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-238-        {
+app/api/admin/slates/[slateId]/route.ts-239-          error:
+app/api/admin/slates/[slateId]/route.ts-240-            "Cut penalty must be a whole number from 0 through 100.",
+app/api/admin/slates/[slateId]/route.ts-241-        },
+app/api/admin/slates/[slateId]/route.ts-242-        { status: 400 }
+app/api/admin/slates/[slateId]/route.ts-243-      );
+app/api/admin/slates/[slateId]/route.ts-244-    }
+app/api/admin/slates/[slateId]/route.ts-245-
+app/api/admin/slates/[slateId]/route.ts-246-    const slateUpdatePayload: {
+app/api/admin/slates/[slateId]/route.ts-247-      is_locked?: boolean;
+app/api/admin/slates/[slateId]/route.ts-248-      nba_team_abbreviations?: string[];
+app/api/admin/slates/[slateId]/route.ts-249-      cut_penalty_per_round?: number;
+app/api/admin/slates/[slateId]/route.ts:250:      has_cut?: boolean;
+app/api/admin/slates/[slateId]/route.ts-251-    } = {
+app/api/admin/slates/[slateId]/route.ts-252-      nba_team_abbreviations: nbaTeamAbbreviations,
+app/api/admin/slates/[slateId]/route.ts-253-    };
+app/api/admin/slates/[slateId]/route.ts-254-
+app/api/admin/slates/[slateId]/route.ts-255-    if (existingSlate.sport === "golf") {
+app/api/admin/slates/[slateId]/route.ts-256-      slateUpdatePayload.cut_penalty_per_round =
+app/api/admin/slates/[slateId]/route.ts-257-        rawCutPenalty;
+app/api/admin/slates/[slateId]/route.ts-258-
+app/api/admin/slates/[slateId]/route.ts:259:      if (typeof hasCut === "boolean") {
+app/api/admin/slates/[slateId]/route.ts:260:        slateUpdatePayload.has_cut = hasCut;
+app/api/admin/slates/[slateId]/route.ts-261-      }
+app/api/admin/slates/[slateId]/route.ts-262-    }
+app/api/admin/slates/[slateId]/route.ts-263-
+app/api/admin/slates/[slateId]/route.ts-264-    if (typeof isLocked === "boolean") {
+app/api/admin/slates/[slateId]/route.ts-265-      slateUpdatePayload.is_locked = isLocked;
+app/api/admin/slates/[slateId]/route.ts-266-    }
+app/api/admin/slates/[slateId]/route.ts-267-
+app/api/admin/slates/[slateId]/route.ts-268-    const { error: slateUpdateError } = await supabaseAdmin
+app/api/admin/slates/[slateId]/route.ts-269-      .from("slates")
+app/api/admin/slates/[slateId]/route.ts-270-      .update(slateUpdatePayload)
+app/api/admin/slates/[slateId]/route.ts-271-      .eq("id", slateId);
+app/api/admin/slates/[slateId]/route.ts-272-
+app/api/admin/slates/[slateId]/route.ts-273-    if (slateUpdateError) {
+app/api/admin/slates/[slateId]/route.ts-274-      return NextResponse.json(
+app/api/admin/slates/[slateId]/route.ts-275-        { error: `Failed to update slate: ${slateUpdateError.message}` },
+app/api/admin/slates/[slateId]/route.ts-276-        { status: 500 }
+app/api/admin/slates/[slateId]/route.ts-277-      );
+app/api/admin/slates/[slateId]/route.ts-278-    }
+app/api/admin/slates/[slateId]/route.ts-279-
+app/api/admin/slates/[slateId]/route.ts-280-    const payload = normalizedTeams.map((team) => ({
+app/api/admin/slates/[slateId]/route.ts-281-      slate_id: slateId,
+app/api/admin/slates/[slateId]/route.ts-282-      team_id: team.team_id,
+app/api/admin/slates/[slateId]/route.ts-283-      draft_order: team.draft_order,
+app/api/admin/slates/[slateId]/route.ts-284-      is_participating: team.is_participating,
+app/api/admin/slates/[slateId]/route.ts-285-    }));
+--
+app/api/admin/slates/route.ts-1-import { NextResponse } from "next/server";
+app/api/admin/slates/route.ts-2-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+app/api/admin/slates/route.ts-3-import { requireAdminApi } from "@/lib/requireAdminApi";
+app/api/admin/slates/route.ts-4-
+app/api/admin/slates/route.ts-5-type AdminSlateRow = {
+app/api/admin/slates/route.ts-6-  id: number;
+app/api/admin/slates/route.ts-7-  date: string;
+app/api/admin/slates/route.ts-8-  start_date: string | null;
+app/api/admin/slates/route.ts-9-  end_date: string | null;
+app/api/admin/slates/route.ts-10-  is_locked: boolean;
+app/api/admin/slates/route.ts-11-  sport: "nba" | "nfl" | "golf";
+app/api/admin/slates/route.ts-12-  display_name: string | null;
+app/api/admin/slates/route.ts-13-  external_event_id: string | null;
+app/api/admin/slates/route.ts-14-  cut_penalty_per_round: number | null;
+app/api/admin/slates/route.ts:15:  has_cut: boolean;
+app/api/admin/slates/route.ts-16-  nba_team_abbreviations: string[] | null;
+app/api/admin/slates/route.ts-17-};
+app/api/admin/slates/route.ts-18-
+app/api/admin/slates/route.ts-19-export async function GET(request: Request) {
+app/api/admin/slates/route.ts-20-  const authError = await requireAdminApi();
+app/api/admin/slates/route.ts-21-  if (authError) return authError;
+app/api/admin/slates/route.ts-22-
+app/api/admin/slates/route.ts-23-  try {
+app/api/admin/slates/route.ts-24-    const { searchParams } = new URL(request.url);
+app/api/admin/slates/route.ts-25-    const sportParam = searchParams.get("sport");
+app/api/admin/slates/route.ts-26-
+app/api/admin/slates/route.ts-27-    const sport =
+app/api/admin/slates/route.ts-28-      sportParam === "nfl"
+app/api/admin/slates/route.ts-29-        ? "nfl"
+app/api/admin/slates/route.ts-30-        : sportParam === "golf"
+app/api/admin/slates/route.ts-31-          ? "golf"
+app/api/admin/slates/route.ts-32-          : "nba";
+app/api/admin/slates/route.ts-33-
+app/api/admin/slates/route.ts-34-    const { data, error } = await supabaseAdmin
+app/api/admin/slates/route.ts-35-      .from("slates")
+app/api/admin/slates/route.ts-36-      .select(
+app/api/admin/slates/route.ts-37-        [
+app/api/admin/slates/route.ts-38-          "id",
+app/api/admin/slates/route.ts-39-          "date",
+app/api/admin/slates/route.ts-40-          "start_date",
+app/api/admin/slates/route.ts-41-          "end_date",
+app/api/admin/slates/route.ts-42-          "is_locked",
+app/api/admin/slates/route.ts-43-          "sport",
+app/api/admin/slates/route.ts-44-          "display_name",
+app/api/admin/slates/route.ts-45-          "external_event_id",
+app/api/admin/slates/route.ts-46-          "cut_penalty_per_round",
+app/api/admin/slates/route.ts:47:          "has_cut",
+app/api/admin/slates/route.ts-48-          "nba_team_abbreviations",
+app/api/admin/slates/route.ts-49-        ].join(",")
+app/api/admin/slates/route.ts-50-      )
+app/api/admin/slates/route.ts-51-      .eq("sport", sport)
+app/api/admin/slates/route.ts-52-      .order("start_date", { ascending: false })
+app/api/admin/slates/route.ts-53-      .order("end_date", { ascending: false });
+app/api/admin/slates/route.ts-54-
+app/api/admin/slates/route.ts-55-    if (error) {
+app/api/admin/slates/route.ts-56-      return NextResponse.json(
+app/api/admin/slates/route.ts-57-        { error: `Failed to load slates: ${error.message}` },
+app/api/admin/slates/route.ts-58-        { status: 500 }
+app/api/admin/slates/route.ts-59-      );
+app/api/admin/slates/route.ts-60-    }
+app/api/admin/slates/route.ts-61-
+app/api/admin/slates/route.ts-62-    const safeData = (data ?? []) as unknown as AdminSlateRow[];
+app/api/admin/slates/route.ts-63-
+app/api/admin/slates/route.ts-64-    const slates = safeData.map((slate) => ({
+app/api/admin/slates/route.ts-65-      ...slate,
+app/api/admin/slates/route.ts-66-      label:
+app/api/admin/slates/route.ts-67-        slate.display_name?.trim() ||
+app/api/admin/slates/route.ts-68-        (slate.start_date &&
+app/api/admin/slates/route.ts-69-        slate.end_date &&
+app/api/admin/slates/route.ts-70-        slate.start_date !== slate.end_date
+app/api/admin/slates/route.ts-71-          ? `${slate.start_date} - ${slate.end_date}`
+app/api/admin/slates/route.ts-72-          : slate.start_date ?? slate.date),
+--
+app/api/refresh-stats-golf/route.ts-20-
+app/api/refresh-stats-golf/route.ts-21-type RefreshBody = {
+app/api/refresh-stats-golf/route.ts-22-  slateId?: number | string;
+app/api/refresh-stats-golf/route.ts-23-  scoreboardPayload?: unknown;
+app/api/refresh-stats-golf/route.ts-24-};
+app/api/refresh-stats-golf/route.ts-25-
+app/api/refresh-stats-golf/route.ts-26-type GolfSlateRecord = {
+app/api/refresh-stats-golf/route.ts-27-  id: number;
+app/api/refresh-stats-golf/route.ts-28-  sport: string;
+app/api/refresh-stats-golf/route.ts-29-  display_name: string | null;
+app/api/refresh-stats-golf/route.ts-30-  external_event_id: string | null;
+app/api/refresh-stats-golf/route.ts-31-  start_date: string;
+app/api/refresh-stats-golf/route.ts-32-  end_date: string;
+app/api/refresh-stats-golf/route.ts-33-  is_locked: boolean;
+app/api/refresh-stats-golf/route.ts-34-  cut_penalty_per_round: number | null;
+app/api/refresh-stats-golf/route.ts:35:  has_cut: boolean;
+app/api/refresh-stats-golf/route.ts-36-};
+app/api/refresh-stats-golf/route.ts-37-
+app/api/refresh-stats-golf/route.ts-38-type GolfPlayerIdRow = {
+app/api/refresh-stats-golf/route.ts-39-  id: number;
+app/api/refresh-stats-golf/route.ts-40-  display_name?: string;
+app/api/refresh-stats-golf/route.ts-41-  espn_player_id: string;
+app/api/refresh-stats-golf/route.ts-42-};
+app/api/refresh-stats-golf/route.ts-43-
+app/api/refresh-stats-golf/route.ts-44-type GolfEventPlayerIdRow = {
+app/api/refresh-stats-golf/route.ts-45-  id: number;
+app/api/refresh-stats-golf/route.ts-46-  player_id: number;
+app/api/refresh-stats-golf/route.ts-47-};
+app/api/refresh-stats-golf/route.ts-48-
+app/api/refresh-stats-golf/route.ts-49-type GolfRoundIdRow = {
+app/api/refresh-stats-golf/route.ts-50-  id: number;
+app/api/refresh-stats-golf/route.ts-51-  event_player_id: number;
+app/api/refresh-stats-golf/route.ts-52-  round_number: number;
+app/api/refresh-stats-golf/route.ts-53-};
+app/api/refresh-stats-golf/route.ts-54-
+app/api/refresh-stats-golf/route.ts-55-type DatabaseError = {
+app/api/refresh-stats-golf/route.ts-56-  message: string;
+app/api/refresh-stats-golf/route.ts-57-};
+app/api/refresh-stats-golf/route.ts-58-
+app/api/refresh-stats-golf/route.ts-59-const EXPECTED_TOURNAMENT_ROUNDS = 4;
+app/api/refresh-stats-golf/route.ts-60-const INSERT_BATCH_SIZE = 750;
+--
+app/api/refresh-stats-golf/route.ts-556-      );
+app/api/refresh-stats-golf/route.ts-557-    }
+app/api/refresh-stats-golf/route.ts-558-
+app/api/refresh-stats-golf/route.ts-559-    const { data: slateData, error: slateError } = await supabaseAdmin
+app/api/refresh-stats-golf/route.ts-560-      .from("slates")
+app/api/refresh-stats-golf/route.ts-561-      .select(
+app/api/refresh-stats-golf/route.ts-562-        [
+app/api/refresh-stats-golf/route.ts-563-          "id",
+app/api/refresh-stats-golf/route.ts-564-          "sport",
+app/api/refresh-stats-golf/route.ts-565-          "display_name",
+app/api/refresh-stats-golf/route.ts-566-          "external_event_id",
+app/api/refresh-stats-golf/route.ts-567-          "start_date",
+app/api/refresh-stats-golf/route.ts-568-          "end_date",
+app/api/refresh-stats-golf/route.ts-569-          "is_locked",
+app/api/refresh-stats-golf/route.ts-570-          "cut_penalty_per_round",
+app/api/refresh-stats-golf/route.ts:571:          "has_cut",
+app/api/refresh-stats-golf/route.ts-572-        ].join(","),
+app/api/refresh-stats-golf/route.ts-573-      )
+app/api/refresh-stats-golf/route.ts-574-      .eq("id", slateId)
+app/api/refresh-stats-golf/route.ts-575-      .single();
+app/api/refresh-stats-golf/route.ts-576-
+app/api/refresh-stats-golf/route.ts-577-    if (slateError || !slateData) {
+app/api/refresh-stats-golf/route.ts-578-      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
+app/api/refresh-stats-golf/route.ts-579-    }
+app/api/refresh-stats-golf/route.ts-580-
+app/api/refresh-stats-golf/route.ts-581-    const slate = slateData as unknown as GolfSlateRecord;
+app/api/refresh-stats-golf/route.ts-582-
+app/api/refresh-stats-golf/route.ts-583-    if (slate.sport !== "golf") {
+app/api/refresh-stats-golf/route.ts-584-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-585-        {
+app/api/refresh-stats-golf/route.ts-586-          error: "This slate is not a Golf slate.",
+app/api/refresh-stats-golf/route.ts-587-        },
+app/api/refresh-stats-golf/route.ts-588-        { status: 400 },
+app/api/refresh-stats-golf/route.ts-589-      );
+app/api/refresh-stats-golf/route.ts-590-    }
+app/api/refresh-stats-golf/route.ts-591-
+app/api/refresh-stats-golf/route.ts-592-    if (slate.is_locked) {
+app/api/refresh-stats-golf/route.ts-593-      return NextResponse.json(
+app/api/refresh-stats-golf/route.ts-594-        {
+app/api/refresh-stats-golf/route.ts-595-          error: "This slate is locked and cannot be refreshed.",
+app/api/refresh-stats-golf/route.ts-596-        },
+--
+app/api/refresh-stats-golf/route.ts-684-        roundTwo?.scoreToPar === undefined
+app/api/refresh-stats-golf/route.ts-685-      ) {
+app/api/refresh-stats-golf/route.ts-686-        return null;
+app/api/refresh-stats-golf/route.ts-687-      }
+app/api/refresh-stats-golf/route.ts-688-
+app/api/refresh-stats-golf/route.ts-689-      const score =
+app/api/refresh-stats-golf/route.ts-690-        Number(roundOne.scoreToPar) +
+app/api/refresh-stats-golf/route.ts-691-        Number(roundTwo.scoreToPar);
+app/api/refresh-stats-golf/route.ts-692-
+app/api/refresh-stats-golf/route.ts-693-      return Number.isFinite(score)
+app/api/refresh-stats-golf/route.ts-694-        ? score
+app/api/refresh-stats-golf/route.ts-695-        : null;
+app/api/refresh-stats-golf/route.ts-696-    }
+app/api/refresh-stats-golf/route.ts-697-
+app/api/refresh-stats-golf/route.ts-698-    const officialCut =
+app/api/refresh-stats-golf/route.ts:699:      slate.has_cut
+app/api/refresh-stats-golf/route.ts-700-        ? calculateGolfCutLine(
+app/api/refresh-stats-golf/route.ts-701-            normalizedCompetitors.map(
+app/api/refresh-stats-golf/route.ts-702-          (competitor) => ({
+app/api/refresh-stats-golf/route.ts-703-            score:
+app/api/refresh-stats-golf/route.ts-704-              getThirtySixHoleScore(
+app/api/refresh-stats-golf/route.ts-705-                competitor,
+app/api/refresh-stats-golf/route.ts-706-              ) ??
+app/api/refresh-stats-golf/route.ts-707-              (
+app/api/refresh-stats-golf/route.ts-708-                Number(
+app/api/refresh-stats-golf/route.ts-709-                  competitor.currentRound ?? 0,
+app/api/refresh-stats-golf/route.ts-710-                ) <= 2
+app/api/refresh-stats-golf/route.ts-711-                  ? competitor.officialScoreToPar
+app/api/refresh-stats-golf/route.ts-712-                  : null
+app/api/refresh-stats-golf/route.ts-713-              ),
+app/api/refresh-stats-golf/route.ts-714-            status:
+app/api/refresh-stats-golf/route.ts-715-              competitor.status,
+app/api/refresh-stats-golf/route.ts-716-            position:
+app/api/refresh-stats-golf/route.ts-717-              competitor.leaderboardOrder,
+app/api/refresh-stats-golf/route.ts-718-            holesCompleted:
+app/api/refresh-stats-golf/route.ts-719-              competitor.holesCompleted,
+app/api/refresh-stats-golf/route.ts-720-            roundsCompleted:
+app/api/refresh-stats-golf/route.ts-721-              competitor.roundsCompleted,
+app/api/refresh-stats-golf/route.ts-722-            currentRound:
+app/api/refresh-stats-golf/route.ts-723-              competitor.currentRound,
+app/api/refresh-stats-golf/route.ts-724-              }),
+--
+app/api/refresh-stats-golf/route.ts-924-            });
+app/api/refresh-stats-golf/route.ts-925-
+app/api/refresh-stats-golf/route.ts-926-        if (courseUpsertError) {
+app/api/refresh-stats-golf/route.ts-927-          throw new Error(courseUpsertError.message);
+app/api/refresh-stats-golf/route.ts-928-        }
+app/api/refresh-stats-golf/route.ts-929-
+app/api/refresh-stats-golf/route.ts-930-        courseHolesUpserted = courseRows.length;
+app/api/refresh-stats-golf/route.ts-931-      }
+app/api/refresh-stats-golf/route.ts-932-    } catch (courseError) {
+app/api/refresh-stats-golf/route.ts-933-      console.error(
+app/api/refresh-stats-golf/route.ts-934-        "Golf player data will refresh, but course-hole data could not be saved:",
+app/api/refresh-stats-golf/route.ts-935-        courseError,
+app/api/refresh-stats-golf/route.ts-936-      );
+app/api/refresh-stats-golf/route.ts-937-    }
+app/api/refresh-stats-golf/route.ts-938-    const penaltyPerRound =
+app/api/refresh-stats-golf/route.ts:939:      slate.has_cut
+app/api/refresh-stats-golf/route.ts-940-        ? Math.max(0, slate.cut_penalty_per_round ?? 0)
+app/api/refresh-stats-golf/route.ts-941-        : 0;
+app/api/refresh-stats-golf/route.ts-942-
+app/api/refresh-stats-golf/route.ts-943-    const golfPlayerRows = competitors.map((competitor) => ({
+app/api/refresh-stats-golf/route.ts-944-      espn_player_id: competitor.espnPlayerId,
+app/api/refresh-stats-golf/route.ts-945-      display_name: competitor.displayName,
+app/api/refresh-stats-golf/route.ts-946-      short_name: competitor.shortName,
+app/api/refresh-stats-golf/route.ts-947-      country: competitor.country,
+app/api/refresh-stats-golf/route.ts-948-      country_flag_url: competitor.countryFlagUrl,
+app/api/refresh-stats-golf/route.ts-949-      player_url: competitor.playerUrl,
+app/api/refresh-stats-golf/route.ts-950-      headshot_url:
+app/api/refresh-stats-golf/route.ts-951-        `https://a.espncdn.com/i/headshots/golf/players/full/` +
+app/api/refresh-stats-golf/route.ts-952-        `${competitor.espnPlayerId}.png`,
+app/api/refresh-stats-golf/route.ts-953-      is_active: true,
+app/api/refresh-stats-golf/route.ts-954-      updated_at: refreshedAt,
+app/api/refresh-stats-golf/route.ts-955-    }));
+app/api/refresh-stats-golf/route.ts-956-
+app/api/refresh-stats-golf/route.ts-957-    function normalizeGolfName(value: string) {
+app/api/refresh-stats-golf/route.ts-958-      return value
+app/api/refresh-stats-golf/route.ts-959-        .normalize("NFD")
+app/api/refresh-stats-golf/route.ts-960-        .replace(/\p{Diacritic}/gu, "")
+app/api/refresh-stats-golf/route.ts-961-        .toLowerCase()
+app/api/refresh-stats-golf/route.ts-962-        .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+app/api/refresh-stats-golf/route.ts-963-        .replace(/&/g, "and")
+app/api/refresh-stats-golf/route.ts-964-        .replace(/[^a-z0-9]+/g, " ")
+--
+app/api/refresh-stats-golf/route.ts-2819-      success: true,
+app/api/refresh-stats-golf/route.ts-2820-      slateId,
+app/api/refresh-stats-golf/route.ts-2821-      refreshedAt,
+app/api/refresh-stats-golf/route.ts-2822-      tournament: {
+app/api/refresh-stats-golf/route.ts-2823-        eventId: tournament.espnEventId,
+app/api/refresh-stats-golf/route.ts-2824-        name: tournament.name,
+app/api/refresh-stats-golf/route.ts-2825-        status: tournament.status,
+app/api/refresh-stats-golf/route.ts-2826-        statusDescription: tournament.statusDescription,
+app/api/refresh-stats-golf/route.ts-2827-        currentRound: tournament.currentRound,
+app/api/refresh-stats-golf/route.ts-2828-        completed: tournament.completed,
+app/api/refresh-stats-golf/route.ts-2829-        startDate: tournament.startDate,
+app/api/refresh-stats-golf/route.ts-2830-        endDate: tournament.endDate,
+app/api/refresh-stats-golf/route.ts-2831-      },
+app/api/refresh-stats-golf/route.ts-2832-      scoring: {
+app/api/refresh-stats-golf/route.ts-2833-        expectedRounds: EXPECTED_TOURNAMENT_ROUNDS,
+app/api/refresh-stats-golf/route.ts:2834:        hasCut: slate.has_cut,
+app/api/refresh-stats-golf/route.ts-2835-        cutPenaltyPerRound: penaltyPerRound,
+app/api/refresh-stats-golf/route.ts-2836-      },
+app/api/refresh-stats-golf/route.ts-2837-      statusCounts,
+app/api/refresh-stats-golf/route.ts-2838-      normalizationCorrections,
+app/api/refresh-stats-golf/route.ts-2839-      fieldReconciliation: {
+app/api/refresh-stats-golf/route.ts-2840-        removedBeforeStart:
+app/api/refresh-stats-golf/route.ts-2841-          removedBeforeStartRows.length,
+app/api/refresh-stats-golf/route.ts-2842-        playerIds:
+app/api/refresh-stats-golf/route.ts-2843-          Array.from(
+app/api/refresh-stats-golf/route.ts-2844-            removedBeforeStartPlayerIds,
+app/api/refresh-stats-golf/route.ts-2845-          ),
+app/api/refresh-stats-golf/route.ts-2846-        golfers:
+app/api/refresh-stats-golf/route.ts-2847-          removedBeforeStartRows.map(
+app/api/refresh-stats-golf/route.ts-2848-            (row) =>
+app/api/refresh-stats-golf/route.ts-2849-              existingGolferById.get(
+app/api/refresh-stats-golf/route.ts-2850-                Number(row.player_id),
+app/api/refresh-stats-golf/route.ts-2851-              )?.displayName ??
+app/api/refresh-stats-golf/route.ts-2852-              "Unknown golfer",
+app/api/refresh-stats-golf/route.ts-2853-          ),
+app/api/refresh-stats-golf/route.ts-2854-      },
+app/api/refresh-stats-golf/route.ts-2855-      gamesFound: 1,
+app/api/refresh-stats-golf/route.ts-2856-      playersUpserted: golfPlayerRows.length,
+app/api/refresh-stats-golf/route.ts-2857-      eventPlayersUpserted: eventPlayerRows.length,
+app/api/refresh-stats-golf/route.ts-2858-      playerStatsUpserted: eventPlayerRows.length,
+app/api/refresh-stats-golf/route.ts-2859-      teamResultsUpserted: persistedTeamRows.length,
+--
+app/slates/new/page.tsx-81-    const requestedSport = searchParams.get("sport");
+app/slates/new/page.tsx-82-
+app/slates/new/page.tsx-83-    if (requestedSport === "nfl" || requestedSport === "golf") {
+app/slates/new/page.tsx-84-      return requestedSport;
+app/slates/new/page.tsx-85-    }
+app/slates/new/page.tsx-86-
+app/slates/new/page.tsx-87-    return "nba";
+app/slates/new/page.tsx-88-  });
+app/slates/new/page.tsx-89-
+app/slates/new/page.tsx-90-  const [golfYear, setGolfYear] = useState(() =>
+app/slates/new/page.tsx-91-    String(new Date().getUTCFullYear())
+app/slates/new/page.tsx-92-  );
+app/slates/new/page.tsx-93-  const [golfTournaments, setGolfTournaments] = useState<GolfTournament[]>([]);
+app/slates/new/page.tsx-94-  const [selectedGolfEventId, setSelectedGolfEventId] = useState("");
+app/slates/new/page.tsx-95-  const [cutPenaltyPerRound, setCutPenaltyPerRound] = useState(5);
+app/slates/new/page.tsx:96:  const [hasCut, setHasCut] = useState(true);
+app/slates/new/page.tsx-97-  const [isLoadingGolfSchedule, setIsLoadingGolfSchedule] = useState(false);
+app/slates/new/page.tsx-98-
+app/slates/new/page.tsx-99-  useEffect(() => {
+app/slates/new/page.tsx-100-    void loadSlateSetup(sport);
+app/slates/new/page.tsx-101-  }, [sport]);
+app/slates/new/page.tsx-102-
+app/slates/new/page.tsx-103-  useEffect(() => {
+app/slates/new/page.tsx-104-    if (sport !== "golf") return;
+app/slates/new/page.tsx-105-    void loadGolfSchedule(golfYear);
+app/slates/new/page.tsx-106-  }, [sport, golfYear]);
+app/slates/new/page.tsx-107-
+app/slates/new/page.tsx-108-  async function loadSlateSetup(targetSport: SportKey) {
+app/slates/new/page.tsx-109-    try {
+app/slates/new/page.tsx-110-      setIsLoadingTeams(true);
+app/slates/new/page.tsx-111-      setMessage("");
+app/slates/new/page.tsx-112-
+app/slates/new/page.tsx-113-      const response = await fetch(
+app/slates/new/page.tsx-114-        `/api/slates?sport=${encodeURIComponent(targetSport)}`
+app/slates/new/page.tsx-115-      );
+app/slates/new/page.tsx-116-      const result = (await response.json()) as SetupResponse | { error?: string };
+app/slates/new/page.tsx-117-
+app/slates/new/page.tsx-118-      if (!response.ok) {
+app/slates/new/page.tsx-119-        setMessage(
+app/slates/new/page.tsx-120-          "error" in result && result.error
+app/slates/new/page.tsx-121-            ? result.error
+--
+app/slates/new/page.tsx-389-          startDate: effectiveStartDate,
+app/slates/new/page.tsx-390-          endDate: effectiveEndDate,
+app/slates/new/page.tsx-391-          sport,
+app/slates/new/page.tsx-392-          displayName:
+app/slates/new/page.tsx-393-            sport === "golf"
+app/slates/new/page.tsx-394-              ? selectedGolfTournament?.name
+app/slates/new/page.tsx-395-              : undefined,
+app/slates/new/page.tsx-396-          externalEventId:
+app/slates/new/page.tsx-397-            sport === "golf"
+app/slates/new/page.tsx-398-              ? selectedGolfTournament?.eventId
+app/slates/new/page.tsx-399-              : undefined,
+app/slates/new/page.tsx-400-          cutPenaltyPerRound:
+app/slates/new/page.tsx-401-            sport === "golf"
+app/slates/new/page.tsx-402-              ? cutPenaltyPerRound
+app/slates/new/page.tsx-403-              : undefined,
+app/slates/new/page.tsx:404:          hasCut:
+app/slates/new/page.tsx-405-            sport === "golf"
+app/slates/new/page.tsx:406:              ? hasCut
+app/slates/new/page.tsx-407-              : undefined,
+app/slates/new/page.tsx-408-teamSelections: teams
+app/slates/new/page.tsx-409-  .filter((team) => team.is_participating)
+app/slates/new/page.tsx-410-  .sort((a, b) => a.draft_order - b.draft_order)
+app/slates/new/page.tsx-411-  .map((team, index) => ({
+app/slates/new/page.tsx-412-    team_id: team.id,
+app/slates/new/page.tsx-413-    draft_order: index + 1,
+app/slates/new/page.tsx-414-    is_participating: true,
+app/slates/new/page.tsx-415-  })),
+app/slates/new/page.tsx-416-        }),
+app/slates/new/page.tsx-417-      });
+app/slates/new/page.tsx-418-
+app/slates/new/page.tsx-419-      const result = await response.json();
+app/slates/new/page.tsx-420-
+app/slates/new/page.tsx-421-      if (!response.ok) {
+app/slates/new/page.tsx-422-        setMessage(result.error || "Failed to create slate.");
+app/slates/new/page.tsx-423-        return;
+app/slates/new/page.tsx-424-      }
+app/slates/new/page.tsx-425-
+app/slates/new/page.tsx-426-      if (sport === "golf") {
+app/slates/new/page.tsx-427-        const slateId = Number(result?.slate?.id);
+app/slates/new/page.tsx-428-
+app/slates/new/page.tsx-429-        if (!Number.isInteger(slateId) || slateId <= 0) {
+app/slates/new/page.tsx-430-          setMessage(
+app/slates/new/page.tsx-431-            "The Golf slate was created, but its slate ID was not returned. Open Manage Slates to refresh the tournament field."
+--
+app/slates/new/page.tsx-616-                      value={cutPenaltyPerRound}
+app/slates/new/page.tsx-617-                      onChange={(e) =>
+app/slates/new/page.tsx-618-                        setCutPenaltyPerRound(Number(e.target.value))
+app/slates/new/page.tsx-619-                      }
+app/slates/new/page.tsx-620-                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+app/slates/new/page.tsx-621-                    />
+app/slates/new/page.tsx-622-
+app/slates/new/page.tsx-623-                    <p className="mt-1 text-xs text-slate-500">
+app/slates/new/page.tsx-624-                      A golfer missing two scheduled rounds would receive
+app/slates/new/page.tsx-625-                      twice this amount.
+app/slates/new/page.tsx-626-                    </p>
+app/slates/new/page.tsx-627-
+app/slates/new/page.tsx-628-                    <label className="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-800">
+app/slates/new/page.tsx-629-                      <input
+app/slates/new/page.tsx-630-                        type="checkbox"
+app/slates/new/page.tsx:631:                        checked={hasCut}
+app/slates/new/page.tsx-632-                        onChange={(e) => setHasCut(e.target.checked)}
+app/slates/new/page.tsx-633-                        className="h-4 w-4 rounded border-slate-300"
+app/slates/new/page.tsx-634-                      />
+app/slates/new/page.tsx-635-                      Tournament has a 36-hole cut
+app/slates/new/page.tsx-636-                    </label>
+app/slates/new/page.tsx-637-
+app/slates/new/page.tsx-638-                    <p className="mt-1 text-xs text-slate-500">
+app/slates/new/page.tsx-639-                      Leave checked for normal PGA Tour events. Turn off for
+app/slates/new/page.tsx-640-                      no-cut tournaments.
+app/slates/new/page.tsx-641-                    </p>
+app/slates/new/page.tsx-642-                  </div>
+app/slates/new/page.tsx-643-
+app/slates/new/page.tsx-644-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+app/slates/new/page.tsx-645-                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+app/slates/new/page.tsx-646-                      Tournament Dates
+app/slates/new/page.tsx-647-                    </div>
+app/slates/new/page.tsx-648-
+app/slates/new/page.tsx-649-                    <div className="mt-1 font-semibold text-slate-900">
+app/slates/new/page.tsx-650-                      {effectiveStartDate && effectiveEndDate
+app/slates/new/page.tsx-651-                        ? formatSlateDateLabel({
+app/slates/new/page.tsx-652-                            start_date: effectiveStartDate,
+app/slates/new/page.tsx-653-                            end_date: effectiveEndDate,
+app/slates/new/page.tsx-654-                          })
+app/slates/new/page.tsx-655-                        : "Select a tournament"}
+app/slates/new/page.tsx-656-                    </div>
+--
+app/admin/slates/page.tsx-8-import { useSelectedSport } from "@/components/providers/SportProvider";
+app/admin/slates/page.tsx-9-
+app/admin/slates/page.tsx-10-type SportKey = "nba" | "nfl" | "golf";
+app/admin/slates/page.tsx-11-
+app/admin/slates/page.tsx-12-type SlateListRow = {
+app/admin/slates/page.tsx-13-  id: number;
+app/admin/slates/page.tsx-14-  date: string;
+app/admin/slates/page.tsx-15-  start_date: string | null;
+app/admin/slates/page.tsx-16-  end_date: string | null;
+app/admin/slates/page.tsx-17-  is_locked: boolean;
+app/admin/slates/page.tsx-18-  label: string;
+app/admin/slates/page.tsx-19-  sport?: SportKey;
+app/admin/slates/page.tsx-20-  display_name?: string | null;
+app/admin/slates/page.tsx-21-  external_event_id?: string | null;
+app/admin/slates/page.tsx-22-  cut_penalty_per_round?: number | null;
+app/admin/slates/page.tsx:23:  has_cut?: boolean;
+app/admin/slates/page.tsx-24-  nba_team_abbreviations?: string[] | null;
+app/admin/slates/page.tsx-25-};
+app/admin/slates/page.tsx-26-
+app/admin/slates/page.tsx-27-type SlateTeamRow = {
+app/admin/slates/page.tsx-28-  team_id: number;
+app/admin/slates/page.tsx-29-  team_name: string;
+app/admin/slates/page.tsx-30-  draft_order: number;
+app/admin/slates/page.tsx-31-  is_participating: boolean;
+app/admin/slates/page.tsx-32-};
+app/admin/slates/page.tsx-33-
+app/admin/slates/page.tsx-34-type GolfFieldSummary = {
+app/admin/slates/page.tsx-35-  golferCount: number;
+app/admin/slates/page.tsx-36-  lastRefreshedAt: string | null;
+app/admin/slates/page.tsx-37-};
+app/admin/slates/page.tsx-38-
+app/admin/slates/page.tsx-39-type ShotCastSummary = {
+app/admin/slates/page.tsx-40-  tournamentId: string;
+app/admin/slates/page.tsx-41-  generatedAt: string | null;
+app/admin/slates/page.tsx-42-  updatedAt: string | null;
+app/admin/slates/page.tsx-43-  summary: {
+app/admin/slates/page.tsx-44-    holesRequested?: number;
+app/admin/slates/page.tsx-45-    holesAvailable?: number;
+app/admin/slates/page.tsx-46-    localImages?: number;
+app/admin/slates/page.tsx-47-    alignedMaps?: number;
+app/admin/slates/page.tsx-48-    alignedGreens?: number;
+--
+app/admin/slates/page.tsx-494-      const response = await fetch(
+app/admin/slates/page.tsx-495-        `/api/admin/slates/${selectedSlateId}`,
+app/admin/slates/page.tsx-496-        {
+app/admin/slates/page.tsx-497-          method: "PATCH",
+app/admin/slates/page.tsx-498-          headers: {
+app/admin/slates/page.tsx-499-            "Content-Type": "application/json",
+app/admin/slates/page.tsx-500-          },
+app/admin/slates/page.tsx-501-          body: JSON.stringify({
+app/admin/slates/page.tsx-502-            is_locked: selectedSlate.is_locked,
+app/admin/slates/page.tsx-503-            cut_penalty_per_round:
+app/admin/slates/page.tsx-504-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx-505-                ? Number(
+app/admin/slates/page.tsx-506-                    selectedSlate.cut_penalty_per_round,
+app/admin/slates/page.tsx-507-                  )
+app/admin/slates/page.tsx-508-                : undefined,
+app/admin/slates/page.tsx:509:            has_cut:
+app/admin/slates/page.tsx-510-              selectedSlate.sport === "golf"
+app/admin/slates/page.tsx:511:                ? selectedSlate.has_cut !== false
+app/admin/slates/page.tsx-512-                : undefined,
+app/admin/slates/page.tsx-513-            nba_team_abbreviations:
+app/admin/slates/page.tsx-514-              selectedSlate.nbaTeamsInput
+app/admin/slates/page.tsx-515-                .split(",")
+app/admin/slates/page.tsx-516-                .map((value) =>
+app/admin/slates/page.tsx-517-                  value.trim().toUpperCase(),
+app/admin/slates/page.tsx-518-                )
+app/admin/slates/page.tsx-519-                .filter(Boolean),
+app/admin/slates/page.tsx-520-            teams: normalizedTeams.map(
+app/admin/slates/page.tsx-521-              (team, index) => ({
+app/admin/slates/page.tsx-522-                team_id: team.team_id,
+app/admin/slates/page.tsx-523-                draft_order: index + 1,
+app/admin/slates/page.tsx-524-                is_participating:
+app/admin/slates/page.tsx-525-                  team.is_participating,
+app/admin/slates/page.tsx-526-              }),
+app/admin/slates/page.tsx-527-            ),
+app/admin/slates/page.tsx-528-          }),
+app/admin/slates/page.tsx-529-        },
+app/admin/slates/page.tsx-530-      );
+app/admin/slates/page.tsx-531-
+app/admin/slates/page.tsx-532-      const result = await response.json();
+app/admin/slates/page.tsx-533-
+app/admin/slates/page.tsx-534-      if (!response.ok) {
+app/admin/slates/page.tsx-535-        setMessage(
+app/admin/slates/page.tsx-536-          result.error || "Failed to save slate.",
+--
+app/admin/slates/page.tsx-1042-
+app/admin/slates/page.tsx-1043-                      <span className="text-sm text-slate-400">
+app/admin/slates/page.tsx-1044-                        per missed round
+app/admin/slates/page.tsx-1045-                      </span>
+app/admin/slates/page.tsx-1046-                    </div>
+app/admin/slates/page.tsx-1047-                  </div>
+app/admin/slates/page.tsx-1048-
+app/admin/slates/page.tsx-1049-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+app/admin/slates/page.tsx-1050-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+app/admin/slates/page.tsx-1051-                      Tournament Cut
+app/admin/slates/page.tsx-1052-                    </div>
+app/admin/slates/page.tsx-1053-
+app/admin/slates/page.tsx-1054-                    <label className="mt-3 flex items-center gap-3 text-sm font-medium text-white">
+app/admin/slates/page.tsx-1055-                      <input
+app/admin/slates/page.tsx-1056-                        type="checkbox"
+app/admin/slates/page.tsx:1057:                        checked={selectedSlate.has_cut !== false}
+app/admin/slates/page.tsx-1058-                        onChange={(event) =>
+app/admin/slates/page.tsx-1059-                          setSelectedSlate((current) =>
+app/admin/slates/page.tsx-1060-                            current
+app/admin/slates/page.tsx-1061-                              ? {
+app/admin/slates/page.tsx-1062-                                  ...current,
+app/admin/slates/page.tsx:1063:                                  has_cut: event.target.checked,
+app/admin/slates/page.tsx-1064-                                }
+app/admin/slates/page.tsx-1065-                              : current,
+app/admin/slates/page.tsx-1066-                          )
+app/admin/slates/page.tsx-1067-                        }
+app/admin/slates/page.tsx-1068-                        disabled={isBusy}
+app/admin/slates/page.tsx-1069-                        className="h-4 w-4 rounded border-slate-500"
+app/admin/slates/page.tsx-1070-                      />
+app/admin/slates/page.tsx-1071-                      36-hole cut
+app/admin/slates/page.tsx-1072-                    </label>
+app/admin/slates/page.tsx-1073-
+app/admin/slates/page.tsx-1074-                    <div className="mt-2 text-xs leading-5 text-slate-400">
+app/admin/slates/page.tsx-1075-                      Turn this off for no-cut tournaments. Projected cut,
+app/admin/slates/page.tsx-1076-                      CUT statuses, and cut penalties will be disabled.
+app/admin/slates/page.tsx-1077-                    </div>
+app/admin/slates/page.tsx-1078-                  </div>
+app/admin/slates/page.tsx-1079-
+app/admin/slates/page.tsx-1080-                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+app/admin/slates/page.tsx-1081-                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+app/admin/slates/page.tsx-1082-                      Last Field Refresh
+app/admin/slates/page.tsx-1083-                    </div>
+app/admin/slates/page.tsx-1084-
+app/admin/slates/page.tsx-1085-                    <div className="mt-2 text-sm font-semibold text-white">
+app/admin/slates/page.tsx-1086-                      {formatRefreshTime(
+app/admin/slates/page.tsx-1087-                        golfField?.lastRefreshedAt ?? null,
+app/admin/slates/page.tsx-1088-                      )}
+--
+components/lineups/types.ts-65-};
+components/lineups/types.ts-66-
+components/lineups/types.ts-67-export type Team = {
+components/lineups/types.ts-68-  id: number;
+components/lineups/types.ts-69-  name: string;
+components/lineups/types.ts-70-};
+components/lineups/types.ts-71-
+components/lineups/types.ts-72-export type Slate = {
+components/lineups/types.ts-73-  id: number;
+components/lineups/types.ts-74-  date: string;
+components/lineups/types.ts-75-  start_date?: string;
+components/lineups/types.ts-76-  end_date?: string;
+components/lineups/types.ts-77-  label?: string;
+components/lineups/types.ts-78-  is_locked: boolean;
+components/lineups/types.ts-79-  sport?: string;
+components/lineups/types.ts:80:  has_cut?: boolean;
+components/lineups/types.ts-81-};
+components/lineups/types.ts-82-
+components/lineups/types.ts-83-export type SavedLineup = {
+components/lineups/types.ts-84-  team_id: number;
+components/lineups/types.ts-85-  player_ids: number[];
+components/lineups/types.ts-86-  pregame_projected_points?: number | null;
+components/lineups/types.ts-87-};
+components/lineups/types.ts-88-
+components/lineups/types.ts-89-export type PlayerStat = {
+components/lineups/types.ts-90-  player_id: number;
+components/lineups/types.ts-91-
+components/lineups/types.ts-92-  points?: number | null;
+components/lineups/types.ts-93-  rebounds?: number | null;
+components/lineups/types.ts-94-  assists?: number | null;
+components/lineups/types.ts-95-  steals?: number | null;
+components/lineups/types.ts-96-  blocks?: number | null;
+components/lineups/types.ts-97-  turnovers?: number | null;
+components/lineups/types.ts-98-
+components/lineups/types.ts-99-  passing_yards?: number | null;
+components/lineups/types.ts-100-  passing_tds?: number | null;
+components/lineups/types.ts-101-  passing_ints?: number | null;
+components/lineups/types.ts-102-  rushing_yards?: number | null;
+components/lineups/types.ts-103-  rushing_tds?: number | null;
+components/lineups/types.ts-104-  receiving_yards?: number | null;
+components/lineups/types.ts-105-  receiving_tds?: number | null;
+--
+components/lineups/GolfScoresDashboard.tsx-1196-        </div>
+components/lineups/GolfScoresDashboard.tsx-1197-          </section>
+components/lineups/GolfScoresDashboard.tsx-1198-        </>
+components/lineups/GolfScoresDashboard.tsx-1199-      ) : activeView === "league" ? (
+components/lineups/GolfScoresDashboard.tsx-1200-        <GolfLeagueView
+components/lineups/GolfScoresDashboard.tsx-1201-          slateId={selectedSlate?.id ?? null}
+components/lineups/GolfScoresDashboard.tsx-1202-          teams={participatingTeams}
+components/lineups/GolfScoresDashboard.tsx-1203-          getPlayersForTeam={getPlayersForTeam}
+components/lineups/GolfScoresDashboard.tsx-1204-          getRawPlayerStat={getRawPlayerStat}
+components/lineups/GolfScoresDashboard.tsx-1205-          setProfilePlayer={setProfilePlayer}
+components/lineups/GolfScoresDashboard.tsx-1206-        />
+components/lineups/GolfScoresDashboard.tsx-1207-      ) : (
+components/lineups/GolfScoresDashboard.tsx-1208-        <GolfTournamentView
+components/lineups/GolfScoresDashboard.tsx-1209-          players={allPlayers}
+components/lineups/GolfScoresDashboard.tsx-1210-          teams={participatingTeams}
+components/lineups/GolfScoresDashboard.tsx:1211:          hasCut={selectedSlate?.has_cut !== false}
+components/lineups/GolfScoresDashboard.tsx-1212-          getPlayersForTeam={getPlayersForTeam}
+components/lineups/GolfScoresDashboard.tsx-1213-          getRawPlayerStat={getRawPlayerStat}
+components/lineups/GolfScoresDashboard.tsx-1214-          setProfilePlayer={setProfilePlayer}
+components/lineups/GolfScoresDashboard.tsx-1215-        />
+components/lineups/GolfScoresDashboard.tsx-1216-      )}
+components/lineups/GolfScoresDashboard.tsx-1217-      
+components/lineups/GolfScoresDashboard.tsx-1218-    </section>
+components/lineups/GolfScoresDashboard.tsx-1219-  );
+components/lineups/GolfScoresDashboard.tsx-1220-}
+--
+components/lineups/GolfTournamentView.tsx-3-import { Fragment, useMemo, useState } from "react";
+components/lineups/GolfTournamentView.tsx-4-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+components/lineups/GolfTournamentView.tsx-5-import { getGolfStatusMeta } from "@/lib/golf/status";
+components/lineups/GolfTournamentView.tsx-6-import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+components/lineups/GolfTournamentView.tsx-7-import { buildGolfLeaderboardRanks } from "@/lib/golf/leaderboard";
+components/lineups/GolfTournamentView.tsx-8-import TeamAvatar from "@/components/ui/TeamAvatar";
+components/lineups/GolfTournamentView.tsx-9-import type {
+components/lineups/GolfTournamentView.tsx-10-  OrderedTeam,
+components/lineups/GolfTournamentView.tsx-11-  Player,
+components/lineups/GolfTournamentView.tsx-12-  PlayerStat,
+components/lineups/GolfTournamentView.tsx-13-} from "@/components/lineups/types";
+components/lineups/GolfTournamentView.tsx-14-
+components/lineups/GolfTournamentView.tsx-15-type Props = {
+components/lineups/GolfTournamentView.tsx-16-  players: Player[];
+components/lineups/GolfTournamentView.tsx-17-  teams: OrderedTeam[];
+components/lineups/GolfTournamentView.tsx:18:  hasCut?: boolean;
+components/lineups/GolfTournamentView.tsx-19-  getPlayersForTeam: (teamId: number) => Player[];
+components/lineups/GolfTournamentView.tsx-20-  getRawPlayerStat: (playerId: number) => PlayerStat | null;
+components/lineups/GolfTournamentView.tsx-21-  setProfilePlayer: (player: Player | null) => void;
+components/lineups/GolfTournamentView.tsx-22-};
+components/lineups/GolfTournamentView.tsx-23-
+components/lineups/GolfTournamentView.tsx-24-type TournamentRow = {
+components/lineups/GolfTournamentView.tsx-25-  player: Player;
+components/lineups/GolfTournamentView.tsx-26-  stat: PlayerStat;
+components/lineups/GolfTournamentView.tsx-27-  owner: OrderedTeam | null;
+components/lineups/GolfTournamentView.tsx-28-};
+components/lineups/GolfTournamentView.tsx-29-
+components/lineups/GolfTournamentView.tsx-30-function formatGolfScore(
+components/lineups/GolfTournamentView.tsx-31-  value: number | null | undefined,
+components/lineups/GolfTournamentView.tsx-32-) {
+components/lineups/GolfTournamentView.tsx-33-  if (value === null || value === undefined) {
+components/lineups/GolfTournamentView.tsx-34-    return "—";
+components/lineups/GolfTournamentView.tsx-35-  }
+components/lineups/GolfTournamentView.tsx-36-
+components/lineups/GolfTournamentView.tsx-37-  const numeric = Number(value);
+components/lineups/GolfTournamentView.tsx-38-
+components/lineups/GolfTournamentView.tsx-39-  if (!Number.isFinite(numeric)) return "—";
+components/lineups/GolfTournamentView.tsx-40-  if (numeric === 0) return "E";
+components/lineups/GolfTournamentView.tsx-41-
+components/lineups/GolfTournamentView.tsx-42-  return numeric > 0
+components/lineups/GolfTournamentView.tsx-43-    ? `+${numeric}`
+--
+components/lineups/GolfTournamentView.tsx-66-            meta.state === "disqualified"
+components/lineups/GolfTournamentView.tsx-67-          ? "border-red-800 bg-red-950 text-red-200"
+components/lineups/GolfTournamentView.tsx-68-          : meta.state === "withdrawn"
+components/lineups/GolfTournamentView.tsx-69-            ? "border-amber-700 bg-amber-950 text-amber-200"
+components/lineups/GolfTournamentView.tsx-70-            : "border-slate-600 bg-slate-800 text-slate-200";
+components/lineups/GolfTournamentView.tsx-71-
+components/lineups/GolfTournamentView.tsx-72-  return {
+components/lineups/GolfTournamentView.tsx-73-    ...meta,
+components/lineups/GolfTournamentView.tsx-74-    className,
+components/lineups/GolfTournamentView.tsx-75-  };
+components/lineups/GolfTournamentView.tsx-76-}
+components/lineups/GolfTournamentView.tsx-77-
+components/lineups/GolfTournamentView.tsx-78-export default function GolfTournamentView({
+components/lineups/GolfTournamentView.tsx-79-  players,
+components/lineups/GolfTournamentView.tsx-80-  teams,
+components/lineups/GolfTournamentView.tsx:81:  hasCut = true,
+components/lineups/GolfTournamentView.tsx-82-  getPlayersForTeam,
+components/lineups/GolfTournamentView.tsx-83-  getRawPlayerStat,
+components/lineups/GolfTournamentView.tsx-84-  setProfilePlayer,
+components/lineups/GolfTournamentView.tsx-85-}: Props) {
+components/lineups/GolfTournamentView.tsx-86-  const [searchTerm, setSearchTerm] =
+components/lineups/GolfTournamentView.tsx-87-    useState("");
+components/lineups/GolfTournamentView.tsx-88-
+components/lineups/GolfTournamentView.tsx-89-  const [draftedOnly, setDraftedOnly] =
+components/lineups/GolfTournamentView.tsx-90-    useState(false);
+components/lineups/GolfTournamentView.tsx-91-
+components/lineups/GolfTournamentView.tsx-92-  const [playingNowOnly, setPlayingNowOnly] =
+components/lineups/GolfTournamentView.tsx-93-    useState(false);
+components/lineups/GolfTournamentView.tsx-94-
+components/lineups/GolfTournamentView.tsx-95-  const [
+components/lineups/GolfTournamentView.tsx-96-    selectedOwnerTeamId,
+components/lineups/GolfTournamentView.tsx-97-    setSelectedOwnerTeamId,
+components/lineups/GolfTournamentView.tsx-98-  ] = useState<number | "drafted" | null>(null);
+components/lineups/GolfTournamentView.tsx-99-
+components/lineups/GolfTournamentView.tsx-100-  const fantasyTeams = useMemo(
+components/lineups/GolfTournamentView.tsx-101-    () =>
+components/lineups/GolfTournamentView.tsx-102-      teams.filter(
+components/lineups/GolfTournamentView.tsx-103-        (team) =>
+components/lineups/GolfTournamentView.tsx-104-          team.is_participating !== false,
+components/lineups/GolfTournamentView.tsx-105-      ),
+components/lineups/GolfTournamentView.tsx-106-    [teams],
+--
+components/lineups/GolfTournamentView.tsx-258-        return a.player.name.localeCompare(
+components/lineups/GolfTournamentView.tsx-259-          b.player.name,
+components/lineups/GolfTournamentView.tsx-260-        );
+components/lineups/GolfTournamentView.tsx-261-      });
+components/lineups/GolfTournamentView.tsx-262-  }, [
+components/lineups/GolfTournamentView.tsx-263-    players,
+components/lineups/GolfTournamentView.tsx-264-    getRawPlayerStat,
+components/lineups/GolfTournamentView.tsx-265-    ownerByPlayerId,
+components/lineups/GolfTournamentView.tsx-266-    searchTerm,
+components/lineups/GolfTournamentView.tsx-267-    draftedOnly,
+components/lineups/GolfTournamentView.tsx-268-    leaderboardRanks,
+components/lineups/GolfTournamentView.tsx-269-  ]);
+components/lineups/GolfTournamentView.tsx-270-
+components/lineups/GolfTournamentView.tsx-271-  const cutLine = useMemo(
+components/lineups/GolfTournamentView.tsx-272-    () =>
+components/lineups/GolfTournamentView.tsx:273:      hasCut
+components/lineups/GolfTournamentView.tsx-274-        ? calculateGolfCutLine(
+components/lineups/GolfTournamentView.tsx-275-        players.flatMap((player) => {
+components/lineups/GolfTournamentView.tsx-276-          const stat =
+components/lineups/GolfTournamentView.tsx-277-            getRawPlayerStat(
+components/lineups/GolfTournamentView.tsx-278-              player.id,
+components/lineups/GolfTournamentView.tsx-279-            );
+components/lineups/GolfTournamentView.tsx-280-
+components/lineups/GolfTournamentView.tsx-281-          if (!stat) {
+components/lineups/GolfTournamentView.tsx-282-            return [];
+components/lineups/GolfTournamentView.tsx-283-          }
+components/lineups/GolfTournamentView.tsx-284-
+components/lineups/GolfTournamentView.tsx-285-          const roundOne =
+components/lineups/GolfTournamentView.tsx-286-            (stat.rounds ?? []).find(
+components/lineups/GolfTournamentView.tsx-287-              (round) =>
+components/lineups/GolfTournamentView.tsx-288-                Number(
+components/lineups/GolfTournamentView.tsx-289-                  round.round_number,
+components/lineups/GolfTournamentView.tsx-290-                ) === 1,
+components/lineups/GolfTournamentView.tsx-291-            );
+components/lineups/GolfTournamentView.tsx-292-
+components/lineups/GolfTournamentView.tsx-293-          const roundTwo =
+components/lineups/GolfTournamentView.tsx-294-            (stat.rounds ?? []).find(
+components/lineups/GolfTournamentView.tsx-295-              (round) =>
+components/lineups/GolfTournamentView.tsx-296-                Number(
+components/lineups/GolfTournamentView.tsx-297-                  round.round_number,
+components/lineups/GolfTournamentView.tsx-298-                ) === 2,
+--
+components/lineups/GolfTournamentView.tsx-332-              status: stat.status,
+components/lineups/GolfTournamentView.tsx-333-              position:
+components/lineups/GolfTournamentView.tsx-334-                stat.leaderboard_order,
+components/lineups/GolfTournamentView.tsx-335-              holesCompleted:
+components/lineups/GolfTournamentView.tsx-336-                stat.holes_completed,
+components/lineups/GolfTournamentView.tsx-337-              roundsCompleted:
+components/lineups/GolfTournamentView.tsx-338-                stat.rounds_completed,
+components/lineups/GolfTournamentView.tsx-339-              currentRound:
+components/lineups/GolfTournamentView.tsx-340-                stat.current_round,
+components/lineups/GolfTournamentView.tsx-341-            },
+components/lineups/GolfTournamentView.tsx-342-          ];
+components/lineups/GolfTournamentView.tsx-343-        }),
+components/lineups/GolfTournamentView.tsx-344-          )
+components/lineups/GolfTournamentView.tsx-345-        : null,
+components/lineups/GolfTournamentView.tsx-346-    [
+components/lineups/GolfTournamentView.tsx:347:      hasCut,
+components/lineups/GolfTournamentView.tsx-348-      players,
+components/lineups/GolfTournamentView.tsx-349-      getRawPlayerStat,
+components/lineups/GolfTournamentView.tsx-350-    ],
+components/lineups/GolfTournamentView.tsx-351-  );
+components/lineups/GolfTournamentView.tsx-352-
+components/lineups/GolfTournamentView.tsx-353-  const draftedCount = useMemo(
+components/lineups/GolfTournamentView.tsx-354-    () =>
+components/lineups/GolfTournamentView.tsx-355-      players.filter((player) =>
+components/lineups/GolfTournamentView.tsx-356-        ownerByPlayerId.has(player.id),
+components/lineups/GolfTournamentView.tsx-357-      ).length,
+components/lineups/GolfTournamentView.tsx-358-    [players, ownerByPlayerId],
+components/lineups/GolfTournamentView.tsx-359-  );
+components/lineups/GolfTournamentView.tsx-360-
+components/lineups/GolfTournamentView.tsx-361-  /*
+components/lineups/GolfTournamentView.tsx-362-   * Once Round 3 begins the cut is historical and locked.
+components/lineups/GolfTournamentView.tsx-363-   * Keep displaying the official cut score/rule, but stop
+components/lineups/GolfTournamentView.tsx-364-   * showing live population counts because Saturday scoring
+components/lineups/GolfTournamentView.tsx-365-   * makes "inside / at cut / outside" misleading.
+components/lineups/GolfTournamentView.tsx-366-   */
+components/lineups/GolfTournamentView.tsx-367-  const hideCutPopulationCounts =
+components/lineups/GolfTournamentView.tsx-368-    players.some((player) => {
+components/lineups/GolfTournamentView.tsx-369-      const stat =
+components/lineups/GolfTournamentView.tsx-370-        getRawPlayerStat(player.id);
+components/lineups/GolfTournamentView.tsx-371-
+components/lineups/GolfTournamentView.tsx-372-      return Number(
+--
+lib/home/golfHomeSummary.ts-1-import { NextResponse } from "next/server";
+lib/home/golfHomeSummary.ts-2-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+lib/home/golfHomeSummary.ts-3-import { getGolfStatusMeta } from "@/lib/golf/status";
+lib/home/golfHomeSummary.ts-4-import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+lib/home/golfHomeSummary.ts-5-
+lib/home/golfHomeSummary.ts-6-type GolfSlateRow = {
+lib/home/golfHomeSummary.ts-7-  id: number;
+lib/home/golfHomeSummary.ts-8-  date: string | null;
+lib/home/golfHomeSummary.ts-9-  start_date: string | null;
+lib/home/golfHomeSummary.ts-10-  end_date: string | null;
+lib/home/golfHomeSummary.ts-11-  is_locked: boolean;
+lib/home/golfHomeSummary.ts-12-  first_game_start_time: string | null;
+lib/home/golfHomeSummary.ts-13-  display_name: string | null;
+lib/home/golfHomeSummary.ts:14:  has_cut: boolean;
+lib/home/golfHomeSummary.ts-15-};
+lib/home/golfHomeSummary.ts-16-
+lib/home/golfHomeSummary.ts-17-type TeamResultRow = {
+lib/home/golfHomeSummary.ts-18-  slate_id: number;
+lib/home/golfHomeSummary.ts-19-  team_id: number;
+lib/home/golfHomeSummary.ts-20-  fantasy_points: number | null;
+lib/home/golfHomeSummary.ts-21-  finish_position: number | null;
+lib/home/golfHomeSummary.ts-22-  games_completed: number | null;
+lib/home/golfHomeSummary.ts-23-  games_in_progress: number | null;
+lib/home/golfHomeSummary.ts-24-  games_remaining: number | null;
+lib/home/golfHomeSummary.ts-25-};
+lib/home/golfHomeSummary.ts-26-
+lib/home/golfHomeSummary.ts-27-type GolfEventPlayerRow = {
+lib/home/golfHomeSummary.ts-28-  id: number;
+lib/home/golfHomeSummary.ts-29-  slate_id: number;
+lib/home/golfHomeSummary.ts-30-  player_id: number;
+lib/home/golfHomeSummary.ts-31-  leaderboard_order: number | null;
+lib/home/golfHomeSummary.ts-32-  official_score_to_par: number | null;
+lib/home/golfHomeSummary.ts-33-  official_score_display: string | null;
+lib/home/golfHomeSummary.ts-34-  fantasy_score: number | null;
+lib/home/golfHomeSummary.ts-35-  penalty_strokes: number | null;
+lib/home/golfHomeSummary.ts-36-  status: string | null;
+lib/home/golfHomeSummary.ts-37-  current_round: number | null;
+lib/home/golfHomeSummary.ts-38-  last_hole: number | null;
+lib/home/golfHomeSummary.ts-39-  holes_completed: number | null;
+--
+lib/home/golfHomeSummary.ts-104-    "disqualified",
+lib/home/golfHomeSummary.ts-105-  ].includes(String(status ?? "").toLowerCase());
+lib/home/golfHomeSummary.ts-106-}
+lib/home/golfHomeSummary.ts-107-
+lib/home/golfHomeSummary.ts-108-export async function getGolfHomeSummary() {
+lib/home/golfHomeSummary.ts-109-  const [
+lib/home/golfHomeSummary.ts-110-    { data: slateData, error: slateError },
+lib/home/golfHomeSummary.ts-111-    { data: resultData, error: resultError },
+lib/home/golfHomeSummary.ts-112-    { data: teamData, error: teamError },
+lib/home/golfHomeSummary.ts-113-    { data: teamUserData, error: teamUserError },
+lib/home/golfHomeSummary.ts-114-    { data: slateTeamData, error: slateTeamError },
+lib/home/golfHomeSummary.ts-115-  ] = await Promise.all([
+lib/home/golfHomeSummary.ts-116-    supabaseAdmin
+lib/home/golfHomeSummary.ts-117-      .from("slates")
+lib/home/golfHomeSummary.ts-118-      .select(
+lib/home/golfHomeSummary.ts:119:        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut",
+lib/home/golfHomeSummary.ts-120-      )
+lib/home/golfHomeSummary.ts-121-      .eq("sport", "golf")
+lib/home/golfHomeSummary.ts-122-      .order("start_date", { ascending: false })
+lib/home/golfHomeSummary.ts-123-      .order("end_date", { ascending: false }),
+lib/home/golfHomeSummary.ts-124-
+lib/home/golfHomeSummary.ts-125-    supabaseAdmin
+lib/home/golfHomeSummary.ts-126-      .from("team_slate_results")
+lib/home/golfHomeSummary.ts-127-      .select(
+lib/home/golfHomeSummary.ts-128-        "slate_id, team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining",
+lib/home/golfHomeSummary.ts-129-      ),
+lib/home/golfHomeSummary.ts-130-
+lib/home/golfHomeSummary.ts-131-    supabaseAdmin
+lib/home/golfHomeSummary.ts-132-      .from("teams")
+lib/home/golfHomeSummary.ts-133-      .select("id, name")
+lib/home/golfHomeSummary.ts-134-      .order("name", { ascending: true }),
+lib/home/golfHomeSummary.ts-135-
+lib/home/golfHomeSummary.ts-136-    supabaseAdmin
+lib/home/golfHomeSummary.ts-137-      .from("app_users")
+lib/home/golfHomeSummary.ts-138-      .select("team_id, avatar_url")
+lib/home/golfHomeSummary.ts-139-      .not("team_id", "is", null),
+lib/home/golfHomeSummary.ts-140-
+lib/home/golfHomeSummary.ts-141-    supabaseAdmin
+lib/home/golfHomeSummary.ts-142-      .from("slate_teams")
+lib/home/golfHomeSummary.ts-143-      .select(
+lib/home/golfHomeSummary.ts-144-        "slate_id, team_id, is_participating",
+--
+lib/home/golfHomeSummary.ts-1015-        round.event_player_id,
+lib/home/golfHomeSummary.ts-1016-      ) ?? new Map<number, number>();
+lib/home/golfHomeSummary.ts-1017-
+lib/home/golfHomeSummary.ts-1018-    eventPlayerScores.set(
+lib/home/golfHomeSummary.ts-1019-      Number(round.round_number),
+lib/home/golfHomeSummary.ts-1020-      Number(round.score_to_par),
+lib/home/golfHomeSummary.ts-1021-    );
+lib/home/golfHomeSummary.ts-1022-
+lib/home/golfHomeSummary.ts-1023-    cutRoundScoresByEventPlayerId.set(
+lib/home/golfHomeSummary.ts-1024-      round.event_player_id,
+lib/home/golfHomeSummary.ts-1025-      eventPlayerScores,
+lib/home/golfHomeSummary.ts-1026-    );
+lib/home/golfHomeSummary.ts-1027-  });
+lib/home/golfHomeSummary.ts-1028-
+lib/home/golfHomeSummary.ts-1029-  const projectedCut =
+lib/home/golfHomeSummary.ts:1030:    latestSlate?.has_cut !== false
+lib/home/golfHomeSummary.ts-1031-      ? calculateGolfCutLine(
+lib/home/golfHomeSummary.ts-1032-          latestEventPlayers.map(
+lib/home/golfHomeSummary.ts-1033-        (player) => {
+lib/home/golfHomeSummary.ts-1034-          const roundScores =
+lib/home/golfHomeSummary.ts-1035-            cutRoundScoresByEventPlayerId.get(
+lib/home/golfHomeSummary.ts-1036-              player.id,
+lib/home/golfHomeSummary.ts-1037-            );
+lib/home/golfHomeSummary.ts-1038-
+lib/home/golfHomeSummary.ts-1039-          const roundOne =
+lib/home/golfHomeSummary.ts-1040-            roundScores?.get(1);
+lib/home/golfHomeSummary.ts-1041-
+lib/home/golfHomeSummary.ts-1042-          const roundTwo =
+lib/home/golfHomeSummary.ts-1043-            roundScores?.get(2);
+lib/home/golfHomeSummary.ts-1044-
+lib/home/golfHomeSummary.ts-1045-          const hasThirtySixHoleScore =
+lib/home/golfHomeSummary.ts-1046-            roundOne !== undefined &&
+lib/home/golfHomeSummary.ts-1047-            roundTwo !== undefined;
+lib/home/golfHomeSummary.ts-1048-
+lib/home/golfHomeSummary.ts-1049-          const thirtySixHoleScore =
+lib/home/golfHomeSummary.ts-1050-            hasThirtySixHoleScore
+lib/home/golfHomeSummary.ts-1051-              ? Number(roundOne) +
+lib/home/golfHomeSummary.ts-1052-                Number(roundTwo)
+lib/home/golfHomeSummary.ts-1053-              : null;
+lib/home/golfHomeSummary.ts-1054-
+lib/home/golfHomeSummary.ts-1055-          return {
+--
+lib/home/golfHomeSummary.ts-1108-
+lib/home/golfHomeSummary.ts-1109-    return {
+lib/home/golfHomeSummary.ts-1110-      id: slate.id,
+lib/home/golfHomeSummary.ts-1111-      date: slate.date,
+lib/home/golfHomeSummary.ts-1112-      start_date: slate.start_date,
+lib/home/golfHomeSummary.ts-1113-      end_date: slate.end_date,
+lib/home/golfHomeSummary.ts-1114-      label:
+lib/home/golfHomeSummary.ts-1115-        slate.display_name?.trim() ||
+lib/home/golfHomeSummary.ts-1116-        formatSlateLabel(
+lib/home/golfHomeSummary.ts-1117-          slate.start_date,
+lib/home/golfHomeSummary.ts-1118-          slate.end_date,
+lib/home/golfHomeSummary.ts-1119-        ),
+lib/home/golfHomeSummary.ts-1120-      display_name:
+lib/home/golfHomeSummary.ts-1121-        slate.display_name ?? null,
+lib/home/golfHomeSummary.ts-1122-      is_locked: slate.is_locked,
+lib/home/golfHomeSummary.ts:1123:      has_cut: slate.has_cut !== false,
+lib/home/golfHomeSummary.ts-1124-      first_game_start_time:
+lib/home/golfHomeSummary.ts-1125-        slate.first_game_start_time,
+lib/home/golfHomeSummary.ts-1126-    };
+lib/home/golfHomeSummary.ts-1127-  }
+lib/home/golfHomeSummary.ts-1128-
+lib/home/golfHomeSummary.ts-1129-  return NextResponse.json({
+lib/home/golfHomeSummary.ts-1130-    success: true,
+lib/home/golfHomeSummary.ts-1131-    latestSlate:
+lib/home/golfHomeSummary.ts-1132-      serializeSlate(latestSlate),
+lib/home/golfHomeSummary.ts-1133-    latestGolfTournamentIsFinal,
+lib/home/golfHomeSummary.ts-1134-    nextSlate: serializeSlate(nextSlate),
+lib/home/golfHomeSummary.ts-1135-    latestSlateRows: latestRows,
+lib/home/golfHomeSummary.ts-1136-    tournamentLeaderboard,
+lib/home/golfHomeSummary.ts-1137-    projectedCut,
+lib/home/golfHomeSummary.ts-1138-    seasonSnapshot,
+lib/home/golfHomeSummary.ts-1139-    funFacts,
+lib/home/golfHomeSummary.ts-1140-    latestSeason,
+lib/home/golfHomeSummary.ts-1141-  });
+lib/home/golfHomeSummary.ts-1142-}
+
+============================================================
+LINEUPBUILDER SLATE TYPE
+============================================================
+
+============================================================
+SELECTED SLATE + GOLF VIEW AREA
+============================================================
+782-
+783-      const winnerTeamId = rows[0]?.teamId ?? null;
+784-
+785-      rows.forEach((row) => {
+786-        map.set(row.teamId, row.teamId === winnerTeamId ? 100 : 0);
+787-      });
+788-
+789-      return map;
+790-    }
+791-
+792-    const k = 20;
+793-
+794-    const teams = orderedTeamsForSlate.map((team) => ({
+795-      teamId: team.id,
+796-      projected: getLiveProjectedTeamTotal(team.id),
+797-    }));
+798-
+799-    const weights = teams.map((t) => ({
+800-      ...t,
+801-      weight: Math.exp(t.projected / k),
+802-    }));
+803-
+804-    const totalWeight = weights.reduce((sum, t) => sum + t.weight, 0);
+805-
+806-    weights.forEach((t) => {
+807-      let pct = (t.weight / totalWeight) * 100;
+808-      pct = Math.max(5, Math.min(95, pct));
+809-      map.set(t.teamId, pct);
+810-    });
+811-
+812-    return map;
+813-  }
+814-
+815-  const liveWinPctMap = computeWinPctMap();
+816-
+817-  function getEffectiveRosterSlots() {
+818-    if (rosterSlots.length > 0) {
+819-      return rosterSlots;
+820-    }
+821-
+822:    const activeSport = selectedSlate?.sport ?? selectedSport;
+823-
+824-    if (activeSport === "golf") {
+825-      return [
+826-        {
+827-          sport: "golf",
+828-          position: "GOLFER",
+829-          slot_count: 4,
+830-          display_order: 1,
+831-        },
+832-      ];
+833-    }
+834-
+835-    return [
+836-      { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+837-      { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+838-    ];
+839-  }
+840-
+841-  function getRosterTotalSlots() {
+842-    return getEffectiveRosterSlots().reduce(
+843-      (sum, slot) => sum + slot.slot_count,
+844-      0
+845-    );
+846-  }
+847-
+848-  function countPlayersByPosition(playerList: Player[]) {
+849-    const map = new Map<string, number>();
+850-    playerList.forEach((player) => {
+851-      map.set(
+852-        player.position_group,
+853-        (map.get(player.position_group) ?? 0) + 1
+854-      );
+855-    });
+856-    return map;
+857-  }
+858-
+859-  function getDraftNeeds(teamId: number) {
+860-    const teamPlayers = getPlayersForTeam(teamId);
+861-    const counts = countPlayersByPosition(teamPlayers);
+862-    const slots = getEffectiveRosterSlots();
+863-
+864-    const parts: string[] = [];
+865-
+866-    slots.forEach((slot) => {
+867-      const have = counts.get(slot.position) ?? 0;
+868-      const needed = Math.max(0, slot.slot_count - have);
+869-      if (needed > 0) parts.push(`${needed} ${slot.position}`);
+870-    });
+871-
+872-    if (parts.length === 0) {
+873-      return "Roster full";
+874-    }
+875-
+876-    return `Needs ${parts.join(" • ")}`;
+877-  }
+878-
+879-  const dailySummary = useMemo(() => {
+880-    const rows = orderedTeamsForSlate.map((team) => {
+881-      const stats = getTeamStats(team.id);
+882-      return {
+883-        teamId: team.id,
+884-        teamName: team.name,
+885-        total: Number(stats.total ?? 0),
+886-        games_completed: Number(stats.games_completed ?? 0),
+887-        games_in_progress: Number(stats.games_in_progress ?? 0),
+888-        games_remaining: Number(stats.games_remaining ?? 0),
+889-        finish_position: stats.finish_position,
+890-        is_participating: (team as any).is_participating !== false,
+891-      };
+892-    });
+893-
+894-    const leader =
+895-      rows
+896-        .filter((row) => row.is_participating)
+897-        .sort((a, b) =>
+898:        (selectedSlate?.sport ?? selectedSport) === "golf"
+899-          ? a.total - b.total
+900-          : b.total - a.total,
+901-      )[0] ?? null;
+902-
+903-    return {
+904-      leader,
+905-      rows,
+906-    };
+907-  }, [orderedTeamsForSlate, teamResultsState, playerStatsState, lineupsState]);
+908-
+909-  function getTeamAssignmentStatus(teamId: number, player: Player) {
+910-    const team = orderedTeamsForSlate.find((item) => item.id === teamId);
+911-    const teamPlayers = getPlayersForTeam(teamId);
+912-    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+913-    const isParticipating = (team as any)?.is_participating !== false;
+914-
+915:    if (!selectedSlateIdNumber) {
+916-      return { canAssign: false, reason: "No slate selected" };
+917-    }
+918:    if (selectedSlate?.is_locked) {
+919-      return { canAssign: false, reason: "Slate locked" };
+920-    }
+921-    if (!isParticipating) return { canAssign: false, reason: "Out" };
+922-    if (ownerTeamId === teamId) {
+923-      return { canAssign: false, reason: "Already here" };
+924-    }
+925-
+926-    const nextPlayers = [...teamPlayers, player];
+927-    const totalSlots = getRosterTotalSlots();
+928-
+929-    if (nextPlayers.length > totalSlots) {
+930-      return { canAssign: false, reason: "Lineup full" };
+931-    }
+932-
+933-    const nextCounts = countPlayersByPosition(nextPlayers);
+934-    const slots = getEffectiveRosterSlots();
+935-
+936-    for (const slot of slots) {
+937-      const count = nextCounts.get(slot.position) ?? 0;
+938-      if (count > slot.slot_count) {
+939-        return { canAssign: false, reason: `Too many ${slot.position}` };
+940-      }
+941-    }
+942-
+943-    return { canAssign: true, reason: "" };
+944-  }
+945-
+946-  async function loadSlateLineups(nextSlateId: number) {
+947-    const loadId = ++latestSlateLoadRef.current;
+948-
+949-    setLineupsState([]);
+950-    setPlayerStatsState([]);
+951-    setTeamResultsState([]);
+952-
+953-    try {
+954-      setIsSlateLoading(true);
+955-      setMessage("");
+956-      setSaveMessage("");
+957-
+958-      const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
+959-        fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
+960-        fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
+961-        fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
+962-      ]);
+963-
+964-      const lineupsResult = await lineupsResponse.json();
+965-      const statsResult = await statsResponse.json();
+966-      const resultsResult = await resultsResponse.json();
+967-
+968-      if (loadId !== latestSlateLoadRef.current) return;
+969-
+970-      if (!lineupsResponse.ok) {
+971-        setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
+972-        return;
+973-      }
+974-
+975-      if (!statsResponse.ok) {
+976-        setSaveMessage(statsResult.error || "Failed to load player stats.");
+977-        return;
+978-      }
+979-
+980-      if (!resultsResponse.ok) {
+981-        setSaveMessage(resultsResult.error || "Failed to load team results.");
+982-        return;
+983-      }
+984-
+985-      setLineupsState(lineupsResult.lineups ?? []);
+986-      setPlayerStatsState(statsResult.playerStats ?? []);
+987-      setTeamResultsState(resultsResult.teamResults ?? []);
+988-      setSaveMessage("");
+989-    } catch (error) {
+990-      if (loadId !== latestSlateLoadRef.current) return;
+991-      console.error(error);
+992-      setSaveMessage("Something went wrong while loading the slate.");
+993-    } finally {
+994-      if (loadId === latestSlateLoadRef.current) {
+995-        setIsSlateLoading(false);
+996-      }
+997-    }
+998-
+999-    try {
+1000-      setIsAvailabilityLoading(true);
+1001-
+1002-      const availabilityResponse = await fetch(
+1003-        `/api/slate-availability?slateId=${nextSlateId}`,
+1004-        { cache: "no-store" }
+1005-      );
+1006-
+1007-      const availabilityResult = await availabilityResponse.json();
+1008-
+1009-      if (loadId !== latestSlateLoadRef.current) return;
+1010-
+1011-      if (!availabilityResponse.ok) {
+1012-        console.error(
+1013-          availabilityResult.error || "Failed to load slate availability."
+1014-        );
+1015-        setAvailablePlayerIdsForSlate([]);
+1016-        return;
+1017-      }
+1018-
+1019-      setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+1020-    } catch (error) {
+1021-      if (loadId !== latestSlateLoadRef.current) return;
+1022-      console.error(error);
+1023-      setAvailablePlayerIdsForSlate([]);
+1024-    } finally {
+1025-      if (loadId === latestSlateLoadRef.current) {
+1026-        setIsAvailabilityLoading(false);
+1027-      }
+1028-    }
+1029-  }
+1030-
+1031-  async function refreshStatsForSelectedSlate(isSilent = false) {
+1032:    if (!selectedSlateIdNumber) {
+1033-      if (!isSilent) alert("No slate selected.");
+1034-      return;
+1035-    }
+1036-
+1037-    if (refreshInFlightRef.current) return;
+1038-
+1039-    refreshInFlightRef.current = true;
+1040-
+1041-    try {
+1042-      setIsRefreshingStats(true);
+1043-      if (!isSilent) {
+1044-        setMessage("");
+1045-        setSaveMessage("");
+1046-      }
+1047-
+1048-      let refreshResult:
+1049-        Record<string, unknown>;
+1050-
+1051-      if (
+1052:        selectedSlate?.sport ===
+1053-        "golf"
+1054-      ) {
+1055-        refreshResult =
+1056-          await refreshGolfFromBrowser(
+1057:            selectedSlateIdNumber,
+1058-          );
+1059-      } else {
+1060-        const refreshEndpoint =
+1061:          selectedSlate?.sport ===
+1062-          "nfl"
+1063-            ? "/api/refresh-stats-nfl"
+1064-            : "/api/refresh-stats";
+1065-
+1066-        const refreshResponse =
+1067-          await fetch(
+1068-            refreshEndpoint,
+1069-            {
+1070-              method: "POST",
+1071-              headers: {
+1072-                "Content-Type":
+1073-                  "application/json",
+1074-              },
+1075-              body: JSON.stringify({
+1076-                slateId:
+1077:                  selectedSlateIdNumber,
+1078-              }),
+1079-              cache: "no-store",
+1080-            },
+1081-          );
+1082-
+1083-        refreshResult =
+1084-          await refreshResponse.json();
+1085-
+1086-        if (!refreshResponse.ok) {
+1087-          const errorMessage =
+1088-            String(
+1089-              refreshResult.error ??
+1090-                "Failed to refresh stats.",
+1091-            );
+1092-
+1093-          if (!isSilent) {
+1094-            alert(errorMessage);
+1095-          } else {
+1096-            console.error(
+1097-              errorMessage,
+1098-            );
+1099-          }
+1100-
+1101-          return;
+1102-        }
+1103-      }
+1104-
+1105-      setLastRefreshSummary({
+1106-        gamesFound:
+1107-          typeof refreshResult.gamesFound ===
+1108-          "number"
+1109-            ? refreshResult.gamesFound
+1110-            : undefined,
+1111-        playerStatsUpserted:
+1112-          typeof refreshResult.playerStatsUpserted ===
+1113-          "number"
+1114-            ? refreshResult.playerStatsUpserted
+1115-            : undefined,
+1116-        teamResultsUpserted:
+1117-          typeof refreshResult.teamResultsUpserted ===
+1118-          "number"
+1119-            ? refreshResult.teamResultsUpserted
+1120-            : undefined,
+1121-      });
+1122-
+1123-      const [statsResponse, resultsResponse] = await Promise.all([
+1124:        fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, {
+1125-          cache: "no-store",
+1126-        }),
+1127:        fetch(`/api/team-results?slateId=${selectedSlateIdNumber}`, {
+1128-          cache: "no-store",
+1129-        }),
+1130-      ]);
+1131-
+1132-      const statsResult = await statsResponse.json();
+1133-      const resultsResult = await resultsResponse.json();
+1134-
+1135-      setPlayerStatsState(statsResult.playerStats ?? []);
+1136-      setTeamResultsState(resultsResult.teamResults ?? []);
+1137-      setLastUpdatedAt(new Date().toISOString());
+1138-
+1139-      if (!isSilent) {
+1140-        setSaveMessage("Stats refreshed successfully.");
+1141-      }
+1142-
+1143:      fetch(`/api/slate-availability?slateId=${selectedSlateIdNumber}`, {
+1144-        cache: "no-store",
+1145-      })
+1146-        .then((res) => res.json())
+1147-        .then((availabilityResult) => {
+1148-          setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+1149-        })
+1150-        .catch((error) => {
+1151-          console.error(error);
+1152-        });
+1153-    } catch (error) {
+1154-      const errorMessage =
+1155-        error instanceof Error
+1156-          ? error.message
+1157-          : String(error);
+1158-
+1159-      const golfFieldIsWaiting =
+1160:        selectedSlate?.sport === "golf" &&
+1161-        errorMessage
+1162-          .toLowerCase()
+1163-          .includes(
+1164-            "tournament field is not available yet",
+1165-          );
+1166-
+1167-      /*
+1168-       * ESPN often publishes the tournament shell before
+1169-       * the player field. For silent Golf auto-refreshes,
+1170-       * this is an expected waiting state rather than an
+1171-       * application error, so do not trigger the Next dev
+1172-       * error overlay.
+1173-       */
+1174-      if (!golfFieldIsWaiting) {
+1175-        console.error(error);
+1176-      }
+1177-
+1178-      if (!isSilent) {
+1179-        alert(
+1180-          golfFieldIsWaiting
+1181-            ? "The tournament is available, but ESPN has not published the field yet."
+1182-            : "Something went wrong while refreshing stats.",
+1183-        );
+1184-      }
+1185-    } finally {
+1186-      refreshInFlightRef.current = false;
+1187-      setIsRefreshingStats(false);
+1188-    }
+1189-  }
+1190-
+1191-  async function persistLineupForTeam(
+1192-    teamId: number,
+1193-    playerList: Player[],
+1194-    successMessage?: string,
+1195-    options?: {
+1196-      allowEmpty?: boolean;
+1197-      notifyNextDrafter?: boolean;
+1198-    }
+1199-  ) {
+1200-    setSaveMessage("");
+1201-    setMessage("");
+1202-
+1203:    if (!selectedSlateIdNumber) {
+1204-      setSaveMessage("Please choose a slate before saving.");
+1205-      return false;
+1206-    }
+1207-    if (!participatingTeamIds.has(teamId)) {
+1208-      setSaveMessage("That team is not participating in this slate.");
+1209-      return false;
+1210-    }
+1211:    if (selectedSlate?.is_locked) {
+1212-      setSaveMessage("This slate is locked.");
+1213-      return false;
+1214-    }
+1215-    if (!options?.allowEmpty && playerList.length === 0) {
+1216-      setSaveMessage("Select at least 1 player before saving.");
+1217-      return false;
+1218-    }
+1219-
+1220-    const totalSlots = getRosterTotalSlots();
+1221-    const slots = getEffectiveRosterSlots();
+1222-    const listCounts = countPlayersByPosition(playerList);
+1223-
+1224-    if (playerList.length > totalSlots) {
+1225-      setSaveMessage(`A lineup can have at most ${totalSlots} players.`);
+1226-      return false;
+1227-    }
+1228-
+1229-    const overLimitSlot = slots.find(
+1230-      (slot) => (listCounts.get(slot.position) ?? 0) > slot.slot_count
+1231-    );
+1232-
+1233-    if (overLimitSlot) {
+1234-      const limitDescription = slots
+1235-        .map((slot) => `${slot.slot_count} ${slot.position}`)
+1236-        .join(" and ");
+1237-      setSaveMessage(`A lineup can have at most ${limitDescription}.`);
+1238-      return false;
+1239-    }
+1240-
+1241-    try {
+1242-      setIsSaving(true);
+1243-
+1244-      const response = await fetch("/api/lineups", {
+1245-        method: "POST",
+1246-        headers: { "Content-Type": "application/json" },
+1247-        body: JSON.stringify({
+1248:          slateId: selectedSlateIdNumber,
+1249-          teamId,
+1250-          playerIds: playerList.map((player) => player.id),
+1251-          notifyNextDrafter: options?.notifyNextDrafter === true,
+1252-        }),
+1253-        cache: "no-store",
+1254-      });
+1255-
+1256-      const result = await response.json();
+1257-
+1258-      if (!response.ok) {
+1259-        setSaveMessage(result.error || "Failed to save lineup.");
+1260-        return false;
+1261-      }
+1262-
+1263-      setLineupsState((prev) => {
+1264-        const otherTeams = prev.filter((lineup) => lineup.team_id !== teamId);
+1265-        return [
+1266-          ...otherTeams,
+1267-          {
+1268-            team_id: teamId,
+1269-            player_ids: playerList.map((player) => player.id),
+1270-          },
+1271-        ];
+1272-      });
+1273-
+1274-      if (successMessage) setSaveMessage(successMessage);
+1275-      return true;
+1276-    } catch (error) {
+1277-      console.error(error);
+1278-      setSaveMessage("Something went wrong while saving the lineup.");
+1279-      return false;
+1280-    } finally {
+1281-      setIsSaving(false);
+1282-    }
+1283-  }
+1284-
+1285-  async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
+1286-    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
+1287-    if (!targetTeam) return;
+1288-
+1289-    const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
+1290-    if (!assignmentStatus.canAssign) {
+1291-      setSaveMessage(assignmentStatus.reason);
+1292-      return;
+1293-    }
+1294-
+1295-    const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
+1296-    const targetPlayers = getPlayersForTeam(targetTeamId);
+1297-
+1298-    if (currentOwnerTeamId === targetTeamId) {
+1299-      setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
+1300-      return;
+1301-    }
+1302-
+1303-    try {
+1304-      setIsAssigningPlayer(true);
+1305-
+1306-      if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
+1307-        const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
+1308-          (item) => item.id !== player.id
+1309-        );
+1310-
+1311-        const removed = await persistLineupForTeam(
+1312-          currentOwnerTeamId,
+1313-          ownerPlayers,
+1314-          undefined,
+1315-          { allowEmpty: true }
+1316-        );
+1317-
+1318-        if (!removed) return;
+1319-      }
+1320-
+1321-      const isAdminProxyPick =
+1322-        currentUser?.role === "admin" &&
+1323-        targetTeamId !== currentUser.teamId;
+1324-
+1325-      const shouldNotifyNextDrafter = isAdminProxyPick
+1326-        ? notifyNextDrafterForProxyPicks
+1327-        : true;
+1328-
+1329-      const added = await persistLineupForTeam(
+1330-        targetTeamId,
+1331-        [...targetPlayers, player],
+1332-        `${player.name} drafted to ${targetTeam.name}.`,
+1333-        {
+1334-          notifyNextDrafter: shouldNotifyNextDrafter,
+1335-        }
+1336-      );
+1337-
+1338-      if (!added) return;
+1339-
+1340-      setDraftingPlayer(null);
+1341-      setSearchTerm("");
+1342-
+1343:      if (selectedSlateIdNumber) {
+1344:        void loadSlateLineups(selectedSlateIdNumber);
+1345-      }
+1346-    } finally {
+1347-      setIsAssigningPlayer(false);
+1348-    }
+1349-  }
+1350-
+1351-  async function handleRemovePlayerFromTeam(player: Player) {
+1352-    const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
+1353-    const ownerTeam = getOwnerTeamForPlayer(player.id);
+1354-
+1355-    if (!ownerTeamId || !ownerTeam) return;
+1356-
+1357-    try {
+1358-      setIsAssigningPlayer(true);
+1359-
+1360-      const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
+1361-        (item) => item.id !== player.id
+1362-      );
+1363-
+1364-      const removed = await persistLineupForTeam(
+1365-        ownerTeamId,
+1366-        nextPlayers,
+1367-        `${player.name} removed from ${ownerTeam.name}.`,
+1368-        { allowEmpty: true }
+1369-      );
+1370-
+1371-      if (!removed) return;
+1372-
+1373-      setDraftingPlayer(null);
+1374-      setSearchTerm("");
+1375-
+1376:      if (selectedSlateIdNumber) {
+1377:        void loadSlateLineups(selectedSlateIdNumber);
+1378-      }
+1379-    } finally {
+1380-      setIsAssigningPlayer(false);
+1381-    }
+1382-  }
+1383-
+1384-  const pillBase =
+1385-    "rounded-full border px-3 py-1.5 text-xs font-medium transition";
+1386-  const activePill = "border-sky-300 bg-sky-100 text-sky-900";
+1387-  const inactivePill =
+1388-    "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50";
+1389-
+1390-  const scoreTableCellClass = compactView
+1391-    ? "px-0 py-0 text-xs"
+1392-    : "px-3 py-2 text-sm";
+1393-
+1394-  const scoreTableHeaderClass = compactView
+1395-    ? "border-b border-slate-200 px-0 py-0 font-semibold"
+1396-    : "border-b border-slate-200 px-3 py-2 font-semibold";
+1397-
+1398-  const ownerTeamForDraftingPlayer = draftingPlayer
+1399-    ? getOwnerTeamForPlayer(draftingPlayer.id)
+1400-    : null;
+1401-
+1402-  function inspectPlayerFromSlot(player: Player) {
+1403-    setIsInspectingPlayerFromSlot(true);
+1404-    setDraftingPlayer(player);
+1405-  }
+1406-
+1407-  const setDraftingPlayerWithSlotRestore:
+1408-    React.Dispatch<React.SetStateAction<Player | null>> = (
+1409-      value
+1410-    ) => {
+1411-      setDraftingPlayer((currentPlayer) => {
+1412-        const nextPlayer =
+1413-          typeof value === "function"
+1414-            ? value(currentPlayer)
+1415-            : value;
+1416-
+1417-        setIsInspectingPlayerFromSlot(
+1418-          Boolean(nextPlayer),
+1419-        );
+1420-
+1421-        return nextPlayer;
+1422-      });
+1423-    };
+1424-
+1425-  async function handleDraftToTargetSlot(
+1426-    player: Player
+1427-  ) {
+1428-    if (!targetDraftSlot) return;
+1429-
+1430-    await handleAssignPlayerToTeam(
+1431-      player,
+1432-      targetDraftSlot.teamId
+1433-    );
+1434-
+1435-    setDraftingPlayer(null);
+1436-    setIsInspectingPlayerFromSlot(false);
+1437-    setTargetDraftSlot(null);
+1438-  }
+1439-
+1440-  const golfScoresControls = (
+1441-    <>
+1442-      <div className="space-y-2">
+1443-        <div className="flex items-center gap-2">
+1444-          <button
+1445-            type="button"
+1446-            onClick={() =>
+1447-              void refreshStatsForSelectedSlate(false)
+1448-            }
+1449-            disabled={
+1450:              !selectedSlateIdNumber ||
+1451-              isRefreshingStats
+1452-            }
+1453-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-sky-500 bg-sky-950 px-3 py-2.5 text-sm font-black text-sky-200 transition hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-60"
+1454-          >
+1455-            <span
+1456-              aria-hidden="true"
+1457-              className={
+1458-                isRefreshingStats
+1459-                  ? "animate-spin"
+1460-                  : ""
+1461-              }
+1462-            >
+1463-              ↻
+1464-            </span>
+1465-
+1466-            <span>
+1467-              {isRefreshingStats
+1468-                ? "Refreshing..."
+1469-                : "Refresh Scores"}
+1470-            </span>
+1471-          </button>
+1472-
+1473-          <button
+1474-            type="button"
+1475-            onClick={() =>
+1476-              setIsGolfSlateMenuOpen(true)
+1477-            }
+1478-            className="flex shrink-0 items-center justify-center rounded-xl border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm font-black text-slate-100 transition hover:border-sky-500"
+1479-          >
+1480-            Slates
+1481-            <span
+1482-              aria-hidden="true"
+1483-              className="ml-1"
+1484-            >
+1485-              ▾
+1486-            </span>
+1487-          </button>
+1488-        </div>
+1489-
+1490-        <div className="flex items-center justify-between gap-3 px-1 text-[11px] text-slate-500">
+1491-          <span className="truncate">
+1492:            {selectedSlateDisplay}
+1493-          </span>
+1494-
+1495-          <span className="shrink-0">
+1496-            {lastUpdatedAt
+1497-              ? `Updated ${new Date(
+1498-                  lastUpdatedAt,
+1499-                ).toLocaleTimeString([], {
+1500-                  hour: "numeric",
+1501-                  minute: "2-digit",
+1502-                })}`
+1503-              : "Not refreshed yet"}
+1504-          </span>
+1505-        </div>
+1506-      </div>
+1507-
+1508-      {hasMounted &&
+1509-      isGolfSlateMenuOpen
+1510-        ? createPortal(
+1511-            <div
+1512-              className="fixed inset-0 z-[12000] flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center"
+1513-              onMouseDown={(event) => {
+1514-                if (
+1515-                  event.target ===
+1516-                  event.currentTarget
+1517-                ) {
+1518-                  setIsGolfSlateMenuOpen(
+1519-                    false,
+1520-                  );
+1521-                }
+1522-              }}
+1523-            >
+1524-              <section
+1525-                role="dialog"
+1526-                aria-modal="true"
+1527-                aria-label="Golf slate and score settings"
+1528-                className="w-full max-w-md overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 text-slate-100 shadow-2xl"
+1529-              >
+1530-                <header className="flex items-center justify-between gap-4 border-b border-slate-800 px-5 py-4">
+1531-                  <div>
+1532-                    <span className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-400">
+1533-                      Golf scores
+1534-                    </span>
+1535-
+1536-                    <h3 className="mt-1 text-xl font-black">
+1537-                      Slate & Settings
+1538-                    </h3>
+1539-                  </div>
+1540-
+1541-                  <button
+1542-                    type="button"
+1543-                    onClick={() =>
+1544-                      setIsGolfSlateMenuOpen(
+1545-                        false,
+1546-                      )
+1547-                    }
+1548-                    aria-label="Close slate settings"
+1549-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-xl text-slate-300 transition hover:bg-slate-800 hover:text-white"
+1550-                  >
+1551-                    ×
+1552-                  </button>
+1553-                </header>
+1554-
+1555-                <div className="space-y-4 p-5">
+1556-                  <label className="block">
+1557-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+1558-                      Season
+1559-                    </span>
+1560-
+1561-                    <select
+1562-                      value={selectedSeason}
+1563-                      onChange={(event) =>
+1564-                        setSelectedSeason(
+1565-                          event.target.value,
+1566-                        )
+1567-                      }
+1568-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white"
+1569-                    >
+1570-                      {seasons.map(
+1571-                        (season) => (
+1572-                          <option
+1573-                            key={season}
+1574-                            value={season}
+1575-                          >
+1576-                            {season}
+1577-                          </option>
+1578-                        ),
+1579-                      )}
+1580-                    </select>
+1581-                  </label>
+1582-
+1583-                  <label className="block">
+1584-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+1585-                      Tournament
+1586-                    </span>
+1587-
+1588-                    <select
+1589:                      value={selectedSlateId}
+1590-                      onChange={(event) => {
+1591-                        setSelectedSlateId(
+1592-                          event.target.value,
+1593-                        );
+1594-
+1595-                        setIsGolfSlateMenuOpen(
+1596-                          false,
+1597-                        );
+1598-                      }}
+1599-                      disabled={isSlateLoading}
+1600-                      className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-base text-white disabled:opacity-60"
+1601-                    >
+1602-                      {filteredSlates.map(
+1603-                        (slate) => (
+1604-                          <option
+1605-                            key={slate.id}
+1606-                            value={String(
+1607-                              slate.id,
+1608-                            )}
+1609-                          >
+1610-                            {slate.label ??
+1611-                              slate.date}
+1612-                          </option>
+1613-                        ),
+1614-                      )}
+1615-                    </select>
+1616-                  </label>
+1617-
+1618-                  <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+1619-                    <span>
+1620-                      <strong className="block text-sm">
+1621-                        Auto-refresh
+1622-                      </strong>
+1623-
+1624-                      <span className="mt-0.5 block text-xs text-slate-500">
+1625-                        Refresh while this page is visible
+1626-                      </span>
+1627-                    </span>
+1628-
+1629-                    <input
+1630-                      type="checkbox"
+1631-                      checked={
+1632-                        autoRefreshEnabled
+1633-                      }
+1634-                      onChange={(event) =>
+1635-                        setAutoRefreshEnabled(
+1636-                          event.target.checked,
+1637-                        )
+1638-                      }
+1639-                      className="h-5 w-5"
+1640-                    />
+1641-                  </label>
+1642-
+1643-                  <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+1644-                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+1645-                      Current slate
+1646-                    </span>
+1647-
+1648-                    <strong className="mt-1 block text-base text-white">
+1649:                      {selectedSlateDisplay}
+1650-                    </strong>
+1651-
+1652-                    <span className="mt-1 block text-xs text-slate-500">
+1653-                      {lastUpdatedAt
+1654-                        ? `Last refreshed ${new Date(
+1655-                            lastUpdatedAt,
+1656-                          ).toLocaleTimeString([], {
+1657-                            hour: "numeric",
+1658-                            minute: "2-digit",
+1659-                          })}`
+1660-                        : "Scores have not been refreshed during this visit."}
+1661-                    </span>
+1662-                  </div>
+1663-                </div>
+1664-              </section>
+1665-            </div>,
+1666-            document.body,
+1667-          )
+1668-        : null}
+1669-    </>
+1670-  );
+1671-
+1672-  const lineupControls = (
+1673-    <LineupControls
+1674:      selectedSlateId={selectedSlateId}
+1675-      setSelectedSlateId={setSelectedSlateId}
+1676-      slates={filteredSlates}
+1677:      selectedSlate={selectedSlate}
+1678:      selectedSlateDisplay={selectedSlateDisplay}
+1679:      selectedSlateIdNumber={selectedSlateIdNumber}
+1680-      isRefreshingStats={isRefreshingStats}
+1681-      refreshStatsForSelectedSlate={
+1682-        refreshStatsForSelectedSlate
+1683-      }
+1684-      autoRefreshEnabled={autoRefreshEnabled}
+1685-      setAutoRefreshEnabled={
+1686-        setAutoRefreshEnabled
+1687-      }
+1688-      compactView={compactView}
+1689-      setCompactView={setCompactView}
+1690-      hasMounted={hasMounted}
+1691-      isSlateLoading={isSlateLoading}
+1692-      lastUpdatedAt={lastUpdatedAt}
+1693-      seasons={seasons}
+1694-      selectedSeason={selectedSeason}
+1695-      setSelectedSeason={setSelectedSeason}
+1696-    />
+1697-  );
+1698-
+1699-  return (
+1700-    <div className="space-y-6">
+1701-      {viewMode === "draft"
+1702-        ? lineupControls
+1703-        : null}
+1704-
+1705-      {message ? (
+1706-        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+1707-          {message}
+1708-        </div>
+1709-      ) : null}
+1710-
+1711-      {currentUser?.role === "admin" && viewMode === "draft" ? (
+1712-        <section className="draft-admin-toggle">
+1713-          <div>
+1714-            <strong>Proxy Pick Notifications</strong>
+1715-            <span>
+1716-              Notify the next drafter after an admin-entered pick.
+1717-            </span>
+1718-          </div>
+1719-
+1720-          <label className="draft-admin-switch">
+1721-            <input
+1722-              type="checkbox"
+1723-              checked={notifyNextDrafterForProxyPicks}
+1724-              onChange={(event) =>
+1725-                setNotifyNextDrafterForProxyPicks(
+1726-                  event.target.checked
+1727-                )
+1728-              }
+1729-            />
+1730-
+1731-            <span aria-hidden="true" />
+1732-
+1733-            <em>
+1734-              {notifyNextDrafterForProxyPicks
+1735-                ? "On"
+1736-                : "Off"}
+1737-            </em>
+1738-          </label>
+1739-        </section>
+1740-      ) : null}
+1741-
+1742-      {saveMessage ? (
+1743-        <div
+1744-          className={`rounded-2xl px-4 py-3 text-sm ${
+1745-            saveMessage.toLowerCase().includes("success") ||
+1746-            saveMessage.toLowerCase().includes("loaded") ||
+1747-            saveMessage.toLowerCase().includes("drafted") ||
+1748-            saveMessage.toLowerCase().includes("removed") ||
+1749-            saveMessage.toLowerCase().includes("refreshed")
+1750-              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+1751-              : "border border-red-200 bg-red-50 text-red-700"
+1752-          }`}
+1753-        >
+1754-          {saveMessage}
+1755-        </div>
+1756-      ) : null}
+1757-
+1758-      {viewMode === "draft" ? (
+1759-        <>
+1760-          <section className="draft-page-tabs">
+1761-            <button
+1762-              type="button"
+1763-              onClick={() => setDraftPageTab("lineup")}
+1764-              className={`draft-page-tab ${
+1765-                draftPageTab === "lineup"
+1766-                  ? "draft-page-tab--active"
+1767-                  : ""
+1768-              }`}
+1769-            >
+1770-              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
+1771-              <span>Lineup</span>
+1772-
+1773-              {currentUser?.teamId ? (
+1774-                <span className="draft-page-tab-count">
+1775-                  {getPlayersForTeam(currentUser.teamId).length}/{getRosterTotalSlots()}
+1776-                </span>
+1777-              ) : null}
+1778-            </button>
+1779-
+1780-            <button
+1781-              type="button"
+1782-              onClick={() => setDraftPageTab("players")}
+1783-              className={`draft-page-tab ${
+1784-                draftPageTab === "players"
+1785-                  ? "draft-page-tab--active"
+1786-                  : ""
+1787-              }`}
+1788-            >
+1789-              <span aria-hidden="true">🔎</span>
+1790-              <span>Players</span>
+1791-            </button>
+1792-          </section>
+1793-
+1794-          {draftPageTab === "lineup" ? (
+1795-            <DraftRosterCourt
+1796-              teamId={currentUser?.teamId ?? null}
+1797-              teamName={currentUser?.displayName ?? null}
+1798-              players={
+1799-                currentUser?.teamId
+1800-                  ? getPlayersForTeam(currentUser.teamId)
+1801-                  : []
+1802-              }
+1803-              rosterSlots={rosterSlots}
+1804:              isLocked={Boolean(selectedSlate?.is_locked)}
+1805-              setDraftingPlayer={setLeagueResearchPlayer}
+1806-              setTargetDraftSlot={setTargetDraftSlot}
+1807-            />
+1808-          ) : (
+1809-            <PlayerPool
+1810-              players={players}
+1811-              filteredPlayers={filteredPlayers}
+1812-              searchTerm={searchTerm}
+1813-              setSearchTerm={setSearchTerm}
+1814-              positionFilter={positionFilter}
+1815-              setPositionFilter={setPositionFilter}
+1816-              onSlateOnly={onSlateOnly}
+1817-              setOnSlateOnly={setOnSlateOnly}
+1818-              isAvailabilityLoading={isAvailabilityLoading}
+1819-              availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+1820-              availablePlayerIdSet={availablePlayerIdSet}
+1821-              playerAverageMap={playerAverageMap}
+1822-              playerProjections={playerProjections}
+1823-              getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1824-              setDraftingPlayer={setDraftingPlayer}
+1825-              isAssigningPlayer={isAssigningPlayer}
+1826-              pillBase={pillBase}
+1827-              activePill={activePill}
+1828-              inactivePill={inactivePill}
+1829-              rosterSlots={rosterSlots}
+1830-              selectedSeason={selectedSeason}
+1831-            />
+1832-          )}
+1833-
+1834-          <LeagueLineupCards
+1835-            teams={orderedTeamsForSlate}
+1836-            currentTeamId={currentUser?.teamId ?? null}
+1837-            getPlayersForTeam={getPlayersForTeam}
+1838-            getPlayerProjectionScore={
+1839-              getPlayerProjectionScore
+1840-            }
+1841-            getDraftNeeds={getDraftNeeds}
+1842-            rosterSlots={rosterSlots}
+1843-            setResearchPlayer={setLeagueResearchPlayer}
+1844-            setTargetDraftSlot={setTargetDraftSlot}
+1845-            isLocked={Boolean(
+1846:              selectedSlate?.is_locked
+1847-            )}
+1848-          />
+1849-        </>
+1850-      ) : (
+1851-        <ScoresDashboard
+1852-          players={players}
+1853-          teams={orderedTeamsForSlate}
+1854:          selectedSlate={selectedSlate}
+1855-          rosterSlots={rosterSlots}
+1856-          lastRefreshSummary={lastRefreshSummary}
+1857-          getPlayersForTeam={getPlayersForTeam}
+1858-          getTeamStats={getTeamStats}
+1859-          getPlayerStat={getPlayerStat}
+1860-          getRawPlayerStat={getRawPlayerStat}
+1861-          getLiveProjectedTeamTotal={
+1862-            getLiveProjectedTeamTotal
+1863-          }
+1864-          getPregameProjectedTeamTotal={
+1865-            getPregameProjectedTeamTotal
+1866-          }
+1867-          liveWinPctMap={liveWinPctMap}
+1868-          playerProjections={playerProjections}
+1869-          controls={
+1870:            (selectedSlate?.sport ??
+1871-              selectedSport) === "golf"
+1872-              ? golfScoresControls
+1873-              : lineupControls
+1874-          }
+1875-          setProfilePlayer={setProfilePlayer}
+1876-        />
+1877-      )}
+1878-
+1879-      <SlotDraftModal
+1880-        targetDraftSlot={targetDraftSlot}
+1881-        setTargetDraftSlot={setTargetDraftSlot}
+1882-        players={players}
+1883-        playerAverageMap={playerAverageMap}
+1884-        playerProjections={playerProjections}
+1885-        availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+1886-        availablePlayerIdSet={availablePlayerIdSet}
+1887-        isAvailabilityLoading={isAvailabilityLoading}
+1888-        getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1889-        setDraftingPlayer={setDraftingPlayerWithSlotRestore}
+1890-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1891-        selectedSeason={selectedSeason}
+1892-        rosterSlots={rosterSlots}
+1893-        hidden={isInspectingPlayerFromSlot}
+1894-        isAssigningPlayer={isAssigningPlayer}
+1895-      />
+1896-
+1897-      <ReadOnlyPlayerModal
+1898-        player={profilePlayer}
+1899-        setPlayer={setProfilePlayer}
+1900-        playerAverageMap={playerAverageMap}
+1901-        playerProjections={playerProjections}
+1902-        golfStat={
+1903-          profilePlayer
+1904-            ? getRawPlayerStat(profilePlayer.id)
+1905-            : null
+1906-        }
+1907-        golfSlateId={
+1908:          selectedSlate?.sport === "golf"
+1909:            ? selectedSlate.id
+1910-            : null
+1911-        }
+1912-      />
+1913-
+1914-      <PlayerResearchModal
+1915-        player={
+1916-          leagueResearchPlayer
+1917-            ? {
+1918-                id: leagueResearchPlayer.id,
+1919-                name: leagueResearchPlayer.name,
+1920-                nbaPlayerId:
+1921-                  leagueResearchPlayer.nba_player_id ??
+1922-                  null,
+1923-                nflPlayerId:
+1924-                  leagueResearchPlayer.nfl_player_id ??
+1925-                  null,
+1926-                espnGolfPlayerId:
+1927-                  leagueResearchPlayer.espn_player_id ??
+1928-                  null,
+1929-                headshotUrl:
+1930-                  leagueResearchPlayer.headshot_url ??
+1931-                  null,
+1932-                positionGroup:
+1933-                  leagueResearchPlayer.position_group ??
+1934-                  null,
+1935-                owgrRank:
+1936-                  leagueResearchPlayer.owgr_rank ??
+1937-                  null,
+1938-              }
+1939-            : null
+1940-        }
+1941-        sport={
+1942:          (selectedSlate?.sport ??
+1943-            selectedSport) as
+1944-            | "nba"
+1945-            | "nfl"
+1946-            | "golf"
+1947-        }
+1948-        season={Number(selectedSeason)}
+1949-        defaultMode="season"
+1950-        onClose={() =>
+1951-          setLeagueResearchPlayer(null)
+1952-        }
+1953-      />
+1954-
+1955-      <DraftPlayerModal
+1956-        draftingPlayer={draftingPlayer}
+1957-        setDraftingPlayer={
+1958-          setDraftingPlayerWithSlotRestore
+1959-        }
+1960-        playerAverageMap={playerAverageMap}
+1961-        playerProjections={playerProjections}
+1962-        availablePlayerIdSet={availablePlayerIdSet}
+1963-        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+1964-        isAssigningPlayer={isAssigningPlayer}
+1965-        isSaving={isSaving}
+1966-        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+1967-        draftingPlayerHistory={draftingPlayerHistory}
+1968-        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+1969-        orderedTeamsForSlate={orderedTeamsForSlate}
+1970-        getTeamStats={getTeamStats}
+1971-        getTeamAssignmentStatus={getTeamAssignmentStatus}
+1972-        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+1973-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1974-        targetDraftSlot={targetDraftSlot}
+1975-        handleDraftToTargetSlot={
+1976-          handleDraftToTargetSlot
+1977-        }
+1978-      />
+1979-    </div>
+1980-  );
+1981-}

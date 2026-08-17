@@ -1,0 +1,1004 @@
+============================================================
+GOLF MODAL STATE TRACE
+============================================================
+
+=== MODAL STATE DECLARATIONS ===
+68-  const [message, setMessage] = useState("");
+69-  const latestSlateLoadRef = useRef(0);
+70-  const [saveMessage, setSaveMessage] = useState("");
+71-  const [isSaving, setIsSaving] = useState(false);
+72-  const [isSlateLoading, setIsSlateLoading] = useState(false);
+73-  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+74-  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+75-  const [isAssigningPlayer, setIsAssigningPlayer] = useState(false);
+76:  const [draftingPlayerHistory, setDraftingPlayerHistory] = useState<
+77-    PlayerHistoryDetailRow[]
+78-  >([]);
+79-  const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] =
+80-    useState(false);
+81-
+82-  const [searchTerm, setSearchTerm] = useState("");
+83-  const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
+84-  const [onSlateOnly, setOnSlateOnly] = useState(false);
+85-  const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
+86-  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
+87-  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+88-  const refreshInFlightRef = useRef(false);
+--
+106-    savedLineupsForInitialSlate
+107-  );
+108-  const [playerStatsState, setPlayerStatsState] =
+109-    useState<PlayerStat[]>(playerStats);
+110-  const [teamResultsState, setTeamResultsState] =
+111-    useState<TeamResult[]>(teamResults);
+112-  const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
+113-    useState<number[]>([]);
+114:  const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+115-  const [
+116-    isInspectingPlayerFromSlot,
+117-    setIsInspectingPlayerFromSlot,
+118-  ] = useState(false);
+119-  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+120:  const [leagueResearchPlayer, setLeagueResearchPlayer] =
+121-    useState<Player | null>(null);
+122-  const [targetDraftSlot, setTargetDraftSlot] =
+123-    useState<TargetDraftSlot | null>(null);
+124-
+125-  const [draftPageTab, setDraftPageTab] = useState<
+126-    "lineup" | "players"
+127-  >("lineup");
+128-
+129-  const [lastRefreshSummary, setLastRefreshSummary] = useState<{
+130-    gamesFound?: number;
+131-    playerStatsUpserted?: number;
+132-    teamResultsUpserted?: number;
+--
+209-    );
+210-
+211-    if (!selectedStillInYear) {
+212-      setSelectedSlateId(String(filteredSlates[0].id));
+213-    }
+214-  }, [filteredSlates, selectedSlateId]);
+215-
+216-  useEffect(() => {
+217:    if (!draftingPlayer) {
+218-      setDraftingPlayerHistory([]);
+219-      setIsDraftingPlayerHistoryLoading(false);
+220-      return;
+221-    }
+222-
+223-    async function loadDraftingPlayerHistory() {
+224-      if ((sport ?? selectedSport) === "golf") {
+225-        setDraftingPlayerHistory([]);
+226-        setIsDraftingPlayerHistoryLoading(false);
+227-        return;
+228-      }
+229-
+230-      try {
+231-        setIsDraftingPlayerHistoryLoading(true);
+232-
+233:        if (!draftingPlayer) return;
+234-
+235-        const response = await fetch(
+236:          `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
+237-          { cache: "no-store" }
+238-        );
+239-
+240-        const result = await response.json();
+241-
+242-        if (!response.ok) {
+243-          console.error(result.error || "Failed to load player history detail.");
+244-          setDraftingPlayerHistory([]);
+245-          return;
+246-        }
+247-
+248-        setDraftingPlayerHistory(result.history ?? []);
+--
+250-        console.error(error);
+251-        setDraftingPlayerHistory([]);
+252-      } finally {
+253-        setIsDraftingPlayerHistoryLoading(false);
+254-      }
+255-    }
+256-
+257-    void loadDraftingPlayerHistory();
+258:  }, [draftingPlayer, sport, selectedSport]);
+259-
+260-  useEffect(() => {
+261-    setPlayerStatsState(playerStats);
+262-  }, [playerStats]);
+263-
+264-  useEffect(() => {
+265-    setTeamResultsState(teamResults);
+266-  }, [teamResults]);
+267-
+268-  useEffect(() => {
+269-    if (!selectedSlateIdNumber) return;
+270-
+--
+1390-  const scoreTableCellClass = compactView
+1391-    ? "px-0 py-0 text-xs"
+1392-    : "px-3 py-2 text-sm";
+1393-
+1394-  const scoreTableHeaderClass = compactView
+1395-    ? "border-b border-slate-200 px-0 py-0 font-semibold"
+1396-    : "border-b border-slate-200 px-3 py-2 font-semibold";
+1397-
+1398:  const ownerTeamForDraftingPlayer = draftingPlayer
+1399:    ? getOwnerTeamForPlayer(draftingPlayer.id)
+1400-    : null;
+1401-
+1402-  function inspectPlayerFromSlot(player: Player) {
+1403-    setIsInspectingPlayerFromSlot(true);
+1404-    setDraftingPlayer(player);
+1405-  }
+1406-
+1407-  const setDraftingPlayerWithSlotRestore:
+1408-    React.Dispatch<React.SetStateAction<Player | null>> = (
+1409-      value
+1410-    ) => {
+1411-      setDraftingPlayer((currentPlayer) => {
+--
+1908-          selectedSlate?.sport === "golf"
+1909-            ? selectedSlate.id
+1910-            : null
+1911-        }
+1912-      />
+1913-
+1914-      <PlayerResearchModal
+1915-        player={
+1916:          leagueResearchPlayer
+1917-            ? {
+1918:                id: leagueResearchPlayer.id,
+1919:                name: leagueResearchPlayer.name,
+1920-                nbaPlayerId:
+1921:                  leagueResearchPlayer.nba_player_id ??
+1922-                  null,
+1923-                nflPlayerId:
+1924:                  leagueResearchPlayer.nfl_player_id ??
+1925-                  null,
+1926-                espnGolfPlayerId:
+1927:                  leagueResearchPlayer.espn_player_id ??
+1928-                  null,
+1929-                headshotUrl:
+1930:                  leagueResearchPlayer.headshot_url ??
+1931-                  null,
+1932-                positionGroup:
+1933:                  leagueResearchPlayer.position_group ??
+1934-                  null,
+1935-                owgrRank:
+1936:                  leagueResearchPlayer.owgr_rank ??
+1937-                  null,
+1938-              }
+1939-            : null
+1940-        }
+1941-        sport={
+1942-          (selectedSlate?.sport ??
+1943-            selectedSport) as
+1944-            | "nba"
+1945-            | "nfl"
+1946-            | "golf"
+1947-        }
+1948-        season={Number(selectedSeason)}
+1949-        defaultMode="season"
+1950-        onClose={() =>
+1951-          setLeagueResearchPlayer(null)
+1952-        }
+1953-      />
+1954-
+1955-      <DraftPlayerModal
+1956:        draftingPlayer={draftingPlayer}
+1957-        setDraftingPlayer={
+1958-          setDraftingPlayerWithSlotRestore
+1959-        }
+1960-        playerAverageMap={playerAverageMap}
+1961-        playerProjections={playerProjections}
+1962-        availablePlayerIdSet={availablePlayerIdSet}
+1963-        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+1964-        isAssigningPlayer={isAssigningPlayer}
+1965-        isSaving={isSaving}
+1966-        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+1967:        draftingPlayerHistory={draftingPlayerHistory}
+1968-        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+1969-        orderedTeamsForSlate={orderedTeamsForSlate}
+1970-        getTeamStats={getTeamStats}
+1971-        getTeamAssignmentStatus={getTeamAssignmentStatus}
+1972-        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+1973-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1974-        targetDraftSlot={targetDraftSlot}
+1975-        handleDraftToTargetSlot={
+1976-          handleDraftToTargetSlot
+1977-        }
+1978-      />
+1979-    </div>
+
+=== PLAYERRESEARCHMODAL REFERENCES ===
+1-"use client";
+2-
+3-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+4-
+5-import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
+6-import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+7:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+8-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+9-import SlotDraftModal from "@/components/lineups/SlotDraftModal";
+10-import PlayerPool from "@/components/lineups/PlayerPool";
+11-import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
+12-import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
+13-import ScoresDashboard from "@/components/lineups/ScoresDashboard";
+14-import { useEffect, useMemo, useRef, useState } from "react";
+15-import { createPortal } from "react-dom";
+16-import LineupControls from "@/components/lineups/LineupControls";
+17-import { getStatColumns } from "@/lib/statColumns";
+18-import { useSelectedSport } from "@/components/providers/SportProvider";
+19-import { getSportConfig } from "@/lib/sports";
+20-import type {
+21-  Player,
+22-  PlayerHistoryDetailRow,
+23-  PlayerStat,
+24-  PositionFilter,
+25-  Props,
+26-  RosterSlotConfig,
+27-  SavedLineup,
+28-  Team,
+29-  TeamResult,
+30-  ViewMode,
+31-  TargetDraftSlot,
+32-} from "@/components/lineups/types";
+33-
+34-export default function LineupBuilder({
+35-  players,
+36-  teams,
+37-  slates,
+38-  slateTeamConfigs,
+39-  playerAverages,
+40-  initialSelectedSlateId,
+41-  savedLineupsForInitialSlate,
+42-  playerStats,
+--
+1899-        setPlayer={setProfilePlayer}
+1900-        playerAverageMap={playerAverageMap}
+1901-        playerProjections={playerProjections}
+1902-        golfStat={
+1903-          profilePlayer
+1904-            ? getRawPlayerStat(profilePlayer.id)
+1905-            : null
+1906-        }
+1907-        golfSlateId={
+1908-          selectedSlate?.sport === "golf"
+1909-            ? selectedSlate.id
+1910-            : null
+1911-        }
+1912-      />
+1913-
+1914:      <PlayerResearchModal
+1915-        player={
+1916-          leagueResearchPlayer
+1917-            ? {
+1918-                id: leagueResearchPlayer.id,
+1919-                name: leagueResearchPlayer.name,
+1920-                nbaPlayerId:
+1921-                  leagueResearchPlayer.nba_player_id ??
+1922-                  null,
+1923-                nflPlayerId:
+1924-                  leagueResearchPlayer.nfl_player_id ??
+1925-                  null,
+1926-                espnGolfPlayerId:
+1927-                  leagueResearchPlayer.espn_player_id ??
+1928-                  null,
+1929-                headshotUrl:
+1930-                  leagueResearchPlayer.headshot_url ??
+1931-                  null,
+1932-                positionGroup:
+1933-                  leagueResearchPlayer.position_group ??
+1934-                  null,
+1935-                owgrRank:
+1936-                  leagueResearchPlayer.owgr_rank ??
+1937-                  null,
+1938-              }
+1939-            : null
+1940-        }
+1941-        sport={
+1942-          (selectedSlate?.sport ??
+1943-            selectedSport) as
+1944-            | "nba"
+1945-            | "nfl"
+1946-            | "golf"
+1947-        }
+1948-        season={Number(selectedSeason)}
+1949-        defaultMode="season"
+
+=== DRAFT PLAYER MODAL REFERENCES ===
+1-"use client";
+2-
+3-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+4-
+5:import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
+6-import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+7-import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+8-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+9-import SlotDraftModal from "@/components/lineups/SlotDraftModal";
+10-import PlayerPool from "@/components/lineups/PlayerPool";
+11-import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
+12-import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
+13-import ScoresDashboard from "@/components/lineups/ScoresDashboard";
+14-import { useEffect, useMemo, useRef, useState } from "react";
+15-import { createPortal } from "react-dom";
+16-import LineupControls from "@/components/lineups/LineupControls";
+17-import { getStatColumns } from "@/lib/statColumns";
+18-import { useSelectedSport } from "@/components/providers/SportProvider";
+19-import { getSportConfig } from "@/lib/sports";
+20-import type {
+21-  Player,
+22-  PlayerHistoryDetailRow,
+23-  PlayerStat,
+24-  PositionFilter,
+25-  Props,
+26-  RosterSlotConfig,
+27-  SavedLineup,
+28-  Team,
+29-  TeamResult,
+30-  ViewMode,
+31-  TargetDraftSlot,
+32-} from "@/components/lineups/types";
+33-
+34-export default function LineupBuilder({
+35-  players,
+36-  teams,
+37-  slates,
+38-  slateTeamConfigs,
+39-  playerAverages,
+40-  initialSelectedSlateId,
+41-  savedLineupsForInitialSlate,
+42-  playerStats,
+43-  teamResults,
+44-  rosterSlots = [],
+45-  defaultViewMode,
+46-  sport,
+47-}: Props) {
+48-  const { selectedSport, setSelectedSport } = useSelectedSport();
+49-
+50-  useEffect(() => {
+--
+1940-        }
+1941-        sport={
+1942-          (selectedSlate?.sport ??
+1943-            selectedSport) as
+1944-            | "nba"
+1945-            | "nfl"
+1946-            | "golf"
+1947-        }
+1948-        season={Number(selectedSeason)}
+1949-        defaultMode="season"
+1950-        onClose={() =>
+1951-          setLeagueResearchPlayer(null)
+1952-        }
+1953-      />
+1954-
+1955:      <DraftPlayerModal
+1956-        draftingPlayer={draftingPlayer}
+1957-        setDraftingPlayer={
+1958-          setDraftingPlayerWithSlotRestore
+1959-        }
+1960-        playerAverageMap={playerAverageMap}
+1961-        playerProjections={playerProjections}
+1962-        availablePlayerIdSet={availablePlayerIdSet}
+1963-        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+1964-        isAssigningPlayer={isAssigningPlayer}
+1965-        isSaving={isSaving}
+1966-        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+1967-        draftingPlayerHistory={draftingPlayerHistory}
+1968-        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+1969-        orderedTeamsForSlate={orderedTeamsForSlate}
+1970-        getTeamStats={getTeamStats}
+1971-        getTeamAssignmentStatus={getTeamAssignmentStatus}
+1972-        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+1973-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1974-        targetDraftSlot={targetDraftSlot}
+1975-        handleDraftToTargetSlot={
+1976-          handleDraftToTargetSlot
+1977-        }
+1978-      />
+1979-    </div>
+1980-  );
+1981-}
+
+=== SETDRAFTINGPLAYER CALLS ===
+72-  const [isSlateLoading, setIsSlateLoading] = useState(false);
+73-  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+74-  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+75-  const [isAssigningPlayer, setIsAssigningPlayer] = useState(false);
+76:  const [draftingPlayerHistory, setDraftingPlayerHistory] = useState<
+77-    PlayerHistoryDetailRow[]
+78-  >([]);
+79-  const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] =
+80-    useState(false);
+81-
+82-  const [searchTerm, setSearchTerm] = useState("");
+83-  const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
+84-  const [onSlateOnly, setOnSlateOnly] = useState(false);
+--
+110-  const [teamResultsState, setTeamResultsState] =
+111-    useState<TeamResult[]>(teamResults);
+112-  const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
+113-    useState<number[]>([]);
+114:  const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+115-  const [
+116-    isInspectingPlayerFromSlot,
+117-    setIsInspectingPlayerFromSlot,
+118-  ] = useState(false);
+119-  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+120-  const [leagueResearchPlayer, setLeagueResearchPlayer] =
+121-    useState<Player | null>(null);
+122-  const [targetDraftSlot, setTargetDraftSlot] =
+--
+214-  }, [filteredSlates, selectedSlateId]);
+215-
+216-  useEffect(() => {
+217-    if (!draftingPlayer) {
+218:      setDraftingPlayerHistory([]);
+219-      setIsDraftingPlayerHistoryLoading(false);
+220-      return;
+221-    }
+222-
+223-    async function loadDraftingPlayerHistory() {
+224-      if ((sport ?? selectedSport) === "golf") {
+225:        setDraftingPlayerHistory([]);
+226-        setIsDraftingPlayerHistoryLoading(false);
+227-        return;
+228-      }
+229-
+230-      try {
+231-        setIsDraftingPlayerHistoryLoading(true);
+232-
+233-        if (!draftingPlayer) return;
+--
+240-        const result = await response.json();
+241-
+242-        if (!response.ok) {
+243-          console.error(result.error || "Failed to load player history detail.");
+244:          setDraftingPlayerHistory([]);
+245-          return;
+246-        }
+247-
+248:        setDraftingPlayerHistory(result.history ?? []);
+249-      } catch (error) {
+250-        console.error(error);
+251:        setDraftingPlayerHistory([]);
+252-      } finally {
+253-        setIsDraftingPlayerHistoryLoading(false);
+254-      }
+255-    }
+256-
+257-    void loadDraftingPlayerHistory();
+258-  }, [draftingPlayer, sport, selectedSport]);
+259-
+--
+1336-      );
+1337-
+1338-      if (!added) return;
+1339-
+1340:      setDraftingPlayer(null);
+1341-      setSearchTerm("");
+1342-
+1343-      if (selectedSlateIdNumber) {
+1344-        void loadSlateLineups(selectedSlateIdNumber);
+1345-      }
+1346-    } finally {
+1347-      setIsAssigningPlayer(false);
+1348-    }
+--
+1369-      );
+1370-
+1371-      if (!removed) return;
+1372-
+1373:      setDraftingPlayer(null);
+1374-      setSearchTerm("");
+1375-
+1376-      if (selectedSlateIdNumber) {
+1377-        void loadSlateLineups(selectedSlateIdNumber);
+1378-      }
+1379-    } finally {
+1380-      setIsAssigningPlayer(false);
+1381-    }
+--
+1400-    : null;
+1401-
+1402-  function inspectPlayerFromSlot(player: Player) {
+1403-    setIsInspectingPlayerFromSlot(true);
+1404:    setDraftingPlayer(player);
+1405-  }
+1406-
+1407:  const setDraftingPlayerWithSlotRestore:
+1408-    React.Dispatch<React.SetStateAction<Player | null>> = (
+1409-      value
+1410-    ) => {
+1411:      setDraftingPlayer((currentPlayer) => {
+1412-        const nextPlayer =
+1413-          typeof value === "function"
+1414-            ? value(currentPlayer)
+1415-            : value;
+1416-
+1417-        setIsInspectingPlayerFromSlot(
+1418-          Boolean(nextPlayer),
+1419-        );
+--
+1431-      player,
+1432-      targetDraftSlot.teamId
+1433-    );
+1434-
+1435:    setDraftingPlayer(null);
+1436-    setIsInspectingPlayerFromSlot(false);
+1437-    setTargetDraftSlot(null);
+1438-  }
+1439-
+1440-  const golfScoresControls = (
+1441-    <>
+1442-      <div className="space-y-2">
+1443-        <div className="flex items-center gap-2">
+--
+1801-                  : []
+1802-              }
+1803-              rosterSlots={rosterSlots}
+1804-              isLocked={Boolean(selectedSlate?.is_locked)}
+1805:              setDraftingPlayer={setLeagueResearchPlayer}
+1806-              setTargetDraftSlot={setTargetDraftSlot}
+1807-            />
+1808-          ) : (
+1809-            <PlayerPool
+1810-              players={players}
+1811-              filteredPlayers={filteredPlayers}
+1812-              searchTerm={searchTerm}
+1813-              setSearchTerm={setSearchTerm}
+--
+1820-              availablePlayerIdSet={availablePlayerIdSet}
+1821-              playerAverageMap={playerAverageMap}
+1822-              playerProjections={playerProjections}
+1823-              getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1824:              setDraftingPlayer={setDraftingPlayer}
+1825-              isAssigningPlayer={isAssigningPlayer}
+1826-              pillBase={pillBase}
+1827-              activePill={activePill}
+1828-              inactivePill={inactivePill}
+1829-              rosterSlots={rosterSlots}
+1830-              selectedSeason={selectedSeason}
+1831-            />
+1832-          )}
+--
+1885-        availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+1886-        availablePlayerIdSet={availablePlayerIdSet}
+1887-        isAvailabilityLoading={isAvailabilityLoading}
+1888-        getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1889:        setDraftingPlayer={setDraftingPlayerWithSlotRestore}
+1890-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1891-        selectedSeason={selectedSeason}
+1892-        rosterSlots={rosterSlots}
+1893-        hidden={isInspectingPlayerFromSlot}
+1894-        isAssigningPlayer={isAssigningPlayer}
+1895-      />
+1896-
+1897-      <ReadOnlyPlayerModal
+--
+1953-      />
+1954-
+1955-      <DraftPlayerModal
+1956-        draftingPlayer={draftingPlayer}
+1957:        setDraftingPlayer={
+1958:          setDraftingPlayerWithSlotRestore
+1959-        }
+1960-        playerAverageMap={playerAverageMap}
+1961-        playerProjections={playerProjections}
+1962-        availablePlayerIdSet={availablePlayerIdSet}
+1963-        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+1964-        isAssigningPlayer={isAssigningPlayer}
+1965-        isSaving={isSaving}
+1966-        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+
+=== SETLEAGUERESEARCHPLAYER CALLS ===
+116-    isInspectingPlayerFromSlot,
+117-    setIsInspectingPlayerFromSlot,
+118-  ] = useState(false);
+119-  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+120:  const [leagueResearchPlayer, setLeagueResearchPlayer] =
+121-    useState<Player | null>(null);
+122-  const [targetDraftSlot, setTargetDraftSlot] =
+123-    useState<TargetDraftSlot | null>(null);
+124-
+125-  const [draftPageTab, setDraftPageTab] = useState<
+126-    "lineup" | "players"
+127-  >("lineup");
+128-
+--
+1801-                  : []
+1802-              }
+1803-              rosterSlots={rosterSlots}
+1804-              isLocked={Boolean(selectedSlate?.is_locked)}
+1805:              setDraftingPlayer={setLeagueResearchPlayer}
+1806-              setTargetDraftSlot={setTargetDraftSlot}
+1807-            />
+1808-          ) : (
+1809-            <PlayerPool
+1810-              players={players}
+1811-              filteredPlayers={filteredPlayers}
+1812-              searchTerm={searchTerm}
+1813-              setSearchTerm={setSearchTerm}
+--
+1839-              getPlayerProjectionScore
+1840-            }
+1841-            getDraftNeeds={getDraftNeeds}
+1842-            rosterSlots={rosterSlots}
+1843:            setResearchPlayer={setLeagueResearchPlayer}
+1844-            setTargetDraftSlot={setTargetDraftSlot}
+1845-            isLocked={Boolean(
+1846-              selectedSlate?.is_locked
+1847-            )}
+1848-          />
+1849-        </>
+1850-      ) : (
+1851-        <ScoresDashboard
+--
+1947-        }
+1948-        season={Number(selectedSeason)}
+1949-        defaultMode="season"
+1950-        onClose={() =>
+1951:          setLeagueResearchPlayer(null)
+1952-        }
+1953-      />
+1954-
+1955-      <DraftPlayerModal
+1956-        draftingPlayer={draftingPlayer}
+1957-        setDraftingPlayer={
+1958-          setDraftingPlayerWithSlotRestore
+1959-        }
+
+=== BOTTOM OF LINEUPBUILDER ===
+                        autoRefreshEnabled
+                      }
+                      onChange={(event) =>
+                        setAutoRefreshEnabled(
+                          event.target.checked,
+                        )
+                      }
+                      className="h-5 w-5"
+                    />
+                  </label>
+
+                  <div className="rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-500">
+                      Current slate
+                    </span>
+
+                    <strong className="mt-1 block text-base text-white">
+                      {selectedSlateDisplay}
+                    </strong>
+
+                    <span className="mt-1 block text-xs text-slate-500">
+                      {lastUpdatedAt
+                        ? `Last refreshed ${new Date(
+                            lastUpdatedAt,
+                          ).toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}`
+                        : "Scores have not been refreshed during this visit."}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
+
+  const lineupControls = (
+    <LineupControls
+      selectedSlateId={selectedSlateId}
+      setSelectedSlateId={setSelectedSlateId}
+      slates={filteredSlates}
+      selectedSlate={selectedSlate}
+      selectedSlateDisplay={selectedSlateDisplay}
+      selectedSlateIdNumber={selectedSlateIdNumber}
+      isRefreshingStats={isRefreshingStats}
+      refreshStatsForSelectedSlate={
+        refreshStatsForSelectedSlate
+      }
+      autoRefreshEnabled={autoRefreshEnabled}
+      setAutoRefreshEnabled={
+        setAutoRefreshEnabled
+      }
+      compactView={compactView}
+      setCompactView={setCompactView}
+      hasMounted={hasMounted}
+      isSlateLoading={isSlateLoading}
+      lastUpdatedAt={lastUpdatedAt}
+      seasons={seasons}
+      selectedSeason={selectedSeason}
+      setSelectedSeason={setSelectedSeason}
+    />
+  );
+
+  return (
+    <div className="space-y-6">
+      {viewMode === "draft"
+        ? lineupControls
+        : null}
+
+      {message ? (
+        <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+          {message}
+        </div>
+      ) : null}
+
+      {currentUser?.role === "admin" && viewMode === "draft" ? (
+        <section className="draft-admin-toggle">
+          <div>
+            <strong>Proxy Pick Notifications</strong>
+            <span>
+              Notify the next drafter after an admin-entered pick.
+            </span>
+          </div>
+
+          <label className="draft-admin-switch">
+            <input
+              type="checkbox"
+              checked={notifyNextDrafterForProxyPicks}
+              onChange={(event) =>
+                setNotifyNextDrafterForProxyPicks(
+                  event.target.checked
+                )
+              }
+            />
+
+            <span aria-hidden="true" />
+
+            <em>
+              {notifyNextDrafterForProxyPicks
+                ? "On"
+                : "Off"}
+            </em>
+          </label>
+        </section>
+      ) : null}
+
+      {saveMessage ? (
+        <div
+          className={`rounded-2xl px-4 py-3 text-sm ${
+            saveMessage.toLowerCase().includes("success") ||
+            saveMessage.toLowerCase().includes("loaded") ||
+            saveMessage.toLowerCase().includes("drafted") ||
+            saveMessage.toLowerCase().includes("removed") ||
+            saveMessage.toLowerCase().includes("refreshed")
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border border-red-200 bg-red-50 text-red-700"
+          }`}
+        >
+          {saveMessage}
+        </div>
+      ) : null}
+
+      {viewMode === "draft" ? (
+        <>
+          <section className="draft-page-tabs">
+            <button
+              type="button"
+              onClick={() => setDraftPageTab("lineup")}
+              className={`draft-page-tab ${
+                draftPageTab === "lineup"
+                  ? "draft-page-tab--active"
+                  : ""
+              }`}
+            >
+              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
+              <span>Lineup</span>
+
+              {currentUser?.teamId ? (
+                <span className="draft-page-tab-count">
+                  {getPlayersForTeam(currentUser.teamId).length}/{getRosterTotalSlots()}
+                </span>
+              ) : null}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setDraftPageTab("players")}
+              className={`draft-page-tab ${
+                draftPageTab === "players"
+                  ? "draft-page-tab--active"
+                  : ""
+              }`}
+            >
+              <span aria-hidden="true">🔎</span>
+              <span>Players</span>
+            </button>
+          </section>
+
+          {draftPageTab === "lineup" ? (
+            <DraftRosterCourt
+              teamId={currentUser?.teamId ?? null}
+              teamName={currentUser?.displayName ?? null}
+              players={
+                currentUser?.teamId
+                  ? getPlayersForTeam(currentUser.teamId)
+                  : []
+              }
+              rosterSlots={rosterSlots}
+              isLocked={Boolean(selectedSlate?.is_locked)}
+              setDraftingPlayer={setLeagueResearchPlayer}
+              setTargetDraftSlot={setTargetDraftSlot}
+            />
+          ) : (
+            <PlayerPool
+              players={players}
+              filteredPlayers={filteredPlayers}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              positionFilter={positionFilter}
+              setPositionFilter={setPositionFilter}
+              onSlateOnly={onSlateOnly}
+              setOnSlateOnly={setOnSlateOnly}
+              isAvailabilityLoading={isAvailabilityLoading}
+              availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+              availablePlayerIdSet={availablePlayerIdSet}
+              playerAverageMap={playerAverageMap}
+              playerProjections={playerProjections}
+              getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+              setDraftingPlayer={setDraftingPlayer}
+              isAssigningPlayer={isAssigningPlayer}
+              pillBase={pillBase}
+              activePill={activePill}
+              inactivePill={inactivePill}
+              rosterSlots={rosterSlots}
+              selectedSeason={selectedSeason}
+            />
+          )}
+
+          <LeagueLineupCards
+            teams={orderedTeamsForSlate}
+            currentTeamId={currentUser?.teamId ?? null}
+            getPlayersForTeam={getPlayersForTeam}
+            getPlayerProjectionScore={
+              getPlayerProjectionScore
+            }
+            getDraftNeeds={getDraftNeeds}
+            rosterSlots={rosterSlots}
+            setResearchPlayer={setLeagueResearchPlayer}
+            setTargetDraftSlot={setTargetDraftSlot}
+            isLocked={Boolean(
+              selectedSlate?.is_locked
+            )}
+          />
+        </>
+      ) : (
+        <ScoresDashboard
+          players={players}
+          teams={orderedTeamsForSlate}
+          selectedSlate={selectedSlate}
+          rosterSlots={rosterSlots}
+          lastRefreshSummary={lastRefreshSummary}
+          getPlayersForTeam={getPlayersForTeam}
+          getTeamStats={getTeamStats}
+          getPlayerStat={getPlayerStat}
+          getRawPlayerStat={getRawPlayerStat}
+          getLiveProjectedTeamTotal={
+            getLiveProjectedTeamTotal
+          }
+          getPregameProjectedTeamTotal={
+            getPregameProjectedTeamTotal
+          }
+          liveWinPctMap={liveWinPctMap}
+          playerProjections={playerProjections}
+          controls={
+            (selectedSlate?.sport ??
+              selectedSport) === "golf"
+              ? golfScoresControls
+              : lineupControls
+          }
+          setProfilePlayer={setProfilePlayer}
+        />
+      )}
+
+      <SlotDraftModal
+        targetDraftSlot={targetDraftSlot}
+        setTargetDraftSlot={setTargetDraftSlot}
+        players={players}
+        playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
+        availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+        availablePlayerIdSet={availablePlayerIdSet}
+        isAvailabilityLoading={isAvailabilityLoading}
+        getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+        setDraftingPlayer={setDraftingPlayerWithSlotRestore}
+        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        selectedSeason={selectedSeason}
+        rosterSlots={rosterSlots}
+        hidden={isInspectingPlayerFromSlot}
+        isAssigningPlayer={isAssigningPlayer}
+      />
+
+      <ReadOnlyPlayerModal
+        player={profilePlayer}
+        setPlayer={setProfilePlayer}
+        playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
+        golfStat={
+          profilePlayer
+            ? getRawPlayerStat(profilePlayer.id)
+            : null
+        }
+        golfSlateId={
+          selectedSlate?.sport === "golf"
+            ? selectedSlate.id
+            : null
+        }
+      />
+
+      <PlayerResearchModal
+        player={
+          leagueResearchPlayer
+            ? {
+                id: leagueResearchPlayer.id,
+                name: leagueResearchPlayer.name,
+                nbaPlayerId:
+                  leagueResearchPlayer.nba_player_id ??
+                  null,
+                nflPlayerId:
+                  leagueResearchPlayer.nfl_player_id ??
+                  null,
+                espnGolfPlayerId:
+                  leagueResearchPlayer.espn_player_id ??
+                  null,
+                headshotUrl:
+                  leagueResearchPlayer.headshot_url ??
+                  null,
+                positionGroup:
+                  leagueResearchPlayer.position_group ??
+                  null,
+                owgrRank:
+                  leagueResearchPlayer.owgr_rank ??
+                  null,
+              }
+            : null
+        }
+        sport={
+          (selectedSlate?.sport ??
+            selectedSport) as
+            | "nba"
+            | "nfl"
+            | "golf"
+        }
+        season={Number(selectedSeason)}
+        defaultMode="season"
+        onClose={() =>
+          setLeagueResearchPlayer(null)
+        }
+      />
+
+      <DraftPlayerModal
+        draftingPlayer={draftingPlayer}
+        setDraftingPlayer={
+          setDraftingPlayerWithSlotRestore
+        }
+        playerAverageMap={playerAverageMap}
+        playerProjections={playerProjections}
+        availablePlayerIdSet={availablePlayerIdSet}
+        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+        isAssigningPlayer={isAssigningPlayer}
+        isSaving={isSaving}
+        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+        draftingPlayerHistory={draftingPlayerHistory}
+        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+        orderedTeamsForSlate={orderedTeamsForSlate}
+        getTeamStats={getTeamStats}
+        getTeamAssignmentStatus={getTeamAssignmentStatus}
+        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        targetDraftSlot={targetDraftSlot}
+        handleDraftToTargetSlot={
+          handleDraftToTargetSlot
+        }
+      />
+    </div>
+  );
+}

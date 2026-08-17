@@ -1,6 +1,7 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import NcaaPickEmNotificationControl from "@/components/admin/NcaaPickEmNotificationControl";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import { getSportConfig } from "@/lib/sports";
 import { useEffect, useMemo, useState } from "react";
@@ -155,7 +156,7 @@ function emptyDrafts() {
   };
 }
 
-export default function NotificationTemplatesPage() {
+function StandardNotificationTemplatesPage() {
   const { selectedSport } = useSelectedSport();
 
   const sport: SportKey =
@@ -571,5 +572,24 @@ export default function NotificationTemplatesPage() {
         )}
       </div>
     </main>
+  );
+}
+
+
+export default function NotificationTemplatesPage() {
+  const {
+    selectedSport,
+  } = useSelectedSport();
+
+  if (
+    selectedSport === "ncaa"
+  ) {
+    return (
+      <NcaaPickEmNotificationControl />
+    );
+  }
+
+  return (
+    <StandardNotificationTemplatesPage />
   );
 }

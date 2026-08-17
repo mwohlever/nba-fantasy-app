@@ -1,0 +1,4735 @@
+===== NCAA PROVIDER / IMPORT LOGIC =====
+const ESPN_CFB_BASE =
+  "https://site.api.espn.com/apis/site/v2/sports/football/college-football";
+
+export type NcaaEspnTeam = {
+  id: string;
+  displayName: string;
+  abbreviation: string | null;
+  logo: string | null;
+  rank: number | null;
+  record: string | null;
+  score: number | null;
+  winner: boolean;
+};
+
+export type NcaaEspnGame = {
+  espnEventId: string;
+  name: string;
+  shortName: string | null;
+  kickoffAt: string;
+
+  awayTeam: NcaaEspnTeam;
+  homeTeam: NcaaEspnTeam;
+
+  status: string;
+  statusDetail: string | null;
+  completed: boolean;
+
+  winnerTeamId: string | null;
+};
+
+export type NcaaEspnWeek = {
+  season: number;
+  week: number;
+  label: string;
+
+  scheduleGames: NcaaEspnGame[];
+  eligibleGames: NcaaEspnGame[];
+
+  diagnostics: {
+    totalEvents: number;
+    mappedEvents: number;
+    rankedVsRankedEvents: number;
+    rankedTeamGames: number;
+    rankingPoll: string | null;
+    rankedTeams: number;
+  };
+};
+
+type RankingResult = {
+  ranksByTeamId: Map<string, number>;
+  pollName: string | null;
+};
+
+function finiteInteger(
+  value: unknown,
+): number | null {
+  const number = Number(value);
+
+  return Number.isInteger(number)
+    ? number
+    : null;
+}
+
+function positiveRank(
+  value: unknown,
+): number | null {
+  const rank = finiteInteger(value);
+
+  return rank !== null &&
+    rank >= 1 &&
+    rank <= 25
+    ? rank
+    : null;
+}
+
+function scoreValue(
+  value: unknown,
+): number | null {
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number
+    : null;
+}
+
+function competitorRecord(
+  competitor: any,
+): string | null {
+  const records =
+    Array.isArray(competitor?.records)
+      ? competitor.records
+      : [];
+
+  const preferred =
+    records.find(
+      (record: any) =>
+        record?.type === "total",
+    ) ??
+    records[0];
+
+  return typeof preferred?.summary === "string"
+    ? preferred.summary
+    : null;
+}
+
+function competitorLogo(
+  competitor: any,
+): string | null {
+  const logos =
+    Array.isArray(competitor?.team?.logos)
+      ? competitor.team.logos
+      : [];
+
+  return typeof logos[0]?.href === "string"
+    ? logos[0].href
+    : null;
+}
+
+function mapTeam(
+  competitor: any,
+  ranksByTeamId: Map<string, number>,
+): NcaaEspnTeam | null {
+  const id =
+    competitor?.team?.id != null
+      ? String(competitor.team.id)
+      : null;
+
+  const displayName =
+    typeof competitor?.team?.displayName ===
+    "string"
+      ? competitor.team.displayName
+      : null;
+
+  if (!id || !displayName) {
+    return null;
+  }
+
+  return {
+    id,
+    displayName,
+
+    abbreviation:
+      typeof competitor?.team?.abbreviation ===
+      "string"
+        ? competitor.team.abbreviation
+        : null,
+
+    logo:
+      competitorLogo(competitor),
+
+    /*
+     * Do not trust scoreboard curatedRank during the
+     * 2026 preseason. ESPN currently returns 99 there.
+     *
+     * Rankings are joined from ESPN's rankings feed by
+     * ESPN team ID instead.
+     */
+    rank:
+      ranksByTeamId.get(id) ??
+      null,
+
+    record:
+      competitorRecord(competitor),
+
+    score:
+      scoreValue(competitor?.score),
+
+    winner:
+      competitor?.winner === true,
+  };
+}
+
+function mapEvent(
+  event: any,
+  ranksByTeamId: Map<string, number>,
+): NcaaEspnGame | null {
+  const competition =
+    event?.competitions?.[0];
+
+  if (!competition) {
+    return null;
+  }
+
+  const competitors =
+    Array.isArray(competition.competitors)
+      ? competition.competitors
+      : [];
+
+  const awayRaw =
+    competitors.find(
+      (competitor: any) =>
+        competitor?.homeAway === "away",
+    );
+
+  const homeRaw =
+    competitors.find(
+      (competitor: any) =>
+        competitor?.homeAway === "home",
+    );
+
+  const awayTeam =
+    mapTeam(
+      awayRaw,
+      ranksByTeamId,
+    );
+
+  const homeTeam =
+    mapTeam(
+      homeRaw,
+      ranksByTeamId,
+    );
+
+  if (!awayTeam || !homeTeam) {
+    return null;
+  }
+
+  const espnEventId =
+    event?.id != null
+      ? String(event.id)
+      : null;
+
+  const kickoffAt =
+    typeof event?.date === "string"
+      ? event.date
+      : typeof competition?.date === "string"
+        ? competition.date
+        : null;
+
+  if (!espnEventId || !kickoffAt) {
+    return null;
+  }
+
+  const statusType =
+    competition?.status?.type ??
+    event?.status?.type ??
+    {};
+
+  const status =
+    typeof statusType?.state === "string"
+      ? statusType.state
+      : statusType?.completed === true
+        ? "post"
+        : "pre";
+
+  const statusDetail =
+    typeof competition?.status?.type?.detail ===
+    "string"
+      ? competition.status.type.detail
+      : typeof competition?.status?.type?.shortDetail ===
+          "string"
+        ? competition.status.type.shortDetail
+        : typeof event?.status?.type?.detail ===
+            "string"
+          ? event.status.type.detail
+          : null;
+
+  const winnerTeamId =
+    awayTeam.winner
+      ? awayTeam.id
+      : homeTeam.winner
+        ? homeTeam.id
+        : null;
+
+  return {
+    espnEventId,
+
+    name:
+      typeof event?.name === "string"
+        ? event.name
+        : `${awayTeam.displayName} at ${homeTeam.displayName}`,
+
+    shortName:
+      typeof event?.shortName === "string"
+        ? event.shortName
+        : null,
+
+    kickoffAt,
+
+    awayTeam,
+    homeTeam,
+
+    status,
+    statusDetail,
+
+    completed:
+      statusType?.completed === true,
+
+    winnerTeamId,
+  };
+}
+
+function isRankedVsRanked(
+  game: NcaaEspnGame,
+) {
+  return (
+    game.awayTeam.rank !== null &&
+    game.homeTeam.rank !== null
+  );
+}
+
+function hasRankedTeam(
+  game: NcaaEspnGame,
+) {
+  return (
+    game.awayTeam.rank !== null ||
+    game.homeTeam.rank !== null
+  );
+}
+
+async function fetchRankings(
+  season: number,
+  week: number,
+): Promise<RankingResult> {
+  const params =
+    new URLSearchParams({
+      season: String(season),
+      week: String(week),
+    });
+
+  const response =
+    await fetch(
+      `${ESPN_CFB_BASE}/rankings?${params.toString()}`,
+      {
+        cache: "no-store",
+
+        headers: {
+          Accept: "application/json",
+          "User-Agent":
+            "Mozilla/5.0 (compatible; 111-Sports/1.0)",
+        },
+      },
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      `ESPN NCAA rankings failed: ${response.status}`,
+    );
+  }
+
+  const payload =
+    await response.json();
+
+  const rankingGroups =
+    Array.isArray(payload?.rankings)
+      ? payload.rankings
+      : [];
+
+  /*
+   * Prefer the Coaches Poll while it is the poll ESPN
+   * currently exposes for 2026 preseason. If ESPN later
+   * supplies the AP poll too, prefer AP.
+   */
+  const poll =
+    rankingGroups.find(
+      (group: any) => {
+        const name =
+          String(
+            group?.name ??
+            group?.shortName ??
+            "",
+          ).toLowerCase();
+
+        return (
+          name.includes("ap poll") ||
+          name.includes("associated press")
+        );
+      },
+    ) ??
+    rankingGroups.find(
+      (group: any) => {
+        const name =
+          String(
+            group?.name ??
+            group?.shortName ??
+            "",
+          ).toLowerCase();
+
+        return (
+          name.includes("coaches") ||
+          name.includes("afca")
+        );
+      },
+    ) ??
+    rankingGroups[0] ??
+    null;
+
+  const ranks =
+    Array.isArray(poll?.ranks)
+      ? poll.ranks
+      : [];
+
+  const ranksByTeamId =
+    new Map<string, number>();
+
+  for (const entry of ranks) {
+    const teamId =
+      entry?.team?.id != null
+        ? String(entry.team.id)
+        : null;
+
+    const rank =
+      positiveRank(
+        entry?.current,
+      );
+
+    if (
+      teamId &&
+      rank !== null
+    ) {
+      ranksByTeamId.set(
+        teamId,
+        rank,
+      );
+    }
+  }
+
+  return {
+    ranksByTeamId,
+
+    pollName:
+      typeof poll?.name === "string"
+        ? poll.name
+        : typeof poll?.shortName === "string"
+          ? poll.shortName
+          : null,
+  };
+}
+
+export async function fetchNcaaPickEmWeek({
+  season,
+  week,
+}: {
+  season: number;
+  week: number;
+}): Promise<NcaaEspnWeek> {
+  const params =
+    new URLSearchParams({
+      dates: String(season),
+      seasontype: "2",
+      week: String(week),
+      limit: "200",
+      groups: "80",
+    });
+
+  const [
+    scoreboardResponse,
+    rankingResult,
+  ] =
+    await Promise.all([
+      fetch(
+        `${ESPN_CFB_BASE}/scoreboard?${params.toString()}`,
+        {
+          cache: "no-store",
+
+          headers: {
+            Accept: "application/json",
+            "User-Agent":
+              "Mozilla/5.0 (compatible; 111-Sports/1.0)",
+          },
+        },
+      ),
+
+      fetchRankings(
+        season,
+        week,
+      ),
+    ]);
+
+  if (!scoreboardResponse.ok) {
+    throw new Error(
+      `ESPN NCAA scoreboard failed: ${scoreboardResponse.status}`,
+    );
+  }
+
+  const payload =
+    await scoreboardResponse.json();
+
+  const events =
+    Array.isArray(payload?.events)
+      ? payload.events
+      : [];
+
+  const scheduleGames =
+    (
+      events.map(
+        (event: any) =>
+          mapEvent(
+            event,
+            rankingResult.ranksByTeamId,
+          ),
+      ) as Array<
+        NcaaEspnGame | null
+      >
+    )
+      .filter(
+        (
+          game: NcaaEspnGame | null,
+        ): game is NcaaEspnGame =>
+          Boolean(game),
+      )
+      .sort(
+        (a, b) =>
+          new Date(
+            a.kickoffAt,
+          ).getTime() -
+          new Date(
+            b.kickoffAt,
+          ).getTime(),
+      );
+
+  const eligibleGames =
+    scheduleGames.filter(
+      isRankedVsRanked,
+    );
+
+  const rankedTeamGames =
+    scheduleGames.filter(
+      hasRankedTeam,
+    );
+
+  return {
+    season,
+    week,
+    label: `Week ${week}`,
+
+    scheduleGames,
+    eligibleGames,
+
+    diagnostics: {
+      totalEvents:
+        events.length,
+
+      mappedEvents:
+        scheduleGames.length,
+
+      rankedVsRankedEvents:
+        eligibleGames.length,
+
+      rankedTeamGames:
+        rankedTeamGames.length,
+
+      rankingPoll:
+        rankingResult.pollName,
+
+      rankedTeams:
+        rankingResult
+          .ranksByTeamId.size,
+    },
+  };
+}
+
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  requireAdmin,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+import {
+  fetchNcaaPickEmWeek,
+  type NcaaEspnGame,
+} from "@/lib/providers/ncaa";
+
+function positiveInteger(
+  value: unknown,
+): number | null {
+  const number =
+    Number(value);
+
+  return Number.isInteger(number) &&
+    number > 0
+    ? number
+    : null;
+}
+
+function stringArray(
+  value: unknown,
+): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(
+      (entry) =>
+        String(
+          entry ?? "",
+        ).trim(),
+    )
+    .filter(Boolean);
+}
+
+function isRankedVsRanked(
+  game: NcaaEspnGame,
+) {
+  return (
+    game.awayTeam.rank !== null &&
+    game.homeTeam.rank !== null
+  );
+}
+
+function hasRankedTeam(
+  game: NcaaEspnGame,
+) {
+  return (
+    game.awayTeam.rank !== null ||
+    game.homeTeam.rank !== null
+  );
+}
+
+function gameRow(
+  weekId: number,
+  game: NcaaEspnGame,
+  included: boolean,
+) {
+  return {
+    week_id:
+      weekId,
+
+    espn_event_id:
+      game.espnEventId,
+
+    kickoff_at:
+      game.kickoffAt,
+
+    away_team_id:
+      game.awayTeam.id,
+
+    away_team_name:
+      game.awayTeam.displayName,
+
+    away_team_abbreviation:
+      game.awayTeam.abbreviation,
+
+    away_team_logo_url:
+      game.awayTeam.logo,
+
+    away_rank:
+      game.awayTeam.rank,
+
+    away_record:
+      game.awayTeam.record,
+
+    away_score:
+      game.awayTeam.score,
+
+    home_team_id:
+      game.homeTeam.id,
+
+    home_team_name:
+      game.homeTeam.displayName,
+
+    home_team_abbreviation:
+      game.homeTeam.abbreviation,
+
+    home_team_logo_url:
+      game.homeTeam.logo,
+
+    home_rank:
+      game.homeTeam.rank,
+
+    home_record:
+      game.homeTeam.record,
+
+    home_score:
+      game.homeTeam.score,
+
+    status:
+      game.status,
+
+    status_detail:
+      game.statusDetail,
+
+    winner_team_id:
+      game.winnerTeamId,
+
+    included,
+
+    updated_at:
+      new Date().toISOString(),
+  };
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  try {
+    const admin =
+      await requireAdmin();
+
+    if (!admin) {
+      return NextResponse.json(
+        {
+          error:
+            "Admin access required.",
+        },
+        { status: 403 },
+      );
+    }
+
+    const body =
+      await request.json();
+
+    const season =
+      positiveInteger(
+        body?.season,
+      );
+
+    const week =
+      positiveInteger(
+        body?.week,
+      );
+
+    const hasExplicitSelection =
+      Array.isArray(
+        body?.includedEventIds,
+      );
+
+    const explicitSelection =
+      new Set(
+        stringArray(
+          body?.includedEventIds,
+        ),
+      );
+
+    if (!season || !week) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid season and week are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const espnWeek =
+      await fetchNcaaPickEmWeek({
+        season,
+        week,
+      });
+
+    const {
+      data: existingWeek,
+      error: existingWeekError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ncaa_pickem_weeks",
+        )
+        .select(
+          "id, season, week_number, label, lock_at, status, analysis, show_analysis",
+        )
+        .eq(
+          "season",
+          season,
+        )
+        .eq(
+          "week_number",
+          week,
+        )
+        .maybeSingle();
+
+    if (existingWeekError) {
+      return NextResponse.json(
+        {
+          error:
+            existingWeekError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    let weekId: number;
+
+    let preservedStatus:
+      | "open"
+      | "locked"
+      | "final" =
+      "open";
+
+    let preservedAnalysis:
+      string | null =
+      null;
+
+    let preservedShowAnalysis =
+      false;
+
+    if (existingWeek) {
+      weekId =
+        Number(
+          existingWeek.id,
+        );
+
+      preservedStatus =
+        existingWeek.status ===
+          "locked" ||
+        existingWeek.status ===
+          "final"
+          ? existingWeek.status
+          : "open";
+
+      preservedAnalysis =
+        existingWeek.analysis ??
+        null;
+
+      preservedShowAnalysis =
+        existingWeek.show_analysis ===
+        true;
+    } else {
+      const {
+        data: createdWeek,
+        error: createWeekError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ncaa_pickem_weeks",
+          )
+          .insert({
+            season,
+            week_number:
+              week,
+            label:
+              espnWeek.label,
+            status:
+              "open",
+          })
+          .select(
+            "id, status",
+          )
+          .single();
+
+      if (
+        createWeekError ||
+        !createdWeek
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              createWeekError
+                ?.message ??
+              "Failed to create NCAA Pick 'Em week.",
+          },
+          { status: 500 },
+        );
+      }
+
+      weekId =
+        Number(
+          createdWeek.id,
+        );
+    }
+
+    /*
+     * Preserve commissioner-added games during a normal
+     * ESPN refresh. This is the important difference from
+     * the previous importer, which cleared every included
+     * game before rebuilding the card.
+     */
+    const {
+      data: existingGames,
+      error: existingGamesError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ncaa_pickem_games",
+        )
+        .select(
+          "espn_event_id, included",
+        )
+        .eq(
+          "week_id",
+          weekId,
+        );
+
+    if (existingGamesError) {
+      return NextResponse.json(
+        {
+          error:
+            existingGamesError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const previouslyIncluded =
+      new Set(
+        (
+          existingGames ??
+          []
+        )
+          .filter(
+            (game) =>
+              game.included ===
+              true,
+          )
+          .map(
+            (game) =>
+              String(
+                game.espn_event_id,
+              ),
+          ),
+      );
+
+    const scheduleIdSet =
+      new Set(
+        espnWeek.scheduleGames.map(
+          (game) =>
+            game.espnEventId,
+        ),
+      );
+
+    const includedIds =
+      new Set<string>();
+
+    if (hasExplicitSelection) {
+      for (
+        const id
+        of explicitSelection
+      ) {
+        if (
+          scheduleIdSet.has(
+            id,
+          )
+        ) {
+          includedIds.add(
+            id,
+          );
+        }
+      }
+    } else {
+      /*
+       * Ranked-vs-ranked is automatic.
+       */
+      for (
+        const game
+        of espnWeek.eligibleGames
+      ) {
+        includedIds.add(
+          game.espnEventId,
+        );
+      }
+
+      /*
+       * Preserve anything the commissioner previously
+       * added manually, as long as ESPN still has it in
+       * this week's schedule.
+       */
+      for (
+        const id
+        of previouslyIncluded
+      ) {
+        if (
+          scheduleIdSet.has(
+            id,
+          )
+        ) {
+          includedIds.add(
+            id,
+          );
+        }
+      }
+    }
+
+    /*
+     * Upsert every ESPN schedule game. That gives the
+     * commissioner a persistent local copy of the whole
+     * weekly schedule while `included` controls which
+     * games appear on the actual Pick 'Em card.
+     */
+    const rows =
+      espnWeek.scheduleGames.map(
+        (game) =>
+          gameRow(
+            weekId,
+            game,
+            includedIds.has(
+              game.espnEventId,
+            ),
+          ),
+      );
+
+    if (rows.length > 0) {
+      const {
+        error: gamesError,
+      } =
+        await supabaseAdmin
+          .from(
+            "ncaa_pickem_games",
+          )
+          .upsert(
+            rows,
+            {
+              onConflict:
+                "espn_event_id",
+            },
+          );
+
+      if (gamesError) {
+        return NextResponse.json(
+          {
+            error:
+              gamesError.message,
+          },
+          { status: 500 },
+        );
+      }
+    }
+
+    const selectedGames =
+      espnWeek.scheduleGames
+        .filter(
+          (game) =>
+            includedIds.has(
+              game.espnEventId,
+            ),
+        )
+        .sort(
+          (a, b) =>
+            new Date(
+              a.kickoffAt,
+            ).getTime() -
+            new Date(
+              b.kickoffAt,
+            ).getTime(),
+        );
+
+    /*
+     * Weekly lock follows the earliest INCLUDED game,
+     * not simply the first ESPN event of the week.
+     */
+    const lockAt =
+      selectedGames.length >
+      0
+        ? selectedGames[0]
+            .kickoffAt
+        : null;
+
+    const {
+      error: weekUpdateError,
+    } =
+      await supabaseAdmin
+        .from(
+          "ncaa_pickem_weeks",
+        )
+        .update({
+          label:
+            espnWeek.label,
+
+          lock_at:
+            lockAt,
+
+          status:
+            preservedStatus,
+
+          updated_at:
+            new Date()
+              .toISOString(),
+        })
+        .eq(
+          "id",
+          weekId,
+        );
+
+    if (weekUpdateError) {
+      return NextResponse.json(
+        {
+          error:
+            weekUpdateError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const candidateGames =
+      espnWeek.scheduleGames
+        .filter(
+          hasRankedTeam,
+        )
+        .map(
+          (game) => ({
+            espnEventId:
+              game.espnEventId,
+
+            kickoffAt:
+              game.kickoffAt,
+
+            included:
+              includedIds.has(
+                game.espnEventId,
+              ),
+
+            automatic:
+              isRankedVsRanked(
+                game,
+              ),
+
+            away: {
+              id:
+                game.awayTeam.id,
+
+              name:
+                game.awayTeam
+                  .displayName,
+
+              abbreviation:
+                game.awayTeam
+                  .abbreviation,
+
+              logo:
+                game.awayTeam.logo,
+
+              rank:
+                game.awayTeam.rank,
+
+              record:
+                game.awayTeam.record,
+            },
+
+            home: {
+              id:
+                game.homeTeam.id,
+
+              name:
+                game.homeTeam
+                  .displayName,
+
+              abbreviation:
+                game.homeTeam
+                  .abbreviation,
+
+              logo:
+                game.homeTeam.logo,
+
+              rank:
+                game.homeTeam.rank,
+
+              record:
+                game.homeTeam.record,
+            },
+
+            status:
+              game.status,
+
+            statusDetail:
+              game.statusDetail,
+          }),
+        );
+
+    return NextResponse.json({
+      success: true,
+
+      season,
+      week,
+      weekId,
+
+      label:
+        espnWeek.label,
+
+      lockAt,
+
+      analysis:
+        preservedAnalysis,
+
+      showAnalysis:
+        preservedShowAnalysis,
+
+      importedGames:
+        selectedGames.length,
+
+      normalEligibleGames:
+        espnWeek
+          .eligibleGames
+          .length,
+
+      optionalGames:
+        candidateGames.filter(
+          (game) =>
+            !game.automatic,
+        ).length,
+
+      diagnostics:
+        espnWeek.diagnostics,
+
+      games:
+        candidateGames,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to import NCAA Pick 'Em week",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to import NCAA Pick 'Em week.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+===== NCAA WEEK + PICKS =====
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+type PickEmWeekRow = {
+  id: number;
+  season: number;
+  week_number: number;
+  label: string;
+  lock_at: string | null;
+  status: "open" | "locked" | "final";
+  analysis: string | null;
+  show_analysis: boolean;
+};
+
+function numericParam(
+  value: string | null,
+): number | null {
+  if (!value) return null;
+
+  const number =
+    Number(value);
+
+  return Number.isInteger(number) &&
+    number > 0
+    ? number
+    : null;
+}
+
+function isWeekLocked(
+  week: PickEmWeekRow,
+) {
+  if (week.status !== "open") {
+    return true;
+  }
+
+  if (!week.lock_at) {
+    return false;
+  }
+
+  const lockTime =
+    new Date(
+      week.lock_at,
+    ).getTime();
+
+  return (
+    Number.isFinite(lockTime) &&
+    Date.now() >= lockTime
+  );
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  try {
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } =
+      new URL(request.url);
+
+    const requestedSeason =
+      numericParam(
+        searchParams.get(
+          "season",
+        ),
+      );
+
+    const requestedWeek =
+      numericParam(
+        searchParams.get(
+          "week",
+        ),
+      );
+
+    const {
+      data: weeksData,
+      error: weeksError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .select(
+        "id, season, week_number, label, lock_at, status, analysis, show_analysis",
+      )
+      .order(
+        "season",
+        {
+          ascending: false,
+        },
+      )
+      .order(
+        "week_number",
+        {
+          ascending: false,
+        },
+      );
+
+    if (weeksError) {
+      return NextResponse.json(
+        {
+          error:
+            weeksError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const weeks =
+      (weeksData ??
+        []) as PickEmWeekRow[];
+
+    let selectedWeek:
+      | PickEmWeekRow
+      | null =
+      null;
+
+    if (
+      requestedSeason !== null &&
+      requestedWeek !== null
+    ) {
+      selectedWeek =
+        weeks.find(
+          (week) =>
+            Number(
+              week.season,
+            ) ===
+              requestedSeason &&
+            Number(
+              week.week_number,
+            ) ===
+              requestedWeek,
+        ) ?? null;
+    }
+
+    if (!selectedWeek) {
+      selectedWeek =
+        weeks[0] ?? null;
+    }
+
+    if (!selectedWeek) {
+      return NextResponse.json({
+        success: true,
+
+        viewer: {
+          teamId:
+            user.teamId,
+
+          displayName:
+            user.displayName,
+
+          avatarUrl:
+            user.avatarUrl,
+        },
+
+        weeks,
+        week: null,
+        games: [],
+        picks: [],
+        groupPicks: [],
+        locked: false,
+      });
+    }
+
+    const locked =
+      isWeekLocked(
+        selectedWeek,
+      );
+
+    const [
+      gamesResult,
+      viewerPicksResult,
+      teamsResult,
+    ] =
+      await Promise.all([
+        supabaseAdmin
+          .from(
+            "ncaa_pickem_games",
+          )
+          .select("*")
+          .eq(
+            "week_id",
+            selectedWeek.id,
+          )
+          .eq(
+            "included",
+            true,
+          )
+          .order(
+            "kickoff_at",
+            {
+              ascending: true,
+            },
+          ),
+
+        supabaseAdmin
+          .from(
+            "ncaa_pickem_picks",
+          )
+          .select(
+            "id, week_id, game_id, team_id, picked_team_id, is_correct",
+          )
+          .eq(
+            "week_id",
+            selectedWeek.id,
+          )
+          .eq(
+            "team_id",
+            user.teamId,
+          ),
+
+        supabaseAdmin
+          .from("teams")
+          .select(
+            "id, name",
+          )
+          .order(
+            "id",
+            {
+              ascending: true,
+            },
+          ),
+      ]);
+
+    if (gamesResult.error) {
+      return NextResponse.json(
+        {
+          error:
+            gamesResult.error.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    if (
+      viewerPicksResult.error
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            viewerPicksResult.error.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    if (teamsResult.error) {
+      return NextResponse.json(
+        {
+          error:
+            teamsResult.error.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const {
+      data: appUsers,
+      error: usersError,
+    } = await supabaseAdmin
+      .from("app_users")
+      .select(
+        "team_id, display_name, avatar_url",
+      )
+      .eq(
+        "is_active",
+        true,
+      );
+
+    if (usersError) {
+      return NextResponse.json(
+        {
+          error:
+            usersError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const userByTeamId =
+      new Map<
+        number,
+        {
+          displayName:
+            string;
+          avatarUrl:
+            string | null;
+        }
+      >();
+
+    for (
+      const appUser
+      of appUsers ?? []
+    ) {
+      userByTeamId.set(
+        Number(
+          appUser.team_id,
+        ),
+        {
+          displayName:
+            String(
+              appUser.display_name ??
+                "",
+            ),
+
+          avatarUrl:
+            appUser.avatar_url ??
+            null,
+        },
+      );
+    }
+
+    const participants =
+      (teamsResult.data ??
+        []).map(
+        (team) => {
+          const teamId =
+            Number(team.id);
+
+          const appUser =
+            userByTeamId.get(
+              teamId,
+            );
+
+          return {
+            teamId,
+
+            name:
+              appUser?.displayName ||
+              String(
+                team.name,
+              ),
+
+            avatarUrl:
+              appUser?.avatarUrl ??
+              null,
+          };
+        },
+      );
+
+    let groupPicks:
+      Array<{
+        game_id: number;
+        team_id: number;
+        picked_team_id:
+          string;
+        is_correct:
+          boolean | null;
+      }> = [];
+
+    /*
+     * CRITICAL:
+     * Other players' picked_team_id values are not queried
+     * at all until the weekly card is locked.
+     *
+     * This is server-side secrecy, not UI hiding.
+     */
+    if (locked) {
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from(
+          "ncaa_pickem_picks",
+        )
+        .select(
+          "game_id, team_id, picked_team_id, is_correct",
+        )
+        .eq(
+          "week_id",
+          selectedWeek.id,
+        );
+
+      if (error) {
+        return NextResponse.json(
+          {
+            error:
+              error.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      groupPicks =
+        (data ?? []).map(
+          (row) => ({
+            game_id:
+              Number(
+                row.game_id,
+              ),
+
+            team_id:
+              Number(
+                row.team_id,
+              ),
+
+            picked_team_id:
+              String(
+                row.picked_team_id,
+              ),
+
+            is_correct:
+              row.is_correct ??
+              null,
+          }),
+        );
+    }
+
+    return NextResponse.json({
+      success: true,
+
+      viewer: {
+        teamId:
+          user.teamId,
+
+        displayName:
+          user.displayName,
+
+        avatarUrl:
+          user.avatarUrl,
+      },
+
+      participants,
+      weeks,
+
+      week:
+        selectedWeek,
+
+      games:
+        gamesResult.data ??
+        [],
+
+      picks:
+        viewerPicksResult.data ??
+        [],
+
+      groupPicks,
+
+      locked,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to load NCAA Pick 'Em week",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load NCAA Pick 'Em.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+type SubmittedPick = {
+  gameId: number;
+  pickedTeamId: string;
+};
+
+function submittedPicks(
+  value: unknown,
+): SubmittedPick[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry: any) => ({
+      gameId:
+        Number(entry?.gameId),
+
+      pickedTeamId:
+        String(
+          entry?.pickedTeamId ??
+            "",
+        ).trim(),
+    }))
+    .filter(
+      (entry) =>
+        Number.isInteger(
+          entry.gameId,
+        ) &&
+        entry.gameId > 0 &&
+        entry.pickedTeamId.length >
+          0,
+    );
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  try {
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        { status: 401 },
+      );
+    }
+
+    const body =
+      await request.json();
+
+    const weekId =
+      Number(body?.weekId);
+
+    const picks =
+      submittedPicks(
+        body?.picks,
+      );
+
+    if (
+      !Number.isInteger(weekId) ||
+      weekId <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Valid weekId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: week,
+      error: weekError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .select(
+        "id, lock_at, status",
+      )
+      .eq("id", weekId)
+      .maybeSingle();
+
+    if (weekError || !week) {
+      return NextResponse.json(
+        {
+          error:
+            weekError?.message ??
+            "Pick 'Em week not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const lockTime =
+      week.lock_at
+        ? new Date(
+            week.lock_at,
+          ).getTime()
+        : null;
+
+    const locked =
+      week.status !== "open" ||
+      (
+        lockTime !== null &&
+        Number.isFinite(lockTime) &&
+        Date.now() >= lockTime
+      );
+
+    if (locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This week's picks are locked.",
+        },
+        { status: 409 },
+      );
+    }
+
+    const {
+      data: games,
+      error: gamesError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_games")
+      .select(
+        "id, away_team_id, home_team_id",
+      )
+      .eq("week_id", weekId)
+      .eq("included", true);
+
+    if (gamesError) {
+      return NextResponse.json(
+        {
+          error:
+            gamesError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const gameById =
+      new Map(
+        (games ?? []).map(
+          (game) => [
+            Number(game.id),
+            game,
+          ],
+        ),
+      );
+
+    if (
+      picks.length !==
+      gameById.size
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Please make a pick for every game before saving.",
+        },
+        { status: 400 },
+      );
+    }
+
+    for (const pick of picks) {
+      const game =
+        gameById.get(
+          pick.gameId,
+        );
+
+      if (!game) {
+        return NextResponse.json(
+          {
+            error:
+              "One of the submitted games is not part of this week's card.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const validTeamIds =
+        new Set([
+          String(
+            game.away_team_id,
+          ),
+          String(
+            game.home_team_id,
+          ),
+        ]);
+
+      if (
+        !validTeamIds.has(
+          pick.pickedTeamId,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "One of the submitted picks does not belong to that matchup.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    const rows =
+      picks.map(
+        (pick) => ({
+          week_id: weekId,
+
+          game_id:
+            pick.gameId,
+
+          team_id:
+            user.teamId,
+
+          picked_team_id:
+            pick.pickedTeamId,
+
+          updated_at:
+            new Date().toISOString(),
+        }),
+      );
+
+    const {
+      error: saveError,
+    } = await supabaseAdmin
+      .from("ncaa_pickem_picks")
+      .upsert(
+        rows,
+        {
+          onConflict:
+            "game_id,team_id",
+        },
+      );
+
+    if (saveError) {
+      return NextResponse.json(
+        {
+          error:
+            saveError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      saved:
+        rows.length,
+    });
+  } catch (error) {
+    console.error(
+      "Failed to save NCAA Pick 'Em picks",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          "Unable to save NCAA Pick 'Em picks.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+===== NCAA STANDINGS =====
+"use client";
+
+import AppNav from "@/components/AppNav";
+import { useEffect } from "react";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+export default function NcaaPickEmStandings() {
+  const {
+    selectedSport,
+    setSelectedSport,
+  } = useSelectedSport();
+
+  useEffect(() => {
+    if (selectedSport !== "ncaa") {
+      setSelectedSport("ncaa");
+    }
+  }, [
+    selectedSport,
+    setSelectedSport,
+  ]);
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
+
+        <section className="rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 p-6 shadow-xl sm:p-8">
+          <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+            NCAA Pick &apos;Em
+          </div>
+
+          <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">
+            Standings
+          </h1>
+
+          <p className="mt-2 text-slate-400">
+            Correct picks, incorrect picks,
+            pick percentage, perfect weeks,
+            and streaks will live here.
+          </p>
+        </section>
+
+        <section className="grid gap-3 sm:grid-cols-4">
+          {[
+            ["Correct", "—"],
+            ["Incorrect", "—"],
+            ["Pick %", "—"],
+            ["Perfect Weeks", "—"],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-slate-800 bg-slate-900 p-5"
+            >
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {label}
+              </div>
+
+              <div className="mt-2 text-3xl font-black">
+                {value}
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
+          Standings will populate after
+          weekly picks are scored. Profile
+          milestones and the NCAA season
+          championship trophy will use the
+          same results later.
+        </section>
+      </div>
+    </main>
+  );
+}
+
+===== EXISTING REFRESH / CRON PATTERNS =====
+
+############################
+FILE: app/api/refresh-stats/route.ts
+############################
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
+
+type RefreshBody = {
+  slateId?: number;
+};
+
+type SlateRecord = {
+  id: number;
+  date: string;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+};
+
+type LineupWithPlayers = {
+  id: number;
+  team_id: number;
+  lineup_players: { player_id: number }[] | null;
+};
+
+type PlayerRecord = {
+  id: number;
+  name: string;
+  nba_player_id?: number | null;
+  team_abbreviation?: string | null;
+};
+
+type NbaScoreboardGame = {
+  gameId?: string;
+  gameCode?: string;
+  gameStatus?: number;
+  gameStatusText?: string;
+};
+
+type NbaScoreboardPayload = {
+  scoreboard?: {
+    games?: NbaScoreboardGame[];
+  };
+};
+
+type NbaBoxScorePlayer = {
+  personId?: number;
+  firstName?: string;
+  familyName?: string;
+  name?: string;
+  statistics?: {
+    points?: number | string;
+    reboundsTotal?: number | string;
+    assists?: number | string;
+    steals?: number | string;
+    blocks?: number | string;
+    turnovers?: number | string;
+  };
+};
+
+type NbaBoxScorePayload = {
+  game?: {
+    gameId?: string;
+    gameStatus?: number;
+    gameStatusText?: string;
+    period?: number;
+    gameClock?: string;
+    homeTeam?: { players?: NbaBoxScorePlayer[] };
+    awayTeam?: { players?: NbaBoxScorePlayer[] };
+  };
+};
+
+type AggregatedPlayerStat = {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+  fantasy_points: number;
+  games_completed: number;
+  games_in_progress: number;
+  games_remaining: number;
+  game_status: number | null;
+  game_status_text: string | null;
+  period: number | null;
+  game_clock: string | null;
+  source_game_ids: string[];
+};
+
+function toNumber(value: unknown) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
+
+function calculateFantasyPoints(stats: {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+}) {
+  return (
+    stats.points +
+    stats.rebounds * 1.2 +
+    stats.assists * 1.5 +
+    stats.steals * 2 +
+    stats.blocks * 2 -
+    stats.turnovers
+  );
+}
+
+function getGameBuckets(gameStatus: number | undefined) {
+  if (gameStatus === 3) {
+    return { games_completed: 1, games_in_progress: 0, games_remaining: 0 };
+  }
+
+  if (gameStatus === 2) {
+    return { games_completed: 0, games_in_progress: 1, games_remaining: 0 };
+  }
+
+  return { games_completed: 0, games_in_progress: 0, games_remaining: 1 };
+}
+
+function formatDateToGameCode(dateString: string) {
+  return dateString.replace(/-/g, "");
+}
+
+function buildDateCodeRange(startDate: string, endDate: string) {
+  const result: string[] = [];
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    result.push(formatDateToGameCode(`${year}-${month}-${day}`));
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+}
+
+async function fetchScoreboardForDate(dateCode: string) {
+  const url = "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json";
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+      Accept: "application/json,text/plain,*/*",
+      Referer: "https://www.nba.com/",
+      Origin: "https://www.nba.com",
+    },
+  });
+
+  if (!response.ok) return [];
+
+  const payload = (await response.json()) as NbaScoreboardPayload;
+  const games = payload.scoreboard?.games ?? [];
+
+  return games.filter((game) => {
+    const gameCode = game.gameCode ?? "";
+    return gameCode.includes(dateCode);
+  });
+}
+
+async function fetchBoxScore(gameId: string) {
+  const url = `https://cdn.nba.com/static/json/liveData/boxscore/boxscore_${gameId}.json`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+      Accept: "application/json,text/plain,*/*",
+      Referer: "https://www.nba.com/",
+      Origin: "https://www.nba.com",
+    },
+  });
+
+  if (!response.ok) return null;
+
+  return (await response.json()) as NbaBoxScorePayload;
+}
+
+function getTeamCodesFromGameCode(gameCode: string | null | undefined) {
+  const raw = String(gameCode ?? "");
+  const matchup = raw.includes("/") ? raw.split("/")[1] ?? "" : raw;
+  const upper = matchup.toUpperCase();
+
+  if (upper.length < 6) return [];
+
+  const away = upper.slice(0, 3);
+  const home = upper.slice(3, 6);
+
+  return [away, home].filter(Boolean);
+}
+
+function blankStat(): AggregatedPlayerStat {
+  return {
+    points: 0,
+    rebounds: 0,
+    assists: 0,
+    steals: 0,
+    blocks: 0,
+    turnovers: 0,
+    fantasy_points: 0,
+    games_completed: 0,
+    games_in_progress: 0,
+    games_remaining: 0,
+    game_status: null,
+    game_status_text: null,
+    period: null,
+    game_clock: null,
+    source_game_ids: [],
+  };
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as RefreshBody;
+    const slateId = body.slateId;
+
+    if (!slateId) {
+      return NextResponse.json({ error: "slateId is required." }, { status: 400 });
+    }
+
+    const { data: slate, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, date, start_date, end_date, is_locked")
+      .eq("id", slateId)
+      .single();
+
+    if (slateError || !slate) {
+      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
+    }
+
+    const safeSlate = slate as SlateRecord;
+
+    if (safeSlate.is_locked) {
+      return NextResponse.json(
+        { error: "This slate is locked. Historical stats cannot be refreshed." },
+        { status: 400 }
+      );
+    }
+
+    const { data: lineupsData, error: lineupsError } = await supabaseAdmin
+      .from("lineups")
+      .select(`
+        id,
+        team_id,
+        lineup_players (
+          player_id
+        )
+      `)
+      .eq("slate_id", slateId);
+
+    if (lineupsError) {
+      return NextResponse.json(
+        { error: `Failed to load lineups: ${lineupsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const lineups = (lineupsData ?? []) as LineupWithPlayers[];
+    const draftedPlayerIds = Array.from(
+      new Set(
+        lineups.flatMap((lineup) =>
+          (lineup.lineup_players ?? []).map((row) => row.player_id)
+        )
+      )
+    );
+
+    if (draftedPlayerIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "No drafted players found for this slate.",
+      });
+    }
+
+    const { data: playersData, error: playersError } = await supabaseAdmin
+      .from("players")
+      .select("id, name, nba_player_id, team_abbreviation")
+      .in("id", draftedPlayerIds);
+
+    if (playersError) {
+      return NextResponse.json(
+        { error: `Failed to load players: ${playersError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const players = (playersData ?? []) as PlayerRecord[];
+
+    const playerByNbaId = new Map<number, PlayerRecord>();
+    for (const player of players) {
+      if (player.nba_player_id) {
+        playerByNbaId.set(Number(player.nba_player_id), player);
+      }
+    }
+
+    const dateCodes = buildDateCodeRange(safeSlate.start_date, safeSlate.end_date);
+    const allGames: NbaScoreboardGame[] = [];
+
+    const { data: manualGames, error: manualGamesError } = await supabaseAdmin
+      .from("slate_nba_games")
+      .select("game_id, game_code")
+      .eq("slate_id", slateId);
+
+    if (manualGamesError) {
+      return NextResponse.json(
+        { error: `Failed to load slate NBA games: ${manualGamesError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const { data: existingStatsData, error: existingStatsError } = await supabaseAdmin
+      .from("player_slate_stats")
+      .select(
+        "player_id, points, rebounds, assists, steals, blocks, turnovers, fantasy_points, games_completed, games_in_progress, games_remaining, game_status, game_status_text, period, game_clock"
+      )
+      .eq("slate_id", slateId)
+      .in("player_id", draftedPlayerIds);
+
+    if (existingStatsError) {
+      return NextResponse.json(
+        { error: `Failed to load existing player stats: ${existingStatsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const existingStatsByPlayerId = new Map<number, any>();
+    (existingStatsData ?? []).forEach((row: any) => {
+      existingStatsByPlayerId.set(Number(row.player_id), row);
+    });
+
+    const aggregatedByPlayerId = new Map<number, AggregatedPlayerStat>();
+
+    // If manual slate games are pinned, rebuild from scratch from the full known game list.
+    // If not, preserve existing stats so multi-day slate refreshes do not wipe prior-day results
+    // when the NBA "today" scoreboard only returns the current day.
+    const isSingleDaySlate = safeSlate.start_date === safeSlate.end_date;
+    const shouldRebuildFromScratch = isSingleDaySlate || (manualGames ?? []).length > 0;
+
+    for (const player of players) {
+      const existing = existingStatsByPlayerId.get(player.id);
+
+      aggregatedByPlayerId.set(
+        player.id,
+        !shouldRebuildFromScratch && existing
+          ? {
+              points: Number(existing.points ?? 0),
+              rebounds: Number(existing.rebounds ?? 0),
+              assists: Number(existing.assists ?? 0),
+              steals: Number(existing.steals ?? 0),
+              blocks: Number(existing.blocks ?? 0),
+              turnovers: Number(existing.turnovers ?? 0),
+              fantasy_points: Number(existing.fantasy_points ?? 0),
+              games_completed: Number(existing.games_completed ?? 0),
+              games_in_progress: Number(existing.games_in_progress ?? 0),
+              games_remaining: Number(existing.games_remaining ?? 0),
+              game_status: existing.game_status ?? null,
+              game_status_text: existing.game_status_text ?? null,
+              period: existing.period ?? null,
+              game_clock: existing.game_clock ?? null,
+              source_game_ids: [],
+            }
+          : blankStat()
+      );
+    }
+
+    if ((manualGames ?? []).length > 0) {
+      for (const manualGame of manualGames ?? []) {
+        allGames.push({
+          gameId: String(manualGame.game_id),
+          gameCode: manualGame.game_code ?? undefined,
+          gameStatus: undefined,
+          gameStatusText: undefined,
+        });
+      }
+    } else {
+      for (const dateCode of dateCodes) {
+        const games = await fetchScoreboardForDate(dateCode);
+        allGames.push(...games);
+      }
+    }
+
+    const uniqueGames = Array.from(
+      new Map(
+        allGames
+          .filter((game) => game.gameId)
+          .map((game) => [String(game.gameId), game])
+      ).values()
+    );
+
+    let allGamesFinal = uniqueGames.length > 0;
+
+    for (const game of uniqueGames) {
+      const gameId = String(game.gameId);
+      const boxScore = await fetchBoxScore(gameId);
+
+      if (!boxScore?.game) {
+        allGamesFinal = false;
+
+        const teamCodes = getTeamCodesFromGameCode(game.gameCode);
+        const gameDateCode = String(game.gameCode ?? "").slice(0, 8);
+        const slateStartDateCode = safeSlate.start_date.replaceAll("-", "");
+        const isFuturePinnedGame = gameDateCode > slateStartDateCode;
+
+        if (isFuturePinnedGame && teamCodes.length > 0) {
+          for (const player of players) {
+            const playerTeam = String(player.team_abbreviation ?? "").toUpperCase();
+
+            if (!teamCodes.includes(playerTeam)) continue;
+
+            const existing = aggregatedByPlayerId.get(player.id) ?? blankStat();
+
+            existing.games_remaining += 1;
+            existing.game_status = 1;
+            existing.game_status_text = "Scheduled";
+            existing.source_game_ids = Array.from(
+              new Set([...existing.source_game_ids, gameId])
+            );
+
+            aggregatedByPlayerId.set(player.id, existing);
+          }
+        }
+
+        continue;
+      }
+
+      const gameStatus = boxScore.game.gameStatus ?? game.gameStatus;
+
+      if (gameStatus !== 3) {
+        allGamesFinal = false;
+      }
+      const gameStatusText =
+        boxScore.game.gameStatusText ?? game.gameStatusText ?? null;
+
+      const period =
+        typeof boxScore.game.period === "number"
+          ? boxScore.game.period
+          : null;
+
+      const gameClock =
+        typeof boxScore.game.gameClock === "string"
+          ? boxScore.game.gameClock
+          : null;
+
+      const buckets = getGameBuckets(gameStatus);
+
+      const boxPlayers = [
+        ...(boxScore.game.homeTeam?.players ?? []),
+        ...(boxScore.game.awayTeam?.players ?? []),
+      ];
+
+      for (const boxPlayer of boxPlayers) {
+        const personId = boxPlayer.personId;
+        if (!personId) continue;
+
+        const player = playerByNbaId.get(Number(personId));
+        if (!player) continue;
+
+        const stats = {
+          points: toNumber(boxPlayer.statistics?.points),
+          rebounds: toNumber(boxPlayer.statistics?.reboundsTotal),
+          assists: toNumber(boxPlayer.statistics?.assists),
+          steals: toNumber(boxPlayer.statistics?.steals),
+          blocks: toNumber(boxPlayer.statistics?.blocks),
+          turnovers: toNumber(boxPlayer.statistics?.turnovers),
+        };
+
+        const existing = aggregatedByPlayerId.get(player.id) ?? blankStat();
+
+        existing.points += stats.points;
+        existing.rebounds += stats.rebounds;
+        existing.assists += stats.assists;
+        existing.steals += stats.steals;
+        existing.blocks += stats.blocks;
+        existing.turnovers += stats.turnovers;
+        existing.fantasy_points = calculateFantasyPoints(existing);
+
+        existing.games_completed += buckets.games_completed;
+        existing.games_in_progress += buckets.games_in_progress;
+        existing.games_remaining += buckets.games_remaining;
+
+        existing.game_status = gameStatus ?? null;
+        existing.game_status_text = gameStatusText;
+        existing.period = period;
+        existing.game_clock = gameClock;
+        existing.source_game_ids = Array.from(
+          new Set([...existing.source_game_ids, gameId])
+        );
+
+        aggregatedByPlayerId.set(player.id, existing);
+      }
+    }
+
+    const playerStatRows = Array.from(aggregatedByPlayerId.entries()).map(
+      ([playerId, stat]) => ({
+        slate_id: slateId,
+        player_id: playerId,
+        points: stat.points,
+        rebounds: stat.rebounds,
+        assists: stat.assists,
+        steals: stat.steals,
+        blocks: stat.blocks,
+        turnovers: stat.turnovers,
+        fantasy_points: Math.round(stat.fantasy_points * 10) / 10,
+        games_completed: stat.games_completed,
+        games_in_progress: stat.games_in_progress,
+        games_remaining: stat.games_remaining,
+        game_status: stat.game_status,
+        game_status_text: stat.game_status_text,
+        period: stat.period,
+        game_clock: stat.game_clock,
+      })
+    );
+
+    const { error: statsUpsertError } = await supabaseAdmin
+      .from("player_slate_stats")
+      .upsert(playerStatRows, {
+        onConflict: "slate_id,player_id",
+      });
+
+    if (statsUpsertError) {
+      return NextResponse.json(
+        { error: `Failed to save player stats: ${statsUpsertError.message}` },
+        { status: 500 }
+      );
+    }
+
+    let playerFinishedNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    try {
+      playerFinishedNotifications = await notifyNewlyFinishedPlayers({
+        slate: {
+          id: safeSlate.id,
+          date: safeSlate.date,
+          start_date: safeSlate.start_date,
+          end_date: safeSlate.end_date,
+          sport: "nba",
+        },
+        players: players.map((player) => ({
+          id: player.id,
+          name: player.name,
+        })),
+        lineups,
+        previousStatuses: Array.from(
+          existingStatsByPlayerId.entries()
+        ).map(([playerId, row]) => ({
+          playerId,
+          gameStatus: row.game_status ?? null,
+        })),
+        currentStats: playerStatRows.map((row) => ({
+          player_id: row.player_id,
+          fantasy_points: row.fantasy_points,
+          game_status: row.game_status,
+        })),
+      });
+    } catch (notificationError) {
+      console.error(
+        "Player stats saved, but finished-player notifications failed",
+        notificationError
+      );
+    }
+
+    const statsByPlayerId = new Map(
+      playerStatRows.map((row) => [row.player_id, row])
+    );
+
+    const teamRows = lineups.map((lineup) => {
+      const playerRows = lineup.lineup_players ?? [];
+
+      const fantasyPoints = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.fantasy_points ?? 0);
+      }, 0);
+
+      const gamesCompleted = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_completed ?? 0);
+      }, 0);
+
+      const gamesInProgress = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_in_progress ?? 0);
+      }, 0);
+
+      const gamesRemaining = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_remaining ?? 0);
+      }, 0);
+
+      return {
+        slate_id: slateId,
+        team_id: lineup.team_id,
+        fantasy_points: Math.round(fantasyPoints * 10) / 10,
+        finish_position: null as number | null,
+        games_completed: gamesCompleted,
+        games_in_progress: gamesInProgress,
+        games_remaining: gamesRemaining,
+      };
+    });
+
+    const sortedTeamRows = [...teamRows].sort(
+      (a, b) => Number(b.fantasy_points) - Number(a.fantasy_points)
+    );
+
+    sortedTeamRows.forEach((row, index) => {
+      row.finish_position = index + 1;
+    });
+
+    const { error: teamUpsertError } = await supabaseAdmin
+      .from("team_slate_results")
+      .upsert(sortedTeamRows, {
+        onConflict: "slate_id,team_id",
+      });
+
+    if (teamUpsertError) {
+      return NextResponse.json(
+        { error: `Failed to save team results: ${teamUpsertError.message}` },
+        { status: 500 }
+      );
+    }
+
+    let slateAutoLocked = false;
+
+    let slateCompleteNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    const slateEndDate = new Date(`${safeSlate.end_date}T23:59:59`);
+    const slateHasEndedByDate = Date.now() > slateEndDate.getTime();
+
+    if (allGamesFinal && slateHasEndedByDate) {
+      const { error: lockError } = await supabaseAdmin
+        .from("slates")
+        .update({ is_locked: true })
+        .eq("id", slateId);
+
+      if (lockError) {
+        return NextResponse.json(
+          { error: `Stats saved, but failed to auto-lock slate: ${lockError.message}` },
+          { status: 500 }
+        );
+      }
+
+      slateAutoLocked = true;
+
+      try {
+        slateCompleteNotifications = await notifyCompletedSlate({
+          slate: {
+            id: safeSlate.id,
+            date: safeSlate.date,
+            start_date: safeSlate.start_date,
+            end_date: safeSlate.end_date,
+          },
+          teamResults: sortedTeamRows.map((row) => ({
+            team_id: row.team_id,
+            fantasy_points: Number(row.fantasy_points ?? 0),
+            finish_position: row.finish_position,
+          })),
+        });
+      } catch (notificationError) {
+        console.error(
+          "Slate locked, but slate-complete notifications failed",
+          notificationError
+        );
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      slateId,
+      dateCodes,
+      gamesFound: uniqueGames.length,
+      playerStatsUpdated: playerStatRows.length,
+      teamResultsUpdated: sortedTeamRows.length,
+      slateAutoLocked,
+      playerFinishedNotifications,
+      slateCompleteNotifications,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while refreshing stats." },
+      { status: 500 }
+    );
+  }
+}
+
+############################
+FILE: app/api/refresh-stats-nfl/route.ts
+############################
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  fetchScoreboardForRange,
+  fetchGameSummary,
+} from "@/lib/providers/nfl";
+import { aggregateEspnBoxscore } from "@/lib/aggregateEspnBoxscore";
+import { calculateNflFantasyPoints } from "@/lib/scoring/nfl";
+import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
+
+type RefreshBody = {
+  slateId?: number;
+};
+
+type SlateRecord = {
+  id: number;
+  sport: string;
+  date: string;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+};
+
+type LineupWithPlayers = {
+  id: number;
+  team_id: number;
+  lineup_players: { player_id: number }[] | null;
+};
+
+type PlayerNflRecord = {
+  id: number;
+  name: string;
+  nfl_player_id: number | null;
+  team_abbreviation: string | null;
+};
+
+function formatDateToCode(dateString: string) {
+  return dateString.replace(/-/g, "");
+}
+
+function blankRow() {
+  return {
+    passing_yards: 0,
+    passing_tds: 0,
+    passing_ints: 0,
+    rushing_yards: 0,
+    rushing_tds: 0,
+    receiving_yards: 0,
+    receiving_tds: 0,
+    receptions: 0,
+    fumbles_lost: 0,
+    fantasy_points: 0,
+    game_status: null as number | null,
+    game_status_text: null as string | null,
+    games_completed: 0,
+    games_in_progress: 0,
+    games_remaining: 0,
+  };
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as RefreshBody;
+    const slateId = body.slateId;
+
+    if (!slateId) {
+      return NextResponse.json({ error: "slateId is required." }, { status: 400 });
+    }
+
+    const { data: slate, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select("id, sport, date, start_date, end_date, is_locked")
+      .eq("id", slateId)
+      .single();
+
+    if (slateError || !slate) {
+      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
+    }
+
+    const safeSlate = slate as SlateRecord;
+
+    if (safeSlate.sport !== "nfl") {
+      return NextResponse.json(
+        { error: "This slate is not an NFL slate." },
+        { status: 400 }
+      );
+    }
+
+    if (safeSlate.is_locked) {
+      return NextResponse.json(
+        { error: "This slate is locked. Stats cannot be refreshed." },
+        { status: 400 }
+      );
+    }
+
+    const { data: lineupsData, error: lineupsError } = await supabaseAdmin
+      .from("lineups")
+      .select(`
+        id,
+        team_id,
+        lineup_players (
+          player_id
+        )
+      `)
+      .eq("slate_id", slateId);
+
+    if (lineupsError) {
+      return NextResponse.json(
+        { error: `Failed to load lineups: ${lineupsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const lineups = (lineupsData ?? []) as LineupWithPlayers[];
+    const draftedPlayerIds = Array.from(
+      new Set(
+        lineups.flatMap((lineup) =>
+          (lineup.lineup_players ?? []).map((row) => row.player_id)
+        )
+      )
+    );
+
+    if (draftedPlayerIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "No drafted players found for this slate.",
+      });
+    }
+
+    const { data: playersData, error: playersError } = await supabaseAdmin
+      .from("players_nfl")
+      .select("id, name, nfl_player_id, team_abbreviation")
+      .in("id", draftedPlayerIds);
+
+    if (playersError) {
+      return NextResponse.json(
+        { error: `Failed to load NFL players: ${playersError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const players = (playersData ?? []) as PlayerNflRecord[];
+
+    const playerByEspnId = new Map<string, PlayerNflRecord>();
+    const draftedTeamAbbreviations = new Set<string>();
+
+    for (const player of players) {
+      if (player.nfl_player_id) {
+        playerByEspnId.set(String(player.nfl_player_id), player);
+      }
+      if (player.team_abbreviation) {
+        draftedTeamAbbreviations.add(player.team_abbreviation.toUpperCase());
+      }
+    }
+
+    // Load previous game_status per player so we can detect newly-finished players
+    const { data: existingStatsData, error: existingStatsError } =
+      await supabaseAdmin
+        .from("player_nfl_slate_stats")
+        .select("player_id, game_status")
+        .eq("slate_id", slateId)
+        .in("player_id", draftedPlayerIds);
+
+    if (existingStatsError) {
+      return NextResponse.json(
+        { error: `Failed to load existing NFL stats: ${existingStatsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const previousStatuses = (existingStatsData ?? []).map((row: any) => ({
+      playerId: Number(row.player_id),
+      gameStatus: row.game_status ?? null,
+    }));
+
+    const startCode = formatDateToCode(safeSlate.start_date);
+    const endCode = formatDateToCode(safeSlate.end_date);
+
+    const events = await fetchScoreboardForRange(startCode, endCode);
+
+    const relevantEvents = events.filter((event: any) => {
+      const competitors = event.competitions?.[0]?.competitors ?? [];
+      return competitors.some((competitor: any) =>
+        draftedTeamAbbreviations.has(
+          String(competitor.team?.abbreviation ?? "").toUpperCase()
+        )
+      );
+    });
+
+    const statByPlayerId = new Map<number, ReturnType<typeof blankRow>>();
+    for (const player of players) {
+      statByPlayerId.set(player.id, blankRow());
+    }
+
+    let allRelevantGamesFinal = relevantEvents.length > 0;
+
+    for (const event of relevantEvents) {
+      const summary = await fetchGameSummary(String(event.id));
+      if (!summary) {
+        allRelevantGamesFinal = false;
+        continue;
+      }
+
+      const statusInfo = summary.header?.competitions?.[0]?.status?.type;
+      const isCompleted = statusInfo?.completed === true;
+      const statusText = statusInfo?.description ?? null;
+
+      if (!isCompleted) {
+        allRelevantGamesFinal = false;
+      }
+
+      const aggregated = aggregateEspnBoxscore(summary);
+
+      for (const [espnPlayerId, stat] of aggregated.entries()) {
+        const player = playerByEspnId.get(espnPlayerId);
+        if (!player) continue;
+
+        const row = statByPlayerId.get(player.id) ?? blankRow();
+
+        row.passing_yards = stat.passing_yards;
+        row.passing_tds = stat.passing_tds;
+        row.passing_ints = stat.passing_ints;
+        row.rushing_yards = stat.rushing_yards;
+        row.rushing_tds = stat.rushing_tds;
+        row.receiving_yards = stat.receiving_yards;
+        row.receiving_tds = stat.receiving_tds;
+        row.receptions = stat.receptions;
+        row.fumbles_lost = stat.fumbles_lost;
+        row.fantasy_points = Math.round(calculateNflFantasyPoints(stat) * 10) / 10;
+        row.game_status_text = statusText;
+        // Matches NBA's convention: 3 = final, 2 = in progress
+        row.game_status = isCompleted ? 3 : 2;
+        row.games_completed = isCompleted ? 1 : 0;
+        row.games_in_progress = isCompleted ? 0 : 1;
+        row.games_remaining = 0;
+
+        statByPlayerId.set(player.id, row);
+      }
+    }
+
+    const playerStatRows = Array.from(statByPlayerId.entries()).map(
+      ([playerId, stat]) => ({
+        slate_id: slateId,
+        player_id: playerId,
+        ...stat,
+        updated_at: new Date().toISOString(),
+      })
+    );
+
+    const { error: statsUpsertError } = await supabaseAdmin
+      .from("player_nfl_slate_stats")
+      .upsert(playerStatRows, {
+        onConflict: "slate_id,player_id",
+      });
+
+    if (statsUpsertError) {
+      return NextResponse.json(
+        { error: `Failed to save NFL player stats: ${statsUpsertError.message}` },
+        { status: 500 }
+      );
+    }
+
+    let playerFinishedNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    try {
+      playerFinishedNotifications = await notifyNewlyFinishedPlayers({
+        slate: {
+          id: safeSlate.id,
+          date: safeSlate.date,
+          start_date: safeSlate.start_date,
+          end_date: safeSlate.end_date,
+          sport: "nfl",
+        },
+        players: players.map((player) => ({
+          id: player.id,
+          name: player.name,
+        })),
+        lineups,
+        previousStatuses,
+        currentStats: playerStatRows.map((row) => ({
+          player_id: row.player_id,
+          fantasy_points: row.fantasy_points,
+          game_status: row.game_status,
+        })),
+      });
+    } catch (notificationError) {
+      console.error(
+        "NFL stats saved, but finished-player notifications failed",
+        notificationError
+      );
+    }
+
+    const statsByPlayerId = new Map(
+      playerStatRows.map((row) => [row.player_id, row])
+    );
+
+    const teamRows = lineups.map((lineup) => {
+      const playerRows = lineup.lineup_players ?? [];
+
+      const fantasyPoints = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.fantasy_points ?? 0);
+      }, 0);
+
+      const gamesCompleted = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_completed ?? 0);
+      }, 0);
+
+      const gamesInProgress = playerRows.reduce((sum, playerRow) => {
+        const stat = statsByPlayerId.get(playerRow.player_id);
+        return sum + Number(stat?.games_in_progress ?? 0);
+      }, 0);
+
+      return {
+        slate_id: slateId,
+        team_id: lineup.team_id,
+        fantasy_points: Math.round(fantasyPoints * 10) / 10,
+        finish_position: null as number | null,
+        games_completed: gamesCompleted,
+        games_in_progress: gamesInProgress,
+        games_remaining: 0,
+      };
+    });
+
+    const sortedTeamRows = [...teamRows].sort(
+      (a, b) => Number(b.fantasy_points) - Number(a.fantasy_points)
+    );
+
+    sortedTeamRows.forEach((row, index) => {
+      row.finish_position = index + 1;
+    });
+
+    const { error: teamUpsertError } = await supabaseAdmin
+      .from("team_slate_results")
+      .upsert(sortedTeamRows, {
+        onConflict: "slate_id,team_id",
+      });
+
+    if (teamUpsertError) {
+      return NextResponse.json(
+        { error: `Failed to save NFL team results: ${teamUpsertError.message}` },
+        { status: 500 }
+      );
+    }
+
+    let slateAutoLocked = false;
+
+    let slateCompleteNotifications = {
+      attempted: 0,
+      sent: 0,
+      skipped: 0,
+      failed: 0,
+    };
+
+    const slateEndDate = new Date(`${safeSlate.end_date}T23:59:59`);
+    const slateHasEndedByDate = Date.now() > slateEndDate.getTime();
+
+    if (allRelevantGamesFinal && slateHasEndedByDate) {
+      const { error: lockError } = await supabaseAdmin
+        .from("slates")
+        .update({ is_locked: true })
+        .eq("id", slateId);
+
+      if (lockError) {
+        return NextResponse.json(
+          { error: `Stats saved, but failed to auto-lock slate: ${lockError.message}` },
+          { status: 500 }
+        );
+      }
+
+      slateAutoLocked = true;
+
+      try {
+        slateCompleteNotifications = await notifyCompletedSlate({
+          slate: {
+            id: safeSlate.id,
+            date: safeSlate.date,
+            start_date: safeSlate.start_date,
+            end_date: safeSlate.end_date,
+          },
+          teamResults: sortedTeamRows.map((row) => ({
+            team_id: row.team_id,
+            fantasy_points: Number(row.fantasy_points ?? 0),
+            finish_position: row.finish_position,
+          })),
+        });
+      } catch (notificationError) {
+        console.error(
+          "NFL slate locked, but slate-complete notifications failed",
+          notificationError
+        );
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      slateId,
+      relevantGamesFound: relevantEvents.length,
+      allRelevantGamesFinal,
+      playerStatsUpdated: playerStatRows.length,
+      teamResultsUpdated: sortedTeamRows.length,
+      slateAutoLocked,
+      playerFinishedNotifications,
+      slateCompleteNotifications,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while refreshing NFL stats." },
+      { status: 500 }
+    );
+  }
+}
+
+############################
+FILE: app/api/refresh-stats-golf/route.ts
+############################
+import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
+import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
+import {
+  fetchGolfCoursesByEventId,
+  fetchGolfTournamentByEventId,
+  parseGolfTournamentByEventIdFromPayload,
+  type GolfCompetitor,
+  type GolfCompetitorStatus,
+  type GolfRound,
+  type GolfTournament,
+} from "@/lib/providers/golf";
+
+import {
+  fetchPgaTourTeeTimes,
+  resolvePgaTourTournament,
+} from "@/lib/providers/pgaTourTeeTimes";
+
+type RefreshBody = {
+  slateId?: number | string;
+  scoreboardPayload?: unknown;
+};
+
+type GolfSlateRecord = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  external_event_id: string | null;
+  start_date: string;
+  end_date: string;
+  is_locked: boolean;
+  cut_penalty_per_round: number | null;
+  has_cut: boolean;
+};
+
+type GolfPlayerIdRow = {
+  id: number;
+  display_name?: string;
+  espn_player_id: string;
+};
+
+type GolfEventPlayerIdRow = {
+  id: number;
+  player_id: number;
+};
+
+type GolfRoundIdRow = {
+  id: number;
+  event_player_id: number;
+  round_number: number;
+};
+
+type DatabaseError = {
+  message: string;
+};
+
+const EXPECTED_TOURNAMENT_ROUNDS = 4;
+const INSERT_BATCH_SIZE = 750;
+
+function normalizeGolfNameKey(
+  value: string,
+) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      "",
+    )
+    .replace(
+      /[^a-z0-9]+/g,
+      " ",
+    )
+    .trim();
+}
+
+function pgaUtcTeeTimeToIso(input: {
+  raw: string;
+  tournamentStartDate: string | null;
+  roundNumber: number;
+}): string | null {
+  const match =
+    input.raw
+      .trim()
+      .match(
+        /^(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s*UTC)?$/i,
+      );
+
+  if (
+    !match ||
+    !input.tournamentStartDate
+  ) {
+    return null;
+  }
+
+  const start =
+    new Date(
+      input.tournamentStartDate,
+    );
+
+  if (
+    Number.isNaN(
+      start.getTime(),
+    )
+  ) {
+    return null;
+  }
+
+  let hour =
+    Number(match[1]);
+
+  const minute =
+    Number(match[2]);
+
+  const meridiem =
+    match[3].toUpperCase();
+
+  if (
+    !Number.isInteger(hour) ||
+    hour < 1 ||
+    hour > 12 ||
+    !Number.isInteger(minute) ||
+    minute < 0 ||
+    minute > 59
+  ) {
+    return null;
+  }
+
+  if (hour === 12) {
+    hour = 0;
+  }
+
+  if (meridiem === "PM") {
+    hour += 12;
+  }
+
+  const roundDate =
+    new Date(
+      Date.UTC(
+        start.getUTCFullYear(),
+        start.getUTCMonth(),
+        start.getUTCDate() +
+          Math.max(
+            0,
+            input.roundNumber - 1,
+          ),
+        hour,
+        minute,
+        0,
+        0,
+      ),
+    );
+
+  return roundDate.toISOString();
+}
+
+function parseSlateId(value: unknown): number | null {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function getTournamentYear(startDate: string): string | null {
+  const year = startDate.slice(0, 4);
+  return /^\d{4}$/.test(year) ? year : null;
+}
+
+function deduplicateCompetitors(
+  competitors: GolfCompetitor[],
+): GolfCompetitor[] {
+  return Array.from(
+    new Map(
+      competitors.map((competitor) => [competitor.espnPlayerId, competitor]),
+    ).values(),
+  );
+}
+
+function chunkRows<T>(rows: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < rows.length; index += size) {
+    chunks.push(rows.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+function getRoundStatus(
+  round: GolfRound,
+  tournamentStatus: GolfTournament["status"],
+): "scheduled" | "active" | "finished" | "not_played" {
+  if (round.holesCompleted === 18) {
+    return "finished";
+  }
+
+  if (round.holesCompleted > 0) {
+    return "active";
+  }
+
+  if (round.strokes !== null && round.strokes > 0) {
+    return "active";
+  }
+
+  return tournamentStatus === "scheduled" ? "scheduled" : "not_played";
+}
+
+function normalizeGolfCompetitorState(
+  competitor: GolfCompetitor,
+  tournament: GolfTournament,
+): GolfCompetitor {
+  const rounds =
+    [...competitor.rounds].sort(
+      (a, b) =>
+        Number(a.roundNumber) -
+        Number(b.roundNumber),
+    );
+
+  const completedRounds =
+    rounds.filter(
+      (round) =>
+        Number(
+          round.holesCompleted ?? 0,
+        ) >= 18,
+    );
+
+  const activeRound =
+    rounds
+      .filter((round) => {
+        const holes =
+          Number(
+            round.holesCompleted ?? 0,
+          );
+
+        return (
+          (holes > 0 && holes < 18) ||
+          (
+            holes < 18 &&
+            round.strokes !== null &&
+            Number(round.strokes) > 0
+          )
+        );
+      })
+      .at(-1) ?? null;
+
+  const playedRounds =
+    rounds.filter(
+      (round) =>
+        Number(
+          round.holesCompleted ?? 0,
+        ) > 0 ||
+        (
+          round.strokes !== null &&
+          Number(round.strokes) > 0
+        ),
+    );
+
+  const latestPlayedRound =
+    playedRounds.at(-1) ?? null;
+
+  const latestCompletedRound =
+    completedRounds.at(-1) ?? null;
+
+  const completedRoundNumber =
+    latestCompletedRound
+      ? Number(
+          latestCompletedRound.roundNumber,
+        )
+      : 0;
+
+  const derivedRoundsCompleted =
+    Math.max(
+      Number(
+        competitor.roundsCompleted ?? 0,
+      ),
+      completedRoundNumber,
+    );
+
+  const holesFromRounds =
+    rounds.reduce(
+      (sum, round) =>
+        sum +
+        Math.max(
+          0,
+          Math.min(
+            18,
+            Number(
+              round.holesCompleted ?? 0,
+            ),
+          ),
+        ),
+      0,
+    );
+
+  const derivedHolesCompleted =
+    Math.max(
+      Number(
+        competitor.holesCompleted ?? 0,
+      ),
+      holesFromRounds,
+    );
+
+  const tournamentRoundRaw =
+    Number(
+      tournament.currentRound ?? 0,
+    );
+
+  const tournamentRound =
+    Number.isFinite(
+      tournamentRoundRaw,
+    ) &&
+    tournamentRoundRaw > 0
+      ? Math.min(
+          EXPECTED_TOURNAMENT_ROUNDS,
+          Math.max(
+            1,
+            tournamentRoundRaw,
+          ),
+        )
+      : null;
+
+  const providerRoundRaw =
+    Number(
+      competitor.currentRound ?? 0,
+    );
+
+  const providerRound =
+    Number.isFinite(
+      providerRoundRaw,
+    ) &&
+    providerRoundRaw > 0
+      ? Math.min(
+          EXPECTED_TOURNAMENT_ROUNDS,
+          Math.max(
+            1,
+            providerRoundRaw,
+          ),
+        )
+      : null;
+
+  const latestPlayedRoundNumber =
+    latestPlayedRound
+      ? Number(
+          latestPlayedRound.roundNumber,
+        )
+      : null;
+
+  const noScoringActivity =
+    playedRounds.length === 0 &&
+    derivedRoundsCompleted === 0 &&
+    derivedHolesCompleted === 0;
+
+  const tournamentHasStarted =
+    tournament.status !== "scheduled";
+
+  /*
+   * A future-round tee time can be published before the current
+   * tournament day is over. Keep that tee time, but do not let it
+   * erase today's completed-round state.
+   *
+   * Example:
+   *   Saturday: R3 complete + Sunday R4 tee time exists
+   *     -> round_complete
+   *
+   *   Sunday: R4 tee-time calendar date has arrived
+   *     -> scheduled until the golfer starts
+   *
+   * Compare calendar dates in America/New_York because PGA tournament
+   * day/status presentation in the app is Eastern-time based.
+   */
+  const easternDateKey = (
+    value: Date | string,
+  ): string | null => {
+    const date =
+      value instanceof Date
+        ? value
+        : new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    const parts =
+      new Intl.DateTimeFormat(
+        "en-CA",
+        {
+          timeZone: "America/New_York",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        },
+      ).formatToParts(date);
+
+    const year =
+      parts.find(
+        (part) => part.type === "year",
+      )?.value;
+
+    const month =
+      parts.find(
+        (part) => part.type === "month",
+      )?.value;
+
+    const day =
+      parts.find(
+        (part) => part.type === "day",
+      )?.value;
+
+    return year && month && day
+      ? `${year}-${month}-${day}`
+      : null;
+  };
+
+  const nextRound =
+    rounds.find(
+      (round) =>
+        Number(round.roundNumber) ===
+          derivedRoundsCompleted + 1 &&
+        Number(
+          round.holesCompleted ?? 0,
+        ) === 0 &&
+        (
+          round.strokes === null ||
+          Number(round.strokes) === 0
+        ),
+    ) ?? null;
+
+  const nextRoundTeeTime =
+    nextRound?.teeTime ?? null;
+
+  const todayEastern =
+    easternDateKey(new Date());
+
+  const nextRoundDateEastern =
+    nextRoundTeeTime
+      ? easternDateKey(nextRoundTeeTime)
+      : null;
+
+  const nextRoundDayHasArrived =
+    nextRoundDateEastern !== null &&
+    todayEastern !== null &&
+    nextRoundDateEastern <= todayEastern;
+
+  const terminalStatuses =
+    new Set<GolfCompetitorStatus>([
+      "finished",
+      "cut",
+      "withdrawn",
+      "disqualified",
+      "did_not_start",
+    ]);
+
+  let normalizedStatus:
+    GolfCompetitorStatus =
+      competitor.status;
+
+  /*
+   * Provider status is authoritative for true terminal states.
+   * Otherwise the actual round data wins.
+   */
+  if (
+    !terminalStatuses.has(
+      competitor.status,
+    )
+  ) {
+    if (activeRound) {
+      normalizedStatus = "active";
+    } else if (noScoringActivity) {
+      normalizedStatus = "scheduled";
+    } else if (
+      tournament.status === "final" &&
+      derivedRoundsCompleted >=
+        EXPECTED_TOURNAMENT_ROUNDS
+    ) {
+      normalizedStatus = "finished";
+    } else if (
+      tournamentRound !== null &&
+      tournamentRound >
+        derivedRoundsCompleted &&
+      derivedRoundsCompleted > 0 &&
+      nextRoundDayHasArrived
+    ) {
+      /*
+       * The next competitive day has actually arrived for this golfer.
+       * It is now correct to reset the daily completion state and show
+       * the golfer as upcoming until the next round begins.
+       *
+       * Merely receiving tomorrow's tee time does NOT trigger this.
+       */
+      normalizedStatus = "scheduled";
+    } else if (
+      latestCompletedRound
+    ) {
+      normalizedStatus =
+        "round_complete";
+    }
+  }
+
+  let normalizedCurrentRound:
+    number | null =
+      providerRound;
+
+  if (activeRound) {
+    normalizedCurrentRound =
+      Number(
+        activeRound.roundNumber,
+      );
+  } else if (
+    normalizedStatus === "scheduled"
+  ) {
+    normalizedCurrentRound =
+      tournamentHasStarted &&
+      tournamentRound !== null
+        ? Math.max(
+            tournamentRound,
+            Math.min(
+              EXPECTED_TOURNAMENT_ROUNDS,
+              derivedRoundsCompleted + 1,
+            ),
+          )
+        : providerRound ??
+          Math.min(
+            EXPECTED_TOURNAMENT_ROUNDS,
+            Math.max(
+              1,
+              derivedRoundsCompleted + 1,
+            ),
+          );
+  } else if (
+    latestPlayedRoundNumber !== null
+  ) {
+    normalizedCurrentRound =
+      latestPlayedRoundNumber;
+  }
+
+  /*
+   * An unplayed golfer cannot legitimately own a live tournament
+   * score or leaderboard position. ESPN/PGA occasionally leaves
+   * placeholder field order / even-par values attached to such a
+   * golfer after the tournament begins.
+   */
+  const clearUnplayedLeaderboardData =
+    tournamentHasStarted &&
+    noScoringActivity &&
+    !terminalStatuses.has(
+      competitor.status,
+    );
+
+  return {
+    ...competitor,
+
+    rounds,
+
+    roundsCompleted:
+      derivedRoundsCompleted,
+
+    holesCompleted:
+      derivedHolesCompleted,
+
+    currentRound:
+      normalizedCurrentRound,
+
+    status:
+      normalizedStatus,
+
+    lastHole:
+      noScoringActivity
+        ? null
+        : competitor.lastHole,
+
+    leaderboardOrder:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.leaderboardOrder,
+
+    officialScoreToPar:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.officialScoreToPar,
+
+    officialScoreDisplay:
+      clearUnplayedLeaderboardData
+        ? null
+        : competitor.officialScoreDisplay,
+  };
+}
+
+function calculatePenaltyStrokes(input: {
+  status: GolfCompetitorStatus;
+  roundsCompleted: number;
+  penaltyPerRound: number;
+}): number {
+  if (input.penaltyPerRound <= 0) {
+    return 0;
+  }
+
+  const receivesMissingRoundPenalty = [
+    "cut",
+    "withdrawn",
+    "disqualified",
+  ].includes(input.status);
+
+  if (!receivesMissingRoundPenalty) {
+    return 0;
+  }
+
+  const missedRounds = Math.max(
+    0,
+    EXPECTED_TOURNAMENT_ROUNDS - input.roundsCompleted,
+  );
+
+  return missedRounds * input.penaltyPerRound;
+}
+
+async function fetchTournamentForSlate(
+  slate: GolfSlateRecord,
+  scoreboardPayload?: unknown,
+): Promise<GolfTournament | null> {
+  const eventId =
+    slate.external_event_id?.trim();
+
+  if (!eventId) {
+    return null;
+  }
+
+  if (
+    scoreboardPayload !==
+    undefined
+  ) {
+    return parseGolfTournamentByEventIdFromPayload(
+      scoreboardPayload,
+      eventId,
+    );
+  }
+
+  const tournamentYear =
+    getTournamentYear(
+      slate.start_date,
+    );
+
+  if (tournamentYear) {
+    const tournament =
+      await fetchGolfTournamentByEventId(
+        eventId,
+        tournamentYear,
+      );
+
+    if (tournament) {
+      return tournament;
+    }
+  }
+
+  return fetchGolfTournamentByEventId(
+    eventId,
+  );
+}
+
+async function upsertInBatches(
+  table: string,
+  rows: Record<string, unknown>[],
+  onConflict: string,
+): Promise<DatabaseError | null> {
+  for (const batch of chunkRows(rows, INSERT_BATCH_SIZE)) {
+    const { error } = await supabaseAdmin
+      .from(table)
+      .upsert(batch, {
+        onConflict,
+      });
+
+    if (error) {
+      return {
+        message: error.message,
+      };
+    }
+  }
+
+  return null;
+}
+
+export async function POST(request: Request) {
+  try {
+    let body: RefreshBody;
+
+    try {
+      body = (await request.json()) as RefreshBody;
+    } catch {
+      return NextResponse.json(
+        {
+          error: "A valid JSON request body is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const slateId =
+      parseSlateId(body.slateId);
+
+    const isPayloadIngestion =
+      body.scoreboardPayload !==
+      undefined;
+
+    if (isPayloadIngestion) {
+      const expectedSecret =
+        process.env
+          .GOLF_CRON_SECRET
+          ?.trim();
+
+      const authorization =
+        request.headers.get(
+          "authorization",
+        );
+
+      const hasCronAuthorization =
+        Boolean(
+          expectedSecret &&
+          authorization ===
+            `Bearer ${expectedSecret}`,
+        );
+
+      const currentUser =
+        hasCronAuthorization
+          ? null
+          : await getCurrentUser();
+
+      if (
+        !hasCronAuthorization &&
+        !currentUser
+      ) {
+        return NextResponse.json(
+          {
+            error: "Login required.",
+          },
+          {
+            status: 401,
+          },
+        );
+      }
+    }
+
+    if (!slateId) {
+      return NextResponse.json(
+        { error: "A valid slateId is required." },
+        { status: 400 },
+      );
+    }
+
+    const { data: slateData, error: slateError } = await supabaseAdmin
+      .from("slates")
+      .select(
+        [
+          "id",
+          "sport",
+          "display_name",
+          "external_event_id",
+          "start_date",
+          "end_date",
+          "is_locked",
+          "cut_penalty_per_round",
+          "has_cut",
+        ].join(","),
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (slateError || !slateData) {
+      return NextResponse.json({ error: "Slate not found." }, { status: 404 });
+    }
+
+    const slate = slateData as unknown as GolfSlateRecord;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error: "This slate is not a Golf slate.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error: "This slate is locked and cannot be refreshed.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!slate.external_event_id?.trim()) {
+      return NextResponse.json(
+        {
+          error: "This Golf slate does not have an ESPN external event ID.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const tournament =
+      await fetchTournamentForSlate(
+        slate,
+        body.scoreboardPayload,
+      );
+
+    if (!tournament) {
+      return NextResponse.json(
+        {
+          error: `ESPN tournament ${slate.external_event_id} was not found.`,
+        },
+        { status: 404 },
+      );
+    }
+
+    const rawCompetitors =
+      deduplicateCompetitors(
+        tournament.competitors,
+      );
+
+    const normalizedCompetitors =
+      rawCompetitors.map(
+        (competitor) =>
+          normalizeGolfCompetitorState(
+            competitor,
+            tournament,
+          ),
+      );
+
+    /*
+     * The cut is a 36-hole decision.
+     *
+     * Once Round 3 begins, officialScoreToPar includes Saturday scoring,
+     * so it must NOT be used to decide who made the Friday cut.
+     *
+     * Derive each golfer's cut score from R1 + R2 only and keep that
+     * eligibility stable for the rest of the tournament.
+     */
+    function getThirtySixHoleScore(
+      competitor: GolfCompetitor,
+    ): number | null {
+      const firstTwoRounds =
+        competitor.rounds
+          .filter(
+            (round) =>
+              Number(round.roundNumber) === 1 ||
+              Number(round.roundNumber) === 2,
+          )
+          .sort(
+            (a, b) =>
+              Number(a.roundNumber) -
+              Number(b.roundNumber),
+          );
+
+      if (firstTwoRounds.length < 2) {
+        return null;
+      }
+
+      const roundOne =
+        firstTwoRounds.find(
+          (round) =>
+            Number(round.roundNumber) === 1,
+        );
+
+      const roundTwo =
+        firstTwoRounds.find(
+          (round) =>
+            Number(round.roundNumber) === 2,
+        );
+
+      if (
+        roundOne?.scoreToPar === null ||
+        roundOne?.scoreToPar === undefined ||
+        roundTwo?.scoreToPar === null ||
+        roundTwo?.scoreToPar === undefined
+      ) {
+        return null;
+      }
+
+      const score =
+        Number(roundOne.scoreToPar) +
+        Number(roundTwo.scoreToPar);
+
+      return Number.isFinite(score)
+        ? score
+        : null;
+    }
+
+    const officialCut =
+      slate.has_cut
+        ? calculateGolfCutLine(
+            normalizedCompetitors.map(
+          (competitor) => ({
+            score:
+              getThirtySixHoleScore(
+                competitor,
+              ) ??
+              (
+                Number(
+                  competitor.currentRound ?? 0,
+                ) <= 2
+                  ? competitor.officialScoreToPar
+                  : null
+              ),
+            status:
+              competitor.status,
+            position:
+              competitor.leaderboardOrder,
+            holesCompleted:
+              competitor.holesCompleted,
+            roundsCompleted:
+              competitor.roundsCompleted,
+            currentRound:
+              competitor.currentRound,
+              }),
+            ),
+          )
+        : null;
+
+    const protectedTerminalStatuses =
+      new Set<GolfCompetitorStatus>([
+        "finished",
+        "withdrawn",
+        "disqualified",
+        "did_not_start",
+      ]);
+
+    const competitors =
+      officialCut?.official
+        ? normalizedCompetitors.map(
+            (competitor) => {
+              const cutScore =
+                getThirtySixHoleScore(
+                  competitor,
+                );
+
+              /*
+               * Before Round 3 begins, the cumulative tournament score is
+               * still equivalent to the 36-hole score, so retain the
+               * fallback for Friday cut processing.
+               */
+              const score =
+                cutScore ??
+                (
+                  Number(
+                    competitor.currentRound ?? 0,
+                  ) <= 2
+                    ? competitor.officialScoreToPar
+                    : null
+                );
+
+              if (
+                score === null ||
+                score === undefined ||
+                !Number.isFinite(
+                  Number(score),
+                ) ||
+                protectedTerminalStatuses.has(
+                  competitor.status,
+                )
+              ) {
+                return competitor;
+              }
+
+              /*
+               * The golfer made the official 36-hole cut.
+               *
+               * An earlier Round-3 refresh may have incorrectly changed
+               * this golfer to CUT after Saturday scoring moved the live
+               * leaderboard. Recover that stale state here.
+               */
+              if (
+                Number(score) <=
+                officialCut.score
+              ) {
+                if (
+                  competitor.status ===
+                    "cut" &&
+                  Number(
+                    tournament.currentRound ?? 0,
+                  ) >= 3
+                ) {
+                  return {
+                    ...competitor,
+                    status:
+                      "scheduled" as GolfCompetitorStatus,
+                    currentRound:
+                      Math.max(
+                        3,
+                        Number(
+                          tournament.currentRound ??
+                            3,
+                        ),
+                      ),
+                  };
+                }
+
+                return competitor;
+              }
+
+              /*
+               * This golfer missed the Friday cut. Keep the cut state
+               * anchored to Round 2 even after the tournament advances.
+               */
+              return {
+                ...competitor,
+                status:
+                  "cut" as GolfCompetitorStatus,
+                currentRound: 2,
+              };
+            },
+          )
+        : normalizedCompetitors;
+
+    const normalizationCorrections =
+      competitors.filter(
+        (competitor, index) => {
+          const raw =
+            rawCompetitors[index];
+
+          return (
+            competitor.status !==
+              raw.status ||
+            competitor.currentRound !==
+              raw.currentRound ||
+            competitor.roundsCompleted !==
+              raw.roundsCompleted ||
+            competitor.holesCompleted !==
+              raw.holesCompleted ||
+            competitor.leaderboardOrder !==
+              raw.leaderboardOrder ||
+            competitor.officialScoreToPar !==
+              raw.officialScoreToPar
+          );
+        },
+      ).length;
+
+    if (
+      normalizationCorrections > 0
+    ) {
+      console.log(
+        "Normalized inconsistent Golf competitor state",
+        {
+          slateId,
+          tournament:
+            tournament.name,
+          corrections:
+            normalizationCorrections,
+        },
+      );
+    }
+
+    if (competitors.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "ESPN returned the tournament, but the tournament field is not available yet.",
+          tournament: {
+            eventId: tournament.espnEventId,
+            name: tournament.name,
+            status: tournament.status,
+          },
+        },
+        { status: 502 },
+      );
+    }
+
+    const refreshedAt = new Date().toISOString();
+
+    let courseHolesUpserted = 0;
+
+    try {
+      /*
+       * Course-hole metadata is required independently of the
+       * player scoring ingestion path.
+       *
+       * Always refresh it so new tournaments have all 18 pars
+       * and yardages available before golfers play those holes.
+       */
+      const courses =
+        await fetchGolfCoursesByEventId(
+          slate.external_event_id ?? "",
+        );
+
+      const courseRows = courses.flatMap((course) =>
+        course.holes.map((hole) => ({
+          slate_id: slateId,
+          course_id: course.espnCourseId,
+          course_name: course.name,
+          is_host: course.isHost,
+          hole_number: hole.holeNumber,
+          par: hole.par,
+          yards: hole.yards,
+          updated_at: refreshedAt,
+        })),
+      );
+
+      if (courseRows.length > 0) {
+        const { error: courseDeleteError } =
+          await supabaseAdmin
+            .from("golf_course_holes")
+            .delete()
+            .eq("slate_id", slateId);
+
+        if (courseDeleteError) {
+          throw new Error(courseDeleteError.message);
+        }
+
+        const { error: courseUpsertError } =
+          await supabaseAdmin
+            .from("golf_course_holes")
+            .upsert(courseRows, {
+              onConflict:
+                "slate_id,course_id,hole_number",
+            });
+
+        if (courseUpsertError) {
+          throw new Error(courseUpsertError.message);
+        }
+
+        courseHolesUpserted = courseRows.length;
+      }
+    } catch (courseError) {
+      console.error(
+        "Golf player data will refresh, but course-hole data could not be saved:",
+        courseError,
+      );
+    }
+    const penaltyPerRound =
+      slate.has_cut
+        ? Math.max(0, slate.cut_penalty_per_round ?? 0)
+        : 0;
+
+    const golfPlayerRows = competitors.map((competitor) => ({
+      espn_player_id: competitor.espnPlayerId,
+      display_name: competitor.displayName,
+      short_name: competitor.shortName,
+      country: competitor.country,
+      country_flag_url: competitor.countryFlagUrl,
+      player_url: competitor.playerUrl,
+      headshot_url:
+        `https://a.espncdn.com/i/headshots/golf/players/full/` +
+        `${competitor.espnPlayerId}.png`,
+      is_active: true,
+      updated_at: refreshedAt,
+    }));
+
+    function normalizeGolfName(value: string) {
+      return value
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+        .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+        .replace(/&/g, "and")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+        .replace(/\s+/g, " ");
+    }
+
+    /*
+     * Pre-draft field imports may create temporary `pga:*`
+     * identities before ESPN publishes its competitor feed.
+     *
+     * Reconcile those records by normalized name so existing
+     * drafted player IDs are preserved instead of creating
+     * duplicate ESPN player records.
+     */
+    const {
+      data: existingGolfPlayerData,
+      error: existingGolfPlayerError,
+    } = await supabaseAdmin
+      .from("golf_players")
+      .select(
+        "id, display_name, espn_player_id",
+      );
+
+    if (existingGolfPlayerError) {
+      return NextResponse.json(
+        {
+          error:
+            "The tournament field was available, but existing Golf players could not be loaded: " +
+            existingGolfPlayerError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const existingGolfPlayers =
+      (existingGolfPlayerData ??
+        []) as unknown as GolfPlayerIdRow[];
+
+    const existingByEspnId =
+      new Map(
+        existingGolfPlayers.map(
+          (player) => [
+            String(
+              player.espn_player_id,
+
+############################
+FILE: app/api/cron/refresh-golf/route.ts
+############################
+import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import {
+  POST as refreshGolfStats,
+} from "@/app/api/refresh-stats-golf/route";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+type GolfSlateRow = {
+  id: number;
+  start_date: string;
+  end_date: string;
+  display_name: string | null;
+  external_event_id: string | null;
+};
+
+function isAuthorized(
+  request: Request,
+) {
+  const configuredSecret =
+    process.env.GOLF_CRON_SECRET?.trim();
+
+  if (!configuredSecret) {
+    console.error(
+      "GOLF_CRON_SECRET is not configured.",
+    );
+
+    return false;
+  }
+
+  const authorization =
+    request.headers.get(
+      "authorization",
+    );
+
+  return (
+    authorization ===
+    `Bearer ${configuredSecret}`
+  );
+}
+
+function dateOnly(
+  value: Date,
+) {
+  return value
+    .toISOString()
+    .slice(0, 10);
+}
+
+export async function GET(
+  request: Request,
+) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json(
+      {
+        error: "Unauthorized.",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  const today = new Date();
+
+  const earliestDate =
+    new Date(today);
+
+  earliestDate.setUTCDate(
+    earliestDate.getUTCDate() - 2,
+  );
+
+  const latestDate =
+    new Date(today);
+
+  latestDate.setUTCDate(
+    latestDate.getUTCDate() + 8,
+  );
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("slates")
+    .select(
+      [
+        "id",
+        "start_date",
+        "end_date",
+        "display_name",
+        "external_event_id",
+      ].join(","),
+    )
+    .eq("sport", "golf")
+    .eq("is_locked", false)
+    .not(
+      "external_event_id",
+      "is",
+      null,
+    )
+    .lte(
+      "start_date",
+      dateOnly(latestDate),
+    )
+    .gte(
+      "end_date",
+      dateOnly(earliestDate),
+    )
+    .order(
+      "start_date",
+      {
+        ascending: true,
+      },
+    );
+
+  if (error) {
+    return NextResponse.json(
+      {
+        error:
+          "Unable to load active Golf slates: " +
+          error.message,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+
+  const rawSlateRows: unknown[] =
+    Array.isArray(data)
+      ? (data as unknown[])
+      : [];
+
+  const slates: GolfSlateRow[] =
+    rawSlateRows
+      .filter(
+        (row) =>
+          typeof row === "object" &&
+          row !== null,
+      )
+      .map((row) => {
+        const record =
+          row as Record<
+            string,
+            unknown
+          >;
+
+        return {
+          id: Number(record.id),
+          start_date:
+            String(
+              record.start_date ?? "",
+            ),
+          end_date:
+            String(
+              record.end_date ?? "",
+            ),
+          display_name:
+            record.display_name == null
+              ? null
+              : String(
+                  record.display_name,
+                ),
+          external_event_id:
+            record.external_event_id == null
+              ? null
+              : String(
+                  record.external_event_id,
+                ),
+        };
+      })
+      .filter(
+        (row) =>
+          Number.isInteger(row.id) &&
+          row.id > 0 &&
+          Boolean(row.start_date) &&
+          Boolean(row.end_date),
+      );
+
+  const results: Array<{
+    slateId: number;
+    tournament: string;
+    ok: boolean;
+    status: number;
+    state:
+      | "refreshed"
+      | "waiting_for_field"
+      | "failed";
+    result: unknown;
+  }> = [];
+
+  /*
+   * Process sequentially to avoid several large ESPN/Supabase
+   * refreshes competing for the same serverless resources.
+   */
+  for (const slate of slates) {
+    const refreshRequest =
+      new Request(
+        "http://internal/api/refresh-stats-golf",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            slateId: slate.id,
+          }),
+        },
+      );
+
+    try {
+      const response =
+        await refreshGolfStats(
+          refreshRequest,
+        );
+
+      let result: unknown;
+
+      try {
+        result =
+          await response.json();
+      } catch {
+        result = {
+          error:
+            "Refresh returned an unreadable response.",
+        };
+      }
+
+      const resultRecord =
+        typeof result === "object" &&
+        result !== null
+          ? result as Record<
+              string,
+              unknown
+            >
+          : null;
+
+      const errorMessage =
+        typeof resultRecord?.error ===
+        "string"
+          ? resultRecord.error
+          : "";
+
+      const waitingForField =
+        response.status === 502 &&
+        errorMessage.includes(
+          "tournament field is not available yet",
+        );
+
+      results.push({
+        slateId: slate.id,
+        tournament:
+          slate.display_name ??
+          `Slate ${slate.id}`,
+        ok:
+          response.ok ||
+          waitingForField,
+        status:
+          waitingForField
+            ? 200
+            : response.status,
+        state:
+          waitingForField
+            ? "waiting_for_field"
+            : response.ok
+              ? "refreshed"
+              : "failed",
+        result:
+          waitingForField
+            ? {
+                success: true,
+                status:
+                  "waiting_for_field",
+                message:
+                  "Tournament found, but ESPN has not published the field yet.",
+                upstream: result,
+              }
+            : result,
+      });
+    } catch (refreshError) {
+      results.push({
+        slateId: slate.id,
+        tournament:
+          slate.display_name ??
+          `Slate ${slate.id}`,
+        ok: false,
+        status: 500,
+        state: "failed",
+        result: {
+          error:
+            refreshError instanceof Error
+              ? refreshError.message
+              : "Unexpected Golf refresh error.",
+        },
+      });
+    }
+  }
+
+  const failures =
+    results.filter(
+      (row) => !row.ok,
+    );
+
+  const waiting =
+    results.filter(
+      (row) =>
+        row.state ===
+        "waiting_for_field",
+    );
+
+  return NextResponse.json(
+    {
+      success:
+        failures.length === 0,
+      checkedAt:
+        new Date().toISOString(),
+      slatesFound:
+        slates.length,
+      processed:
+        results.length,
+      refreshed:
+        results.filter(
+          (row) =>
+            row.state ===
+            "refreshed",
+        ).length,
+      waiting:
+        waiting.length,
+      failures:
+        failures.length,
+      results,
+    },
+    {
+      status:
+        failures.length > 0
+          ? 207
+          : 200,
+      headers: {
+        "Cache-Control":
+          "no-store, max-age=0",
+      },
+    },
+  );
+}

@@ -1,0 +1,506 @@
+=== RELEVANT PROVIDER / ROUTE CODE ===
+lib/providers/pgaTourShots.ts:39:  tourcastX: number | null;
+lib/providers/pgaTourShots.ts:40:  tourcastY: number | null;
+lib/providers/pgaTourShots.ts:62:    bottomToTopCoords?: RawShotCoordinateGroup | null;
+lib/providers/pgaTourShots.ts:96:  bottomToTop: GolfShotCoordinateSet | null;
+lib/providers/pgaTourShots.ts:372:    tourcastX: numberOrNull(
+lib/providers/pgaTourShots.ts:373:      value?.tourcastX,
+lib/providers/pgaTourShots.ts:375:    tourcastY: numberOrNull(
+lib/providers/pgaTourShots.ts:376:      value?.tourcastY,
+lib/providers/pgaTourShots.ts:603:      bottomToTop: coordinateSet(
+lib/providers/pgaTourShots.ts:604:        shot.overview?.bottomToTopCoords,
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:39:  tourcastX: number | null;
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:40:  tourcastY: number | null;
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:62:    bottomToTopCoords?: RawShotCoordinateGroup | null;
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:96:  bottomToTop: GolfShotCoordinateSet | null;
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:372:    tourcastX: numberOrNull(
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:373:      value?.tourcastX,
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:375:    tourcastY: numberOrNull(
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:376:      value?.tourcastY,
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:600:      bottomToTop: coordinateSet(
+lib/providers/pgaTourShots.ts.before-live-hole-refresh:601:        shot.overview?.bottomToTopCoords,
+lib/shotcast/importShotCastManifest.ts:72:    tourcastX: numberOrNull(value.tourcastX),
+lib/shotcast/importShotCastManifest.ts:73:    tourcastY: numberOrNull(value.tourcastY),
+lib/shotcast/importShotCastManifest.ts:88:    bottomToTop:
+lib/shotcast/importShotCastManifest.ts:90:        value.bottomToTopCoords,
+lib/shotcast/importShotCastManifest.ts:452:        holePickleBottomToTop
+lib/shotcast/importShotCastManifest.ts:453:        holePickleGreenBottomToTop
+lib/shotcast/importShotCastManifest.ts:461:        holePickleBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts:471:        holePickleGreenBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts:481:            tourcastX
+lib/shotcast/importShotCastManifest.ts:482:            tourcastY
+lib/shotcast/importShotCastManifest.ts:486:          bottomToTopCoords {
+lib/shotcast/importShotCastManifest.ts:490:            tourcastX
+lib/shotcast/importShotCastManifest.ts:491:            tourcastY
+lib/shotcast/importShotCastManifest.ts:682:            .holePickleBottomToTop,
+lib/shotcast/importShotCastManifest.ts:688:            .holePickleGreenBottomToTop,
+lib/shotcast/importShotCastManifest.ts:854:          bottomToTop:
+lib/shotcast/importShotCastManifest.ts:857:                .holePickleBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts:864:          greenBottomToTop:
+lib/shotcast/importShotCastManifest.ts:867:                .holePickleGreenBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts:876:          holePickleBottomToTop:
+lib/shotcast/importShotCastManifest.ts:878:          holePickleGreenBottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:72:    tourcastX: numberOrNull(value.tourcastX),
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:73:    tourcastY: numberOrNull(value.tourcastY),
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:88:    bottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:90:        value.bottomToTopCoords,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:284:        holePickleBottomToTop
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:285:        holePickleGreenBottomToTop
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:293:        holePickleBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:303:        holePickleGreenBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:313:            tourcastX
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:314:            tourcastY
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:318:          bottomToTopCoords {
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:322:            tourcastX
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:323:            tourcastY
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:514:            .holePickleBottomToTop,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:520:            .holePickleGreenBottomToTop,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:632:          bottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:635:                .holePickleBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:642:          greenBottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:645:                .holePickleGreenBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:654:          holePickleBottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain:656:          holePickleGreenBottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:72:    tourcastX: numberOrNull(value.tourcastX),
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:73:    tourcastY: numberOrNull(value.tourcastY),
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:88:    bottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:90:        value.bottomToTopCoords,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:284:        holePickleBottomToTop
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:285:        holePickleGreenBottomToTop
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:293:        holePickleBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:303:        holePickleGreenBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:313:            tourcastX
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:314:            tourcastY
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:318:          bottomToTopCoords {
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:322:            tourcastX
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:323:            tourcastY
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:514:            .holePickleBottomToTop,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:520:            .holePickleGreenBottomToTop,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:632:          bottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:635:                .holePickleBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:642:          greenBottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:645:                .holePickleGreenBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:654:          holePickleBottomToTop:
+lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers:656:          holePickleGreenBottomToTop:
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:72:    tourcastX: numberOrNull(value.tourcastX),
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:73:    tourcastY: numberOrNull(value.tourcastY),
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:88:    bottomToTop:
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:90:        value.bottomToTopCoords,
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:284:        holePickleBottomToTop
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:285:        holePickleGreenBottomToTop
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:293:        holePickleBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:303:        holePickleGreenBottomToTopAsset {
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:313:            tourcastX
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:314:            tourcastY
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:318:          bottomToTopCoords {
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:322:            tourcastX
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:323:            tourcastY
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:514:            .holePickleBottomToTop,
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:520:            .holePickleGreenBottomToTop,
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:632:          bottomToTop:
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:635:                .holePickleBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:642:          greenBottomToTop:
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:645:                .holePickleGreenBottomToTopAsset,
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:654:          holePickleBottomToTop:
+lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final:656:          holePickleGreenBottomToTop:
+components/lineups/GolfHoleReplayPanel.tsx.before-live-hole-refresh:11:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-live-hole-refresh:12:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-live-hole-refresh:33:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-live-hole-refresh:226:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-real-hole-map-phase1:13:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-real-hole-map-phase1:14:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-real-hole-map-phase1:35:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-real-hole-map-phase1:242:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx:31:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx:32:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx:53:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx:381:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-2d-hole-map:13:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-2d-hole-map:14:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-2d-hole-map:35:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-2d-hole-map:242:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleMap2D.tsx:14:  tourcastX?: number | null;
+components/lineups/GolfHoleMap2D.tsx:15:  tourcastY?: number | null;
+components/lineups/GolfHoleMap2D.tsx:31:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx:157:  tourcastX: number;
+components/lineups/GolfHoleMap2D.tsx:158:  tourcastY: number;
+components/lineups/GolfHoleMap2D.tsx:161:    coordinate?.tourcastX !== null &&
+components/lineups/GolfHoleMap2D.tsx:162:    coordinate?.tourcastX !== undefined &&
+components/lineups/GolfHoleMap2D.tsx:163:    coordinate?.tourcastY !== null &&
+components/lineups/GolfHoleMap2D.tsx:164:    coordinate?.tourcastY !== undefined &&
+components/lineups/GolfHoleMap2D.tsx:166:      coordinate.tourcastX,
+components/lineups/GolfHoleMap2D.tsx:169:      coordinate.tourcastY,
+components/lineups/GolfHoleMap2D.tsx:196:   * PGA already supplies normalized bottomToTop x/y
+components/lineups/GolfHoleMap2D.tsx:253:        coordinate.tourcastX -
+components/lineups/GolfHoleMap2D.tsx:257:        coordinate.tourcastY -
+components/lineups/GolfHoleMap2D.tsx:518:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx:520:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx:524:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx:535:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx:539:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-coordinate-calibration:26:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-coordinate-calibration:150:            shot.bottomToTop;
+components/lineups/GolfHoleMap2D.tsx.before-interactive-map:26:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-interactive-map:190:            shot.bottomToTop;
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:273:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:275:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:278:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:288:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-focus-transform-fix:291:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:273:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:275:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:278:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:288:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-click-calibration:291:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:319:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:321:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:324:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:334:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:338:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:716:      shots[0]?.bottomToTop?.from;
+components/lineups/GolfHoleMap2D.tsx.before-shotcast-finalization:721:      ]?.bottomToTop?.to;
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle:15:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle:16:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle:37:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-toggle:249:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:285:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:287:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:290:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:300:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-marker-click-fix:303:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:285:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:287:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:290:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:300:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation:303:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:285:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:287:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:290:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:300:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-ball-animation-v2:303:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:380:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:382:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:385:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:395:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-progressive-reveal:398:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:385:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:387:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:390:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:400:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-clean-start-and-flag:403:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:385:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:387:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:390:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:400:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-persist-completed-replay:403:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:385:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:387:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:390:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:400:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-generic-shotcast-engine:403:              shot.bottomToTop.to,
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest:30:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest:31:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest:52:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-generic-shotcast-manifest:269:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix:30:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix:31:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix:52:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-tournament-id-narrowing-fix:337:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest:30:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest:31:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest:52:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-db-shotcast-manifest:337:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones:31:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones:32:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones:53:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones:370:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain:31:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain:32:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain:53:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain:370:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:388:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:390:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:393:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:403:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain:407:              shot.bottomToTop.to,
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final:31:  tourcastX: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final:32:  tourcastY: number | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final:53:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final:370:          `/api/golf/hole-replay?${query}`,
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:28:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:388:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:390:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:393:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:403:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final:407:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:14:  tourcastX?: number | null;
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:15:  tourcastY?: number | null;
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:31:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:157:  tourcastX: number;
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:158:  tourcastY: number;
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:161:    coordinate?.tourcastX !== null &&
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:162:    coordinate?.tourcastX !== undefined &&
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:163:    coordinate?.tourcastY !== null &&
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:164:    coordinate?.tourcastY !== undefined &&
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:166:      coordinate.tourcastX,
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:169:      coordinate.tourcastY,
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:231:        coordinate.tourcastX -
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:235:        coordinate.tourcastY -
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:525:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:527:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:531:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:542:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback:546:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:14:  tourcastX?: number | null;
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:15:  tourcastY?: number | null;
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:31:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:157:  tourcastX: number;
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:158:  tourcastY: number;
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:161:    coordinate?.tourcastX !== null &&
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:162:    coordinate?.tourcastX !== undefined &&
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:163:    coordinate?.tourcastY !== null &&
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:164:    coordinate?.tourcastY !== undefined &&
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:166:      coordinate.tourcastX,
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:169:      coordinate.tourcastY,
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:231:        coordinate.tourcastX -
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:235:        coordinate.tourcastY -
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:525:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:527:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:531:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:542:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates:546:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:14:  tourcastX?: number | null;
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:15:  tourcastY?: number | null;
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:31:  bottomToTop: CoordinateSet | null;
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:157:  tourcastX: number;
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:158:  tourcastY: number;
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:161:    coordinate?.tourcastX !== null &&
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:162:    coordinate?.tourcastX !== undefined &&
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:163:    coordinate?.tourcastY !== null &&
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:164:    coordinate?.tourcastY !== undefined &&
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:166:      coordinate.tourcastX,
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:169:      coordinate.tourcastY,
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:196:   * PGA already supplies normalized bottomToTop x/y
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:253:        coordinate.tourcastX -
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:257:        coordinate.tourcastY -
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:518:            !shot.bottomToTop ||
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:520:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:524:              shot.bottomToTop.to,
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:535:              shot.bottomToTop.from,
+components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform:539:              shot.bottomToTop.to,
+
+=== CURRENT HOLE REPLAY API OUTPUT ===
+HTTP: 200
+{
+  success: true,
+  available: true,
+  replay: {
+    tournamentId: 'R2026013',
+    pgaPlayerId: '57366',
+    playerName: 'Cameron Young',
+    roundNumber: 4,
+    holeNumber: 5,
+    par: 5,
+    yardage: 525,
+    holeStatus: 'BIRDIE',
+    holeScore: '4',
+    shots: [
+      {
+        strokeNumber: 1,
+        playByPlay: '348 yds to right fairway, 179 yds to hole',
+        distance: '348 yds',
+        distanceRemaining: '179 yds',
+        strokeType: 'STROKE',
+        fromLocation: 'Tee Box',
+        toLocation: 'Right Fairway',
+        fromLocationCode: 'OTB',
+        toLocationCode: 'ERF',
+        finalStroke: false,
+        leftToRight: {
+          from: {
+            x: 0.13702097492425278,
+            y: 0.4520960511457366,
+            tourcastX: 8733.155,
+            tourcastY: 7283.467,
+            tourcastZ: 834.041
+          },
+          to: {
+            x: 0.5578970945550799,
+            y: 0.5988798830082585,
+            tourcastX: 9771.416,
+            tourcastY: 7165.469,
+            tourcastZ: 807.025
+          }
+        },
+        bottomToTop: {
+          from: {
+            x: 0.46435370998869163,
+            y: 0.7936780087271906,
+            tourcastX: 8733.155,
+            tourcastY: 7283.467,
+            tourcastZ: 834.041
+          },
+          to: {
+            x: 0.5738281013709565,
+            y: 0.30455169869789656,
+            tourcastX: 9771.416,
+            tourcastY: 7165.469,
+            tourcastZ: 807.025
+          }
+        }
+      },
+      {
+        strokeNumber: 2,
+        playByPlay: '172 yds to right green, 28 ft 3 in. to hole',
+        distance: '172 yds',
+        distanceRemaining: '28 ft 3 in.',
+        strokeType: 'STROKE',
+        fromLocation: 'Fairway',
+        toLocation: 'Right Green',
+        fromLocationCode: 'OFW',
+        toLocationCode: 'ERG',
+        finalStroke: false,
+        leftToRight: {
+          from: {
+            x: 0.5578970945550799,
+            y: 0.5988798830082585,
+            tourcastX: 9771.416,
+            tourcastY: 7165.469,
+            tourcastZ: 807.025
+          },
+          to: {
+            x: 0.7622493226897136,
+            y: 0.4893685187340967,
+            tourcastX: 10268.896,
+            tourcastY: 7297.987,
+            tourcastZ: 805.402
+          }
+        },
+        bottomToTop: {
+          from: {
+            x: 0.5738281013709565,
+            y: 0.30455169869789656,
+            tourcastX: 9771.416,
+            tourcastY: 7165.469,
+            tourcastZ: 807.025
+          },
+          to: {
+            x: 0.4921522758365743,
+            y: 0.06706126758272413,
+            tourcastX: 10268.896,
+            tourcastY: 7297.987,
+            tourcastZ: 805.402
+          }
+        }
+      },
+      {
+        strokeNumber: 3,
+        playByPlay: 'Putt 30 ft 6 in., 2 ft 0 in. to hole',
+        distance: '30 ft 6 in.',
+        distanceRemaining: '2 ft 0 in.',
+        strokeType: 'STROKE',
+        fromLocation: 'Green',
+        toLocation: 'Left Green',
+        fromLocationCode: 'OGR',
+        toLocationCode: 'ELG',
+        finalStroke: false,
+        leftToRight: {
+          from: {
+            x: 0.7622493226897136,
+            y: 0.4893685187340967,
+            tourcastX: 10268.896,
+            tourcastY: 7297.987,
+            tourcastZ: 805.402
+          },
+          to: {
+            x: 0.7695526224601847,
+            y: 0.465862380634925,
+            tourcastX: 10285.956,
+            tourcastY: 7323.294,
+            tourcastZ: 806.731
+          }
+        },
+        bottomToTop: {
+          from: {
+            x: 0.4921522758365743,
+            y: 0.06706126758272413,
+            tourcastX: 10268.896,
+            tourcastY: 7297.987,
+            tourcastZ: 805.402
+          },
+          to: {
+            x: 0.47462091540801987,
+            y: 0.058573648844517434,
+            tourcastX: 10285.956,
+            tourcastY: 7323.294,
+            tourcastZ: 806.731
+          }
+        }
+      },
+      {
+        strokeNumber: 4,
+        playByPlay: 'In the hole',
+        distance: '2 ft 0 in.',
+        distanceRemaining: '',
+        strokeType: 'STROKE',
+        fromLocation: 'Green',
+        toLocation: 'Green',
+        fromLocationCode: 'OGR',
+        toLocationCode: 'OGR',
+        finalStroke: true,
+        leftToRight: {
+          from: {
+            x: 0.7695526224601847,
+            y: 0.465862380634925,
+            tourcastX: 10285.956,
+            tourcastY: 7323.294,
+            tourcastZ: 806.731
+          },
+          to: {
+            x: 0.7692878298057062,
+            y: 0.4678732165450318,
+            tourcastX: 10285.38,
+            tourcastY: 7321.16,
+            tourcastZ: 806.69
+          }
+        },
+        bottomToTop: {
+          from: {
+            x: 0.47462091540801987,
+            y: 0.058573648844517434,
+            tourcastX: 10285.956,
+            tourcastY: 7323.294,
+            tourcastZ: 806.731
+          },
+          to: {
+            x: 0.47612063811352723,
+            y: 0.05888138084849737,
+            tourcastX: 10285.38,
+            tourcastY: 7321.16,
+            tourcastZ: 806.69
+          }
+        }
+      }
+    ]
+  },
+  reconciledHole: {
+    hole_number: 5,
+    strokes: 4,
+    relative_to_par: -1,
+    score_display: '-1',
+    holes_completed: 18,
+    round_score_to_par: -3,
+    round_strokes: 67
+  }
+}

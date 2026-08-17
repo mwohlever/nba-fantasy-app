@@ -1,0 +1,75 @@
+============================================================
+PGA LIVE FULL-SHOT RAW SEGMENT AUDIT
+============================================================
+
+Tournament: R2026027
+Player: 28237
+Round: 3
+Holes: [1, 2, 3, 4, 5, 6]
+
+
+============================================================
+HOLE 1
+============================================================
+TOP-LEVEL KEYS:
+['error']
+
+NO SHOTS ARRAY
+{
+  "error": "Valid slateId, playerId, round, and hole parameters are required."
+}
+
+============================================================
+HOLE 2
+============================================================
+TOP-LEVEL KEYS:
+['error']
+
+NO SHOTS ARRAY
+{
+  "error": "Valid slateId, playerId, round, and hole parameters are required."
+}
+
+============================================================
+HOLE 3
+============================================================
+TOP-LEVEL KEYS:
+['error']
+
+NO SHOTS ARRAY
+{
+  "error": "Valid slateId, playerId, round, and hole parameters are required."
+}
+
+============================================================
+HOLE 4
+============================================================
+TOP-LEVEL KEYS:
+['error']
+
+NO SHOTS ARRAY
+{
+  "error": "Valid slateId, playerId, round, and hole parameters are required."
+}
+
+============================================================
+HOLE 5
+============================================================
+TOP-LEVEL KEYS:
+['error']
+
+NO SHOTS ARRAY
+{
+  "error": "Valid slateId, playerId, round, and hole parameters are required."
+}
+
+============================================================
+HOLE 6
+============================================================
+TOP-LEVEL KEYS:
+['error']
+
+NO SHOTS ARRAY
+{
+  "error": "Valid slateId, playerId, round, and hole parameters are required."
+}

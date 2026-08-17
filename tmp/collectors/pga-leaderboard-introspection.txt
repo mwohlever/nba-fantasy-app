@@ -1,0 +1,11 @@
+============================================================
+PGA LEADERBOARD INTROSPECTION
+============================================================
+2026-08-13T18:34:44.433Z
+
+PROBE FAILED
+TypeError: Failed to parse URL from https://orchestrator.pgatour.com/graphql
+    at node:internal/deps/undici/undici:14976:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async gql ([stdin]:35:7)
+    at async [stdin]:110:5

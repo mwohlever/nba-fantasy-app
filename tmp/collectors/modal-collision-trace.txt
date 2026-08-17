@@ -1,0 +1,1142 @@
+============================================================
+MODAL COLLISION TRACE
+============================================================
+
+=== LINEUPBUILDER: MODAL STATES + ALL SETTERS ===
+1-"use client";
+2-
+3-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+4-
+5:import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
+6:import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+7:import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+8-import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+9-import SlotDraftModal from "@/components/lineups/SlotDraftModal";
+10-import PlayerPool from "@/components/lineups/PlayerPool";
+11:import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
+12:import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
+13-import ScoresDashboard from "@/components/lineups/ScoresDashboard";
+14-import { useEffect, useMemo, useRef, useState } from "react";
+15-import { createPortal } from "react-dom";
+16-import LineupControls from "@/components/lineups/LineupControls";
+17-import { getStatColumns } from "@/lib/statColumns";
+18-import { useSelectedSport } from "@/components/providers/SportProvider";
+19-import { getSportConfig } from "@/lib/sports";
+20-import type {
+--
+68-  const [message, setMessage] = useState("");
+69-  const latestSlateLoadRef = useRef(0);
+70-  const [saveMessage, setSaveMessage] = useState("");
+71-  const [isSaving, setIsSaving] = useState(false);
+72-  const [isSlateLoading, setIsSlateLoading] = useState(false);
+73-  const [isRefreshingStats, setIsRefreshingStats] = useState(false);
+74-  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+75-  const [isAssigningPlayer, setIsAssigningPlayer] = useState(false);
+76:  const [draftingPlayerHistory, setDraftingPlayerHistory] = useState<
+77-    PlayerHistoryDetailRow[]
+78-  >([]);
+79-  const [isDraftingPlayerHistoryLoading, setIsDraftingPlayerHistoryLoading] =
+80-    useState(false);
+81-
+82-  const [searchTerm, setSearchTerm] = useState("");
+83-  const [positionFilter, setPositionFilter] = useState<PositionFilter>("All");
+84-  const [onSlateOnly, setOnSlateOnly] = useState(false);
+--
+106-    savedLineupsForInitialSlate
+107-  );
+108-  const [playerStatsState, setPlayerStatsState] =
+109-    useState<PlayerStat[]>(playerStats);
+110-  const [teamResultsState, setTeamResultsState] =
+111-    useState<TeamResult[]>(teamResults);
+112-  const [availablePlayerIdsForSlate, setAvailablePlayerIdsForSlate] =
+113-    useState<number[]>([]);
+114:  const [draftingPlayer, setDraftingPlayer] = useState<Player | null>(null);
+115-  const [
+116-    isInspectingPlayerFromSlot,
+117-    setIsInspectingPlayerFromSlot,
+118-  ] = useState(false);
+119:  const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+120:  const [leagueResearchPlayer, setLeagueResearchPlayer] =
+121-    useState<Player | null>(null);
+122-  const [targetDraftSlot, setTargetDraftSlot] =
+123-    useState<TargetDraftSlot | null>(null);
+124-
+125-  const [draftPageTab, setDraftPageTab] = useState<
+126-    "lineup" | "players"
+127-  >("lineup");
+128-
+--
+209-    );
+210-
+211-    if (!selectedStillInYear) {
+212-      setSelectedSlateId(String(filteredSlates[0].id));
+213-    }
+214-  }, [filteredSlates, selectedSlateId]);
+215-
+216-  useEffect(() => {
+217:    if (!draftingPlayer) {
+218:      setDraftingPlayerHistory([]);
+219-      setIsDraftingPlayerHistoryLoading(false);
+220-      return;
+221-    }
+222-
+223-    async function loadDraftingPlayerHistory() {
+224-      if ((sport ?? selectedSport) === "golf") {
+225:        setDraftingPlayerHistory([]);
+226-        setIsDraftingPlayerHistoryLoading(false);
+227-        return;
+228-      }
+229-
+230-      try {
+231-        setIsDraftingPlayerHistoryLoading(true);
+232-
+233:        if (!draftingPlayer) return;
+234-
+235-        const response = await fetch(
+236:          `/api/player-history-detail?playerId=${draftingPlayer.id}&season=2026&limit=10`,
+237-          { cache: "no-store" }
+238-        );
+239-
+240-        const result = await response.json();
+241-
+242-        if (!response.ok) {
+243-          console.error(result.error || "Failed to load player history detail.");
+244:          setDraftingPlayerHistory([]);
+245-          return;
+246-        }
+247-
+248:        setDraftingPlayerHistory(result.history ?? []);
+249-      } catch (error) {
+250-        console.error(error);
+251:        setDraftingPlayerHistory([]);
+252-      } finally {
+253-        setIsDraftingPlayerHistoryLoading(false);
+254-      }
+255-    }
+256-
+257-    void loadDraftingPlayerHistory();
+258:  }, [draftingPlayer, sport, selectedSport]);
+259-
+260-  useEffect(() => {
+261-    setPlayerStatsState(playerStats);
+262-  }, [playerStats]);
+263-
+264-  useEffect(() => {
+265-    setTeamResultsState(teamResults);
+266-  }, [teamResults]);
+--
+1332-        `${player.name} drafted to ${targetTeam.name}.`,
+1333-        {
+1334-          notifyNextDrafter: shouldNotifyNextDrafter,
+1335-        }
+1336-      );
+1337-
+1338-      if (!added) return;
+1339-
+1340:      setDraftingPlayer(null);
+1341-      setSearchTerm("");
+1342-
+1343-      if (selectedSlateIdNumber) {
+1344-        void loadSlateLineups(selectedSlateIdNumber);
+1345-      }
+1346-    } finally {
+1347-      setIsAssigningPlayer(false);
+1348-    }
+--
+1365-        ownerTeamId,
+1366-        nextPlayers,
+1367-        `${player.name} removed from ${ownerTeam.name}.`,
+1368-        { allowEmpty: true }
+1369-      );
+1370-
+1371-      if (!removed) return;
+1372-
+1373:      setDraftingPlayer(null);
+1374-      setSearchTerm("");
+1375-
+1376-      if (selectedSlateIdNumber) {
+1377-        void loadSlateLineups(selectedSlateIdNumber);
+1378-      }
+1379-    } finally {
+1380-      setIsAssigningPlayer(false);
+1381-    }
+--
+1390-  const scoreTableCellClass = compactView
+1391-    ? "px-0 py-0 text-xs"
+1392-    : "px-3 py-2 text-sm";
+1393-
+1394-  const scoreTableHeaderClass = compactView
+1395-    ? "border-b border-slate-200 px-0 py-0 font-semibold"
+1396-    : "border-b border-slate-200 px-3 py-2 font-semibold";
+1397-
+1398:  const ownerTeamForDraftingPlayer = draftingPlayer
+1399:    ? getOwnerTeamForPlayer(draftingPlayer.id)
+1400-    : null;
+1401-
+1402-  function inspectPlayerFromSlot(player: Player) {
+1403-    setIsInspectingPlayerFromSlot(true);
+1404:    setDraftingPlayer(player);
+1405-  }
+1406-
+1407:  const setDraftingPlayerWithSlotRestore:
+1408-    React.Dispatch<React.SetStateAction<Player | null>> = (
+1409-      value
+1410-    ) => {
+1411:      setDraftingPlayer((currentPlayer) => {
+1412-        const nextPlayer =
+1413-          typeof value === "function"
+1414-            ? value(currentPlayer)
+1415-            : value;
+1416-
+1417-        setIsInspectingPlayerFromSlot(
+1418-          Boolean(nextPlayer),
+1419-        );
+--
+1427-  ) {
+1428-    if (!targetDraftSlot) return;
+1429-
+1430-    await handleAssignPlayerToTeam(
+1431-      player,
+1432-      targetDraftSlot.teamId
+1433-    );
+1434-
+1435:    setDraftingPlayer(null);
+1436-    setIsInspectingPlayerFromSlot(false);
+1437-    setTargetDraftSlot(null);
+1438-  }
+1439-
+1440-  const golfScoresControls = (
+1441-    <>
+1442-      <div className="space-y-2">
+1443-        <div className="flex items-center gap-2">
+--
+1787-              }`}
+1788-            >
+1789-              <span aria-hidden="true">🔎</span>
+1790-              <span>Players</span>
+1791-            </button>
+1792-          </section>
+1793-
+1794-          {draftPageTab === "lineup" ? (
+1795:            <DraftRosterCourt
+1796-              teamId={currentUser?.teamId ?? null}
+1797-              teamName={currentUser?.displayName ?? null}
+1798-              players={
+1799-                currentUser?.teamId
+1800-                  ? getPlayersForTeam(currentUser.teamId)
+1801-                  : []
+1802-              }
+1803-              rosterSlots={rosterSlots}
+1804-              isLocked={Boolean(selectedSlate?.is_locked)}
+1805:              setDraftingPlayer={setLeagueResearchPlayer}
+1806-              setTargetDraftSlot={setTargetDraftSlot}
+1807-            />
+1808-          ) : (
+1809-            <PlayerPool
+1810-              players={players}
+1811-              filteredPlayers={filteredPlayers}
+1812-              searchTerm={searchTerm}
+1813-              setSearchTerm={setSearchTerm}
+--
+1816-              onSlateOnly={onSlateOnly}
+1817-              setOnSlateOnly={setOnSlateOnly}
+1818-              isAvailabilityLoading={isAvailabilityLoading}
+1819-              availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+1820-              availablePlayerIdSet={availablePlayerIdSet}
+1821-              playerAverageMap={playerAverageMap}
+1822-              playerProjections={playerProjections}
+1823-              getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1824:              setDraftingPlayer={setDraftingPlayer}
+1825-              isAssigningPlayer={isAssigningPlayer}
+1826-              pillBase={pillBase}
+1827-              activePill={activePill}
+1828-              inactivePill={inactivePill}
+1829-              rosterSlots={rosterSlots}
+1830-              selectedSeason={selectedSeason}
+1831-            />
+1832-          )}
+1833-
+1834:          <LeagueLineupCards
+1835-            teams={orderedTeamsForSlate}
+1836-            currentTeamId={currentUser?.teamId ?? null}
+1837-            getPlayersForTeam={getPlayersForTeam}
+1838-            getPlayerProjectionScore={
+1839-              getPlayerProjectionScore
+1840-            }
+1841-            getDraftNeeds={getDraftNeeds}
+1842-            rosterSlots={rosterSlots}
+1843:            setResearchPlayer={setLeagueResearchPlayer}
+1844-            setTargetDraftSlot={setTargetDraftSlot}
+1845-            isLocked={Boolean(
+1846-              selectedSlate?.is_locked
+1847-            )}
+1848-          />
+1849-        </>
+1850-      ) : (
+1851-        <ScoresDashboard
+--
+1867-          liveWinPctMap={liveWinPctMap}
+1868-          playerProjections={playerProjections}
+1869-          controls={
+1870-            (selectedSlate?.sport ??
+1871-              selectedSport) === "golf"
+1872-              ? golfScoresControls
+1873-              : lineupControls
+1874-          }
+1875:          setProfilePlayer={setProfilePlayer}
+1876-        />
+1877-      )}
+1878-
+1879-      <SlotDraftModal
+1880-        targetDraftSlot={targetDraftSlot}
+1881-        setTargetDraftSlot={setTargetDraftSlot}
+1882-        players={players}
+1883-        playerAverageMap={playerAverageMap}
+1884-        playerProjections={playerProjections}
+1885-        availablePlayerIdsForSlate={availablePlayerIdsForSlate}
+1886-        availablePlayerIdSet={availablePlayerIdSet}
+1887-        isAvailabilityLoading={isAvailabilityLoading}
+1888-        getOwnerTeamForPlayer={getOwnerTeamForPlayer}
+1889:        setDraftingPlayer={setDraftingPlayerWithSlotRestore}
+1890-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1891-        selectedSeason={selectedSeason}
+1892-        rosterSlots={rosterSlots}
+1893-        hidden={isInspectingPlayerFromSlot}
+1894-        isAssigningPlayer={isAssigningPlayer}
+1895-      />
+1896-
+1897:      <ReadOnlyPlayerModal
+1898:        player={profilePlayer}
+1899:        setPlayer={setProfilePlayer}
+1900-        playerAverageMap={playerAverageMap}
+1901-        playerProjections={playerProjections}
+1902-        golfStat={
+1903:          profilePlayer
+1904:            ? getRawPlayerStat(profilePlayer.id)
+1905-            : null
+1906-        }
+1907-        golfSlateId={
+1908-          selectedSlate?.sport === "golf"
+1909-            ? selectedSlate.id
+1910-            : null
+1911-        }
+1912-      />
+1913-
+1914:      <PlayerResearchModal
+1915-        player={
+1916:          leagueResearchPlayer
+1917-            ? {
+1918:                id: leagueResearchPlayer.id,
+1919:                name: leagueResearchPlayer.name,
+1920-                nbaPlayerId:
+1921:                  leagueResearchPlayer.nba_player_id ??
+1922-                  null,
+1923-                nflPlayerId:
+1924:                  leagueResearchPlayer.nfl_player_id ??
+1925-                  null,
+1926-                espnGolfPlayerId:
+1927:                  leagueResearchPlayer.espn_player_id ??
+1928-                  null,
+1929-                headshotUrl:
+1930:                  leagueResearchPlayer.headshot_url ??
+1931-                  null,
+1932-                positionGroup:
+1933:                  leagueResearchPlayer.position_group ??
+1934-                  null,
+1935-                owgrRank:
+1936:                  leagueResearchPlayer.owgr_rank ??
+1937-                  null,
+1938-              }
+1939-            : null
+1940-        }
+1941-        sport={
+1942-          (selectedSlate?.sport ??
+1943-            selectedSport) as
+1944-            | "nba"
+1945-            | "nfl"
+1946-            | "golf"
+1947-        }
+1948-        season={Number(selectedSeason)}
+1949-        defaultMode="season"
+1950-        onClose={() =>
+1951:          setLeagueResearchPlayer(null)
+1952-        }
+1953-      />
+1954-
+1955:      <DraftPlayerModal
+1956:        draftingPlayer={draftingPlayer}
+1957:        setDraftingPlayer={
+1958:          setDraftingPlayerWithSlotRestore
+1959-        }
+1960-        playerAverageMap={playerAverageMap}
+1961-        playerProjections={playerProjections}
+1962-        availablePlayerIdSet={availablePlayerIdSet}
+1963-        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+1964-        isAssigningPlayer={isAssigningPlayer}
+1965-        isSaving={isSaving}
+1966-        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+1967:        draftingPlayerHistory={draftingPlayerHistory}
+1968-        isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
+1969-        orderedTeamsForSlate={orderedTeamsForSlate}
+1970-        getTeamStats={getTeamStats}
+1971-        getTeamAssignmentStatus={getTeamAssignmentStatus}
+1972-        getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
+1973-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+1974-        targetDraftSlot={targetDraftSlot}
+1975-        handleDraftToTargetSlot={
+
+=== ALL PLAYERMODAL IMPORTS / RENDERS ===
+app/player-history/page.tsx:10:import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+app/page.tsx:16:import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+app/page.tsx:2237:      <ReadOnlyPlayerModal
+app/page.tsx.broken-compact-golf-hero:14:import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+app/page.tsx.broken-compact-golf-hero:2107:      <ReadOnlyPlayerModal
+components/lineups/DraftPlayerModal.tsx:3:import PlayerModal from "@/components/lineups/PlayerModal";
+components/lineups/DraftPlayerModal.tsx:57:export default function DraftPlayerModal({
+components/lineups/DraftPlayerModal.tsx:80:    <PlayerModal
+components/lineups/ReadOnlyPlayerModal.tsx:3:import GolfPlayerModal from "@/components/lineups/GolfPlayerModal";
+components/lineups/ReadOnlyPlayerModal.tsx:4:import PlayerModal from "@/components/lineups/PlayerModal";
+components/lineups/ReadOnlyPlayerModal.tsx:20:export default function ReadOnlyPlayerModal({
+components/lineups/ReadOnlyPlayerModal.tsx:42:    <PlayerModal
+components/lineups/LineupBuilder.tsx:5:import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
+components/lineups/LineupBuilder.tsx:6:import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+components/lineups/LineupBuilder.tsx:1897:      <ReadOnlyPlayerModal
+components/lineups/LineupBuilder.tsx:1955:      <DraftPlayerModal
+
+=== ALL DRAFTROSTERCOURT RENDERS ===
+components/lineups/LineupBuilder.tsx:11:import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
+components/lineups/LineupBuilder.tsx:1795:            <DraftRosterCourt
+components/lineups/DraftRosterCourt.tsx:91:export default function DraftRosterCourt({
+
+=== DRAFTROSTERCOURT CURRENT FILE ===
+"use client";
+
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import type {
+  Player,
+  RosterSlotConfig,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
+
+type Props = {
+  teamId: number | null;
+  teamName: string | null;
+  players: Player[];
+  rosterSlots: RosterSlotConfig[];
+  isLocked: boolean;
+  setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
+  setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
+};
+
+type SlotProps = {
+  player: Player | null;
+  positionGroup: string;
+  slotNumber: number;
+  disabled: boolean;
+  onPlayerClick: (player: Player) => void;
+  onEmptyClick: (positionGroup: string) => void;
+};
+
+function DraftRosterSlot({
+  player,
+  positionGroup,
+  slotNumber,
+  disabled,
+  onPlayerClick,
+  onEmptyClick,
+}: SlotProps) {
+  const label = player?.name ?? positionGroup;
+
+  return (
+    <button
+      type="button"
+      disabled={!player && disabled}
+      onClick={() => {
+        if (player) {
+          onPlayerClick(player);
+          return;
+        }
+
+        onEmptyClick(positionGroup);
+      }}
+      aria-label={
+        player
+          ? `View ${player.name}`
+          : `Draft ${positionGroup} into slot ${slotNumber}`
+      }
+      className={`draft-roster-slot ${
+        player
+          ? "draft-roster-slot--filled"
+          : "draft-roster-slot--empty"
+      }`}
+    >
+      <span className="draft-roster-headshot">
+        {player ? (
+          <PlayerHeadshot
+            nbaPlayerId={player.nba_player_id}
+            nflPlayerId={player.nfl_player_id}
+            espnGolfPlayerId={player.espn_player_id}
+            imageUrl={player.headshot_url}
+            playerName={player.name}
+            size="xl"
+            className="draft-roster-player-image"
+          />
+        ) : (
+          <span className="draft-roster-plus" aria-hidden="true">
+            +
+          </span>
+        )}
+      </span>
+
+      <span className="draft-roster-player-name">
+        {label}
+      </span>
+
+      <span className="draft-roster-position">
+        {player ? positionGroup : "Empty"}
+      </span>
+    </button>
+  );
+}
+
+export default function DraftRosterCourt({
+  teamId,
+  teamName,
+  players,
+  rosterSlots,
+  isLocked,
+  setDraftingPlayer,
+  setTargetDraftSlot,
+}: Props) {
+  // Fallback to NBA's 2G/3F-C shape if no roster_slots rows were found,
+  // so nothing breaks if this ever runs before the config is seeded.
+  const effectiveSlots: RosterSlotConfig[] =
+    rosterSlots.length > 0
+      ? rosterSlots
+      : [
+          { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
+          { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
+        ];
+
+  const totalSlots = effectiveSlots.reduce(
+    (sum, slot) => sum + slot.slot_count,
+    0
+  );
+
+  const playersByPosition = new Map<string, Player[]>();
+  for (const player of players) {
+    const existing = playersByPosition.get(player.position_group) ?? [];
+    existing.push(player);
+    playersByPosition.set(player.position_group, existing);
+  }
+
+  const completedSlots = Math.min(players.length, totalSlots);
+  const progressPercent = totalSlots > 0 ? (completedSlots / totalSlots) * 100 : 0;
+
+  function openEmptySlot(positionGroup: string) {
+    if (!teamId || !teamName || isLocked) return;
+
+    setTargetDraftSlot({
+      teamId,
+      teamName,
+      positionGroup,
+    });
+  }
+
+  return (
+    <section className="draft-roster-court">
+      <div className="draft-roster-header">
+        <div>
+          <div className="draft-roster-kicker">
+            Your lineup
+          </div>
+
+          <h2 className="draft-roster-title">
+            {teamName ?? "Loading your team..."}
+          </h2>
+        </div>
+
+        <div className="draft-roster-count">
+          <strong>{completedSlots}/{totalSlots}</strong>
+          <span>{completedSlots === totalSlots ? "Complete" : "Filled"}</span>
+        </div>
+      </div>
+
+      <div className="draft-roster-progress">
+        <div
+          className="draft-roster-progress-fill"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      <div className="draft-roster-formation">
+        {effectiveSlots.map((slotConfig) => {
+          const positionPlayers = playersByPosition.get(slotConfig.position) ?? [];
+
+          const slots: Array<Player | null> = Array.from(
+            { length: slotConfig.slot_count },
+            (_, index) => positionPlayers[index] ?? null
+          );
+
+          return (
+            <div
+              key={slotConfig.position}
+              className="draft-roster-row"
+            >
+              {slots.map((player, index) => (
+                <DraftRosterSlot
+                  key={`${slotConfig.position}-${index}`}
+                  player={player}
+                  positionGroup={slotConfig.position}
+                  slotNumber={index + 1}
+                  disabled={!teamId || isLocked}
+                  onPlayerClick={setDraftingPlayer}
+                  onEmptyClick={openEmptySlot}
+                />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="draft-roster-footer">
+        {isLocked ? (
+          <span>🔒 This slate is locked</span>
+        ) : completedSlots === totalSlots ? (
+          <span>✅ Lineup complete</span>
+        ) : (
+          <span>Tap an empty spot to draft a player</span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+=== DRAFTPLAYERMODAL CURRENT FILE ===
+"use client";
+
+import PlayerModal from "@/components/lineups/PlayerModal";
+import type {
+  OrderedTeam,
+  Player,
+  PlayerHistoryDetailRow,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
+
+type TeamStats = {
+  totalPlayers: number;
+  guards: number;
+  fcPlayers: number;
+};
+
+type AssignmentStatus = {
+  canAssign: boolean;
+  reason: string;
+};
+
+type Props = {
+  draftingPlayer: Player | null;
+  setDraftingPlayer: React.Dispatch<
+    React.SetStateAction<Player | null>
+  >;
+  playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
+  availablePlayerIdSet: Set<number>;
+  ownerTeamForDraftingPlayer: OrderedTeam | null;
+  isAssigningPlayer: boolean;
+  isSaving: boolean;
+  handleRemovePlayerFromTeam: (
+    player: Player
+  ) => Promise<void>;
+  draftingPlayerHistory: PlayerHistoryDetailRow[];
+  isDraftingPlayerHistoryLoading: boolean;
+  orderedTeamsForSlate: OrderedTeam[];
+  getTeamStats: (teamId: number) => TeamStats;
+  getTeamAssignmentStatus: (
+    teamId: number,
+    player: Player
+  ) => AssignmentStatus;
+  getOwnerTeamIdForPlayer: (
+    playerId: number
+  ) => number | null;
+  handleAssignPlayerToTeam: (
+    player: Player,
+    teamId: number
+  ) => Promise<void>;
+  targetDraftSlot: TargetDraftSlot | null;
+  handleDraftToTargetSlot: (
+    player: Player
+  ) => Promise<void>;
+};
+
+export default function DraftPlayerModal({
+  draftingPlayer,
+  setDraftingPlayer,
+  playerAverageMap,
+  playerProjections,
+  availablePlayerIdSet,
+  ownerTeamForDraftingPlayer,
+  isAssigningPlayer,
+  isSaving,
+  handleRemovePlayerFromTeam,
+  draftingPlayerHistory,
+  isDraftingPlayerHistoryLoading,
+  orderedTeamsForSlate,
+  getTeamStats,
+  getTeamAssignmentStatus,
+  getOwnerTeamIdForPlayer,
+  handleAssignPlayerToTeam,
+  targetDraftSlot,
+  handleDraftToTargetSlot,
+}: Props) {
+  void draftingPlayerHistory;
+
+  return (
+    <PlayerModal
+      mode="draft"
+      player={draftingPlayer}
+      onClose={() => setDraftingPlayer(null)}
+      playerAverageMap={playerAverageMap}
+      playerProjections={playerProjections}
+      availablePlayerIdSet={
+        availablePlayerIdSet
+      }
+      ownerTeam={
+        ownerTeamForDraftingPlayer
+      }
+      isAssigningPlayer={
+        isAssigningPlayer
+      }
+      isSaving={isSaving}
+      isExternalLoading={
+        isDraftingPlayerHistoryLoading
+      }
+      orderedTeamsForSlate={
+        orderedTeamsForSlate
+      }
+      getTeamStats={getTeamStats}
+      getTeamAssignmentStatus={
+        getTeamAssignmentStatus
+      }
+      getOwnerTeamIdForPlayer={
+        getOwnerTeamIdForPlayer
+      }
+      handleAssignPlayerToTeam={
+        handleAssignPlayerToTeam
+      }
+      targetDraftSlot={targetDraftSlot}
+      handleDraftToTargetSlot={
+        handleDraftToTargetSlot
+      }
+      handleRemovePlayerFromTeam={
+        handleRemovePlayerFromTeam
+      }
+    />
+  );
+}
+
+=== READONLYPLAYERMODAL CURRENT FILE ===
+"use client";
+
+import GolfPlayerModal from "@/components/lineups/GolfPlayerModal";
+import PlayerModal from "@/components/lineups/PlayerModal";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import type {
+  Player,
+  PlayerStat,
+} from "@/components/lineups/types";
+
+type Props = {
+  player: Player | null;
+  setPlayer: (player: Player | null) => void;
+  playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
+  golfStat?: PlayerStat | null;
+  golfSlateId?: number | null;
+};
+
+export default function ReadOnlyPlayerModal({
+  player,
+  setPlayer,
+  playerAverageMap,
+  playerProjections,
+  golfStat = null,
+  golfSlateId = null,
+}: Props) {
+  const { selectedSport } = useSelectedSport();
+
+  if (selectedSport === "golf" && player) {
+    return (
+      <GolfPlayerModal
+        player={player}
+        stat={golfStat}
+        slateId={golfSlateId}
+        onClose={() => setPlayer(null)}
+      />
+    );
+  }
+
+  return (
+    <PlayerModal
+      mode="view"
+      player={player}
+      onClose={() => setPlayer(null)}
+      playerAverageMap={playerAverageMap}
+      playerProjections={playerProjections}
+    />
+  );
+}
+
+=== PLAYERMODAL MODE LOGIC ===
+310-
+311-  const projectionConfidence = projectionMeta?.confidence ?? null;
+312-
+313-  const projectionSource =
+314-    projectionMeta?.source === "league"
+315-      ? "League data"
+316-      : projectionMeta?.source === "nbaSeasonAverage"
+317-        ? "NBA season average"
+318-        : "Fallback";
+319-
+320-  const nbaAverage = projectionMeta?.nbaSeasonAverage ?? null;
+321-
+322:  const isDraftMode = props.mode === "draft";
+323:  const ownerTeam = isDraftMode ? props.ownerTeam : null;
+324-
+325-  const isOnSlate =
+326:    isDraftMode && props.availablePlayerIdSet.has(currentPlayer.id);
+327-
+328:  const isBusy = isDraftMode && (props.isAssigningPlayer || props.isSaving);
+329-
+330-  const isLoading =
+331:    isProfileLoading || (isDraftMode && props.isExternalLoading === true);
+332-
+333-  function renderHeader() {
+334-    return (
+335-      <header className="player-modal-header">
+336-        <button
+337-          type="button"
+338-          onClick={onClose}
+339-          className="player-modal-close"
+340-          aria-label="Close player profile"
+341-        >
+342-          ×
+343-        </button>
+--
+348-              nbaPlayerId={currentPlayer.nba_player_id}
+349-              nflPlayerId={currentPlayer.nfl_player_id}
+350-              espnGolfPlayerId={currentPlayer.espn_player_id}
+351-              imageUrl={currentPlayer.headshot_url}
+352-              playerName={currentPlayer.name}
+353-              size="xl"
+354-              className="player-modal-headshot"
+355-            />
+356-          </div>
+357-
+358-          <div className="min-w-0">
+359-            <div className="player-modal-kicker">
+360:              {isDraftMode ? "Draft decision" : "Player profile"}
+361-            </div>
+362-
+363-            <h2>{currentPlayer.name}</h2>
+364-
+365-            <div className="player-modal-subtitle">
+366-              <span>{currentPlayer.position_group}</span>
+367-
+368-              {nbaAverage !== null ? (
+369-                <>
+370-                  <span aria-hidden="true">•</span>
+371-                  <span>Reg. Season {fmt(nbaAverage)}</span>
+372-                </>
+--
+402-                  {projectionBadges.includes("hot") ? " 🔥" : ""}
+403-                  {projectionBadges.includes("cold") ? " 🧊" : ""}
+404-                </strong>
+405-                <small>
+406-                  {projectionConfidence
+407-                    ? `${String(projectionConfidence).toUpperCase()} confidence`
+408-                    : projectionSource}
+409-                </small>
+410-              </>
+411-            )}
+412-          </div>
+413-
+414:          {isDraftMode ? (
+415-            <div className="player-modal-highlight">
+416-              <span>Status</span>
+417-
+418-              <strong>
+419-                {ownerTeam
+420-                  ? ownerTeam.name
+421-                  : isOnSlate
+422-                    ? "Available"
+423-                    : "Not playing"}
+424-              </strong>
+425-
+426-              <small>
+--
+429-                  : isOnSlate
+430-                    ? "Playing this slate"
+431-                    : "Not scheduled"}
+432-              </small>
+433-            </div>
+434-          ) : null}
+435-        </div>
+436-      </header>
+437-    );
+438-  }
+439-
+440-  function renderDraftActions() {
+441:    if (!isDraftMode) {
+442-      return null;
+443-    }
+444-
+445-    return (
+446-      <section className="player-modal-actions">
+447-        {props.targetDraftSlot ? (
+448-          <button
+449-            type="button"
+450-            disabled={isBusy}
+451-            onClick={() => {
+452-              if (!props.handleDraftToTargetSlot) {
+453-                return;
+--
+456-              void props.handleDraftToTargetSlot(currentPlayer);
+457-            }}
+458-            className="mb-4 flex w-full items-center justify-center rounded-2xl bg-emerald-600 px-5 py-4 text-base font-bold text-white shadow transition hover:bg-emerald-700 disabled:opacity-60"
+459-          >
+460-            {isBusy
+461-              ? "Drafting..."
+462-              : `Draft to ${props.targetDraftSlot.positionGroup} Slot`}
+463-          </button>
+464-        ) : null}
+465-
+466-        <div className="player-modal-actions-heading">
+467-          <div>
+468:            <span>Roster action</span>
+469-
+470-            <strong>
+471-              {ownerTeam ? `Currently on ${ownerTeam.name}` : "Choose a lineup"}
+472-            </strong>
+473-          </div>
+474-
+475-          {ownerTeam ? (
+476-            <button
+477-              type="button"
+478-              onClick={() =>
+479-                void props.handleRemovePlayerFromTeam(currentPlayer)
+480-              }
+--
+926-            <div className="player-modal-empty">
+927-              Player history could not be loaded.
+928-            </div>
+929-          ) : isGolf ? (
+930-            <div className="space-y-5">
+931-              <section>
+932-                <div className="player-modal-section-heading">
+933-                  <div>
+934-                    <div className="player-modal-section-kicker">
+935-                      Golfer details
+936-                    </div>
+937-
+938:                    <h3>Golf Profile</h3>
+939-                  </div>
+940-                </div>
+941-
+942-                <div className="player-modal-resume">
+943-                  <div>
+944-                    <span>OWGR</span>
+945-                    <strong>
+946-                      {currentPlayer.owgr_rank
+947-                        ? `#${currentPlayer.owgr_rank}`
+948-                        : "—"}
+949-                    </strong>
+950-                  </div>
+
+=== GIT STATUS ===
+ M components/lineups/LineupBuilder.tsx
+?? app/admin/slates/page.tsx.before-field-waiting-fix
+?? app/admin/slates/page.tsx.before-pga-field-button-final
+?? app/admin/slates/page.tsx.before-pga-field-fallback-final
+?? app/admin/slates/page.tsx.before-pga-field-import-button
+?? app/api/espn-golf-proxy/route.ts.before-espn-user-agent-20260811-085011
+?? app/api/golf-standings/route.ts.before-r4-final-state
+?? app/api/player-league-profile/route.ts.before-final-profile-cleanup
+?? app/api/refresh-stats-golf/route.ts.before-final-round-settlement
+?? app/globals.css.before-final-research-polish
+?? app/globals.css.before-final-unified-season-card
+?? app/page.tsx.bak-golf-auto-refresh
+?? app/player-history/page.tsx.bak-final-research-ui
+?? app/player-history/page.tsx.bak-nfl-ui-cleanup
+?? app/player-history/page.tsx.before-draft-integration
+?? app/player-history/page.tsx.before-final-history-unification
+?? app/player-history/page.tsx.before-final-profile-cleanup
+?? app/player-history/page.tsx.before-final-research-polish
+?? app/player-history/page.tsx.before-season-defaults
+?? app/player-history/page.tsx.before-season-sort-rewrite
+?? app/player-history/page.tsx.before-sport-switch-sort-fix
+?? app/player-history/page.tsx.before-unified-card-final
+?? app/profile/page.tsx.before-tournament-trophies
+?? app/slates/new/page.tsx.before-golf-field-waiting-fix
+?? berger-provider-collector.txt
+?? berger-raw-espn.json
+?? compare-more-menu-collector.txt
+?? components/lineups/GolfGreen3D.tsx.before-visual-v1
+?? components/lineups/GolfHoleMap2D.tsx.bak-shotcast-layout
+?? components/lineups/GolfHoleMap2D.tsx.bak-tourcast-terrain
+?? components/lineups/GolfHoleMap2D.tsx.before-3d-green
+?? components/lineups/GolfHoleMap2D.tsx.before-3d-shot-markers
+?? components/lineups/GolfHoleMap2D.tsx.before-3d-wiring-fix
+?? components/lineups/GolfHoleMap2D.tsx.before-desktop-video-layout
+?? components/lineups/GolfHoleMap2D.tsx.before-full-hole-playback
+?? components/lineups/GolfHoleMap2D.tsx.before-green-arrival-trail
+?? components/lineups/GolfHoleMap2D.tsx.before-green-polish
+?? components/lineups/GolfHoleMap2D.tsx.before-mobile-overlay-pacing
+?? components/lineups/GolfHoleMap2D.tsx.before-mobile-shot-overlay
+?? components/lineups/GolfHoleMap2D.tsx.before-mobile-video-overlay
+?? components/lineups/GolfHoleMap2D.tsx.before-native-pga-coordinates
+?? components/lineups/GolfHoleMap2D.tsx.before-native-world-coordinates
+?? components/lineups/GolfHoleMap2D.tsx.before-pga-tfw-transform
+?? components/lineups/GolfHoleMap2D.tsx.before-production-3d-strip
+?? components/lineups/GolfHoleMap2D.tsx.before-radar-data
+?? components/lineups/GolfHoleMap2D.tsx.before-real-green-view
+?? components/lineups/GolfHoleMap2D.tsx.before-real-tracking
+?? components/lineups/GolfHoleMap2D.tsx.before-real-video-player
+?? components/lineups/GolfHoleMap2D.tsx.before-remove-map-hint
+?? components/lineups/GolfHoleMap2D.tsx.before-reset-fix
+?? components/lineups/GolfHoleMap2D.tsx.before-shot-navigator-v2
+?? components/lineups/GolfHoleMap2D.tsx.before-shot-timeline
+?? components/lineups/GolfHoleMap2D.tsx.before-shotcast-awesome-phase1
+?? components/lineups/GolfHoleMap2D.tsx.before-tourcast-tfw-final
+?? components/lineups/GolfHoleReplayPanel.tsx.bak-shotcast-unified
+?? components/lineups/GolfHoleReplayPanel.tsx.bak-tourcast-terrain
+?? components/lineups/GolfHoleReplayPanel.tsx.before-3d-green
+?? components/lineups/GolfHoleReplayPanel.tsx.before-albatross-cut-milestones
+?? components/lineups/GolfHoleReplayPanel.tsx.before-production-3d-strip
+?? components/lineups/GolfHoleReplayPanel.tsx.before-radar-data
+?? components/lineups/GolfHoleReplayPanel.tsx.before-real-green-view
+?? components/lineups/GolfHoleReplayPanel.tsx.before-real-tracking
+?? components/lineups/GolfHoleReplayPanel.tsx.before-shotcast-awesome-phase1
+?? components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-tfw-final
+?? components/lineups/GolfHoleReplayPanel.tsx.before-tourcast-v3
+?? components/lineups/GolfTournamentView.tsx.before-albatross-cut-milestones
+?? components/lineups/LeagueLineupCards.tsx.bak-league-profile
+?? components/lineups/LeagueLineupCards.tsx.bak-league-research-profile
+?? components/lineups/LineupBuilder.tsx.bak-golf-auto-refresh
+?? components/lineups/LineupBuilder.tsx.bak-league-research-profile
+?? components/lineups/LineupBuilder.tsx.bak-own-lineup-modal
+?? components/lineups/LineupBuilder.tsx.before-shared-slot-browser
+?? components/lineups/LineupBuilder.tsx.before-slot-research-cards
+?? components/lineups/PlayerPool.tsx.bak-final-research-ui
+?? components/lineups/PlayerPool.tsx.bak-nfl-ui-cleanup
+?? components/lineups/PlayerPool.tsx.before-draft-league-history-final
+?? components/lineups/PlayerPool.tsx.before-final-research-polish
+?? components/lineups/PlayerPool.tsx.before-golf-draft-integration
+?? components/lineups/PlayerPool.tsx.before-league-history-cards
+?? components/lineups/PlayerPool.tsx.before-nfl-qb-aware-compare
+?? components/lineups/PlayerPool.tsx.before-owgr-season-sort
+?? components/lineups/PlayerPool.tsx.before-season-defaults
+?? components/lineups/PlayerPool.tsx.before-shared-slot-browser
+?? components/lineups/PlayerPool.tsx.before-slot-compare-bar-position
+?? components/lineups/PlayerPool.tsx.before-unified-season-card-layout
+?? components/lineups/PlayerResearchModal.tsx.before-date-range-fix
+?? components/lineups/PlayerResearchModal.tsx.before-final-profile-cleanup
+?? components/lineups/PlayerResearchModal.tsx.before-shared-slot-browser
+?? components/lineups/SlotDraftModal.tsx.before-compare-position-fix
+?? components/lineups/SlotDraftModal.tsx.before-final-ui-unification
+?? components/lineups/SlotDraftModal.tsx.before-nav-scroll-fix
+?? components/lineups/SlotDraftModal.tsx.before-research-cards
+?? components/lineups/SlotDraftModal.tsx.before-shared-slot-browser
+?? components/lineups/SlotDraftModal.tsx.before-slot-compare-bar-position
+?? components/lineups/SlotDraftModal.tsx.before-sort-floating-compare
+?? components/profile/TrophyCase.tsx.before-albatross-cut-milestones
+?? components/profile/TrophyCase.tsx.before-tournament-trophies
+?? draft-slot-player-cards-current.txt
+?? final-player-research-unification.txt
+?? final-research-ui-last-pass.txt
+?? final-research-ui-polish-collector.txt
+?? golf-albatross-cut-milestone-collector.txt
+?? golf-compare-current-collector.txt
+?? golf-cut-final-fresh-collector.txt
+?? golf-cut-final-ties-collector.txt
+?? golf-cutline-status-collector.txt
+?? golf-cutline-ui.txt
+?? golf-draft-final-integration-collector.txt
+?? golf-edge-proxy-fix-collector.txt
+?? golf-final-notification-collector.txt
+?? golf-home-final-state-collector.txt
+?? golf-live-refresh-followup.txt
+?? golf-player-history-current-collector.txt
+?? golf-refresh-refactor-collector.zip
+?? golf-scorecard-sync-collector.txt
+?? golf-season-stats-next-collector.txt
+?? golf-standings-history-collector.txt
+?? golf-standings-teamstats-scorecard-collector.txt
+?? golf-status-helper.txt
+?? golf-status-pipeline-collector.txt
+?? league-lineup-cards-current.txt
+?? league-lineups-player-modal-current.txt
+?? lib/profile/golfTeamProfile.ts.before-albatross-cut-milestones
+?? lib/profile/golfTeamProfile.ts.before-tournament-trophies
+?? lib/providers/golf.ts.before-production-proxy-url-20260811-083737
+?? lib/providers/pgaTourShots.ts.before-native-world-coordinates
+?? lib/providers/pgaTourShots.ts.before-radar-data
+?? lib/providers/pgaTourShots.ts.before-real-green-view
+?? lib/providers/pgaTourShots.ts.before-real-tracking
+?? lib/providers/pgaTourShots.ts.before-shot-dedupe
+?? lib/providers/pgaTourShots.ts.before-shotcast-awesome-phase1
+?? lib/providers/pgaTourShots.ts.before-tourcast-v3
+?? lib/shotcast/importShotCastManifest.ts.bak-tourcast-request-headers
+?? lib/shotcast/importShotCastManifest.ts.bak-tourcast-terrain
+?? lib/shotcast/importShotCastManifest.ts.before-tourcast-tfw-final
+?? lib/slateCompleteNotifications.ts.before-fix-sport-order
+?? lib/slateCompleteNotifications.ts.before-golf-score-format
+?? nfl-season-stats-next-collector.txt
+?? nfl-ui-cleanup-collector.txt
+?? player-history-card-final-collector.txt
+?? player-history-season-stats-collector.txt
+?? profile-final-cleanup-collector.txt
+?? scripts/check-nba-season-stats.mjs
+?? scripts/count-golf-season-stats.mjs
+?? scripts/import-golf-season-stats.mjs.before-partial-data-fix
+?? scripts/import-nba-season-averages.js.before-boxscore-stats
+?? scripts/probe-espn-golf-season-stats.mjs
+?? season-stats-data-source-collector.txt
+?? season-stats-draft-next-collector.txt
+?? shared-player-browser-refactor-current.txt
+?? shotcast-asset-access-probe.txt
+?? shotcast-calibration-current.txt
+?? shotcast-course-asset-path-probe.txt
+?? shotcast-current-collector.txt
+?? shotcast-final-three-files.txt
+?? shotcast-full-tournament-id-current.txt
+?? shotcast-golf-engine-loader-probe.txt
+?? shotcast-live-hole-followup.txt
+?? shotcast-loading-loop-collector.txt
+?? shotcast-range-engine-probe.txt
+?? shotcast-tfw-debug-current.txt
+?? shotcast-video-current.txt
+?? shotcast-wyndham-terrain-assets.txt
+?? tmp-berger.json
+?? tmp/collectors/
+?? tmp/draft-league-history-followup.txt
+?? tmp/golf-live-refresh-current.zip
+?? tmp/golf-trophies-current.zip
+?? tmp/pre-ship-shotcast-refresh-audit.txt
+?? tmp/shotcast-live-refresh-video-layout-collector.txt
+?? tmp/shotcast-mobile-overlay-current.tsx
+
+=== GIT DIFF — RELEVANT FILES ===
+diff --git a/components/lineups/LineupBuilder.tsx b/components/lineups/LineupBuilder.tsx
+index f4b35ae..842e665 100644
+--- a/components/lineups/LineupBuilder.tsx
++++ b/components/lineups/LineupBuilder.tsx
+@@ -1802,7 +1802,7 @@ export default function LineupBuilder({
+               }
+               rosterSlots={rosterSlots}
+               isLocked={Boolean(selectedSlate?.is_locked)}
+-              setDraftingPlayer={setDraftingPlayer}
++              setDraftingPlayer={setLeagueResearchPlayer}
+               setTargetDraftSlot={setTargetDraftSlot}
+             />
+           ) : (

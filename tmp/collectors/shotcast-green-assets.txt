@@ -1,0 +1,232 @@
+◇ injected env (9) from .env.local // tip: ⌘ enable debugging { debug: true }
+TOURNAMENT: R2026013
+PGA PLAYER: 57366
+GRAPHQL HTTP: 200
+
+=== ENHANCED PICKLE ===
+{
+  "__typename": "HolePickle",
+  "leftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_land.png",
+  "bottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_port.png",
+  "greenLeftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_land.png",
+  "greenBottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_port.png",
+  "leftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_full_5_land",
+    "assetType": "image"
+  },
+  "bottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_full_5_port",
+    "assetType": "image"
+  },
+  "greenLeftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_green_5_land",
+    "assetType": "image"
+  },
+  "greenBottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_green_5_port",
+    "assetType": "image"
+  }
+}
+
+=== OTHER HOLE IMAGE FIELDS ===
+green: true
+teeGreen: {
+  "__typename": "PointOfInterestCoords",
+  "leftToRightCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 8733.16,
+    "tourcastY": 7283.47,
+    "tourcastZ": 834.04,
+    "enhancedX": -4.644491479557845,
+    "enhancedY": 0.1675120869060771
+  },
+  "bottomToTopCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 8733.16,
+    "tourcastY": 7283.47,
+    "tourcastZ": 834.04,
+    "enhancedX": 0.3509519677676028,
+    "enhancedY": 5.780943872098484
+  }
+}
+pinGreen: {
+  "__typename": "PointOfInterestCoords",
+  "leftToRightCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 10285.38,
+    "tourcastY": 7321.16,
+    "tourcastZ": 806.69,
+    "enhancedX": 0.5486905389631025,
+    "enhancedY": 0.2971217481787539
+  },
+  "bottomToTopCoords": {
+    "__typename": "StrokeCoordinates",
+    "x": -1,
+    "y": -1,
+    "z": -1,
+    "tourcastX": 10285.38,
+    "tourcastY": 7321.16,
+    "tourcastZ": 806.69,
+    "enhancedX": 0.43634185035389,
+    "enhancedY": 0.4496201809166879
+  }
+}
+holePickleBottomToTop: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_5.jpg
+holePickleLeftToRight: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_5.jpg
+holePickleGreenBottomToTop: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_5.jpg
+holePickleGreenLeftToRight: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_5.jpg
+holePickleBottomToTopAsset: {
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_full_5",
+  "assetType": "image"
+}
+holePickleLeftToRightAsset: {
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_full_5",
+  "assetType": "image"
+}
+holePickleGreenBottomToTopAsset: {
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_green_5",
+  "assetType": "image"
+}
+holePickleGreenLeftToRightAsset: {
+  "__typename": "ImageAsset",
+  "imageOrg": "pga-tour",
+  "imagePath": "/holes_2026_r_013_752_overhead_green_5",
+  "assetType": "image"
+}
+enhancedPickle: {
+  "__typename": "HolePickle",
+  "leftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_land.png",
+  "bottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_port.png",
+  "greenLeftToRight": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_land.png",
+  "greenBottomToTop": "https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_port.png",
+  "leftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_full_5_land",
+    "assetType": "image"
+  },
+  "bottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_full_5_port",
+    "assetType": "image"
+  },
+  "greenLeftToRightAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_green_5_land",
+    "assetType": "image"
+  },
+  "greenBottomToTopAsset": {
+    "__typename": "ImageAsset",
+    "imageOrg": "pga-tour",
+    "imagePath": "/tourcastPickle/holes_2026_r_013_752_overhead_green_5_port",
+    "assetType": "image"
+  }
+}
+
+=== RECURSIVE GREEN / IMAGE URL SEARCH ===
+hole.teeGreen.__typename: PointOfInterestCoords
+hole.teeGreen.leftToRightCoords.__typename: StrokeCoordinates
+hole.teeGreen.bottomToTopCoords.__typename: StrokeCoordinates
+hole.pinGreen.__typename: PointOfInterestCoords
+hole.pinGreen.leftToRightCoords.__typename: StrokeCoordinates
+hole.pinGreen.bottomToTopCoords.__typename: StrokeCoordinates
+hole.holePickleBottomToTop: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_full_5.jpg
+hole.holePickleLeftToRight: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_full_5.jpg
+hole.holePickleGreenBottomToTop: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,a_270,w_750,q_auto/holes_2026_r_013_752_overhead_green_5.jpg
+hole.holePickleGreenLeftToRight: https://pga-tour-res.cloudinary.com/image/upload/c_fill,b_rgb:ffffff,w_1500,q_auto/holes_2026_r_013_752_overhead_green_5.jpg
+hole.holePickleBottomToTopAsset.__typename: ImageAsset
+hole.holePickleBottomToTopAsset.imageOrg: pga-tour
+hole.holePickleBottomToTopAsset.imagePath: /holes_2026_r_013_752_overhead_full_5
+hole.holePickleBottomToTopAsset.assetType: image
+hole.holePickleLeftToRightAsset.__typename: ImageAsset
+hole.holePickleLeftToRightAsset.imageOrg: pga-tour
+hole.holePickleLeftToRightAsset.imagePath: /holes_2026_r_013_752_overhead_full_5
+hole.holePickleLeftToRightAsset.assetType: image
+hole.holePickleGreenBottomToTopAsset.__typename: ImageAsset
+hole.holePickleGreenBottomToTopAsset.imageOrg: pga-tour
+hole.holePickleGreenBottomToTopAsset.imagePath: /holes_2026_r_013_752_overhead_green_5
+hole.holePickleGreenBottomToTopAsset.assetType: image
+hole.holePickleGreenLeftToRightAsset.__typename: ImageAsset
+hole.holePickleGreenLeftToRightAsset.imageOrg: pga-tour
+hole.holePickleGreenLeftToRightAsset.imagePath: /holes_2026_r_013_752_overhead_green_5
+hole.holePickleGreenLeftToRightAsset.assetType: image
+hole.strokes[0].green.__typename: ShotLinkCoordWrapper
+hole.strokes[0].green.leftToRightCoords.__typename: ShotLinkCoordinates
+hole.strokes[0].green.leftToRightCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[0].green.leftToRightCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[0].green.bottomToTopCoords.__typename: ShotLinkCoordinates
+hole.strokes[0].green.bottomToTopCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[0].green.bottomToTopCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[1].green.__typename: ShotLinkCoordWrapper
+hole.strokes[1].green.leftToRightCoords.__typename: ShotLinkCoordinates
+hole.strokes[1].green.leftToRightCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[1].green.leftToRightCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[1].green.bottomToTopCoords.__typename: ShotLinkCoordinates
+hole.strokes[1].green.bottomToTopCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[1].green.bottomToTopCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[1].playByPlay: 172 yds to right green, 28 ft 3 in. to hole
+hole.strokes[1].toLocation: Right Green
+hole.strokes[2].green.__typename: ShotLinkCoordWrapper
+hole.strokes[2].green.leftToRightCoords.__typename: ShotLinkCoordinates
+hole.strokes[2].green.leftToRightCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[2].green.leftToRightCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[2].green.bottomToTopCoords.__typename: ShotLinkCoordinates
+hole.strokes[2].green.bottomToTopCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[2].green.bottomToTopCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[2].toLocation: Left Green
+hole.strokes[2].fromLocation: Green
+hole.strokes[3].green.__typename: ShotLinkCoordWrapper
+hole.strokes[3].green.leftToRightCoords.__typename: ShotLinkCoordinates
+hole.strokes[3].green.leftToRightCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[3].green.leftToRightCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[3].green.bottomToTopCoords.__typename: ShotLinkCoordinates
+hole.strokes[3].green.bottomToTopCoords.fromCoords.__typename: StrokeCoordinates
+hole.strokes[3].green.bottomToTopCoords.toCoords.__typename: StrokeCoordinates
+hole.strokes[3].toLocation: Green
+hole.strokes[3].fromLocation: Green
+hole.enhancedPickle.__typename: HolePickle
+hole.enhancedPickle.leftToRight: https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_land.png
+hole.enhancedPickle.bottomToTop: https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_full_5_port.png
+hole.enhancedPickle.greenLeftToRight: https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_1500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_land.png
+hole.enhancedPickle.greenBottomToTop: https://pga-tour-res.cloudinary.com/c_fill,b_rgb:ffffff,w_500,f_auto,q_auto/tourcastPickle/holes_2026_r_013_752_overhead_green_5_port.png
+hole.enhancedPickle.leftToRightAsset.__typename: ImageAsset
+hole.enhancedPickle.leftToRightAsset.imageOrg: pga-tour
+hole.enhancedPickle.leftToRightAsset.imagePath: /tourcastPickle/holes_2026_r_013_752_overhead_full_5_land
+hole.enhancedPickle.leftToRightAsset.assetType: image
+hole.enhancedPickle.bottomToTopAsset.__typename: ImageAsset
+hole.enhancedPickle.bottomToTopAsset.imageOrg: pga-tour
+hole.enhancedPickle.bottomToTopAsset.imagePath: /tourcastPickle/holes_2026_r_013_752_overhead_full_5_port
+hole.enhancedPickle.bottomToTopAsset.assetType: image
+hole.enhancedPickle.greenLeftToRightAsset.__typename: ImageAsset
+hole.enhancedPickle.greenLeftToRightAsset.imageOrg: pga-tour
+hole.enhancedPickle.greenLeftToRightAsset.imagePath: /tourcastPickle/holes_2026_r_013_752_overhead_green_5_land
+hole.enhancedPickle.greenLeftToRightAsset.assetType: image
+hole.enhancedPickle.greenBottomToTopAsset.__typename: ImageAsset
+hole.enhancedPickle.greenBottomToTopAsset.imageOrg: pga-tour
+hole.enhancedPickle.greenBottomToTopAsset.imagePath: /tourcastPickle/holes_2026_r_013_752_overhead_green_5_port
+hole.enhancedPickle.greenBottomToTopAsset.assetType: image

@@ -140,6 +140,25 @@ function AppNavContent() {
 
   const isAdmin = currentUser?.role === "admin";
 
+  const isNcaaPickEm =
+    selectedSport === "ncaa" ||
+    pathname.startsWith("/ncaa-pickem");
+
+  const displayedMainLinks = isNcaaPickEm
+    ? [
+        {
+          href: "/ncaa-pickem",
+          label: "Home",
+          icon: "⌂",
+        },
+        {
+          href: "/ncaa-pickem/standings",
+          label: "Standings",
+          icon: "▦",
+        },
+      ]
+    : mainLinks;
+
   const sportScopedPaths = [
     "/",
     "/profile",
@@ -168,6 +187,21 @@ function AppNavContent() {
 
   function handleSelectSport(sportKey: string) {
     setSelectedSport(sportKey);
+
+    /*
+     * NCAA Pick 'Em is an independent mini-game rather than a
+     * fantasy slate mode. Enter and leave its dedicated routes
+     * explicitly instead of pushing NCAA through Draft/Scores.
+     */
+    if (sportKey === "ncaa") {
+      router.push("/ncaa-pickem");
+      return;
+    }
+
+    if (pathname.startsWith("/ncaa-pickem")) {
+      router.push(appendSportParam("/", sportKey));
+      return;
+    }
 
     if (sportScopedPaths.includes(pathname)) {
       router.push(appendSportParam(pathname, sportKey));
@@ -309,10 +343,10 @@ function AppNavContent() {
   function mobileLinkClass(href: string) {
     const active = isLinkActive(href);
 
-    return `app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium ${
+    return `app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium transition ${
       active
-        ? "app-mobile-nav-active bg-sky-100 text-sky-900"
-        : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+        ? "app-mobile-nav-active bg-slate-800 text-sky-300 ring-1 ring-sky-500/20"
+        : "app-mobile-nav-idle text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"
     }`;
   }
 
@@ -328,32 +362,54 @@ function AppNavContent() {
           [data-floating-compare="true"] {
           display: none !important;
         }
+
+        .app-mobile-bottom-nav .app-mobile-nav-active {
+          background: rgba(30, 41, 59, 0.96) !important;
+          color: rgb(125, 211, 252) !important;
+          box-shadow:
+            inset 0 0 0 1px rgba(56, 189, 248, 0.22) !important;
+        }
+
+        .app-mobile-bottom-nav .app-mobile-nav-active::after {
+          background: rgb(56, 189, 248) !important;
+        }
       `}</style>
 
       {/* Desktop nav only */}
       <nav className="app-desktop-nav mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            {mainLinks.map((link) => (
+            {displayedMainLinks.map((link) => (
               <Link
                 key={link.href}
-                href={getLinkHref(link.href)}
+                href={
+                  isNcaaPickEm
+                    ? link.href
+                    : getLinkHref(link.href)
+                }
                 className={desktopLinkClass(link.href)}
               >
                 {link.label}
               </Link>
             ))}
 
-            <Link href="/standings" className={desktopLinkClass("/standings")}>
-              Standings
-            </Link>
+            {!isNcaaPickEm ? (
+              <>
+                <Link
+                  href="/standings"
+                  className={desktopLinkClass("/standings")}
+                >
+                  Standings
+                </Link>
 
-            <Link
-              href="/player-history"
-              className={desktopLinkClass("/player-history")}
-            >
-              Player History
-            </Link>
+                <Link
+                  href="/player-history"
+                  className={desktopLinkClass("/player-history")}
+                >
+                  Player History
+                </Link>
+              </>
+            ) : null}
           </div>
 
           <div className="flex items-center gap-3">
@@ -593,7 +649,7 @@ function AppNavContent() {
         ref={mobileMoreRef}
         className="app-mobile-bottom-nav fixed bottom-[-42px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[42px] pt-1 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
       >
-        {mobileMoreOpen ? (
+        {!isNcaaPickEm && mobileMoreOpen ? (
           <div className="app-dropdown-panel absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
             {mobileMoreLinks.map((link) => (
               <Link
@@ -621,11 +677,19 @@ function AppNavContent() {
           </div>
         ) : null}
 
-        <div className="mx-auto grid max-w-xl grid-cols-4 gap-1">
-          {mainLinks.map((link) => (
+        <div
+          className={`mx-auto grid max-w-xl gap-1 ${
+            isNcaaPickEm ? "grid-cols-2" : "grid-cols-4"
+          }`}
+        >
+          {displayedMainLinks.map((link) => (
             <Link
               key={link.href}
-              href={getLinkHref(link.href)}
+              href={
+                isNcaaPickEm
+                  ? link.href
+                  : getLinkHref(link.href)
+              }
               className={mobileLinkClass(link.href)}
             >
               <span className="text-lg leading-none">{link.icon}</span>
@@ -633,18 +697,20 @@ function AppNavContent() {
             </Link>
           ))}
 
-          <button
-            type="button"
-            onClick={() => setMobileMoreOpen((open) => !open)}
-            className={`app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium ${
-              moreIsActive
-                ? "app-mobile-nav-active bg-sky-100 text-sky-900"
-                : "app-mobile-nav-idle text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-            }`}
-          >
-            <span className="text-lg leading-none">⋯</span>
-            <span>More</span>
-          </button>
+          {!isNcaaPickEm ? (
+            <button
+              type="button"
+              onClick={() => setMobileMoreOpen((open) => !open)}
+              className={`app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium transition ${
+                moreIsActive
+                  ? "app-mobile-nav-active bg-slate-800 text-sky-300 ring-1 ring-sky-500/20"
+                  : "app-mobile-nav-idle text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"
+              }`}
+            >
+              <span className="text-lg leading-none">⋯</span>
+              <span>More</span>
+            </button>
+          ) : null}
         </div>
       </div>
     </>

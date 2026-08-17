@@ -1,0 +1,14 @@
+============================================================
+PGA INTROSPECTION V2
+============================================================
+Generated: 2026-08-13T18:37:15.720Z
+Endpoint: "https://orchestrator.pgatour.com/graphql"
+Endpoint length: 40
+
+=== REQUEST ===
+
+PROBE FAILED
+TypeError: Failed to parse URL from https://orchestrator.pgatour.com/graphql
+    at node:internal/deps/undici/undici:14976:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async main ([stdin]:68:20)

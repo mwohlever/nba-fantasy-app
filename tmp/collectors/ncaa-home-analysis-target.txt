@@ -1,0 +1,1141 @@
+===== NCAA HOME =====
+"use client";
+
+import AppNav from "@/components/AppNav";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import {
+  useSelectedSport,
+} from "@/components/providers/SportProvider";
+
+type PickEmWeek = {
+  id: number;
+  season: number;
+  week_number: number;
+  label: string;
+  lock_at: string | null;
+  status:
+    | "open"
+    | "locked"
+    | "final";
+};
+
+type PickEmGame = {
+  id: number;
+  espn_event_id: string;
+  kickoff_at: string;
+
+  away_team_id: string;
+  away_team_name: string;
+  away_team_abbreviation:
+    string | null;
+  away_team_logo_url:
+    string | null;
+  away_rank: number | null;
+  away_record: string | null;
+  away_score: number | null;
+  away_stats:
+    Record<string, unknown>;
+
+  home_team_id: string;
+  home_team_name: string;
+  home_team_abbreviation:
+    string | null;
+  home_team_logo_url:
+    string | null;
+  home_rank: number | null;
+  home_record: string | null;
+  home_score: number | null;
+  home_stats:
+    Record<string, unknown>;
+
+  status: string;
+  status_detail: string | null;
+  winner_team_id:
+    string | null;
+};
+
+type Participant = {
+  teamId: number;
+  name: string;
+  avatarUrl: string | null;
+};
+
+type GroupPick = {
+  game_id: number;
+  team_id: number;
+  picked_team_id: string;
+  is_correct:
+    boolean | null;
+};
+
+type WeekResponse = {
+  success: boolean;
+
+  viewer?: {
+    teamId: number;
+    displayName: string;
+    avatarUrl: string | null;
+  };
+
+  participants:
+    Participant[];
+
+  weeks: PickEmWeek[];
+  week: PickEmWeek | null;
+  games: PickEmGame[];
+
+  picks: Array<{
+    game_id: number;
+    picked_team_id: string;
+    is_correct?: boolean | null;
+  }>;
+
+  groupPicks:
+    GroupPick[];
+
+  locked: boolean;
+
+  error?: string;
+};
+
+function formatKickoff(
+  value: string,
+) {
+  return new Date(
+    value,
+  ).toLocaleString(
+    "en-US",
+    {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone:
+        "America/New_York",
+    },
+  );
+}
+
+function teamLabel(
+  rank: number | null,
+  name: string,
+) {
+  return rank
+    ? `#${rank} ${name}`
+    : name;
+}
+
+function gameStatus(
+  game: PickEmGame,
+) {
+  if (
+    game.status_detail
+  ) {
+    return game.status_detail;
+  }
+
+  if (
+    game.status === "post"
+  ) {
+    return "Final";
+  }
+
+  if (
+    game.status === "in"
+  ) {
+    return "Live";
+  }
+
+  return formatKickoff(
+    game.kickoff_at,
+  );
+}
+
+function avatarFallback(
+  name: string,
+) {
+  return (
+    name.trim()[0]?.toUpperCase() ??
+    "?"
+  );
+}
+
+export default function NcaaPickEmHome() {
+  const {
+    selectedSport,
+    setSelectedSport,
+  } = useSelectedSport();
+
+  const [data, setData] =
+    useState<WeekResponse | null>(
+      null,
+    );
+
+  const [
+    selections,
+    setSelections,
+  ] =
+    useState<
+      Record<number, string>
+    >({});
+
+  const [
+    expandedGameId,
+    setExpandedGameId,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    selectedSeason,
+    setSelectedSeason,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    selectedWeek,
+    setSelectedWeek,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
+    useState(true);
+
+  const [
+    isSaving,
+    setIsSaving,
+  ] =
+    useState(false);
+
+  const [
+    message,
+    setMessage,
+  ] =
+    useState("");
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  useEffect(() => {
+    if (
+      selectedSport !==
+      "ncaa"
+    ) {
+      setSelectedSport(
+        "ncaa",
+      );
+    }
+  }, [
+    selectedSport,
+    setSelectedSport,
+  ]);
+
+  async function loadWeek() {
+    try {
+      setIsLoading(true);
+      setError("");
+
+      const params =
+        new URLSearchParams();
+
+      if (
+        selectedSeason !==
+        null
+      ) {
+        params.set(
+          "season",
+          String(
+            selectedSeason,
+          ),
+        );
+      }
+
+      if (
+        selectedWeek !== null
+      ) {
+        params.set(
+          "week",
+          String(
+            selectedWeek,
+          ),
+        );
+      }
+
+      const suffix =
+        params.toString()
+          ? `?${params.toString()}`
+          : "";
+
+      const response =
+        await fetch(
+          `/api/ncaa-pickem/week${suffix}`,
+          {
+            cache:
+              "no-store",
+          },
+        );
+
+      const result =
+        (await response.json()) as WeekResponse;
+
+      if (!response.ok) {
+        setError(
+          result.error ||
+            "Failed to load NCAA Pick 'Em.",
+        );
+
+        setData(null);
+        return;
+      }
+
+      setData(result);
+
+      const saved:
+        Record<number, string> =
+        {};
+
+      for (
+        const pick
+        of result.picks ?? []
+      ) {
+        saved[
+          Number(
+            pick.game_id,
+          )
+        ] =
+          String(
+            pick.picked_team_id,
+          );
+      }
+
+      setSelections(
+        saved,
+      );
+
+      if (
+        selectedSeason ===
+          null &&
+        result.week
+      ) {
+        setSelectedSeason(
+          result.week.season,
+        );
+      }
+
+      if (
+        selectedWeek ===
+          null &&
+        result.week
+      ) {
+        setSelectedWeek(
+          result.week.week_number,
+        );
+      }
+    } catch (loadError) {
+      console.error(
+        loadError,
+      );
+
+      setError(
+        "Unable to load NCAA Pick 'Em.",
+      );
+
+      setData(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadWeek();
+  }, [
+    selectedSeason,
+    selectedWeek,
+  ]);
+
+  const seasons =
+    useMemo(
+      () =>
+        Array.from(
+          new Set(
+            (data?.weeks ??
+              []).map(
+              (week) =>
+                week.season,
+            ),
+          ),
+        ).sort(
+          (a, b) =>
+            b - a,
+        ),
+      [data?.weeks],
+    );
+
+  const weeksForSeason =
+    useMemo(
+      () =>
+        (data?.weeks ?? [])
+          .filter(
+            (week) =>
+              selectedSeason ===
+                null ||
+              week.season ===
+                selectedSeason,
+          )
+          .sort(
+            (a, b) =>
+              a.week_number -
+              b.week_number,
+          ),
+      [
+        data?.weeks,
+        selectedSeason,
+      ],
+    );
+
+  const participantById =
+    useMemo(
+      () =>
+        new Map(
+          (
+            data?.participants ??
+            []
+          ).map(
+            (participant) => [
+              participant.teamId,
+              participant,
+            ],
+          ),
+        ),
+      [data?.participants],
+    );
+
+  const allGamesPicked =
+    Boolean(
+      data?.games.length,
+    ) &&
+    data!.games.every(
+      (game) =>
+        Boolean(
+          selections[
+            game.id
+          ],
+        ),
+    );
+
+  function picksForTeam(
+    game: PickEmGame,
+    pickedTeamId: string,
+  ) {
+    if (!data?.locked) {
+      return [];
+    }
+
+    return (
+      data.groupPicks ??
+      []
+    )
+      .filter(
+        (pick) =>
+          pick.game_id ===
+            game.id &&
+          pick.picked_team_id ===
+            pickedTeamId,
+      )
+      .map(
+        (pick) =>
+          participantById.get(
+            pick.team_id,
+          ),
+      )
+      .filter(
+        (
+          participant,
+        ): participant is Participant =>
+          Boolean(
+            participant,
+          ),
+      );
+  }
+
+  async function savePicks() {
+    if (
+      !data?.week ||
+      data.locked ||
+      !allGamesPicked
+    ) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setMessage("");
+      setError("");
+
+      const response =
+        await fetch(
+          "/api/ncaa-pickem/picks",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                weekId:
+                  data.week.id,
+
+                picks:
+                  data.games.map(
+                    (game) => ({
+                      gameId:
+                        game.id,
+
+                      pickedTeamId:
+                        selections[
+                          game.id
+                        ],
+                    }),
+                  ),
+              }),
+          },
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        setError(
+          result.error ||
+            "Unable to save picks.",
+        );
+
+        return;
+      }
+
+      setMessage(
+        "✓ Picks saved.",
+      );
+
+      await loadWeek();
+    } catch (saveError) {
+      console.error(
+        saveError,
+      );
+
+      setError(
+        "Unable to save picks.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <AppNav />
+
+        <section className="overflow-hidden rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 shadow-xl">
+          <div className="border-b border-slate-700/80 px-5 py-6 sm:px-7">
+            <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
+              111 Sports
+            </div>
+
+            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
+                  NCAA Pick &apos;Em
+                </h1>
+
+                <p className="mt-2 max-w-2xl text-sm text-slate-300 sm:text-base">
+                  Pick the winner of every Top-25-vs-Top-25 matchup. The entire weekly card locks when the first eligible game kicks off.
+                </p>
+              </div>
+
+              {data?.week ? (
+                <div className="rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    Card status
+                  </div>
+
+                  <div className="mt-1 font-bold">
+                    {data.locked
+                      ? "🔒 Locked"
+                      : "🟢 Open"}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-3 px-5 py-4 sm:grid-cols-2 sm:px-7">
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Season
+              </span>
+
+              <select
+                value={
+                  selectedSeason ??
+                  ""
+                }
+                onChange={(
+                  event,
+                ) => {
+                  const value =
+                    Number(
+                      event.target
+                        .value,
+                    );
+
+                  setSelectedSeason(
+                    Number.isFinite(
+                      value,
+                    )
+                      ? value
+                      : null,
+                  );
+
+                  setSelectedWeek(
+                    null,
+                  );
+
+                  setMessage("");
+                }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100"
+              >
+                {seasons.length ===
+                0 ? (
+                  <option value="">
+                    No seasons yet
+                  </option>
+                ) : null}
+
+                {seasons.map(
+                  (season) => (
+                    <option
+                      key={season}
+                      value={season}
+                    >
+                      {season}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+
+            <label className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                Week
+              </span>
+
+              <select
+                value={
+                  selectedWeek ??
+                  ""
+                }
+                onChange={(
+                  event,
+                ) => {
+                  const value =
+                    Number(
+                      event.target
+                        .value,
+                    );
+
+                  setSelectedWeek(
+                    Number.isFinite(
+                      value,
+                    )
+                      ? value
+                      : null,
+                  );
+
+                  setMessage("");
+                }}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100"
+              >
+                {weeksForSeason.length ===
+                0 ? (
+                  <option value="">
+                    No weeks yet
+                  </option>
+                ) : null}
+
+                {weeksForSeason.map(
+                  (week) => (
+                    <option
+                      key={
+                        week.id
+                      }
+                      value={
+                        week.week_number
+                      }
+                    >
+                      {week.label}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+          </div>
+        </section>
+
+        {error ? (
+          <div className="rounded-2xl border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+            {error}
+          </div>
+        ) : null}
+
+        {message ? (
+          <div className="rounded-2xl border border-emerald-500/40 bg-emerald-950/30 px-4 py-3 text-sm font-semibold text-emerald-300">
+            {message}
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-400">
+            Loading NCAA Pick &apos;Em…
+          </section>
+        ) : null}
+
+        {!isLoading &&
+        !error &&
+        !data?.week ? (
+          <section className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center">
+            <div className="text-4xl">
+              🏈
+            </div>
+
+            <h2 className="mt-3 text-xl font-bold">
+              NCAA Pick &apos;Em is ready
+            </h2>
+
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
+              No weekly games have been imported yet.
+            </p>
+          </section>
+        ) : null}
+
+        {!isLoading &&
+        data?.week ? (
+          <>
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">
+                    {data.week.season}
+                  </div>
+
+                  <h2 className="mt-1 text-2xl font-black">
+                    {data.week.label}
+                  </h2>
+                </div>
+
+                {data.week.lock_at ? (
+                  <div className="text-sm text-slate-400">
+                    {data.locked
+                      ? "Locked "
+                      : "Locks "}
+
+                    {formatKickoff(
+                      data.week
+                        .lock_at,
+                    )}
+                  </div>
+                ) : null}
+              </div>
+
+              {data.games.length ===
+              0 ? (
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 text-sm text-slate-400">
+                  No eligible Top 25 matchups are loaded for this week.
+                </div>
+              ) : null}
+
+              {data.games.map(
+                (game) => {
+                  const awayPicked =
+                    selections[
+                      game.id
+                    ] ===
+                    String(
+                      game.away_team_id,
+                    );
+
+                  const homePicked =
+                    selections[
+                      game.id
+                    ] ===
+                    String(
+                      game.home_team_id,
+                    );
+
+                  const awayPeople =
+                    picksForTeam(
+                      game,
+                      String(
+                        game.away_team_id,
+                      ),
+                    );
+
+                  const homePeople =
+                    picksForTeam(
+                      game,
+                      String(
+                        game.home_team_id,
+                      ),
+                    );
+
+                  const expanded =
+                    expandedGameId ===
+                    game.id;
+
+                  return (
+                    <article
+                      key={
+                        game.id
+                      }
+                      className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                          {gameStatus(
+                            game,
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedGameId(
+                              expanded
+                                ? null
+                                : game.id,
+                            )
+                          }
+                          className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                        >
+                          {expanded
+                            ? "▴"
+                            : "▾"}
+                        </button>
+                      </div>
+
+                      <div className="grid gap-2 p-4 sm:grid-cols-2">
+                        {[
+                          {
+                            side:
+                              "away",
+
+                            id:
+                              String(
+                                game.away_team_id,
+                              ),
+
+                            name:
+                              game.away_team_name,
+
+                            logo:
+                              game.away_team_logo_url,
+
+                            rank:
+                              game.away_rank,
+
+                            record:
+                              game.away_record,
+
+                            score:
+                              game.away_score,
+
+                            selected:
+                              awayPicked,
+
+                            people:
+                              awayPeople,
+                          },
+
+                          {
+                            side:
+                              "home",
+
+                            id:
+                              String(
+                                game.home_team_id,
+                              ),
+
+                            name:
+                              game.home_team_name,
+
+                            logo:
+                              game.home_team_logo_url,
+
+                            rank:
+                              game.home_rank,
+
+                            record:
+                              game.home_record,
+
+                            score:
+                              game.home_score,
+
+                            selected:
+                              homePicked,
+
+                            people:
+                              homePeople,
+                          },
+                        ].map(
+                          (
+                            team,
+                          ) => (
+                            <label
+                              key={
+                                team.id
+                              }
+                              className={`relative flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition ${
+                                team.selected
+                                  ? "border-blue-400 bg-blue-950/50 ring-1 ring-blue-400/30"
+                                  : "border-slate-700 bg-slate-950/70 hover:border-slate-600"
+                              } ${
+                                data.locked
+                                  ? "cursor-default"
+                                  : ""
+                              }`}
+                            >
+                              <input
+                                type="radio"
+                                name={`game-${game.id}`}
+                                value={
+                                  team.id
+                                }
+                                checked={
+                                  team.selected
+                                }
+                                disabled={
+                                  data.locked
+                                }
+                                onChange={() => {
+                                  if (
+                                    data.locked
+                                  ) {
+                                    return;
+                                  }
+
+                                  setSelections(
+                                    (
+                                      current,
+                                    ) => ({
+                                      ...current,
+                                      [
+                                        game.id
+                                      ]:
+                                        team.id,
+                                    }),
+                                  );
+
+                                  setMessage(
+                                    "",
+                                  );
+                                }}
+                                className="h-4 w-4 shrink-0 accent-sky-400"
+                              />
+
+                              {team.logo ? (
+                                <img
+                                  src={
+                                    team.logo
+                                  }
+                                  alt=""
+                                  className="h-10 w-10 shrink-0 object-contain"
+                                />
+                              ) : (
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-black text-slate-400">
+                                  {team.name[0]}
+                                </div>
+                              )}
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="truncate font-bold">
+                                    {teamLabel(
+                                      team.rank,
+                                      team.name,
+                                    )}
+                                  </div>
+
+                                  {team.score !==
+                                  null ? (
+                                    <div className="ml-auto text-xl font-black">
+                                      {
+                                        team.score
+                                      }
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <div className="mt-1 text-xs text-slate-500">
+                                  {team.side ===
+                                  "away"
+                                    ? "Away"
+                                    : "Home"}
+
+                                  {team.record
+                                    ? ` · ${team.record}`
+                                    : ""}
+                                </div>
+
+                                {data.locked ? (
+                                  <div className="mt-3 flex flex-wrap gap-1.5">
+                                    {team.people.length >
+                                    0 ? (
+                                      team.people.map(
+                                        (
+                                          participant,
+                                        ) => (
+                                          <span
+                                            key={
+                                              participant.teamId
+                                            }
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] font-semibold text-slate-300"
+                                          >
+                                            {participant.avatarUrl ? (
+                                              <img
+                                                src={
+                                                  participant.avatarUrl
+                                                }
+                                                alt=""
+                                                className="h-5 w-5 rounded-full object-cover"
+                                              />
+                                            ) : (
+                                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[10px]">
+                                                {avatarFallback(
+                                                  participant.name,
+                                                )}
+                                              </span>
+                                            )}
+
+                                            {
+                                              participant.name
+                                            }
+                                          </span>
+                                        ),
+                                      )
+                                    ) : (
+                                      <span className="text-[11px] text-slate-600">
+                                        No picks
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            </label>
+                          ),
+                        )}
+                      </div>
+
+                      {expanded ? (
+                        <div className="border-t border-slate-800 bg-slate-950/50 px-4 py-4">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                {teamLabel(
+                                  game.away_rank,
+                                  game.away_team_name,
+                                )}
+                              </div>
+
+                              <div className="mt-2 text-sm text-slate-300">
+                                Record:{" "}
+                                <strong>
+                                  {game.away_record ??
+                                    "—"}
+                                </strong>
+                              </div>
+                            </div>
+
+                            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                                {teamLabel(
+                                  game.home_rank,
+                                  game.home_team_name,
+                                )}
+                              </div>
+
+                              <div className="mt-2 text-sm text-slate-300">
+                                Record:{" "}
+                                <strong>
+                                  {game.home_record ??
+                                    "—"}
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 text-xs text-slate-500">
+                            Passing, rushing, scoring and defensive averages will populate here once the team-stat feed is connected.
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                },
+              )}
+            </section>
+
+            {data.games.length >
+            0 ? (
+              <div className="sticky bottom-16 z-20 rounded-2xl border border-slate-700 bg-slate-900/95 p-3 shadow-2xl backdrop-blur sm:static">
+                {data.locked ? (
+                  <div className="text-center text-sm font-semibold text-slate-400">
+                    🔒 Picks are locked. Everyone&apos;s selections are now visible.
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={
+                      !allGamesPicked ||
+                      isSaving
+                    }
+                    onClick={() =>
+                      void savePicks()
+                    }
+                    className="w-full rounded-xl bg-blue-600 px-5 py-3 font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {isSaving
+                      ? "Saving…"
+                      : allGamesPicked
+                        ? "Save Picks"
+                        : `Pick all ${data.games.length} game${data.games.length === 1 ? "" : "s"} to save`}
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+    </main>
+  );
+}

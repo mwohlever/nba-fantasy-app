@@ -7,6 +7,7 @@ type PreferencesBody = {
   draftTurnEnabled?: boolean;
   playerFinishedEnabled?: boolean;
   slateFinalEnabled?: boolean;
+  pickemReminderEnabled?: boolean;
 };
 
 const defaultPreferences = {
@@ -14,6 +15,7 @@ const defaultPreferences = {
   draft_turn_enabled: true,
   player_finished_enabled: true,
   slate_final_enabled: false,
+  pickem_reminder_enabled: true,
 };
 
 function formatPreferences(row: {
@@ -21,12 +23,14 @@ function formatPreferences(row: {
   draft_turn_enabled: boolean;
   player_finished_enabled: boolean;
   slate_final_enabled: boolean;
+  pickem_reminder_enabled: boolean;
 }) {
   return {
     notificationsEnabled: row.notifications_enabled,
     draftTurnEnabled: row.draft_turn_enabled,
     playerFinishedEnabled: row.player_finished_enabled,
     slateFinalEnabled: row.slate_final_enabled,
+    pickemReminderEnabled: row.pickem_reminder_enabled,
   };
 }
 
@@ -44,7 +48,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("notification_preferences")
       .select(
-        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -70,7 +74,7 @@ export async function GET() {
         ...defaultPreferences,
       })
       .select(
-        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
       )
       .single();
 
@@ -129,6 +133,10 @@ export async function PATCH(request: Request) {
         typeof body.slateFinalEnabled === "boolean"
           ? body.slateFinalEnabled
           : defaultPreferences.slate_final_enabled,
+      pickem_reminder_enabled:
+        typeof body.pickemReminderEnabled === "boolean"
+          ? body.pickemReminderEnabled
+          : defaultPreferences.pickem_reminder_enabled,
       updated_at: new Date().toISOString(),
     };
 
@@ -144,7 +152,7 @@ export async function PATCH(request: Request) {
         }
       )
       .select(
-        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled"
+        "notifications_enabled, draft_turn_enabled, player_finished_enabled, slate_final_enabled, pickem_reminder_enabled"
       )
       .single();
 

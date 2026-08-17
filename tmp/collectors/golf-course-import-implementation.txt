@@ -1,0 +1,2101 @@
+============================================================
+GOLF PRE-TOURNAMENT COURSE IMPORT IMPLEMENTATION
+============================================================
+
+=== PGA TOUR FIELD PROVIDER ===
+import "server-only";
+
+const PGA_TOUR_SCHEDULE_URL =
+  "https://data-api.pgatour.com/schedule/R";
+
+const DEFAULT_PGA_API_KEY =
+  "da2-gsrx5bibzbb4njvhl7t37wqyl4";
+
+type UnknownRecord = Record<string, unknown>;
+
+type ScheduleTournament = {
+  tournamentId?: string | null;
+  name?: string | null;
+};
+
+type RawFieldPlayer = {
+  id?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  shortName?: string | null;
+  displayName?: string | null;
+  country?: string | null;
+  countryFlag?: string | null;
+  headshot?: string | null;
+  qualifier?: string | null;
+  alternate?: boolean | null;
+  withdrawn?: boolean | null;
+  status?: string | null;
+  amateur?: boolean | null;
+  owgr?: string | number | null;
+  rankingPoints?: string | number | null;
+};
+
+export type PgaTourFieldPlayer = {
+  pgaPlayerId: string;
+  displayName: string;
+  shortName: string;
+  firstName: string | null;
+  lastName: string | null;
+  country: string | null;
+  countryCode: string | null;
+  headshotUrl: string | null;
+  qualifier: string | null;
+  isAlternate: boolean;
+  isWithdrawn: boolean;
+  isAmateur: boolean;
+  status: string | null;
+  owgrRank: number | null;
+  rankingPoints: number | null;
+};
+
+export type PgaTourField = {
+  tournamentId: string;
+  tournamentName: string;
+  year: string;
+  fieldUrl: string;
+  players: PgaTourFieldPlayer[];
+};
+
+function requestHeaders() {
+  return {
+    Accept: "application/json, text/html",
+    "x-api-key":
+      process.env.PGA_TOUR_API_KEY?.trim() ||
+      DEFAULT_PGA_API_KEY,
+    "x-pgat-platform": "web",
+    Origin: "https://www.pgatour.com",
+    Referer: "https://www.pgatour.com/",
+    "User-Agent": "111 Sports",
+  };
+}
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function slugify(value: string) {
+  return normalizeName(value)
+    .replace(/\s+/g, "-");
+}
+
+function numberOrNull(value: unknown) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : null;
+}
+
+function isRecord(
+  value: unknown,
+): value is UnknownRecord {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value)
+  );
+}
+
+function resolveHeadshot(
+  value: string | null | undefined,
+) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  return trimmed
+    .replaceAll("${HEIGHT}", "160")
+    .replaceAll("${WIDTH}", "160");
+}
+
+function displayNameForPlayer(
+  player: RawFieldPlayer,
+) {
+  const firstName =
+    player.firstName?.trim() ?? "";
+
+  const lastName =
+    player.lastName?.trim() ?? "";
+
+  const naturalName =
+    `${firstName} ${lastName}`.trim();
+
+  if (naturalName) {
+    return naturalName;
+  }
+
+  const supplied =
+    player.displayName?.trim() ?? "";
+
+  /*
+   * PGA's field response often uses "Last, First".
+   */
+  if (supplied.includes(",")) {
+    const [last, first] =
+      supplied.split(",").map(
+        (part) => part.trim(),
+      );
+
+    return `${first ?? ""} ${last ?? ""}`.trim();
+  }
+
+  return supplied;
+}
+
+function findFieldPlayerArray(
+  value: unknown,
+): RawFieldPlayer[] | null {
+  if (Array.isArray(value)) {
+    const playerRows =
+      value.filter(
+        (row): row is RawFieldPlayer =>
+          isRecord(row) &&
+          typeof row.id === "string" &&
+          (
+            typeof row.firstName === "string" ||
+            typeof row.lastName === "string"
+          ) &&
+          (
+            "qualifier" in row ||
+            "alternate" in row ||
+            "withdrawn" in row
+          ),
+      );
+
+    if (
+      value.length >= 20 &&
+      playerRows.length >=
+        Math.floor(value.length * 0.8)
+    ) {
+      return playerRows;
+    }
+
+    for (const child of value) {
+      const found =
+        findFieldPlayerArray(child);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  if (isRecord(value)) {
+    for (const child of Object.values(value)) {
+      const found =
+        findFieldPlayerArray(child);
+
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function fetchText(
+  url: string,
+  context: string,
+) {
+  const controller =
+    new AbortController();
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    25_000,
+  );
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: requestHeaders(),
+      signal: controller.signal,
+      cache: "no-store",
+      redirect: "follow",
+    });
+
+    const text =
+      await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `${context} failed (${response.status}): ` +
+          text.slice(0, 300),
+      );
+    }
+
+    return text;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function findTournament(
+  year: string,
+  tournamentName: string,
+) {
+  const scheduleText =
+    await fetchText(
+      `${PGA_TOUR_SCHEDULE_URL}/${year}`,
+      `PGA TOUR ${year} schedule`,
+    );
+
+  const schedule =
+    JSON.parse(scheduleText) as {
+      tournaments?: ScheduleTournament[];
+    };
+
+  const tournaments =
+    Array.isArray(schedule.tournaments)
+      ? schedule.tournaments
+      : [];
+
+  const normalizedTarget =
+    normalizeName(tournamentName);
+
+  const exact =
+    tournaments.find(
+      (row) =>
+        typeof row.name === "string" &&
+        normalizeName(row.name) ===
+          normalizedTarget,
+    ) ?? null;
+
+  if (exact) {
+    return exact;
+  }
+
+  return (
+    tournaments.find((row) => {
+      if (
+        typeof row.name !== "string"
+      ) {
+        return false;
+      }
+
+      const normalized =
+        normalizeName(row.name);
+
+      return (
+        normalized.includes(
+          normalizedTarget,
+        ) ||
+        normalizedTarget.includes(
+          normalized,
+        )
+      );
+    }) ?? null
+  );
+}
+
+export async function fetchPgaTourField(
+  input: {
+    year: string;
+    tournamentName: string;
+  },
+): Promise<PgaTourField> {
+  const tournament =
+    await findTournament(
+      input.year,
+      input.tournamentName,
+    );
+
+  const tournamentId =
+    tournament?.tournamentId?.trim();
+
+  const tournamentName =
+    tournament?.name?.trim();
+
+  if (
+    !tournamentId ||
+    !tournamentName
+  ) {
+    throw new Error(
+      `Could not match "${input.tournamentName}" ` +
+        `to the PGA TOUR ${input.year} schedule.`,
+    );
+  }
+
+  const fieldUrl =
+    `https://www.pgatour.com/tournaments/` +
+    `${input.year}/` +
+    `${slugify(tournamentName)}/` +
+    `${tournamentId}/field`;
+
+  const html =
+    await fetchText(
+      fieldUrl,
+      `${tournamentName} field page`,
+    );
+
+  const nextDataMatch =
+    html.match(
+      /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/,
+    );
+
+  if (!nextDataMatch?.[1]) {
+    throw new Error(
+      `${tournamentName} did not include __NEXT_DATA__.`,
+    );
+  }
+
+  const nextData =
+    JSON.parse(nextDataMatch[1]) as unknown;
+
+  const rawPlayers =
+    findFieldPlayerArray(nextData);
+
+  if (
+    !rawPlayers ||
+    rawPlayers.length === 0
+  ) {
+    throw new Error(
+      `${tournamentName} field data could not be located.`,
+    );
+  }
+
+  const players =
+    rawPlayers
+      .map((player) => {
+        const pgaPlayerId =
+          player.id?.trim() ?? "";
+
+        const displayName =
+          displayNameForPlayer(player);
+
+        if (
+          !pgaPlayerId ||
+          !displayName
+        ) {
+          return null;
+        }
+
+        return {
+          pgaPlayerId,
+          displayName,
+          shortName:
+            player.shortName?.trim() ||
+            displayName,
+          firstName:
+            player.firstName?.trim() ||
+            null,
+          lastName:
+            player.lastName?.trim() ||
+            null,
+          country:
+            player.country?.trim() ||
+            null,
+          countryCode:
+            player.countryFlag?.trim() ||
+            null,
+          headshotUrl:
+            resolveHeadshot(
+              player.headshot,
+            ),
+          qualifier:
+            player.qualifier?.trim() ||
+            null,
+          isAlternate:
+            Boolean(player.alternate),
+          isWithdrawn:
+            Boolean(player.withdrawn),
+          isAmateur:
+            Boolean(player.amateur),
+          status:
+            player.status?.trim() ||
+            null,
+          owgrRank:
+            numberOrNull(player.owgr),
+          rankingPoints:
+            numberOrNull(
+              player.rankingPoints,
+            ),
+        } satisfies PgaTourFieldPlayer;
+      })
+      .filter(
+        (
+          player,
+        ): player is PgaTourFieldPlayer =>
+          player !== null,
+      );
+
+  /*
+   * Only the confirmed field belongs in the draft pool.
+   * PGA provides alternates separately, but this also protects
+   * us if they ever appear inside the main array.
+   */
+  const confirmedPlayers =
+    players.filter(
+      (player) =>
+        !player.isAlternate &&
+        !player.isWithdrawn &&
+        player.status !== "OUT",
+    );
+
+  return {
+    tournamentId,
+    tournamentName,
+    year: input.year,
+    fieldUrl,
+    players: confirmedPlayers,
+  };
+}
+
+=== PGA TOUR FIELD IMPORT ROUTE ===
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+import {
+  fetchPgaTourField,
+  type PgaTourFieldPlayer,
+} from "@/lib/providers/pgaTourField";
+
+type RequestBody = {
+  slateId?: number | string;
+};
+
+type SlateRow = {
+  id: number;
+  sport: string;
+  display_name: string | null;
+  start_date: string;
+  external_event_id: string | null;
+  is_locked: boolean;
+};
+
+type ExistingGolfPlayer = {
+  id: number;
+  display_name: string;
+  espn_player_id: string;
+};
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function parseSlateId(
+  value: unknown,
+) {
+  const parsed = Number(value);
+
+  return Number.isInteger(parsed) &&
+    parsed > 0
+    ? parsed
+    : null;
+}
+
+function countryFlagUrl(
+  countryCode: string | null,
+) {
+  const normalized =
+    countryCode
+      ?.trim()
+      .toLowerCase();
+
+  if (
+    !normalized ||
+    normalized.length !== 3
+  ) {
+    return null;
+  }
+
+  /*
+   * Existing PGA/ESPN refreshes will replace this later
+   * with their authoritative flag URL.
+   */
+  return null;
+}
+
+async function authorize(
+  request: NextRequest,
+) {
+  const configuredSecret =
+    process.env.GOLF_CRON_SECRET?.trim();
+
+  const supplied =
+    request.headers
+      .get("authorization")
+      ?.replace(/^Bearer\s+/i, "")
+      .trim();
+
+  if (
+    configuredSecret &&
+    supplied === configuredSecret
+  ) {
+    return null;
+  }
+
+  return requireAdminApi();
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  const authError =
+    await authorize(request);
+
+  if (authError) {
+    return authError;
+  }
+
+  try {
+    let body: RequestBody;
+
+    try {
+      body =
+        (await request.json()) as RequestBody;
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            "A valid JSON request body is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const slateId =
+      parseSlateId(body.slateId);
+
+    if (!slateId) {
+      return NextResponse.json(
+        {
+          error:
+            "A valid slateId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: slateData,
+      error: slateError,
+    } = await supabaseAdmin
+      .from("slates")
+      .select(
+        [
+          "id",
+          "sport",
+          "display_name",
+          "start_date",
+          "external_event_id",
+          "is_locked",
+        ].join(","),
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (
+      slateError ||
+      !slateData
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            slateError?.message ||
+            "Slate not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const slate =
+      slateData as unknown as SlateRow;
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "This endpoint only imports Golf fields.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (slate.is_locked) {
+      return NextResponse.json(
+        {
+          error:
+            "This slate is locked.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const tournamentName =
+      slate.display_name?.trim();
+
+    const year =
+      slate.start_date?.slice(0, 4);
+
+    if (
+      !tournamentName ||
+      !/^\d{4}$/.test(year)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The slate needs a tournament name and valid start date.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const field =
+      await fetchPgaTourField({
+        year,
+        tournamentName,
+      });
+
+    const {
+      data: existingData,
+      error: existingError,
+    } = await supabaseAdmin
+      .from("golf_players")
+      .select(
+        "id, display_name, espn_player_id",
+      );
+
+    if (existingError) {
+      return NextResponse.json(
+        {
+          error:
+            "The PGA field was downloaded, but existing golfers could not be loaded: " +
+            existingError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    const existingPlayers =
+      (existingData ?? []) as unknown as ExistingGolfPlayer[];
+
+    const existingByName =
+      new Map<
+        string,
+        ExistingGolfPlayer[]
+      >();
+
+    for (
+      const player of existingPlayers
+    ) {
+      const key =
+        normalizeName(
+          player.display_name,
+        );
+
+      const matches =
+        existingByName.get(key) ?? [];
+
+      matches.push(player);
+      existingByName.set(
+        key,
+        matches,
+      );
+    }
+
+    const refreshedAt =
+      new Date().toISOString();
+
+    const resolvedPlayerIds =
+      new Map<string, number>();
+
+    const ambiguousPlayers: Array<{
+      pgaPlayerId: string;
+      displayName: string;
+      databaseMatches: number[];
+    }> = [];
+
+    const missingPlayers: PgaTourFieldPlayer[] =
+      [];
+
+    for (
+      const fieldPlayer of field.players
+    ) {
+      const possibleMatches =
+        existingByName.get(
+          normalizeName(
+            fieldPlayer.displayName,
+          ),
+        ) ?? [];
+
+      if (
+        possibleMatches.length === 1
+      ) {
+        resolvedPlayerIds.set(
+          fieldPlayer.pgaPlayerId,
+          Number(
+            possibleMatches[0].id,
+          ),
+        );
+      } else if (
+        possibleMatches.length > 1
+      ) {
+        ambiguousPlayers.push({
+          pgaPlayerId:
+            fieldPlayer.pgaPlayerId,
+          displayName:
+            fieldPlayer.displayName,
+          databaseMatches:
+            possibleMatches.map(
+              (player) =>
+                Number(player.id),
+            ),
+        });
+      } else {
+        missingPlayers.push(
+          fieldPlayer,
+        );
+      }
+    }
+
+    if (
+      ambiguousPlayers.length > 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "The field contains golfer names that match multiple database records.",
+          ambiguousPlayers,
+        },
+        { status: 409 },
+      );
+    }
+
+    let createdGolfers = 0;
+
+    if (
+      missingPlayers.length > 0
+    ) {
+      const newRows =
+        missingPlayers.map(
+          (player) => ({
+            /*
+             * ESPN IDs are mandatory in the existing schema.
+             * This stable placeholder is reconciled to the real
+             * ESPN ID by refresh-stats-golf once ESPN publishes
+             * the tournament competitor feed.
+             */
+            espn_player_id:
+              `pga:${player.pgaPlayerId}`,
+            display_name:
+              player.displayName,
+            short_name:
+              player.shortName,
+            country:
+              player.country,
+            country_flag_url:
+              countryFlagUrl(
+                player.countryCode,
+              ),
+            player_url:
+              `https://www.pgatour.com/player/` +
+              `${player.pgaPlayerId}`,
+            headshot_url:
+              player.headshotUrl,
+            owgr_player_id:
+              player.pgaPlayerId,
+            owgr_rank:
+              player.owgrRank,
+            owgr_points:
+              player.rankingPoints,
+            owgr_updated_at:
+              refreshedAt,
+            is_active: true,
+            updated_at:
+              refreshedAt,
+          }),
+        );
+
+      const {
+        data: insertedData,
+        error: insertedError,
+      } = await supabaseAdmin
+        .from("golf_players")
+        .upsert(newRows, {
+          onConflict:
+            "espn_player_id",
+        })
+        .select(
+          "id, espn_player_id",
+        );
+
+      if (insertedError) {
+        return NextResponse.json(
+          {
+            error:
+              "Missing PGA field golfers could not be created: " +
+              insertedError.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const inserted =
+        (insertedData ??
+          []) as unknown as Array<{
+          id: number;
+          espn_player_id: string;
+        }>;
+
+      createdGolfers =
+        inserted.length;
+
+      for (
+        const player of inserted
+      ) {
+        const pgaPlayerId =
+          player.espn_player_id.replace(
+            /^pga:/,
+            "",
+          );
+
+        resolvedPlayerIds.set(
+          pgaPlayerId,
+          Number(player.id),
+        );
+      }
+    }
+
+    const unresolved =
+      field.players.filter(
+        (player) =>
+          !resolvedPlayerIds.has(
+            player.pgaPlayerId,
+          ),
+      );
+
+    if (unresolved.length > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Some PGA field golfers could not be resolved to database IDs.",
+          unresolvedPlayers:
+            unresolved.map(
+              (player) => ({
+                pgaPlayerId:
+                  player.pgaPlayerId,
+                displayName:
+                  player.displayName,
+              }),
+            ),
+        },
+        { status: 500 },
+      );
+    }
+
+    const eventRows =
+      field.players.map(
+        (player, index) => ({
+          slate_id: slateId,
+          player_id:
+            resolvedPlayerIds.get(
+              player.pgaPlayerId,
+            )!,
+          leaderboard_order:
+            index + 1,
+          official_score_to_par:
+            null,
+          official_score_display:
+            null,
+          penalty_strokes: 0,
+          fantasy_score: null,
+          rounds_completed: 0,
+          holes_completed: 0,
+          current_round: null,
+          last_hole: null,
+          status: "scheduled",
+          tee_time: null,
+          tee_time_raw: null,
+          updated_at:
+            refreshedAt,
+        }),
+      );
+
+    const {
+      data: eventData,
+      error: eventError,
+    } = await supabaseAdmin
+      .from("golf_event_players")
+      .upsert(eventRows, {
+        onConflict:
+          "slate_id,player_id",
+      })
+      .select("id");
+
+    if (eventError) {
+      return NextResponse.json(
+        {
+          error:
+            "The golfers were saved, but the slate field could not be populated: " +
+            eventError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      slateId,
+      tournament: {
+        pgaTournamentId:
+          field.tournamentId,
+        name:
+          field.tournamentName,
+        fieldUrl:
+          field.fieldUrl,
+      },
+      fieldPlayersFound:
+        field.players.length,
+      existingGolfersMatched:
+        field.players.length -
+        missingPlayers.length,
+      createdGolfers,
+      eventPlayersUpserted:
+        eventData?.length ??
+        eventRows.length,
+      importedAt:
+        refreshedAt,
+      preview:
+        field.players
+          .slice(0, 10)
+          .map((player) => ({
+            pgaPlayerId:
+              player.pgaPlayerId,
+            displayName:
+              player.displayName,
+            owgrRank:
+              player.owgrRank,
+            qualifier:
+              player.qualifier,
+          })),
+    });
+  } catch (error) {
+    console.error(
+      "PGA TOUR field import failed:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected PGA TOUR field import error.",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+=== SLATE CREATE ROUTE ===
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { requireAdminApi } from "@/lib/requireAdminApi";
+
+function isoDateFromGameCode(gameCode: string | null | undefined) {
+  const raw = String(gameCode ?? "").slice(0, 8);
+  if (!/^\d{8}$/.test(raw)) return null;
+  return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+}
+
+async function autoAttachNbaGamesToSlate(slateId: number) {
+  try {
+    const response = await fetch(
+      "https://cdn.nba.com/static/json/liveData/scoreboard/todaysScoreboard_00.json",
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) return;
+
+    const payload = await response.json();
+    const games = payload?.scoreboard?.games ?? [];
+
+    const rows = games
+      .filter((game: any) => game?.gameId)
+      .map((game: any) => ({
+        slate_id: slateId,
+        game_date: isoDateFromGameCode(game.gameCode),
+        game_id: String(game.gameId),
+        game_code: game.gameCode ?? null,
+        note: `${game.awayTeam?.teamTricode ?? ""} at ${game.homeTeam?.teamTricode ?? ""}`.trim(),
+      }));
+
+    if (rows.length === 0) return;
+
+    await supabaseAdmin
+      .from("slate_nba_games")
+      .upsert(rows, { onConflict: "slate_id,game_id" });
+  } catch (error) {
+    console.error("Auto attach NBA games failed:", error);
+  }
+}
+
+
+function normalizeNbaTeamCode(value: string | null | undefined) {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (code === "NY") return "NYK";
+  return code;
+}
+
+
+
+type TeamRow = { id: number; name: string };
+
+type TeamSlateResultRow = {
+  team_id: number;
+  fantasy_points: number | null;
+  finish_position: number | null;
+};
+
+type TeamConfigInput = {
+  team_id: number;
+  draft_order: number;
+  is_participating: boolean;
+};
+
+type ScoreboardV3Team = {
+  teamTricode?: string;
+  tricode?: string;
+  teamCode?: string;
+};
+
+type ScoreboardV3Game = {
+  homeTeam?: ScoreboardV3Team;
+  awayTeam?: ScoreboardV3Team;
+  gameTimeUTC?: string;
+};
+
+type ScoreboardV3Payload = {
+  scoreboard?: { games?: ScoreboardV3Game[] };
+  games?: ScoreboardV3Game[];
+};
+
+type EspnCompetition = {
+  date?: string;
+  competitors?: Array<{
+    team?: {
+      abbreviation?: string;
+    };
+  }>;
+};
+
+type EspnEvent = {
+  date?: string;
+  competitions?: EspnCompetition[];
+};
+
+type EspnScoreboardPayload = {
+  events?: EspnEvent[];
+};
+
+const MANUAL_TEAM_CODE_FALLBACKS: Record<string, string[]> = {
+  "2026-04-24": ["LAL", "HOU", "BOS", "PHI", "SAS", "POR"],
+};
+
+function normalizeTeamConfigs(
+  rawConfigs: TeamConfigInput[],
+  allTeams: TeamRow[],
+  suggestedOrderIds: number[]
+) {
+  const rawMap = new Map<number, TeamConfigInput>();
+
+  rawConfigs.forEach((config) => {
+    rawMap.set(Number(config.team_id), {
+      team_id: Number(config.team_id),
+      draft_order: Number(config.draft_order),
+      is_participating: Boolean(config.is_participating),
+    });
+  });
+
+  const allTeamIds = allTeams.map((team) => team.id);
+
+  const participating = allTeamIds.filter(
+    (teamId) => rawMap.get(teamId)?.is_participating ?? true
+  );
+
+  const notParticipating = allTeamIds.filter(
+    (teamId) => !(rawMap.get(teamId)?.is_participating ?? true)
+  );
+
+  const suggestedRank = new Map<number, number>();
+  suggestedOrderIds.forEach((teamId, index) => suggestedRank.set(teamId, index));
+
+  const sortBySuggestedOrder = (a: number, b: number) => {
+    const aRank = suggestedRank.get(a) ?? Number.MAX_SAFE_INTEGER;
+    const bRank = suggestedRank.get(b) ?? Number.MAX_SAFE_INTEGER;
+
+    if (aRank !== bRank) return aRank - bRank;
+
+    const aName = allTeams.find((team) => team.id === a)?.name ?? "";
+    const bName = allTeams.find((team) => team.id === b)?.name ?? "";
+    return aName.localeCompare(bName);
+  };
+
+  participating.sort(sortBySuggestedOrder);
+  notParticipating.sort(sortBySuggestedOrder);
+
+  return [...participating, ...notParticipating].map((teamId, index) => ({
+    team_id: teamId,
+    draft_order: index + 1,
+    is_participating: participating.includes(teamId),
+  }));
+}
+
+function buildDateRange(startDate: string, endDate: string) {
+  const result: string[] = [];
+  const current = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (current <= end) {
+    const year = current.getFullYear();
+    const month = String(current.getMonth() + 1).padStart(2, "0");
+    const day = String(current.getDate()).padStart(2, "0");
+    result.push(`${year}-${month}-${day}`);
+    current.setDate(current.getDate() + 1);
+  }
+
+  return result;
+}
+
+function formatForNbaStats(gameDateIso: string) {
+  const [year, month, day] = gameDateIso.split("-");
+  return `${month}/${day}/${year}`;
+}
+
+function formatForEspn(gameDateIso: string) {
+  return gameDateIso.replaceAll("-", "");
+}
+
+function normalizeTeamCode(raw: string | null) {
+  if (!raw) return null;
+
+  const code = raw.trim().toUpperCase();
+  if (!code) return null;
+
+  const aliasMap: Record<string, string> = {
+  PHO: "PHX",
+  BRK: "BKN",
+  UTH: "UTA",
+  GS: "GSW",
+  SA: "SAS",
+  NO: "NOP",
+
+  // 🔥 FIX: Knicks normalization
+  NY: "NYK",
+};
+
+  return aliasMap[code] ?? code;
+}
+
+function getGamesFromPayload(payload: ScoreboardV3Payload) {
+  return payload.scoreboard?.games ?? payload.games ?? [];
+}
+
+function getTeamTricode(team?: ScoreboardV3Team) {
+  const raw = team?.teamTricode ?? team?.tricode ?? team?.teamCode ?? null;
+  return normalizeTeamCode(typeof raw === "string" ? raw : null);
+}
+
+async function fetchScoreboardForDate(gameDateIso: string) {
+  const formattedDate = formatForNbaStats(gameDateIso);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+
+  try {
+    const url = `https://stats.nba.com/stats/scoreboardv3?GameDate=${encodeURIComponent(
+      formattedDate
+    )}&LeagueID=00`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        Connection: "keep-alive",
+        Origin: "https://www.nba.com",
+        Referer: "https://www.nba.com/",
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `NBA scoreboard request failed for ${formattedDate} with status ${response.status}`
+      );
+    }
+
+    return (await response.json()) as ScoreboardV3Payload;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchEspnScoreboardForDate(gameDateIso: string) {
+  const espnDate = formatForEspn(gameDateIso);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+
+  try {
+    const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${espnDate}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `ESPN scoreboard request failed for ${espnDate} with status ${response.status}`
+      );
+    }
+
+    return (await response.json()) as EspnScoreboardPayload;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function getNbaTeamsAndFirstGameTimeForDate(date: string) {
+  const teamSet = new Set<string>();
+  let firstGameStartTime: string | null = null;
+  let source: "nba-stats" | "espn" | "manual" | "empty" = "empty";
+
+  try {
+    const payload = await fetchScoreboardForDate(date);
+    const games = getGamesFromPayload(payload);
+
+    for (const game of games) {
+      const homeCode = getTeamTricode(game.homeTeam);
+      const awayCode = getTeamTricode(game.awayTeam);
+
+      if (homeCode) teamSet.add(homeCode);
+      if (awayCode) teamSet.add(awayCode);
+
+      if (game.gameTimeUTC) {
+        if (!firstGameStartTime || game.gameTimeUTC < firstGameStartTime) {
+          firstGameStartTime = game.gameTimeUTC;
+        }
+      }
+    }
+
+    if (teamSet.size > 0) {
+      source = "nba-stats";
+      return { teamCodes: Array.from(teamSet), firstGameStartTime, source };
+    }
+  } catch (error) {
+    console.error(`NBA Stats scoreboard failed for ${date}:`, error);
+  }
+
+  try {
+    const payload = await fetchEspnScoreboardForDate(date);
+    const events = payload.events ?? [];
+
+    for (const event of events) {
+      const competitions = event.competitions ?? [];
+
+      for (const competition of competitions) {
+        const competitors = competition.competitors ?? [];
+
+        for (const competitor of competitors) {
+          const code = normalizeTeamCode(competitor.team?.abbreviation ?? null);
+          if (code) teamSet.add(code);
+        }
+
+        const gameDate = competition.date ?? event.date;
+        if (gameDate) {
+          if (!firstGameStartTime || gameDate < firstGameStartTime) {
+            firstGameStartTime = gameDate;
+          }
+        }
+      }
+    }
+
+    if (teamSet.size > 0) {
+      source = "espn";
+      return { teamCodes: Array.from(teamSet), firstGameStartTime, source };
+    }
+  } catch (error) {
+    console.error(`ESPN scoreboard failed for ${date}:`, error);
+  }
+
+  const manualFallback = MANUAL_TEAM_CODE_FALLBACKS[date] ?? [];
+  if (manualFallback.length > 0) {
+    source = "manual";
+    return {
+      teamCodes: manualFallback,
+      firstGameStartTime,
+      source,
+    };
+  }
+
+  return {
+    teamCodes: [],
+    firstGameStartTime,
+    source,
+  };
+}
+
+async function getMostRecentCompletedSlateSetup(
+  sport: "nba" | "nfl" | "golf"
+) {
+  const { data: slates, error: slatesError } = await supabaseAdmin
+    .from("slates")
+    .select(
+      "id, start_date, end_date, date, display_name, sport"
+    )
+    .eq("sport", sport)
+    .order("start_date", { ascending: false })
+    .order("end_date", { ascending: false });
+
+  if (slatesError) throw new Error(slatesError.message);
+
+  for (const slate of slates ?? []) {
+    const { data: results, error: resultsError } = await supabaseAdmin
+      .from("team_slate_results")
+      .select("team_id, fantasy_points, finish_position")
+      .eq("slate_id", slate.id);
+
+    if (resultsError) throw new Error(resultsError.message);
+
+    const safeResults = (results ?? []) as TeamSlateResultRow[];
+    const hasRealResults = safeResults.some(
+      (row) =>
+        row.finish_position !== null &&
+        row.finish_position !== undefined &&
+        (row.fantasy_points ?? 0) > 0
+    );
+
+    if (hasRealResults) {
+      return { slate, results: safeResults };
+    }
+  }
+
+  return { slate: null, results: [] as TeamSlateResultRow[] };
+}
+
+function buildSuggestedOrderIds(results: TeamSlateResultRow[], safeTeams: TeamRow[]) {
+  const rankedTeams = [...results]
+    .filter(
+      (row) =>
+        row.finish_position !== null &&
+        row.finish_position !== undefined &&
+        (row.fantasy_points ?? 0) > 0
+    )
+    .sort((a, b) => {
+      const aFinish = a.finish_position ?? Number.MAX_SAFE_INTEGER;
+      const bFinish = b.finish_position ?? Number.MAX_SAFE_INTEGER;
+
+      if (aFinish !== bFinish) return aFinish - bFinish;
+
+      return (b.fantasy_points ?? 0) - (a.fantasy_points ?? 0);
+    });
+
+  const inverseOrderIds = rankedTeams.map((row) => row.team_id).reverse();
+
+  const teamsMissingFromSlate = safeTeams
+    .filter((team) => !inverseOrderIds.includes(team.id))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((team) => team.id);
+
+  return [...inverseOrderIds, ...teamsMissingFromSlate];
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const sportParam = searchParams.get("sport");
+
+    const sport: "nba" | "nfl" | "golf" =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
+    const { data: teams, error: teamsError } = await supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .order("name", { ascending: true });
+
+    if (teamsError) {
+      return NextResponse.json(
+        { error: `Failed to load teams: ${teamsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const safeTeams = (teams ?? []) as TeamRow[];
+    const previousCompleted =
+      await getMostRecentCompletedSlateSetup(sport);
+
+    const suggestedOrderIds = buildSuggestedOrderIds(
+      previousCompleted.results,
+      safeTeams
+    );
+
+    const suggestedTeamConfigs = normalizeTeamConfigs(
+      safeTeams.map((team) => ({
+        team_id: team.id,
+        draft_order: 0,
+        is_participating: true,
+      })),
+      safeTeams,
+      suggestedOrderIds
+    );
+
+    return NextResponse.json({
+      success: true,
+      sport,
+      teams: safeTeams,
+      latestSlate: previousCompleted.slate,
+      previousCompletedSlate: previousCompleted.slate,
+      suggestedTeamConfigs,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while loading slate setup." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const authError = await requireAdminApi();
+  if (authError) return authError;
+
+  try {
+    const body = await request.json();
+
+    const startDate = String(body?.startDate ?? "").trim();
+    const endDate = String(body?.endDate ?? "").trim();
+
+    const sport: "nba" | "nfl" | "golf" =
+      body?.sport === "nfl"
+        ? "nfl"
+        : body?.sport === "golf"
+          ? "golf"
+          : "nba";
+
+    const displayName =
+      typeof body?.displayName === "string"
+        ? body.displayName.trim()
+        : "";
+
+    const externalEventId =
+      typeof body?.externalEventId === "string"
+        ? body.externalEventId.trim()
+        : "";
+
+    const rawCutPenalty = Number(body?.cutPenaltyPerRound);
+
+    const cutPenaltyPerRound =
+      sport === "golf" && Number.isInteger(rawCutPenalty)
+        ? rawCutPenalty
+        : null;
+
+    const teamConfigs = Array.isArray(body?.teamSelections)
+      ? body.teamSelections
+      : Array.isArray(body?.teamConfigs)
+        ? body.teamConfigs
+        : [];
+
+    if (!startDate || !endDate) {
+      return NextResponse.json(
+        { error: "Start date and end date are required." },
+        { status: 400 }
+      );
+    }
+
+    if (endDate < startDate) {
+      return NextResponse.json(
+        { error: "End date cannot be earlier than start date." },
+        { status: 400 }
+      );
+    }
+
+    if (sport === "golf") {
+      if (!displayName) {
+        return NextResponse.json(
+          { error: "Tournament name is required for a Golf slate." },
+          { status: 400 }
+        );
+      }
+
+      if (!externalEventId) {
+        return NextResponse.json(
+          { error: "ESPN event ID is required for a Golf slate." },
+          { status: 400 }
+        );
+      }
+
+      if (
+        cutPenaltyPerRound === null ||
+        cutPenaltyPerRound < 0 ||
+        cutPenaltyPerRound > 100
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Golf cut penalty must be a whole number from 0 through 100.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const { data: teams, error: teamsError } = await supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .order("name", { ascending: true });
+
+    if (teamsError || !teams) {
+      return NextResponse.json(
+        { error: `Failed to load teams: ${teamsError?.message}` },
+        { status: 500 }
+      );
+    }
+
+    const safeTeams = teams as TeamRow[];
+    const previousCompleted =
+      await getMostRecentCompletedSlateSetup(sport);
+    const suggestedOrderIds = buildSuggestedOrderIds(
+      previousCompleted.results,
+      safeTeams
+    );
+
+    const normalizedTeamConfigs =
+      teamConfigs.length > 0
+        ? (teamConfigs as TeamConfigInput[])
+            .map((config) => ({
+              team_id: Number(config.team_id),
+              draft_order: Number(config.draft_order),
+              is_participating: Boolean(config.is_participating),
+            }))
+            .sort((a, b) => {
+              if (a.is_participating !== b.is_participating) {
+                return a.is_participating ? -1 : 1;
+              }
+
+              return a.draft_order - b.draft_order;
+            })
+            .map((config, index) => ({
+              ...config,
+              draft_order: index + 1,
+            }))
+        : normalizeTeamConfigs(
+            safeTeams.map((team) => ({
+              team_id: team.id,
+              draft_order: 0,
+              is_participating: true,
+            })),
+            safeTeams,
+            suggestedOrderIds
+          );
+
+    const dates = buildDateRange(startDate, endDate);
+    const nbaTeamSet = new Set<string>();
+    let firstGameStartTime: string | null = null;
+    const detectionSources: Array<{
+      date: string;
+      source: string;
+      teamCodes: string[];
+      firstGameStartTime: string | null;
+    }> = [];
+
+    if (sport === "nba") {
+    for (const date of dates) {
+      const detected = await getNbaTeamsAndFirstGameTimeForDate(date);
+
+      detected.teamCodes.forEach((code) => nbaTeamSet.add(code));
+
+      if (detected.firstGameStartTime) {
+        if (
+          !firstGameStartTime ||
+          detected.firstGameStartTime < firstGameStartTime
+        ) {
+          firstGameStartTime = detected.firstGameStartTime;
+        }
+      }
+
+      detectionSources.push({
+        date,
+        source: detected.source,
+        teamCodes: detected.teamCodes,
+        firstGameStartTime: detected.firstGameStartTime,
+      });
+    }
+
+    }
+    const nbaTeamAbbreviations = Array.from(nbaTeamSet).sort();
+
+    const { data: newSlate, error: insertSlateError } = await supabaseAdmin
+      .from("slates")
+      .insert({
+        date: startDate,
+        start_date: startDate,
+        end_date: endDate,
+        is_locked: false,
+        sport,
+        display_name:
+          sport === "golf" ? displayName : null,
+        external_event_id:
+          sport === "golf" ? externalEventId : null,
+        cut_penalty_per_round:
+          sport === "golf" ? cutPenaltyPerRound : null,
+        nba_team_abbreviations:
+          sport === "nba" ? nbaTeamAbbreviations : [],
+        first_game_start_time:
+          sport === "nba" ? firstGameStartTime : null,
+      })
+      .select(
+        "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, nba_team_abbreviations, first_game_start_time"
+      )
+      .single();
+
+    if (insertSlateError || !newSlate) {
+      return NextResponse.json(
+        { error: insertSlateError?.message || "Failed to create slate." },
+        { status: 500 }
+      );
+    }
+
+    const slateTeamRows = normalizedTeamConfigs.map((config) => ({
+      slate_id: newSlate.id,
+      team_id: config.team_id,
+      draft_order: config.draft_order,
+      is_participating: config.is_participating,
+    }));
+
+    const { error: insertSlateTeamsError } = await supabaseAdmin
+      .from("slate_teams")
+      .insert(slateTeamRows);
+
+    if (insertSlateTeamsError) {
+      await supabaseAdmin.from("slates").delete().eq("id", newSlate.id);
+
+      return NextResponse.json(
+        {
+          error: `Failed to create slate team order: ${insertSlateTeamsError.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    // Automatically pin NBA games for this slate so multi-day stat refreshes
+    // rebuild from a stable full game list instead of relying on "today" scoreboards.
+    if (sport === "nba") {
+    try {
+      const dateCodes = new Set(dates.map((date) => date.replaceAll("-", "")));
+      const slateTeamCodes = new Set(nbaTeamAbbreviations);
+
+      const scheduleResponse = await fetch(
+        "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2.json",
+        {
+          method: "GET",
+          cache: "no-store",
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            Accept: "application/json,text/plain,*/*",
+            Referer: "https://www.nba.com/",
+            Origin: "https://www.nba.com",
+          },
+        }
+      );
+
+      if (scheduleResponse.ok) {
+        const schedulePayload = (await scheduleResponse.json()) as any;
+        const gameDates = schedulePayload?.leagueSchedule?.gameDates ?? [];
+        const scheduleGames = gameDates.flatMap((day: any) => day.games ?? []);
+
+        const slateGameRows = scheduleGames
+          .filter((game: any) => {
+            const gameCode = String(game?.gameCode ?? "");
+            const dateCode = gameCode.slice(0, 8);
+
+            if (!dateCodes.has(dateCode)) return false;
+            if (game?.gameStatusText === "UNNECESSARY") return false;
+
+            const awayCode = normalizeTeamCode(game?.awayTeam?.teamTricode ?? null);
+            const homeCode = normalizeTeamCode(game?.homeTeam?.teamTricode ?? null);
+
+            return (
+              (awayCode && slateTeamCodes.has(awayCode)) ||
+              (homeCode && slateTeamCodes.has(homeCode))
+            );
+          })
+          .map((game: any) => ({
+            slate_id: newSlate.id,
+            game_date: isoDateFromGameCode(game.gameCode),
+            game_id: String(game.gameId),
+            game_code: game.gameCode ?? null,
+            note: `${game?.awayTeam?.teamTricode ?? "?"} at ${game?.homeTeam?.teamTricode ?? "?"}`,
+          }))
+          .filter((row: any) => row.game_id && row.game_code);
+
+        const dedupedGames = Array.from(
+          new Map(
+            slateGameRows.map((row: any) => [
+              `${row.slate_id}:${row.game_id}`,
+              row,
+            ])
+          ).values()
+        );
+
+        if (dedupedGames.length > 0) {
+          const { error: slateGamesError } = await supabaseAdmin
+            .from("slate_nba_games")
+            .upsert(dedupedGames, {
+              onConflict: "slate_id,game_id",
+            });
+
+          if (slateGamesError) {
+            console.error("Failed to auto-create slate_nba_games:", slateGamesError);
+          } else {
+            console.log(
+              `✅ Auto-created ${dedupedGames.length} slate_nba_games rows for slate ${newSlate.id}`
+            );
+          }
+        } else {
+          console.warn(
+            `No slate_nba_games rows found for slate ${newSlate.id}; refresh may need manual pinning.`
+          );
+        }
+      } else {
+        console.error(
+          "Failed to load scheduleLeagueV2 while auto-pinning slate games:",
+          scheduleResponse.status
+        );
+      }
+    } catch (slateGamesInsertError) {
+      console.error(
+        "Unexpected error while auto-creating slate_nba_games:",
+        slateGamesInsertError
+      );
+    }
+    }
+
+    return NextResponse.json({
+      success: true,
+      slate: newSlate,
+      slateTeams: slateTeamRows,
+      nbaTeamAbbreviations,
+      firstGameStartTime,
+      detectionSources,
+      displayName:
+        sport === "golf" ? displayName : null,
+      externalEventId:
+        sport === "golf" ? externalEventId : null,
+      cutPenaltyPerRound:
+        sport === "golf" ? cutPenaltyPerRound : null,
+      previousCompletedSlate: previousCompleted.slate,
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Unexpected server error while creating slate." },
+      { status: 500 }
+    );
+  }
+}
+=== SHOTCAST ADMIN ROUTE ===
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
+
+import {
+  importShotCastManifest,
+} from "@/lib/shotcast/importShotCastManifest";
+
+import {
+  requireAdminApi,
+} from "@/lib/requireAdminApi";
+
+import {
+  supabaseAdmin,
+} from "@/lib/supabaseAdmin";
+
+function parseSlateId(value: unknown) {
+  const slateId = Number(value);
+
+  return Number.isInteger(slateId) &&
+    slateId > 0
+    ? slateId
+    : null;
+}
+
+export async function GET(
+  request: NextRequest,
+) {
+  const authError =
+    await requireAdminApi();
+
+  if (authError) {
+    return authError;
+  }
+
+  const slateId =
+    parseSlateId(
+      request.nextUrl.searchParams.get(
+        "slateId",
+      ),
+    );
+
+  if (!slateId) {
+    return NextResponse.json(
+      {
+        error:
+          "A valid slateId is required.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const {
+    data,
+    error,
+  } = await supabaseAdmin
+    .from("shotcast_manifests")
+    .select(
+      "tournament_id, manifest, generated_at, updated_at",
+    )
+    .eq("slate_id", slateId)
+    .order(
+      "updated_at",
+      {
+        ascending: false,
+      },
+    )
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    shotcast: data
+      ? {
+          tournamentId:
+            data.tournament_id,
+          generatedAt:
+            data.generated_at,
+          updatedAt:
+            data.updated_at,
+          summary:
+            (data.manifest as any)
+              ?.summary ?? null,
+          course:
+            (data.manifest as any)
+              ?.course ?? null,
+        }
+      : null,
+  });
+}
+
+export async function POST(
+  request: NextRequest,
+) {
+  const authError =
+    await requireAdminApi();
+
+  if (authError) {
+    return authError;
+  }
+
+  try {
+    const body = await request.json();
+
+    const slateId =
+      parseSlateId(body?.slateId);
+
+    const tournamentId =
+      String(
+        body?.tournamentId ?? "",
+      )
+        .trim()
+        .toUpperCase();
+
+    const round =
+      Number(body?.round ?? 1);
+
+    if (!slateId) {
+      return NextResponse.json(
+        {
+          error:
+            "A valid slateId is required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      !/^R\d{7}$/.test(
+        tournamentId,
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Enter a PGA tournament ID such as R2026013.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const {
+      data: slate,
+      error: slateError,
+    } = await supabaseAdmin
+      .from("slates")
+      .select(
+        "id, sport, display_name",
+      )
+      .eq("id", slateId)
+      .single();
+
+    if (
+      slateError ||
+      !slate
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            slateError?.message ||
+            "Slate not found.",
+        },
+        { status: 404 },
+      );
+    }
+
+    if (slate.sport !== "golf") {
+      return NextResponse.json(
+        {
+          error:
+            "ShotCast is only available for Golf slates.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const manifest =
+      await importShotCastManifest({
+        tournamentId,
+        round,
+      });
+
+    const timestamp =
+      new Date().toISOString();
+
+    const {
+      error: upsertError,
+    } = await supabaseAdmin
+      .from("shotcast_manifests")
+      .upsert(
+        {
+          tournament_id:
+            tournamentId,
+          slate_id: slateId,
+          manifest,
+          generated_at:
+            manifest.generatedAt,
+          updated_at: timestamp,
+        },
+        {
+          onConflict:
+            "tournament_id",
+        },
+      );
+
+    if (upsertError) {
+      return NextResponse.json(
+        {
+          error:
+            "ShotCast was imported but could not be saved: " +
+            upsertError.message,
+        },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      tournamentId,
+      course:
+        manifest.course,
+      summary:
+        manifest.summary,
+      generatedAt:
+        manifest.generatedAt,
+    });
+  } catch (error) {
+    console.error(
+      "Admin ShotCast refresh failed:",
+      error,
+    );
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unexpected ShotCast import error.",
+      },
+      { status: 500 },
+    );
+  }
+}
