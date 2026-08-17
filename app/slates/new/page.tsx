@@ -184,53 +184,181 @@ setTeams(
       setIsLoadingGolfSchedule(true);
       setMessage("");
 
+      /*
+       * Load the Golf schedule directly from ESPN in the browser.
+       *
+       * Production server-side Golf requests run through the Vercel
+       * ESPN Edge proxy. ESPN is currently rejecting that proxy path
+       * with 403 Access Denied.
+       *
+       * Our existing live Golf refresh already uses browser -> ESPN
+       * successfully, so use that proven path for schedule discovery too.
+       */
+      const espnUrl =
+        "https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard" +
+        `?dates=${encodeURIComponent(year)}`;
+
       const response = await fetch(
-        `/api/golf/schedule?year=${encodeURIComponent(year)}`,
-        { cache: "no-store" }
+        espnUrl,
+        {
+          cache: "no-store",
+          headers: {
+            Accept:
+              "application/json, text/plain, */*",
+          },
+        }
       );
 
-      const result = (await response.json()) as
-        | GolfScheduleResponse
-        | { error?: string };
-
       if (!response.ok) {
-        setGolfTournaments([]);
-        setSelectedGolfEventId("");
-        setMessage(
-          "error" in result && result.error
-            ? result.error
-            : "Failed to load Golf tournaments."
+        throw new Error(
+          `ESPN Golf schedule request failed with ${response.status} ${response.statusText}.`
         );
-        return;
       }
 
-      const safeResult = result as GolfScheduleResponse;
-      const tournaments = safeResult.tournaments ?? [];
+      const payload = (await response.json()) as {
+        leagues?: Array<{
+          calendar?: Array<{
+            id?: string;
+            label?: string;
+            startDate?: string;
+            endDate?: string;
+          }>;
+        }>;
+      };
 
-      setGolfTournaments(tournaments);
-      setSelectedGolfEventId((current) => {
-        if (
-          current &&
-          tournaments.some((tournament) => tournament.eventId === current)
-        ) {
-          return current;
+      const calendar =
+        Array.isArray(payload.leagues?.[0]?.calendar)
+          ? payload.leagues?.[0]?.calendar ?? []
+          : [];
+
+      const tournaments =
+        calendar
+          .map((entry) => {
+            const eventId =
+              String(entry.id ?? "").trim();
+
+            const name =
+              String(entry.label ?? "").trim();
+
+            if (
+              !eventId ||
+              !name
+            ) {
+              return null;
+            }
+
+            const normalizeDate = (
+              value: string | undefined
+            ) => {
+              if (!value) {
+                return null;
+              }
+
+              const parsed =
+                new Date(value);
+
+              return Number.isNaN(
+                parsed.getTime()
+              )
+                ? null
+                : parsed.toISOString();
+            };
+
+            return {
+              eventId,
+              name,
+              startDate:
+                normalizeDate(
+                  entry.startDate
+                ),
+              endDate:
+                normalizeDate(
+                  entry.endDate
+                ),
+            };
+          })
+          .filter(
+            (
+              tournament
+            ): tournament is {
+              eventId: string;
+              name: string;
+              startDate: string | null;
+              endDate: string | null;
+            } =>
+              tournament !== null
+          )
+          .sort((a, b) =>
+            (
+              a.startDate ??
+              ""
+            ).localeCompare(
+              b.startDate ??
+              ""
+            )
+          );
+
+      setGolfTournaments(
+        tournaments
+      );
+
+      setSelectedGolfEventId(
+        (current) => {
+          if (
+            current &&
+            tournaments.some(
+              (tournament) =>
+                tournament.eventId ===
+                current
+            )
+          ) {
+            return current;
+          }
+
+          const today =
+            new Date()
+              .toISOString()
+              .slice(
+                0,
+                10
+              );
+
+          const currentOrNext =
+            tournaments.find(
+              (tournament) => {
+                const endDate =
+                  tournament.endDate?.slice(
+                    0,
+                    10
+                  );
+
+                return endDate
+                  ? endDate >= today
+                  : false;
+              }
+            ) ??
+            tournaments[0];
+
+          return (
+            currentOrNext?.eventId ??
+            ""
+          );
         }
-
-        const today = new Date().toISOString().slice(0, 10);
-
-        const currentOrNext =
-          tournaments.find((tournament) => {
-            const endDate = tournament.endDate?.slice(0, 10);
-            return endDate ? endDate >= today : false;
-          }) ?? tournaments[0];
-
-        return currentOrNext?.eventId ?? "";
-      });
+      );
     } catch (error) {
-      console.error(error);
+      console.error(
+        "Failed to load Golf schedule directly from ESPN:",
+        error
+      );
+
       setGolfTournaments([]);
       setSelectedGolfEventId("");
-      setMessage("Something went wrong while loading Golf tournaments.");
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while loading Golf tournaments."
+      );
     } finally {
       setIsLoadingGolfSchedule(false);
     }

@@ -86,6 +86,29 @@ function getAdminGroups(
   sport: string,
 ): AdminGroup[] {
   if (
+    sport === "nba-skins"
+  ) {
+    return [
+      {
+        title:
+          "NBA Skins",
+        description:
+          "Manage the annual NBA Skins draft, lock state, records, and historical seasons.",
+        cards: [
+          {
+            href:
+              "/admin/nba-skins",
+            title:
+              "NBA Skins Control",
+            description:
+              "Manage the active season, draft lock, historical import, and team records.",
+          },
+        ],
+      },
+    ];
+  }
+
+  if (
     sport === "ncaa"
   ) {
     return [

@@ -140,24 +140,70 @@ function AppNavContent() {
 
   const isAdmin = currentUser?.role === "admin";
 
-  const isNcaaPickEm =
-    selectedSport === "ncaa" ||
-    pathname.startsWith("/ncaa-pickem");
+  const routeSport =
+    pathname.startsWith("/nba-skins")
+      ? "nba-skins"
+      : pathname.startsWith("/ncaa-pickem")
+        ? "ncaa"
+        : null;
 
-  const displayedMainLinks = isNcaaPickEm
+  const activeSport =
+    routeSport ??
+    selectedSport;
+
+  const isNbaSkins =
+    activeSport === "nba-skins";
+
+  const isNcaaPickEm =
+    activeSport === "ncaa";
+
+  useEffect(() => {
+    if (
+      routeSport &&
+      routeSport !== selectedSport
+    ) {
+      setSelectedSport(
+        routeSport,
+      );
+    }
+  }, [
+    routeSport,
+    selectedSport,
+    setSelectedSport,
+  ]);
+
+  const displayedMainLinks = isNbaSkins
     ? [
         {
-          href: "/ncaa-pickem",
+          href: "/nba-skins",
           label: "Home",
           icon: "⌂",
         },
         {
-          href: "/ncaa-pickem/standings",
+          href: "/nba-skins/draft",
+          label: "Draft",
+          icon: "✎",
+        },
+        {
+          href: "/nba-skins/standings",
           label: "Standings",
           icon: "▦",
         },
       ]
-    : mainLinks;
+    : isNcaaPickEm
+      ? [
+          {
+            href: "/ncaa-pickem",
+            label: "Home",
+            icon: "⌂",
+          },
+          {
+            href: "/ncaa-pickem/standings",
+            label: "Standings",
+            icon: "▦",
+          },
+        ]
+      : mainLinks;
 
   const sportScopedPaths = [
     "/",
@@ -193,12 +239,20 @@ function AppNavContent() {
      * fantasy slate mode. Enter and leave its dedicated routes
      * explicitly instead of pushing NCAA through Draft/Scores.
      */
+    if (sportKey === "nba-skins") {
+      router.push("/nba-skins");
+      return;
+    }
+
     if (sportKey === "ncaa") {
       router.push("/ncaa-pickem");
       return;
     }
 
-    if (pathname.startsWith("/ncaa-pickem")) {
+    if (
+      pathname.startsWith("/ncaa-pickem") ||
+      pathname.startsWith("/nba-skins")
+    ) {
       router.push(appendSportParam("/", sportKey));
       return;
     }
@@ -326,8 +380,20 @@ function AppNavContent() {
   }
 
   function isLinkActive(href: string) {
-    if (href === "/") return pathname === "/";
-    return pathname === href || pathname.startsWith(`${href}/`);
+    if (
+      href === "/" ||
+      href === "/nba-skins" ||
+      href === "/ncaa-pickem"
+    ) {
+      return pathname === href;
+    }
+
+    return (
+      pathname === href ||
+      pathname.startsWith(
+        `${href}/`,
+      )
+    );
   }
 
   function desktopLinkClass(href: string) {
@@ -383,7 +449,7 @@ function AppNavContent() {
               <Link
                 key={link.href}
                 href={
-                  isNcaaPickEm
+                  isNcaaPickEm || isNbaSkins
                     ? link.href
                     : getLinkHref(link.href)
                 }
@@ -393,7 +459,7 @@ function AppNavContent() {
               </Link>
             ))}
 
-            {!isNcaaPickEm ? (
+            {!isNcaaPickEm && !isNbaSkins ? (
               <>
                 <Link
                   href="/standings"
@@ -419,8 +485,8 @@ function AppNavContent() {
               onClick={() => setDesktopSportOpen((open) => !open)}
               className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-sky-300"
             >
-              <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
-              <span>{getSportConfig(selectedSport).label}</span>
+              <span aria-hidden="true">{getSportConfig(activeSport).emoji}</span>
+              <span>{getSportConfig(activeSport).label}</span>
               <span aria-hidden="true">▾</span>
             </button>
 
@@ -435,7 +501,7 @@ function AppNavContent() {
                       setDesktopSportOpen(false);
                     }}
                     className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                      selectedSport === sport.key
+                      activeSport === sport.key
                         ? "bg-sky-100 font-semibold text-sky-900"
                         : "text-slate-700 hover:bg-slate-100"
                     }`}
@@ -592,22 +658,25 @@ function AppNavContent() {
               <button
                 type="button"
                 onClick={() => setMobileSportOpen((open) => !open)}
-                aria-label={`Switch sport, currently ${getSportConfig(selectedSport).label}`}
+                aria-label={`Switch sport, currently ${getSportConfig(activeSport).label}`}
                 className="block"
               >
                 <span className="relative block h-12 w-12">
                   <img
-                    src={getSportConfig(selectedSport).logo}
-                    alt={`${getSportConfig(selectedSport).label} logo`}
+                    src={getSportConfig(activeSport).logo}
+                    alt={`${getSportConfig(activeSport).label} logo`}
                     className="h-12 w-12 rounded-full object-cover shadow-sm"
                   />
 
-                  {selectedSport === "ncaa" ? (
+                  {activeSport === "ncaa" ||
+                  activeSport === "nba-skins" ? (
                     <span
                       aria-hidden="true"
                       className="absolute -bottom-1 -right-1 rounded-full border border-slate-700 bg-slate-950 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-white shadow-md"
                     >
-                      NCAA
+                      {activeSport === "nba-skins"
+                        ? "SKINS"
+                        : "NCAA"}
                     </span>
                   ) : null}
                 </span>
@@ -624,7 +693,7 @@ function AppNavContent() {
                         setMobileSportOpen(false);
                       }}
                       className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                        selectedSport === sport.key
+                        activeSport === sport.key
                           ? "bg-sky-100 font-semibold text-sky-900"
                           : "text-slate-700 hover:bg-slate-100"
                       }`}
@@ -660,7 +729,7 @@ function AppNavContent() {
         ref={mobileMoreRef}
         className="app-mobile-bottom-nav fixed bottom-[-42px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[42px] pt-1 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
       >
-        {!isNcaaPickEm && mobileMoreOpen ? (
+        {!isNcaaPickEm && !isNbaSkins && mobileMoreOpen ? (
           <div className="app-dropdown-panel absolute bottom-full right-3 mb-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
             {mobileMoreLinks.map((link) => (
               <Link
@@ -690,14 +759,18 @@ function AppNavContent() {
 
         <div
           className={`mx-auto grid max-w-xl gap-1 ${
-            isNcaaPickEm ? "grid-cols-2" : "grid-cols-4"
+            isNcaaPickEm
+              ? "grid-cols-2"
+              : isNbaSkins
+                ? "grid-cols-3"
+                : "grid-cols-4"
           }`}
         >
           {displayedMainLinks.map((link) => (
             <Link
               key={link.href}
               href={
-                isNcaaPickEm
+                isNcaaPickEm || isNbaSkins
                   ? link.href
                   : getLinkHref(link.href)
               }
@@ -708,7 +781,7 @@ function AppNavContent() {
             </Link>
           ))}
 
-          {!isNcaaPickEm ? (
+          {!isNcaaPickEm && !isNbaSkins ? (
             <button
               type="button"
               onClick={() => setMobileMoreOpen((open) => !open)}
