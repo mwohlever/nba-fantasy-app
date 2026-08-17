@@ -158,6 +158,10 @@ export default function AdminSlatesPage() {
 
   const [message, setMessage] = useState("");
 
+  const [golfAdminTab, setGolfAdminTab] = useState<
+    "tournament" | "teams" | "tools"
+  >("tournament");
+
   const isBusy =
     isSaving ||
     isReseeding ||
@@ -174,6 +178,7 @@ export default function AdminSlatesPage() {
     setGolfField(null);
     setShotCast(null);
     setShotCastTournamentId("");
+    setGolfAdminTab("tournament");
     void loadSlates();
   }, [selectedSport]);
 
@@ -999,7 +1004,49 @@ export default function AdminSlatesPage() {
               </div>
 
               {selectedSlate.sport === "golf" ? (
-                <div className="grid gap-4 md:grid-cols-5">
+                <div className="rounded-2xl border border-slate-700 bg-slate-950/40 p-1">
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      {
+                        key: "tournament" as const,
+                        label: "Tournament",
+                      },
+                      {
+                        key: "teams" as const,
+                        label: "Teams & Draft",
+                      },
+                      {
+                        key: "tools" as const,
+                        label: "Tools",
+                      },
+                    ].map((tab) => {
+                      const isActive =
+                        golfAdminTab === tab.key;
+
+                      return (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() =>
+                            setGolfAdminTab(tab.key)
+                          }
+                          className={`rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+                            isActive
+                              ? "bg-emerald-700 text-white shadow-sm"
+                              : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {selectedSlate.sport === "golf" &&
+              golfAdminTab === "tournament" ? (
+                <div className="grid gap-4 md:grid-cols-4">
                   <div className="rounded-2xl border border-emerald-800 bg-emerald-950/35 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
                       Tournament Field
@@ -1099,31 +1146,7 @@ export default function AdminSlatesPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-violet-800 bg-violet-950/35 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
-                      ShotCast Assets
-                    </div>
 
-                    <div className="mt-2 text-sm font-bold text-white">
-                      {shotCast
-                        ? `${
-                            shotCast.summary
-                              ?.localImages ?? 0
-                          } photos · ${
-                            shotCast.summary
-                              ?.alignedMaps ?? 0
-                          } maps`
-                        : "Not imported"}
-                    </div>
-
-                    <div className="mt-1 text-xs text-violet-200/80">
-                      {shotCast
-                        ? formatRefreshTime(
-                            shotCast.updatedAt,
-                          )
-                        : "Enter the PGA ID below"}
-                    </div>
-                  </div>
                 </div>
               ) : null}
 
@@ -1158,7 +1181,8 @@ export default function AdminSlatesPage() {
                 </div>
               ) : null}
 
-              {selectedSlate.sport === "golf" ? (
+              {selectedSlate.sport === "golf" &&
+              golfAdminTab === "tournament" ? (
                 <div className="rounded-2xl border border-emerald-800 bg-emerald-950/25 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -1241,11 +1265,42 @@ export default function AdminSlatesPage() {
                 </div>
               ) : null}
 
-              {selectedSlate.sport === "golf" ? (
-                <div className="rounded-2xl border border-violet-800 bg-violet-950/25 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
-                    ShotCast Course Importer
-                  </div>
+              {selectedSlate.sport === "golf" &&
+              golfAdminTab === "tools" ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-violet-800 bg-violet-950/25 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-violet-300">
+                          ShotCast Course Assets
+                        </div>
+
+                        <div className="mt-2 text-sm font-bold text-white">
+                          {shotCast
+                            ? `${
+                                shotCast.summary
+                                  ?.localImages ?? 0
+                              } photos · ${
+                                shotCast.summary
+                                  ?.alignedMaps ?? 0
+                              } maps`
+                            : "Not imported"}
+                        </div>
+
+                        <div className="mt-1 text-xs text-violet-200/80">
+                          {shotCast
+                            ? `Last updated ${formatRefreshTime(
+                                shotCast.updatedAt,
+                              )}`
+                            : "No ShotCast course assets are loaded for this tournament."}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t border-violet-900/70 pt-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                        Course Importer
+                      </div>
 
                   <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
                     <div className="flex-1">
@@ -1290,14 +1345,44 @@ export default function AdminSlatesPage() {
                     </button>
                   </div>
 
-                  <div className="mt-2 text-xs leading-5 text-slate-400">
-                    Refreshes all 18 hole layouts and checks whether PGA has published coordinate-aligned maps.
+                      <div className="mt-2 text-xs leading-5 text-slate-400">
+                        Refreshes all 18 hole layouts and checks whether PGA has published coordinate-aligned maps.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                          World Golf Ranking
+                        </div>
+                        <div className="mt-1 text-xs leading-5 text-slate-400">
+                          Refresh golfer OWGR data used throughout 111 Sports.
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void handleSyncGolfRankings()
+                        }
+                        disabled={isBusy}
+                        className="shrink-0 rounded-xl border border-emerald-500 bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isSyncingGolfRankings
+                          ? "Syncing OWGR..."
+                          : "Sync OWGR"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : null}
 
-              <div className="overflow-hidden rounded-2xl border border-slate-700">
-                <div className="overflow-x-auto">
+              {selectedSlate.sport !== "golf" ||
+              golfAdminTab === "teams" ? (
+                <div className="overflow-hidden rounded-2xl border border-slate-700">
+                  <div className="overflow-x-auto">
                   <table className="min-w-full border-collapse text-sm">
                     <thead className="bg-slate-800 text-slate-200">
                       <tr className="text-left">
@@ -1339,11 +1424,12 @@ export default function AdminSlatesPage() {
                         ),
                       )}
                     </tbody>
-                  </table>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              ) : null}
 
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={() => void handleSave()}
@@ -1353,7 +1439,19 @@ export default function AdminSlatesPage() {
                   {isSaving ? "Saving..." : "Save Slate"}
                 </button>
 
-                {selectedSlate.sport === "golf" ? (
+                <button
+                  type="button"
+                  onClick={() => void handleDelete()}
+                  disabled={isBusy}
+                  className="rounded-xl border border-red-600 bg-red-900 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isDeleting
+                    ? "Deleting..."
+                    : "Delete Slate"}
+                </button>
+
+                {selectedSlate.sport === "golf" &&
+                golfAdminTab === "tournament" ? (
                   <>
                     <button
                       type="button"
@@ -1394,43 +1492,35 @@ export default function AdminSlatesPage() {
                         ? "Importing PGA Field..."
                         : "Import PGA Tour Field"}
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void handleSyncGolfRankings()
-                      }
-                      disabled={isBusy}
-                      className="rounded-xl border border-emerald-500 bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isSyncingGolfRankings
-                        ? "Syncing OWGR..."
-                        : "Sync OWGR"}
-                    </button>
                   </>
                 ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => void handleReseed()}
-                  disabled={isBusy}
-                  className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isReseeding
-                    ? "Reseeding..."
-                    : "Reseed From Previous Slate"}
-                </button>
+                {selectedSlate.sport === "golf" &&
+                golfAdminTab === "teams" ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleReseed()}
+                    disabled={isBusy}
+                    className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isReseeding
+                      ? "Reseeding..."
+                      : "Reseed From Previous Slate"}
+                  </button>
+                ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={isBusy}
-                  className="rounded-xl border border-red-600 bg-red-900 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isDeleting
-                    ? "Deleting..."
-                    : "Delete Slate"}
-                </button>
+                {selectedSlate.sport !== "golf" ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleReseed()}
+                    disabled={isBusy}
+                    className="rounded-xl border border-slate-500 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isReseeding
+                      ? "Reseeding..."
+                      : "Reseed From Previous Slate"}
+                  </button>
+                ) : null}
               </div>
             </div>
           )}
