@@ -101,10 +101,6 @@ type Props = {
    * PGA's native TOURCAST hole pin.
    */
   pinWorld?: WorldPoint | null;
-  greenPin?: {
-    x: number;
-    y: number;
-  } | null;
 
   shots: MapShot[];
   selectedStrokeNumber: number | null;
@@ -1563,7 +1559,6 @@ export default function GolfHoleMap2D({
   greenImageUrl = null,
   greenModelUrl = null,
   pinWorld = null,
-  greenPin = null,
   shots,
   selectedStrokeNumber,
   onSelectStroke,
@@ -1652,51 +1647,6 @@ export default function GolfHoleMap2D({
 
   const animationResolveRef =
     useRef<(() => void) | null>(null);
-
-  /*
-   * A different authoritative ShotCast asset must start from
-   * a clean presentation state.
-   *
-   * Zoom, pan, Course/Green View, playback reveal state, and
-   * video state are UI-only. None of them should leak from a
-   * previously viewed hole into the next one.
-   *
-   * Do NOT reset on shot-array refreshes: live holes poll every
-   * 30 seconds and should keep the user's current view.
-   */
-  useEffect(() => {
-    if (
-      animationFrameRef.current !== null
-    ) {
-      window.cancelAnimationFrame(
-        animationFrameRef.current,
-      );
-
-      animationFrameRef.current = null;
-    }
-
-    if (animationResolveRef.current) {
-      animationResolveRef.current();
-      animationResolveRef.current = null;
-    }
-
-    pointersRef.current.clear();
-    dragStartRef.current = null;
-    gestureStartRef.current = null;
-
-    setTransform(DEFAULT_TRANSFORM);
-    setIsInteracting(false);
-    setIsPlaying(false);
-    setViewMode("course");
-
-    setVideoStrokeNumber(null);
-    setAnimatedStrokeNumber(null);
-    setAnimationProgress(1);
-    setRevealedStrokeCount(null);
-  }, [
-    imageUrl,
-    greenImageUrl,
-  ]);
 
   /*
    * Load PGA's dedicated Green View as soon as ShotCast
@@ -1950,18 +1900,11 @@ export default function GolfHoleMap2D({
       ],
     );
 
-  /*
-   * PGA's dedicated Green View is a hole-level asset.
-   *
-   * Make it available whenever the image exists, even before
-   * the golfer has a shot whose Green View coordinates fall
-   * inside the crop.
-   *
-   * Shot availability and image availability are separate
-   * concerns.
-   */
   const greenViewAvailable =
-    Boolean(greenImageUrl);
+    Boolean(
+      greenImageUrl &&
+      greenPlottedShots.length > 0,
+    );
 
   const isAnyGreenView =
     (
@@ -3272,25 +3215,7 @@ export default function GolfHoleMap2D({
    *   because St. Jude's pinGreen payload is an unavailable
    *   -1/-1 sentinel.
    */
-  /*
-   * Green View uses PGA's normalized enhanced pin coordinates
-   * directly against our VIEWBOX_SIZE coordinate space.
-   */
-  const authoritativeGreenPinPoint =
-    isAnyGreenView &&
-    greenPin
-      ? {
-          x:
-            greenPin.x *
-            VIEWBOX_SIZE,
-          y:
-            greenPin.y *
-            VIEWBOX_SIZE,
-        }
-      : null;
-
   const cupPoint =
-    authoritativeGreenPinPoint ??
     authoritativeCoursePinPoint ??
     [...plottedShots]
       .reverse()
@@ -3870,11 +3795,7 @@ export default function GolfHoleMap2D({
                   </g>
                 ) : null}
 
-                {animatedBallPoint &&
-                !(
-                  animatedShot?.finalStroke &&
-                  animationProgress >= 1
-                ) ? (
+                {animatedBallPoint ? (
                   <g className="pointer-events-none">
                     {animatedAltitude >
                     0.02 ? (

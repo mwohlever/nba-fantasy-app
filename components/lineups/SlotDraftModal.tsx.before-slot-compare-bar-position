@@ -1,0 +1,361 @@
+"use client";
+
+import {
+  useMemo,
+  useState,
+} from "react";
+
+import PlayerPool from "@/components/lineups/PlayerPool";
+
+import type {
+  Player,
+  PositionFilter,
+  RosterSlotConfig,
+  TargetDraftSlot,
+  Team,
+} from "@/components/lineups/types";
+
+type Props = {
+  targetDraftSlot:
+    TargetDraftSlot | null;
+
+  setTargetDraftSlot: (
+    slot:
+      TargetDraftSlot | null,
+  ) => void;
+
+  players: Player[];
+
+  playerAverageMap:
+    Map<number, number>;
+
+  playerProjections:
+    Record<number, any>;
+
+  availablePlayerIdsForSlate:
+    number[];
+
+  availablePlayerIdSet:
+    Set<number>;
+
+  isAvailabilityLoading:
+    boolean;
+
+  getOwnerTeamForPlayer: (
+    playerId: number,
+  ) => Team | null;
+
+  setDraftingPlayer:
+    React.Dispatch<
+      React.SetStateAction<
+        Player | null
+      >
+    >;
+
+  handleAssignPlayerToTeam: (
+    player: Player,
+    teamId: number,
+  ) => Promise<void>;
+
+  selectedSeason:
+    string;
+
+  rosterSlots?:
+    RosterSlotConfig[];
+
+  hidden?: boolean;
+
+  isAssigningPlayer:
+    boolean;
+};
+
+export default function SlotDraftModal({
+  targetDraftSlot,
+  setTargetDraftSlot,
+  players,
+  playerAverageMap,
+  playerProjections,
+  availablePlayerIdsForSlate,
+  availablePlayerIdSet,
+  isAvailabilityLoading,
+  getOwnerTeamForPlayer,
+  setDraftingPlayer,
+  handleAssignPlayerToTeam,
+  selectedSeason,
+  rosterSlots = [],
+  hidden = false,
+  isAssigningPlayer,
+}: Props) {
+  const [
+    searchTerm,
+    setSearchTerm,
+  ] = useState("");
+
+  const [
+    onSlateOnly,
+    setOnSlateOnly,
+  ] = useState(false);
+
+  /*
+   * Position is intentionally fixed to the roster slot.
+   * PlayerPool still owns all other browser behavior.
+   */
+  const [
+    positionFilter,
+    setPositionFilter,
+  ] =
+    useState<PositionFilter>(
+      "All",
+    );
+
+  const filteredPlayers =
+    useMemo(() => {
+      if (!targetDraftSlot) {
+        return [];
+      }
+
+      return players.filter(
+        (player) => {
+          if (
+            player.position_group !==
+            targetDraftSlot.positionGroup
+          ) {
+            return false;
+          }
+
+          /*
+           * A player already owned by another team
+           * cannot be drafted into this open slot.
+           */
+          if (
+            getOwnerTeamForPlayer(
+              player.id,
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            searchTerm &&
+            !player.name
+              .toLowerCase()
+              .includes(
+                searchTerm.toLowerCase(),
+              )
+          ) {
+            return false;
+          }
+
+          if (
+            onSlateOnly &&
+            !isAvailabilityLoading &&
+            !availablePlayerIdSet.has(
+              player.id,
+            )
+          ) {
+            return false;
+          }
+
+          return true;
+        },
+      );
+    }, [
+      targetDraftSlot,
+      players,
+      getOwnerTeamForPlayer,
+      searchTerm,
+      onSlateOnly,
+      isAvailabilityLoading,
+      availablePlayerIdSet,
+    ]);
+
+  if (!targetDraftSlot) {
+    return null;
+  }
+
+  async function draftToSlot(
+    player: Player,
+  ) {
+    if (!targetDraftSlot) {
+      return;
+    }
+
+    await handleAssignPlayerToTeam(
+      player,
+      targetDraftSlot.teamId,
+    );
+
+    setTargetDraftSlot(
+      null,
+    );
+
+    setSearchTerm("");
+  }
+
+  return (
+    <div
+      className={`fixed inset-x-0 top-0 bottom-[5rem] z-[10000] flex items-start justify-center bg-slate-950/75 p-0 backdrop-blur-sm sm:inset-0 sm:items-center sm:p-6 ${
+        hidden
+          ? "pointer-events-none opacity-0"
+          : ""
+      }`}
+      aria-hidden={hidden}
+      onMouseDown={(event) => {
+        if (
+          event.target ===
+          event.currentTarget
+        ) {
+          setTargetDraftSlot(
+            null,
+          );
+        }
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Draft to ${targetDraftSlot.positionGroup} roster spot`}
+        className="flex h-full max-h-full w-full flex-col overflow-hidden bg-slate-950 text-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-[30px] sm:border sm:border-slate-700"
+      >
+        <header className="shrink-0 border-b border-slate-700 bg-slate-950/95 px-5 py-4 backdrop-blur">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.22em] text-sky-300">
+                Draft to roster spot
+              </div>
+
+              <div className="mt-1 flex items-center gap-2">
+                <h2 className="text-2xl font-black text-white">
+                  {
+                    targetDraftSlot.teamName
+                  }
+                </h2>
+
+                <span className="rounded-full bg-sky-950 px-2.5 py-1 text-xs font-black text-sky-300">
+                  {
+                    targetDraftSlot.positionGroup
+                  }
+                </span>
+              </div>
+
+              <div className="mt-1 text-sm text-slate-400">
+                Choose an available{" "}
+                {
+                  targetDraftSlot.positionGroup
+                }.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setTargetDraftSlot(
+                  null,
+                )
+              }
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-2xl font-bold text-slate-300 transition hover:bg-slate-700"
+              aria-label="Close draft-to-slot browser"
+            >
+              ×
+            </button>
+          </div>
+        </header>
+
+        <div
+          data-slot-player-browser="true"
+          className="min-h-0 flex-1 overflow-y-auto px-4 pb-28 pt-4 sm:px-6 sm:pb-6"
+        >
+          <PlayerPool
+            players={
+              players
+            }
+            filteredPlayers={
+              filteredPlayers
+            }
+            searchTerm={
+              searchTerm
+            }
+            setSearchTerm={
+              setSearchTerm
+            }
+            positionFilter={
+              positionFilter
+            }
+            setPositionFilter={
+              setPositionFilter
+            }
+            onSlateOnly={
+              onSlateOnly
+            }
+            setOnSlateOnly={
+              setOnSlateOnly
+            }
+            isAvailabilityLoading={
+              isAvailabilityLoading
+            }
+            availablePlayerIdsForSlate={
+              availablePlayerIdsForSlate
+            }
+            availablePlayerIdSet={
+              availablePlayerIdSet
+            }
+            playerAverageMap={
+              playerAverageMap
+            }
+            playerProjections={
+              playerProjections
+            }
+            getOwnerTeamForPlayer={
+              getOwnerTeamForPlayer
+            }
+            setDraftingPlayer={
+              setDraftingPlayer
+            }
+            isAssigningPlayer={
+              isAssigningPlayer
+            }
+            pillBase=""
+            activePill=""
+            inactivePill=""
+            rosterSlots={
+              rosterSlots
+            }
+            selectedSeason={
+              selectedSeason
+            }
+            hidePositionFilter
+            slotDraftContext={{
+              targetDraftSlot,
+              onDraftPlayer:
+                draftToSlot,
+            }}
+          />
+        </div>
+
+        <style jsx global>{`
+          [data-slot-player-browser="true"] .draft-player-toolbar {
+            position: static !important;
+            top: auto !important;
+            bottom: auto !important;
+            z-index: auto !important;
+          }
+
+          /*
+           * The slot modal itself already stops 5rem above the
+           * viewport bottom so the persistent app nav stays visible.
+           *
+           * PlayerPool's canonical Compare control uses 5.75rem from
+           * the viewport bottom. Inside this backdrop-filtered shell,
+           * fixed positioning is relative to the shell instead.
+           *
+           * 0.75rem here + the shell's 5rem nav clearance = the same
+           * 5.75rem viewport position as the normal Players screen.
+           */
+          [data-slot-player-browser="true"] [data-floating-compare="true"] {
+            bottom: 0.75rem !important;
+          }
+        `}</style>
+      </section>
+    </div>
+  );
+}

@@ -34,16 +34,6 @@ export async function GET(request: NextRequest) {
     const sport =
       request.nextUrl.searchParams.get("sport")?.trim() ?? "";
 
-    const requestedDate =
-      request.nextUrl.searchParams.get("date")?.trim() ?? "";
-
-    const selectedDate =
-      /^\d{4}-\d{2}-\d{2}$/.test(
-        requestedDate
-      )
-        ? requestedDate
-        : null;
-
     const start =
       validIsoDateTime(
         request.nextUrl.searchParams.get("start")?.trim() ?? ""
@@ -367,14 +357,7 @@ export async function GET(request: NextRequest) {
       player_id: number | null;
       title: string;
       body: string;
-      status:
-        | "waiting"
-        | "missed"
-        | "pending"
-        | "sent"
-        | "partial"
-        | "failed"
-        | "skipped";
+      status: "waiting" | "missed";
       sent_count: number;
       failed_count: number;
       skipped: boolean;
@@ -477,49 +460,20 @@ export async function GET(request: NextRequest) {
 
       if (golfSlateIds.length > 0) {
         /*
-         * The expected-event ledger is permanent.
-         *
-         * Load the ENTIRE tournament's Golf player-finished delivery
-         * history, not merely today's rows. A real delivery record does
-         * not replace an expectation; it becomes the delivery state of
-         * that expected event.
-         *
-         * This also means a notification manually recovered tomorrow
-         * still appears as SENT when auditing the round/day on which it
-         * was originally expected.
+         * Visible notification history is filtered to the selected day,
+         * but deduplication/reconciliation must use the entire tournament
+         * history. Otherwise a Round 1 notification sent yesterday would
+         * incorrectly appear MISSED while viewing Round 2 today.
          */
         const {
           data: tournamentNotificationHistory,
           error: tournamentNotificationHistoryError,
         } = await supabaseAdmin
           .from("notification_history")
-          .select(
-            `
-              id,
-              event_key,
-              notification_type,
-              user_id,
-              team_id,
-              slate_id,
-              player_id,
-              title,
-              body,
-              status,
-              sent_count,
-              failed_count,
-              skipped,
-              reason,
-              metadata,
-              created_at,
-              completed_at
-            `
-          )
+          .select("event_key")
           .in("slate_id", golfSlateIds)
           .eq("notification_type", "player_finished")
-          .not("event_key", "is", null)
-          .order("created_at", {
-            ascending: false,
-          });
+          .not("event_key", "is", null);
 
         if (tournamentNotificationHistoryError) {
           return NextResponse.json(
@@ -532,40 +486,14 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        const tournamentHistoryByEventKey =
-          new Map<
-            string,
-            NonNullable<
-              typeof tournamentNotificationHistory
-            >[number]
-          >();
-
         for (
           const row of tournamentNotificationHistory ?? []
         ) {
-          if (!row.event_key) {
-            continue;
-          }
-
-          const key =
-            String(row.event_key);
-
-          /*
-           * Rows are newest first. Keep the newest record if old data
-           * ever contains more than one row for the same logical event.
-           */
-          if (
-            !tournamentHistoryByEventKey.has(
-              key
-            )
-          ) {
-            tournamentHistoryByEventKey.set(
-              key,
-              row
+          if (row.event_key) {
+            realEventKeys.add(
+              String(row.event_key)
             );
           }
-
-          realEventKeys.add(key);
         }
 
         const [
@@ -632,6 +560,26 @@ export async function GET(request: NextRequest) {
               | Array<{ player_id: number }>
               | null;
           }>;
+
+        console.log("[notification-ledger:golf]", {
+          requestedStart: start,
+          requestedEnd: end,
+          requestedSport: sport || "all",
+          relevantGolfSlates: relevantGolfSlates.map((row) => ({
+            id: Number(row.id),
+            displayName: row.display_name,
+            startDate: row.start_date,
+            endDate: row.end_date,
+          })),
+          golfSlateIds,
+          golfLineups: (golfLineups ?? []).length,
+          lineupPlayers: (golfLineups ?? []).reduce(
+            (sum: number, row: any) =>
+              sum + Number(row.lineup_players?.length ?? 0),
+            0
+          ),
+          eventPlayers: (eventPlayers ?? []).length,
+        });
 
         const safeEventPlayers =
           (eventPlayers ?? []) as Array<{
@@ -786,15 +734,39 @@ export async function GET(request: NextRequest) {
         }
 
         /*
-         * Expected Golf notification rounds are determined per golfer.
+         * One tournament-wide expected round.
          *
-         * Golfers do not all complete a round at the same time. Using
-         * the field-wide maximum rounds_completed advances every golfer
-         * to the next round as soon as the first golfer finishes.
+         * golf_rounds may contain placeholder/future rows, so the
+         * highest persisted round number is NOT evidence that the field
+         * is currently playing that round.
          *
-         * Instead, each golfer's own rounds_completed determines the
-         * round whose completion notification should currently exist.
+         * rounds_completed is the meaningful progression signal:
+         *
+         *   nobody has completed a round -> Round 1
+         *   field has completed R1      -> Round 2
+         *   field has completed R2      -> Round 3
+         *   field has completed R3      -> Round 4
          */
+        const maxRoundsCompleted =
+          safeEventPlayers.reduce(
+            (max, row) =>
+              Math.max(
+                max,
+                Number(
+                  row.rounds_completed ?? 0
+                )
+              ),
+            0
+          );
+
+        const ledgerTournamentRound =
+          Math.min(
+            4,
+            Math.max(
+              1,
+              maxRoundsCompleted + 1
+            )
+          );
 
         const ledgerPlayerIds =
           Array.from(
@@ -822,6 +794,16 @@ export async function GET(request: NextRequest) {
               String(row.display_name),
             ])
           );
+
+        console.log("[notification-ledger:golf:resolved]", {
+          users: (ledgerUsers ?? []).length,
+          preferences: (ledgerPreferences ?? []).length,
+          golfRounds: (golfRounds ?? []).length,
+          golfPlayers: (ledgerGolfPlayers ?? []).length,
+          eventPlayerMap: ledgerEventPlayerBySlatePlayer.size,
+          ledgerTournamentRound,
+          maxRoundsCompleted,
+        });
 
         for (const lineup of safeGolfLineups) {
           const slateId =
@@ -901,109 +883,19 @@ export async function GET(request: NextRequest) {
                 Number(eventPlayer.id)
               ) ?? [];
 
-            const roundsCompleted =
-              Number(
-                eventPlayer.rounds_completed ?? 0
-              );
+            const roundNumber =
+              ledgerTournamentRound;
 
-            const currentRound =
-              Number(
-                eventPlayer.current_round ?? 0
-              );
+            const eventKey =
+              `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
 
             /*
-             * The Notification Monitor is an AUDIT LEDGER, not a snapshot
-             * of whichever round happens to be current now.
-             *
-             * The selected tournament calendar day defines the expected
-             * Golf round:
-             *
-             *   start date     -> Round 1
-             *   start + 1 day  -> Round 2
-             *   start + 2 days -> Round 3
-             *   start + 3 days -> Round 4
-             *
-             * That gives each day a stable event identity. Moving the
-             * golfer to Round 3 can never make the Round 2 expectation
-             * disappear from Friday's audit.
+             * If the delivery pipeline already processed this exact
+             * current-round event, the real notification_history row is
+             * authoritative and no synthetic row is needed.
              */
-            const slateStartKey =
-              String(
-                slate.start_date ??
-                  slate.date ??
-                  ""
-              );
-
-            const auditDateKey =
-              selectedDate;
-
-            let roundNumber = 0;
-
             if (
-              auditDateKey &&
-              /^\d{4}-\d{2}-\d{2}$/.test(
-                slateStartKey
-              )
-            ) {
-              const [
-                auditYear,
-                auditMonth,
-                auditDay,
-              ] = auditDateKey
-                .split("-")
-                .map(Number);
-
-              const [
-                startYear,
-                startMonth,
-                startDay,
-              ] = slateStartKey
-                .split("-")
-                .map(Number);
-
-              const auditDayNumber =
-                Date.UTC(
-                  auditYear,
-                  auditMonth - 1,
-                  auditDay
-                );
-
-              const startDayNumber =
-                Date.UTC(
-                  startYear,
-                  startMonth - 1,
-                  startDay
-                );
-
-              roundNumber =
-                Math.floor(
-                  (
-                    auditDayNumber -
-                    startDayNumber
-                  ) /
-                    86_400_000
-                ) + 1;
-            } else {
-              /*
-               * Compatibility fallback for direct API calls that do not
-               * supply ?date=. The app page always supplies it.
-               */
-              roundNumber =
-                Math.min(
-                  4,
-                  Math.max(
-                    1,
-                    currentRound >
-                      roundsCompleted
-                      ? currentRound
-                      : roundsCompleted || 1
-                  )
-                );
-            }
-
-            if (
-              roundNumber < 1 ||
-              roundNumber > 4
+              realEventKeys.has(eventKey)
             ) {
               continue;
             }
@@ -1017,18 +909,11 @@ export async function GET(request: NextRequest) {
               ) ?? null;
 
             /*
-             * No persisted round means this golfer was not expected to
-             * play that round (for example a normal tournament cut).
-             * Do not create a permanent WAITING event that can never
-             * become valid.
+             * A current-round notification becomes MISSED only after
+             * that exact round is genuinely complete.
+             *
+             * Future placeholder round rows do not matter.
              */
-            if (!persistedRound) {
-              continue;
-            }
-
-            const eventKey =
-              `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
-
             const roundComplete =
               Number(
                 eventPlayer.rounds_completed ??
@@ -1036,7 +921,7 @@ export async function GET(request: NextRequest) {
               ) >= roundNumber ||
               Number(
                 persistedRound
-                  .holes_completed ?? 0
+                  ?.holes_completed ?? 0
               ) >= 18;
 
             const playerName =
@@ -1045,7 +930,7 @@ export async function GET(request: NextRequest) {
               ) ??
               `Golfer ${playerId}`;
 
-            const expectedRow: ExpectedLedgerRow = {
+            expectedLedgerRows.push({
               id:
                 `expected:${eventKey}`,
               event_key:
@@ -1082,23 +967,23 @@ export async function GET(request: NextRequest) {
               metadata: {
                 expected: true,
                 roundNumber,
-                expectedDate:
-                  auditDateKey,
-                roundsCompleted,
+                ledgerTournamentRound,
+                roundsCompleted:
+                  Number(
+                    eventPlayer.rounds_completed ??
+                      0
+                  ),
                 playerStatus:
                   eventPlayer.status ??
                   null,
                 holesCompleted:
                   persistedRound
-                    .holes_completed ??
+                    ?.holes_completed ??
                   null,
                 devices: [],
               },
               created_at:
-                `${
-                  auditDateKey ??
-                  slateStartKey
-                }T00:00:00.000Z`,
+                expectedCreatedAt,
               completed_at:
                 roundComplete
                   ? new Date().toISOString()
@@ -1113,114 +998,7 @@ export async function GET(request: NextRequest) {
                 `Team ${teamId}`,
               playerName,
               slateLabel,
-            };
-
-            /*
-             * The expectation NEVER disappears.
-             *
-             * If the delivery pipeline has a real row, overlay the real
-             * delivery state onto this expected event. The event remains
-             * represented exactly once in the audit ledger.
-             */
-            const realHistory =
-              tournamentHistoryByEventKey.get(
-                eventKey
-              ) ??
-              null;
-
-            if (realHistory) {
-              expectedLedgerRows.push({
-                ...expectedRow,
-                id:
-                  String(realHistory.id),
-                user_id:
-                  realHistory.user_id
-                    ? String(
-                        realHistory.user_id
-                      )
-                    : expectedRow.user_id,
-                team_id:
-                  realHistory.team_id ===
-                  null
-                    ? expectedRow.team_id
-                    : Number(
-                        realHistory.team_id
-                      ),
-                slate_id:
-                  realHistory.slate_id ===
-                  null
-                    ? expectedRow.slate_id
-                    : Number(
-                        realHistory.slate_id
-                      ),
-                player_id:
-                  realHistory.player_id ===
-                  null
-                    ? expectedRow.player_id
-                    : Number(
-                        realHistory.player_id
-                      ),
-                title:
-                  String(
-                    realHistory.title ??
-                      expectedRow.title
-                  ),
-                body:
-                  String(
-                    realHistory.body ??
-                      expectedRow.body
-                  ),
-                status:
-                  realHistory.status as
-                    ExpectedLedgerRow["status"],
-                sent_count:
-                  Number(
-                    realHistory.sent_count ??
-                      0
-                  ),
-                failed_count:
-                  Number(
-                    realHistory.failed_count ??
-                      0
-                  ),
-                skipped:
-                  Boolean(
-                    realHistory.skipped
-                  ),
-                reason:
-                  realHistory.reason ??
-                  null,
-                metadata: {
-                  ...expectedRow.metadata,
-                  ...(
-                    realHistory.metadata &&
-                    typeof
-                      realHistory.metadata ===
-                      "object"
-                      ? realHistory.metadata
-                      : {}
-                  ),
-                  expected: true,
-                  roundNumber,
-                  expectedDate:
-                    auditDateKey,
-                },
-                created_at:
-                  String(
-                    realHistory.created_at
-                  ),
-                completed_at:
-                  realHistory.completed_at
-                    ? String(
-                        realHistory.completed_at
-                      )
-                    : null,
-              });
-            } else {
-              expectedLedgerRows.push(
-                expectedRow
-              );
-            }
+            });
           }
         }
       }
@@ -1250,29 +1028,19 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const expectedEventKeys =
-      new Set(
-        expectedLedgerRows.map(
-          (row) => row.event_key
-        )
-      );
-
-    const standaloneHistory =
-      history.filter(
-        (row) =>
-          !(
-            row.notification_type ===
-              "player_finished" &&
-            row.sport === "golf" &&
-            row.event_key &&
-            expectedEventKeys.has(
-              String(row.event_key)
-            )
-          )
-      );
+    console.log("[notification-ledger:golf:result]", {
+      actualHistory: history.length,
+      expectedRows: expectedLedgerRows.length,
+      waiting: expectedLedgerRows.filter(
+        (row) => row.status === "waiting"
+      ).length,
+      missed: expectedLedgerRows.filter(
+        (row) => row.status === "missed"
+      ).length,
+    });
 
     const combinedHistory = [
-      ...standaloneHistory,
+      ...history,
       ...expectedLedgerRows,
     ].sort(
       (a, b) =>

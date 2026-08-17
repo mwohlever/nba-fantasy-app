@@ -34,16 +34,6 @@ export async function GET(request: NextRequest) {
     const sport =
       request.nextUrl.searchParams.get("sport")?.trim() ?? "";
 
-    const requestedDate =
-      request.nextUrl.searchParams.get("date")?.trim() ?? "";
-
-    const selectedDate =
-      /^\d{4}-\d{2}-\d{2}$/.test(
-        requestedDate
-      )
-        ? requestedDate
-        : null;
-
     const start =
       validIsoDateTime(
         request.nextUrl.searchParams.get("start")?.trim() ?? ""
@@ -367,14 +357,7 @@ export async function GET(request: NextRequest) {
       player_id: number | null;
       title: string;
       body: string;
-      status:
-        | "waiting"
-        | "missed"
-        | "pending"
-        | "sent"
-        | "partial"
-        | "failed"
-        | "skipped";
+      status: "waiting" | "missed";
       sent_count: number;
       failed_count: number;
       skipped: boolean;
@@ -424,45 +407,47 @@ export async function GET(request: NextRequest) {
       }
 
       const relevantGolfSlates = (golfSlates ?? []).filter((slate) => {
-        const rawStartDate =
+        const rawDate =
           slate.start_date ??
           slate.date;
 
-        if (!rawStartDate) return false;
+        if (!rawDate) return false;
 
+        const date = new Date(`${rawDate}T12:00:00Z`);
+
+        if (start && date < new Date(start)) {
+          return false;
+        }
+
+        /*
+         * A tournament can span several days. Include it if its end date
+         * overlaps the requested monitor date.
+         */
         const rawEndDate =
           slate.end_date ??
           slate.date ??
-          rawStartDate;
+          rawDate;
 
-        /*
-         * A Golf tournament spans multiple calendar days.
-         *
-         * Include the slate whenever its date range overlaps the
-         * Notification Monitor's selected day:
-         *
-         *   slateEnd >= rangeStart
-         *   slateStart < rangeEnd
-         *
-         * Do NOT require the tournament itself to start on the selected
-         * day; Round 2/3/4 naturally occur after start_date.
-         */
-        const slateStart =
-          new Date(`${rawStartDate}T00:00:00Z`);
+        const endDate =
+          new Date(`${rawEndDate}T23:59:59Z`);
 
-        const slateEnd =
-          new Date(`${rawEndDate}T23:59:59.999Z`);
+        if (end && endDate >= new Date(end)) {
+          /*
+           * This is fine: the slate may span beyond the selected day.
+           * We only need it to overlap the range.
+           */
+        }
 
         if (
           start &&
-          slateEnd < new Date(start)
+          endDate < new Date(start)
         ) {
           return false;
         }
 
         if (
           end &&
-          slateStart >= new Date(end)
+          date >= new Date(end)
         ) {
           return false;
         }
@@ -476,98 +461,6 @@ export async function GET(request: NextRequest) {
         );
 
       if (golfSlateIds.length > 0) {
-        /*
-         * The expected-event ledger is permanent.
-         *
-         * Load the ENTIRE tournament's Golf player-finished delivery
-         * history, not merely today's rows. A real delivery record does
-         * not replace an expectation; it becomes the delivery state of
-         * that expected event.
-         *
-         * This also means a notification manually recovered tomorrow
-         * still appears as SENT when auditing the round/day on which it
-         * was originally expected.
-         */
-        const {
-          data: tournamentNotificationHistory,
-          error: tournamentNotificationHistoryError,
-        } = await supabaseAdmin
-          .from("notification_history")
-          .select(
-            `
-              id,
-              event_key,
-              notification_type,
-              user_id,
-              team_id,
-              slate_id,
-              player_id,
-              title,
-              body,
-              status,
-              sent_count,
-              failed_count,
-              skipped,
-              reason,
-              metadata,
-              created_at,
-              completed_at
-            `
-          )
-          .in("slate_id", golfSlateIds)
-          .eq("notification_type", "player_finished")
-          .not("event_key", "is", null)
-          .order("created_at", {
-            ascending: false,
-          });
-
-        if (tournamentNotificationHistoryError) {
-          return NextResponse.json(
-            {
-              error:
-                "Failed to reconcile expected Golf notifications: " +
-                tournamentNotificationHistoryError.message,
-            },
-            { status: 500 }
-          );
-        }
-
-        const tournamentHistoryByEventKey =
-          new Map<
-            string,
-            NonNullable<
-              typeof tournamentNotificationHistory
-            >[number]
-          >();
-
-        for (
-          const row of tournamentNotificationHistory ?? []
-        ) {
-          if (!row.event_key) {
-            continue;
-          }
-
-          const key =
-            String(row.event_key);
-
-          /*
-           * Rows are newest first. Keep the newest record if old data
-           * ever contains more than one row for the same logical event.
-           */
-          if (
-            !tournamentHistoryByEventKey.has(
-              key
-            )
-          ) {
-            tournamentHistoryByEventKey.set(
-              key,
-              row
-            );
-          }
-
-          realEventKeys.add(key);
-        }
-
         const [
           { data: golfLineups, error: golfLineupsError },
           { data: eventPlayers, error: eventPlayersError },
@@ -632,6 +525,26 @@ export async function GET(request: NextRequest) {
               | Array<{ player_id: number }>
               | null;
           }>;
+
+        console.log("[notification-ledger:golf]", {
+          requestedStart: start,
+          requestedEnd: end,
+          requestedSport: sport || "all",
+          relevantGolfSlates: relevantGolfSlates.map((row) => ({
+            id: Number(row.id),
+            displayName: row.display_name,
+            startDate: row.start_date,
+            endDate: row.end_date,
+          })),
+          golfSlateIds,
+          golfLineups: (golfLineups ?? []).length,
+          lineupPlayers: (golfLineups ?? []).reduce(
+            (sum: number, row: any) =>
+              sum + Number(row.lineup_players?.length ?? 0),
+            0
+          ),
+          eventPlayers: (eventPlayers ?? []).length,
+        });
 
         const safeEventPlayers =
           (eventPlayers ?? []) as Array<{
@@ -785,17 +698,6 @@ export async function GET(request: NextRequest) {
           );
         }
 
-        /*
-         * Expected Golf notification rounds are determined per golfer.
-         *
-         * Golfers do not all complete a round at the same time. Using
-         * the field-wide maximum rounds_completed advances every golfer
-         * to the next round as soon as the first golfer finishes.
-         *
-         * Instead, each golfer's own rounds_completed determines the
-         * round whose completion notification should currently exist.
-         */
-
         const ledgerPlayerIds =
           Array.from(
             new Set(
@@ -822,6 +724,14 @@ export async function GET(request: NextRequest) {
               String(row.display_name),
             ])
           );
+
+        console.log("[notification-ledger:golf:resolved]", {
+          users: (ledgerUsers ?? []).length,
+          preferences: (ledgerPreferences ?? []).length,
+          golfRounds: (golfRounds ?? []).length,
+          golfPlayers: (ledgerGolfPlayers ?? []).length,
+          eventPlayerMap: ledgerEventPlayerBySlatePlayer.size,
+        });
 
         for (const lineup of safeGolfLineups) {
           const slateId =
@@ -901,325 +811,141 @@ export async function GET(request: NextRequest) {
                 Number(eventPlayer.id)
               ) ?? [];
 
-            const roundsCompleted =
-              Number(
-                eventPlayer.rounds_completed ?? 0
+            const persistedMaxRound =
+              rounds.reduce(
+                (max, round) =>
+                  Math.max(
+                    max,
+                    Number(
+                      round.round_number ?? 0
+                    )
+                  ),
+                0
               );
 
             const currentRound =
-              Number(
-                eventPlayer.current_round ?? 0
+              Math.max(
+                1,
+                Number(
+                  eventPlayer.current_round ?? 0
+                ),
+                Number(
+                  eventPlayer.rounds_completed ?? 0
+                ),
+                persistedMaxRound
               );
 
             /*
-             * The Notification Monitor is an AUDIT LEDGER, not a snapshot
-             * of whichever round happens to be current now.
-             *
-             * The selected tournament calendar day defines the expected
-             * Golf round:
-             *
-             *   start date     -> Round 1
-             *   start + 1 day  -> Round 2
-             *   start + 2 days -> Round 3
-             *   start + 3 days -> Round 4
-             *
-             * That gives each day a stable event identity. Moving the
-             * golfer to Round 3 can never make the Round 2 expectation
-             * disappear from Friday's audit.
+             * We want the current tournament round to appear before
+             * completion, but not speculative future rounds.
              */
-            const slateStartKey =
-              String(
-                slate.start_date ??
-                  slate.date ??
-                  ""
-              );
-
-            const auditDateKey =
-              selectedDate;
-
-            let roundNumber = 0;
-
-            if (
-              auditDateKey &&
-              /^\d{4}-\d{2}-\d{2}$/.test(
-                slateStartKey
-              )
+            for (
+              let roundNumber = 1;
+              roundNumber <=
+                Math.min(4, currentRound);
+              roundNumber += 1
             ) {
-              const [
-                auditYear,
-                auditMonth,
-                auditDay,
-              ] = auditDateKey
-                .split("-")
-                .map(Number);
+              const eventKey =
+                `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
 
-              const [
-                startYear,
-                startMonth,
-                startDay,
-              ] = slateStartKey
-                .split("-")
-                .map(Number);
+              if (
+                realEventKeys.has(eventKey)
+              ) {
+                continue;
+              }
 
-              const auditDayNumber =
-                Date.UTC(
-                  auditYear,
-                  auditMonth - 1,
-                  auditDay
-                );
+              const persistedRound =
+                rounds.find(
+                  (round) =>
+                    Number(
+                      round.round_number
+                    ) === roundNumber
+                ) ?? null;
 
-              const startDayNumber =
-                Date.UTC(
-                  startYear,
-                  startMonth - 1,
-                  startDay
-                );
-
-              roundNumber =
-                Math.floor(
-                  (
-                    auditDayNumber -
-                    startDayNumber
-                  ) /
-                    86_400_000
-                ) + 1;
-            } else {
-              /*
-               * Compatibility fallback for direct API calls that do not
-               * supply ?date=. The app page always supplies it.
-               */
-              roundNumber =
-                Math.min(
-                  4,
-                  Math.max(
-                    1,
-                    currentRound >
-                      roundsCompleted
-                      ? currentRound
-                      : roundsCompleted || 1
-                  )
-                );
-            }
-
-            if (
-              roundNumber < 1 ||
-              roundNumber > 4
-            ) {
-              continue;
-            }
-
-            const persistedRound =
-              rounds.find(
-                (round) =>
-                  Number(
-                    round.round_number
-                  ) === roundNumber
-              ) ?? null;
-
-            /*
-             * No persisted round means this golfer was not expected to
-             * play that round (for example a normal tournament cut).
-             * Do not create a permanent WAITING event that can never
-             * become valid.
-             */
-            if (!persistedRound) {
-              continue;
-            }
-
-            const eventKey =
-              `player_finished:${slateId}:${playerId}:round-${roundNumber}`;
-
-            const roundComplete =
-              Number(
-                eventPlayer.rounds_completed ??
-                  0
-              ) >= roundNumber ||
-              Number(
-                persistedRound
-                  .holes_completed ?? 0
-              ) >= 18;
-
-            const playerName =
-              ledgerPlayerNameById.get(
-                playerId
-              ) ??
-              `Golfer ${playerId}`;
-
-            const expectedRow: ExpectedLedgerRow = {
-              id:
-                `expected:${eventKey}`,
-              event_key:
-                eventKey,
-              notification_type:
-                "player_finished",
-              user_id:
-                user
-                  ? String(user.id)
-                  : null,
-              team_id:
-                teamId,
-              slate_id:
-                slateId,
-              player_id:
-                playerId,
-              title:
-                `⛳ ${playerName} finished!`,
-              body:
-                roundComplete
-                  ? `${playerName} completed Round ${roundNumber}, but no notification event was recorded.`
-                  : `Waiting for ${playerName} to complete Round ${roundNumber}.`,
-              status:
-                roundComplete
-                  ? "missed"
-                  : "waiting",
-              sent_count: 0,
-              failed_count: 0,
-              skipped: false,
-              reason:
-                roundComplete
-                  ? `Round ${roundNumber} is complete, but no matching notification event reached the delivery pipeline.`
-                  : `Waiting for Round ${roundNumber} completion.`,
-              metadata: {
-                expected: true,
-                roundNumber,
-                expectedDate:
-                  auditDateKey,
-                roundsCompleted,
-                playerStatus:
-                  eventPlayer.status ??
-                  null,
-                holesCompleted:
+              const roundComplete =
+                Number(
                   persistedRound
-                    .holes_completed ??
-                  null,
-                devices: [],
-              },
-              created_at:
-                `${
-                  auditDateKey ??
-                  slateStartKey
-                }T00:00:00.000Z`,
-              completed_at:
-                roundComplete
-                  ? new Date().toISOString()
-                  : null,
-              sport:
-                "golf",
-              recipientName:
-                user?.display_name ??
-                "No recipient",
-              teamName:
-                teamMap.get(teamId) ??
-                `Team ${teamId}`,
-              playerName,
-              slateLabel,
-            };
+                    ?.holes_completed ?? 0
+                ) >= 18 ||
+                Number(
+                  eventPlayer.rounds_completed ??
+                    0
+                ) >= roundNumber;
 
-            /*
-             * The expectation NEVER disappears.
-             *
-             * If the delivery pipeline has a real row, overlay the real
-             * delivery state onto this expected event. The event remains
-             * represented exactly once in the audit ledger.
-             */
-            const realHistory =
-              tournamentHistoryByEventKey.get(
-                eventKey
-              ) ??
-              null;
+              const playerName =
+                ledgerPlayerNameById.get(
+                  playerId
+                ) ??
+                `Golfer ${playerId}`;
 
-            if (realHistory) {
               expectedLedgerRows.push({
-                ...expectedRow,
                 id:
-                  String(realHistory.id),
+                  `expected:${eventKey}`,
+                event_key:
+                  eventKey,
+                notification_type:
+                  "player_finished",
                 user_id:
-                  realHistory.user_id
-                    ? String(
-                        realHistory.user_id
-                      )
-                    : expectedRow.user_id,
+                  user
+                    ? String(user.id)
+                    : null,
                 team_id:
-                  realHistory.team_id ===
-                  null
-                    ? expectedRow.team_id
-                    : Number(
-                        realHistory.team_id
-                      ),
+                  teamId,
                 slate_id:
-                  realHistory.slate_id ===
-                  null
-                    ? expectedRow.slate_id
-                    : Number(
-                        realHistory.slate_id
-                      ),
+                  slateId,
                 player_id:
-                  realHistory.player_id ===
-                  null
-                    ? expectedRow.player_id
-                    : Number(
-                        realHistory.player_id
-                      ),
+                  playerId,
                 title:
-                  String(
-                    realHistory.title ??
-                      expectedRow.title
-                  ),
+                  `⛳ ${playerName} finished!`,
                 body:
-                  String(
-                    realHistory.body ??
-                      expectedRow.body
-                  ),
+                  roundComplete
+                    ? `${playerName} completed Round ${roundNumber}, but no notification event was recorded.`
+                    : `Waiting for ${playerName} to complete Round ${roundNumber}.`,
                 status:
-                  realHistory.status as
-                    ExpectedLedgerRow["status"],
-                sent_count:
-                  Number(
-                    realHistory.sent_count ??
-                      0
-                  ),
-                failed_count:
-                  Number(
-                    realHistory.failed_count ??
-                      0
-                  ),
-                skipped:
-                  Boolean(
-                    realHistory.skipped
-                  ),
+                  roundComplete
+                    ? "missed"
+                    : "waiting",
+                sent_count: 0,
+                failed_count: 0,
+                skipped: false,
                 reason:
-                  realHistory.reason ??
-                  null,
+                  roundComplete
+                    ? "Round is complete, but no matching notification event reached the delivery pipeline."
+                    : `Waiting for Round ${roundNumber} completion.`,
                 metadata: {
-                  ...expectedRow.metadata,
-                  ...(
-                    realHistory.metadata &&
-                    typeof
-                      realHistory.metadata ===
-                      "object"
-                      ? realHistory.metadata
-                      : {}
-                  ),
                   expected: true,
                   roundNumber,
-                  expectedDate:
-                    auditDateKey,
+                  roundsCompleted:
+                    Number(
+                      eventPlayer.rounds_completed ??
+                        0
+                    ),
+                  playerStatus:
+                    eventPlayer.status ??
+                    null,
+                  holesCompleted:
+                    persistedRound
+                      ?.holes_completed ??
+                    null,
+                  devices: [],
                 },
                 created_at:
-                  String(
-                    realHistory.created_at
-                  ),
+                  expectedCreatedAt,
                 completed_at:
-                  realHistory.completed_at
-                    ? String(
-                        realHistory.completed_at
-                      )
+                  roundComplete
+                    ? new Date().toISOString()
                     : null,
+                sport:
+                  "golf",
+                recipientName:
+                  user?.display_name ??
+                  "No recipient",
+                teamName:
+                  teamMap.get(teamId) ??
+                  `Team ${teamId}`,
+                playerName,
+                slateLabel,
               });
-            } else {
-              expectedLedgerRows.push(
-                expectedRow
-              );
             }
           }
         }
@@ -1250,29 +976,19 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const expectedEventKeys =
-      new Set(
-        expectedLedgerRows.map(
-          (row) => row.event_key
-        )
-      );
-
-    const standaloneHistory =
-      history.filter(
-        (row) =>
-          !(
-            row.notification_type ===
-              "player_finished" &&
-            row.sport === "golf" &&
-            row.event_key &&
-            expectedEventKeys.has(
-              String(row.event_key)
-            )
-          )
-      );
+    console.log("[notification-ledger:golf:result]", {
+      actualHistory: history.length,
+      expectedRows: expectedLedgerRows.length,
+      waiting: expectedLedgerRows.filter(
+        (row) => row.status === "waiting"
+      ).length,
+      missed: expectedLedgerRows.filter(
+        (row) => row.status === "missed"
+      ).length,
+    });
 
     const combinedHistory = [
-      ...standaloneHistory,
+      ...history,
       ...expectedLedgerRows,
     ].sort(
       (a, b) =>

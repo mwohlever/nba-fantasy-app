@@ -62,6 +62,17 @@ type RawRadarTrajectory = {
   valid?: boolean | null;
 };
 
+type RawBallFlightTrajectory = {
+  kind?: string | null;
+  type?: string | null;
+  xFit?: unknown[] | null;
+  yFit?: unknown[] | null;
+  zFit?: unknown[] | null;
+  timeInterval?: unknown[] | null;
+  validTimeInterval?: unknown[] | null;
+  measuredTimeInterval?: unknown[] | null;
+};
+
 type RawRadarData = {
   apexHeight?: number | null;
   apexRange?: number | null;
@@ -80,10 +91,14 @@ type RawRadarData = {
   normalizedTrajectoryV2?: RawRadarTrajectory[] | null;
 
   /*
-   * Keep the polynomial trajectory payload available for the
-   * next ShotCast phase without making the UI depend on it yet.
+   * PGA's measured/reconstructed radar polynomial.
+   *
+   * For Flight rows:
+   *   X = downrange
+   *   Y = height
+   *   Z = lateral movement
    */
-  ballTrajectory?: unknown[] | null;
+  ballTrajectory?: RawBallFlightTrajectory[] | null;
 };
 
 type RawBallPathPoint = {
@@ -247,6 +262,16 @@ export type GolfShotRadarData = {
   carrySide: number | null;
 };
 
+export type GolfShotFlightTrajectory = {
+  kind: string | null;
+  type: string | null;
+  xFit: number[];
+  yFit: number[];
+  zFit: number[];
+  timeStart: number;
+  timeEnd: number;
+};
+
 export type GolfBallPathPoint = {
   x: number;
   y: number;
@@ -290,6 +315,7 @@ export type GolfHoleReplayShot = {
    */
   videoId: string | null;
   radarData: GolfShotRadarData | null;
+  flightTrajectory: GolfShotFlightTrajectory | null;
   ballPath: GolfBallPath | null;
 
   leftToRight: GolfShotCoordinateSet | null;
@@ -683,6 +709,99 @@ function finiteNumber(
   return Number.isFinite(numeric)
     ? numeric
     : null;
+}
+
+function finiteNumberArray(
+  value: unknown[] | null | undefined,
+): number[] | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+
+  const numbers = value.map((entry) =>
+    finiteNumber(entry),
+  );
+
+  if (numbers.some((entry) => entry === null)) {
+    return null;
+  }
+
+  return numbers as number[];
+}
+
+function flightTrajectory(
+  value: RawRadarData | null | undefined,
+): GolfShotFlightTrajectory | null {
+  const rows = value?.ballTrajectory;
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return null;
+  }
+
+  /*
+   * PGA can expose more than one radar row. The 2D replay
+   * specifically wants the airborne Flight trajectory.
+   */
+  const row =
+    rows.find(
+      (candidate) =>
+        candidate?.kind?.toLowerCase() === "flight",
+    ) ??
+    null;
+
+  if (!row) {
+    return null;
+  }
+
+  const xFit = finiteNumberArray(row.xFit);
+  const yFit = finiteNumberArray(row.yFit);
+  const zFit = finiteNumberArray(row.zFit);
+
+  if (!xFit || !yFit || !zFit) {
+    return null;
+  }
+
+  const interval =
+    Array.isArray(row.timeInterval) &&
+    row.timeInterval.length >= 2
+      ? row.timeInterval
+      : null;
+
+  if (!interval) {
+    return null;
+  }
+
+  const timeStart =
+    finiteNumber(interval[0]);
+
+  const timeEnd =
+    finiteNumber(interval[1]);
+
+  if (
+    timeStart === null ||
+    timeEnd === null ||
+    timeEnd <= timeStart
+  ) {
+    return null;
+  }
+
+  return {
+    kind:
+      typeof row.kind === "string"
+        ? row.kind
+        : null,
+
+    type:
+      typeof row.type === "string"
+        ? row.type
+        : null,
+
+    xFit,
+    yFit,
+    zFit,
+    timeStart,
+    timeEnd,
+  };
 }
 
 function radarData(
@@ -1188,6 +1307,10 @@ export async function fetchGolfHoleReplay(
             shot.radarData,
           ),
 
+        flightTrajectory:
+          flightTrajectory(
+            shot.radarData,
+          ),
 
         ballPath:
           ballPath(

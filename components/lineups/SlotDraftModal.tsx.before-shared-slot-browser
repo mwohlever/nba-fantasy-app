@@ -1,0 +1,1984 @@
+"use client";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+
+import type {
+  Player,
+  TargetDraftSlot,
+} from "@/components/lineups/types";
+
+type Props = {
+  targetDraftSlot: TargetDraftSlot | null;
+  setTargetDraftSlot: (
+    slot: TargetDraftSlot | null
+  ) => void;
+  players: Player[];
+  playerAverageMap: Map<number, number>;
+  playerProjections: Record<number, any>;
+  availablePlayerIdSet: Set<number>;
+  isAvailabilityLoading: boolean;
+  getOwnerTeamForPlayer: (
+    playerId: number
+  ) => { id: number; name: string } | null;
+  handleAssignPlayerToTeam: (
+    player: Player,
+    teamId: number
+  ) => Promise<void>;
+  onInspectPlayer: (player: Player) => void;
+  selectedSeason: string;
+  hidden?: boolean;
+  isAssigningPlayer: boolean;
+  isSaving: boolean;
+};
+
+type ResearchMode =
+  | "season"
+  | "league";
+
+type SortOption =
+  | "name"
+  | "owgr"
+  | "golf_scoring_avg"
+  | "golf_cuts_pct"
+  | "golf_wins"
+  | "golf_top5"
+  | "golf_top10"
+  | "golf_birdies_round"
+  | "golf_birdie_rate"
+  | "golf_bogey_rate"
+  | "golf_gir"
+  | "golf_drive_acc"
+  | "golf_drive_dist"
+  | "golf_putts_gir"
+  | "nfl_fp"
+  | "nfl_pass_yd"
+  | "nfl_pass_td"
+  | "nfl_int"
+  | "nfl_rush_yd"
+  | "nfl_rush_td"
+  | "nfl_targets"
+  | "nfl_receptions"
+  | "nfl_rec_yd"
+  | "nfl_rec_td"
+  | "season_fp"
+  | "season_pts"
+  | "season_reb"
+  | "season_ast"
+  | "season_stl"
+  | "season_blk"
+  | "season_to"
+  | "times_drafted"
+  | "avg_score"
+  | "high_score"
+  | "winning_lineups"
+  | "runner_up_lineups"
+  | "podium_lineups"
+  | "avg_finish";
+
+type LeagueHistoryStat = {
+  player_id: number;
+  times_drafted?: number | null;
+  avg_score?: number | null;
+  high_score?: number | null;
+  winning_lineups?: number | null;
+  runner_up_lineups?: number | null;
+  podium_lineups?: number | null;
+  avg_finish?: number | null;
+};
+
+function fmt(
+  value: number | null | undefined,
+  digits = 1,
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(Number(value))
+  ) {
+    return "—";
+  }
+
+  return Number(value).toFixed(digits);
+}
+
+function pct(
+  value: number | null | undefined,
+  digits = 0,
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(Number(value))
+  ) {
+    return "—";
+  }
+
+  return `${Number(value).toFixed(digits)}%`;
+}
+
+function intValue(
+  value: number | null | undefined,
+) {
+  if (
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(Number(value))
+  ) {
+    return "—";
+  }
+
+  return String(
+    Math.round(Number(value)),
+  );
+}
+
+export default function SlotDraftModal({
+  targetDraftSlot,
+  setTargetDraftSlot,
+  players,
+  playerAverageMap,
+  playerProjections,
+  availablePlayerIdSet,
+  isAvailabilityLoading,
+  getOwnerTeamForPlayer,
+  handleAssignPlayerToTeam,
+  onInspectPlayer,
+  selectedSeason,
+  hidden = false,
+  isAssigningPlayer,
+  isSaving,
+}: Props) {
+  const { selectedSport } =
+    useSelectedSport();
+
+  const isGolf =
+    selectedSport === "golf";
+
+  const isNfl =
+    selectedSport === "nfl";
+
+  const isNba =
+    selectedSport === "nba";
+
+  const [
+    sortBy,
+    setSortBy,
+  ] = useState<SortOption>(
+    selectedSport === "golf"
+      ? "golf_scoring_avg"
+      : selectedSport === "nfl"
+        ? "nfl_fp"
+        : "season_fp",
+  );
+
+  const [
+    searchTerm,
+    setSearchTerm,
+  ] = useState("");
+
+  const [
+    showAllPlayers,
+    setShowAllPlayers,
+  ] = useState(false);
+
+  const [
+    researchMode,
+    setResearchMode,
+  ] = useState<ResearchMode>(
+    "season",
+  );
+
+  const [
+    seasonStats,
+    setSeasonStats,
+  ] = useState<any[]>([]);
+
+  const [
+    leagueHistory,
+    setLeagueHistory,
+  ] = useState<
+    LeagueHistoryStat[]
+  >([]);
+
+  const [
+    compareMode,
+    setCompareMode,
+  ] = useState(false);
+
+  const [
+    comparePlayerIds,
+    setComparePlayerIds,
+  ] = useState<number[]>([]);
+
+  const [
+    compareOpen,
+    setCompareOpen,
+  ] = useState(false);
+
+  useEffect(() => {
+    if (!targetDraftSlot) {
+      return;
+    }
+
+    setResearchMode("season");
+    setSortBy(
+      isGolf
+        ? "golf_scoring_avg"
+        : isNfl
+          ? "nfl_fp"
+          : "season_fp",
+    );
+    setCompareMode(false);
+    setComparePlayerIds([]);
+    setCompareOpen(false);
+  }, [
+    targetDraftSlot?.teamId,
+    targetDraftSlot?.positionGroup,
+  ]);
+
+  useEffect(() => {
+    if (!targetDraftSlot) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadResearch() {
+      const [
+        seasonResponse,
+        leagueResponse,
+      ] = await Promise.allSettled([
+        fetch(
+          `/api/player-season-stats?season=${selectedSeason}&sport=${selectedSport}`,
+          {
+            cache: "no-store",
+          },
+        ),
+        fetch(
+          `/api/player-history?season=${selectedSeason}&sport=${selectedSport}`,
+          {
+            cache: "no-store",
+          },
+        ),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (
+        seasonResponse.status ===
+        "fulfilled"
+      ) {
+        try {
+          const result =
+            await seasonResponse.value.json();
+
+          const rows =
+            result?.playerStats ??
+            result?.playerSeasonStats ??
+            result?.players ??
+            [];
+
+          setSeasonStats(
+            Array.isArray(rows)
+              ? rows
+              : [],
+          );
+        } catch {
+          setSeasonStats([]);
+        }
+      } else {
+        setSeasonStats([]);
+      }
+
+      if (
+        leagueResponse.status ===
+        "fulfilled"
+      ) {
+        try {
+          const result =
+            await leagueResponse.value.json();
+
+          setLeagueHistory(
+            Array.isArray(
+              result?.playerHistory,
+            )
+              ? result.playerHistory
+              : [],
+          );
+        } catch {
+          setLeagueHistory([]);
+        }
+      } else {
+        setLeagueHistory([]);
+      }
+    }
+
+    void loadResearch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    targetDraftSlot?.teamId,
+    selectedSeason,
+    selectedSport,
+  ]);
+
+  const seasonByPlayerId =
+    useMemo(() => {
+      const map =
+        new Map<number, any>();
+
+      for (
+        const row
+        of seasonStats
+      ) {
+        map.set(
+          Number(row.player_id),
+          row,
+        );
+      }
+
+      return map;
+    }, [
+      seasonStats,
+    ]);
+
+  const leagueByPlayerId =
+    useMemo(() => {
+      const map =
+        new Map<
+          number,
+          LeagueHistoryStat
+        >();
+
+      for (
+        const row
+        of leagueHistory
+      ) {
+        map.set(
+          Number(row.player_id),
+          row,
+        );
+      }
+
+      return map;
+    }, [
+      leagueHistory,
+    ]);
+
+  const filteredPlayers =
+    useMemo(() => {
+      if (!targetDraftSlot) {
+        return [];
+      }
+
+      const eligible =
+        players.filter((player) => {
+          if (
+            player.position_group !==
+            targetDraftSlot.positionGroup
+          ) {
+            return false;
+          }
+
+          if (
+            !showAllPlayers &&
+            !isAvailabilityLoading &&
+            !availablePlayerIdSet.has(
+              player.id,
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            getOwnerTeamForPlayer(
+              player.id,
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            searchTerm.trim() &&
+            !player.name
+              .toLowerCase()
+              .includes(
+                searchTerm
+                  .trim()
+                  .toLowerCase(),
+              )
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+
+      const numeric =
+        (
+          value:
+            number |
+            null |
+            undefined,
+        ) =>
+          value === null ||
+          value === undefined ||
+          !Number.isFinite(
+            Number(value),
+          )
+            ? null
+            : Number(value);
+
+      const valueFor =
+        (player: Player) => {
+          const season =
+            seasonByPlayerId.get(
+              player.id,
+            );
+
+          const league =
+            leagueByPlayerId.get(
+              player.id,
+            );
+
+          if (
+            researchMode ===
+            "league"
+          ) {
+            switch (sortBy) {
+              case "avg_score":
+                return numeric(
+                  league?.avg_score,
+                );
+              case "high_score":
+                return numeric(
+                  league?.high_score,
+                );
+              case "winning_lineups":
+                return numeric(
+                  league?.winning_lineups,
+                );
+              case "runner_up_lineups":
+                return numeric(
+                  league?.runner_up_lineups,
+                );
+              case "podium_lineups":
+                return numeric(
+                  league?.podium_lineups,
+                );
+              case "avg_finish":
+                return numeric(
+                  league?.avg_finish,
+                );
+              case "times_drafted":
+              default:
+                return numeric(
+                  league?.times_drafted,
+                );
+            }
+          }
+
+          if (isGolf) {
+            switch (sortBy) {
+              case "golf_cuts_pct":
+                return numeric(
+                  season?.cuts_made_pct,
+                );
+              case "golf_wins":
+                return numeric(
+                  season?.wins,
+                );
+              case "golf_top5":
+                return numeric(
+                  season?.top_5_finishes,
+                );
+              case "golf_top10":
+                return numeric(
+                  season?.top_10_finishes,
+                );
+              case "golf_birdies_round":
+                return numeric(
+                  season?.birdies_per_round,
+                );
+              case "golf_birdie_rate":
+                return numeric(
+                  season?.birdie_rate,
+                );
+              case "golf_bogey_rate":
+                return numeric(
+                  season?.bogey_rate,
+                );
+              case "golf_gir":
+                return numeric(
+                  season?.greens_in_reg_pct,
+                );
+              case "golf_drive_acc":
+                return numeric(
+                  season?.driving_accuracy_pct,
+                );
+              case "golf_drive_dist":
+                return numeric(
+                  season?.driving_distance,
+                );
+              case "golf_putts_gir":
+                return numeric(
+                  season?.putts_per_gir,
+                );
+              case "owgr":
+                return numeric(
+                  player.owgr_rank,
+                );
+              case "golf_scoring_avg":
+              default:
+                return numeric(
+                  season?.scoring_average,
+                );
+            }
+          }
+
+          if (isNfl) {
+            switch (sortBy) {
+              case "nfl_pass_yd":
+                return numeric(
+                  season?.passing_yards_per_game,
+                );
+              case "nfl_pass_td":
+                return numeric(
+                  season?.passing_tds_per_game,
+                );
+              case "nfl_int":
+                return numeric(
+                  season?.passing_ints_per_game,
+                );
+              case "nfl_rush_yd":
+                return numeric(
+                  season?.rushing_yards_per_game,
+                );
+              case "nfl_rush_td":
+                return numeric(
+                  season?.rushing_tds_per_game,
+                );
+              case "nfl_targets":
+                return numeric(
+                  season?.receiving_targets_per_game,
+                );
+              case "nfl_receptions":
+                return numeric(
+                  season?.receptions_per_game,
+                );
+              case "nfl_rec_yd":
+                return numeric(
+                  season?.receiving_yards_per_game,
+                );
+              case "nfl_rec_td":
+                return numeric(
+                  season?.receiving_tds_per_game,
+                );
+              case "nfl_fp":
+              default:
+                return numeric(
+                  season?.fantasy_points_per_game,
+                );
+            }
+          }
+
+          switch (sortBy) {
+            case "season_pts":
+              return numeric(
+                season?.points,
+              );
+            case "season_reb":
+              return numeric(
+                season?.rebounds,
+              );
+            case "season_ast":
+              return numeric(
+                season?.assists,
+              );
+            case "season_stl":
+              return numeric(
+                season?.steals,
+              );
+            case "season_blk":
+              return numeric(
+                season?.blocks,
+              );
+            case "season_to":
+              return numeric(
+                season?.turnovers,
+              );
+            case "season_fp":
+            default:
+              return numeric(
+                season?.fantasy_points,
+              );
+          }
+        };
+
+      return eligible.sort(
+        (a, b) => {
+          if (sortBy === "name") {
+            return a.name.localeCompare(
+              b.name,
+            );
+          }
+
+          const aValue =
+            valueFor(a);
+
+          const bValue =
+            valueFor(b);
+
+          if (
+            aValue === null &&
+            bValue === null
+          ) {
+            return a.name.localeCompare(
+              b.name,
+            );
+          }
+
+          if (aValue === null) {
+            return 1;
+          }
+
+          if (bValue === null) {
+            return -1;
+          }
+
+          const lowerIsBetter =
+            sortBy ===
+              "golf_scoring_avg" ||
+            sortBy ===
+              "golf_bogey_rate" ||
+            sortBy ===
+              "golf_putts_gir" ||
+            sortBy ===
+              "avg_finish" ||
+            sortBy ===
+              "nfl_int";
+
+          const comparison =
+            lowerIsBetter
+              ? aValue - bValue
+              : bValue - aValue;
+
+          return (
+            comparison ||
+            a.name.localeCompare(
+              b.name,
+            )
+          );
+        },
+      );
+    }, [
+      targetDraftSlot,
+      players,
+      availablePlayerIdSet,
+      isAvailabilityLoading,
+      getOwnerTeamForPlayer,
+      searchTerm,
+      showAllPlayers,
+      seasonByPlayerId,
+      leagueByPlayerId,
+      researchMode,
+      sortBy,
+      isGolf,
+      isNfl,
+    ]);
+
+  if (!targetDraftSlot) {
+    return null;
+  }
+
+  async function draftPlayer(
+    player: Player,
+  ) {
+    if (!targetDraftSlot) {
+      return;
+    }
+
+    await handleAssignPlayerToTeam(
+      player,
+      targetDraftSlot.teamId,
+    );
+
+    setTargetDraftSlot(null);
+    setSearchTerm("");
+  }
+
+  function toggleComparePlayer(
+    playerId: number,
+  ) {
+    setComparePlayerIds(
+      (previous) => {
+        if (
+          previous.includes(
+            playerId,
+          )
+        ) {
+          return previous.filter(
+            (id) =>
+              id !== playerId,
+          );
+        }
+
+        if (
+          previous.length >= 3
+        ) {
+          return previous;
+        }
+
+        return [
+          ...previous,
+          playerId,
+        ];
+      },
+    );
+  }
+
+  const activeStatClasses =
+    isGolf
+      ? {
+          border:
+            "border-emerald-400",
+          bg:
+            "bg-emerald-950/75",
+          text:
+            "text-emerald-300",
+        }
+      : isNfl
+        ? {
+            border:
+              "border-sky-400",
+            bg:
+              "bg-sky-950/75",
+            text:
+              "text-sky-300",
+          }
+        : {
+            border:
+              "border-orange-400",
+            bg:
+              "bg-orange-950/75",
+            text:
+              "text-orange-300",
+          };
+
+  const comparePlayers =
+    comparePlayerIds
+      .map((id) =>
+        players.find(
+          (player) =>
+            player.id === id,
+        ),
+      )
+      .filter(
+        (
+          player,
+        ): player is Player =>
+          Boolean(player),
+      );
+
+  function getCardStats(
+    player: Player,
+  ) {
+    const season =
+      seasonByPlayerId.get(
+        player.id,
+      );
+
+    const league =
+      leagueByPlayerId.get(
+        player.id,
+      );
+
+    if (
+      researchMode ===
+      "league"
+    ) {
+      const dynamic =
+        sortBy ===
+          "runner_up_lineups"
+          ? {
+              label: "2ND",
+              value: intValue(
+                league?.runner_up_lineups,
+              ),
+              key:
+                "runner_up_lineups",
+            }
+          : sortBy ===
+              "podium_lineups"
+            ? {
+                label:
+                  "PODIUM",
+                value:
+                  intValue(
+                    league?.podium_lineups,
+                  ),
+                key:
+                  "podium_lineups",
+              }
+            : sortBy ===
+                "avg_finish"
+              ? {
+                  label:
+                    "FINISH",
+                  value:
+                    fmt(
+                      league?.avg_finish,
+                    ),
+                  key:
+                    "avg_finish",
+                }
+              : sortBy ===
+                  "times_drafted"
+                ? {
+                    label:
+                      "DRAFTED",
+                    value:
+                      intValue(
+                        league?.times_drafted,
+                      ),
+                    key:
+                      "times_drafted",
+                  }
+                : {
+                    label:
+                      isGolf
+                        ? "PODIUM"
+                        : "DRAFTED",
+                    value:
+                      intValue(
+                        isGolf
+                          ? league?.podium_lineups
+                          : league?.times_drafted,
+                      ),
+                    key:
+                      isGolf
+                        ? "podium_lineups"
+                        : "times_drafted",
+                  };
+
+      return [
+        {
+          label: "AVG",
+          value: fmt(
+            league?.avg_score,
+          ),
+          key: "avg_score",
+        },
+        {
+          label: "BEST",
+          value: fmt(
+            league?.high_score,
+          ),
+          key: "high_score",
+        },
+        {
+          label: "WINS",
+          value: intValue(
+            league?.winning_lineups,
+          ),
+          key:
+            "winning_lineups",
+        },
+        dynamic,
+      ];
+    }
+
+    if (isGolf) {
+      const dynamic =
+        sortBy === "golf_wins"
+          ? {
+              label: "WINS",
+              value:
+                intValue(
+                  season?.wins,
+                ),
+              key:
+                "golf_wins",
+            }
+          : sortBy ===
+              "golf_top5"
+            ? {
+                label:
+                  "TOP 5",
+                value:
+                  intValue(
+                    season?.top_5_finishes,
+                  ),
+                key:
+                  "golf_top5",
+              }
+            : sortBy ===
+                "golf_top10"
+              ? {
+                  label:
+                    "TOP 10",
+                  value:
+                    intValue(
+                      season?.top_10_finishes,
+                    ),
+                  key:
+                    "golf_top10",
+                }
+              : sortBy ===
+                  "golf_birdie_rate"
+                ? {
+                    label:
+                      "BIRD %",
+                    value:
+                      pct(
+                        season?.birdie_rate,
+                        1,
+                      ),
+                    key:
+                      "golf_birdie_rate",
+                  }
+                : sortBy ===
+                    "golf_bogey_rate"
+                  ? {
+                      label:
+                        "BOGEY %",
+                      value:
+                        pct(
+                          season?.bogey_rate,
+                          1,
+                        ),
+                      key:
+                        "golf_bogey_rate",
+                    }
+                  : sortBy ===
+                      "golf_gir"
+                    ? {
+                        label:
+                          "GIR",
+                        value:
+                          pct(
+                            season?.greens_in_reg_pct,
+                            1,
+                          ),
+                        key:
+                          "golf_gir",
+                      }
+                    : sortBy ===
+                        "golf_drive_acc"
+                      ? {
+                          label:
+                            "DRV ACC",
+                          value:
+                            pct(
+                              season?.driving_accuracy_pct,
+                              1,
+                            ),
+                          key:
+                            "golf_drive_acc",
+                        }
+                      : sortBy ===
+                          "golf_drive_dist"
+                        ? {
+                            label:
+                              "DIST",
+                            value:
+                              fmt(
+                                season?.driving_distance,
+                                1,
+                              ),
+                            key:
+                              "golf_drive_dist",
+                          }
+                        : sortBy ===
+                            "golf_putts_gir"
+                          ? {
+                              label:
+                                "PUTTS",
+                              value:
+                                fmt(
+                                  season?.putts_per_gir,
+                                  2,
+                                ),
+                              key:
+                                "golf_putts_gir",
+                            }
+                          : {
+                              label:
+                                "WINS",
+                              value:
+                                intValue(
+                                  season?.wins,
+                                ),
+                              key:
+                                "golf_wins",
+                            };
+
+      return [
+        {
+          label: "AVG",
+          value: fmt(
+            season?.scoring_average,
+            2,
+          ),
+          key:
+            "golf_scoring_avg",
+        },
+        {
+          label: "CUTS",
+          value: pct(
+            season?.cuts_made_pct,
+          ),
+          key:
+            "golf_cuts_pct",
+        },
+        {
+          label: "BIRD/R",
+          value: fmt(
+            season?.birdies_per_round,
+            2,
+          ),
+          key:
+            "golf_birdies_round",
+        },
+        dynamic,
+      ];
+    }
+
+    if (isNfl) {
+      const dynamic =
+        sortBy ===
+          "nfl_pass_td"
+          ? {
+              label:
+                "P TD",
+              value:
+                fmt(
+                  season?.passing_tds_per_game,
+                ),
+              key:
+                "nfl_pass_td",
+            }
+          : sortBy ===
+              "nfl_int"
+            ? {
+                label:
+                  "INT",
+                value:
+                  fmt(
+                    season?.passing_ints_per_game,
+                  ),
+                key:
+                  "nfl_int",
+              }
+            : sortBy ===
+                "nfl_rush_td"
+              ? {
+                  label:
+                    "R TD",
+                  value:
+                    fmt(
+                      season?.rushing_tds_per_game,
+                    ),
+                  key:
+                    "nfl_rush_td",
+                }
+              : sortBy ===
+                  "nfl_targets"
+                ? {
+                    label:
+                      "TGT",
+                    value:
+                      fmt(
+                        season?.receiving_targets_per_game,
+                      ),
+                    key:
+                      "nfl_targets",
+                  }
+                : sortBy ===
+                    "nfl_receptions"
+                  ? {
+                      label:
+                        "REC",
+                      value:
+                        fmt(
+                          season?.receptions_per_game,
+                        ),
+                      key:
+                        "nfl_receptions",
+                    }
+                  : sortBy ===
+                      "nfl_rec_td"
+                    ? {
+                        label:
+                          "REC TD",
+                        value:
+                          fmt(
+                            season?.receiving_tds_per_game,
+                          ),
+                        key:
+                          "nfl_rec_td",
+                      }
+                    : {
+                        label:
+                          "REC YD",
+                        value:
+                          fmt(
+                            season?.receiving_yards_per_game,
+                          ),
+                        key:
+                          "nfl_rec_yd",
+                      };
+
+      return [
+        {
+          label:
+            "FP/G",
+          value:
+            fmt(
+              season?.fantasy_points_per_game,
+            ),
+          key:
+            "nfl_fp",
+        },
+        {
+          label:
+            "PASS",
+          value:
+            fmt(
+              season?.passing_yards_per_game,
+            ),
+          key:
+            "nfl_pass_yd",
+        },
+        {
+          label:
+            "RUSH",
+          value:
+            fmt(
+              season?.rushing_yards_per_game,
+            ),
+          key:
+            "nfl_rush_yd",
+        },
+        dynamic,
+      ];
+    }
+
+    const nbaDynamic =
+      sortBy ===
+        "season_stl"
+        ? {
+            label:
+              "STL",
+            value:
+              fmt(
+                season?.steals,
+              ),
+            key:
+              "season_stl",
+          }
+        : sortBy ===
+            "season_blk"
+          ? {
+              label:
+                "BLK",
+              value:
+                fmt(
+                  season?.blocks,
+                ),
+              key:
+                "season_blk",
+            }
+          : sortBy ===
+              "season_to"
+            ? {
+                label:
+                  "TO",
+                value:
+                  fmt(
+                    season?.turnovers,
+                  ),
+                key:
+                  "season_to",
+              }
+            : {
+                label:
+                  "AST",
+                value:
+                  fmt(
+                    season?.assists,
+                  ),
+                key:
+                  "season_ast",
+              };
+
+    return [
+      {
+        label: "FP",
+        value: fmt(
+          season?.fantasy_points,
+        ),
+        key:
+          "season_fp",
+      },
+      {
+        label: "PTS",
+        value: fmt(
+          season?.points,
+        ),
+        key:
+          "season_pts",
+      },
+      {
+        label: "REB",
+        value: fmt(
+          season?.rebounds,
+        ),
+        key:
+          "season_reb",
+      },
+      nbaDynamic,
+    ];
+  }
+
+  return (
+    <div
+      className={`mobile-modal-safe slot-draft-overlay fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 px-3 py-4 backdrop-blur-sm sm:items-center ${
+        hidden
+          ? "slot-draft-overlay--hidden"
+          : ""
+      }`}
+      aria-hidden={hidden}
+      onClick={() => {
+        if (!hidden) {
+          setTargetDraftSlot(
+            null,
+          );
+        }
+      }}
+    >
+      <section
+        className="mobile-modal-panel-safe slot-draft-modal flex max-h-[88dvh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border shadow-2xl"
+        onClick={(event) =>
+          event.stopPropagation()
+        }
+      >
+        <header className="slot-draft-header">
+          <div className="min-w-0">
+            <div className="slot-draft-kicker">
+              Draft to roster spot
+            </div>
+
+            <h2>
+              {
+                targetDraftSlot.teamName
+              }
+              <span>
+                {
+                  targetDraftSlot.positionGroup
+                }
+              </span>
+            </h2>
+
+            <p>
+              Choose an available{" "}
+              {
+                targetDraftSlot.positionGroup
+              }.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              setTargetDraftSlot(
+                null,
+              )
+            }
+            className="slot-draft-close"
+            aria-label="Close draft modal"
+          >
+            ×
+          </button>
+        </header>
+
+        <div className="border-b border-slate-700 bg-slate-950/95 px-4 pt-3">
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setResearchMode(
+                  "season",
+                );
+
+                setSortBy(
+                  isGolf
+                    ? "golf_scoring_avg"
+                    : isNfl
+                      ? "nfl_fp"
+                      : "season_fp",
+                );
+              }}
+              className={`rounded-lg px-3 py-2 text-xs font-black transition ${
+                researchMode ===
+                "season"
+                  ? isGolf
+                    ? "bg-emerald-600 text-white"
+                    : "bg-sky-600 text-white"
+                  : "text-slate-400"
+              }`}
+            >
+              Season Stats
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setResearchMode(
+                  "league",
+                );
+
+                setSortBy(
+                  "times_drafted",
+                );
+              }}
+              className={`rounded-lg px-3 py-2 text-xs font-black transition ${
+                researchMode ===
+                "league"
+                  ? isGolf
+                    ? "bg-emerald-600 text-white"
+                    : "bg-sky-600 text-white"
+                  : "text-slate-400"
+              }`}
+            >
+              League History
+            </button>
+          </div>
+        </div>
+
+        <div className="slot-draft-search">
+          <div className="slot-draft-search-heading">
+            <label htmlFor="slot-player-search">
+              Search players
+            </label>
+
+            <div
+              className="inline-flex shrink-0 rounded-full border border-slate-600 bg-slate-800 p-1"
+              role="group"
+              aria-label="Player availability"
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setShowAllPlayers(
+                    false,
+                  )
+                }
+                aria-pressed={
+                  !showAllPlayers
+                }
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  !showAllPlayers
+                    ? "bg-sky-600 text-white shadow-sm"
+                    : "text-slate-300"
+                }`}
+              >
+                On This Slate
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowAllPlayers(
+                    true,
+                  )
+                }
+                aria-pressed={
+                  showAllPlayers
+                }
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  showAllPlayers
+                    ? "bg-sky-600 text-white shadow-sm"
+                    : "text-slate-300"
+                }`}
+              >
+                All Players
+              </button>
+            </div>
+          </div>
+
+          <input
+            id="slot-player-search"
+            type="text"
+            value={searchTerm}
+            onChange={(event) =>
+              setSearchTerm(
+                event.target.value,
+              )
+            }
+            placeholder={`Search ${targetDraftSlot.positionGroup} players...`}
+            autoFocus
+          />
+
+          <div className="mt-3 flex items-center gap-3">
+            <label className="min-w-0 flex-1">
+              <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Sort
+              </span>
+
+              <select
+                value={sortBy}
+                onChange={(event) =>
+                  setSortBy(
+                    event.target.value as SortOption,
+                  )
+                }
+                className="w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm font-bold text-white"
+              >
+                {researchMode === "league" ? (
+                  <>
+                    <option value="times_drafted">Times Drafted</option>
+                    <option value="avg_score">Avg Score</option>
+                    <option value="high_score">Best Score</option>
+                    <option value="winning_lineups">Wins</option>
+
+                    {isGolf ? (
+                      <option value="podium_lineups">Podiums</option>
+                    ) : (
+                      <option value="runner_up_lineups">Runner-Ups</option>
+                    )}
+
+                    <option value="avg_finish">Avg Finish</option>
+                    <option value="name">Player Name</option>
+                  </>
+                ) : isGolf ? (
+                  <>
+                    <option value="golf_scoring_avg">Scoring Average</option>
+                    <option value="golf_cuts_pct">Cuts Made %</option>
+                    <option value="golf_wins">Wins</option>
+                    <option value="golf_top5">Top 5s</option>
+                    <option value="golf_top10">Top 10s</option>
+                    <option value="golf_birdies_round">Birdies / Round</option>
+                    <option value="golf_birdie_rate">Birdie %</option>
+                    <option value="golf_bogey_rate">Bogey %</option>
+                    <option value="golf_gir">GIR %</option>
+                    <option value="golf_drive_acc">Driving Accuracy</option>
+                    <option value="golf_drive_dist">Driving Distance</option>
+                    <option value="golf_putts_gir">Putts / GIR</option>
+                    <option value="name">Player Name</option>
+                  </>
+                ) : isNfl ? (
+                  <>
+                    <option value="nfl_fp">Fantasy Points / Game</option>
+                    <option value="nfl_pass_yd">Pass Yards / Game</option>
+                    <option value="nfl_pass_td">Pass TD / Game</option>
+                    <option value="nfl_int">INT / Game</option>
+                    <option value="nfl_rush_yd">Rush Yards / Game</option>
+                    <option value="nfl_rush_td">Rush TD / Game</option>
+                    <option value="nfl_targets">Targets / Game</option>
+                    <option value="nfl_receptions">Receptions / Game</option>
+                    <option value="nfl_rec_yd">Receiving Yards / Game</option>
+                    <option value="nfl_rec_td">Receiving TD / Game</option>
+                    <option value="name">Player Name</option>
+                  </>
+                ) : isNba ? (
+                  <>
+                    <option value="season_fp">Fantasy Points</option>
+                    <option value="season_pts">Points</option>
+                    <option value="season_reb">Rebounds</option>
+                    <option value="season_ast">Assists</option>
+                    <option value="season_stl">Steals</option>
+                    <option value="season_blk">Blocks</option>
+                    <option value="season_to">Turnovers</option>
+                    <option value="name">Player Name</option>
+                  </>
+                ) : null}
+              </select>
+            </label>
+
+            <div className="pt-5 text-xs font-bold text-slate-400">
+              {filteredPlayers.length} shown
+            </div>
+          </div>
+        </div>
+
+        {compareMode ? (
+          <div className="border-b border-slate-700 bg-slate-950 px-4 py-2 text-xs text-slate-300">
+            <div className="flex items-center justify-between gap-3">
+              <span>
+                Select 2–3 players
+                to compare.
+              </span>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCompareMode(
+                    false,
+                  );
+                  setComparePlayerIds(
+                    [],
+                  );
+                }}
+                className="font-bold text-slate-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="slot-draft-results min-h-0 flex-1 overflow-y-auto p-4 pb-28 sm:p-5">
+          {isAvailabilityLoading ? (
+            <div className="slot-draft-empty">
+              <div aria-hidden="true">
+                {isGolf
+                  ? "⛳"
+                  : "🏀"}
+              </div>
+
+              <strong>
+                Loading available players
+              </strong>
+            </div>
+          ) : filteredPlayers.length ===
+            0 ? (
+            <div className="slot-draft-empty">
+              <div aria-hidden="true">
+                📅
+              </div>
+
+              <strong>
+                No players available yet
+              </strong>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPlayers.map(
+                (player) => {
+                  const selected =
+                    comparePlayerIds.includes(
+                      player.id,
+                    );
+
+                  const stats =
+                    getCardStats(
+                      player,
+                    );
+
+                  return (
+                    <article
+                      key={player.id}
+                      className={`rounded-2xl border bg-slate-900/90 p-3 transition ${
+                        selected
+                          ? isGolf
+                            ? "border-emerald-400 ring-2 ring-emerald-400/40"
+                            : "border-sky-400 ring-2 ring-sky-400/40"
+                          : "border-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              compareMode
+                            ) {
+                              toggleComparePlayer(
+                                player.id,
+                              );
+                              return;
+                            }
+
+                            onInspectPlayer(
+                              player,
+                            );
+                          }}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        >
+                          <PlayerHeadshot
+                            nbaPlayerId={
+                              player.nba_player_id
+                            }
+                            nflPlayerId={
+                              player.nfl_player_id
+                            }
+                            espnGolfPlayerId={
+                              player.espn_player_id
+                            }
+                            imageUrl={
+                              player.headshot_url
+                            }
+                            playerName={
+                              player.name
+                            }
+                            size="md"
+                          />
+
+                          <div className="min-w-0">
+                            <div className="truncate text-base font-black text-white">
+                              {
+                                player.name
+                              }
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-slate-400">
+                              {
+                                player.position_group
+                              }
+                              {isGolf
+                                ? ` · OWGR ${
+                                    player.owgr_rank
+                                      ? `#${player.owgr_rank}`
+                                      : "—"
+                                  }`
+                                : ""}
+                            </div>
+
+                            <div
+                              className={`mt-1 text-[11px] font-bold ${
+                                isGolf
+                                  ? "text-emerald-300"
+                                  : "text-sky-300"
+                              }`}
+                            >
+                              {compareMode
+                                ? selected
+                                  ? "✓ Selected"
+                                  : "Tap to compare"
+                                : "View player stats"}
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void draftPlayer(
+                              player,
+                            )
+                          }
+                          disabled={
+                            isAssigningPlayer ||
+                            isSaving
+                          }
+                          className="shrink-0 rounded-full border border-emerald-700 bg-emerald-950/70 px-4 py-2 text-xs font-black text-emerald-300 disabled:opacity-50"
+                        >
+                          {isAssigningPlayer ||
+                          isSaving
+                            ? "Saving…"
+                            : "Draft"}
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            compareMode
+                          ) {
+                            toggleComparePlayer(
+                              player.id,
+                            );
+                          } else {
+                            onInspectPlayer(
+                              player,
+                            );
+                          }
+                        }}
+                        className="mt-3 grid w-full grid-cols-4 gap-1 border-t border-slate-700/70 pt-2"
+                      >
+                        {stats.map(
+                          (
+                            stat,
+                            index,
+                          ) => (
+                            <div
+                              key={`${stat.label}-${index}`}
+                              className={`rounded-lg border px-1 py-1.5 text-center ${
+                                stat.key ===
+                                sortBy
+                                  ? `${activeStatClasses.border} ${activeStatClasses.bg}`
+                                  : "border-transparent bg-slate-950/55"
+                              }`}
+                            >
+                              <strong
+                                className={`block text-[13px] font-black ${
+                                  stat.key ===
+                                  sortBy
+                                    ? activeStatClasses.text
+                                    : "text-white"
+                                }`}
+                              >
+                                {
+                                  stat.value
+                                }
+                              </strong>
+
+                              <span
+                                className={`mt-0.5 block text-[9px] font-bold uppercase ${
+                                  stat.key ===
+                                  sortBy
+                                    ? activeStatClasses.text
+                                    : "text-slate-400"
+                                }`}
+                              >
+                                {
+                                  stat.label
+                                }
+                              </span>
+                            </div>
+                          ),
+                        )}
+                      </button>
+                    </article>
+                  );
+                },
+              )}
+            </div>
+          )}
+        </div>
+
+        {compareOpen &&
+        comparePlayers.length >=
+          2 ? (
+          <div
+            className="fixed inset-x-0 top-0 bottom-[5rem] z-[100] overflow-y-auto bg-slate-950"
+            onClick={() =>
+              setCompareOpen(false)
+            }
+          >
+            <section
+              className="mx-auto min-h-full w-full max-w-2xl bg-slate-950 px-4 pb-8 pt-[max(1.25rem,env(safe-area-inset-top))]"
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div
+                    className={`text-xs font-black uppercase tracking-[0.18em] ${
+                      isGolf
+                        ? "text-emerald-300"
+                        : isNfl
+                          ? "text-sky-300"
+                          : "text-orange-300"
+                    }`}
+                  >
+                    {isGolf
+                      ? "Golfer Comparison"
+                      : "Player Comparison"}
+                  </div>
+
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    Side by side
+                  </h3>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCompareOpen(
+                      false,
+                    )
+                  }
+                  className="rounded-full border border-slate-700 px-3 py-2 text-white"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div
+                className="mt-4 grid gap-2"
+                style={{
+                  gridTemplateColumns:
+                    `repeat(${comparePlayers.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {comparePlayers.map(
+                  (player) => (
+                    <div
+                      key={
+                        player.id
+                      }
+                      className="rounded-2xl border border-slate-700 bg-slate-900 p-3 text-center"
+                    >
+                      <PlayerHeadshot
+                        nbaPlayerId={
+                          player.nba_player_id
+                        }
+                        nflPlayerId={
+                          player.nfl_player_id
+                        }
+                        espnGolfPlayerId={
+                          player.espn_player_id
+                        }
+                        imageUrl={
+                          player.headshot_url
+                        }
+                        playerName={
+                          player.name
+                        }
+                        size="md"
+                        className="mx-auto"
+                      />
+
+                      <div className="mt-2 truncate text-sm font-black text-white">
+                        {
+                          player.name
+                        }
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {[
+                  0,
+                  1,
+                  2,
+                  3,
+                ].map(
+                  (statIndex) => (
+                    <div
+                      key={
+                        statIndex
+                      }
+                      className="grid items-stretch gap-2"
+                      style={{
+                        gridTemplateColumns:
+                          `repeat(${comparePlayers.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {comparePlayers.map(
+                        (
+                          player,
+                        ) => {
+                          const stat =
+                            getCardStats(
+                              player,
+                            )[
+                              statIndex
+                            ];
+
+                          return (
+                            <div
+                              key={`${player.id}-${statIndex}`}
+                              className="rounded-xl bg-slate-900 p-2 text-center"
+                            >
+                              <div className="text-lg font-black text-white">
+                                {
+                                  stat
+                                    ?.value ??
+                                  "—"
+                                }
+                              </div>
+
+                              <div className="text-[9px] font-black uppercase text-slate-400">
+                                {
+                                  stat
+                                    ?.label ??
+                                  ""
+                                }
+                              </div>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                  ),
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCompareOpen(
+                    false,
+                  )
+                }
+                className="mt-4 w-full rounded-xl border border-slate-700 px-4 py-3 font-bold text-white"
+              >
+                Back to players
+              </button>
+            </section>
+          </div>
+        ) : null}
+      </section>
+
+      {!hidden &&
+      !compareOpen ? (
+        <div
+          data-floating-compare="true"
+          className="fixed bottom-[5.75rem] right-4 z-[70]"
+          onClick={(event) =>
+            event.stopPropagation()
+          }
+        >
+          {!compareMode ? (
+            <button
+              type="button"
+              onClick={() =>
+                setCompareMode(
+                  true,
+                )
+              }
+              className={`rounded-2xl border px-5 py-3 text-sm font-black shadow-2xl backdrop-blur ${
+                isGolf
+                  ? "border-emerald-400 bg-emerald-800/95 text-white"
+                  : isNfl
+                    ? "border-sky-400 bg-sky-800/95 text-white"
+                    : "border-orange-400 bg-orange-800/95 text-white"
+              }`}
+            >
+              ⇄{" "}
+              {isGolf
+                ? "Compare Golfers"
+                : "Compare Players"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                setCompareOpen(
+                  true,
+                )
+              }
+              disabled={
+                comparePlayers.length <
+                2
+              }
+              className={`rounded-2xl border px-5 py-3 text-sm font-black text-white shadow-2xl disabled:cursor-not-allowed disabled:opacity-45 ${
+                isGolf
+                  ? "border-emerald-400 bg-emerald-700"
+                  : isNfl
+                    ? "border-sky-400 bg-sky-700"
+                    : "border-orange-400 bg-orange-700"
+              }`}
+            >
+              Compare{" "}
+              {
+                comparePlayers.length
+              }{" "}
+              {isGolf
+                ? "Golfers"
+                : "Players"}
+            </button>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}

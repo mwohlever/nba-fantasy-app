@@ -1,0 +1,816 @@
+"use client";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import * as THREE from "three";
+
+import {
+  GLTFLoader,
+} from "three/examples/jsm/loaders/GLTFLoader.js";
+
+import {
+  OrbitControls,
+} from "three/examples/jsm/controls/OrbitControls.js";
+
+type Props = {
+  modelUrl: string;
+  title: string;
+};
+
+type StoredMesh = {
+  mesh: THREE.Mesh;
+  originalMaterial:
+    | THREE.Material
+    | THREE.Material[];
+  slopeMaterial:
+    THREE.MeshStandardMaterial;
+};
+
+type CameraSnapshot = {
+  position: THREE.Vector3;
+  target: THREE.Vector3;
+};
+
+function disposeMaterial(
+  material:
+    | THREE.Material
+    | THREE.Material[],
+) {
+  if (
+    Array.isArray(material)
+  ) {
+    material.forEach(
+      (item) =>
+        item.dispose(),
+    );
+
+    return;
+  }
+
+  material.dispose();
+}
+
+export default function GolfGreen3D({
+  modelUrl,
+  title,
+}: Props) {
+  const hostRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const meshesRef =
+    useRef<StoredMesh[]>([]);
+
+  const controlsRef =
+    useRef<OrbitControls | null>(
+      null,
+    );
+
+  const cameraRef =
+    useRef<
+      THREE.PerspectiveCamera | null
+    >(null);
+
+  const homeCameraRef =
+    useRef<CameraSnapshot | null>(
+      null,
+    );
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(true);
+
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    mode,
+    setMode,
+  ] = useState<
+    "surface" | "slope"
+  >("surface");
+
+  const [
+    meshStats,
+    setMeshStats,
+  ] = useState<{
+    vertices: number;
+    meshes: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const host =
+      hostRef.current;
+
+    if (!host) {
+      return;
+    }
+
+    let disposed = false;
+    let frame = 0;
+
+    setIsLoading(true);
+    setError(null);
+    setMeshStats(null);
+
+    meshesRef.current = [];
+
+    const scene =
+      new THREE.Scene();
+
+    scene.background =
+      new THREE.Color(
+        0x07110c,
+      );
+
+    const camera =
+      new THREE.PerspectiveCamera(
+        34,
+        1,
+        0.01,
+        100000,
+      );
+
+    cameraRef.current =
+      camera;
+
+    const renderer =
+      new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: false,
+        powerPreference:
+          "high-performance",
+      });
+
+    renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio,
+        2,
+      ),
+    );
+
+    renderer.outputColorSpace =
+      THREE.SRGBColorSpace;
+
+    renderer.shadowMap.enabled =
+      true;
+
+    renderer.shadowMap.type =
+      THREE.PCFSoftShadowMap;
+
+    host.appendChild(
+      renderer.domElement,
+    );
+
+    const controls =
+      new OrbitControls(
+        camera,
+        renderer.domElement,
+      );
+
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = true;
+    controls.minDistance = 0.01;
+    controls.maxPolarAngle =
+      Math.PI * 0.49;
+
+    controlsRef.current =
+      controls;
+
+    /*
+     * Deliberately directional lighting:
+     * hills/valleys should be visible even before
+     * the explicit slope visualization is enabled.
+     */
+    const hemisphere =
+      new THREE.HemisphereLight(
+        0xe8fff2,
+        0x21341f,
+        2.1,
+      );
+
+    scene.add(hemisphere);
+
+    const keyLight =
+      new THREE.DirectionalLight(
+        0xffffff,
+        3.2,
+      );
+
+    keyLight.position.set(
+      6,
+      10,
+      4,
+    );
+
+    keyLight.castShadow = true;
+
+    scene.add(keyLight);
+
+    const fillLight =
+      new THREE.DirectionalLight(
+        0xb9d8ff,
+        1.3,
+      );
+
+    fillLight.position.set(
+      -5,
+      4,
+      -6,
+    );
+
+    scene.add(fillLight);
+
+    function resize() {
+      if (disposed) {
+        return;
+      }
+
+      const currentHost =
+        hostRef.current;
+
+      if (!currentHost) {
+        return;
+      }
+
+      const width =
+        Math.max(
+          currentHost.clientWidth,
+          1,
+        );
+
+      const height =
+        Math.max(
+          currentHost.clientHeight,
+          1,
+        );
+
+      renderer.setSize(
+        width,
+        height,
+        false,
+      );
+
+      camera.aspect =
+        width / height;
+
+      camera.updateProjectionMatrix();
+    }
+
+    const observer =
+      new ResizeObserver(
+        resize,
+      );
+
+    observer.observe(host);
+    resize();
+
+    function animate() {
+      if (disposed) {
+        return;
+      }
+
+      controls.update();
+
+      renderer.render(
+        scene,
+        camera,
+      );
+
+      frame =
+        window.requestAnimationFrame(
+          animate,
+        );
+    }
+
+    animate();
+
+    const loader =
+      new GLTFLoader();
+
+    loader.load(
+      modelUrl,
+      (gltf) => {
+        if (disposed) {
+          return;
+        }
+
+        const model =
+          gltf.scene;
+
+        scene.add(model);
+
+        model.updateMatrixWorld(true);
+
+        const bounds =
+          new THREE.Box3()
+            .setFromObject(model);
+
+        if (bounds.isEmpty()) {
+          setError(
+            "The PGA green model contained no renderable geometry.",
+          );
+
+          setIsLoading(false);
+          return;
+        }
+
+        const center =
+          bounds.getCenter(
+            new THREE.Vector3(),
+          );
+
+        /*
+         * Center PGA geometry at our scene origin.
+         * This changes only display placement, not
+         * the mesh's internal slope/elevation.
+         */
+        model.position.sub(
+          center,
+        );
+
+        model.updateMatrixWorld(true);
+
+        const centeredBounds =
+          new THREE.Box3()
+            .setFromObject(model);
+
+        const size =
+          centeredBounds.getSize(
+            new THREE.Vector3(),
+          );
+
+        const maxDimension =
+          Math.max(
+            size.x,
+            size.y,
+            size.z,
+            0.01,
+          );
+
+        let vertexCount = 0;
+        let meshCount = 0;
+
+        model.traverse(
+          (object) => {
+            if (
+              !(object instanceof THREE.Mesh)
+            ) {
+              return;
+            }
+
+            meshCount += 1;
+
+            const mesh =
+              object;
+
+            const geometry =
+              mesh.geometry.clone();
+
+            if (
+              !geometry.attributes
+                .normal
+            ) {
+              geometry.computeVertexNormals();
+            }
+
+            mesh.geometry =
+              geometry;
+
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            vertexCount +=
+              geometry.attributes
+                .position?.count ??
+              0;
+
+            const originalMaterial =
+              mesh.material;
+
+            /*
+             * Compute a genuine slope-intensity color
+             * from PGA's surface normals.
+             *
+             * 0°   = flat
+             * ~20° = very steep for a putting surface
+             *
+             * This does NOT invent elevation. It is
+             * derived directly from GreenXX.glb.
+             */
+            const normalAttribute =
+              geometry.attributes
+                .normal;
+
+            const positionAttribute =
+              geometry.attributes
+                .position;
+
+            const colors =
+              new Float32Array(
+                positionAttribute.count *
+                  3,
+              );
+
+            const normal =
+              new THREE.Vector3();
+
+            const color =
+              new THREE.Color();
+
+            const normalMatrix =
+              new THREE.Matrix3()
+                .getNormalMatrix(
+                  mesh.matrixWorld,
+                );
+
+            for (
+              let index = 0;
+              index <
+              positionAttribute.count;
+              index += 1
+            ) {
+              normal.fromBufferAttribute(
+                normalAttribute,
+                index,
+              );
+
+              normal
+                .applyMatrix3(
+                  normalMatrix,
+                )
+                .normalize();
+
+              const upComponent =
+                THREE.MathUtils.clamp(
+                  Math.abs(
+                    normal.y,
+                  ),
+                  0,
+                  1,
+                );
+
+              const slopeRadians =
+                Math.acos(
+                  upComponent,
+                );
+
+              const slopeDegrees =
+                THREE.MathUtils
+                  .radToDeg(
+                    slopeRadians,
+                  );
+
+              const intensity =
+                THREE.MathUtils.clamp(
+                  slopeDegrees /
+                    20,
+                  0,
+                  1,
+                );
+
+              /*
+               * Green -> yellow -> orange/red
+               * as actual surface slope increases.
+               */
+              color.setHSL(
+                0.34 *
+                  (1 - intensity),
+                0.78,
+                0.46,
+              );
+
+              colors[
+                index * 3
+              ] = color.r;
+
+              colors[
+                index * 3 + 1
+              ] = color.g;
+
+              colors[
+                index * 3 + 2
+              ] = color.b;
+            }
+
+            geometry.setAttribute(
+              "color",
+              new THREE.BufferAttribute(
+                colors,
+                3,
+              ),
+            );
+
+            const slopeMaterial =
+              new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.96,
+                metalness: 0,
+                side:
+                  THREE.DoubleSide,
+              });
+
+            meshesRef.current.push({
+              mesh,
+              originalMaterial,
+              slopeMaterial,
+            });
+          },
+        );
+
+        /*
+         * Camera looks across the green at an angle
+         * rather than directly overhead so elevation
+         * changes are immediately visible.
+         */
+        const cameraDistance =
+          maxDimension * 1.45;
+
+        const cameraPosition =
+          new THREE.Vector3(
+            maxDimension * 0.72,
+            maxDimension * 0.88,
+            cameraDistance,
+          );
+
+        camera.position.copy(
+          cameraPosition,
+        );
+
+        controls.target.set(
+          0,
+          0,
+          0,
+        );
+
+        camera.near =
+          Math.max(
+            maxDimension / 1000,
+            0.001,
+          );
+
+        camera.far =
+          maxDimension * 100;
+
+        camera.updateProjectionMatrix();
+
+        controls.minDistance =
+          maxDimension * 0.15;
+
+        controls.maxDistance =
+          maxDimension * 4;
+
+        controls.update();
+
+        homeCameraRef.current = {
+          position:
+            cameraPosition.clone(),
+          target:
+            controls.target.clone(),
+        };
+
+        setMeshStats({
+          vertices:
+            vertexCount,
+          meshes:
+            meshCount,
+        });
+
+        setIsLoading(false);
+      },
+      undefined,
+      (loadError) => {
+        console.error(
+          "[ShotCast 3D] Unable to load green GLB",
+          loadError,
+        );
+
+        if (!disposed) {
+          setError(
+            "Unable to load the PGA 3D green.",
+          );
+
+          setIsLoading(false);
+        }
+      },
+    );
+
+    return () => {
+      disposed = true;
+
+      window.cancelAnimationFrame(
+        frame,
+      );
+
+      observer.disconnect();
+      controls.dispose();
+
+      meshesRef.current.forEach(
+        ({
+          mesh,
+          originalMaterial,
+          slopeMaterial,
+        }) => {
+          mesh.geometry.dispose();
+
+          /*
+           * Original GLTF materials/textures belong
+           * to this loaded scene and can be released.
+           */
+          disposeMaterial(
+            originalMaterial,
+          );
+
+          slopeMaterial.dispose();
+        },
+      );
+
+      renderer.dispose();
+
+      renderer.domElement.remove();
+
+      meshesRef.current = [];
+
+      controlsRef.current =
+        null;
+
+      cameraRef.current =
+        null;
+
+      homeCameraRef.current =
+        null;
+    };
+  }, [modelUrl]);
+
+  useEffect(() => {
+    meshesRef.current.forEach(
+      ({
+        mesh,
+        originalMaterial,
+        slopeMaterial,
+      }) => {
+        mesh.material =
+          mode === "slope"
+            ? slopeMaterial
+            : originalMaterial;
+      },
+    );
+  }, [mode]);
+
+  function resetCamera() {
+    const camera =
+      cameraRef.current;
+
+    const controls =
+      controlsRef.current;
+
+    const home =
+      homeCameraRef.current;
+
+    if (
+      !camera ||
+      !controls ||
+      !home
+    ) {
+      return;
+    }
+
+    camera.position.copy(
+      home.position,
+    );
+
+    controls.target.copy(
+      home.target,
+    );
+
+    controls.update();
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-3 py-2">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
+            PGA 3D Green
+          </div>
+
+          <div className="mt-0.5 text-[10px] text-slate-500">
+            Actual TOURCAST green geometry
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <div className="flex overflow-hidden rounded-lg border border-slate-700 bg-slate-900">
+            <button
+              type="button"
+              onClick={() =>
+                setMode(
+                  "surface",
+                )
+              }
+              className={`px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] ${
+                mode === "surface"
+                  ? "bg-slate-700 text-white"
+                  : "text-slate-500"
+              }`}
+            >
+              Surface
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setMode(
+                  "slope",
+                )
+              }
+              className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] ${
+                mode === "slope"
+                  ? "bg-emerald-900 text-emerald-200"
+                  : "text-slate-500"
+              }`}
+            >
+              Slope
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              resetCamera
+            }
+            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[9px] font-bold text-slate-300"
+          >
+            Reset view
+          </button>
+        </div>
+      </div>
+
+      <div className="relative aspect-square">
+        <div
+          ref={hostRef}
+          className="absolute inset-0"
+          aria-label={`${title} 3D green`}
+        />
+
+        {isLoading ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/80">
+            <div className="text-center">
+              <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400" />
+
+              <div className="mt-3 text-xs font-bold text-slate-300">
+                Loading PGA 3D green…
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-slate-950 p-5 text-center text-xs leading-5 text-rose-300">
+            {error}
+          </div>
+        ) : null}
+
+        {!isLoading &&
+        !error ? (
+          <>
+            <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              Drag to orbit · Scroll/pinch to zoom
+            </div>
+
+            {meshStats ? (
+              <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[8px] text-slate-400 backdrop-blur">
+                {meshStats.vertices.toLocaleString()} vertices
+              </div>
+            ) : null}
+          </>
+        ) : null}
+
+        {mode === "slope" &&
+        !isLoading &&
+        !error ? (
+          <div className="pointer-events-none absolute bottom-2 right-2 rounded-lg border border-white/10 bg-slate-950/90 px-2.5 py-1.5 backdrop-blur">
+            <div className="text-[8px] font-black uppercase tracking-[0.1em] text-slate-400">
+              Slope intensity
+            </div>
+
+            <div className="mt-1 text-[8px] text-slate-500">
+              flatter → steeper
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

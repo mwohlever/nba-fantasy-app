@@ -8,8 +8,6 @@ import {
   useState,
 } from "react";
 
-function GolfGreen3D(_props: Record<string, unknown>) { return null; }
-
 type Coordinate = {
   x: number | null;
   y: number | null;
@@ -50,16 +48,6 @@ type BallPathPoint = {
   secondsSinceStart: number;
 };
 
-type ShotFlightTrajectory = {
-  kind: string | null;
-  type: string | null;
-  xFit: number[];
-  yFit: number[];
-  zFit: number[];
-  timeStart: number;
-  timeEnd: number;
-};
-
 type BallPath = {
   isLipOut: boolean;
   reconstructionType: string | null;
@@ -77,7 +65,6 @@ type MapShot = {
 
   videoId?: string | null;
   radarData?: ShotRadarData | null;
-  flightTrajectory?: ShotFlightTrajectory | null;
   ballPath?: BallPath | null;
 
   worldFrom?: WorldPoint | null;
@@ -95,17 +82,6 @@ type Props = {
   title: string;
   imageUrl: string;
   greenImageUrl?: string | null;
-  greenModelUrl?: string | null;
-
-  /*
-   * PGA's native TOURCAST hole pin.
-   */
-  pinWorld?: WorldPoint | null;
-  greenPin?: {
-    x: number;
-    y: number;
-  } | null;
-
   shots: MapShot[];
   selectedStrokeNumber: number | null;
   onSelectStroke: (
@@ -129,7 +105,6 @@ type PlotShot = {
   finalStroke: boolean;
   videoId: string | null;
   radarData: ShotRadarData | null;
-  flightTrajectory: ShotFlightTrajectory | null;
   ballPath: BallPath | null;
   distance: string | null;
   distanceRemaining: string | null;
@@ -178,16 +153,6 @@ export type MapCalibration = {
 const VIEWBOX_SIZE = 1000;
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
-const GREEN_MAX_SCALE = 2;
-
-/*
- * Presentation only.
- *
- * PGA's sampled putt coordinates and relative timestamps remain
- * authoritative. We simply replay that real motion a little slower
- * so the break is easier to watch.
- */
-const PUTT_PLAYBACK_SLOWDOWN = 1.35;
 
 /*
  * Calibration is supplied by the tournament/hole configuration.
@@ -625,709 +590,6 @@ function approximateCurveLength(
   return Math.max(length, 1);
 }
 
-type TrackedPlotPoint = PlotPoint & {
-  t: number;
-  altitude: number;
-};
-
-type LocalTrackPoint = {
-  x: number;
-  y: number;
-  t: number;
-  altitude: number;
-};
-
-function evaluatePolynomial(
-  coefficients: number[],
-  time: number,
-) {
-  let result = 0;
-  let power = 1;
-
-  for (
-    const coefficient
-      of coefficients
-  ) {
-    result +=
-      coefficient * power;
-
-    power *= time;
-  }
-
-  return result;
-}
-
-function mapLocalTrackToPlot(
-  from: PlotPoint,
-  to: PlotPoint,
-  localPoints: LocalTrackPoint[],
-): TrackedPlotPoint[] | null {
-  if (localPoints.length < 2) {
-    return null;
-  }
-
-  const first =
-    localPoints[0];
-
-  const last =
-    localPoints[
-      localPoints.length - 1
-    ];
-
-  const localDx =
-    last.x - first.x;
-
-  const localDy =
-    last.y - first.y;
-
-  const localLength =
-    Math.hypot(
-      localDx,
-      localDy,
-    );
-
-  const screenDx =
-    to.x - from.x;
-
-  const screenDy =
-    to.y - from.y;
-
-  const screenLength =
-    Math.hypot(
-      screenDx,
-      screenDy,
-    );
-
-  if (
-    localLength < 1e-6 ||
-    screenLength < 1e-6
-  ) {
-    return null;
-  }
-
-  const localLengthSq =
-    localLength *
-    localLength;
-
-  const perpendicularX =
-    -screenDy /
-    screenLength;
-
-  const perpendicularY =
-    screenDx /
-    screenLength;
-
-  const lateralScale =
-    screenLength /
-    localLength;
-
-  return localPoints.map(
-    (point) => {
-      const dx =
-        point.x -
-        first.x;
-
-      const dy =
-        point.y -
-        first.y;
-
-      /*
-       * Position along the shot's local start→finish axis.
-       */
-      const along =
-        (
-          dx * localDx +
-          dy * localDy
-        ) /
-        localLengthSq;
-
-      /*
-       * Signed distance away from the straight start→finish
-       * line. This is what preserves PGA's actual curve/break
-       * when we rotate the tracking data onto our map.
-       */
-      const lateral =
-        (
-          localDx * dy -
-          localDy * dx
-        ) /
-        localLength;
-
-      return {
-        x:
-          from.x +
-          screenDx * along +
-          perpendicularX *
-            lateral *
-            lateralScale,
-
-        y:
-          from.y +
-          screenDy * along +
-          perpendicularY *
-            lateral *
-            lateralScale,
-
-        t:
-          point.t,
-
-        altitude:
-          point.altitude,
-      };
-    },
-  );
-}
-
-function flightTrackPoints(
-  shot: PlotShot,
-): TrackedPlotPoint[] | null {
-  const trajectory =
-    shot.flightTrajectory;
-
-  if (
-    !trajectory ||
-    trajectory.timeEnd <=
-      trajectory.timeStart
-  ) {
-    return null;
-  }
-
-  const sampleCount = 64;
-
-  const raw: {
-    x: number;
-    y: number;
-    z: number;
-    t: number;
-  }[] = [];
-
-  for (
-    let index = 0;
-    index < sampleCount;
-    index += 1
-  ) {
-    const normalizedTime =
-      index /
-      (sampleCount - 1);
-
-    const time =
-      trajectory.timeStart +
-      (
-        trajectory.timeEnd -
-        trajectory.timeStart
-      ) *
-        normalizedTime;
-
-    raw.push({
-      x: evaluatePolynomial(
-        trajectory.xFit,
-        time,
-      ),
-
-      /*
-       * PGA radar Y is height for the payload we've
-       * verified from TOURCAST.
-       */
-      y: evaluatePolynomial(
-        trajectory.yFit,
-        time,
-      ),
-
-      /*
-       * PGA radar Z carries the horizontal side component.
-       */
-      z: evaluatePolynomial(
-        trajectory.zFit,
-        time,
-      ),
-
-      t:
-        normalizedTime,
-    });
-  }
-
-  /*
-   * Remove the start→finish height baseline so altitude is
-   * the ball's height ABOVE its straight ground-level path.
-   */
-  const firstHeight =
-    raw[0].y;
-
-  const lastHeight =
-    raw[
-      raw.length - 1
-    ].y;
-
-  const altitudeValues =
-    raw.map((point) => {
-      const baseline =
-        firstHeight +
-        (
-          lastHeight -
-          firstHeight
-        ) *
-          point.t;
-
-      return Math.max(
-        0,
-        point.y -
-          baseline,
-      );
-    });
-
-  const maximumAltitude =
-    Math.max(
-      ...altitudeValues,
-      0.0001,
-    );
-
-  const localPoints:
-    LocalTrackPoint[] =
-    raw.map(
-      (
-        point,
-        index,
-      ) => ({
-        /*
-         * X = downrange
-         * Z = lateral movement
-         */
-        x:
-          point.x,
-
-        y:
-          point.z,
-
-        t:
-          point.t,
-
-        altitude:
-          clamp(
-            altitudeValues[index] /
-              maximumAltitude,
-            0,
-            1,
-          ),
-      }),
-    );
-
-  return mapLocalTrackToPlot(
-    shot.from,
-    shot.to,
-    localPoints,
-  );
-}
-
-function ballRollTrackPoints(
-  shot: PlotShot,
-): TrackedPlotPoint[] | null {
-  const path =
-    shot.ballPath?.path;
-
-  if (!path || path.length < 2) {
-    return null;
-  }
-
-  const ordered =
-    [...path].sort(
-      (
-        first,
-        second,
-      ) =>
-        first.secondsSinceStart -
-        second.secondsSinceStart,
-    );
-
-  const startTime =
-    ordered[0]
-      .secondsSinceStart;
-
-  const endTime =
-    ordered[
-      ordered.length - 1
-    ].secondsSinceStart;
-
-  const duration =
-    Math.max(
-      endTime - startTime,
-      0.001,
-    );
-
-  const localPoints:
-    LocalTrackPoint[] =
-    ordered.map(
-      (point) => ({
-        x:
-          point.x,
-
-        y:
-          point.y,
-
-        t:
-          clamp(
-            (
-              point.secondsSinceStart -
-              startTime
-            ) /
-              duration,
-            0,
-            1,
-          ),
-
-        altitude: 0,
-      }),
-    );
-
-  return mapLocalTrackToPlot(
-    shot.from,
-    shot.to,
-    localPoints,
-  );
-}
-
-function fallbackTrackPoints(
-  shot: PlotShot,
-): TrackedPlotPoint[] {
-  const result:
-    TrackedPlotPoint[] = [];
-
-  const samples = 32;
-
-  for (
-    let index = 0;
-    index < samples;
-    index += 1
-  ) {
-    const t =
-      index /
-      (samples - 1);
-
-    const point =
-      pointOnQuadraticCurve(
-        shot.from,
-        shot.to,
-        t,
-      );
-
-    result.push({
-      ...point,
-      t,
-      altitude: 0,
-    });
-  }
-
-  return result;
-}
-
-function hasRealTrackingPath(
-  shot: PlotShot,
-) {
-  return Boolean(
-    (
-      isGreenLocation(
-        shot.fromLocation,
-      ) &&
-      shot.ballPath?.path.length
-    ) ||
-      shot.flightTrajectory ||
-      shot.ballPath?.path.length,
-  );
-}
-
-function trackedPathPoints(
-  shot: PlotShot,
-): TrackedPlotPoint[] {
-  /*
-   * Once the ball is already on the green, PGA's BallPath is
-   * authoritative: it contains the actual sampled roll/break.
-   */
-  if (
-    isGreenLocation(
-      shot.fromLocation,
-    )
-  ) {
-    const roll =
-      ballRollTrackPoints(
-        shot,
-      );
-
-    if (roll) {
-      return roll;
-    }
-  }
-
-  /*
-   * For full shots, use the actual radar polynomial.
-   */
-  const flight =
-    flightTrackPoints(
-      shot,
-    );
-
-  if (flight) {
-    return flight;
-  }
-
-  /*
-   * Some PGA shots expose a sampled BallPath even without
-   * radar. Use that before falling back.
-   */
-  const roll =
-    ballRollTrackPoints(
-      shot,
-    );
-
-  if (roll) {
-    return roll;
-  }
-
-  /*
-   * Last-resort legacy behavior.
-   */
-  return fallbackTrackPoints(
-    shot,
-  );
-}
-
-function trackedPathLength(
-  points: TrackedPlotPoint[],
-) {
-  let length = 0;
-
-  for (
-    let index = 1;
-    index < points.length;
-    index += 1
-  ) {
-    length +=
-      Math.hypot(
-        points[index].x -
-          points[index - 1].x,
-
-        points[index].y -
-          points[index - 1].y,
-      );
-  }
-
-  return Math.max(
-    length,
-    1,
-  );
-}
-
-function trackedPathD(
-  points: TrackedPlotPoint[],
-) {
-  if (!points.length) {
-    return "";
-  }
-
-  return [
-    `M ${points[0].x} ${points[0].y}`,
-    ...points
-      .slice(1)
-      .map(
-        (point) =>
-          `L ${point.x} ${point.y}`,
-      ),
-  ].join(" ");
-}
-
-function pointOnTrackedPath(
-  points: TrackedPlotPoint[],
-  progress: number,
-): TrackedPlotPoint | null {
-  if (!points.length) {
-    return null;
-  }
-
-  if (points.length === 1) {
-    return points[0];
-  }
-
-  const target =
-    clamp(
-      progress,
-      0,
-      1,
-    );
-
-  if (
-    target <=
-    points[0].t
-  ) {
-    return points[0];
-  }
-
-  for (
-    let index = 1;
-    index < points.length;
-    index += 1
-  ) {
-    const previous =
-      points[index - 1];
-
-    const current =
-      points[index];
-
-    if (
-      target >
-      current.t
-    ) {
-      continue;
-    }
-
-    const interval =
-      Math.max(
-        current.t -
-          previous.t,
-        0.000001,
-      );
-
-    const localProgress =
-      clamp(
-        (
-          target -
-          previous.t
-        ) /
-          interval,
-        0,
-        1,
-      );
-
-    return {
-      x:
-        previous.x +
-        (
-          current.x -
-          previous.x
-        ) *
-          localProgress,
-
-      y:
-        previous.y +
-        (
-          current.y -
-          previous.y
-        ) *
-          localProgress,
-
-      t:
-        target,
-
-      altitude:
-        previous.altitude +
-        (
-          current.altitude -
-          previous.altitude
-        ) *
-          localProgress,
-    };
-  }
-
-  return points[
-    points.length - 1
-  ];
-}
-
-function trackingAnimationDuration(
-  shot: PlotShot,
-) {
-  if (
-    isGreenLocation(
-      shot.fromLocation,
-    ) &&
-    shot.ballPath?.path.length
-  ) {
-    const path =
-      shot.ballPath.path;
-
-    const first =
-      path[0]
-        .secondsSinceStart;
-
-    const last =
-      path[
-        path.length - 1
-      ].secondsSinceStart;
-
-    const realDuration =
-      Math.max(
-        0,
-        last - first,
-      );
-
-    if (realDuration > 0) {
-      /*
-       * Keep PGA's real sample timing relationships intact.
-       *
-       * The entire timestamp axis is stretched uniformly for
-       * presentation; no points, break, acceleration pattern, or
-       * path geometry are invented here.
-       */
-      return clamp(
-        realDuration *
-          1000 *
-          PUTT_PLAYBACK_SLOWDOWN,
-        1100,
-        6500,
-      );
-    }
-  }
-
-  const trajectory =
-    shot.flightTrajectory;
-
-  if (trajectory) {
-    const realDuration =
-      trajectory.timeEnd -
-      trajectory.timeStart;
-
-    /*
-     * TOURCAST-style replay is intentionally a little faster
-     * than real-time flight while still respecting PGA timing.
-     */
-    return clamp(
-      realDuration *
-        1000 *
-        0.62,
-      1400,
-      4300,
-    );
-  }
-
-  if (
-    shot.ballPath?.path.length
-  ) {
-    const path =
-      shot.ballPath.path;
-
-    const first =
-      path[0]
-        .secondsSinceStart;
-
-    const last =
-      path[
-        path.length - 1
-      ].secondsSinceStart;
-
-    return clamp(
-      (
-        last -
-        first
-      ) * 1000,
-      800,
-      3600,
-    );
-  }
-
-  return shot.finalStroke
-    ? 1150
-    : shot.strokeNumber === 1
-      ? 2200
-      : 1550;
-}
-
 function easeInOutCubic(
   value: number,
 ) {
@@ -1497,16 +759,7 @@ function radarMetrics(
     });
   }
 
-  const headlineMetrics = new Set([
-    "Ball speed",
-    "Apex",
-    "Carry",
-    "Spin",
-  ]);
-
-  return metrics.filter((metric) =>
-    headlineMetrics.has(metric.label),
-  );
+  return metrics;
 }
 
 function shotDescription(
@@ -1561,9 +814,6 @@ export default function GolfHoleMap2D({
   title,
   imageUrl,
   greenImageUrl = null,
-  greenModelUrl = null,
-  pinWorld = null,
-  greenPin = null,
   shots,
   selectedStrokeNumber,
   onSelectStroke,
@@ -1573,11 +823,6 @@ export default function GolfHoleMap2D({
   emptyStateLabel = "No shot data is available yet.",
 }: Props) {
   const viewportRef =
-    useRef<HTMLDivElement | null>(
-      null,
-    );
-
-  const videoPanelRef =
     useRef<HTMLDivElement | null>(
       null,
     );
@@ -1610,11 +855,7 @@ export default function GolfHoleMap2D({
     useState(false);
 
   const [viewMode, setViewMode] =
-    useState<
-      "course" |
-      "green" |
-      "green3d"
-    >(
+    useState<"course" | "green">(
       "course",
     );
 
@@ -1652,51 +893,6 @@ export default function GolfHoleMap2D({
 
   const animationResolveRef =
     useRef<(() => void) | null>(null);
-
-  /*
-   * A different authoritative ShotCast asset must start from
-   * a clean presentation state.
-   *
-   * Zoom, pan, Course/Green View, playback reveal state, and
-   * video state are UI-only. None of them should leak from a
-   * previously viewed hole into the next one.
-   *
-   * Do NOT reset on shot-array refreshes: live holes poll every
-   * 30 seconds and should keep the user's current view.
-   */
-  useEffect(() => {
-    if (
-      animationFrameRef.current !== null
-    ) {
-      window.cancelAnimationFrame(
-        animationFrameRef.current,
-      );
-
-      animationFrameRef.current = null;
-    }
-
-    if (animationResolveRef.current) {
-      animationResolveRef.current();
-      animationResolveRef.current = null;
-    }
-
-    pointersRef.current.clear();
-    dragStartRef.current = null;
-    gestureStartRef.current = null;
-
-    setTransform(DEFAULT_TRANSFORM);
-    setIsInteracting(false);
-    setIsPlaying(false);
-    setViewMode("course");
-
-    setVideoStrokeNumber(null);
-    setAnimatedStrokeNumber(null);
-    setAnimationProgress(1);
-    setRevealedStrokeCount(null);
-  }, [
-    imageUrl,
-    greenImageUrl,
-  ]);
 
   /*
    * Load PGA's dedicated Green View as soon as ShotCast
@@ -1797,9 +993,6 @@ export default function GolfHoleMap2D({
                   shot.videoId ?? null,
                 radarData:
                   shot.radarData ?? null,
-                flightTrajectory:
-                  shot.flightTrajectory ??
-                  null,
                 ballPath:
                   shot.ballPath ?? null,
                 distance:
@@ -1920,9 +1113,6 @@ export default function GolfHoleMap2D({
                   shot.videoId ?? null,
                 radarData:
                   shot.radarData ?? null,
-                flightTrajectory:
-                  shot.flightTrajectory ??
-                  null,
                 ballPath:
                   shot.ballPath ?? null,
                 distance:
@@ -1950,41 +1140,24 @@ export default function GolfHoleMap2D({
       ],
     );
 
-  /*
-   * PGA's dedicated Green View is a hole-level asset.
-   *
-   * Make it available whenever the image exists, even before
-   * the golfer has a shot whose Green View coordinates fall
-   * inside the crop.
-   *
-   * Shot availability and image availability are separate
-   * concerns.
-   */
   const greenViewAvailable =
-    Boolean(greenImageUrl);
-
-  const isAnyGreenView =
-    (
-      viewMode === "green" ||
-      viewMode === "green3d"
-    ) &&
-    greenViewAvailable;
+    Boolean(
+      greenImageUrl &&
+      greenPlottedShots.length > 0,
+    );
 
   const plottedShots =
-    isAnyGreenView
+    viewMode === "green" &&
+    greenViewAvailable
       ? greenPlottedShots
       : coursePlottedShots;
 
   const activeImageUrl =
-    isAnyGreenView &&
+    viewMode === "green" &&
+    greenViewAvailable &&
     greenImageUrl
       ? greenImageUrl
       : imageUrl;
-
-  const green3dAvailable =
-    Boolean(
-      greenModelUrl,
-    );
 
   const selectedShot =
     plottedShots.find(
@@ -1994,16 +1167,6 @@ export default function GolfHoleMap2D({
     ) ??
     plottedShots[0] ??
     null;
-
-  /*
-   * The final stroke's destination is PGA's cup location
-   * in the normalized Green View coordinate system.
-   */
-  const greenHolePoint =
-    greenPlottedShots.find(
-      (shot) =>
-        shot.finalStroke,
-    )?.to ?? null;
 
   /*
    * Navigation always follows the complete hole sequence,
@@ -2169,9 +1332,11 @@ export default function GolfHoleMap2D({
           }
 
           const duration =
-            trackingAnimationDuration(
-              shot,
-            );
+            shot.finalStroke
+              ? 1150
+              : shot.strokeNumber === 1
+                ? 2200
+                : 1550;
 
           const startedAt =
             performance.now();
@@ -2196,13 +1361,9 @@ export default function GolfHoleMap2D({
               );
 
             setAnimationProgress(
-              hasRealTrackingPath(
-                shot,
-              )
-                ? rawProgress
-                : easeInOutCubic(
-                    rawProgress,
-                  ),
+              easeInOutCubic(
+                rawProgress,
+              ),
             );
 
             if (rawProgress >= 1) {
@@ -2212,17 +1373,12 @@ export default function GolfHoleMap2D({
               animationResolveRef.current =
                 null;
 
-              /*
-               * Keep the completed shot mounted briefly so the
-               * mobile info overlay can fade away naturally before
-               * playback advances to the next stroke.
-               */
               window.setTimeout(() => {
                 setAnimatedStrokeNumber(
                   null,
                 );
                 resolve();
-              }, 650);
+              }, 300);
 
               return;
             }
@@ -2312,261 +1468,6 @@ export default function GolfHoleMap2D({
       },
       [
         resetView,
-        updateTransform,
-      ],
-    );
-
-  /*
-   * Frame a genuine PGA putt rather than using a fixed Green View
-   * zoom.
-   *
-   * The fit is based on:
-   *   - PGA's actual sampled BallPath when available
-   *   - the shot endpoints as a safe geometry fallback
-   *   - PGA's confirmed cup point when available
-   *
-   * This changes only the viewport. It does not alter shot data.
-   */
-  const focusGreenPutt =
-    useCallback(
-      (
-        shot: PlotShot | null,
-      ) => {
-        const viewport =
-          viewportRef.current;
-
-        if (
-          !viewport ||
-          !shot
-        ) {
-          setTransform(
-            DEFAULT_TRANSFORM,
-          );
-          return;
-        }
-
-        const width =
-          Math.max(
-            viewport.clientWidth,
-            1,
-          );
-
-        const height =
-          Math.max(
-            viewport.clientHeight,
-            1,
-          );
-
-        /*
-         * On-green BallPath is PGA's authoritative sampled roll.
-         */
-        const realRoll =
-          ballRollTrackPoints(
-            shot,
-          );
-
-        const fitPoints:
-          PlotPoint[] =
-          realRoll &&
-          realRoll.length >= 2
-            ? realRoll.map(
-                (point) => ({
-                  x: point.x,
-                  y: point.y,
-                }),
-              )
-            : [
-                shot.from,
-                shot.to,
-              ];
-
-        /*
-         * Keep the cup visible whenever PGA has definitively
-         * identified it from the final stroke.
-         */
-        if (greenHolePoint) {
-          fitPoints.push(
-            greenHolePoint,
-          );
-        }
-
-        let minX =
-          Infinity;
-
-        let maxX =
-          -Infinity;
-
-        let minY =
-          Infinity;
-
-        let maxY =
-          -Infinity;
-
-        for (
-          const point
-          of fitPoints
-        ) {
-          minX =
-            Math.min(
-              minX,
-              point.x,
-            );
-
-          maxX =
-            Math.max(
-              maxX,
-              point.x,
-            );
-
-          minY =
-            Math.min(
-              minY,
-              point.y,
-            );
-
-          maxY =
-            Math.max(
-              maxY,
-              point.y,
-            );
-        }
-
-        if (
-          !Number.isFinite(minX) ||
-          !Number.isFinite(maxX) ||
-          !Number.isFinite(minY) ||
-          !Number.isFinite(maxY)
-        ) {
-          setTransform(
-            DEFAULT_TRANSFORM,
-          );
-          return;
-        }
-
-        /*
-         * Convert the PGA 1000×1000 plotting frame into the
-         * rendered viewport's pixel dimensions.
-         */
-        const pathWidthPx =
-          Math.max(
-            (
-              maxX -
-              minX
-            ) /
-              VIEWBOX_SIZE *
-              width,
-            1,
-          );
-
-        const pathHeightPx =
-          Math.max(
-            (
-              maxY -
-              minY
-            ) /
-              VIEWBOX_SIZE *
-              height,
-            1,
-          );
-
-        /*
-         * Leave breathing room around the rolling ball and flag.
-         * Padding is presentation-only and does not affect PGA data.
-         */
-        const padding =
-          clamp(
-            Math.min(
-              width,
-              height,
-            ) *
-              0.16,
-            42,
-            76,
-          );
-
-        const availableWidth =
-          Math.max(
-            width -
-              padding *
-                2,
-            1,
-          );
-
-        const availableHeight =
-          Math.max(
-            height -
-              padding *
-                2,
-            1,
-          );
-
-        const targetScale =
-          clamp(
-            Math.min(
-              availableWidth /
-                pathWidthPx,
-              availableHeight /
-                pathHeightPx,
-            ),
-            MIN_SCALE,
-            GREEN_MAX_SCALE,
-          );
-
-        const centerPlotX =
-          (
-            minX +
-            maxX
-          ) /
-          2;
-
-        const centerPlotY =
-          (
-            minY +
-            maxY
-          ) /
-          2;
-
-        const targetX =
-          centerPlotX /
-            VIEWBOX_SIZE *
-            width;
-
-        const targetY =
-          centerPlotY /
-            VIEWBOX_SIZE *
-            height;
-
-        const centerX =
-          width /
-          2;
-
-        const centerY =
-          height /
-          2;
-
-        updateTransform({
-          scale:
-            targetScale,
-
-          x:
-            (
-              centerX -
-              targetX
-            ) *
-            targetScale,
-
-          y:
-            (
-              centerY -
-              targetY
-            ) *
-            targetScale,
-
-          rotation: 0,
-        });
-      },
-      [
-        greenHolePoint,
         updateTransform,
       ],
     );
@@ -2970,11 +1871,12 @@ export default function GolfHoleMap2D({
           setViewMode("green");
 
           /*
-           * Move into a putt-specific Green View derived from
-           * PGA's actual sampled roll path + cup.
+           * The Green View image itself is already a tight
+           * crop. Start at 1× rather than magnifying another
+           * 3–4× and destroying image clarity.
            */
-          focusGreenPutt(
-            animationShot,
+          setTransform(
+            DEFAULT_TRANSFORM,
           );
         } else {
           setViewMode("course");
@@ -2988,7 +1890,7 @@ export default function GolfHoleMap2D({
             window.setTimeout(
               resolve,
               useGreenShot
-                ? 700
+                ? 500
                 : 200,
             );
           },
@@ -3025,26 +1927,9 @@ export default function GolfHoleMap2D({
           greenViewAvailable
         ) {
           setViewMode("green");
-
-          const upcomingGreenShot =
-            greenPlottedShots.find(
-              (candidate) =>
-                candidate.strokeNumber >
-                courseShot.strokeNumber &&
-                isGreenLocation(
-                  candidate.fromLocation,
-                ),
-            ) ?? null;
-
-          if (upcomingGreenShot) {
-            focusGreenPutt(
-              upcomingGreenShot,
-            );
-          } else {
-            setTransform(
-              DEFAULT_TRANSFORM,
-            );
-          }
+          setTransform(
+            DEFAULT_TRANSFORM,
+          );
 
           await new Promise<void>(
             (resolve) => {
@@ -3082,7 +1967,6 @@ export default function GolfHoleMap2D({
     animateShot,
     cancelShotAnimation,
     coursePlottedShots,
-    focusGreenPutt,
     greenPlottedShots,
     greenViewAvailable,
     isPlaying,
@@ -3113,35 +1997,6 @@ export default function GolfHoleMap2D({
     );
 
     setIsPlaying(true);
-  }
-
-  function openVideoReplay(
-    strokeNumber: number,
-  ) {
-    setIsPlaying(false);
-    setVideoStrokeNumber(
-      strokeNumber,
-    );
-
-    /*
-     * Desktop already shows the video beside the map.
-     * Mobile stacks it below the map/navigator, so bring that
-     * existing panel into view after React renders the video.
-     */
-    if (
-      typeof window !== "undefined" &&
-      window.matchMedia(
-        "(max-width: 639px)",
-      ).matches
-    ) {
-      window.setTimeout(() => {
-        videoPanelRef.current
-          ?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-      }, 120);
-    }
   }
 
   async function selectShot(
@@ -3195,16 +2050,15 @@ export default function GolfHoleMap2D({
 
     if (shouldUseGreen) {
       setViewMode("green");
-
-      focusGreenPutt(
-        greenShot,
+      setTransform(
+        DEFAULT_TRANSFORM,
       );
 
       await new Promise<void>(
         (resolve) => {
           window.setTimeout(
             resolve,
-            700,
+            450,
           );
         },
       );
@@ -3244,60 +2098,16 @@ export default function GolfHoleMap2D({
     );
   }
 
-  /*
-   * COURSE VIEW PIN
-   * ----------------
-   *
-   * pinWorld comes from PGA courseData.pinsTees.
-   *
-   * The active Course View uses terrainNN.jpg with its matching
-   * terrainNN.tfw affine, so this is the exact world -> image
-   * conversion already used for PGA native shot coordinates.
-   */
-  const authoritativeCoursePinPoint =
-    !isAnyGreenView &&
-    pinWorld
-      ? worldToPlotPoint(
-          pinWorld,
-          calibration,
-        )
-      : null;
-
-  /*
-   * Course View:
-   *   use PGA's independent hole-level pin.
-   *
-   * Green View:
-   *   keep the confirmed final-stroke destination for now,
-   *   because St. Jude's pinGreen payload is an unavailable
-   *   -1/-1 sentinel.
-   */
-  /*
-   * Green View uses PGA's normalized enhanced pin coordinates
-   * directly against our VIEWBOX_SIZE coordinate space.
-   */
-  const authoritativeGreenPinPoint =
-    isAnyGreenView &&
-    greenPin
-      ? {
-          x:
-            greenPin.x *
-            VIEWBOX_SIZE,
-          y:
-            greenPin.y *
-            VIEWBOX_SIZE,
-        }
-      : null;
-
   const cupPoint =
-    authoritativeGreenPinPoint ??
-    authoritativeCoursePinPoint ??
     [...plottedShots]
       .reverse()
       .find(
         (shot) =>
           shot.finalStroke,
       )?.to ??
+    plottedShots[
+      plottedShots.length - 1
+    ]?.to ??
     null;
 
   const animatedShot =
@@ -3307,63 +2117,32 @@ export default function GolfHoleMap2D({
         animatedStrokeNumber,
     ) ?? null;
 
-  const animatedTrackedPath =
-    animatedShot
-      ? trackedPathPoints(
-          animatedShot,
-        )
-      : null;
-
   const animatedBallPoint =
-    animatedTrackedPath
-      ? pointOnTrackedPath(
-          animatedTrackedPath,
+    animatedShot
+      ? pointOnQuadraticCurve(
+          animatedShot.from,
+          animatedShot.to,
           animationProgress,
         )
       : null;
 
-  const animatedAltitude =
-    animatedBallPoint
-      ?.altitude ?? 0;
-
   const inverseScale =
     1 / transform.scale;
 
-  /*
-   * Course View keeps the existing highly visible shot markers.
-   *
-   * Green View is intentionally more restrained so close-putt
-   * markers do not cover the rolling ball, cup, or flag.
-   */
   const markerRadius =
-    (
-      viewMode === "green"
-        ? 15
-        : 25
-    ) *
-    inverseScale;
+    25 * inverseScale;
 
   const markerStroke =
-    viewMode === "green"
-      ? Math.max(
-          1.5,
-          4 * inverseScale,
-        )
-      : Math.max(
-          3,
-          7 * inverseScale,
-        );
+    Math.max(
+      3,
+      7 * inverseScale,
+    );
 
   const markerFontSize =
-    viewMode === "green"
-      ? Math.max(
-          7,
-          18 * inverseScale,
-        )
-      : Math.max(
-          12,
-          29 * inverseScale,
-        );
+    Math.max(
+      12,
+      29 * inverseScale,
+    );
 
   const selectedRadarMetrics =
     selectedShot
@@ -3395,13 +2174,6 @@ export default function GolfHoleMap2D({
             greenViewAvailable ? (
               <span className="rounded-full border border-emerald-700 bg-emerald-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-emerald-300">
                 Green View
-              </span>
-            ) : null}
-
-            {viewMode === "green3d" &&
-            green3dAvailable ? (
-              <span className="rounded-full border border-cyan-700 bg-cyan-950 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.08em] text-cyan-300">
-                3D Green
               </span>
             ) : null}
           </div>
@@ -3447,44 +2219,22 @@ export default function GolfHoleMap2D({
               >
                 Green
               </button>
-
-              {green3dAvailable ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPlaying(false);
-                    cancelShotAnimation();
-                    setViewMode(
-                      "green3d",
-                    );
-                  }}
-                  className={`border-l border-slate-700 px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.08em] transition ${
-                    viewMode === "green3d"
-                      ? "bg-cyan-900 text-cyan-200"
-                      : "text-slate-500 hover:text-slate-300"
-                  }`}
-                >
-                  3D
-                </button>
-              ) : null}
             </div>
           ) : null}
 
           {plottedShots.length > 0 ? (
             <>
-              {viewMode !== "green3d" ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    focusShot(
-                      selectedShot,
-                    )
-                  }
-                  className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
-                >
-                  Recenter shot
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() =>
+                  focusShot(
+                    selectedShot,
+                  )
+                }
+                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[10px] font-bold text-slate-300"
+              >
+                Recenter shot
+              </button>
 
               <button
                 type="button"
@@ -3511,32 +2261,6 @@ export default function GolfHoleMap2D({
 
       <div className="grid gap-3 p-3 sm:grid-cols-[minmax(260px,430px)_1fr]">
         <div className="mx-auto w-full max-w-[430px]">
-          {viewMode === "green3d" &&
-          greenModelUrl ? (
-            <GolfGreen3D
-              modelUrl={
-                greenModelUrl
-              }
-              title={title}
-              selectedShot={
-                selectedShot
-                  ? {
-                      strokeNumber:
-                        selectedShot.strokeNumber,
-                      from:
-                        selectedShot.from,
-                      to:
-                        selectedShot.to,
-                      finalStroke:
-                        selectedShot.finalStroke,
-                    }
-                  : null
-              }
-              holePoint={
-                greenHolePoint
-              }
-            />
-          ) : (
           <div
             ref={viewportRef}
             className={`relative aspect-square overflow-hidden rounded-xl border border-slate-700 bg-slate-950 select-none ${
@@ -3648,19 +2372,10 @@ export default function GolfHoleMap2D({
                       wasRevealed ||
                       isAnimating;
 
-                    const actualPath =
-                      trackedPathPoints(
-                        shot,
-                      );
-
                     const pathLength =
-                      trackedPathLength(
-                        actualPath,
-                      );
-
-                    const pathD =
-                      trackedPathD(
-                        actualPath,
+                      approximateCurveLength(
+                        shot.from,
+                        shot.to,
                       );
 
                     const showLandingMarker =
@@ -3702,9 +2417,10 @@ export default function GolfHoleMap2D({
                         />
 
                         <path
-                          d={
-                            pathD
-                          }
+                          d={curvePath(
+                            shot.from,
+                            shot.to,
+                          )}
                           fill="none"
                           visibility={
                             showPath
@@ -3870,43 +2586,8 @@ export default function GolfHoleMap2D({
                   </g>
                 ) : null}
 
-                {animatedBallPoint &&
-                !(
-                  animatedShot?.finalStroke &&
-                  animationProgress >= 1
-                ) ? (
+                {animatedBallPoint ? (
                   <g className="pointer-events-none">
-                    {animatedAltitude >
-                    0.02 ? (
-                      <circle
-                        cx={
-                          animatedBallPoint.x
-                        }
-                        cy={
-                          animatedBallPoint.y
-                        }
-                        r={
-                          (
-                            19 +
-                            animatedAltitude *
-                              18
-                          ) *
-                          inverseScale
-                        }
-                        fill="none"
-                        stroke="#38bdf8"
-                        strokeWidth={
-                          3 *
-                          inverseScale
-                        }
-                        opacity={
-                          0.22 +
-                          animatedAltitude *
-                            0.28
-                        }
-                      />
-                    ) : null}
-
                     <circle
                       cx={
                         animatedBallPoint.x
@@ -3915,11 +2596,7 @@ export default function GolfHoleMap2D({
                         animatedBallPoint.y
                       }
                       r={
-                        (
-                          13 +
-                          animatedAltitude *
-                            5
-                        ) *
+                        13 *
                         inverseScale
                       }
                       fill="#ffffff"
@@ -4002,103 +2679,9 @@ export default function GolfHoleMap2D({
               </svg>
             </div>
 
-            {animatedShot ? (
-              <div
-                className={`pointer-events-none absolute bottom-2 right-2 z-20 max-w-[90%] rounded-xl border border-white/15 bg-slate-950/75 px-3 py-2 text-left shadow-xl backdrop-blur-md transition-all duration-500 ease-out sm:hidden ${
-                  animationProgress <= 0.03 ||
-                  animationProgress >= 1
-                    ? "translate-y-1 opacity-0"
-                    : "translate-y-0 opacity-100"
-                }`}
-                aria-hidden="true"
-              >
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${
-                      animatedShot.finalStroke
-                        ? "border-emerald-300 bg-emerald-500 text-white"
-                        : "border-yellow-200 bg-yellow-300 text-slate-950"
-                    }`}
-                  >
-                    {animatedShot.strokeNumber}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-300">
-                      Shot {animatedShot.strokeNumber}
-                    </div>
-
-                    <div className="mt-0.5 whitespace-normal break-words text-[12px] font-bold leading-4 text-white">
-                      {shotDescription(
-                        animatedShot,
-                      ) || "Shot in progress"}
-                    </div>
-                  </div>
-                </div>
-
-                {animatedShot.fromLocation ||
-                animatedShot.toLocation ? (
-                  <div className="mt-1.5 flex items-center gap-1.5 truncate text-[10px] font-medium text-slate-300">
-                    <span className="truncate">
-                      {animatedShot.fromLocation ??
-                        "Previous position"}
-                    </span>
-
-                    <span className="shrink-0 text-slate-500">
-                      →
-                    </span>
-
-                    <span className="truncate">
-                      {animatedShot.toLocation ??
-                        "Landing area"}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {!animatedShot &&
-            selectedShot?.videoId &&
-            !isVideoPanelOpen ? (
-              <button
-                type="button"
-                data-shotcast-marker="true"
-                onClick={(event) => {
-                  event.stopPropagation();
-
-                  openVideoReplay(
-                    selectedShot.strokeNumber,
-                  );
-                }}
-                className="absolute bottom-2 right-2 z-20 flex items-center gap-2 rounded-xl border border-emerald-400/40 bg-slate-950/80 px-3 py-2 text-left shadow-xl backdrop-blur-md transition duration-300 hover:bg-emerald-950/90 active:scale-[0.98] sm:hidden"
-                aria-label={`Watch PGA TOUR replay of shot ${selectedShot.strokeNumber}`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-950 text-sm"
-                >
-                  🎥
-                </span>
-
-                <span className="min-w-0">
-                  <span className="block text-[9px] font-black uppercase tracking-[0.12em] text-emerald-300">
-                    Replay available
-                  </span>
-
-                  <span className="mt-0.5 block text-[11px] font-bold text-white">
-                    Watch Shot{" "}
-                    {selectedShot.strokeNumber}
-                  </span>
-                </span>
-
-                <span
-                  aria-hidden="true"
-                  className="ml-1 text-xs font-black text-emerald-300"
-                >
-                  ↓
-                </span>
-              </button>
-            ) : null}
+            <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-white/10 bg-slate-950/85 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
+              Drag · Pinch · Twist · Scroll
+            </div>
 
             <div className="pointer-events-none absolute right-2 top-2 rounded-lg border border-white/10 bg-slate-950/80 px-2 py-1 text-[9px] text-slate-300 backdrop-blur">
               {transform.scale.toFixed(
@@ -4111,24 +2694,180 @@ export default function GolfHoleMap2D({
               °
             </div>
           </div>
-          )}
         </div>
 
-        <div
-          className={`min-w-0 ${
-            isVideoPanelOpen
-              ? "sm:flex sm:h-full sm:flex-col"
-              : ""
-          }`}
-        >
+        <div className="min-w-0">
+          {selectedShot ? (
+            isVideoPanelOpen ? (
+              <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-2.5">
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
+                      Shot {selectedShot.strokeNumber} replay
+                    </div>
+
+                    <div className="mt-0.5 text-xs font-bold text-slate-300">
+                      PGA TOUR video available
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVideoStrokeNumber(
+                        null,
+                      )
+                    }
+                    className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800"
+                  >
+                    × Back to shot
+                  </button>
+                </div>
+
+                <div className="flex min-h-[220px] items-center justify-center p-4">
+                  <div className="max-w-xs text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-700 bg-emerald-950 text-xl">
+                      🎥
+                    </div>
+
+                    <div className="mt-3 text-sm font-black text-white">
+                      Video replay detected
+                    </div>
+
+                    <div className="mt-1 text-xs leading-5 text-slate-500">
+                      PGA video ID{" "}
+                      <span className="font-mono text-slate-400">
+                        {selectedShot.videoId}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 text-[10px] leading-4 text-slate-600">
+                      The player area is ready. We’ll connect PGA’s verified video playback source next rather than guessing at an embed URL.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black ${
+                      selectedShot.finalStroke
+                        ? "border-emerald-400 bg-emerald-700 text-white"
+                        : "border-yellow-400 bg-yellow-300 text-slate-950"
+                    }`}
+                  >
+                    {
+                      selectedShot.strokeNumber
+                    }
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="text-sm font-black text-white">
+                      Shot{" "}
+                      {
+                        selectedShot.strokeNumber
+                      }
+                    </div>
+
+                    <div className="mt-0.5 text-xs font-bold text-slate-300">
+                      {shotDescription(
+                        selectedShot,
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+                  {selectedShot.fromLocation ||
+                    "Unknown lie"}
+
+                  <span className="mx-2 text-slate-600">
+                    →
+                  </span>
+
+                  {selectedShot.finalStroke
+                    ? "Hole"
+                    : selectedShot.toLocation ||
+                      "Unknown lie"}
+                </div>
+
+                {selectedRadarMetrics.length >
+                0 ? (
+                  <div className="mt-3">
+                    <div className="mb-2 text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
+                      Shot data
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedRadarMetrics.map(
+                        (metric) => (
+                          <div
+                            key={metric.label}
+                            className="rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-2"
+                          >
+                            <div className="text-[8px] font-black uppercase tracking-[0.1em] text-slate-600">
+                              {metric.label}
+                            </div>
+
+                            <div className="mt-0.5 text-sm font-black text-slate-100">
+                              {metric.value}
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedShot.ballPath
+                  ?.path.length ? (
+                  <div className="mt-3 rounded-lg border border-emerald-900/70 bg-emerald-950/30 px-3 py-2 text-[10px] text-emerald-300">
+                    ✓ Real PGA ball path available
+                    <span className="ml-1 text-emerald-500">
+                      ·{" "}
+                      {
+                        selectedShot.ballPath
+                          .path.length
+                      }{" "}
+                      samples
+                    </span>
+                  </div>
+                ) : null}
+
+                {selectedShot.videoId ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVideoStrokeNumber(
+                        selectedShot.strokeNumber,
+                      )
+                    }
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-700 bg-emerald-950 px-3 py-2.5 text-xs font-black text-emerald-200 transition hover:bg-emerald-900"
+                  >
+                    <span aria-hidden="true">
+                      🎥
+                    </span>
+
+                    Video replay available
+                  </button>
+                ) : null}
+              </div>
+            )
+          ) : (
+            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
+              <div className="text-sm font-black text-slate-200">
+                Hole layout
+              </div>
+
+              <div className="mt-1 text-xs leading-5 text-slate-500">
+                {emptyStateLabel}
+              </div>
+            </div>
+          )}
+
           {coursePlottedShots.length > 0 ? (
-            <div
-              className={`rounded-xl border border-slate-700 bg-slate-950 p-3 ${
-                isVideoPanelOpen
-                  ? "sm:hidden"
-                  : ""
-              }`}
-            >
+            <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950 p-3">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
@@ -4257,199 +2996,6 @@ export default function GolfHoleMap2D({
               ) : null}
             </div>
           ) : null}
-
-
-          <div
-            ref={videoPanelRef}
-            className={`mt-3 ${
-              isVideoPanelOpen
-                ? "sm:mt-0 sm:min-h-0 sm:flex-1"
-                : ""
-            }`}
-          >
-          {selectedShot ? (
-            isVideoPanelOpen ? (
-              <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-950 sm:flex sm:h-full sm:min-h-0 sm:flex-col">
-                <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-800 px-3 py-2.5">
-                  <div>
-                    <div className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-400">
-                      Shot {selectedShot.strokeNumber} replay
-                    </div>
-
-                    <div className="mt-0.5 text-xs font-bold text-slate-300">
-                      PGA TOUR video available
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setVideoStrokeNumber(
-                        null,
-                      )
-                    }
-                    className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[10px] font-bold text-slate-300 transition hover:bg-slate-800"
-                  >
-                    × Back to shot
-                  </button>
-                </div>
-
-                <div className="bg-black sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
-                  <div className="relative aspect-video w-full overflow-hidden bg-black sm:aspect-auto sm:min-h-0 sm:flex-1">
-                    <iframe
-                      key={
-                        selectedShot.videoId
-                      }
-                      src={`https://players.brightcove.net/6116716431001/ZNwBVBwf_default/index.html?videoId=${encodeURIComponent(
-                        selectedShot.videoId ?? "",
-                      )}&autoplay=true`}
-                      title={`PGA TOUR Shot ${selectedShot.strokeNumber} video replay`}
-                      className="absolute inset-0 h-full w-full border-0"
-                      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                      allowFullScreen
-                      referrerPolicy="strict-origin-when-cross-origin"
-                    />
-                  </div>
-
-                  <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-800 px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-400">
-                        PGA TOUR replay
-                      </div>
-
-                      <div className="mt-0.5 text-[10px] text-slate-500">
-                        Shot {selectedShot.strokeNumber}
-                        {selectedShot.distance
-                          ? ` · ${selectedShot.distance}`
-                          : ""}
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 text-[9px] font-semibold text-slate-600">
-                      Video provided by PGA TOUR
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm font-black ${
-                      selectedShot.finalStroke
-                        ? "border-emerald-400 bg-emerald-700 text-white"
-                        : "border-yellow-400 bg-yellow-300 text-slate-950"
-                    }`}
-                  >
-                    {
-                      selectedShot.strokeNumber
-                    }
-                  </span>
-
-                  <div className="min-w-0">
-                    <div className="text-sm font-black text-white">
-                      Shot{" "}
-                      {
-                        selectedShot.strokeNumber
-                      }
-                    </div>
-
-                    <div className="mt-0.5 text-xs font-bold text-slate-300">
-                      {shotDescription(
-                        selectedShot,
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
-                  {selectedShot.fromLocation ||
-                    "Unknown lie"}
-
-                  <span className="mx-2 text-slate-600">
-                    →
-                  </span>
-
-                  {selectedShot.finalStroke
-                    ? "Hole"
-                    : selectedShot.toLocation ||
-                      "Unknown lie"}
-                </div>
-
-                {selectedRadarMetrics.length >
-                0 ? (
-                  <div className="mt-3">
-                    <div className="mb-2 text-[9px] font-black uppercase tracking-[0.14em] text-slate-500">
-                      Shot data
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {selectedRadarMetrics.map(
-                        (metric) => (
-                          <div
-                            key={metric.label}
-                            className="rounded-lg border border-slate-800 bg-slate-900 px-2.5 py-2"
-                          >
-                            <div className="text-[8px] font-black uppercase tracking-[0.1em] text-slate-600">
-                              {metric.label}
-                            </div>
-
-                            <div className="mt-0.5 text-sm font-black text-slate-100">
-                              {metric.value}
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-
-                {selectedShot.ballPath
-                  ?.path.length ? (
-                  <div className="mt-3 rounded-lg border border-emerald-900/70 bg-emerald-950/30 px-3 py-2 text-[10px] text-emerald-300">
-                    ✓ Real PGA ball path available
-                    <span className="ml-1 text-emerald-500">
-                      ·{" "}
-                      {
-                        selectedShot.ballPath
-                          .path.length
-                      }{" "}
-                      samples
-                    </span>
-                  </div>
-                ) : null}
-
-                {selectedShot.videoId ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      openVideoReplay(
-                        selectedShot.strokeNumber,
-                      )
-                    }
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-emerald-700 bg-emerald-950 px-3 py-2.5 text-xs font-black text-emerald-200 transition hover:bg-emerald-900"
-                  >
-                    <span aria-hidden="true">
-                      🎥
-                    </span>
-
-                    Video replay available
-                  </button>
-                ) : null}
-              </div>
-            )
-          ) : (
-            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3">
-              <div className="text-sm font-black text-slate-200">
-                Hole layout
-              </div>
-
-              <div className="mt-1 text-xs leading-5 text-slate-500">
-                {emptyStateLabel}
-              </div>
-            </div>
-          )}
-          </div>
 
           <div className="mt-3 text-[10px] leading-4 text-slate-500">
             {plottedShots.length > 0
