@@ -3853,20 +3853,46 @@ export default function PlayerPool({
         }
         defaultMode="season"
         actionLabel={
-          slotDraftContext
-            ? `Draft to ${slotDraftContext.targetDraftSlot.positionGroup} Slot`
+          researchPlayer
+            ? slotDraftContext
+              ? `Draft to ${slotDraftContext.targetDraftSlot.positionGroup} Slot`
+              : "Draft"
             : undefined
         }
         onAction={
-          slotDraftContext &&
           researchPlayer
             ? async () => {
-                await slotDraftContext.onDraftPlayer(
-                  researchPlayer,
-                );
+                if (
+                  slotDraftContext
+                ) {
+                  await slotDraftContext.onDraftPlayer(
+                    researchPlayer,
+                  );
+
+                  setResearchPlayer(
+                    null,
+                  );
+
+                  return;
+                }
+
+                /*
+                 * Season Stats uses PlayerResearchModal instead of
+                 * the normal DraftPlayerModal.
+                 *
+                 * Hand the selected player back to the established
+                 * draft flow so availability, ownership, current turn,
+                 * admin assignment, and roster rules remain centralized.
+                 */
+                const playerToDraft =
+                  researchPlayer;
 
                 setResearchPlayer(
                   null,
+                );
+
+                setDraftingPlayer(
+                  playerToDraft,
                 );
               }
             : undefined
