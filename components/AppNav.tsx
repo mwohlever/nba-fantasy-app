@@ -11,6 +11,7 @@ import {
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import { SPORTS, getSportConfig } from "@/lib/sports";
+import { getAdminMenuGroups } from "@/lib/adminMenu";
 
 type CurrentUser = {
   id: string;
@@ -35,52 +36,6 @@ const mainLinks = [
   { href: "/", label: "Home", icon: "⌂" },
   { href: "/lineups/draft", label: "Draft", icon: "✎" },
   { href: "/lineups/scores", label: "Scores", icon: "▦" },
-];
-
-const desktopAdminGroups = [
-  {
-    label: "Overview",
-    links: [{ href: "/admin", label: "Admin Home" }],
-  },
-  {
-    label: "Slates",
-    links: [
-      { href: "/slates/new", label: "Create Slate" },
-      { href: "/admin/slates", label: "Manage Slates" },
-      { href: "/admin/slate-games", label: "Slate NBA Games" },
-      { href: "/admin/corrections", label: "Corrections" },
-    ],
-  },
-  {
-    label: "Notifications",
-    links: [
-      {
-        href: "/admin/notification-templates",
-        label: "Notification Templates",
-      },
-      {
-        href: "/admin/notification-history",
-        label: "Notification History",
-      },
-    ],
-  },
-  {
-    label: "Players & League",
-    links: [
-      {
-        href: "/admin/players",
-        label: "Manage NBA Players",
-      },
-      {
-        href: "/admin/players-nfl",
-        label: "Manage NFL Players",
-      },
-      {
-        href: "/admin/league-awards",
-        label: "League Awards",
-      },
-    ],
-  },
 ];
 
 const profileLinks = [
@@ -172,6 +127,11 @@ function AppNavContent() {
           },
         ]
       : profileLinks;
+
+  const displayedAdminGroups =
+    getAdminMenuGroups(
+      activeSport,
+    );
 
   useEffect(() => {
     if (
@@ -616,7 +576,7 @@ function AppNavContent() {
                           Admin
                         </div>
 
-                        {desktopAdminGroups.map((group, groupIndex) => (
+                        {displayedAdminGroups.map((group, groupIndex) => (
                           <div key={group.label}>
                             {groupIndex > 0 ? (
                               <div className="my-2 border-t border-slate-100" />

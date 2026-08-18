@@ -9,6 +9,7 @@ import {
 } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSelectedSport } from "@/components/providers/SportProvider";
+import { getAdminMenuGroups } from "@/lib/adminMenu";
 
 type CurrentUser = {
   id: string;
@@ -47,52 +48,6 @@ const profileLinks = [
   },
 ];
 
-const adminGroups = [
-  {
-    label: "Overview",
-    links: [{ href: "/admin", label: "Admin Home" }],
-  },
-  {
-    label: "Slates",
-    links: [
-      { href: "/slates/new", label: "Create Slate" },
-      { href: "/admin/slates", label: "Manage Slates" },
-      { href: "/admin/slate-games", label: "Slate NBA Games" },
-      { href: "/admin/corrections", label: "Corrections" },
-    ],
-  },
-  {
-    label: "Notifications",
-    links: [
-      {
-        href: "/admin/notification-templates",
-        label: "Notification Templates",
-      },
-      {
-        href: "/admin/notification-history",
-        label: "Notification History",
-      },
-    ],
-  },
-  {
-    label: "Players & League",
-    links: [
-      {
-        href: "/admin/players",
-        label: "Manage NBA Players",
-      },
-      {
-        href: "/admin/players-nfl",
-        label: "Manage NFL Players",
-      },
-      {
-        href: "/admin/league-awards",
-        label: "League Awards",
-      },
-    ],
-  },
-];
-
 const sportScopedPaths = [
   "/profile",
   "/lineups/draft",
@@ -127,6 +82,16 @@ function MobileAccountMenuContent() {
   const isNbaSkins =
     pathname.startsWith("/nba-skins") ||
     selectedSport === "nba-skins";
+
+  const activeAdminSport =
+    isNbaSkins
+      ? "nba-skins"
+      : selectedSport;
+
+  const displayedAdminGroups =
+    getAdminMenuGroups(
+      activeAdminSport,
+    );
 
   const displayedProfileLinks =
     isNbaSkins
@@ -382,7 +347,7 @@ function MobileAccountMenuContent() {
                 Admin
               </div>
 
-              {adminGroups.map((group, groupIndex) => (
+              {displayedAdminGroups.map((group, groupIndex) => (
                 <div key={group.label}>
                   {groupIndex > 0 ? (
                     <div className="my-2 border-t border-slate-100" />

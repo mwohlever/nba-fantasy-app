@@ -176,6 +176,7 @@ export async function GET(
       picksResult,
       nbaTeamsResult,
       recordsResult,
+      usersResult,
     ] =
       await Promise.all([
         supabase
@@ -227,6 +228,19 @@ export async function GET(
             "season_id",
             selectedSeason.id,
           ),
+
+        supabase
+          .from(
+            "app_users",
+          )
+          .select(
+            "team_id, avatar_url",
+          )
+          .not(
+            "team_id",
+            "is",
+            null,
+          ),
       ]);
 
 
@@ -266,6 +280,15 @@ export async function GET(
       );
     }
 
+    if (
+      usersResult.error
+    ) {
+      throw new Error(
+        usersResult
+          .error.message,
+      );
+    }
+
 
     const leagueTeams =
       (
@@ -294,6 +317,41 @@ export async function GET(
         []
       ) as unknown as
         TeamRecordRow[];
+
+    const teamUsers =
+      (
+        usersResult.data ??
+        []
+      ) as unknown as Array<{
+        team_id: number | null;
+        avatar_url: string | null;
+      }>;
+
+
+    const avatarByTeamId =
+      new Map<
+        number,
+        string | null
+      >();
+
+    teamUsers.forEach(
+      (user) => {
+        if (
+          user.team_id === null ||
+          user.team_id === undefined
+        ) {
+          return;
+        }
+
+        avatarByTeamId.set(
+          Number(
+            user.team_id,
+          ),
+          user.avatar_url ??
+            null,
+        );
+      },
+    );
 
 
     const leagueTeamByName =
@@ -391,6 +449,16 @@ export async function GET(
             leagueTeamId:
               leagueTeam?.id ??
               null,
+
+            avatarUrl:
+              leagueTeam
+                ? avatarByTeamId.get(
+                    Number(
+                      leagueTeam.id,
+                    ),
+                  ) ??
+                  null
+                : null,
 
             pickCount:
               ownerPicks.length,

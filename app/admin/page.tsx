@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import AppNav from "@/components/AppNav";
+import NbaSkinsAdminPage from "@/app/admin/nba-skins/page";
 
 import {
   useSelectedSport,
@@ -362,6 +363,20 @@ export default function AdminPage() {
     getAdminGroups(
       selectedSport,
     );
+
+  /*
+   * NBA Skins has a deliberately small commissioner surface.
+   * Show those controls directly on /admin rather than forcing
+   * another click through an admin card.
+   */
+  if (
+    isHydrated &&
+    selectedSport === "nba-skins"
+  ) {
+    return (
+      <NbaSkinsAdminPage />
+    );
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">

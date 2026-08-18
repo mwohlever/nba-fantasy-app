@@ -298,9 +298,26 @@ export default function NbaSkinsProfilePage() {
           currentUser,
         );
 
+        const requestedTeamId =
+          Number(
+            new URLSearchParams(
+              window.location.search,
+            ).get(
+              "teamId",
+            ),
+          );
+
+        const profileTeamId =
+          Number.isInteger(
+            requestedTeamId,
+          ) &&
+          requestedTeamId > 0
+            ? requestedTeamId
+            : currentUser.teamId;
+
         const profileResponse =
           await fetch(
-            `/api/nba-skins/profile?teamId=${currentUser.teamId}`,
+            `/api/nba-skins/profile?teamId=${profileTeamId}`,
             {
               cache:
                 "no-store",
@@ -355,17 +372,32 @@ export default function NbaSkinsProfilePage() {
 
   const headshot =
     useMemo(
-      () =>
-        user?.avatarUrl ??
-        (
-          user
-            ? TEAM_HEADSHOTS[
-                user.displayName
-              ]
-            : null
-        ) ??
-        null,
-      [user],
+      () => {
+        const profileName =
+          profile?.team.name ??
+          user?.displayName ??
+          "";
+
+        const viewingSelf =
+          profile?.team.id ===
+          user?.teamId;
+
+        return (
+          (
+            viewingSelf
+              ? user?.avatarUrl
+              : null
+          ) ??
+          TEAM_HEADSHOTS[
+            profileName
+          ] ??
+          null
+        );
+      },
+      [
+        profile,
+        user,
+      ],
     );
 
 
@@ -380,9 +412,11 @@ export default function NbaSkinsProfilePage() {
               <img
                 src={headshot}
                 alt={
-                  user
-                    ? `${user.displayName} profile`
-                    : "NBA Skins profile"
+                  profile
+                    ? `${profile.team.name} profile`
+                    : user
+                      ? `${user.displayName} profile`
+                      : "NBA Skins profile"
                 }
                 className="h-20 w-20 rounded-2xl border border-blue-500/25 object-cover shadow-sm sm:h-24 sm:w-24"
               />
@@ -403,7 +437,8 @@ export default function NbaSkinsProfilePage() {
               </div>
 
               <h1 className="mt-1 text-3xl font-black tracking-tight text-white">
-                {user?.displayName ??
+                {profile?.team.name ??
+                  user?.displayName ??
                   "Profile"}
               </h1>
 
