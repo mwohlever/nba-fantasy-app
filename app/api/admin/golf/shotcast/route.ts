@@ -8,6 +8,10 @@ import {
 } from "@/lib/shotcast/importShotCastManifest";
 
 import {
+  resolvePgaTourTournament,
+} from "@/lib/providers/pgaTourField";
+
+import {
   requireAdminApi,
 } from "@/lib/requireAdminApi";
 
@@ -117,7 +121,7 @@ export async function POST(
     const slateId =
       parseSlateId(body?.slateId);
 
-    const tournamentId =
+    const suppliedTournamentId =
       String(
         body?.tournamentId ?? "",
       )
@@ -138,14 +142,15 @@ export async function POST(
     }
 
     if (
+      suppliedTournamentId &&
       !/^R\d{7}$/.test(
-        tournamentId,
+        suppliedTournamentId,
       )
     ) {
       return NextResponse.json(
         {
           error:
-            "Enter a PGA tournament ID such as R2026013.",
+            "The optional PGA tournament ID override must look like R2026013.",
         },
         { status: 400 },
       );
@@ -157,7 +162,7 @@ export async function POST(
     } = await supabaseAdmin
       .from("slates")
       .select(
-        "id, sport, display_name",
+        "id, sport, display_name, start_date",
       )
       .eq("id", slateId)
       .single();
@@ -183,6 +188,82 @@ export async function POST(
             "ShotCast is only available for Golf slates.",
         },
         { status: 400 },
+      );
+    }
+
+    let tournamentId =
+      suppliedTournamentId;
+
+    let tournamentIdSource:
+      "manual" | "pga-schedule" =
+      "manual";
+
+    if (!tournamentId) {
+      const tournamentName =
+        String(
+          slate.display_name ?? "",
+        ).trim();
+
+      const startDate =
+        String(
+          slate.start_date ?? "",
+        ).trim();
+
+      const year =
+        startDate.slice(0, 4);
+
+      if (
+        !tournamentName ||
+        !/^\d{4}$/.test(year)
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "ShotCast could not auto-resolve the PGA tournament because the slate is missing a tournament name or valid start year.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const resolved =
+        await resolvePgaTourTournament(
+          year,
+          tournamentName,
+        );
+
+      tournamentId =
+        String(
+          resolved?.tournamentId ??
+            "",
+        )
+          .trim()
+          .toUpperCase();
+
+      tournamentIdSource =
+        "pga-schedule";
+
+      if (
+        !/^R\d{7}$/.test(
+          tournamentId,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              `PGA TOUR could not resolve "${tournamentName}" to a tournament ID for ${year}.`,
+          },
+          { status: 404 },
+        );
+      }
+
+      console.log(
+        "[ShotCast] PGA tournament auto-resolved",
+        {
+          slateId,
+          tournamentName,
+          year,
+          tournamentId,
+        },
       );
     }
 
@@ -304,6 +385,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       tournamentId,
+      tournamentIdSource,
       course:
         manifest.course,
       summary:

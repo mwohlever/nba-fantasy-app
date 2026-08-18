@@ -1,3 +1,7 @@
+import {
+  fetchPgaTourCourseIdentity,
+} from "@/lib/providers/pgaTourField";
+
 const PGA_GRAPHQL_URL =
   "https://orchestrator.pgatour.com/graphql";
 
@@ -1030,7 +1034,7 @@ export async function importShotCastManifest({
       ? leaderboard.courses
       : [];
 
-  const course =
+  let course =
     courses.find(
       (row: any) =>
         row?.hostCourse === true &&
@@ -1042,12 +1046,41 @@ export async function importShotCastManifest({
     ) ??
     courses[0];
 
-  const courseId =
-    String(course?.id ?? "").trim();
+  let courseId =
+    String(
+      course?.id ?? "",
+    ).trim();
 
+  /*
+   * Before LeaderboardHoleByHole initializes,
+   * PGA's own tournament overview already exposes
+   * the official host course in __NEXT_DATA__.
+   */
   if (!courseId) {
-    throw new Error(
-      "No enabled PGA course was returned.",
+    const preLiveCourse =
+      await fetchPgaTourCourseIdentity(
+        normalizedTournamentId,
+      );
+
+    course =
+      preLiveCourse;
+
+    courseId =
+      preLiveCourse.id;
+
+    console.log(
+      "[ShotCast] PGA course resolved from tournament overview",
+      {
+        tournamentId:
+          normalizedTournamentId,
+        courseId,
+        courseName:
+          preLiveCourse.courseName,
+        courseCode:
+          preLiveCourse.courseCode,
+        scoringLevel:
+          preLiveCourse.scoringLevel,
+      },
     );
   }
 

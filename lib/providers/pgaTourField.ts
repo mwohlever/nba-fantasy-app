@@ -57,6 +57,14 @@ export type PgaTourField = {
   players: PgaTourFieldPlayer[];
 };
 
+export type PgaTourCourseIdentity = {
+  id: string;
+  courseName: string | null;
+  courseCode: string | null;
+  hostCourse: boolean;
+  scoringLevel: string | null;
+};
+
 function requestHeaders() {
   return {
     Accept: "application/json, text/html",
@@ -252,7 +260,7 @@ async function fetchText(
   }
 }
 
-async function findTournament(
+export async function resolvePgaTourTournament(
   year: string,
   tournamentName: string,
 ) {
@@ -310,6 +318,114 @@ async function findTournament(
   );
 }
 
+export async function fetchPgaTourCourseIdentity(
+  tournamentIdInput: string,
+): Promise<PgaTourCourseIdentity> {
+  const tournamentId =
+    tournamentIdInput.trim().toUpperCase();
+
+  if (!/^R\d{7}$/.test(tournamentId)) {
+    throw new Error(
+      "PGA tournament ID must look like R2026013.",
+    );
+  }
+
+  const year = tournamentId.slice(1, 5);
+
+  const scheduleText =
+    await fetchText(
+      `${PGA_TOUR_SCHEDULE_URL}/${year}`,
+      `PGA TOUR ${year} schedule`,
+    );
+
+  const schedule =
+    JSON.parse(scheduleText) as {
+      tournaments?: ScheduleTournament[];
+    };
+
+  const tournament =
+    (schedule.tournaments ?? []).find(
+      (row) =>
+        row?.tournamentId?.trim().toUpperCase() ===
+        tournamentId,
+    );
+
+  const tournamentName =
+    tournament?.name?.trim();
+
+  if (!tournamentName) {
+    throw new Error(
+      `Could not find ${tournamentId} on PGA TOUR schedule.`,
+    );
+  }
+
+  const url =
+    `https://www.pgatour.com/tournaments/` +
+    `${year}/${slugify(tournamentName)}/` +
+    `${tournamentId}/overview`;
+
+  const html =
+    await fetchText(
+      url,
+      `${tournamentName} overview page`,
+    );
+
+  const match =
+    html.match(
+      /<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/,
+    );
+
+  if (!match?.[1]) {
+    throw new Error(
+      `${tournamentName} overview has no __NEXT_DATA__.`,
+    );
+  }
+
+  const nextData =
+    JSON.parse(match[1]) as any;
+
+  const courses =
+    Array.isArray(
+      nextData?.props?.pageProps?.tournament?.courses,
+    )
+      ? nextData.props.pageProps.tournament.courses
+      : [];
+
+  const course =
+    courses.find(
+      (row: any) =>
+        row?.hostCourse === true,
+    ) ??
+    courses[0];
+
+  const id =
+    String(course?.id ?? "").trim();
+
+  if (!id) {
+    throw new Error(
+      `${tournamentName} overview returned no course ID.`,
+    );
+  }
+
+  return {
+    id,
+    courseName:
+      typeof course?.courseName === "string"
+        ? course.courseName.trim() || null
+        : null,
+    courseCode:
+      typeof course?.courseCode === "string"
+        ? course.courseCode.trim() || null
+        : null,
+    hostCourse:
+      course?.hostCourse === true,
+    scoringLevel:
+      typeof course?.scoringLevel === "string"
+        ? course.scoringLevel.trim() || null
+        : null,
+  };
+}
+
 export async function fetchPgaTourField(
   input: {
     year: string;
@@ -317,7 +433,7 @@ export async function fetchPgaTourField(
   },
 ): Promise<PgaTourField> {
   const tournament =
-    await findTournament(
+    await resolvePgaTourTournament(
       input.year,
       input.tournamentName,
     );

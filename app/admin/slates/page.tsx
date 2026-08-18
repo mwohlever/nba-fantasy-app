@@ -341,12 +341,13 @@ export default function AdminSlatesPage() {
         .toUpperCase();
 
     if (
+      tournamentId &&
       !/^R\d{7}$/.test(
         tournamentId,
       )
     ) {
       setMessage(
-        "Enter a PGA tournament ID such as R2026013.",
+        "The optional PGA tournament ID override must look like R2026013.",
       );
 
       return;
@@ -1311,7 +1312,7 @@ export default function AdminSlatesPage() {
                         htmlFor="shotcast-tournament-id"
                         className="mb-1 block text-xs font-medium text-slate-300"
                       >
-                        PGA Tournament ID
+                        PGA Tournament ID Override
                       </label>
 
                       <input
@@ -1327,9 +1328,13 @@ export default function AdminSlatesPage() {
                           )
                         }
                         disabled={isBusy}
-                        placeholder="R2026013"
+                        placeholder="Auto-resolve from slate"
                         className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-3 text-sm font-bold uppercase text-white outline-none focus:border-violet-400"
                       />
+
+                      <div className="mt-1 text-xs text-slate-400">
+                        Leave blank to resolve the PGA tournament automatically from this slate.
+                      </div>
                     </div>
 
                     <button
