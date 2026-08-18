@@ -283,9 +283,11 @@ const teamRows =
       games_played:
         record.gamesPlayed,
 
-      projection_source:
-        null,
-
+      /*
+       * Projection fields are managed by the separate
+       * projected-standings pipeline. Record refreshes must
+       * never erase them.
+       */
       source_updated_at:
         now,
 

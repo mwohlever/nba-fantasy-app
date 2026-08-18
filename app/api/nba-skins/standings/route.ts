@@ -54,6 +54,15 @@ type TeamRecordRow = {
   wins: number;
   losses: number;
   games_played: number;
+
+  projected_wins:
+    number | null;
+
+  projected_losses:
+    number | null;
+
+  projection_source:
+    string | null;
 };
 
 
@@ -152,23 +161,138 @@ export async function GET(
       });
     }
 
-    const requestedSeason =
-      Number(
-        request.nextUrl
-          .searchParams
-          .get("season"),
-      );
+    const rawRequestedSeason =
+      request.nextUrl
+        .searchParams
+        .get("season");
 
-    const selectedSeason =
-      seasonRows.find(
-        (row) =>
-          Number.isFinite(
-            requestedSeason,
-          ) &&
-          row.season ===
-            requestedSeason,
+    const requestedSeason =
+      rawRequestedSeason ===
+      null
+        ? null
+        : Number(
+            rawRequestedSeason,
+          );
+
+    const homeMode =
+      request.nextUrl
+        .searchParams
+        .get("home") ===
+      "1";
+
+
+    let selectedSeason =
+      (
+        requestedSeason !==
+          null &&
+        Number.isFinite(
+          requestedSeason,
+        )
+          ? seasonRows.find(
+              (row) =>
+                row.season ===
+                requestedSeason,
+            )
+          : null
       ) ??
       seasonRows[0];
+
+
+    /*
+     * NBA Skins Home should continue showing the latest real
+     * completed/active league season until the new annual draft
+     * has actually been saved.
+     *
+     * This fallback is HOME-ONLY. Historical Standings remains
+     * free to display the empty upcoming season explicitly.
+     */
+    if (
+      homeMode &&
+      rawRequestedSeason ===
+        null
+    ) {
+      const seasonIds =
+        seasonRows.map(
+          (row) =>
+            row.id,
+        );
+
+      const {
+        data:
+          allPickSeasonsRaw,
+        error:
+          allPickSeasonsError,
+      } =
+        await supabase
+          .from(
+            "nba_skins_picks",
+          )
+          .select(
+            "season_id",
+          )
+          .in(
+            "season_id",
+            seasonIds,
+          );
+
+
+      if (
+        allPickSeasonsError
+      ) {
+        throw new Error(
+          allPickSeasonsError
+            .message,
+        );
+      }
+
+
+      const pickCountBySeasonId =
+        new Map<
+          number,
+          number
+        >();
+
+
+      (
+        allPickSeasonsRaw ??
+        []
+      ).forEach(
+        (
+          row: {
+            season_id:
+              number;
+          },
+        ) => {
+          const seasonId =
+            Number(
+              row.season_id,
+            );
+
+          pickCountBySeasonId.set(
+            seasonId,
+            (
+              pickCountBySeasonId.get(
+                seasonId,
+              ) ??
+              0
+            ) + 1,
+          );
+        },
+      );
+
+
+      selectedSeason =
+        seasonRows.find(
+          (row) =>
+            (
+              pickCountBySeasonId.get(
+                row.id,
+              ) ??
+              0
+            ) === 28,
+        ) ??
+        seasonRows[0];
+    }
 
 
     const [
@@ -222,7 +346,15 @@ export async function GET(
             "nba_skins_team_records",
           )
           .select(
-            "nba_team_abbreviation, wins, losses, games_played",
+            [
+              "nba_team_abbreviation",
+              "wins",
+              "losses",
+              "games_played",
+              "projected_wins",
+              "projected_losses",
+              "projection_source",
+            ].join(","),
           )
           .eq(
             "season_id",
@@ -515,6 +647,15 @@ export async function GET(
 
                             gamesPlayed:
                               record.games_played,
+
+                            projectedWins:
+                              record.projected_wins,
+
+                            projectedLosses:
+                              record.projected_losses,
+
+                            projectionSource:
+                              record.projection_source,
                           }
                         : null,
                   };

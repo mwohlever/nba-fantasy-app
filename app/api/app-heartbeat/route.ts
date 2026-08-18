@@ -14,6 +14,10 @@ import {
   GET as checkNcaaReminders,
 } from "@/app/api/cron/ncaa-pickem-reminders/route";
 
+import {
+  GET as refreshNbaSkins,
+} from "@/app/api/cron/refresh-nba-skins/route";
+
 export const runtime =
   "nodejs";
 
@@ -71,9 +75,11 @@ export async function POST() {
   const results: {
     ncaaRefresh: unknown;
     ncaaReminders: unknown;
+    nbaSkinsRefresh: unknown;
   } = {
     ncaaRefresh: null,
     ncaaReminders: null,
+    nbaSkinsRefresh: null,
   };
 
   /*
@@ -159,6 +165,54 @@ export async function POST() {
           : "Unexpected NCAA reminder failure.",
     };
   }
+
+  /*
+   * NBA Skins is season-long rather than slate-based.
+   *
+   * The refresh route itself skips automatically until a
+   * complete annual draft exists, so it is safe to include
+   * in the same global heartbeat.
+   */
+  try {
+    const skinsResponse =
+      await refreshNbaSkins(
+        new Request(
+          "http://internal/api/cron/refresh-nba-skins",
+          {
+            method: "GET",
+            headers,
+          },
+        ),
+      );
+
+    try {
+      results.nbaSkinsRefresh =
+        await skinsResponse.json();
+    } catch {
+      results.nbaSkinsRefresh = {
+        success: false,
+        status:
+          skinsResponse.status,
+        error:
+          "Unreadable NBA Skins refresh response.",
+      };
+    }
+  } catch (error) {
+    console.error(
+      "App heartbeat NBA Skins refresh failed",
+      error,
+    );
+
+    results.nbaSkinsRefresh = {
+      success: false,
+
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unexpected NBA Skins refresh failure.",
+    };
+  }
+
 
   return NextResponse.json(
     {

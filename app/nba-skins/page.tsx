@@ -37,6 +37,18 @@ type PickRecord = {
   wins: number;
   losses: number;
   gamesPlayed: number;
+
+  projectedWins:
+    | number
+    | null;
+
+  projectedLosses:
+    | number
+    | null;
+
+  projectionSource:
+    | string
+    | null;
 };
 
 
@@ -186,6 +198,12 @@ function rowMetrics(
   let points = 0;
   let gamesPlayed = 0;
 
+  let projectedPoints =
+    0;
+
+  let projectedPickCount =
+    0;
+
 
   standing.picks.forEach(
     (pick) => {
@@ -207,6 +225,36 @@ function rowMetrics(
                 pick.record.losses ??
                   0,
               );
+
+
+        const projectionValue =
+          pick.pickType ===
+          "wins"
+            ? pick.record
+                .projectedWins
+            : pick.record
+                .projectedLosses;
+
+
+        if (
+          projectionValue !==
+            null &&
+          projectionValue !==
+            undefined &&
+          Number.isFinite(
+            Number(
+              projectionValue,
+            ),
+          )
+        ) {
+          projectedPoints +=
+            Number(
+              projectionValue,
+            );
+
+          projectedPickCount +=
+            1;
+        }
 
         return;
       }
@@ -275,18 +323,30 @@ function rowMetrics(
 
 
   /*
-   * Projected is intentionally NOT the same as pace.
+   * Projected is intentionally NOT the same as Pace.
    *
-   * It will eventually come from an authoritative external
-   * projected-final NBA standings source. Until then, active
-   * seasons display a dash. A completed season simply resolves
-   * to the actual final score.
+   * Pace:
+   *   current Skins accuracy extrapolated across all 574
+   *   possible team-games.
+   *
+   * Projected:
+   *   sum ESPN BPI projected final wins for each Wins pick
+   *   and projected final losses for each Losses pick.
+   *
+   * A completed season resolves to the actual score.
    */
   const projected =
     gamesLeft === 0 &&
     standing.pickCount === 7
       ? points
-      : null;
+      : (
+          standing.pickCount ===
+            7 &&
+          projectedPickCount ===
+            7
+        )
+        ? projectedPoints
+        : null;
 
 
   return {
@@ -344,7 +404,7 @@ export default function NbaSkinsHomePage() {
 
         const response =
           await fetch(
-            "/api/nba-skins/standings",
+            "/api/nba-skins/standings?home=1",
             {
               cache:
                 "no-store",
@@ -443,6 +503,28 @@ export default function NbaSkinsHomePage() {
     null;
 
 
+  const newestAvailableSeason =
+    data?.availableSeasons
+      .reduce(
+        (
+          newest,
+          entry,
+        ) =>
+          Math.max(
+            newest,
+            entry.season,
+          ),
+        0,
+      ) ??
+    0;
+
+
+  const showingPreviousSeason =
+    season !== null &&
+    newestAvailableSeason >
+      season.season;
+
+
   return (
     <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
       <div className="mx-auto max-w-7xl space-y-5">
@@ -461,7 +543,13 @@ export default function NbaSkinsHomePage() {
               </h1>
 
               <p className="mt-2 text-sm text-slate-400">
-                Points earned from your seven Wins / Losses selections.
+                {showingPreviousSeason
+                  ? `Showing ${seasonLabel(
+                      season!.season,
+                    )} until the ${seasonLabel(
+                      newestAvailableSeason,
+                    )} draft is saved.`
+                  : "Points earned from your seven Wins / Losses selections."}
               </p>
             </div>
 
@@ -677,8 +765,8 @@ export default function NbaSkinsHomePage() {
               <strong className="text-slate-400">
                 Projected
               </strong>{" "}
-              will use projected final NBA team records once that data source
-              is connected.
+              uses ESPN BPI projected final NBA team records for each drafted
+              Wins / Losses selection.
             </div>
           </section>
         )}
