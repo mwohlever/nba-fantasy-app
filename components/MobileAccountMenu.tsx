@@ -124,6 +124,26 @@ function MobileAccountMenuContent() {
   const searchParams = useSearchParams();
   const { selectedSport } = useSelectedSport();
 
+  const isNbaSkins =
+    pathname.startsWith("/nba-skins") ||
+    selectedSport === "nba-skins";
+
+  const displayedProfileLinks =
+    isNbaSkins
+      ? [
+          {
+            href: "/nba-skins/profile",
+            label: "Profile / Trophies",
+            tab: "overview",
+          },
+          {
+            href: "/profile?tab=settings",
+            label: "Settings",
+            tab: "settings",
+          },
+        ]
+      : profileLinks;
+
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -320,15 +340,24 @@ function MobileAccountMenuContent() {
             Profile
           </div>
 
-          {profileLinks.map((link) => {
+          {displayedProfileLinks.map((link) => {
             const isActive =
-              pathname.startsWith("/profile") &&
-              activeProfileTab === link.tab;
+              isNbaSkins
+                ? link.tab === "settings"
+                  ? pathname.startsWith("/profile") &&
+                    activeProfileTab === "settings"
+                  : pathname.startsWith("/nba-skins/profile")
+                : pathname.startsWith("/profile") &&
+                  activeProfileTab === link.tab;
 
             return (
               <Link
                 key={link.href}
-                href={getLinkHref(link.href, selectedSport)}
+                href={
+                  isNbaSkins
+                    ? link.href
+                    : getLinkHref(link.href, selectedSport)
+                }
                 onClick={() => setIsOpen(false)}
                 className={`block rounded-xl px-3 py-2.5 text-sm transition ${
                   isActive

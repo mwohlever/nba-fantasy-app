@@ -157,6 +157,22 @@ function AppNavContent() {
   const isNcaaPickEm =
     activeSport === "ncaa";
 
+  const displayedProfileLinks =
+    isNbaSkins
+      ? [
+          {
+            href: "/nba-skins/profile",
+            label: "Profile / Trophies",
+            tab: "overview",
+          },
+          {
+            href: "/profile?tab=settings",
+            label: "Settings",
+            tab: "settings",
+          },
+        ]
+      : profileLinks;
+
   useEffect(() => {
     if (
       routeSport &&
@@ -562,10 +578,15 @@ function AppNavContent() {
                       Profile
                     </div>
 
-                    {profileLinks.map((link) => {
+                    {displayedProfileLinks.map((link) => {
                       const isActive =
-                        pathname.startsWith("/profile") &&
-                        activeProfileTab === link.tab;
+                        isNbaSkins
+                          ? link.tab === "settings"
+                            ? pathname.startsWith("/profile") &&
+                              activeProfileTab === "settings"
+                            : pathname.startsWith("/nba-skins/profile")
+                          : pathname.startsWith("/profile") &&
+                            activeProfileTab === link.tab;
 
                       return (
                         <Link

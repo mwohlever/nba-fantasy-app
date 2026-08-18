@@ -15,12 +15,16 @@ type Pick = {
   pickType: "wins" | "losses";
   draftRound: number | null;
   finalPoints: number | null;
+  record: {
+    wins: number;
+    losses: number;
+    gamesPlayed: number;
+  } | null;
 };
 
 type Standing = {
   ownerName: string;
   leagueTeamId: number | null;
-  draftPosition: number | null;
   pickCount: number;
   finalTotal: number | null;
   hasCompleteFinalPoints: boolean;
@@ -64,6 +68,13 @@ function rankLabel(rank: number | null) {
   }
 
   return ordinal(rank);
+}
+
+function formatSeasonLabel(season: number) {
+  const end =
+    String(season + 1).slice(-2);
+
+  return `${season}-${end}`;
 }
 
 export default function NbaSkinsStandingsPage() {
@@ -212,7 +223,7 @@ export default function NbaSkinsStandingsPage() {
                         key={season.season}
                         value={season.season}
                       >
-                        {season.season}
+                        {formatSeasonLabel(season.season)}
                       </option>
                     ),
                   )}
@@ -257,7 +268,7 @@ export default function NbaSkinsStandingsPage() {
                 (standing) => (
                   <div
                     key={standing.ownerName}
-                    className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm"
+                    className="rounded-3xl border border-blue-500/25 bg-gradient-to-br from-slate-900 to-blue-950/60 p-4 shadow-sm sm:p-5"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -286,38 +297,22 @@ export default function NbaSkinsStandingsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between border-t border-slate-800 pt-3 text-xs text-slate-400">
-                      <span>
-                        {standing.pickCount}/7 picks
-                      </span>
-
-                      {standing.draftPosition !==
-                      null ? (
-                        <span>
-                          Drafted{" "}
-                          {ordinal(
-                            standing.draftPosition,
-                          )}
-                        </span>
-                      ) : (
-                        <span>
-                          Draft order unavailable
-                        </span>
-                      )}
+                    <div className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-400">
+                      {standing.pickCount}/7 picks
                     </div>
                   </div>
                 ),
               )}
             </section>
 
-            <section className="space-y-4">
+            <section className="space-y-3">
               {data.standings.map(
                 (standing) => (
                   <article
                     key={standing.ownerName}
                     className="overflow-hidden rounded-3xl border border-slate-700 bg-slate-900 shadow-sm"
                   >
-                    <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-4 py-4 sm:px-5">
+                    <div className="flex items-center justify-between gap-4 border-b border-slate-800 px-4 py-3 sm:px-5">
                       <div>
                         <div className="text-lg font-black text-white">
                           {standing.ownerName}
@@ -353,7 +348,7 @@ export default function NbaSkinsStandingsPage() {
                           (pick) => (
                             <div
                               key={pick.id}
-                              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[48px_minmax(0,1fr)_110px_70px] sm:px-5"
+                              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 sm:grid-cols-[34px_minmax(0,1fr)_125px_64px] sm:px-5 sm:py-2.5"
                             >
                               <div className="hidden text-xs font-bold text-slate-500 sm:block">
                                 {pick.draftRound !==
@@ -378,13 +373,15 @@ export default function NbaSkinsStandingsPage() {
                                 </div>
 
                                 <div className="mt-1 flex items-center gap-2 sm:hidden">
-                                  {pick.draftRound !==
-                                  null ? (
+                                  {pick.draftRound !== null ? (
                                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                      Round{" "}
-                                      {
-                                        pick.draftRound
-                                      }
+                                      Round {pick.draftRound}
+                                    </span>
+                                  ) : null}
+
+                                  {pick.record ? (
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                      {pick.record.wins}-{pick.record.losses}
                                     </span>
                                   ) : null}
 
@@ -402,7 +399,14 @@ export default function NbaSkinsStandingsPage() {
                               </div>
 
                               <div className="hidden sm:block">
-                                <span
+                                <div className="flex items-center gap-2">
+                                  {pick.record ? (
+                                    <span className="text-xs font-bold tabular-nums text-slate-500">
+                                      {pick.record.wins}-{pick.record.losses}
+                                    </span>
+                                  ) : null}
+
+                                  <span
                                   className={
                                     pick.pickType ===
                                     "wins"
@@ -410,8 +414,9 @@ export default function NbaSkinsStandingsPage() {
                                       : "inline-flex rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-300"
                                   }
                                 >
-                                  {pick.pickType}
-                                </span>
+                                    {pick.pickType}
+                                  </span>
+                                </div>
                               </div>
 
                               <div className="text-right">

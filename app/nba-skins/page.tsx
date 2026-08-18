@@ -24,7 +24,7 @@ export default function NbaSkinsHomePage() {
           </p>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Link
             href="/nba-skins/draft"
             className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm transition hover:border-blue-500/60"
@@ -70,12 +70,30 @@ export default function NbaSkinsHomePage() {
             </div>
 
             <div className="mt-2 text-xl font-black text-white">
-              2022–2025
+              2022-23 through 2025-26
             </div>
 
             <p className="mt-2 text-sm leading-6 text-slate-400">
               Browse the normalized historical picks and results from
               past NBA Skins seasons.
+            </p>
+          </Link>
+
+          <Link
+            href="/nba-skins/profile"
+            className="rounded-3xl border border-blue-500/25 bg-gradient-to-br from-slate-900 to-blue-950/50 p-5 shadow-sm transition hover:border-blue-400/60"
+          >
+            <div className="text-xs font-bold uppercase tracking-widest text-blue-300">
+              Profile
+            </div>
+
+            <div className="mt-2 text-xl font-black text-white">
+              Career Stats
+            </div>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Championships, career points, best picks, season history,
+              and your Wins vs. Losses performance.
             </p>
           </Link>
         </section>

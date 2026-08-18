@@ -12,7 +12,8 @@ import PushDeviceControls from "@/components/profile/PushDeviceControls";
 import ChangePinForm from "@/components/profile/ChangePinForm";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import ProfilePictureSettings from "@/components/profile/ProfilePictureSettings";
-import ProfileOverview from "@/components/profile/ProfileOverview";
+import NbaProfileOverview from "@/components/profile/NbaProfileOverview";
+import NflProfileOverview from "@/components/profile/NflProfileOverview";
 import GolfProfileOverview from "@/components/profile/GolfProfileOverview";
 import NcaaPickEmProfileOverview from "@/components/profile/NcaaPickEmProfileOverview";
 import NcaaPickEmTrophyCase from "@/components/profile/NcaaPickEmTrophyCase";
@@ -721,8 +722,16 @@ function ProfilePageContent() {
                       availableSeasons={availableSeasons}
                       onSeasonChange={setSeason}
                     />
+                  ) : selectedSport === "nfl" ? (
+                    <NflProfileOverview
+                      profile={profile}
+                      teamId={profile.team.id}
+                      season={season}
+                      availableSeasons={availableSeasons}
+                      onSeasonChange={setSeason}
+                    />
                   ) : (
-                    <ProfileOverview
+                    <NbaProfileOverview
                       profile={profile}
                       teamId={profile.team.id}
                       season={season}
