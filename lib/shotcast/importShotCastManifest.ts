@@ -750,7 +750,7 @@ export async function fetchPgaTourCourseMetadata(
       ? leaderboard.courses
       : [];
 
-  const course =
+  let course =
     courses.find(
       (row: any) =>
         row?.hostCourse === true &&
@@ -762,14 +762,41 @@ export async function fetchPgaTourCourseMetadata(
     ) ??
     courses[0];
 
-  const courseId =
+  let courseId =
     String(
       course?.id ?? "",
     ).trim();
 
+  /*
+   * Pre-event LeaderboardHoleByHole can legitimately return
+   * no courses even though PGA has already published the
+   * tournament and its official host course.
+   *
+   * Use the same PGA tournament-overview source as the full
+   * ShotCast importer so field/course metadata and ShotCast
+   * resolve tournament identity consistently.
+   */
   if (!courseId) {
-    throw new Error(
-      "No enabled PGA host course was returned.",
+    const preLiveCourse =
+      await fetchPgaTourCourseIdentity(
+        normalizedTournamentId,
+      );
+
+    course =
+      preLiveCourse;
+
+    courseId =
+      preLiveCourse.id;
+
+    console.log(
+      "[PGA course metadata] Course resolved from tournament overview",
+      {
+        tournamentId:
+          normalizedTournamentId,
+        courseId,
+        courseName:
+          preLiveCourse.courseName,
+      },
     );
   }
 

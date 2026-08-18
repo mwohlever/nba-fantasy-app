@@ -315,15 +315,14 @@ export default function AdminSlatesPage() {
 
       setShotCast(nextShotCast);
 
-      if (
-        nextShotCast
-          ?.tournamentId
-      ) {
-        setShotCastTournamentId(
-          nextShotCast
-            .tournamentId,
-        );
-      }
+      /*
+       * This field is an explicit admin override only.
+       *
+       * Do not populate it from the existing ShotCast manifest.
+       * Leaving it blank allows the server to resolve the PGA
+       * tournament automatically from the selected slate.
+       */
+      setShotCastTournamentId("");
     } catch (error) {
       console.error(error);
       setShotCast(null);
