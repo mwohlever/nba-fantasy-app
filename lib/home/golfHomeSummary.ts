@@ -591,18 +591,73 @@ export async function getGolfHomeSummary() {
       return `${playerIds.length}/4 drafted`;
     }
 
-    const currentRound = Math.max(
-      1,
-      ...players.map((player) =>
-        Number(
-          player.current_round ??
-            Math.max(
-              Number(player.rounds_completed ?? 0),
-              1,
-            ),
+    /*
+     * Future tee-time reconciliation can legitimately advance
+     * current_round before the golfer has started that round.
+     *
+     * Example:
+     *   Morikawa finishes R1
+     *   R2 tee time is published
+     *   current_round becomes 2
+     *   status remains round_complete
+     *
+     * That must NOT move the entire fantasy team to R2 while
+     * another drafted golfer is still playing R1.
+     *
+     * Home therefore resolves the team round from actual play:
+     *
+     *   1. an actively playing round wins;
+     *   2. otherwise use the latest completed round;
+     *   3. before any play has occurred, use the scheduled round.
+     */
+    const activelyPlayingRounds = players
+      .filter(
+        (player) =>
+          String(
+            player.status ?? "",
+          ).toLowerCase() === "active",
+      )
+      .map((player) =>
+        Math.max(
+          1,
+          Number(player.current_round ?? 1),
         ),
-      ),
+      );
+
+    const completedRounds = players
+      .map((player) =>
+        Math.max(
+          0,
+          Number(
+            player.rounds_completed ?? 0,
+          ),
+        ),
+      )
+      .filter((round) => round > 0);
+
+    const scheduledRounds = players.map(
+      (player) =>
+        Math.max(
+          1,
+          Number(
+            player.current_round ??
+              Number(
+                player.rounds_completed ?? 0,
+              ) +
+                1,
+          ),
+        ),
     );
+
+    const currentRound =
+      activelyPlayingRounds.length > 0
+        ? Math.max(...activelyPlayingRounds)
+        : completedRounds.length > 0
+          ? Math.max(...completedRounds)
+          : Math.max(
+              1,
+              ...scheduledRounds,
+            );
 
     function currentRoundHoles(
       player: GolfEventPlayerRow,
@@ -723,9 +778,26 @@ export async function getGolfHomeSummary() {
 
     const completedCurrentRound =
       eligiblePlayers.filter(
-        (player) =>
-          currentRoundHoles(player) ===
-          18,
+        (player) => {
+          /*
+           * rounds_completed is authoritative for whether this
+           * golfer has actually completed the team round.
+           *
+           * Do not infer completion from a future current_round
+           * value that was promoted only to carry the next tee time.
+           */
+          const roundsCompleted =
+            Math.max(
+              0,
+              Number(
+                player.rounds_completed ?? 0,
+              ),
+            );
+
+          return (
+            roundsCompleted >= currentRound
+          );
+        },
       );
 
     if (
