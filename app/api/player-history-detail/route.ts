@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,6 +35,52 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status: 401,
+          headers: {
+            "Cache-Control":
+              "no-store, max-age=0",
+          },
+        },
+      );
+    }
+
+    /*
+     * This route currently reads player_slate_stats, which is
+     * the NBA stat table. Preserve that existing contract while
+     * restricting its history to the active NBA League.
+     */
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        "nba",
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "NBA is not enabled for the active Group.",
+        },
+        {
+          status: 404,
+          headers: {
+            "Cache-Control":
+              "no-store, max-age=0",
+          },
+        },
+      );
+    }
+
     const seasonStart = `${seasonParam}-01-01`;
     const seasonEnd = `${seasonParam}-12-31`;
 
@@ -53,10 +101,15 @@ export async function GET(request: NextRequest) {
           date,
           start_date,
           end_date,
-          is_locked
+          is_locked,
+          league_id
         )
       `)
       .eq("player_id", playerId)
+      .eq(
+        "slates.league_id",
+        activeLeague.league.id,
+      )
       .gte("slates.date", seasonStart)
       .lte("slates.date", seasonEnd)
       .order("date", { foreignTable: "slates", ascending: false })
@@ -93,7 +146,19 @@ const history = (data ?? [])
     return bTime - aTime;
   });
     return NextResponse.json(
-      { success: true, history },
+      {
+        success: true,
+
+        scope: {
+          groupId:
+            activeLeague.context.group.id,
+
+          leagueId:
+            activeLeague.league.id,
+        },
+
+        history,
+      },
       { headers: { "Cache-Control": "no-store, max-age=0" } }
     );
   } catch (error) {

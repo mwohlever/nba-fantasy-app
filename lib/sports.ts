@@ -14,13 +14,13 @@ export const SPORTS: SportConfig[] = [
     logo: "/logos/nba.png",
   },
   { key: "nfl", label: "NFL", emoji: "🏈", logo: "/logos/nfl.png" },
-  { key: "golf", label: "Golf", emoji: "⛳", logo: "/logos/golf.png" },
   {
     key: "ncaa",
     label: "NCAA Pick 'Em",
     emoji: "🏈",
     logo: "/logos/nfl.png",
   },
+  { key: "golf", label: "Golf", emoji: "⛳", logo: "/logos/golf.png" },
 ];
 
 export function getSportConfig(

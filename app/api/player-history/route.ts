@@ -7,6 +7,14 @@ import {
   supabaseAdmin,
 } from "@/lib/supabaseAdmin";
 
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  getActiveLeagueForSport,
+} from "@/lib/groups/context";
+
 type SlateRow = {
   id: number;
   start_date: string | null;
@@ -81,6 +89,7 @@ function numberOrNull(
 
 async function getGolfPlayerHistory(
   seasonParam: string | null,
+  leagueId: string,
 ) {
   const db =
     supabaseAdmin as any;
@@ -105,9 +114,12 @@ async function getGolfPlayerHistory(
     db
       .from("slates")
       .select(
-        "id, date, start_date, end_date, display_name, is_locked",
+        "id, date, start_date, end_date, display_name, is_locked, league_id",
       )
-      .eq("sport", "golf"),
+      .eq(
+        "league_id",
+        leagueId,
+      ),
 
     db
       .from("golf_players")
@@ -890,18 +902,57 @@ export async function GET(
         "sport",
       );
 
-    if (
-      sportParam === "golf"
-    ) {
-      return getGolfPlayerHistory(
-        seasonParam,
+    const sport:
+      | "nba"
+      | "nfl"
+      | "golf" =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
+
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status: 401,
+        },
       );
     }
 
-    const sport =
-      sportParam === "nfl"
-        ? "nfl"
-        : "nba";
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        sport,
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "This League is not enabled for the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    if (
+      sport === "golf"
+    ) {
+      return getGolfPlayerHistory(
+        seasonParam,
+        activeLeague.league.id,
+      );
+    }
 
     const isAllTime =
       seasonParam === "all";
@@ -952,15 +1003,15 @@ export async function GET(
       supabaseAdmin
         .from("slates")
         .select(
-          "id, start_date, date, is_locked",
+          "id, start_date, date, is_locked, league_id",
         )
         .eq(
           "is_locked",
           true,
         )
         .eq(
-          "sport",
-          sport,
+          "league_id",
+          activeLeague.league.id,
         ),
 
       supabaseAdmin
@@ -1417,6 +1468,15 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
+
+      scope: {
+        groupId:
+          activeLeague.context.group.id,
+
+        leagueId:
+          activeLeague.league.id,
+      },
+
       season:
         selectedSeason,
       sport,

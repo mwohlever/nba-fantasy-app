@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getActiveSlateAccessForUser,
+  teamBelongsToGroup,
+} from "@/lib/groups/context";
 
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
@@ -26,6 +31,57 @@ export async function GET(request: Request) {
       );
     }
 
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const slateAccess =
+      await getActiveSlateAccessForUser(
+        user,
+        slateId,
+      );
+
+    if (!slateAccess) {
+      return NextResponse.json(
+        {
+          error:
+            "Slate not found in the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const teamAllowed =
+      await teamBelongsToGroup(
+        teamId,
+        slateAccess.context.group.id,
+      );
+
+    if (!teamAllowed) {
+      return NextResponse.json(
+        {
+          error:
+            "Team not found in the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
     const [
       slateResult,
       teamsResult,
@@ -37,13 +93,26 @@ export async function GET(request: Request) {
     ] = await Promise.all([
       supabaseAdmin
         .from("slates")
-        .select("id, date, start_date, end_date")
-        .eq("id", slateId)
+        .select(
+          "id, date, start_date, end_date, league_id",
+        )
+        .eq(
+          "id",
+          slateId,
+        )
+        .eq(
+          "league_id",
+          slateAccess.league.id,
+        )
         .single(),
 
       supabaseAdmin
         .from("teams")
-        .select("id, name"),
+        .select("id, name")
+        .eq(
+          "group_id",
+          slateAccess.context.group.id,
+        ),
 
       supabaseAdmin
         .from("team_slate_results")
@@ -95,13 +164,69 @@ export async function GET(request: Request) {
       );
     }
 
-    const slate = slateResult.data;
-    const teams = teamsResult.data ?? [];
-    const results = resultsResult.data ?? [];
-    const lineups = lineupsResult.data ?? [];
-    const players = playersResult.data ?? [];
-    const playerStats = playerStatsResult.data ?? [];
-    const slateTeams = slateTeamsResult.data ?? [];
+    const slate =
+      slateResult.data;
+
+    const teams =
+      teamsResult.data ??
+      [];
+
+    const activeTeamIds =
+      new Set(
+        teams.map(
+          (team) =>
+            Number(
+              team.id,
+            ),
+        ),
+      );
+
+    const results =
+      (
+        resultsResult.data ??
+        []
+      ).filter(
+        (result) =>
+          activeTeamIds.has(
+            Number(
+              result.team_id,
+            ),
+          ),
+      );
+
+    const lineups =
+      (
+        lineupsResult.data ??
+        []
+      ).filter(
+        (lineup) =>
+          activeTeamIds.has(
+            Number(
+              lineup.team_id,
+            ),
+          ),
+      );
+
+    const players =
+      playersResult.data ??
+      [];
+
+    const playerStats =
+      playerStatsResult.data ??
+      [];
+
+    const slateTeams =
+      (
+        slateTeamsResult.data ??
+        []
+      ).filter(
+        (row) =>
+          activeTeamIds.has(
+            Number(
+              row.team_id,
+            ),
+          ),
+      );
 
     const lineupIds = lineups.map((lineup) =>
       Number(lineup.id)
@@ -265,6 +390,15 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
+
+      scope: {
+        groupId:
+          slateAccess.context.group.id,
+
+        leagueId:
+          slateAccess.league.id,
+      },
+
       slate: {
         id: slateId,
         label: formatSlateDateLabel(slate),

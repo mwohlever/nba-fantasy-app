@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStatColumns } from "@/lib/statColumns";
 import { DEFAULT_SPORT } from "@/lib/sports";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 type LineupRow = {
   id: number;
@@ -22,15 +24,71 @@ type TeamSlateResultRow = {
 
 export async function GET(req: NextRequest) {
   try {
-    const season = req.nextUrl.searchParams.get("season");
-    const sport = req.nextUrl.searchParams.get("sport") ?? DEFAULT_SPORT;
+    const season =
+      req.nextUrl.searchParams.get(
+        "season",
+      );
+
+    const sportParam =
+      req.nextUrl.searchParams.get(
+        "sport",
+      ) ??
+      DEFAULT_SPORT;
+
+    const sport:
+      | "nba"
+      | "nfl"
+      | "golf" =
+      sportParam === "nfl"
+        ? "nfl"
+        : sportParam === "golf"
+          ? "golf"
+          : "nba";
 
     if (!season) {
       return NextResponse.json({ error: "season is required" }, { status: 400 });
     }
 
-    const isAllTime = season === "all";
-    const statColumns = getStatColumns(sport);
+    const isAllTime =
+      season === "all";
+
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        sport,
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "This League is not enabled for the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const statColumns =
+      getStatColumns(
+        sport,
+      );
 
     /*
      * Golf does not use player_slate_stats.
@@ -51,6 +109,15 @@ export async function GET(req: NextRequest) {
         sport,
         season,
         statColumns: [],
+
+        scope: {
+          groupId:
+            activeLeague.context.group.id,
+
+          leagueId:
+            activeLeague.league.id,
+        },
+
         teams: [],
       });
     }
@@ -60,8 +127,13 @@ export async function GET(req: NextRequest) {
 
     let slateQuery = supabaseAdmin
       .from("slates")
-      .select("id, start_date")
-      .eq("sport", sport);
+      .select(
+        "id, start_date, league_id",
+      )
+      .eq(
+        "league_id",
+        activeLeague.league.id,
+      );
 
     if (!isAllTime) {
       slateQuery = slateQuery
@@ -202,7 +274,22 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ success: true, sport, season, statColumns, teams });
+    return NextResponse.json({
+      success: true,
+      sport,
+      season,
+
+      scope: {
+        groupId:
+          activeLeague.context.group.id,
+
+        leagueId:
+          activeLeague.league.id,
+      },
+
+      statColumns,
+      teams,
+    });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

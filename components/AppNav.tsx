@@ -134,12 +134,28 @@ function AppNavContent() {
       groupContext?.canAdministerGroup,
     );
 
+  const sportParam =
+    searchParams.get(
+      "sport",
+    );
+
+  const sharedRouteSport =
+    sportParam === "nba" ||
+    sportParam === "nfl" ||
+    sportParam === "golf"
+      ? sportParam
+      : null;
+
   const routeSport =
-    pathname.startsWith("/nba-skins")
+    pathname.startsWith(
+      "/nba-skins",
+    )
       ? "nba-skins"
-      : pathname.startsWith("/ncaa-pickem")
+      : pathname.startsWith(
+            "/ncaa-pickem",
+          )
         ? "ncaa"
-        : null;
+        : sharedRouteSport;
 
   const activeSport =
     routeSport ??
@@ -273,6 +289,71 @@ function AppNavContent() {
     setSelectedSport,
   ]);
 
+
+  /*
+   * INTERIM PLATFORM-HOME BEHAVIOR
+   *
+   * "/" is still the shared fantasy Home page today, not yet a
+   * true 111 Sports platform landing page.
+   *
+   * If a fresh tab opens at bare "/", make the route agree with
+   * the persisted sport instead of allowing the nav and page
+   * data to disagree.
+   *
+   * Once Groups gets a true platform landing page, remove this
+   * effect and let "/" become that sport-neutral landing page.
+   */
+  useEffect(() => {
+    if (
+      pathname !== "/" ||
+      searchParams.get(
+        "sport",
+      )
+    ) {
+      return;
+    }
+
+    if (
+      selectedSport ===
+      "nba-skins"
+    ) {
+      router.replace(
+        "/nba-skins",
+      );
+
+      return;
+    }
+
+    if (
+      selectedSport ===
+      "ncaa"
+    ) {
+      router.replace(
+        "/ncaa-pickem",
+      );
+
+      return;
+    }
+
+    if (
+      selectedSport === "nba" ||
+      selectedSport === "nfl" ||
+      selectedSport === "golf"
+    ) {
+      router.replace(
+        appendSportParam(
+          "/",
+          selectedSport,
+        ),
+      );
+    }
+  }, [
+    pathname,
+    searchParams,
+    selectedSport,
+    router,
+  ]);
+
   const displayedMainLinks = isNbaSkins
     ? [
         {
@@ -309,6 +390,8 @@ function AppNavContent() {
   const sportScopedPaths = [
     "/",
     "/profile",
+    "/standings",
+    "/player-history",
     "/lineups/draft",
     "/lineups/scores",
     "/slates/new",
@@ -332,35 +415,260 @@ function AppNavContent() {
     return href;
   }
 
-  function handleSelectSport(sportKey: string) {
-    setSelectedSport(sportKey);
+  type SportSection =
+    | "home"
+    | "profile"
+    | "standings"
+    | "draft"
+    | "scores"
+    | "player-history"
+    | "other";
 
-    /*
-     * NCAA Pick 'Em is an independent mini-game rather than a
-     * fantasy slate mode. Enter and leave its dedicated routes
-     * explicitly instead of pushing NCAA through Draft/Scores.
-     */
-    if (sportKey === "nba-skins") {
-      router.push("/nba-skins");
-      return;
-    }
 
-    if (sportKey === "ncaa") {
-      router.push("/ncaa-pickem");
-      return;
+  function getCurrentSportSection():
+    SportSection {
+    if (
+      pathname === "/" ||
+      pathname === "/nba-skins" ||
+      pathname === "/ncaa-pickem"
+    ) {
+      return "home";
     }
 
     if (
-      pathname.startsWith("/ncaa-pickem") ||
-      pathname.startsWith("/nba-skins")
+      pathname.startsWith(
+        "/profile",
+      ) ||
+      pathname.startsWith(
+        "/nba-skins/profile",
+      )
     ) {
-      router.push(appendSportParam("/", sportKey));
+      return "profile";
+    }
+
+    if (
+      pathname === "/standings" ||
+      pathname.startsWith(
+        "/nba-skins/standings",
+      ) ||
+      pathname.startsWith(
+        "/ncaa-pickem/standings",
+      )
+    ) {
+      return "standings";
+    }
+
+    if (
+      pathname ===
+        "/lineups/draft" ||
+      pathname.startsWith(
+        "/nba-skins/draft",
+      )
+    ) {
+      return "draft";
+    }
+
+    if (
+      pathname ===
+      "/lineups/scores"
+    ) {
+      return "scores";
+    }
+
+    if (
+      pathname.startsWith(
+        "/player-history",
+      )
+    ) {
+      return "player-history";
+    }
+
+    return "other";
+  }
+
+
+  function getSportDestination(
+    sportKey: string,
+  ) {
+    const section =
+      getCurrentSportSection();
+
+    /*
+     * Preserve the current Profile tab for the shared profile
+     * page. NBA Skins combines its Profile/Trophies surface.
+     */
+    const profileTab =
+      activeProfileTab ??
+      "overview";
+
+
+    if (
+      sportKey ===
+      "nba-skins"
+    ) {
+      if (
+        section ===
+        "profile"
+      ) {
+        return "/nba-skins/profile";
+      }
+
+      if (
+        section ===
+        "standings"
+      ) {
+        return "/nba-skins/standings";
+      }
+
+      if (
+        section ===
+        "draft"
+      ) {
+        return "/nba-skins/draft";
+      }
+
+      return "/nba-skins";
+    }
+
+
+    if (
+      sportKey ===
+      "ncaa"
+    ) {
+      if (
+        section ===
+        "profile"
+      ) {
+        return appendSportParam(
+          `/profile?tab=${profileTab}`,
+          "ncaa",
+        );
+      }
+
+      if (
+        section ===
+        "standings"
+      ) {
+        return "/ncaa-pickem/standings";
+      }
+
+      return "/ncaa-pickem";
+    }
+
+
+    if (
+      section ===
+      "profile"
+    ) {
+      return appendSportParam(
+        `/profile?tab=${profileTab}`,
+        sportKey,
+      );
+    }
+
+    if (
+      section ===
+      "standings"
+    ) {
+      return appendSportParam(
+        "/standings",
+        sportKey,
+      );
+    }
+
+    if (
+      section ===
+      "draft"
+    ) {
+      return appendSportParam(
+        "/lineups/draft",
+        sportKey,
+      );
+    }
+
+    if (
+      section ===
+      "scores"
+    ) {
+      return appendSportParam(
+        "/lineups/scores",
+        sportKey,
+      );
+    }
+
+    if (
+      section ===
+      "player-history"
+    ) {
+      return appendSportParam(
+        "/player-history",
+        sportKey,
+      );
+    }
+
+    return appendSportParam(
+      "/",
+      sportKey,
+    );
+  }
+
+
+  function handleSelectSport(
+    sportKey: string,
+  ) {
+    const destination =
+      getSportDestination(
+        sportKey,
+      );
+
+    const currentSection =
+      getCurrentSportSection();
+
+    /*
+     * NBA Skins and NCAA Pick 'Em do not support every shared
+     * fantasy section (for example Player History or Scores).
+     *
+     * When the destination is their fallback Home page, navigate
+     * first and let routeSport synchronize selectedSport after the
+     * route changes. Updating selectedSport while the unsupported
+     * old page is still mounted can make that page briefly request
+     * data for a sport it cannot render.
+     */
+    const usesDedicatedFallback =
+      (
+        sportKey ===
+          "nba-skins" &&
+        destination ===
+          "/nba-skins" &&
+        currentSection !==
+          "home"
+      ) ||
+      (
+        sportKey ===
+          "ncaa" &&
+        destination ===
+          "/ncaa-pickem" &&
+        currentSection !==
+          "home"
+      );
+
+    if (
+      usesDedicatedFallback
+    ) {
+      router.push(
+        destination,
+      );
+
       return;
     }
 
-    if (sportScopedPaths.includes(pathname)) {
-      router.push(appendSportParam(pathname, sportKey));
-    }
+    setSelectedSport(
+      sportKey,
+    );
+
+    router.push(
+      destination,
+    );
   }
 
   const moreIsActive =
@@ -574,14 +882,18 @@ function AppNavContent() {
             {!isNcaaPickEm && !isNbaSkins ? (
               <>
                 <Link
-                  href="/standings"
+                  href={getLinkHref(
+                    "/standings",
+                  )}
                   className={desktopLinkClass("/standings")}
                 >
                   Standings
                 </Link>
 
                 <Link
-                  href="/player-history"
+                  href={getLinkHref(
+                    "/player-history",
+                  )}
                   className={desktopLinkClass("/player-history")}
                 >
                   Player History
@@ -944,7 +1256,9 @@ function AppNavContent() {
             {mobileMoreLinks.map((link) => (
               <Link
                 key={link.href}
-                href={link.href}
+                href={getLinkHref(
+                  link.href,
+                )}
                 onClick={() => setMobileMoreOpen(false)}
                 className={`block rounded-xl px-4 py-3 text-sm font-medium transition ${
                   (
