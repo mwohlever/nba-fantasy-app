@@ -2,11 +2,29 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
 } from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
+
+
+export type ClientAvailableGroup = {
+  id: string;
+  name: string;
+  slug: string;
+
+  role:
+    | "member"
+    | "admin";
+
+  isActive: boolean;
+};
 
 
 export type ClientGroupLeague = {
@@ -31,9 +49,11 @@ export type ClientGroupContext = {
 
   membership: {
     id: string;
+
     role:
       | "member"
       | "admin";
+
     isActive: boolean;
   };
 
@@ -56,10 +76,22 @@ type GroupProviderValue = {
   groupContext:
     ClientGroupContext | null;
 
-  isLoading: boolean;
+  availableGroups:
+    ClientAvailableGroup[];
+
+  isLoading:
+    boolean;
+
+  isSwitchingGroup:
+    boolean;
 
   refreshGroupContext:
     () => Promise<void>;
+
+  setActiveGroup:
+    (
+      groupSlug: string,
+    ) => Promise<void>;
 };
 
 
@@ -77,6 +109,9 @@ export default function GroupProvider({
   children:
     React.ReactNode;
 }) {
+  const router =
+    useRouter();
+
   const [
     groupContext,
     setGroupContext,
@@ -88,6 +123,16 @@ export default function GroupProvider({
     );
 
   const [
+    availableGroups,
+    setAvailableGroups,
+  ] =
+    useState<
+      ClientAvailableGroup[]
+    >(
+      [],
+    );
+
+  const [
     isLoading,
     setIsLoading,
   ] =
@@ -95,83 +140,198 @@ export default function GroupProvider({
       true,
     );
 
+  const [
+    isSwitchingGroup,
+    setIsSwitchingGroup,
+  ] =
+    useState(
+      false,
+    );
 
-  async function loadContext() {
-    try {
-      const response =
-        await fetch(
-          "/api/groups/context",
-          {
-            cache:
-              "no-store",
-          },
-        );
 
-      if (
-        response.status ===
-        401
-      ) {
-        setGroupContext(
-          null,
-        );
+  const loadContext =
+    useCallback(
+      async () => {
+        try {
+          const response =
+            await fetch(
+              "/api/groups/context",
+              {
+                cache:
+                  "no-store",
+              },
+            );
 
-        return;
-      }
 
-      const result =
-        await response.json();
+          if (
+            response.status ===
+            401
+          ) {
+            setGroupContext(
+              null,
+            );
 
-      if (
-        !response.ok
-      ) {
-        throw new Error(
-          result?.error ??
-            "Failed to load Group context.",
-        );
-      }
+            setAvailableGroups(
+              [],
+            );
 
-      setGroupContext(
-        result.context ??
-          null,
-      );
-    } catch (
-      error
-    ) {
-      console.error(
-        "Failed to load Group context",
-        error,
-      );
+            return;
+          }
 
-      setGroupContext(
-        null,
-      );
-    } finally {
-      setIsLoading(
-        false,
-      );
-    }
-  }
+
+          const result =
+            await response.json();
+
+
+          if (
+            !response.ok
+          ) {
+            throw new Error(
+              result?.error ??
+                "Failed to load Group context.",
+            );
+          }
+
+
+          setGroupContext(
+            result.context ??
+              null,
+          );
+
+          setAvailableGroups(
+            Array.isArray(
+              result.groups,
+            )
+              ? result.groups
+              : [],
+          );
+        } catch (
+          error
+        ) {
+          console.error(
+            "Failed to load Group context",
+            error,
+          );
+
+          setGroupContext(
+            null,
+          );
+
+          setAvailableGroups(
+            [],
+          );
+        } finally {
+          setIsLoading(
+            false,
+          );
+        }
+      },
+      [],
+    );
 
 
   useEffect(
     () => {
       void loadContext();
     },
-    [],
+    [
+      loadContext,
+    ],
   );
+
+
+  const setActiveGroup =
+    useCallback(
+      async (
+        groupSlug:
+          string,
+      ) => {
+        if (
+          !groupSlug ||
+          groupSlug ===
+            groupContext?.group.slug
+        ) {
+          return;
+        }
+
+        try {
+          setIsSwitchingGroup(
+            true,
+          );
+
+          const response =
+            await fetch(
+              "/api/groups/active",
+              {
+                method:
+                  "POST",
+
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                },
+
+                body:
+                  JSON.stringify({
+                    groupSlug,
+                  }),
+              },
+            );
+
+
+          const result =
+            await response.json();
+
+
+          if (
+            !response.ok
+          ) {
+            throw new Error(
+              result?.error ??
+                "Failed to switch Group.",
+            );
+          }
+
+
+          await loadContext();
+
+          router.push(
+            "/",
+          );
+
+          router.refresh();
+        } finally {
+          setIsSwitchingGroup(
+            false,
+          );
+        }
+      },
+      [
+        groupContext?.group.slug,
+        loadContext,
+        router,
+      ],
+    );
 
 
   const value =
     useMemo(
       () => ({
         groupContext,
+        availableGroups,
         isLoading,
+        isSwitchingGroup,
         refreshGroupContext:
           loadContext,
+        setActiveGroup,
       }),
       [
         groupContext,
+        availableGroups,
         isLoading,
+        isSwitchingGroup,
+        loadContext,
+        setActiveGroup,
       ],
     );
 

@@ -511,3 +511,125 @@ export async function requireGroupAdmin() {
     context,
   };
 }
+
+
+export type AvailableGroup = {
+  id: string;
+  name: string;
+  slug: string;
+  role: GroupRole;
+  isActive: boolean;
+};
+
+
+export async function getAvailableGroupsForUser(
+  user: AppUser,
+): Promise<AvailableGroup[]> {
+  const memberships =
+    await loadMemberships(
+      user.id,
+    );
+
+  const groups:
+    AvailableGroup[] =
+    [];
+
+  for (
+    const membership
+    of memberships
+  ) {
+    const group =
+      unwrapRelated(
+        membership.groups,
+      );
+
+    if (
+      !group ||
+      !group.is_active ||
+      !membership.is_active
+    ) {
+      continue;
+    }
+
+    groups.push({
+      id:
+        group.id,
+
+      name:
+        group.name,
+
+      slug:
+        group.slug,
+
+      role:
+        membership.role,
+
+      isActive:
+        group.is_active,
+    });
+  }
+
+  return groups;
+}
+
+
+export async function userCanAccessGroup(
+  user: AppUser,
+  groupSlug: string,
+) {
+  const normalizedSlug =
+    groupSlug
+      .trim()
+      .toLowerCase();
+
+  if (!normalizedSlug) {
+    return false;
+  }
+
+  const groups =
+    await getAvailableGroupsForUser(
+      user,
+    );
+
+  return groups.some(
+    (group) =>
+      group.slug
+        .trim()
+        .toLowerCase() ===
+      normalizedSlug,
+  );
+}
+
+
+export async function setActiveGroupCookie(
+  groupSlug: string,
+) {
+  const cookieStore =
+    await cookies();
+
+  cookieStore.set({
+    name:
+      ACTIVE_GROUP_COOKIE_NAME,
+
+    value:
+      groupSlug
+        .trim()
+        .toLowerCase(),
+
+    httpOnly:
+      true,
+
+    secure:
+      process.env.NODE_ENV ===
+      "production",
+
+    sameSite:
+      "lax",
+
+    path:
+      "/",
+
+    maxAge:
+      60 * 60 * 24 * 365,
+  });
+}

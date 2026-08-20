@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth";
 
 import {
+  getAvailableGroupsForUser,
   getGroupContextForUser,
 } from "@/lib/groups/context";
 

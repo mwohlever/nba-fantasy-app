@@ -9,6 +9,7 @@ import {
 } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSelectedSport } from "@/components/providers/SportProvider";
+import { useGroupContext } from "@/components/providers/GroupProvider";
 import { getAdminMenuGroups } from "@/lib/adminMenu";
 
 type CurrentUser = {
@@ -78,6 +79,10 @@ function MobileAccountMenuContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { selectedSport } = useSelectedSport();
+
+  const {
+    groupContext,
+  } = useGroupContext();
 
   const isNbaSkins =
     pathname.startsWith("/nba-skins") ||
@@ -339,7 +344,7 @@ function MobileAccountMenuContent() {
 
           <DarkModeToggle />
 
-          {currentUser.role === "admin" ? (
+          {groupContext?.canAdministerGroup ? (
             <>
               <div className="my-2 border-t border-slate-200" />
 

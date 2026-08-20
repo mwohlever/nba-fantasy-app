@@ -30,3 +30,47 @@ export function getSportConfig(
 }
 
 export const DEFAULT_SPORT = "nba";
+
+
+export function sportKeyFromLeagueSportKey(
+  leagueSportKey:
+    string,
+) {
+  if (
+    leagueSportKey ===
+    "nba_skins"
+  ) {
+    return "nba-skins";
+  }
+
+  if (
+    leagueSportKey ===
+    "ncaa_pickem"
+  ) {
+    return "ncaa";
+  }
+
+  return leagueSportKey;
+}
+
+
+export function leagueSportKeyFromSportKey(
+  sportKey:
+    string,
+) {
+  if (
+    sportKey ===
+    "nba-skins"
+  ) {
+    return "nba_skins";
+  }
+
+  if (
+    sportKey ===
+    "ncaa"
+  ) {
+    return "ncaa_pickem";
+  }
+
+  return sportKey;
+}

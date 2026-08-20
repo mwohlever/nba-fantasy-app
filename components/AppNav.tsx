@@ -10,7 +10,12 @@ import {
 } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSelectedSport } from "@/components/providers/SportProvider";
-import { SPORTS, getSportConfig } from "@/lib/sports";
+import { useGroupContext } from "@/components/providers/GroupProvider";
+import {
+  SPORTS,
+  getSportConfig,
+  sportKeyFromLeagueSportKey,
+} from "@/lib/sports";
 import { getAdminMenuGroups } from "@/lib/adminMenu";
 
 type CurrentUser = {
@@ -62,6 +67,14 @@ function AppNavContent() {
   const searchParams = useSearchParams();
   const { selectedSport, setSelectedSport } = useSelectedSport();
 
+  const {
+    groupContext,
+    availableGroups,
+    isLoading: isGroupLoading,
+    isSwitchingGroup,
+    setActiveGroup,
+  } = useGroupContext();
+
   const activeProfileTab =
     pathname.startsWith("/profile")
       ? searchParams.get("tab") ?? "overview"
@@ -93,7 +106,10 @@ function AppNavContent() {
     mobileMoreOpen,
   ]);
 
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin =
+    Boolean(
+      groupContext?.canAdministerGroup,
+    );
 
   const routeSport =
     pathname.startsWith("/nba-skins")
@@ -132,6 +148,60 @@ function AppNavContent() {
     getAdminMenuGroups(
       activeSport,
     );
+
+
+  const enabledSportKeys =
+    new Set(
+      (
+        groupContext?.leagues ??
+        []
+      ).map(
+        (league) =>
+          sportKeyFromLeagueSportKey(
+            league.sportKey,
+          ),
+      ),
+    );
+
+
+  const displayedSports =
+    groupContext
+      ? SPORTS.filter(
+          (sport) =>
+            enabledSportKeys.has(
+              sport.key,
+            ),
+        )
+      : SPORTS;
+
+
+  /*
+   * If Group configuration eventually disables the currently
+   * stored sport, fall back to the first enabled League.
+   */
+  useEffect(() => {
+    if (
+      !groupContext ||
+      displayedSports.length ===
+        0 ||
+      displayedSports.some(
+        (sport) =>
+          sport.key ===
+          selectedSport,
+      )
+    ) {
+      return;
+    }
+
+    setSelectedSport(
+      displayedSports[0].key,
+    );
+  }, [
+    groupContext,
+    displayedSports,
+    selectedSport,
+    setSelectedSport,
+  ]);
 
   useEffect(() => {
     if (
@@ -455,6 +525,64 @@ function AppNavContent() {
           </div>
 
           <div className="flex items-center gap-3">
+          {groupContext ? (
+            availableGroups.length > 1 ? (
+              <div className="relative">
+                <select
+                  value={groupContext.group.slug}
+                  disabled={isSwitchingGroup}
+                  onChange={(event) => {
+                    void setActiveGroup(
+                      event.target.value,
+                    );
+                  }}
+                  aria-label="Active Group"
+                  title="Switch Group"
+                  className="appearance-none rounded-full border border-slate-700 bg-slate-800 py-2 pl-4 pr-8 text-sm font-semibold text-slate-100 transition hover:border-slate-500 disabled:opacity-60"
+                >
+                  {availableGroups.map(
+                    (group) => (
+                      <option
+                        key={group.id}
+                        value={group.slug}
+                      >
+                        {group.name}
+                      </option>
+                    ),
+                  )}
+                </select>
+
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-300"
+                >
+                  ▼
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled
+                aria-label={`Active Group: ${groupContext.group.name}`}
+                title="Active Group"
+                className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100"
+              >
+                <span>
+                  {groupContext.group.name}
+                </span>
+
+                <span
+                  aria-hidden="true"
+                  className="text-[10px] text-slate-300"
+                >
+                  ▼
+                </span>
+              </button>
+            )
+          ) : isGroupLoading ? (
+            <div className="h-9 w-16 animate-pulse rounded-full bg-slate-800" />
+          ) : null}
+
           <div className="relative" ref={desktopSportRef}>
             <button
               type="button"
@@ -468,7 +596,7 @@ function AppNavContent() {
 
             {desktopSportOpen ? (
               <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                {SPORTS.map((sport) => (
+                {displayedSports.map((sport) => (
                   <button
                     key={sport.key}
                     type="button"
@@ -665,7 +793,7 @@ function AppNavContent() {
 
               {mobileSportOpen ? (
                 <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                  {SPORTS.map((sport) => (
+                  {displayedSports.map((sport) => (
                     <button
                       key={sport.key}
                       type="button"
@@ -689,9 +817,17 @@ function AppNavContent() {
             <Link
               href="/"
               aria-label="111 Fantasy Sports home"
-              className="truncate text-lg font-bold tracking-tight text-slate-900"
+              className="min-w-0"
             >
-              111 Fantasy Sports
+              <span className="block truncate text-lg font-bold tracking-tight text-slate-900">
+                111 Fantasy Sports
+              </span>
+
+              {groupContext ? (
+                <span className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  Group: {groupContext.group.name}
+                </span>
+              ) : null}
             </Link>
           </div>
 
