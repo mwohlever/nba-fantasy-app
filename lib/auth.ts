@@ -29,6 +29,15 @@ export type AppUser = {
   avatarUrl: string | null;
 
   /*
+   * Modern authentication identity.
+   *
+   * Nullable during the Groups beta while existing PIN accounts
+   * are explicitly linked to Supabase Auth.
+   */
+  email: string | null;
+  authUserId: string | null;
+
+  /*
    * New account-level permission model.
    */
   systemRole:
@@ -48,6 +57,8 @@ type AppUserRow = {
   pin_hash: string;
   is_active: boolean;
   avatar_url: string | null;
+  email: string | null;
+  auth_user_id: string | null;
 };
 
 type SessionRow = {
@@ -176,7 +187,9 @@ export async function getCurrentUser(): Promise<AppUser | null> {
           pin_salt,
           pin_hash,
           is_active,
-          avatar_url
+          avatar_url,
+          email,
+          auth_user_id
         )
       `
     )
@@ -214,6 +227,15 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     displayName: relatedUser.display_name,
     role: relatedUser.role,
     avatarUrl: relatedUser.avatar_url ?? null,
+
+    email:
+      relatedUser.email ??
+      null,
+
+    authUserId:
+      relatedUser.auth_user_id ??
+      null,
+
     systemRole:
       relatedUser.system_role ??
       "user",
