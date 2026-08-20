@@ -9,11 +9,11 @@ type LoginBody = {
 
 type AppUserRow = {
   id: string;
-  team_id: number;
+  team_id: number | null;
   display_name: string;
   role: "player" | "admin";
-  pin_salt: string;
-  pin_hash: string;
+  pin_salt: string | null;
+  pin_hash: string | null;
   is_active: boolean;
 };
 
@@ -56,7 +56,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const pinIsValid = await verifyPin(pin, user.pin_salt, user.pin_hash);
+    if (
+      !user.pin_salt ||
+      !user.pin_hash
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This account does not use league PIN sign-in.",
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
+    const pinIsValid =
+      await verifyPin(
+        pin,
+        user.pin_salt,
+        user.pin_hash,
+      );
 
     if (!pinIsValid) {
       return NextResponse.json(

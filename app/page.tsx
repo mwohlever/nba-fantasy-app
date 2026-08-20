@@ -378,6 +378,25 @@ function HomePageContent() {
     }
   }, [sportFromUrl]);
   const [data, setData] = useState<HomeSummaryResponse | null>(null);
+
+  /*
+   * Home data is asynchronous, while the selected sport can
+   * change immediately from the URL.
+   *
+   * Keep track of which sport produced the current response so
+   * auto-refresh can never combine:
+   *
+   *   new sport + previous sport's slate
+   */
+  const [dataSport, setDataSport] = useState<string | null>(null);
+
+  /*
+   * Also keep the current rendered sport in a ref so an older
+   * request cannot overwrite Home after the user has switched.
+   */
+  const activeHomeSportRef = useRef(sport);
+  activeHomeSportRef.current = sport;
+
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [profileTeam, setProfileTeam] = useState<{
@@ -524,12 +543,21 @@ function HomePageContent() {
   }
 
   async function loadHomeSummary() {
+    /*
+     * Capture the sport this request belongs to.
+     *
+     * If the user switches sports before the request completes,
+     * its response is discarded instead of becoming stale Home
+     * state for the newly selected sport.
+     */
+    const requestedSport = sport;
+
     try {
       setIsLoading(true);
       setMessage("");
 
       const response = await fetch(
-        `/api/home-summary?sport=${sport}`,
+        `/api/home-summary?sport=${requestedSport}`,
         { cache: "no-store" }
       );
 
@@ -540,10 +568,22 @@ function HomePageContent() {
         return;
       }
 
+      /*
+       * A different sport may have been selected while this
+       * request was in flight.
+       */
+      if (
+        activeHomeSportRef.current !==
+        requestedSport
+      ) {
+        return;
+      }
+
       setData(result);
+      setDataSport(requestedSport);
 
       if (
-        sport === "golf" &&
+        requestedSport === "golf" &&
         result.latestSlate?.id
       ) {
         try {
@@ -577,9 +617,9 @@ function HomePageContent() {
         setGolfPlayerStats([]);
       }
 
-      if (sport === "nba") {
+      if (requestedSport === "nba") {
         const awardsResponse = await fetch(
-          `/api/season-awards?sport=${selectedSport}`,
+          `/api/season-awards?sport=${requestedSport}`,
           {
           cache: "no-store",
         });
@@ -603,6 +643,12 @@ function HomePageContent() {
   }
 
   useEffect(() => {
+    /*
+     * The previous response may remain in React state for one
+     * render after a sport switch. Mark it stale immediately.
+     */
+    setDataSport(null);
+
     void loadHomeSummary();
   }, [sport]);
 
@@ -757,6 +803,15 @@ function HomePageContent() {
 
   useEffect(() => {
     if (sport !== "golf") return;
+
+    /*
+     * Critical sport-switch guard:
+     *
+     * Do not let the new Golf sport state consume a latestSlate
+     * that came from the previous NBA/NFL Home response.
+     */
+    if (dataSport !== sport) return;
+
     if (!latestSlate?.id) return;
     if (latestSlate.is_locked) return;
 
@@ -806,11 +861,18 @@ function HomePageContent() {
     };
   }, [
     sport,
+    dataSport,
     latestSlate?.id,
     latestSlate?.is_locked,
   ]);
 
   useEffect(() => {
+    /*
+     * nextSlate must belong to the currently rendered sport.
+     * This also forces cleanup/recreation when sport changes.
+     */
+    if (dataSport !== sport) return;
+
     if (!nextSlate?.id || !nextSlate.first_game_start_time) return;
 
     const tipoffMs = new Date(nextSlate.first_game_start_time).getTime();
@@ -831,7 +893,12 @@ function HomePageContent() {
         clearTimeout(autoRefreshTimerRef.current);
       }
     };
-  }, [nextSlate?.id, nextSlate?.first_game_start_time]);
+  }, [
+    sport,
+    dataSport,
+    nextSlate?.id,
+    nextSlate?.first_game_start_time,
+  ]);
 
   const nextSlateStartTime = nextSlate?.first_game_start_time
     ? new Date(nextSlate.first_game_start_time)

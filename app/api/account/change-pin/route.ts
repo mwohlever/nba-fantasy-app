@@ -16,8 +16,8 @@ type ChangePinBody = {
 
 type AppUserSecurityRow = {
   id: string;
-  pin_salt: string;
-  pin_hash: string;
+  pin_salt: string | null;
+  pin_hash: string | null;
   is_active: boolean;
 };
 
@@ -90,11 +90,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const currentPinIsValid = await verifyPin(
-      currentPin,
-      user.pin_salt,
-      user.pin_hash
-    );
+    if (
+      !user.pin_salt ||
+      !user.pin_hash
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This account does not currently use a league PIN.",
+        },
+        {
+          status: 409,
+        },
+      );
+    }
+
+    const currentPinIsValid =
+      await verifyPin(
+        currentPin,
+        user.pin_salt,
+        user.pin_hash
+      );
 
     if (!currentPinIsValid) {
       return NextResponse.json(
