@@ -2211,13 +2211,35 @@ export async function POST(request: Request) {
           continue;
         }
 
+        /*
+         * The future round and tee time are scheduling information.
+         * They must not erase the fact that the golfer has completed
+         * the immediately preceding round.
+         *
+         * Example after R1:
+         *
+         *   top-level status: round_complete
+         *   current_round:    2
+         *   persisted R2:     scheduled + tee time
+         *
+         * Once R2 actually begins, the normal provider refresh will
+         * replace round_complete with active.
+         */
+        const preserveCompletedRoundStatus =
+          eventRow.status ===
+          "round_complete";
+
         eventRow.current_round =
           fallbackRoundNumber;
 
         eventRow.last_hole = null;
 
-        eventRow.status =
-          "scheduled";
+        if (
+          !preserveCompletedRoundStatus
+        ) {
+          eventRow.status =
+            "scheduled";
+        }
 
         eventRow.tee_time =
           resolvedTeeTime;

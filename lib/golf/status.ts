@@ -417,8 +417,45 @@ export function getGolfStatusMeta(
   }
 
   /*
-   * A real persisted upcoming round always wins over a stale
-   * round_complete flag from the provider.
+   * Between rounds, completion of the most recently played round
+   * is the golfer's CURRENT competitive state.
+   *
+   * A future-round row/tee time is scheduling information only.
+   * It should remain available to callers, but it must not turn
+   * "R1 complete, R2 tee time published" into "Upcoming".
+   *
+   * playingRound is handled above, so once the next round actually
+   * starts, live play naturally takes precedence.
+   */
+  if (
+    status === "round_complete" ||
+    completedRound ||
+    aggregateHoles === 18
+  ) {
+    const roundNumber =
+      Number(
+        completedRound?.round_number ??
+          stat.rounds_completed ??
+          stat.current_round ??
+          1,
+      );
+
+    return result("round_complete", {
+      label: "✓ Round complete",
+      compactLabel:
+        `R${roundNumber} complete`,
+      detail:
+        `Round ${roundNumber} complete`,
+      order: 2,
+      round: roundNumber,
+      holes: 18,
+      teeTime: null,
+    });
+  }
+
+  /*
+   * No completed current round exists, so a real persisted future
+   * round can now represent the golfer as upcoming.
    */
   if (upcomingRound) {
     const roundNumber =
@@ -491,32 +528,6 @@ export function getGolfStatusMeta(
       round: roundNumber,
       holes: 0,
       teeTime,
-    });
-  }
-
-  if (
-    status === "round_complete" ||
-    completedRound ||
-    aggregateHoles === 18
-  ) {
-    const roundNumber =
-      Number(
-        completedRound?.round_number ??
-          stat.current_round ??
-          stat.rounds_completed ??
-          1,
-      );
-
-    return result("round_complete", {
-      label: "✓ Round complete",
-      compactLabel:
-        `R${roundNumber} complete`,
-      detail:
-        `Round ${roundNumber} complete`,
-      order: 2,
-      round: roundNumber,
-      holes: 18,
-      teeTime: null,
     });
   }
 
