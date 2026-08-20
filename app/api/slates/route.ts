@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 function isoDateFromGameCode(gameCode: string | null | undefined) {
   const raw = String(gameCode ?? "").slice(0, 8);
@@ -355,14 +357,16 @@ async function getNbaTeamsAndFirstGameTimeForDate(date: string) {
 }
 
 async function getMostRecentCompletedSlateSetup(
-  sport: "nba" | "nfl" | "golf"
+  sport: "nba" | "nfl" | "golf",
+  leagueId: string,
 ) {
   const { data: slates, error: slatesError } = await supabaseAdmin
     .from("slates")
     .select(
-      "id, start_date, end_date, date, display_name, sport"
+      "id, start_date, end_date, date, display_name, sport, league_id"
     )
     .eq("sport", sport)
+    .eq("league_id", leagueId)
     .order("start_date", { ascending: false })
     .order("end_date", { ascending: false });
 
@@ -430,9 +434,51 @@ export async function GET(request: NextRequest) {
         : sportParam === "golf"
           ? "golf"
           : "nba";
+
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Login required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        sport,
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "This League is not enabled for the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const {
+      context,
+      league,
+    } = activeLeague;
+
     const { data: teams, error: teamsError } = await supabaseAdmin
       .from("teams")
       .select("id, name")
+      .eq(
+        "group_id",
+        context.group.id,
+      )
       .order("name", { ascending: true });
 
     if (teamsError) {
@@ -444,7 +490,10 @@ export async function GET(request: NextRequest) {
 
     const safeTeams = (teams ?? []) as TeamRow[];
     const previousCompleted =
-      await getMostRecentCompletedSlateSetup(sport);
+      await getMostRecentCompletedSlateSetup(
+        sport,
+        league.id,
+      );
 
     const suggestedOrderIds = buildSuggestedOrderIds(
       previousCompleted.results,
@@ -464,6 +513,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       sport,
+      group: {
+        id: context.group.id,
+        name: context.group.name,
+        slug: context.group.slug,
+      },
+      league: {
+        id: league.id,
+        name: league.name,
+        slug: league.slug,
+        sportKey: league.sportKey,
+        gameMode: league.gameMode,
+      },
       teams: safeTeams,
       latestSlate: previousCompleted.slate,
       previousCompletedSlate: previousCompleted.slate,
@@ -494,6 +555,43 @@ export async function POST(request: NextRequest) {
         : body?.sport === "golf"
           ? "golf"
           : "nba";
+
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Login required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        sport,
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "This League is not enabled for the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const {
+      context,
+      league,
+    } = activeLeague;
 
     const displayName =
       typeof body?.displayName === "string"
@@ -570,6 +668,10 @@ export async function POST(request: NextRequest) {
     const { data: teams, error: teamsError } = await supabaseAdmin
       .from("teams")
       .select("id, name")
+      .eq(
+        "group_id",
+        context.group.id,
+      )
       .order("name", { ascending: true });
 
     if (teamsError || !teams) {
@@ -581,7 +683,10 @@ export async function POST(request: NextRequest) {
 
     const safeTeams = teams as TeamRow[];
     const previousCompleted =
-      await getMostRecentCompletedSlateSetup(sport);
+      await getMostRecentCompletedSlateSetup(
+        sport,
+        league.id,
+      );
     const suggestedOrderIds = buildSuggestedOrderIds(
       previousCompleted.results,
       safeTeams
@@ -660,6 +765,7 @@ export async function POST(request: NextRequest) {
         end_date: endDate,
         is_locked: false,
         sport,
+        league_id: league.id,
         display_name:
           sport === "golf" ? displayName : null,
         external_event_id:
@@ -674,7 +780,7 @@ export async function POST(request: NextRequest) {
           sport === "nba" ? firstGameStartTime : null,
       })
       .select(
-        "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations, first_game_start_time"
+        "id, date, start_date, end_date, is_locked, sport, league_id, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations, first_game_start_time"
       )
       .single();
 
@@ -803,6 +909,18 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      group: {
+        id: context.group.id,
+        name: context.group.name,
+        slug: context.group.slug,
+      },
+      league: {
+        id: league.id,
+        name: league.name,
+        slug: league.slug,
+        sportKey: league.sportKey,
+        gameMode: league.gameMode,
+      },
       slate: newSlate,
       slateTeams: slateTeamRows,
       nbaTeamAbbreviations,

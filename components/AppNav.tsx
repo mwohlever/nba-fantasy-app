@@ -88,10 +88,33 @@ function AppNavContent() {
 
   const desktopUserRef = useRef<HTMLDivElement | null>(null);
   const mobileMoreRef = useRef<HTMLDivElement | null>(null);
-  const desktopSportRef = useRef<HTMLDivElement | null>(null);
-  const mobileSportRef = useRef<HTMLDivElement | null>(null);
-  const [desktopSportOpen, setDesktopSportOpen] = useState(false);
-  const [mobileSportOpen, setMobileSportOpen] = useState(false);
+
+  const desktopGroupRef =
+    useRef<HTMLDivElement | null>(null);
+
+  const desktopSportRef =
+    useRef<HTMLDivElement | null>(null);
+
+  const mobileSportRef =
+    useRef<HTMLDivElement | null>(null);
+
+  const [
+    desktopGroupOpen,
+    setDesktopGroupOpen,
+  ] =
+    useState(false);
+
+  const [
+    desktopSportOpen,
+    setDesktopSportOpen,
+  ] =
+    useState(false);
+
+  const [
+    mobileSportOpen,
+    setMobileSportOpen,
+  ] =
+    useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.mobileMoreOpen =
@@ -173,6 +196,38 @@ function AppNavContent() {
             ),
         )
       : SPORTS;
+
+
+  /*
+   * The active Group must always be representable in the
+   * selector, even while the available-Groups list is loading
+   * or temporarily unavailable.
+   */
+  const displayedGroups =
+    groupContext
+      ? (
+          availableGroups.length > 0
+            ? availableGroups
+            : [
+                {
+                  id:
+                    groupContext.group.id,
+
+                  name:
+                    groupContext.group.name,
+
+                  slug:
+                    groupContext.group.slug,
+
+                  role:
+                    groupContext.membership.role,
+
+                  isActive:
+                    groupContext.group.isActive,
+                },
+              ]
+        )
+      : [];
 
 
   /*
@@ -386,6 +441,17 @@ function AppNavContent() {
         setMobileMoreOpen(false);
       }
 
+      if (
+        desktopGroupRef.current &&
+        !desktopGroupRef.current.contains(
+          target,
+        )
+      ) {
+        setDesktopGroupOpen(
+          false,
+        );
+      }
+
       if (desktopSportRef.current && !desktopSportRef.current.contains(target)) {
         setDesktopSportOpen(false);
       }
@@ -526,46 +592,26 @@ function AppNavContent() {
 
           <div className="flex items-center gap-3">
           {groupContext ? (
-            availableGroups.length > 1 ? (
-              <div className="relative">
-                <select
-                  value={groupContext.group.slug}
-                  disabled={isSwitchingGroup}
-                  onChange={(event) => {
-                    void setActiveGroup(
-                      event.target.value,
-                    );
-                  }}
-                  aria-label="Active Group"
-                  title="Switch Group"
-                  className="appearance-none rounded-full border border-slate-700 bg-slate-800 py-2 pl-4 pr-8 text-sm font-semibold text-slate-100 transition hover:border-slate-500 disabled:opacity-60"
-                >
-                  {availableGroups.map(
-                    (group) => (
-                      <option
-                        key={group.id}
-                        value={group.slug}
-                      >
-                        {group.name}
-                      </option>
-                    ),
-                  )}
-                </select>
-
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-300"
-                >
-                  ▼
-                </span>
-              </div>
-            ) : (
+            <div
+              className="relative"
+              ref={desktopGroupRef}
+            >
               <button
                 type="button"
-                disabled
+                disabled={isSwitchingGroup}
+                onClick={() =>
+                  setDesktopGroupOpen(
+                    (open) =>
+                      !open,
+                  )
+                }
+                aria-expanded={
+                  desktopGroupOpen
+                }
+                aria-haspopup="menu"
                 aria-label={`Active Group: ${groupContext.group.name}`}
-                title="Active Group"
-                className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100"
+                title="Switch Group"
+                className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-slate-500 disabled:opacity-60"
               >
                 <span>
                   {groupContext.group.name}
@@ -573,12 +619,59 @@ function AppNavContent() {
 
                 <span
                   aria-hidden="true"
-                  className="text-[10px] text-slate-300"
+                  className="text-xs text-slate-300"
                 >
-                  ▼
+                  ▾
                 </span>
               </button>
-            )
+
+              {desktopGroupOpen ? (
+                <div
+                  role="menu"
+                  className="app-dropdown-panel absolute right-0 top-full z-50 mt-2 min-w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg"
+                >
+                  {displayedGroups.map(
+                    (group) => {
+                      const isActive =
+                        group.slug ===
+                        groupContext
+                          .group
+                          .slug;
+
+                      return (
+                        <button
+                          key={
+                            group.id
+                          }
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setDesktopGroupOpen(
+                              false,
+                            );
+
+                            if (
+                              !isActive
+                            ) {
+                              void setActiveGroup(
+                                group.slug,
+                              );
+                            }
+                          }}
+                          className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                            isActive
+                              ? "bg-sky-100 font-semibold text-sky-900"
+                              : "text-slate-700 hover:bg-slate-100"
+                          }`}
+                        >
+                          {group.name}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              ) : null}
+            </div>
           ) : isGroupLoading ? (
             <div className="h-9 w-16 animate-pulse rounded-full bg-slate-800" />
           ) : null}

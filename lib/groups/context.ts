@@ -633,3 +633,47 @@ export async function setActiveGroupCookie(
       60 * 60 * 24 * 365,
   });
 }
+
+
+export type LeagueSportKey =
+  | "nba"
+  | "nfl"
+  | "golf"
+  | "ncaa_pickem"
+  | "nba_skins";
+
+
+export async function getActiveLeagueForSport(
+  user: AppUser,
+  sportKey: LeagueSportKey,
+  gameMode = "standard",
+) {
+  const context =
+    await getGroupContextForUser(
+      user,
+    );
+
+  if (!context) {
+    return null;
+  }
+
+  const league =
+    context.leagues.find(
+      (candidate) =>
+        candidate.sportKey ===
+          sportKey &&
+        candidate.gameMode ===
+          gameMode &&
+        candidate.isEnabled,
+    ) ??
+    null;
+
+  if (!league) {
+    return null;
+  }
+
+  return {
+    context,
+    league,
+  };
+}
