@@ -133,6 +133,10 @@ export async function getFantasyTeamProfile(
           "id, season, team_id, title, emoji, description, rarity, display_order, featured"
         )
         .eq("team_id", teamId)
+        .eq(
+          "league_id",
+          scope.leagueId,
+        )
         .eq("sport", sport)
         .order("season", { ascending: false })
         .order("featured", { ascending: false })

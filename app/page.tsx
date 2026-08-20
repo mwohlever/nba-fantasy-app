@@ -578,7 +578,9 @@ function HomePageContent() {
       }
 
       if (sport === "nba") {
-        const awardsResponse = await fetch("/api/season-awards", {
+        const awardsResponse = await fetch(
+          `/api/season-awards?sport=${selectedSport}`,
+          {
           cache: "no-store",
         });
         const awardsResult = await awardsResponse.json();

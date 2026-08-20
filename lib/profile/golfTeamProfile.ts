@@ -211,6 +211,10 @@ export async function getGolfTeamProfile(
         "id, season, team_id, title, emoji, description, rarity, display_order, featured",
       )
       .eq("team_id", teamId)
+      .eq(
+        "league_id",
+        scope.leagueId,
+      )
       .eq("sport", "golf")
       .order("season", {
         ascending: false,
