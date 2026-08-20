@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type { ProfileScope } from "@/lib/profile/profileScope";
 
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
@@ -141,6 +142,7 @@ function isCutStatus(status: string | null | undefined) {
 export async function getGolfTeamProfile(
   teamId: number,
   seasonParam: string | null,
+  scope: ProfileScope,
 ) {
   const isAllTime =
     !seasonParam ||
@@ -162,14 +164,21 @@ export async function getGolfTeamProfile(
       .from("teams")
       .select("id, name")
       .eq("id", teamId)
+      .eq(
+        "group_id",
+        scope.groupId,
+      )
       .maybeSingle(),
 
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, display_name, is_locked",
+        "id, date, start_date, end_date, display_name, is_locked, league_id",
       )
-      .eq("sport", "golf"),
+      .eq(
+        "league_id",
+        scope.leagueId,
+      ),
 
     supabaseAdmin
       .from("team_slate_results")
@@ -1174,6 +1183,15 @@ export async function getGolfTeamProfile(
   return NextResponse.json({
     success: true,
     sport: "golf",
+
+    scope: {
+      groupId:
+        scope.groupId,
+
+      leagueId:
+        scope.leagueId,
+    },
+
     team: {
       id: safeTeam.id,
       name: safeTeam.name,

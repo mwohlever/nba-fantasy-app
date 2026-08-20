@@ -6,6 +6,10 @@ import {
   supabaseAdmin,
 } from "@/lib/supabaseAdmin";
 
+import type {
+  ProfileScope,
+} from "@/lib/profile/profileScope";
+
 type SeasonValue =
   number | "all";
 
@@ -329,6 +333,7 @@ export async function getNcaaPickEmTeamProfile(
   teamId: number,
   seasonParam:
     string | null,
+  scope: ProfileScope,
 ) {
   const [
     teamResult,
@@ -350,6 +355,10 @@ export async function getNcaaPickEmTeamProfile(
           "id",
           teamId,
         )
+        .eq(
+          "group_id",
+          scope.groupId,
+        )
         .maybeSingle(),
 
       supabaseAdmin
@@ -370,7 +379,11 @@ export async function getNcaaPickEmTeamProfile(
           "ncaa_pickem_weeks",
         )
         .select(
-          "id, season, week_number, label, status",
+          "id, season, week_number, label, status, league_id",
+        )
+        .eq(
+          "league_id",
+          scope.leagueId,
         )
         .order(
           "season",
@@ -420,6 +433,10 @@ export async function getNcaaPickEmTeamProfile(
         )
         .select(
           "id, name",
+        )
+        .eq(
+          "group_id",
+          scope.groupId,
         ),
     ]);
 
@@ -1235,6 +1252,14 @@ export async function getNcaaPickEmTeamProfile(
 
     sport:
       "ncaa",
+
+    scope: {
+      groupId:
+        scope.groupId,
+
+      leagueId:
+        scope.leagueId,
+    },
 
     team: {
       id:

@@ -7,6 +7,15 @@ import {
   createClient,
 } from "@supabase/supabase-js";
 
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  getActiveLeagueForSport,
+  teamBelongsToGroup,
+} from "@/lib/groups/context";
+
 
 export const dynamic =
   "force-dynamic";
@@ -45,15 +54,6 @@ type NbaTeamRow = {
   abbreviation: string;
   display_name: string;
 };
-
-
-const OWNER_NAMES =
-  [
-    "Mark",
-    "Josh",
-    "Jon",
-    "Andy",
-  ] as const;
 
 
 function getSupabaseAdmin() {
@@ -115,7 +115,7 @@ export async function GET(
       );
 
     if (
-      !Number.isFinite(
+      !Number.isInteger(
         teamId,
       ) ||
       teamId <= 0
@@ -127,6 +127,62 @@ export async function GET(
         },
         {
           status: 400,
+        },
+      );
+    }
+
+
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        "nba_skins",
+      );
+
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "NBA Skins is not enabled for the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+
+    const teamAllowed =
+      await teamBelongsToGroup(
+        teamId,
+        activeLeague.context.group.id,
+      );
+
+
+    if (!teamAllowed) {
+      return NextResponse.json(
+        {
+          error:
+            "Team not found in the active Group.",
+        },
+        {
+          status: 404,
         },
       );
     }
@@ -148,9 +204,9 @@ export async function GET(
           .select(
             "id, name",
           )
-          .in(
-            "name",
-            [...OWNER_NAMES],
+          .eq(
+            "group_id",
+            activeLeague.context.group.id,
           ),
 
         supabase
@@ -158,7 +214,11 @@ export async function GET(
             "nba_skins_seasons",
           )
           .select(
-            "id, season, status",
+            "id, season, status, league_id",
+          )
+          .eq(
+            "league_id",
+            activeLeague.league.id,
           )
           .order(
             "season",

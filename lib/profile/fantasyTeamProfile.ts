@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type { ProfileScope } from "@/lib/profile/profileScope";
 
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
@@ -36,6 +37,7 @@ const MILESTONE_THRESHOLDS: Record<string, { score175: number; score200: number;
 export async function getFantasyTeamProfile(
   req: Request,
   forcedSport: "nba" | "nfl",
+  scope: ProfileScope,
 ) {
   try {
     const { searchParams } = new URL(req.url);
@@ -81,12 +83,25 @@ export async function getFantasyTeamProfile(
       { data: teamUser },
       { data: leagueAwards },
     ] = await Promise.all([
-      supabaseAdmin.from("teams").select("id, name").eq("id", teamId).single(),
-      supabaseAdmin.from("teams").select("id, name"),
+      supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq("id", teamId)
+        .eq("group_id", scope.groupId)
+        .single(),
+      supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq("group_id", scope.groupId),
       supabaseAdmin
         .from("slates")
-        .select("id, date, start_date, end_date, is_locked")
-        .eq("sport", sport),
+        .select(
+          "id, date, start_date, end_date, is_locked, league_id"
+        )
+        .eq(
+          "league_id",
+          scope.leagueId,
+        ),
       supabaseAdmin.from("team_slate_results").select("*"),
       supabaseAdmin
         .from("lineups")
@@ -523,6 +538,15 @@ export async function getFantasyTeamProfile(
     return NextResponse.json({
       success: true,
       sport,
+
+      scope: {
+        groupId:
+          scope.groupId,
+
+        leagueId:
+          scope.leagueId,
+      },
+
       team: {
         id: safeTeam.id,
         name: safeTeam.name,
