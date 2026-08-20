@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getPlayerProjectionMapForSeason } from "@/lib/playerProjections";
 import { getGolfHomeSummary } from "@/lib/home/golfHomeSummary";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 type Team = {
   id: number;
@@ -160,6 +162,46 @@ export async function GET(request: Request) {
         ? "nfl"
         : "nba";
 
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status:
+            401,
+        },
+      );
+    }
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        sport,
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "This League is not enabled for the active Group.",
+        },
+        {
+          status:
+            404,
+        },
+      );
+    }
+
+    const {
+      context,
+      league,
+    } = activeLeague;
+
     const playersTable = sport === "nfl" ? "players_nfl" : "players";
     const playersSelect =
       sport === "nfl"
@@ -182,15 +224,41 @@ export async function GET(request: Request) {
       { data: slateTeams, error: slateTeamsError },
       { data: nbaSeasonAverages, error: nbaSeasonAveragesError },
     ] = await Promise.all([
-      supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+      supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq(
+          "group_id",
+          context.group.id,
+        )
+        .order(
+          "name",
+          {
+            ascending: true,
+          },
+        ),
+
       supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, first_game_start_time, tournament_analysis, show_tournament_analysis"
+          "id, date, start_date, end_date, is_locked, first_game_start_time, tournament_analysis, show_tournament_analysis, league_id"
         )
-        .eq("sport", sport)
-        .order("start_date", { ascending: false })
-        .order("end_date", { ascending: false }),
+        .eq(
+          "league_id",
+          league.id,
+        )
+        .order(
+          "start_date",
+          {
+            ascending: false,
+          },
+        )
+        .order(
+          "end_date",
+          {
+            ascending: false,
+          },
+        ),
       supabaseAdmin
         .from("team_slate_results")
         .select(
@@ -272,25 +340,144 @@ export async function GET(request: Request) {
       );
     }
 
-    const avatarUrlByTeamId = new Map<number, string | null>();
-
-    (teamUsers ?? []).forEach((user) => {
-      if (user.team_id === null || user.team_id === undefined) return;
-
-      avatarUrlByTeamId.set(
-        Number(user.team_id),
-        user.avatar_url ?? null
+    const activeTeamIds =
+      new Set(
+        safeTeams.map(
+          (team) =>
+            Number(
+              team.id,
+            ),
+        ),
       );
-    });
 
-    const safeSlates = (slates ?? []) as Slate[];
-    const safeResults = (teamSlateResults ?? []) as TeamSlateResult[];
-    const safeLineups = (lineups ?? []) as Lineup[];
-    const safeLineupPlayers = (lineupPlayers ?? []) as LineupPlayer[];
-    const safePlayers = (players ?? []) as Player[];
-    const safePlayerSlateStats = (playerSlateStats ?? []) as unknown as PlayerSlateStat[];
-    const safeSeasonTeamSummary = (seasonTeamSummary ?? []) as SeasonTeamSummary[];
-    const safeSlateTeams = (slateTeams ?? []) as SlateTeam[];
+    const avatarUrlByTeamId =
+      new Map<
+        number,
+        string | null
+      >();
+
+    (
+      teamUsers ??
+      []
+    ).forEach(
+      (user) => {
+        if (
+          user.team_id ===
+            null ||
+          user.team_id ===
+            undefined ||
+          !activeTeamIds.has(
+            Number(
+              user.team_id,
+            ),
+          )
+        ) {
+          return;
+        }
+
+        avatarUrlByTeamId.set(
+          Number(
+            user.team_id,
+          ),
+          user.avatar_url ??
+            null,
+        );
+      },
+    );
+
+    const safeSlates =
+      (slates ?? []) as Slate[];
+
+    const activeSlateIds =
+      new Set(
+        safeSlates.map(
+          (slate) =>
+            Number(
+              slate.id,
+            ),
+        ),
+      );
+
+    const safeResults =
+      (
+        teamSlateResults ??
+        []
+      ).filter(
+        (row: any) =>
+          activeSlateIds.has(
+            Number(
+              row.slate_id,
+            ),
+          ),
+      ) as TeamSlateResult[];
+
+    const safeLineups =
+      (
+        lineups ??
+        []
+      ).filter(
+        (row: any) =>
+          activeSlateIds.has(
+            Number(
+              row.slate_id,
+            ),
+          ),
+      ) as Lineup[];
+
+    const activeLineupIds =
+      new Set(
+        safeLineups.map(
+          (lineup) =>
+            Number(
+              lineup.id,
+            ),
+        ),
+      );
+
+    const safeLineupPlayers =
+      (
+        lineupPlayers ??
+        []
+      ).filter(
+        (row: any) =>
+          activeLineupIds.has(
+            Number(
+              row.lineup_id,
+            ),
+          ),
+      ) as LineupPlayer[];
+
+    const safePlayers =
+      (players ?? []) as Player[];
+
+    const safePlayerSlateStats =
+      (
+        playerSlateStats ??
+        []
+      ).filter(
+        (row: any) =>
+          activeSlateIds.has(
+            Number(
+              row.slate_id,
+            ),
+          ),
+      ) as unknown as PlayerSlateStat[];
+
+    const safeSeasonTeamSummary =
+      (seasonTeamSummary ?? []) as SeasonTeamSummary[];
+
+    const safeSlateTeams =
+      (
+        slateTeams ??
+        []
+      ).filter(
+        (row: any) =>
+          activeSlateIds.has(
+            Number(
+              row.slate_id,
+            ),
+          ),
+      ) as SlateTeam[];
     const safeNbaSeasonAverages = (nbaSeasonAverages ?? []) as NbaSeasonAverage[];
 
     const normalizedSlates = safeSlates

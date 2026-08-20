@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { DEFAULT_SPORT } from "@/lib/sports";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 type TeamRow = {
   id: number;
@@ -52,35 +54,184 @@ function roundTo(value: number, digits = 2) {
 export async function GET(request: NextRequest) {
   try {
     const seasonParam = request.nextUrl.searchParams.get("season");
-    const sport = request.nextUrl.searchParams.get("sport") ?? DEFAULT_SPORT;
+
+    const sport =
+      request.nextUrl.searchParams.get("sport") ??
+      DEFAULT_SPORT;
+
+    const normalizedSport:
+      | "nba"
+      | "nfl"
+      | "golf" =
+      sport === "nfl"
+        ? "nfl"
+        : sport === "golf"
+          ? "golf"
+          : "nba";
+
+    const user =
+      await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Login required.",
+        },
+        {
+          status: 401,
+        },
+      );
+    }
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        normalizedSport,
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "This League is not enabled for the active Group.",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
+
+    const {
+      context,
+      league,
+    } = activeLeague;
 
     const [
       { data: teams, error: teamsError },
       { data: slates, error: slatesError },
-      { data: teamSlateResults, error: teamSlateResultsError },
-      { data: slateTeams, error: slateTeamsError },
     ] = await Promise.all([
-      supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+      supabaseAdmin
+        .from("teams")
+        .select("id, name")
+        .eq(
+          "group_id",
+          context.group.id,
+        )
+        .order(
+          "name",
+          {
+            ascending: true,
+          },
+        ),
+
       supabaseAdmin
         .from("slates")
-        .select("id, start_date, is_locked, sport")
-        .eq("is_locked", true)
-        .eq("sport", sport)
-        .order("start_date", { ascending: true }),
-      supabaseAdmin
-        .from("team_slate_results")
-        .select("slate_id, team_id, fantasy_points, finish_position"),
-      supabaseAdmin
-        .from("slate_teams")
-        .select("slate_id, team_id, draft_order, is_participating"),
+        .select(
+          "id, start_date, is_locked, sport, league_id",
+        )
+        .eq(
+          "league_id",
+          league.id,
+        )
+        .eq(
+          "is_locked",
+          true,
+        )
+        .order(
+          "start_date",
+          {
+            ascending: true,
+          },
+        ),
     ]);
 
-    if (teamsError || slatesError || teamSlateResultsError || slateTeamsError) {
+    if (
+      teamsError ||
+      slatesError
+    ) {
       return NextResponse.json(
         {
           error:
             teamsError?.message ||
             slatesError?.message ||
+            "Failed to load standings data.",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    const safeSlates =
+      (slates ?? []) as SlateRow[];
+
+    const relevantSlateIds =
+      safeSlates.map(
+        (slate) =>
+          Number(
+            slate.id,
+          ),
+      );
+
+    const [
+      {
+        data:
+          teamSlateResults,
+        error:
+          teamSlateResultsError,
+      },
+      {
+        data:
+          slateTeams,
+        error:
+          slateTeamsError,
+      },
+    ] =
+      relevantSlateIds.length >
+      0
+        ? await Promise.all([
+            supabaseAdmin
+              .from(
+                "team_slate_results",
+              )
+              .select(
+                "slate_id, team_id, fantasy_points, finish_position",
+              )
+              .in(
+                "slate_id",
+                relevantSlateIds,
+              ),
+
+            supabaseAdmin
+              .from(
+                "slate_teams",
+              )
+              .select(
+                "slate_id, team_id, draft_order, is_participating",
+              )
+              .in(
+                "slate_id",
+                relevantSlateIds,
+              ),
+          ])
+        : [
+            {
+              data: [],
+              error: null,
+            },
+            {
+              data: [],
+              error: null,
+            },
+          ];
+
+    if (
+      teamSlateResultsError ||
+      slateTeamsError
+    ) {
+      return NextResponse.json(
+        {
+          error:
             teamSlateResultsError?.message ||
             slateTeamsError?.message ||
             "Failed to load standings data.",
@@ -89,9 +240,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const safeTeams = (teams ?? []) as TeamRow[];
-    const safeSlates = (slates ?? []) as SlateRow[];
-    const safeResults = (teamSlateResults ?? []) as TeamSlateResultRow[];
+    const safeTeams =
+      (teams ?? []) as TeamRow[];
+
+    const safeResults =
+      (
+        teamSlateResults ??
+        []
+      ) as TeamSlateResultRow[];
     const safeSlateTeams = (slateTeams ?? []) as SlateTeamRow[];
 
     // Only slates matching the requested sport ended up in safeSlates
@@ -102,7 +258,13 @@ export async function GET(request: NextRequest) {
       slateSeasonMap.set(slate.id, getSeasonFromDate(slate.start_date));
     });
 
-    const relevantSlateIds = new Set(safeSlates.map((slate) => slate.id));
+    const relevantSlateIdSet =
+      new Set(
+        safeSlates.map(
+          (slate) =>
+            slate.id,
+        ),
+      );
 
     const availableSeasons = Array.from(
       new Set(
@@ -122,7 +284,7 @@ export async function GET(request: NextRequest) {
           : availableSeasons[0] ?? null;
 
     const seasonResults = safeResults.filter((row) => {
-      if (!relevantSlateIds.has(row.slate_id)) return false;
+      if (!relevantSlateIdSet.has(row.slate_id)) return false;
 
       const slateSeason = slateSeasonMap.get(row.slate_id);
 
@@ -135,7 +297,7 @@ export async function GET(request: NextRequest) {
     const slateTeamBySlateTeamId = new Map<string, SlateTeamRow>();
 
     safeSlateTeams.forEach((row) => {
-      if (!relevantSlateIds.has(row.slate_id)) return;
+      if (!relevantSlateIdSet.has(row.slate_id)) return;
       slateTeamBySlateTeamId.set(`${row.slate_id}:${row.team_id}`, row);
     });
 
@@ -228,7 +390,23 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      sport,
+      sport: normalizedSport,
+      group: {
+        id:
+          context.group.id,
+        name:
+          context.group.name,
+        slug:
+          context.group.slug,
+      },
+      league: {
+        id:
+          league.id,
+        name:
+          league.name,
+        slug:
+          league.slug,
+      },
       selectedSeason,
       availableSeasons,
       standings,
