@@ -15,10 +15,25 @@ const SESSION_LENGTH_DAYS = 90;
 
 export type AppUser = {
   id: string;
+
+  /*
+   * Legacy runtime identity.
+   *
+   * Keep these fields while the existing application is
+   * migrated sport-by-sport to Group-scoped identities.
+   */
   teamId: number;
-  displayName: string;
   role: "player" | "admin";
+
+  displayName: string;
   avatarUrl: string | null;
+
+  /*
+   * New account-level permission model.
+   */
+  systemRole:
+    | "user"
+    | "super_admin";
 };
 
 type AppUserRow = {
@@ -26,6 +41,9 @@ type AppUserRow = {
   team_id: number;
   display_name: string;
   role: "player" | "admin";
+  system_role:
+    | "user"
+    | "super_admin";
   pin_salt: string;
   pin_hash: string;
   is_active: boolean;
@@ -154,6 +172,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
           team_id,
           display_name,
           role,
+          system_role,
           pin_salt,
           pin_hash,
           is_active,
@@ -195,13 +214,50 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     displayName: relatedUser.display_name,
     role: relatedUser.role,
     avatarUrl: relatedUser.avatar_url ?? null,
+    systemRole:
+      relatedUser.system_role ??
+      "user",
   };
 }
 
-export async function requireAdmin() {
-  const user = await getCurrentUser();
 
-  if (!user || user.role !== "admin") {
+/*
+ * Transitional compatibility helper.
+ *
+ * Existing server pages and API routes still call requireAdmin().
+ * Make that helper understand the new Groups permission model now,
+ * without forcing every route to migrate in the same patch.
+ */
+export async function requireAdmin() {
+  const user =
+    await getCurrentUser();
+
+  if (!user) {
+    return null;
+  }
+
+  if (
+    user.systemRole ===
+    "super_admin"
+  ) {
+    return user;
+  }
+
+  const {
+    getGroupContextForUser,
+  } =
+    await import(
+      "@/lib/groups/context"
+    );
+
+  const context =
+    await getGroupContextForUser(
+      user,
+    );
+
+  if (
+    !context?.isGroupAdmin
+  ) {
     return null;
   }
 
