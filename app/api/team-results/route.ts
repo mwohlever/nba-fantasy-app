@@ -2,6 +2,8 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveSlateAccessForUser } from "@/lib/groups/context";
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,6 +32,41 @@ export async function GET(request: NextRequest) {
             "Cache-Control": "no-store, max-age=0",
           },
         }
+      );
+    }
+
+    const currentUser =
+      await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status:
+            401,
+        },
+      );
+    }
+
+    const slateAccess =
+      await getActiveSlateAccessForUser(
+        currentUser,
+        slateId,
+      );
+
+    if (!slateAccess) {
+      return NextResponse.json(
+        {
+          error:
+            "Slate not found in the active Group.",
+        },
+        {
+          status:
+            404,
+        },
       );
     }
 
@@ -63,7 +100,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        teamResults: data ?? [],
+
+        group: {
+          id:
+            slateAccess.context.group.id,
+
+          name:
+            slateAccess.context.group.name,
+
+          slug:
+            slateAccess.context.group.slug,
+        },
+
+        league: {
+          id:
+            slateAccess.league.id,
+
+          name:
+            slateAccess.league.name,
+
+          slug:
+            slateAccess.league.slug,
+        },
+
+        teamResults:
+          data ?? [],
       },
       {
         headers: {

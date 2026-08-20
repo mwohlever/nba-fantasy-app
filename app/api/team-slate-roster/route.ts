@@ -4,6 +4,11 @@ import {
 } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStatColumns } from "@/lib/statColumns";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getActiveSlateAccessForUser,
+  teamBelongsToGroup,
+} from "@/lib/groups/context";
 
 function getSlotOrder(
   positionGroup: string | null,
@@ -101,13 +106,76 @@ export async function GET(
       );
     }
 
+    const currentUser =
+      await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status:
+            401,
+        },
+      );
+    }
+
+    const slateAccess =
+      await getActiveSlateAccessForUser(
+        currentUser,
+        slateId,
+      );
+
+    if (!slateAccess) {
+      return NextResponse.json(
+        {
+          error:
+            "Slate not found in the active Group.",
+        },
+        {
+          status:
+            404,
+        },
+      );
+    }
+
+    const teamIsInGroup =
+      await teamBelongsToGroup(
+        teamId,
+        slateAccess.context.group.id,
+      );
+
+    if (!teamIsInGroup) {
+      return NextResponse.json(
+        {
+          error:
+            "Team not found in the active Group.",
+        },
+        {
+          status:
+            404,
+        },
+      );
+    }
+
     const {
       data: slate,
       error: slateError,
     } = await supabaseAdmin
       .from("slates")
-      .select("sport")
-      .eq("id", slateId)
+      .select(
+        "sport, league_id",
+      )
+      .eq(
+        "id",
+        slateId,
+      )
+      .eq(
+        "league_id",
+        slateAccess.league.id,
+      )
       .maybeSingle();
 
     if (slateError) {
@@ -131,7 +199,14 @@ export async function GET(
       await supabaseAdmin
         .from("teams")
         .select("id, name")
-        .eq("id", teamId)
+        .eq(
+          "id",
+          teamId,
+        )
+        .eq(
+          "group_id",
+          slateAccess.context.group.id,
+        )
         .maybeSingle();
 
     const {

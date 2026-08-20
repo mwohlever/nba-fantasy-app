@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
+import {
+  getActiveSlateAccessForUser,
+  teamBelongsToGroup,
+} from "@/lib/groups/context";
 import { notifyNextDrafter } from "@/lib/draftNotifications";
 import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
 
@@ -173,12 +177,61 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const slateId = Number(slateIdParam);
+    const slateId =
+      Number(
+        slateIdParam,
+      );
 
-    if (!Number.isFinite(slateId)) {
+    if (
+      !Number.isInteger(
+        slateId,
+      ) ||
+      slateId <= 0
+    ) {
       return NextResponse.json(
-        { error: "slateId must be a valid number." },
-        { status: 400 },
+        {
+          error:
+            "slateId must be a valid number.",
+        },
+        {
+          status:
+            400,
+        },
+      );
+    }
+
+    const currentUser =
+      await getCurrentUser();
+
+    if (!currentUser) {
+      return NextResponse.json(
+        {
+          error:
+            "Login required.",
+        },
+        {
+          status:
+            401,
+        },
+      );
+    }
+
+    const slateAccess =
+      await getActiveSlateAccessForUser(
+        currentUser,
+        slateId,
+      );
+
+    if (!slateAccess) {
+      return NextResponse.json(
+        {
+          error:
+            "Slate not found in the active Group.",
+        },
+        {
+          status:
+            404,
+        },
       );
     }
 
@@ -338,7 +391,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const uniquePlayerIds = [...new Set(playerIds)];
+    const uniquePlayerIds =
+      [
+        ...new Set(
+          playerIds,
+        ),
+      ];
 
     if (uniquePlayerIds.length !== playerIds.length) {
       return NextResponse.json(
@@ -350,11 +408,49 @@ export async function POST(request: Request) {
       );
     }
 
+    const slateAccess =
+      await getActiveSlateAccessForUser(
+        currentUser,
+        slateId,
+      );
+
+    if (!slateAccess) {
+      return NextResponse.json(
+        {
+          error:
+            "Selected slate does not belong to the active Group.",
+        },
+        {
+          status:
+            404,
+        },
+      );
+    }
+
+    const teamIsInGroup =
+      await teamBelongsToGroup(
+        teamId,
+        slateAccess.context.group.id,
+      );
+
+    if (!teamIsInGroup) {
+      return NextResponse.json(
+        {
+          error:
+            "Selected team does not belong to the active Group.",
+        },
+        {
+          status:
+            404,
+        },
+      );
+    }
+
     const { data: slateData, error: slateError } =
       await supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, sport",
+          "id, date, start_date, end_date, is_locked, sport, league_id",
         )
         .eq("id", slateId)
         .single();
@@ -366,8 +462,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const slate = slateData as unknown as SlateRow;
-    const sport = normalizeSport(slate.sport);
+    const slate =
+      slateData as unknown as
+        SlateRow & {
+          league_id:
+            string | null;
+        };
+
+    if (
+      slate.league_id !==
+      slateAccess.league.id
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Selected slate is outside the active League.",
+        },
+        {
+          status:
+            404,
+        },
+      );
+    }
+
+    const sport =
+      normalizeSport(
+        slate.sport,
+      );
 
     if (slate.is_locked) {
       return NextResponse.json(
@@ -422,7 +543,14 @@ export async function POST(request: Request) {
       await supabaseAdmin
         .from("teams")
         .select("id, name")
-        .eq("id", teamId)
+        .eq(
+          "id",
+          teamId,
+        )
+        .eq(
+          "group_id",
+          slateAccess.context.group.id,
+        )
         .single();
 
     if (teamError || !team) {

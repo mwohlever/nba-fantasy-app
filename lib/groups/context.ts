@@ -677,3 +677,179 @@ export async function getActiveLeagueForSport(
     league,
   };
 }
+
+
+export type ActiveSlateAccess = {
+  context: GroupContext;
+
+  league: GroupLeague;
+
+  slate: {
+    id: number;
+
+    sport:
+      | "nba"
+      | "nfl"
+      | "golf";
+
+    leagueId: string;
+  };
+};
+
+
+export async function getActiveSlateAccessForUser(
+  user: AppUser,
+  slateId: number,
+): Promise<ActiveSlateAccess | null> {
+  if (
+    !Number.isInteger(
+      slateId,
+    ) ||
+    slateId <= 0
+  ) {
+    return null;
+  }
+
+  const context =
+    await getGroupContextForUser(
+      user,
+    );
+
+  if (!context) {
+    return null;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from(
+        "slates",
+      )
+      .select(
+        `
+          id,
+          sport,
+          league_id
+        `,
+      )
+      .eq(
+        "id",
+        slateId,
+      )
+      .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to validate slate access: ${error.message}`,
+    );
+  }
+
+  if (
+    !data ||
+    !data.league_id
+  ) {
+    return null;
+  }
+
+  const sport =
+    data.sport ===
+    "nfl"
+      ? "nfl"
+      : data.sport ===
+          "golf"
+        ? "golf"
+        : data.sport ===
+            "nba"
+          ? "nba"
+          : null;
+
+  if (!sport) {
+    return null;
+  }
+
+  const league =
+    context.leagues.find(
+      (candidate) =>
+        candidate.id ===
+          data.league_id &&
+        candidate.isEnabled,
+    ) ??
+    null;
+
+  if (!league) {
+    return null;
+  }
+
+  if (
+    league.sportKey !==
+    sport
+  ) {
+    return null;
+  }
+
+  return {
+    context,
+
+    league,
+
+    slate: {
+      id:
+        Number(
+          data.id,
+        ),
+
+      sport,
+
+      leagueId:
+        data.league_id,
+    },
+  };
+}
+
+
+export async function teamBelongsToGroup(
+  teamId: number,
+  groupId: string,
+) {
+  if (
+    !Number.isInteger(
+      teamId,
+    ) ||
+    teamId <= 0
+  ) {
+    return false;
+  }
+
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from(
+        "teams",
+      )
+      .select(
+        "id",
+      )
+      .eq(
+        "id",
+        teamId,
+      )
+      .eq(
+        "group_id",
+        groupId,
+      )
+      .maybeSingle();
+
+  if (error) {
+    throw new Error(
+      `Failed to validate team access: ${error.message}`,
+    );
+  }
+
+  return Boolean(
+    data,
+  );
+}
