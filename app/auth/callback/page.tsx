@@ -96,6 +96,76 @@ export default function AuthCallbackPage() {
               .access_token;
 
 
+          /*
+           * If authentication began from a Group invitation,
+           * consume that invite BEFORE bridging into the normal
+           * 111 Sports application session.
+           *
+           * This handles:
+           *   - Google OAuth;
+           *   - email confirmation after sign-up.
+           */
+          const searchParams =
+            new URLSearchParams(
+              window.location.search,
+            );
+
+
+          const inviteToken =
+            String(
+              searchParams.get(
+                "invite",
+              ) ??
+                "",
+            ).trim();
+
+
+          if (
+            inviteToken
+          ) {
+            const inviteResponse =
+              await fetch(
+                `/api/group-invites/${encodeURIComponent(
+                  inviteToken,
+                )}`,
+                {
+                  method:
+                    "POST",
+
+                  headers: {
+                    "Content-Type":
+                      "application/json",
+                  },
+
+                  body:
+                    JSON.stringify({
+                      accessToken,
+                    }),
+                },
+              );
+
+
+            const inviteResult =
+              await inviteResponse
+                .json();
+
+
+            if (
+              !inviteResponse.ok
+            ) {
+              await supabase
+                .auth
+                .signOut();
+
+
+              throw new Error(
+                inviteResult.error ||
+                  "Unable to accept your Group invitation.",
+              );
+            }
+          }
+
+
           const response =
             await fetch(
               "/api/auth/bridge",
