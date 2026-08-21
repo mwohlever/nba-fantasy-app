@@ -292,6 +292,15 @@ export default function GroupsAdminPage() {
       "",
     );
 
+
+  const [
+    showInactiveMembers,
+    setShowInactiveMembers,
+  ] =
+    useState(
+      false,
+    );
+
   const [
     inviteSearch,
     setInviteSearch,
@@ -450,52 +459,94 @@ export default function GroupsAdminPage() {
     );
 
 
-  const filteredMembers =
+  const memberMatchesSearch =
+    (
+      member:
+        MemberRow,
+    ) => {
+      const query =
+        memberSearch
+          .trim()
+          .toLowerCase();
+
+      if (!query) {
+        return true;
+      }
+
+      return (
+        member.display_name
+          .toLowerCase()
+          .includes(
+            query,
+          ) ||
+        (
+          member.email ??
+          ""
+        )
+          .toLowerCase()
+          .includes(
+            query,
+          ) ||
+        (
+          member.team?.name ??
+          ""
+        )
+          .toLowerCase()
+          .includes(
+            query,
+          )
+      );
+    };
+
+
+  const activeMembers =
     useMemo(
-      () => {
-        const members =
+      () =>
+        (
           selectedGroup?.members ??
-          [];
-
-        const query =
-          memberSearch
-            .trim()
-            .toLowerCase();
-
-        if (!query) {
-          return members;
-        }
-
-        return members.filter(
+          []
+        ).filter(
           (member) =>
-            member.display_name
-              .toLowerCase()
-              .includes(
-                query,
-              ) ||
-            (
-              member.email ??
-              ""
-            )
-              .toLowerCase()
-              .includes(
-                query,
-              ) ||
-            (
-              member.team?.name ??
-              ""
-            )
-              .toLowerCase()
-              .includes(
-                query,
-              ),
-        );
-      },
+            member.is_active &&
+            memberMatchesSearch(
+              member,
+            ),
+        ),
       [
         selectedGroup,
         memberSearch,
       ],
     );
+
+
+  const inactiveMembers =
+    useMemo(
+      () =>
+        (
+          selectedGroup?.members ??
+          []
+        ).filter(
+          (member) =>
+            !member.is_active &&
+            memberMatchesSearch(
+              member,
+            ),
+        ),
+      [
+        selectedGroup,
+        memberSearch,
+      ],
+    );
+
+
+  const inactiveMemberCount =
+    (
+      selectedGroup?.members ??
+      []
+    ).filter(
+      (member) =>
+        !member.is_active,
+    ).length;
 
 
   const filteredInvites =
@@ -897,6 +948,125 @@ export default function GroupsAdminPage() {
   }
 
 
+  async function removeMember(
+    membership:
+      MemberRow,
+  ) {
+    if (
+      !selectedGroup
+    ) {
+      return;
+    }
+
+
+    const confirmed =
+      window.confirm(
+        `Remove ${membership.display_name} from ${selectedGroup.name}?`,
+      );
+
+
+    if (
+      !confirmed
+    ) {
+      return;
+    }
+
+
+    const result =
+      await runAction({
+        action:
+          "remove_member",
+
+        groupId:
+          selectedGroup.id,
+
+        membershipId:
+          membership.id,
+      });
+
+
+    if (
+      !result
+    ) {
+      return;
+    }
+
+
+    setMessage(
+      `${membership.display_name} was removed from ${selectedGroup.name}.`,
+    );
+
+
+    await Promise.all([
+      loadGroups(
+        selectedGroup.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
+  }
+
+
+  async function deleteGroup() {
+    if (
+      !selectedGroup
+    ) {
+      return;
+    }
+
+
+    const groupName =
+      selectedGroup.name;
+
+
+    const confirmed =
+      window.confirm(
+        `Permanently delete ${groupName}? This is only allowed for inactive Groups with no slate history and cannot be undone.`,
+      );
+
+
+    if (
+      !confirmed
+    ) {
+      return;
+    }
+
+
+    const result =
+      await runAction({
+        action:
+          "delete_group",
+
+        groupId:
+          selectedGroup.id,
+      });
+
+
+    if (
+      !result
+    ) {
+      return;
+    }
+
+
+    setMessage(
+      `${groupName} was permanently deleted.`,
+    );
+
+
+    setSelectedGroupId(
+      "",
+    );
+
+
+    await Promise.all([
+      loadGroups(),
+
+      refreshGroupContext(),
+    ]);
+  }
+
+
   async function setGroupActive(
     isActive:
       boolean,
@@ -926,9 +1096,13 @@ export default function GroupsAdminPage() {
       `${selectedGroup.name} is now ${isActive ? "active" : "inactive"}.`,
     );
 
-    await loadGroups(
-      selectedGroup.id,
-    );
+    await Promise.all([
+      loadGroups(
+        selectedGroup.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
   }
 
 
@@ -1306,20 +1480,37 @@ export default function GroupsAdminPage() {
 
                 {selectedGroup &&
                 data?.permissions?.isSuperAdmin ? (
-                  <button
-                    type="button"
-                    disabled={saving}
-                    onClick={() =>
-                      void setGroupActive(
-                        !selectedGroup.is_active,
-                      )
-                    }
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700"
-                  >
-                    {selectedGroup.is_active
-                      ? "Deactivate Group"
-                      : "Activate Group"}
-                  </button>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() =>
+                        void setGroupActive(
+                          !selectedGroup.is_active,
+                        )
+                      }
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700"
+                    >
+                      {selectedGroup.is_active
+                        ? "Deactivate Group"
+                        : "Activate Group"}
+                    </button>
+
+                    {!selectedGroup.is_active &&
+                    selectedGroup.slug !==
+                      "111" ? (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() =>
+                          void deleteGroup()
+                        }
+                        className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50"
+                      >
+                        Delete Group
+                      </button>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             </section>
@@ -1479,11 +1670,15 @@ export default function GroupsAdminPage() {
                           <th className="px-4 py-2.5">
                             Joined
                           </th>
+
+                          <th className="px-4 py-2.5 text-right">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
 
                       <tbody>
-                        {filteredMembers.map(
+                        {activeMembers.map(
                           (member) => (
                             <tr
                               key={member.id}
@@ -1558,6 +1753,29 @@ export default function GroupsAdminPage() {
                                   member.joined_at,
                                 )}
                               </td>
+
+                              <td className="px-4 py-3 text-right">
+                                {member.is_active &&
+                                member.user_id !==
+                                  data?.currentUser?.id ? (
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() =>
+                                      void removeMember(
+                                        member,
+                                      )
+                                    }
+                                    className="rounded-lg border border-red-300 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                  >
+                                    Remove
+                                  </button>
+                                ) : (
+                                  <span className="text-xs text-slate-400">
+                                    —
+                                  </span>
+                                )}
+                              </td>
                             </tr>
                           ),
                         )}
@@ -1565,6 +1783,130 @@ export default function GroupsAdminPage() {
                     </table>
                   </div>
                 </section>
+
+
+                {inactiveMemberCount >
+                0 ? (
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowInactiveMembers(
+                          (current) =>
+                            !current,
+                        )
+                      }
+                      className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-slate-50"
+                    >
+                      <div>
+                        <div className="font-semibold">
+                          Former / Inactive Members
+                          {" "}
+                          <span className="text-slate-400">
+                            ({inactiveMemberCount})
+                          </span>
+                        </div>
+
+                        <div className="mt-0.5 text-xs text-slate-500">
+                          Removed members are retained for Group history.
+                        </div>
+                      </div>
+
+                      <span className="text-sm font-bold text-slate-400">
+                        {showInactiveMembers
+                          ? "▲"
+                          : "▼"}
+                      </span>
+                    </button>
+
+
+                    {showInactiveMembers ? (
+                      <div className="overflow-x-auto border-t border-slate-200">
+                        <table className="w-full min-w-[760px] text-left text-sm">
+                          <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                              <th className="px-4 py-2.5">
+                                Member
+                              </th>
+
+                              <th className="px-4 py-2.5">
+                                Email
+                              </th>
+
+                              <th className="px-4 py-2.5">
+                                Team
+                              </th>
+
+                              <th className="px-4 py-2.5">
+                                Role
+                              </th>
+
+                              <th className="px-4 py-2.5">
+                                Joined
+                              </th>
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            {inactiveMembers.length ===
+                            0 ? (
+                              <tr>
+                                <td
+                                  colSpan={5}
+                                  className="px-4 py-6 text-center text-sm text-slate-500"
+                                >
+                                  No inactive members match your search.
+                                </td>
+                              </tr>
+                            ) : (
+                              inactiveMembers.map(
+                                (member) => (
+                                  <tr
+                                    key={member.id}
+                                    className="border-t border-slate-100"
+                                  >
+                                    <td className="px-4 py-3">
+                                      <div className="font-semibold text-slate-600">
+                                        {member.display_name}
+                                      </div>
+
+                                      <div className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                                        INACTIVE
+                                      </div>
+                                    </td>
+
+                                    <td className="px-4 py-3 text-slate-500">
+                                      {member.email ??
+                                        "Not linked"}
+                                    </td>
+
+                                    <td className="px-4 py-3 text-slate-500">
+                                      {member.team?.name ??
+                                        "—"}
+                                    </td>
+
+                                    <td className="px-4 py-3 text-slate-500">
+                                      {member.role ===
+                                      "admin"
+                                        ? "Admin"
+                                        : "Member"}
+                                    </td>
+
+                                    <td className="px-4 py-3 text-slate-500">
+                                      {formatDate(
+                                        member.joined_at,
+                                      )}
+                                    </td>
+                                  </tr>
+                                ),
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </section>
+                ) : null}
 
 
                 <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

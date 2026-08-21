@@ -2009,6 +2009,545 @@ export async function POST(
 
 
     // ==========================================================
+    // REMOVE MEMBER FROM GROUP
+    // ==========================================================
+
+    if (
+      action ===
+      "remove_member"
+    ) {
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+
+      const membershipId =
+        String(
+          body.membershipId ??
+            "",
+        ).trim();
+
+
+      if (
+        !(
+          await requireGroupAdmin(
+            user,
+            groupId,
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group administrator access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+
+      const {
+        data:
+          membership,
+        error:
+          membershipError,
+      } =
+        await supabaseAdmin
+          .from(
+            "group_memberships",
+          )
+          .select(
+            `
+              id,
+              user_id,
+              role,
+              is_active
+            `,
+          )
+          .eq(
+            "id",
+            membershipId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .maybeSingle();
+
+
+      if (
+        membershipError
+      ) {
+        throw new Error(
+          `Unable to load Group member: ${membershipError.message}`,
+        );
+      }
+
+
+      if (
+        !membership
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group member not found.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+
+      /*
+       * An administrator should never remove their own current
+       * membership from this screen. Another administrator can
+       * handle that if necessary.
+       */
+      if (
+        String(
+          membership.user_id,
+        ) ===
+        user.id
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "You cannot remove your own Group membership.",
+          },
+          {
+            status:
+              409,
+          },
+        );
+      }
+
+
+      /*
+       * Never remove the final active Group administrator.
+       */
+      if (
+        membership.role ===
+          "admin" &&
+        membership.is_active
+      ) {
+        const {
+          count,
+          error:
+            adminCountError,
+        } =
+          await supabaseAdmin
+            .from(
+              "group_memberships",
+            )
+            .select(
+              "id",
+              {
+                count:
+                  "exact",
+
+                head:
+                  true,
+              },
+            )
+            .eq(
+              "group_id",
+              groupId,
+            )
+            .eq(
+              "role",
+              "admin",
+            )
+            .eq(
+              "is_active",
+              true,
+            );
+
+
+        if (
+          adminCountError
+        ) {
+          throw new Error(
+            `Unable to validate Group administrators: ${adminCountError.message}`,
+          );
+        }
+
+
+        if (
+          Number(
+            count ??
+              0,
+          ) <=
+          1
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "A Group must retain at least one active administrator.",
+            },
+            {
+              status:
+                409,
+            },
+          );
+        }
+      }
+
+
+      const {
+        error:
+          removeError,
+      } =
+        await supabaseAdmin
+          .from(
+            "group_memberships",
+          )
+          .update({
+            is_active:
+              false,
+
+            updated_at:
+              new Date()
+                .toISOString(),
+          })
+          .eq(
+            "id",
+            membershipId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+
+      if (
+        removeError
+      ) {
+        throw new Error(
+          `Unable to remove Group member: ${removeError.message}`,
+        );
+      }
+
+
+      return NextResponse.json({
+        success:
+          true,
+      });
+    }
+
+
+    // ==========================================================
+    // PERMANENTLY DELETE AN EMPTY / TEST GROUP
+    // ==========================================================
+
+    if (
+      action ===
+      "delete_group"
+    ) {
+      if (
+        user.systemRole !==
+        "super_admin"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Super Admin access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+
+      const {
+        data:
+          group,
+        error:
+          groupError,
+      } =
+        await supabaseAdmin
+          .from(
+            "groups",
+          )
+          .select(
+            `
+              id,
+              name,
+              slug,
+              is_active
+            `,
+          )
+          .eq(
+            "id",
+            groupId,
+          )
+          .maybeSingle();
+
+
+      if (
+        groupError
+      ) {
+        throw new Error(
+          `Unable to load Group: ${groupError.message}`,
+        );
+      }
+
+
+      if (
+        !group
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group not found.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+
+      /*
+       * The original 111 Group is never deletable from this UI.
+       */
+      if (
+        group.slug ===
+        "111"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "The primary 111 Group cannot be deleted.",
+          },
+          {
+            status:
+              409,
+          },
+        );
+      }
+
+
+      if (
+        group.is_active
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Deactivate the Group before permanently deleting it.",
+          },
+          {
+            status:
+              409,
+          },
+        );
+      }
+
+
+      const {
+        data:
+          leagueRows,
+        error:
+          leaguesLookupError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .select(
+            "id",
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+
+      if (
+        leaguesLookupError
+      ) {
+        throw new Error(
+          `Unable to inspect Group leagues: ${leaguesLookupError.message}`,
+        );
+      }
+
+
+      const leagueIds =
+        (
+          leagueRows ??
+          []
+        ).map(
+          (row) =>
+            String(
+              row.id,
+            ),
+        );
+
+
+      /*
+       * Permanent Group deletion is intentionally limited to
+       * Groups that have never accumulated slate history.
+       */
+      if (
+        leagueIds.length >
+        0
+      ) {
+        const {
+          count:
+            slateCount,
+          error:
+            slateCountError,
+        } =
+          await supabaseAdmin
+            .from(
+              "slates",
+            )
+            .select(
+              "id",
+              {
+                count:
+                  "exact",
+
+                head:
+                  true,
+              },
+            )
+            .in(
+              "league_id",
+              leagueIds,
+            );
+
+
+        if (
+          slateCountError
+        ) {
+          throw new Error(
+            `Unable to inspect Group history: ${slateCountError.message}`,
+          );
+        }
+
+
+        if (
+          Number(
+            slateCount ??
+              0,
+          ) >
+          0
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "This Group has slate history and cannot be permanently deleted. Leave it inactive instead.",
+            },
+            {
+              status:
+                409,
+            },
+          );
+        }
+      }
+
+
+      /*
+       * These Groups have no competitive history, so delete their
+       * platform scaffolding in dependency-safe order.
+       *
+       * The app_users records themselves are deliberately NOT
+       * deleted because accounts can belong to other Groups.
+       */
+      const cleanupTables = [
+        "group_invites",
+        "group_memberships",
+        "teams",
+        "leagues",
+      ];
+
+
+      for (
+        const table of
+        cleanupTables
+      ) {
+        const {
+          error:
+            cleanupError,
+        } =
+          await supabaseAdmin
+            .from(
+              table,
+            )
+            .delete()
+            .eq(
+              "group_id",
+              groupId,
+            );
+
+
+        if (
+          cleanupError
+        ) {
+          throw new Error(
+            `Unable to delete ${table}: ${cleanupError.message}`,
+          );
+        }
+      }
+
+
+      const {
+        error:
+          deleteGroupError,
+      } =
+        await supabaseAdmin
+          .from(
+            "groups",
+          )
+          .delete()
+          .eq(
+            "id",
+            groupId,
+          );
+
+
+      if (
+        deleteGroupError
+      ) {
+        throw new Error(
+          `Unable to permanently delete Group: ${deleteGroupError.message}`,
+        );
+      }
+
+
+      return NextResponse.json({
+        success:
+          true,
+
+        group: {
+          id:
+            groupId,
+
+          name:
+            group.name,
+        },
+      });
+    }
+
+
+    // ==========================================================
     // ENABLE / DISABLE A GAME INSIDE A GROUP
     // ==========================================================
 
