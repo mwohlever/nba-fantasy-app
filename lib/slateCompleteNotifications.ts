@@ -268,7 +268,9 @@ export async function notifyCompletedSlate(input: {
       slateId: input.slate.id,
       title,
       body,
-      url: `/lineups/scores?slateId=${input.slate.id}`,
+      url:
+        `/lineups/scores?sport=${encodeURIComponent(input.slate.sport ?? "nba")}` +
+        `&slateId=${input.slate.id}`,
       tag: `slate-complete-${input.slate.id}-${teamId}`,
       skipReason,
       metadata: {

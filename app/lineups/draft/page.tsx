@@ -103,6 +103,10 @@ export default async function DraftLineupsPage({
   const [
     { data: rawPlayers, error: playersError },
     { data: rawTeams, error: teamsError },
+    {
+      data: activeMemberships,
+      error: activeMembershipsError,
+    },
     { data: slates, error: slatesError },
     { data: slateTeams, error: slateTeamsError },
     allPlayerStatsResult,
@@ -115,12 +119,24 @@ export default async function DraftLineupsPage({
 
     supabaseAdmin
       .from("teams")
-      .select("id, name")
+      .select("id, name, user_id")
       .eq(
         "group_id",
         activeGroupId,
       )
       .order("name", { ascending: true }),
+
+    supabaseAdmin
+      .from("group_memberships")
+      .select("user_id")
+      .eq(
+        "group_id",
+        activeGroupId,
+      )
+      .eq(
+        "is_active",
+        true,
+      ),
 
     supabaseAdmin
       .from("slates")
@@ -164,6 +180,7 @@ export default async function DraftLineupsPage({
   if (
     playersError ||
     teamsError ||
+    activeMembershipsError ||
     slatesError ||
     slateTeamsError ||
     allPlayerStatsError
@@ -182,6 +199,7 @@ export default async function DraftLineupsPage({
               <div className="mt-2 text-sm text-red-600">
                 {playersError?.message ||
                   teamsError?.message ||
+                  activeMembershipsError?.message ||
                   slatesError?.message ||
                   slateTeamsError?.message ||
                   allPlayerStatsError?.message}
@@ -329,15 +347,30 @@ export default async function DraftLineupsPage({
         ),
     );
 
+  const activeGroupUserIds =
+    new Set(
+      (activeMemberships ?? []).map(
+        (membership: any) =>
+          String(
+            membership.user_id,
+          ),
+      ),
+    );
+
   /*
-   * Group membership alone does not mean a team belongs
-   * in this slate. Removed/historical teams remain stored
-   * for history, so Draft only receives teams configured
-   * as participants in the selected slate.
+   * A current Draft team must satisfy BOTH:
+   *   - active membership in this Group;
+   *   - participation in the selected slate.
+   *
+   * Historical team/slate rows stay in the database.
    */
   const teams =
     (rawTeams ?? []).filter(
       (team: any) =>
+        team.user_id &&
+        activeGroupUserIds.has(
+          String(team.user_id),
+        ) &&
         selectedSlateParticipantTeamIds.has(
           Number(team.id),
         ),

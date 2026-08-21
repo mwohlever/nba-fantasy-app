@@ -108,11 +108,15 @@ export async function GET(request: NextRequest) {
 
     const [
       { data: teams, error: teamsError },
+      {
+        data: activeMemberships,
+        error: activeMembershipsError,
+      },
       { data: slates, error: slatesError },
     ] = await Promise.all([
       supabaseAdmin
         .from("teams")
-        .select("id, name")
+        .select("id, name, user_id")
         .eq(
           "group_id",
           context.group.id,
@@ -122,6 +126,18 @@ export async function GET(request: NextRequest) {
           {
             ascending: true,
           },
+        ),
+
+      supabaseAdmin
+        .from("group_memberships")
+        .select("user_id")
+        .eq(
+          "group_id",
+          context.group.id,
+        )
+        .eq(
+          "is_active",
+          true,
         ),
 
       supabaseAdmin
@@ -147,12 +163,14 @@ export async function GET(request: NextRequest) {
 
     if (
       teamsError ||
+      activeMembershipsError ||
       slatesError
     ) {
       return NextResponse.json(
         {
           error:
             teamsError?.message ||
+            activeMembershipsError?.message ||
             slatesError?.message ||
             "Failed to load standings data.",
         },
@@ -240,8 +258,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const activeGroupUserIds =
+      new Set(
+        (activeMemberships ?? []).map(
+          (membership: any) =>
+            String(
+              membership.user_id,
+            ),
+        ),
+      );
+
     const safeTeams =
-      (teams ?? []) as TeamRow[];
+      (
+        (teams ?? []) as Array<
+          TeamRow & {
+            user_id:
+              string | null;
+          }
+        >
+      ).filter(
+        (team) =>
+          team.user_id &&
+          activeGroupUserIds.has(
+            String(team.user_id),
+          ),
+      );
 
     const safeResults =
       (

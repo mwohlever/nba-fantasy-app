@@ -105,6 +105,10 @@ export default async function ScoresLineupsPage({
   const [
     { data: rawPlayers, error: playersError },
     { data: teams, error: teamsError },
+    {
+      data: activeMemberships,
+      error: activeMembershipsError,
+    },
     { data: teamUsers, error: teamUsersError },
     { data: slates, error: slatesError },
     { data: slateTeams, error: slateTeamsError },
@@ -116,12 +120,23 @@ export default async function ScoresLineupsPage({
       .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
     supabaseAdmin
       .from("teams")
-      .select("id, name")
+      .select("id, name, user_id")
       .eq(
         "group_id",
         activeGroupId,
       )
       .order("name", { ascending: true }),
+    supabaseAdmin
+      .from("group_memberships")
+      .select("user_id")
+      .eq(
+        "group_id",
+        activeGroupId,
+      )
+      .eq(
+        "is_active",
+        true,
+      ),
     supabaseAdmin
       .from("app_users")
       .select("team_id, avatar_url")
@@ -155,6 +170,7 @@ export default async function ScoresLineupsPage({
   if (
     playersError ||
     teamsError ||
+    activeMembershipsError ||
     teamUsersError ||
     slatesError ||
     slateTeamsError ||
@@ -172,6 +188,7 @@ export default async function ScoresLineupsPage({
               <div className="mt-2 text-sm text-red-600">
                 {playersError?.message ||
                   teamsError?.message ||
+                  activeMembershipsError?.message ||
                   teamUsersError?.message ||
                   slatesError?.message ||
                   slateTeamsError?.message ||
@@ -227,10 +244,34 @@ export default async function ScoresLineupsPage({
         ),
     );
 
+  /*
+   * Current competition eligibility requires BOTH:
+   *
+   *   1. an active membership in the active Group;
+   *   2. a participating team configuration in this League.
+   *
+   * Historical team/slate rows are intentionally retained, but
+   * removing a user from a Group must immediately remove that
+   * team from current/live fantasy surfaces.
+   */
+  const activeGroupUserIds =
+    new Set(
+      (activeMemberships ?? []).map(
+        (membership: any) =>
+          String(
+            membership.user_id,
+          ),
+      ),
+    );
+
   const teamsWithAvatars =
     (teams ?? [])
       .filter(
         (team: any) =>
+          team.user_id &&
+          activeGroupUserIds.has(
+            String(team.user_id),
+          ) &&
           activeLeagueParticipantTeamIds.has(
             Number(team.id),
           ),

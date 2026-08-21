@@ -289,13 +289,17 @@ export async function GET(
         error: teamError,
       },
       {
+        data: activeMembershipData,
+        error: activeMembershipError,
+      },
+      {
         data: slateData,
         error: slateError,
       },
     ] = await Promise.all([
       supabaseAdmin
         .from("teams")
-        .select("id, name")
+        .select("id, name, user_id")
         .eq(
           "group_id",
           context.group.id,
@@ -303,6 +307,18 @@ export async function GET(
         .order("name", {
           ascending: true,
         }),
+
+      supabaseAdmin
+        .from("group_memberships")
+        .select("user_id")
+        .eq(
+          "group_id",
+          context.group.id,
+        )
+        .eq(
+          "is_active",
+          true,
+        ),
 
       supabaseAdmin
         .from("slates")
@@ -321,12 +337,14 @@ export async function GET(
 
     if (
       teamError ||
+      activeMembershipError ||
       slateError
     ) {
       return NextResponse.json(
         {
           error:
             teamError?.message ||
+            activeMembershipError?.message ||
             slateError?.message ||
             "Unable to load Golf standings setup.",
         },
@@ -338,8 +356,31 @@ export async function GET(
       );
     }
 
+    const activeGroupUserIds =
+      new Set(
+        (activeMembershipData ?? []).map(
+          (membership: any) =>
+            String(
+              membership.user_id,
+            ),
+        ),
+      );
+
     const teams =
-      (teamData ?? []) as TeamRow[];
+      (
+        (teamData ?? []) as Array<
+          TeamRow & {
+            user_id:
+              string | null;
+          }
+        >
+      ).filter(
+        (team) =>
+          team.user_id &&
+          activeGroupUserIds.has(
+            String(team.user_id),
+          ),
+      );
 
     const allSlates =
       (slateData ??

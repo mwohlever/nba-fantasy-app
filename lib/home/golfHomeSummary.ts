@@ -142,6 +142,10 @@ export async function getGolfHomeSummary() {
     { data: slateData, error: slateError },
     { data: resultData, error: resultError },
     { data: teamData, error: teamError },
+    {
+      data: activeMembershipData,
+      error: activeMembershipError,
+    },
     { data: teamUserData, error: teamUserError },
     { data: slateTeamData, error: slateTeamError },
   ] = await Promise.all([
@@ -166,12 +170,24 @@ export async function getGolfHomeSummary() {
 
     supabaseAdmin
       .from("teams")
-      .select("id, name")
+      .select("id, name, user_id")
       .eq(
         "group_id",
         context.group.id,
       )
       .order("name", { ascending: true }),
+
+    supabaseAdmin
+      .from("group_memberships")
+      .select("user_id")
+      .eq(
+        "group_id",
+        context.group.id,
+      )
+      .eq(
+        "is_active",
+        true,
+      ),
 
     supabaseAdmin
       .from("app_users")
@@ -190,6 +206,7 @@ export async function getGolfHomeSummary() {
     slateError ||
     resultError ||
     teamError ||
+    activeMembershipError ||
     teamUserError ||
     slateTeamError;
 
@@ -210,8 +227,35 @@ export async function getGolfHomeSummary() {
   const results =
     (resultData ?? []) as TeamResultRow[];
 
+  const activeGroupUserIds =
+    new Set(
+      (activeMembershipData ?? []).map(
+        (membership: any) =>
+          String(
+            membership.user_id,
+          ),
+      ),
+    );
+
+  const activeTeams =
+    (teamData ?? []).filter(
+      (team: any) =>
+        team.user_id &&
+        activeGroupUserIds.has(
+          String(team.user_id),
+        ),
+    );
+
+  const activeTeamIds =
+    new Set(
+      activeTeams.map(
+        (team: any) =>
+          Number(team.id),
+      ),
+    );
+
   const teamNameById = new Map(
-    (teamData ?? []).map((team) => [
+    activeTeams.map((team: any) => [
       Number(team.id),
       String(team.name),
     ]),
@@ -296,8 +340,14 @@ export async function getGolfHomeSummary() {
       return slateResults;
     }
 
-    return slateResults.filter((row) =>
-      participatingIds.has(row.team_id),
+    return slateResults.filter(
+      (row) =>
+        activeTeamIds.has(
+          Number(row.team_id),
+        ) &&
+        participatingIds.has(
+          row.team_id,
+        ),
     );
   }
 

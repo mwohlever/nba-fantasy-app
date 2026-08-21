@@ -214,6 +214,10 @@ export async function GET(request: Request) {
         : "slate_id, player_id, fantasy_points, game_status, game_status_text, period, game_clock";
     const [
       { data: teams, error: teamsError },
+      {
+        data: activeMemberships,
+        error: activeMembershipsError,
+      },
       { data: slates, error: slatesError },
       { data: teamSlateResults, error: teamSlateResultsError },
       { data: lineups, error: lineupsError },
@@ -226,7 +230,7 @@ export async function GET(request: Request) {
     ] = await Promise.all([
       supabaseAdmin
         .from("teams")
-        .select("id, name")
+        .select("id, name, user_id")
         .eq(
           "group_id",
           context.group.id,
@@ -236,6 +240,18 @@ export async function GET(request: Request) {
           {
             ascending: true,
           },
+        ),
+
+      supabaseAdmin
+        .from("group_memberships")
+        .select("user_id")
+        .eq(
+          "group_id",
+          context.group.id,
+        )
+        .eq(
+          "is_active",
+          true,
         ),
 
       supabaseAdmin
@@ -293,6 +309,7 @@ export async function GET(request: Request) {
 
     if (
       teamsError ||
+      activeMembershipsError ||
       slatesError ||
       teamSlateResultsError ||
       lineupsError ||
@@ -307,6 +324,7 @@ export async function GET(request: Request) {
         {
           error:
             teamsError?.message ||
+            activeMembershipsError?.message ||
             slatesError?.message ||
             teamSlateResultsError?.message ||
             lineupsError?.message ||
@@ -322,7 +340,31 @@ export async function GET(request: Request) {
       );
     }
 
-    const safeTeams = (teams ?? []) as Team[];
+    const activeGroupUserIds =
+      new Set(
+        (activeMemberships ?? []).map(
+          (membership: any) =>
+            String(
+              membership.user_id,
+            ),
+        ),
+      );
+
+    const safeTeams =
+      (
+        (teams ?? []) as Array<
+          Team & {
+            user_id:
+              string | null;
+          }
+        >
+      ).filter(
+        (team) =>
+          team.user_id &&
+          activeGroupUserIds.has(
+            String(team.user_id),
+          ),
+      );
 
     const { data: teamUsers, error: teamUsersError } = await supabaseAdmin
       .from("app_users")
@@ -850,7 +892,14 @@ export async function GET(request: Request) {
 
     const latestSlateRowsBase = latestSlate
       ? safeResults
-          .filter((row) => row.slate_id === latestSlate.id)
+          .filter(
+            (row) =>
+              row.slate_id ===
+                latestSlate.id &&
+              activeTeamIds.has(
+                Number(row.team_id),
+              ),
+          )
           .map((row) => ({
             ...row,
             teamName:

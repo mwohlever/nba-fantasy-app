@@ -283,7 +283,9 @@ export async function notifyNewlyFinishedPlayers(input: {
 
       title,
       body,
-      url: `/lineups/scores?slateId=${input.slate.id}`,
+      url:
+        `/lineups/scores?sport=${encodeURIComponent(sport)}` +
+        `&slateId=${input.slate.id}`,
       tag:
         `player-finished-${input.slate.id}-${stat.player_id}` +
         (stat.event_key_suffix
