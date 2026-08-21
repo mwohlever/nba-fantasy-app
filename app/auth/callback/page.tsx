@@ -82,18 +82,38 @@ export default function AuthCallbackPage() {
           }
 
 
-          if (
-            !session
-          ) {
-            throw new Error(
-              "No Supabase authentication session was returned.",
+          /*
+           * OAuth can return its credentials in the URL hash.
+           * In production, Supabase session hydration may not
+           * finish before getSession() is checked, even though
+           * authentication itself succeeded.
+           *
+           * Fall back to the callback fragment directly so the
+           * 111 Sports bridge can finish the authenticated login.
+           */
+          const hashParams =
+            new URLSearchParams(
+              window.location.hash.replace(
+                /^#/,
+                "",
+              ),
             );
-          }
 
 
           const accessToken =
-            session
-              .access_token;
+            session?.access_token ??
+            hashParams.get(
+              "access_token",
+            );
+
+
+          if (
+            !accessToken
+          ) {
+            throw new Error(
+              "No Supabase authentication token was returned.",
+            );
+          }
 
 
           /*
