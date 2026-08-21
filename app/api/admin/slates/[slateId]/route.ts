@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getActiveSlateAccessForUser,
+} from "@/lib/groups/context";
 
 function normalizeNbaTeamCode(value: string | null | undefined) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -47,6 +51,31 @@ export async function GET(_: NextRequest, context: RouteContext) {
       );
     }
 
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 },
+      );
+    }
+
+    const slateAccess =
+      await getActiveSlateAccessForUser(
+        user,
+        slateId,
+      );
+
+    if (!slateAccess) {
+      return NextResponse.json(
+        {
+          error:
+            "Slate not found in the active Group.",
+        },
+        { status: 404 },
+      );
+    }
+
     const [
       { data: slate, error: slateError },
       { data: teams, error: teamsError },
@@ -67,6 +96,10 @@ export async function GET(_: NextRequest, context: RouteContext) {
       supabaseAdmin
         .from("teams")
         .select("id, name")
+        .eq(
+          "group_id",
+          slateAccess.context.group.id,
+        )
         .order("name", { ascending: true }),
       supabaseAdmin
         .from("slate_teams")

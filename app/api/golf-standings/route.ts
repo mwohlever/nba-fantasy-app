@@ -4,6 +4,8 @@ import {
 } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 export const dynamic = "force-dynamic";
 
@@ -253,6 +255,34 @@ export async function GET(
         "season",
       );
 
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 },
+      );
+    }
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        "golf",
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "Golf is not enabled for the active Group.",
+        },
+        { status: 404 },
+      );
+    }
+
+    const { context, league } =
+      activeLeague;
+
     const [
       {
         data: teamData,
@@ -266,6 +296,10 @@ export async function GET(
       supabaseAdmin
         .from("teams")
         .select("id, name")
+        .eq(
+          "group_id",
+          context.group.id,
+        )
         .order("name", {
           ascending: true,
         }),
@@ -276,6 +310,10 @@ export async function GET(
           "id, start_date, end_date, display_name",
         )
         .eq("sport", "golf")
+        .eq(
+          "league_id",
+          league.id,
+        )
         .order("start_date", {
           ascending: true,
         }),
@@ -621,12 +659,34 @@ export async function GET(
       );
     }
 
+    /*
+     * A Group can retain old team identities for historical purposes.
+     * Do not treat every retained Group team as a competitor in this
+     * Golf season. The selected slate lineups are the authoritative
+     * participation set for this standings payload.
+     */
+    const participatingTeamIds =
+      new Set(
+        lineups.map(
+          (lineup) =>
+            Number(lineup.team_id),
+        ),
+      );
+
+    const standingsTeams =
+      teams.filter(
+        (team) =>
+          participatingTeamIds.has(
+            Number(team.id),
+          ),
+      );
+
     const accumulatorByTeamId =
       new Map<
         number,
         GolfStandingAccumulator
       >(
-        teams.map(
+        standingsTeams.map(
           (team) => [
             team.id,
             {

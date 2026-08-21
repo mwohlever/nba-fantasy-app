@@ -5,6 +5,10 @@ import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
 import RefreshPlayersButton from "@/components/lineups/RefreshPlayersButton";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getActiveLeagueForSport,
+} from "@/lib/groups/context";
 
 function getTodayDateString() {
   const now = new Date();
@@ -57,6 +61,26 @@ export default async function DraftLineupsPage({
     : resolvedSearchParams?.sport;
 
   const sport = resolveSport(sportParam);
+
+  const currentUser =
+    await getCurrentUser();
+
+  const activeLeague =
+    currentUser
+      ? await getActiveLeagueForSport(
+          currentUser,
+          sport,
+        )
+      : null;
+
+  const activeGroupId =
+    activeLeague?.context.group.id ??
+    "__no_active_group__";
+
+  const activeLeagueId =
+    activeLeague?.league.id ??
+    "__no_active_league__";
+
   const today = getTodayDateString();
 
   const playersTable =
@@ -78,7 +102,7 @@ export default async function DraftLineupsPage({
 
   const [
     { data: rawPlayers, error: playersError },
-    { data: teams, error: teamsError },
+    { data: rawTeams, error: teamsError },
     { data: slates, error: slatesError },
     { data: slateTeams, error: slateTeamsError },
     allPlayerStatsResult,
@@ -92,6 +116,10 @@ export default async function DraftLineupsPage({
     supabaseAdmin
       .from("teams")
       .select("id, name")
+      .eq(
+        "group_id",
+        activeGroupId,
+      )
       .order("name", { ascending: true }),
 
     supabaseAdmin
@@ -100,6 +128,10 @@ export default async function DraftLineupsPage({
         "id, date, start_date, end_date, is_locked, sport, display_name",
       )
       .eq("sport", sport)
+      .eq(
+        "league_id",
+        activeLeagueId,
+      )
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
 
@@ -281,6 +313,35 @@ export default async function DraftLineupsPage({
     })?.id ??
     safeSlates[0]?.id ??
     null;
+
+  const selectedSlateParticipantTeamIds =
+    new Set(
+      safeSlateTeams
+        .filter(
+          (row) =>
+            Number(row.slate_id) ===
+              Number(selectedSlateId) &&
+            row.is_participating !== false,
+        )
+        .map(
+          (row) =>
+            Number(row.team_id),
+        ),
+    );
+
+  /*
+   * Group membership alone does not mean a team belongs
+   * in this slate. Removed/historical teams remain stored
+   * for history, so Draft only receives teams configured
+   * as participants in the selected slate.
+   */
+  const teams =
+    (rawTeams ?? []).filter(
+      (team: any) =>
+        selectedSlateParticipantTeamIds.has(
+          Number(team.id),
+        ),
+    );
 
   if (!selectedSlateId && safeSlates.length === 0) {
     return (

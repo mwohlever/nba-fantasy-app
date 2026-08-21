@@ -4,6 +4,10 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getActiveLeagueForSport,
+} from "@/lib/groups/context";
 
 function getTodayDateString() {
   const now = new Date();
@@ -53,6 +57,30 @@ export default async function ScoresLineupsPage({
         ? "golf"
         : "nba";
 
+  const currentUser =
+    await getCurrentUser();
+
+  const activeLeague =
+    currentUser
+      ? await getActiveLeagueForSport(
+          currentUser,
+          sport,
+        )
+      : null;
+
+  /*
+   * Using impossible fallback IDs keeps this page fail-closed:
+   * if there is no authenticated active League, no Group data
+   * can accidentally fall back to the global tables.
+   */
+  const activeGroupId =
+    activeLeague?.context.group.id ??
+    "__no_active_group__";
+
+  const activeLeagueId =
+    activeLeague?.league.id ??
+    "__no_active_league__";
+
   const today = getTodayDateString();
 
   const playersTable =
@@ -86,7 +114,14 @@ export default async function ScoresLineupsPage({
       .from(playersTable)
       .select(playersSelect)
       .order(sport === "golf" ? "display_name" : "name", { ascending: true }),
-    supabaseAdmin.from("teams").select("id, name").order("name", { ascending: true }),
+    supabaseAdmin
+      .from("teams")
+      .select("id, name")
+      .eq(
+        "group_id",
+        activeGroupId,
+      )
+      .order("name", { ascending: true }),
     supabaseAdmin
       .from("app_users")
       .select("team_id, avatar_url")
@@ -97,6 +132,10 @@ export default async function ScoresLineupsPage({
         "id, date, start_date, end_date, is_locked, sport, display_name, has_cut",
       )
       .eq("sport", sport)
+      .eq(
+        "league_id",
+        activeLeagueId,
+      )
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
     supabaseAdmin
@@ -156,10 +195,53 @@ export default async function ScoresLineupsPage({
     );
   });
 
-  const teamsWithAvatars = (teams ?? []).map((team: any) => ({
-    ...team,
-    avatarUrl: avatarUrlByTeamId.get(Number(team.id)) ?? null,
-  }));
+  /*
+   * A Group can retain old/inactive team identities for history.
+   * That does NOT make every Group team a participant in every
+   * slate.
+   *
+   * Restrict the Scores surface to teams referenced by
+   * slate_teams for slates belonging to this active League.
+   */
+  const activeLeagueSlateIds =
+    new Set(
+      (slates ?? []).map(
+        (slate: any) =>
+          Number(slate.id),
+      ),
+    );
+
+  const activeLeagueParticipantTeamIds =
+    new Set(
+      (slateTeams ?? [])
+        .filter(
+          (row: any) =>
+            activeLeagueSlateIds.has(
+              Number(row.slate_id),
+            ) &&
+            row.is_participating !== false,
+        )
+        .map(
+          (row: any) =>
+            Number(row.team_id),
+        ),
+    );
+
+  const teamsWithAvatars =
+    (teams ?? [])
+      .filter(
+        (team: any) =>
+          activeLeagueParticipantTeamIds.has(
+            Number(team.id),
+          ),
+      )
+      .map((team: any) => ({
+        ...team,
+        avatarUrl:
+          avatarUrlByTeamId.get(
+            Number(team.id),
+          ) ?? null,
+      }));
 
   const normalizedPlayers = (rawPlayers ?? []).map((p: any) => {
     if (sport === "nfl") {

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getGolfStatusMeta } from "@/lib/golf/status";
 import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 type GolfSlateRow = {
   id: number;
@@ -108,6 +110,34 @@ function isTerminalGolfStatus(
 }
 
 export async function getGolfHomeSummary() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Login required." },
+      { status: 401 },
+    );
+  }
+
+  const activeLeague =
+    await getActiveLeagueForSport(
+      user,
+      "golf",
+    );
+
+  if (!activeLeague) {
+    return NextResponse.json(
+      {
+        error:
+          "Golf is not enabled for the active Group.",
+      },
+      { status: 404 },
+    );
+  }
+
+  const { context, league } =
+    activeLeague;
+
   const [
     { data: slateData, error: slateError },
     { data: resultData, error: resultError },
@@ -121,6 +151,10 @@ export async function getGolfHomeSummary() {
         "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut, tournament_analysis, show_tournament_analysis",
       )
       .eq("sport", "golf")
+      .eq(
+        "league_id",
+        league.id,
+      )
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
 
@@ -133,6 +167,10 @@ export async function getGolfHomeSummary() {
     supabaseAdmin
       .from("teams")
       .select("id, name")
+      .eq(
+        "group_id",
+        context.group.id,
+      )
       .order("name", { ascending: true }),
 
     supabaseAdmin

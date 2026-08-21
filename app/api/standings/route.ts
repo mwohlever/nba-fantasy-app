@@ -355,8 +355,59 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.draft_order - b.draft_order);
 
-    const standings: StandingRow[] = safeTeams.map((team) => {
-      const teamRows = seasonResults.filter((row) => row.team_id === team.id);
+    /*
+     * Teams are Group-specific, but old/inactive team identities
+     * are intentionally retained for history. Only include a team
+     * in standings if it actually participated in a relevant slate
+     * for the selected season.
+     */
+    const standingsSlateIds =
+      new Set(
+        safeSlates
+          .filter((slate) => {
+            if (isAllTime) {
+              return true;
+            }
+
+            return (
+              getSeasonFromDate(
+                slate.start_date,
+              ) === selectedSeason
+            );
+          })
+          .map(
+            (slate) =>
+              Number(slate.id),
+          ),
+      );
+
+    const standingsParticipantTeamIds =
+      new Set(
+        safeSlateTeams
+          .filter(
+            (row) =>
+              standingsSlateIds.has(
+                Number(row.slate_id),
+              ) &&
+              row.is_participating !== false,
+          )
+          .map(
+            (row) =>
+              Number(row.team_id),
+          ),
+      );
+
+    const standingsTeams =
+      safeTeams.filter(
+        (team) =>
+          standingsParticipantTeamIds.has(
+            Number(team.id),
+          ),
+      );
+
+    const standings: StandingRow[] = standingsTeams
+      .map((team) => {
+        const teamRows = seasonResults.filter((row) => row.team_id === team.id);
 
       const playedRows = teamRows.filter((row) => (row.fantasy_points ?? 0) > 0);
       const scores = playedRows.map((row) => Number(row.fantasy_points ?? 0));
@@ -368,25 +419,46 @@ export async function GET(request: NextRequest) {
       const runnerUps = playedRows.filter((row) => row.finish_position === 2).length;
       const slatesPlayed = playedRows.length;
 
-      return {
-        season: isAllTime ? "all" : selectedSeason ?? 0,
-        team_id: team.id,
-        name: team.name,
-        wins,
-        runner_ups: runnerUps,
-        avg_finish:
-          finishes.length > 0
-            ? roundTo(finishes.reduce((sum, value) => sum + value, 0) / finishes.length, 2)
-            : null,
-        avg_score:
-          scores.length > 0
-            ? roundTo(scores.reduce((sum, value) => sum + value, 0) / scores.length, 2)
-            : null,
-        high_score: scores.length > 0 ? roundTo(Math.max(...scores), 2) : null,
-        low_score: scores.length > 0 ? roundTo(Math.min(...scores), 2) : null,
-        slates_played: slatesPlayed,
-      };
-    });
+        return {
+          season:
+            isAllTime
+              ? ("all" as const)
+              : selectedSeason ?? 0,
+          team_id: team.id,
+          name: team.name,
+          wins,
+          runner_ups: runnerUps,
+          avg_finish:
+            finishes.length > 0
+              ? roundTo(
+                  finishes.reduce((sum, value) => sum + value, 0) /
+                    finishes.length,
+                  2,
+                )
+              : null,
+          avg_score:
+            scores.length > 0
+              ? roundTo(
+                  scores.reduce((sum, value) => sum + value, 0) /
+                    scores.length,
+                  2,
+                )
+              : null,
+          high_score:
+            scores.length > 0
+              ? roundTo(Math.max(...scores), 2)
+              : null,
+          low_score:
+            scores.length > 0
+              ? roundTo(Math.min(...scores), 2)
+              : null,
+          slates_played: slatesPlayed,
+        };
+      })
+      .filter(
+        (row) =>
+          row.slates_played > 0,
+      );
 
     return NextResponse.json({
       success: true,

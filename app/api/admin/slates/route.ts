@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 
 type AdminSlateRow = {
   id: number;
@@ -31,6 +33,31 @@ export async function GET(request: Request) {
           ? "golf"
           : "nba";
 
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Login required." },
+        { status: 401 },
+      );
+    }
+
+    const activeLeague =
+      await getActiveLeagueForSport(
+        user,
+        sport,
+      );
+
+    if (!activeLeague) {
+      return NextResponse.json(
+        {
+          error:
+            "This League is not enabled for the active Group.",
+        },
+        { status: 404 },
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from("slates")
       .select(
@@ -49,6 +76,10 @@ export async function GET(request: Request) {
         ].join(",")
       )
       .eq("sport", sport)
+      .eq(
+        "league_id",
+        activeLeague.league.id,
+      )
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false });
 
