@@ -422,17 +422,17 @@ export default function AdminPage() {
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <Link
                   href="/admin/groups"
-                  className="group rounded-2xl border border-violet-200 bg-violet-50 p-5 transition hover:border-violet-400"
+                  className="group rounded-2xl border border-slate-700 bg-slate-950/40 p-5 transition hover:border-violet-500 hover:bg-slate-900"
                 >
-                  <h3 className="font-semibold text-slate-950">
+                  <h3 className="font-semibold text-slate-100">
                     Manage Groups
                   </h3>
 
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
                     Create Groups, manage Group roles, and invite new or existing 111 Sports users.
                   </p>
 
-                  <div className="mt-4 text-sm font-semibold text-violet-700">
+                  <div className="mt-4 text-sm font-semibold text-violet-400">
                     Open →
                   </div>
                 </Link>

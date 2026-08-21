@@ -926,12 +926,24 @@ export async function POST(
         ).trim();
 
 
+      /*
+       * Blank slug means "derive it from the Group name."
+       *
+       * The admin UI intentionally allows this field to be empty.
+       * `??` alone is not enough because an empty string is neither
+       * null nor undefined.
+       */
+      const requestedSlug =
+        String(
+          body.slug ??
+            "",
+        ).trim();
+
+
       const slug =
         normalizeSlug(
-          String(
-            body.slug ??
-              name,
-          ),
+          requestedSlug ||
+            name,
         );
 
 
@@ -1111,6 +1123,167 @@ export async function POST(
         throw new Error(
           `Unable to create Group administrator membership: ${membershipError.message}`,
         );
+      }
+
+
+      /*
+       * The Group creator is already an active Admin member.
+       * They also need their own Group-specific fantasy team,
+       * just like users who join later through an invitation.
+       */
+      const creatorTeamBaseName =
+        String(
+          user.displayName ??
+            "Player",
+        )
+          .trim()
+          .replace(
+            /\s+/g,
+            " ",
+          ) ||
+        "Player";
+
+
+      const {
+        data:
+          existingCreatorTeam,
+        error:
+          existingCreatorTeamError,
+      } =
+        await supabaseAdmin
+          .from(
+            "teams",
+          )
+          .select(
+            `
+              id,
+              name
+            `,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .eq(
+            "user_id",
+            user.id,
+          )
+          .maybeSingle();
+
+
+      if (
+        existingCreatorTeamError
+      ) {
+        await supabaseAdmin
+          .from(
+            "groups",
+          )
+          .delete()
+          .eq(
+            "id",
+            groupId,
+          );
+
+
+        throw new Error(
+          `Unable to check Group creator team: ${existingCreatorTeamError.message}`,
+        );
+      }
+
+
+      if (
+        !existingCreatorTeam
+      ) {
+        let creatorTeamName =
+          creatorTeamBaseName;
+
+
+        const {
+          data:
+            sameNameTeam,
+          error:
+            sameNameTeamError,
+        } =
+          await supabaseAdmin
+            .from(
+              "teams",
+            )
+            .select(
+              "id",
+            )
+            .eq(
+              "name",
+              creatorTeamName,
+            )
+            .maybeSingle();
+
+
+        if (
+          sameNameTeamError
+        ) {
+          await supabaseAdmin
+            .from(
+              "groups",
+            )
+            .delete()
+            .eq(
+              "id",
+              groupId,
+            );
+
+
+          throw new Error(
+            `Unable to validate Group creator team name: ${sameNameTeamError.message}`,
+          );
+        }
+
+
+        if (
+          sameNameTeam
+        ) {
+          creatorTeamName =
+            `${creatorTeamBaseName} (${createdGroup.name})`;
+        }
+
+
+        const {
+          error:
+            creatorTeamError,
+        } =
+          await supabaseAdmin
+            .from(
+              "teams",
+            )
+            .insert({
+              name:
+                creatorTeamName,
+
+              group_id:
+                groupId,
+
+              user_id:
+                user.id,
+            });
+
+
+        if (
+          creatorTeamError
+        ) {
+          await supabaseAdmin
+            .from(
+              "groups",
+            )
+            .delete()
+            .eq(
+              "id",
+              groupId,
+            );
+
+
+          throw new Error(
+            `Unable to create Group creator team: ${creatorTeamError.message}`,
+          );
+        }
       }
 
 

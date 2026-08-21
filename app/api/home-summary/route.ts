@@ -1396,14 +1396,17 @@ export async function GET(request: Request) {
           }
         : null,
 
-      ...(sport === "nba"
-        ? [
-            { label: "🏆 Champion", value: "Mark" },
-            { label: "👑 Consistency King", value: "Josh" },
-            { label: "🛡 DPOY", value: "Jon" },
-            { label: "😂 Last Laugh", value: "Andy" },
-          ]
-        : []),
+      ...(
+        sport === "nba" &&
+        context.group.slug === "111"
+          ? [
+              { label: "🏆 Champion", value: "Mark" },
+              { label: "👑 Consistency King", value: "Josh" },
+              { label: "🛡 DPOY", value: "Jon" },
+              { label: "😂 Last Laugh", value: "Andy" },
+            ]
+          : []
+      ),
 
       mostWinsAllTime
         ? {

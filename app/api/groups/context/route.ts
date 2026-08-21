@@ -34,16 +34,27 @@ export async function GET() {
       );
     }
 
-    const context =
-      await getGroupContextForUser(
-        user,
-      );
+    const [
+      context,
+      groups,
+    ] =
+      await Promise.all([
+        getGroupContextForUser(
+          user,
+        ),
+
+        getAvailableGroupsForUser(
+          user,
+        ),
+      ]);
 
     return NextResponse.json({
       success:
         true,
 
       context,
+
+      groups,
     });
   } catch (
     error

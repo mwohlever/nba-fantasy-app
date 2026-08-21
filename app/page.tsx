@@ -20,6 +20,7 @@ import type {
 } from "@/components/lineups/types";
 import { getStatColumns, type StatColumn } from "@/lib/statColumns";
 import { useSelectedSport } from "@/components/providers/SportProvider";
+import { useGroupContext } from "@/components/providers/GroupProvider";
 import type { GolfCutLine } from "@/lib/golf/cutLine";
 
 type LatestSlate = {
@@ -361,6 +362,16 @@ function formatGolfRosterStatus(
 
 function HomePageContent() {
   const { selectedSport, setSelectedSport } = useSelectedSport();
+
+  const {
+    groupContext,
+  } =
+    useGroupContext();
+
+  const activeGroupId =
+    groupContext?.group.id ??
+    null;
+
   const searchParams = useSearchParams();
   const sportFromUrl = searchParams.get("sport");
   const sport =
@@ -396,6 +407,14 @@ function HomePageContent() {
    */
   const activeHomeSportRef = useRef(sport);
   activeHomeSportRef.current = sport;
+
+  const activeHomeGroupIdRef =
+    useRef<string | null>(
+      activeGroupId,
+    );
+
+  activeHomeGroupIdRef.current =
+    activeGroupId;
 
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -551,6 +570,20 @@ function HomePageContent() {
      * state for the newly selected sport.
      */
     const requestedSport = sport;
+    const requestedGroupId =
+      activeGroupId;
+
+    /*
+     * GroupProvider briefly has no resolved Group during initial
+     * hydration. Do not issue an unscoped Home request while
+     * that context is still loading.
+     */
+    if (!requestedGroupId) {
+      setData(null);
+      setSeasonAwards(null);
+      setGolfPlayerStats([]);
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -574,7 +607,9 @@ function HomePageContent() {
        */
       if (
         activeHomeSportRef.current !==
-        requestedSport
+          requestedSport ||
+        activeHomeGroupIdRef.current !==
+          requestedGroupId
       ) {
         return;
       }
@@ -644,13 +679,25 @@ function HomePageContent() {
 
   useEffect(() => {
     /*
-     * The previous response may remain in React state for one
-     * render after a sport switch. Mark it stale immediately.
+     * Sport and Group are both part of the Home data scope.
+     *
+     * Clear the previous scope immediately so a Group switch can
+     * never render the previous Group's slate, standings, ticker,
+     * awards, or Golf data while the new request is loading.
      */
     setDataSport(null);
+    setData(null);
+    setSeasonAwards(null);
+    setGolfPlayerStats([]);
+    setMessage("");
 
-    void loadHomeSummary();
-  }, [sport]);
+    if (activeGroupId) {
+      void loadHomeSummary();
+    }
+  }, [
+    sport,
+    activeGroupId,
+  ]);
 
   useEffect(() => {
     if (!slateRosterModal) {

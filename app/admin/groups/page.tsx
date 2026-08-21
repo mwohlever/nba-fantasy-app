@@ -10,6 +10,10 @@ import Link from "next/link";
 
 import AppNav from "@/components/AppNav";
 
+import {
+  useGroupContext,
+} from "@/components/providers/GroupProvider";
+
 
 type LeagueRow = {
   id: string;
@@ -242,6 +246,12 @@ function inviteStatusClass(
 
 
 export default function GroupsAdminPage() {
+  const {
+    refreshGroupContext,
+  } =
+    useGroupContext();
+
+
   const [
     data,
     setData,
@@ -730,9 +740,13 @@ export default function GroupsAdminPage() {
       `Created ${result.group.name}.`,
     );
 
-    await loadGroups(
-      result.group.id,
-    );
+    await Promise.all([
+      loadGroups(
+        result.group.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
   }
 
 
