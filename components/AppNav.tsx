@@ -247,8 +247,12 @@ function AppNavContent() {
 
 
   /*
-   * If Group configuration eventually disables the currently
-   * stored sport, fall back to the first enabled League.
+   * If the active Group does not offer the currently selected
+   * sport, move to its first enabled League and make the URL
+   * agree with that fallback.
+   *
+   * This is especially important when switching Groups while
+   * the current URL contains ?sport=<old-group-sport>.
    */
   useEffect(() => {
     if (
@@ -264,19 +268,50 @@ function AppNavContent() {
       return;
     }
 
+    const fallbackSport =
+      displayedSports[0].key;
+
     setSelectedSport(
-      displayedSports[0].key,
+      fallbackSport,
+    );
+
+    router.replace(
+      getSportDestination(
+        fallbackSport,
+      ),
     );
   }, [
     groupContext,
     displayedSports,
     selectedSport,
     setSelectedSport,
+    router,
   ]);
 
+  /*
+   * The route may synchronize the selected sport only when that
+   * sport is actually enabled in the active Group.
+   *
+   * Without this guard:
+   *   Group A / Golf
+   *     -> switch to Group B without Golf
+   *     -> fallback sets NBA
+   *     -> stale ?sport=golf sets Golf again
+   *     -> infinite state loop.
+   */
   useEffect(() => {
+    const routeSportIsEnabled =
+      routeSport
+        ? displayedSports.some(
+            (sport) =>
+              sport.key ===
+              routeSport,
+          )
+        : false;
+
     if (
       routeSport &&
+      routeSportIsEnabled &&
       routeSport !== selectedSport
     ) {
       setSelectedSport(
@@ -285,6 +320,7 @@ function AppNavContent() {
     }
   }, [
     routeSport,
+    displayedSports,
     selectedSport,
     setSelectedSport,
   ]);
