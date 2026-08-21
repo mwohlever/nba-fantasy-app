@@ -406,6 +406,39 @@ export default function AdminPage() {
               </p>
             </section>
 
+            <section className="rounded-3xl border border-violet-200 bg-white p-5 shadow-sm">
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-violet-600">
+                Platform
+              </div>
+
+              <h2 className="mt-1 text-xl font-semibold">
+                Groups & Access
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-600">
+                Manage Groups, members, administrators, enabled games, and invitations.
+              </p>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <Link
+                  href="/admin/groups"
+                  className="group rounded-2xl border border-violet-200 bg-violet-50 p-5 transition hover:border-violet-400"
+                >
+                  <h3 className="font-semibold text-slate-950">
+                    Manage Groups
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    Create Groups, manage Group roles, and invite new or existing 111 Sports users.
+                  </p>
+
+                  <div className="mt-4 text-sm font-semibold text-violet-700">
+                    Open →
+                  </div>
+                </Link>
+              </div>
+            </section>
+
             {adminGroups.map(
               (
                 group,
