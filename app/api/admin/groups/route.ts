@@ -98,6 +98,8 @@ type ActionBody = {
 
   sports?: string[];
 
+  initialAdminUserId?: string;
+
   email?: string;
 
   inviteId?: string;
@@ -428,6 +430,66 @@ export async function GET() {
     );
 
 
+    let platformUsers:
+      Array<{
+        id: string;
+        display_name: string;
+        email: string | null;
+        avatar_url: string | null;
+        system_role: string;
+      }> =
+      [];
+
+
+    if (
+      user.systemRole ===
+      "super_admin"
+    ) {
+      const {
+        data:
+          platformUserData,
+        error:
+          platformUserError,
+      } =
+        await supabaseAdmin
+          .from(
+            "app_users",
+          )
+          .select(
+            `
+              id,
+              display_name,
+              email,
+              avatar_url,
+              system_role
+            `,
+          )
+          .order(
+            "display_name",
+            {
+              ascending:
+                true,
+            },
+          );
+
+
+      if (
+        platformUserError
+      ) {
+        throw new Error(
+          `Unable to load platform users: ${platformUserError.message}`,
+        );
+      }
+
+
+      platformUsers =
+        (
+          platformUserData ??
+          []
+        ) as typeof platformUsers;
+    }
+
+
     if (
       groupIds.length ===
       0
@@ -445,6 +507,8 @@ export async function GET() {
             user.systemRole ===
             "super_admin",
         },
+
+        platformUsers,
 
         groups:
           [],
@@ -829,6 +893,8 @@ export async function GET() {
           user.systemRole,
       },
 
+      platformUsers,
+
       groups:
         resultGroups,
     });
@@ -1020,6 +1086,78 @@ export async function POST(
       }
 
 
+      const initialAdminUserId =
+        String(
+          body.initialAdminUserId ??
+            "",
+        ).trim();
+
+
+      if (
+        !initialAdminUserId
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Choose an initial Group Admin.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
+      const {
+        data:
+          initialAdminUser,
+        error:
+          initialAdminUserError,
+      } =
+        await supabaseAdmin
+          .from(
+            "app_users",
+          )
+          .select(
+            `
+              id,
+              display_name,
+              email
+            `,
+          )
+          .eq(
+            "id",
+            initialAdminUserId,
+          )
+          .maybeSingle();
+
+
+      if (
+        initialAdminUserError
+      ) {
+        throw new Error(
+          `Unable to validate initial Group Admin: ${initialAdminUserError.message}`,
+        );
+      }
+
+
+      if (
+        !initialAdminUser
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "That initial Group Admin account no longer exists.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
       const {
         data:
           createdGroup,
@@ -1096,7 +1234,7 @@ export async function POST(
               groupId,
 
             user_id:
-              user.id,
+              initialAdminUser.id,
 
             role:
               "admin",
@@ -1127,13 +1265,14 @@ export async function POST(
 
 
       /*
-       * The Group creator is already an active Admin member.
-       * They also need their own Group-specific fantasy team,
-       * just like users who join later through an invitation.
+       * The selected initial Group Admin becomes the first
+       * active member and receives the Group-specific fantasy
+       * team identity. The Super Admin who created the Group
+       * does not need Group membership.
        */
       const creatorTeamBaseName =
         String(
-          user.displayName ??
+          initialAdminUser.display_name ??
             "Player",
         )
           .trim()
@@ -1166,7 +1305,7 @@ export async function POST(
           )
           .eq(
             "user_id",
-            user.id,
+            initialAdminUser.id,
           )
           .maybeSingle();
 
@@ -1262,7 +1401,7 @@ export async function POST(
                 groupId,
 
               user_id:
-                user.id,
+                initialAdminUser.id,
             });
 
 

@@ -106,6 +106,15 @@ type GroupRow = {
 };
 
 
+type PlatformUserRow = {
+  id: string;
+  display_name: string;
+  email: string | null;
+  avatar_url: string | null;
+  system_role: string;
+};
+
+
 type GroupsResponse = {
   success?: boolean;
 
@@ -125,6 +134,9 @@ type GroupsResponse = {
 
   groups?:
     GroupRow[];
+
+  platformUsers?:
+    PlatformUserRow[];
 };
 
 
@@ -404,9 +416,93 @@ export default function GroupsAdminPage() {
     );
 
 
+  const [
+    newGroupAdminUserId,
+    setNewGroupAdminUserId,
+  ] =
+    useState(
+      "",
+    );
+
+
+  const [
+    newGroupAdminSearch,
+    setNewGroupAdminSearch,
+  ] =
+    useState(
+      "",
+    );
+
+
+  const [
+    newGroupAdminPickerOpen,
+    setNewGroupAdminPickerOpen,
+  ] =
+    useState(
+      false,
+    );
+
+
   const groups =
     data?.groups ??
     [];
+
+
+  const platformUsers =
+    data?.platformUsers ??
+    [];
+
+
+  const selectedNewGroupAdmin =
+    useMemo(
+      () =>
+        platformUsers.find(
+          (platformUser) =>
+            platformUser.id ===
+            newGroupAdminUserId,
+        ) ??
+        null,
+      [
+        platformUsers,
+        newGroupAdminUserId,
+      ],
+    );
+
+
+  const filteredPlatformUsers =
+    useMemo(
+      () => {
+        const query =
+          newGroupAdminSearch
+            .trim()
+            .toLowerCase();
+
+        if (!query) {
+          return platformUsers;
+        }
+
+        return platformUsers.filter(
+          (platformUser) =>
+            platformUser.display_name
+              .toLowerCase()
+              .includes(
+                query,
+              ) ||
+            (
+              platformUser.email ??
+              ""
+            )
+              .toLowerCase()
+              .includes(
+                query,
+              ),
+        );
+      },
+      [
+        platformUsers,
+        newGroupAdminSearch,
+      ],
+    );
 
 
   const selectedGroup =
@@ -769,6 +865,9 @@ export default function GroupsAdminPage() {
 
         sports:
           newGroupSports,
+
+        initialAdminUserId:
+          newGroupAdminUserId,
       });
 
     if (!result) {
@@ -781,6 +880,18 @@ export default function GroupsAdminPage() {
 
     setNewGroupSlug(
       "",
+    );
+
+    setNewGroupAdminUserId(
+      "",
+    );
+
+    setNewGroupAdminSearch(
+      "",
+    );
+
+    setNewGroupAdminPickerOpen(
+      false,
     );
 
     setShowCreateGroup(
@@ -1295,6 +1406,7 @@ export default function GroupsAdminPage() {
                 disabled={
                   saving ||
                   !newGroupName.trim() ||
+                  !newGroupAdminUserId ||
                   newGroupSports.length ===
                     0
                 }
@@ -1305,6 +1417,111 @@ export default function GroupsAdminPage() {
               >
                 Create
               </button>
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                Initial Group Admin
+              </label>
+
+              <div className="relative max-w-xl">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setNewGroupAdminPickerOpen(
+                      (current) =>
+                        !current,
+                    )
+                  }
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-left text-sm"
+                >
+                  <span>
+                    {selectedNewGroupAdmin
+                      ? (
+                          selectedNewGroupAdmin.email
+                            ? `${selectedNewGroupAdmin.display_name} · ${selectedNewGroupAdmin.email}`
+                            : selectedNewGroupAdmin.display_name
+                        )
+                      : "Choose an existing 111 Sports user"}
+                  </span>
+
+                  <span className="text-slate-400">
+                    ▾
+                  </span>
+                </button>
+
+                {newGroupAdminPickerOpen ? (
+                  <div className="absolute z-50 mt-2 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                    <input
+                      autoFocus
+                      value={
+                        newGroupAdminSearch
+                      }
+                      onChange={(event) =>
+                        setNewGroupAdminSearch(
+                          event.target.value,
+                        )
+                      }
+                      placeholder="Search name or email…"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-500"
+                    />
+
+                    <div className="mt-2 max-h-64 overflow-y-auto">
+                      {filteredPlatformUsers.length ===
+                      0 ? (
+                        <div className="px-3 py-3 text-sm text-slate-500">
+                          No matching users.
+                        </div>
+                      ) : (
+                        filteredPlatformUsers.map(
+                          (
+                            platformUser,
+                          ) => (
+                            <button
+                              key={
+                                platformUser.id
+                              }
+                              type="button"
+                              onClick={() => {
+                                setNewGroupAdminUserId(
+                                  platformUser.id,
+                                );
+
+                                setNewGroupAdminSearch(
+                                  "",
+                                );
+
+                                setNewGroupAdminPickerOpen(
+                                  false,
+                                );
+                              }}
+                              className={`flex w-full items-center justify-between gap-4 rounded-lg px-3 py-2 text-left text-sm ${
+                                newGroupAdminUserId ===
+                                platformUser.id
+                                  ? "bg-violet-50 font-bold text-violet-800"
+                                  : "hover:bg-slate-50"
+                              }`}
+                            >
+                              <span>
+                                {platformUser.display_name}
+                              </span>
+
+                              <span className="truncate text-xs text-slate-400">
+                                {platformUser.email ??
+                                  "No email"}
+                              </span>
+                            </button>
+                          ),
+                        )
+                      )}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <p className="mt-1.5 text-xs text-slate-500">
+                This user becomes the Group Admin and member. Creating the Group does not automatically add the Super Admin.
+              </p>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
