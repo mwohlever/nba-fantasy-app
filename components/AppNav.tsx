@@ -186,6 +186,9 @@ function AppNavContent() {
   const displayedAdminGroups =
     getAdminMenuGroups(
       activeSport,
+      Boolean(
+        groupContext?.isSuperAdmin,
+      ),
     );
 
 
@@ -842,6 +845,42 @@ function AppNavContent() {
       href === "/ncaa-pickem"
     ) {
       return pathname === href;
+    }
+
+    /*
+     * Commissioner administration and platform administration
+     * currently share the /admin route tree, but they are
+     * separate navigation scopes.
+     *
+     * Groups & Access belongs to the Super Admin surface even
+     * though its legacy route remains /admin/groups.
+     */
+    const isPlatformAdminPath =
+      pathname.startsWith(
+        "/admin/platform",
+      ) ||
+      pathname.startsWith(
+        "/admin/groups",
+      );
+
+    if (
+      href === "/admin"
+    ) {
+      return (
+        (
+          pathname === "/admin" ||
+          pathname.startsWith(
+            "/admin/",
+          )
+        ) &&
+        !isPlatformAdminPath
+      );
+    }
+
+    if (
+      href === "/admin/platform"
+    ) {
+      return isPlatformAdminPath;
     }
 
     return (

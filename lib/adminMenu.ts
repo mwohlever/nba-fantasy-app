@@ -9,15 +9,27 @@ export type AdminMenuGroup = {
 };
 
 
-const ADMIN_HOME: AdminMenuGroup = {
-  label: "Overview",
-  links: [
-    {
-      href: "/admin",
-      label: "Admin Home",
-    },
-  ],
-};
+function getAdminOverviewGroup(
+  isSuperAdmin: boolean,
+): AdminMenuGroup {
+  return {
+    label: "Overview",
+    links: [
+      {
+        href: "/admin",
+        label: "Commissioner Center",
+      },
+      ...(isSuperAdmin
+        ? [
+            {
+              href: "/admin/platform",
+              label: "Super Admin Center",
+            },
+          ]
+        : []),
+    ],
+  };
+}
 
 
 const NOTIFICATIONS: AdminMenuGroup = {
@@ -37,17 +49,22 @@ const NOTIFICATIONS: AdminMenuGroup = {
 
 export function getAdminMenuGroups(
   sport: string,
+  isSuperAdmin = false,
 ): AdminMenuGroup[] {
+  const adminOverview =
+    getAdminOverviewGroup(
+      isSuperAdmin,
+    );
   if (sport === "nba-skins") {
     return [
-      ADMIN_HOME,
+      adminOverview,
     ];
   }
 
 
   if (sport === "ncaa") {
     return [
-      ADMIN_HOME,
+      adminOverview,
       {
         label: "Pick 'Em",
         links: [
@@ -64,7 +81,7 @@ export function getAdminMenuGroups(
 
   if (sport === "nfl") {
     return [
-      ADMIN_HOME,
+      adminOverview,
       {
         label: "Slates",
         links: [
@@ -102,7 +119,7 @@ export function getAdminMenuGroups(
 
   if (sport === "golf") {
     return [
-      ADMIN_HOME,
+      adminOverview,
       {
         label: "Slates",
         links: [
@@ -138,7 +155,7 @@ export function getAdminMenuGroups(
    * NBA fantasy.
    */
   return [
-    ADMIN_HOME,
+    adminOverview,
     {
       label: "Slates",
       links: [
