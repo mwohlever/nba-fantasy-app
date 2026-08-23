@@ -11,6 +11,11 @@ import {
   type PushResult,
 } from "@/lib/push";
 import { requireAdminApi } from "@/lib/requireAdminApi";
+
+import {
+  canOperateNotificationLeague,
+} from "@/lib/notificationHistoryScope";
+
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type RecoveryBody = {
@@ -87,6 +92,7 @@ async function retryHistoryRow(
         id,
         event_key,
         notification_type,
+        league_id,
         user_id,
         slate_id,
         title,
@@ -115,6 +121,73 @@ async function retryHistoryRow(
       { status: 404 }
     );
   }
+
+  let retryLeagueId =
+    history.league_id
+      ? String(
+          history.league_id,
+        )
+      : null;
+
+
+  /*
+   * Compatibility for old history rows that predate league_id.
+   * Slate-backed rows can still recover their Group ownership.
+   */
+  if (
+    !retryLeagueId &&
+    history.slate_id
+  ) {
+    const {
+      data:
+        retrySlate,
+    } =
+      await supabaseAdmin
+        .from(
+          "slates",
+        )
+        .select(
+          "league_id",
+        )
+        .eq(
+          "id",
+          Number(
+            history.slate_id,
+          ),
+        )
+        .maybeSingle();
+
+
+    retryLeagueId =
+      retrySlate?.league_id
+        ? String(
+            retrySlate.league_id,
+          )
+        : null;
+  }
+
+
+  const canRetry =
+    await canOperateNotificationLeague(
+      retryLeagueId,
+    );
+
+
+  if (
+    !canRetry
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "You do not have permission to retry notifications for this Group.",
+      },
+      {
+        status:
+          403,
+      },
+    );
+  }
+
 
   if (
     history.status !== "failed" &&
@@ -335,7 +408,7 @@ async function sendMissedGolfEvent(
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, sport, display_name"
+        "id, date, start_date, end_date, sport, display_name, league_id"
       )
       .eq("id", slateId)
       .eq("sport", "golf")
@@ -402,6 +475,33 @@ async function sendMissedGolfEvent(
       { status: 404 }
     );
   }
+
+
+  const canSend =
+    await canOperateNotificationLeague(
+      slate.league_id
+        ? String(
+            slate.league_id,
+          )
+        : null,
+    );
+
+
+  if (
+    !canSend
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "You do not have permission to send notifications for this Group.",
+      },
+      {
+        status:
+          403,
+      },
+    );
+  }
+
 
   const {
     data: persistedRound,

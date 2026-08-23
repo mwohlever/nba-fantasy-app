@@ -91,38 +91,14 @@ export async function GET(
   }
 
   try {
-    const reminderSettings =
-      await getNcaaPickEmNotificationSettings();
-
-    if (
-      !reminderSettings.enabled
-    ) {
-      return NextResponse.json({
-        success: true,
-        checkedWeeks: 0,
-        remindersSent: 0,
-        remindersSkipped: 0,
-        disabled: true,
-        message:
-          "NCAA Pick 'Em reminders are disabled by the commissioner.",
-      });
-    }
-
     const now =
       Date.now();
 
-    const reminderHours =
-      reminderSettings.reminderHours;
-
     /*
-     * There is no guaranteed production scheduler.
+     * League reminder timing can vary by Group.
      *
-     * Normal logged-in app activity can call this check.
-     * Once a card enters its configured reminder window,
-     * the first available app heartbeat can send the reminder.
-     *
-     * sendLoggedNotification() + the per-user/week event key
-     * makes repeated checks safe and prevents duplicate pushes.
+     * Load every open week inside the largest supported reminder
+     * horizon, then apply that week's own league setting below.
      */
     const windowStart =
       new Date(
@@ -132,7 +108,7 @@ export async function GET(
     const windowEnd =
       new Date(
         now +
-          reminderHours *
+          168 *
             60 *
             60 *
             1000,
@@ -147,7 +123,7 @@ export async function GET(
           "ncaa_pickem_weeks",
         )
         .select(
-          "id, season, week_number, label, lock_at, status",
+          "id, season, week_number, label, lock_at, status, league_id",
         )
         .eq(
           "status",
@@ -183,52 +159,315 @@ export async function GET(
         remindersSent: 0,
         remindersSkipped: 0,
         message:
-          `No Pick 'Em week is currently within the ${reminderHours}-hour reminder window.`,
-        reminderHours,
+          "No Pick 'Em week is currently within the 168-hour maximum reminder window.",
       });
     }
+
+    const candidateLeagueIds =
+      [
+        ...new Set(
+          weeks
+            .map(
+              (week) =>
+                week.league_id
+                  ? String(
+                      week.league_id,
+                    )
+                  : null,
+            )
+            .filter(
+              (
+                leagueId,
+              ): leagueId is string =>
+                Boolean(
+                  leagueId,
+                ),
+            ),
+        ),
+      ];
+
+    const {
+      data: leagueRows,
+      error: leaguesError,
+    } =
+      candidateLeagueIds.length >
+      0
+        ? await supabaseAdmin
+            .from(
+              "leagues",
+            )
+            .select(
+              "id, group_id",
+            )
+            .in(
+              "id",
+              candidateLeagueIds,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (
+      leaguesError
+    ) {
+      throw new Error(
+        `Failed to resolve Pick 'Em leagues: ${leaguesError.message}`,
+      );
+    }
+
+    const groupIdByLeagueId =
+      new Map(
+        (
+          leagueRows ??
+          []
+        ).map(
+          (row) => [
+            String(
+              row.id,
+            ),
+            String(
+              row.group_id,
+            ),
+          ],
+        ),
+      );
+
+    const groupIds =
+      [
+        ...new Set(
+          [
+            ...groupIdByLeagueId
+              .values(),
+          ],
+        ),
+      ];
+
+    const {
+      data: teamRows,
+      error: teamsError,
+    } =
+      groupIds.length >
+      0
+        ? await supabaseAdmin
+            .from(
+              "teams",
+            )
+            .select(
+              "id, user_id, group_id",
+            )
+            .in(
+              "group_id",
+              groupIds,
+            )
+            .not(
+              "user_id",
+              "is",
+              null,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (
+      teamsError
+    ) {
+      throw new Error(
+        `Failed to load Pick 'Em Group teams: ${teamsError.message}`,
+      );
+    }
+
+    const candidateUserIds =
+      [
+        ...new Set(
+          (
+            teamRows ??
+            []
+          )
+            .map(
+              (team) =>
+                team.user_id
+                  ? String(
+                      team.user_id,
+                    )
+                  : null,
+            )
+            .filter(
+              (
+                userId,
+              ): userId is string =>
+                Boolean(
+                  userId,
+                ),
+            ),
+        ),
+      ];
+
+    const {
+      data: membershipRows,
+      error: membershipsError,
+    } =
+      candidateUserIds.length >
+        0 &&
+      groupIds.length >
+        0
+        ? await supabaseAdmin
+            .from(
+              "group_memberships",
+            )
+            .select(
+              "group_id, user_id",
+            )
+            .in(
+              "group_id",
+              groupIds,
+            )
+            .in(
+              "user_id",
+              candidateUserIds,
+            )
+            .eq(
+              "is_active",
+              true,
+            )
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (
+      membershipsError
+    ) {
+      throw new Error(
+        `Failed to load active Group memberships: ${membershipsError.message}`,
+      );
+    }
+
+    const activeMembershipKeys =
+      new Set(
+        (
+          membershipRows ??
+          []
+        ).map(
+          (row) =>
+            `${String(
+              row.group_id,
+            )}:${String(
+              row.user_id,
+            )}`,
+        ),
+      );
+
+    const activeTeamRows =
+      (
+        teamRows ??
+        []
+      ).filter(
+        (team) =>
+          Boolean(
+            team.user_id,
+          ) &&
+          activeMembershipKeys.has(
+            `${String(
+              team.group_id,
+            )}:${String(
+              team.user_id,
+            )}`,
+          ),
+      );
+
+    const userIds =
+      [
+        ...new Set(
+          activeTeamRows.map(
+            (team) =>
+              String(
+                team.user_id,
+              ),
+          ),
+        ),
+      ];
 
     const {
       data: users,
       error: usersError,
     } =
-      await supabaseAdmin
-        .from(
-          "app_users",
-        )
-        .select(
-          "id, team_id, display_name",
-        )
-        .eq(
-          "is_active",
-          true,
-        );
+      userIds.length >
+      0
+        ? await supabaseAdmin
+            .from(
+              "app_users",
+            )
+            .select(
+              "id, display_name",
+            )
+            .in(
+              "id",
+              userIds,
+            )
+            .eq(
+              "is_active",
+              true,
+            )
+        : {
+            data: [],
+            error: null,
+          };
 
-    if (usersError) {
+    if (
+      usersError
+    ) {
       throw new Error(
         `Failed to load active users: ${usersError.message}`,
       );
     }
 
-    const activeUsers =
-      (
-        users ??
-        []
-      ).filter(
-        (user) =>
-          user.team_id !==
-            null &&
-          user.team_id !==
-            undefined,
+    const userById =
+      new Map(
+        (
+          users ??
+          []
+        ).map(
+          (user) => [
+            String(
+              user.id,
+            ),
+            user,
+          ],
+        ),
       );
 
-    const userIds =
-      activeUsers.map(
-        (user) =>
-          String(
-            user.id,
-          ),
+    const teamsByGroupId =
+      new Map<
+        string,
+        typeof activeTeamRows
+      >();
+
+    for (
+      const team
+      of activeTeamRows
+    ) {
+      const groupId =
+        String(
+          team.group_id,
+        );
+
+      const existing =
+        teamsByGroupId.get(
+          groupId,
+        ) ??
+        [];
+
+      existing.push(
+        team,
       );
+
+      teamsByGroupId.set(
+        groupId,
+        existing,
+      );
+    }
 
     const {
       data: preferences,
@@ -309,6 +548,75 @@ export async function GET(
         Number(
           week.id,
         );
+
+      const leagueId =
+        week.league_id
+          ? String(
+              week.league_id,
+            )
+          : null;
+
+      if (
+        !leagueId
+      ) {
+        continue;
+      }
+
+      const groupId =
+        groupIdByLeagueId.get(
+          leagueId,
+        ) ??
+        null;
+
+      if (
+        !groupId
+      ) {
+        continue;
+      }
+
+      const reminderSettings =
+        await getNcaaPickEmNotificationSettings(
+          leagueId,
+        );
+
+      if (
+        !reminderSettings.enabled
+      ) {
+        continue;
+      }
+
+      const lockAtMs =
+        week.lock_at
+          ? new Date(
+              week.lock_at,
+            ).getTime()
+          : NaN;
+
+      const leagueWindowEnd =
+        now +
+        reminderSettings
+          .reminderHours *
+          60 *
+          60 *
+          1000;
+
+      if (
+        !Number.isFinite(
+          lockAtMs,
+        ) ||
+        lockAtMs <
+          now ||
+        lockAtMs >
+          leagueWindowEnd
+      ) {
+        continue;
+      }
+
+      const weekTeams =
+        teamsByGroupId.get(
+          groupId,
+        ) ??
+        [];
 
       const {
         data: games,
@@ -420,18 +728,29 @@ export async function GET(
       }
 
       for (
-        const user
-        of activeUsers
+        const team
+        of weekTeams
       ) {
         const userId =
           String(
-            user.id,
+            team.user_id,
           );
 
         const teamId =
           Number(
-            user.team_id,
+            team.id,
           );
+
+        const user =
+          userById.get(
+            userId,
+          );
+
+        if (
+          !user
+        ) {
+          continue;
+        }
 
         const displayName =
           String(
@@ -578,6 +897,7 @@ export async function GET(
 
             userId,
             teamId,
+            leagueId,
 
             title,
             body,

@@ -296,7 +296,7 @@ export default function GroupProvider({
           await loadContext();
 
           router.push(
-            "/",
+            `${window.location.pathname}${window.location.search}`,
           );
 
           router.refresh();

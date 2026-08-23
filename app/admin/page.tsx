@@ -32,7 +32,7 @@ const NOTIFICATION_CARDS:
         "/admin/notification-templates",
 
       title:
-        "Notification Templates",
+        "Notification Controls",
 
       description:
         "Control notification wording, timing, and sport-specific message settings.",
@@ -389,16 +389,16 @@ export default function AdminPage() {
           </section>
         ) : (
           <>
-            <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
               <div className="text-xs font-black uppercase tracking-[0.18em] text-sky-600">
                 {sport.emoji} {sport.label}
               </div>
 
-              <h1 className="mt-2 text-3xl font-bold tracking-tight">
+              <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
                 Commissioner Control Center
               </h1>
 
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-600">
                 {selectedSport ===
                 "ncaa"
                   ? "Manage weekly Pick 'Em games, reminders, and commissioner operations."
@@ -414,21 +414,21 @@ export default function AdminPage() {
                   key={
                     group.title
                   }
-                  className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4"
                 >
-                  <h2 className="text-xl font-semibold">
+                  <h2 className="text-lg font-semibold">
                     {
                       group.title
                     }
                   </h2>
 
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-0.5 text-xs leading-5 text-slate-500">
                     {
                       group.description
                     }
                   </p>
 
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     {group.cards.map(
                       (
                         card,
@@ -440,7 +440,7 @@ export default function AdminPage() {
                           href={
                             card.href
                           }
-                          className="group rounded-2xl border border-slate-200 bg-slate-50 p-5 transition hover:border-sky-300 hover:bg-sky-50"
+                          className="group rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-sky-300 hover:bg-sky-50 sm:p-4"
                         >
                           <h3 className="font-semibold text-slate-950">
                             {
@@ -448,13 +448,13 @@ export default function AdminPage() {
                             }
                           </h3>
 
-                          <p className="mt-2 text-sm leading-6 text-slate-600">
+                          <p className="mt-1 text-xs leading-5 text-slate-600">
                             {
                               card.description
                             }
                           </p>
 
-                          <div className="mt-4 text-sm font-semibold text-sky-700">
+                          <div className="mt-2 text-xs font-semibold text-sky-700">
                             Open →
                           </div>
                         </Link>

@@ -1,7 +1,9 @@
 import {
-  getNotificationTemplate,
   renderNotificationTemplate,
 } from "@/lib/notificationTemplates";
+import {
+  getLeagueNotificationTemplate,
+} from "@/lib/leagueNotificationSettings";
 import { sendLoggedNotification } from "@/lib/notifications";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSportConfig } from "@/lib/sports";
@@ -13,6 +15,7 @@ type SlateInput = {
   end_date: string;
   sport?: string;
   display_name?: string | null;
+  league_id?: string | null;
 };
 
 
@@ -165,8 +168,44 @@ export async function notifyNewlyFinishedPlayers(input: {
         ? "golf"
         : "nba";
 
-  const template =
-    await getNotificationTemplate("player_finished", sport);
+  let leagueId =
+    input.slate.league_id
+      ? String(input.slate.league_id)
+      : null;
+
+  if (!leagueId) {
+    const {
+      data: leagueSlate,
+      error: leagueSlateError,
+    } =
+      await supabaseAdmin
+        .from("slates")
+        .select("league_id")
+        .eq("id", input.slate.id)
+        .maybeSingle();
+
+    if (leagueSlateError) {
+      console.error(
+        "Unable to resolve league for player-finished notification:",
+        leagueSlateError,
+      );
+    }
+
+    leagueId =
+      leagueSlate?.league_id
+        ? String(leagueSlate.league_id)
+        : null;
+  }
+
+  const {
+    enabled: leagueNotificationEnabled,
+    template,
+  } =
+    await getLeagueNotificationTemplate(
+      "player_finished",
+      sport,
+      leagueId,
+    );
 
   const startDate =
     input.slate.start_date ??
@@ -245,14 +284,19 @@ export async function notifyNewlyFinishedPlayers(input: {
 
     let skipReason: string | null = null;
 
-    if (!user) {
-      skipReason = "The player's team does not have an active league account.";
+    if (!leagueNotificationEnabled) {
+      skipReason =
+        "Player-finished notifications are disabled by the commissioner.";
+    } else if (!user) {
+      skipReason =
+        "The player's team does not have an active league account.";
     } else if (
       preference &&
       (!preference.notifications_enabled ||
         !preference.player_finished_enabled)
     ) {
-      skipReason = "Player-finished notifications are disabled.";
+      skipReason =
+        "Player-finished notifications are disabled.";
     }
 
     const result = await sendLoggedNotification({
@@ -265,6 +309,7 @@ export async function notifyNewlyFinishedPlayers(input: {
       userId: user?.id ?? null,
       teamId,
       slateId: input.slate.id,
+      leagueId,
 
       /*
        * notification_history.player_id references the shared

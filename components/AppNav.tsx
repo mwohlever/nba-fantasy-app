@@ -303,25 +303,50 @@ function AppNavContent() {
    *     -> infinite state loop.
    */
   useEffect(() => {
+    /*
+     * Notification administration is a shared cross-sport route.
+     *
+     * Its ?sport= value must be authoritative even for dedicated
+     * game keys such as NCAA Pick 'Em and NBA Skins. The general
+     * routeSport resolver is designed primarily around game-page
+     * routes and can otherwise leave the previous fantasy sport
+     * mounted after the URL has already changed.
+     */
+    const notificationRouteSport =
+      pathname.startsWith(
+        "/admin/notification",
+      )
+        ? searchParams.get(
+            "sport",
+          )
+        : null;
+
+    const effectiveRouteSport =
+      notificationRouteSport ??
+      routeSport;
+
     const routeSportIsEnabled =
-      routeSport
+      effectiveRouteSport
         ? displayedSports.some(
             (sport) =>
               sport.key ===
-              routeSport,
+              effectiveRouteSport,
           )
         : false;
 
     if (
-      routeSport &&
+      effectiveRouteSport &&
       routeSportIsEnabled &&
-      routeSport !== selectedSport
+      effectiveRouteSport !==
+        selectedSport
     ) {
       setSelectedSport(
-        routeSport,
+        effectiveRouteSport,
       );
     }
   }, [
+    pathname,
+    searchParams,
     routeSport,
     displayedSports,
     selectedSport,
@@ -655,10 +680,20 @@ function AppNavContent() {
   function handleSelectSport(
     sportKey: string,
   ) {
-    const destination =
-      getSportDestination(
-        sportKey,
+    const isNotificationAdminRoute =
+      pathname.startsWith(
+        "/admin/notification",
       );
+
+    const destination =
+      isNotificationAdminRoute
+        ? appendSportParam(
+            pathname,
+            sportKey,
+          )
+        : getSportDestination(
+            sportKey,
+          );
 
     const currentSection =
       getCurrentSportSection();
@@ -692,8 +727,16 @@ function AppNavContent() {
       );
 
     if (
-      usesDedicatedFallback
+      usesDedicatedFallback ||
+      isNotificationAdminRoute
     ) {
+      /*
+       * Navigate first and let routeSport synchronize selectedSport.
+       *
+       * Notification admin pages preserve their route across sports,
+       * so updating selectedSport before the URL changes can race with
+       * the still-stale ?sport= value and immediately switch back.
+       */
       router.push(
         destination,
       );
