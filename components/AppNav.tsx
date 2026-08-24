@@ -278,6 +278,31 @@ function AppNavContent() {
       fallbackSport,
     );
 
+
+    const isCommissionerGroupSettings =
+      pathname.startsWith(
+        "/admin/groups",
+      ) &&
+      searchParams.get(
+        "view",
+      ) ===
+        "commissioner";
+
+
+    /*
+     * Group Settings is Group-scoped, not sport-page-scoped.
+     *
+     * If the newly active Group does not offer the previously
+     * selected sport, update the nav's selected sport but remain
+     * on Group Settings instead of redirecting to that sport's Home.
+     */
+    if (
+      isCommissionerGroupSettings
+    ) {
+      return;
+    }
+
+
     router.replace(
       getSportDestination(
         fallbackSport,
@@ -289,6 +314,8 @@ function AppNavContent() {
     selectedSport,
     setSelectedSport,
     router,
+    pathname,
+    searchParams,
   ]);
 
   /*
@@ -898,13 +925,36 @@ function AppNavContent() {
      * Groups & Access belongs to the Super Admin surface even
      * though its legacy route remains /admin/groups.
      */
+    const isCommissionerGroupSettings =
+      pathname.startsWith(
+        "/admin/groups",
+      ) &&
+      searchParams.get(
+        "view",
+      ) ===
+        "commissioner";
+
+
     const isPlatformAdminPath =
       pathname.startsWith(
         "/admin/platform",
       ) ||
-      pathname.startsWith(
-        "/admin/groups",
+      (
+        pathname.startsWith(
+          "/admin/groups",
+        ) &&
+        !isCommissionerGroupSettings
       );
+
+    if (
+      href ===
+        "/admin/groups?view=commissioner"
+    ) {
+      return (
+        isCommissionerGroupSettings
+      );
+    }
+
 
     if (
       href === "/admin"

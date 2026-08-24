@@ -108,6 +108,8 @@ type ActionBody = {
 
   leagueId?: string;
 
+  sportKey?: string;
+
   role?:
     | "member"
     | "admin";
@@ -2729,17 +2731,216 @@ export async function POST(
       if (
         !leagueId
       ) {
-        return NextResponse.json(
-          {
+        const requestedSportKey =
+          String(
+            body.sportKey ??
+              "",
+          ).trim();
+
+
+        if (
+          body.isActive !==
+            true ||
+          !Object.prototype.hasOwnProperty.call(
+            LEAGUE_TEMPLATES,
+            requestedSportKey,
+          )
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Choose a valid game to enable.",
+            },
+            {
+              status:
+                400,
+            },
+          );
+        }
+
+
+        const template =
+          LEAGUE_TEMPLATES[
+            requestedSportKey as
+              LeagueKey
+          ];
+
+
+        /*
+         * If this Group had the game previously and it was disabled,
+         * re-enable that existing League rather than creating another.
+         */
+        const {
+          data:
+            existingLeague,
+          error:
+            existingLeagueError,
+        } =
+          await supabaseAdmin
+            .from(
+              "leagues",
+            )
+            .select(
+              `
+                id,
+                name,
+                is_enabled
+              `,
+            )
+            .eq(
+              "group_id",
+              groupId,
+            )
+            .eq(
+              "sport_key",
+              template.sport_key,
+            )
+            .eq(
+              "game_mode",
+              template.game_mode,
+            )
+            .maybeSingle();
+
+
+        if (
+          existingLeagueError
+        ) {
+          throw new Error(
+            `Unable to inspect Group game: ${existingLeagueError.message}`,
+          );
+        }
+
+
+        if (
+          existingLeague
+        ) {
+          const {
             error:
-              "League is required.",
+              enableExistingError,
+          } =
+            await supabaseAdmin
+              .from(
+                "leagues",
+              )
+              .update({
+                is_enabled:
+                  true,
+              })
+              .eq(
+                "id",
+                existingLeague.id,
+              )
+              .eq(
+                "group_id",
+                groupId,
+              );
+
+
+          if (
+            enableExistingError
+          ) {
+            throw new Error(
+              `Unable to enable Group game: ${enableExistingError.message}`,
+            );
+          }
+
+
+          return NextResponse.json({
+            success:
+              true,
+
+            league: {
+              id:
+                String(
+                  existingLeague.id,
+                ),
+
+              name:
+                existingLeague.name,
+
+              isEnabled:
+                true,
+            },
+          });
+        }
+
+
+        const {
+          data:
+            createdLeague,
+          error:
+            createLeagueError,
+        } =
+          await supabaseAdmin
+            .from(
+              "leagues",
+            )
+            .insert({
+              group_id:
+                groupId,
+
+              sport_key:
+                template.sport_key,
+
+              game_mode:
+                template.game_mode,
+
+              name:
+                template.name,
+
+              slug:
+                template.slug,
+
+              is_enabled:
+                true,
+
+              settings_version:
+                1,
+
+              settings:
+                {},
+            })
+            .select(
+              `
+                id,
+                name,
+                is_enabled
+              `,
+            )
+            .single();
+
+
+        if (
+          createLeagueError ||
+          !createdLeague
+        ) {
+          throw new Error(
+            createLeagueError?.message
+              ? `Unable to add Group game: ${createLeagueError.message}`
+              : "Unable to add Group game.",
+          );
+        }
+
+
+        return NextResponse.json({
+          success:
+            true,
+
+          league: {
+            id:
+              String(
+                createdLeague.id,
+              ),
+
+            name:
+              createdLeague.name,
+
+            isEnabled:
+              true,
           },
-          {
-            status:
-              400,
-          },
-        );
+        });
       }
+
 
       const {
         data:

@@ -1,20 +1,55 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import {
+  redirect,
+} from "next/navigation";
+
+import {
+  getCurrentUser,
+} from "@/lib/auth";
+
+import {
+  getGroupContextForUser,
+} from "@/lib/groups/context";
+
 
 export default async function NewSlateLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children:
+    React.ReactNode;
 }>) {
-  const user = await getCurrentUser();
+  const user =
+    await getCurrentUser();
+
 
   if (!user) {
-    redirect("/login");
+    redirect(
+      "/login",
+    );
   }
 
-  if (user.role !== "admin") {
-    redirect("/");
+
+  if (
+    user.systemRole ===
+    "super_admin"
+  ) {
+    return children;
   }
+
+
+  const context =
+    await getGroupContextForUser(
+      user,
+    );
+
+
+  if (
+    !context?.isGroupAdmin
+  ) {
+    redirect(
+      "/",
+    );
+  }
+
 
   return children;
 }

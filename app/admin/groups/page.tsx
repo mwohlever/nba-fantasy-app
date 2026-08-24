@@ -8,6 +8,10 @@ import {
 
 import Link from "next/link";
 
+import {
+  useSearchParams,
+} from "next/navigation";
+
 import AppNav from "@/components/AppNav";
 
 import {
@@ -259,9 +263,21 @@ function inviteStatusClass(
 
 export default function GroupsAdminPage() {
   const {
+    groupContext,
     refreshGroupContext,
   } =
     useGroupContext();
+
+
+  const searchParams =
+    useSearchParams();
+
+
+  const commissionerView =
+    searchParams.get(
+      "view",
+    ) ===
+    "commissioner";
 
 
   const [
@@ -767,9 +783,68 @@ export default function GroupsAdminPage() {
 
   useEffect(
     () => {
+      /*
+       * Commissioner Group Settings is always scoped to the
+       * app-level active Group.
+       *
+       * Do not perform the initial Groups request until
+       * GroupProvider has resolved that active Group. Otherwise
+       * the first Group returned by /api/admin/groups can briefly
+       * render as the wrong Group.
+       */
+      if (
+        commissionerView
+      ) {
+        const activeGroupId =
+          groupContext?.group.id;
+
+
+        if (
+          !activeGroupId
+        ) {
+          return;
+        }
+
+
+        setSelectedGroupId(
+          activeGroupId,
+        );
+
+
+        setGroupPickerOpen(
+          false,
+        );
+
+
+        setLatestInviteUrl(
+          "",
+        );
+
+
+        setLatestInviteEmail(
+          "",
+        );
+
+
+        void loadGroups(
+          activeGroupId,
+        );
+
+
+        return;
+      }
+
+
+      /*
+       * Bare /admin/groups remains the Super Admin platform view
+       * and may load the complete Group list immediately.
+       */
       void loadGroups();
     },
-    [],
+    [
+      commissionerView,
+      groupContext?.group.id,
+    ],
   );
 
 
@@ -1259,6 +1334,55 @@ export default function GroupsAdminPage() {
   }
 
 
+  async function addGroupGame(
+    sportKey:
+      string,
+
+    label:
+      string,
+  ) {
+    if (
+      !selectedGroup
+    ) {
+      return;
+    }
+
+
+    const result =
+      await runAction({
+        action:
+          "set_league_enabled",
+
+        groupId:
+          selectedGroup.id,
+
+        sportKey,
+
+        isActive:
+          true,
+      });
+
+
+    if (!result) {
+      return;
+    }
+
+
+    setMessage(
+      `${label} enabled for ${selectedGroup.name}.`,
+    );
+
+
+    await Promise.all([
+      loadGroups(
+        selectedGroup.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
+  }
+
+
   async function copyInviteUrl() {
     if (
       !latestInviteUrl
@@ -1308,20 +1432,27 @@ export default function GroupsAdminPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="text-xs font-black uppercase tracking-[0.16em] text-sky-600">
-                111 Sports Platform
+                {commissionerView
+                  ? "Commissioner Center"
+                  : "111 Sports Platform"}
               </div>
 
               <h1 className="mt-1 text-2xl font-bold tracking-tight">
-                Groups & Access
+                {commissionerView
+                  ? "Group Settings"
+                  : "Groups & Access"}
               </h1>
 
               <p className="mt-1 text-sm text-slate-500">
-                Groups, games, members, roles, and invitations.
+                {commissionerView
+                  ? `Manage games, members, roles, and invitations${groupContext ? ` for ${groupContext.group.name}` : ""}.`
+                  : "Groups, games, members, roles, and invitations."}
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {data?.permissions?.canCreateGroups ? (
+              {!commissionerView &&
+              data?.permissions?.canCreateGroups ? (
                 <button
                   type="button"
                   onClick={() =>
@@ -1339,10 +1470,16 @@ export default function GroupsAdminPage() {
               ) : null}
 
               <Link
-                href="/admin/platform"
+                href={
+                  commissionerView
+                    ? "/admin"
+                    : "/admin/platform"
+                }
                 className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
-                ← Super Admin Center
+                {commissionerView
+                  ? "← Commissioner Center"
+                  : "← Super Admin Center"}
               </Link>
             </div>
           </div>
@@ -1363,7 +1500,8 @@ export default function GroupsAdminPage() {
         ) : null}
 
 
-        {showCreateGroup &&
+        {!commissionerView &&
+        showCreateGroup &&
         data?.permissions?.canCreateGroups ? (
           <section className="rounded-2xl border border-violet-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between gap-4">
@@ -1564,8 +1702,20 @@ export default function GroupsAdminPage() {
         ) : (
           <>
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="grid gap-4 lg:grid-cols-[320px_1fr_auto] lg:items-end">
-                <div className="relative">
+              <div
+                className={`grid gap-4 lg:items-end ${
+                  commissionerView
+                    ? "lg:grid-cols-1"
+                    : "lg:grid-cols-[320px_1fr_auto]"
+                }`}
+              >
+                <div
+                  className={
+                    commissionerView
+                      ? "hidden"
+                      : "relative"
+                  }
+                >
                   <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
                     Group
                   </label>
@@ -1696,6 +1846,7 @@ export default function GroupsAdminPage() {
 
 
                 {selectedGroup &&
+                !commissionerView &&
                 data?.permissions?.isSuperAdmin ? (
                   <div className="flex flex-wrap justify-end gap-2">
                     <button
@@ -1759,6 +1910,55 @@ export default function GroupsAdminPage() {
                       </div>
                     </div>
                   </div>
+
+                  {GAME_OPTIONS.some(
+                    (game) =>
+                      !selectedGroup.leagues.some(
+                        (league) =>
+                          league.sport_key ===
+                          game.key,
+                      ),
+                  ) ? (
+                    <div className="border-b border-slate-200 px-4 py-3">
+                      <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Add a game
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {GAME_OPTIONS.filter(
+                          (game) =>
+                            !selectedGroup.leagues.some(
+                              (league) =>
+                                league.sport_key ===
+                                game.key,
+                            ),
+                        ).map(
+                          (game) => (
+                            <button
+                              key={
+                                game.key
+                              }
+                              type="button"
+                              disabled={
+                                saving
+                              }
+                              onClick={() =>
+                                void addGroupGame(
+                                  game.key,
+                                  game.label,
+                                )
+                              }
+                              className="rounded-full border border-sky-300 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-50"
+                            >
+                              + {game.emoji}{" "}
+                              {game.label}
+                            </button>
+                          ),
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+
 
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[700px] text-left text-sm">

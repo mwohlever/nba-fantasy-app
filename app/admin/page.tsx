@@ -406,6 +406,36 @@ export default function AdminPage() {
               </p>
             </section>
 
+            <section className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+              <h2 className="text-lg font-semibold">
+                Group
+              </h2>
+
+              <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                Manage the people and games available in this Group.
+              </p>
+
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Link
+                  href="/admin/groups?view=commissioner"
+                  className="group rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-sky-300 hover:bg-sky-50 sm:p-4"
+                >
+                  <h3 className="font-semibold text-slate-950">
+                    Group Settings
+                  </h3>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    Manage enabled games, members, commissioner roles, and invitations.
+                  </p>
+
+                  <div className="mt-2 text-xs font-semibold text-sky-700">
+                    Open →
+                  </div>
+                </Link>
+              </div>
+            </section>
+
+
             {adminGroups.map(
               (
                 group,

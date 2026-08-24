@@ -17,6 +17,14 @@ function getCommissionerLinks(
       href: "/admin",
       label: "Overview",
     },
+
+    {
+      href:
+        "/admin/groups?view=commissioner",
+
+      label:
+        "Group Settings",
+    },
   ];
 
 
