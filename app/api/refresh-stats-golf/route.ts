@@ -1916,60 +1916,13 @@ export async function POST(request: Request) {
      */
 
     /*
-     * ESPN remains authoritative for scoring and live round
-     * advancement.
-     *
-     * ESPN can, however, finish a round and create the next
-     * round's placeholder rows before it publishes the tee
-     * times. PGA TOUR frequently has the official next-round
-     * pairings available first.
-     *
-     * In that narrow window:
-     *
-     *   - do NOT advance tournament.currentRound ourselves
-     *   - do NOT manufacture scoring activity
-     *   - fill only missing tee times on the already-published
-     *     next-round placeholder
-     *
-     * Resolve the PGA tournament ID from PGA's official season
-     * schedule so this works for future tournaments without a
-     * hard-coded tournament map.
+     * ESPN remains authoritative for scoring and live round advancement.
+     * PGA TOUR is authoritative for the tee sheet it is currently
+     * publishing. The PGA parser returns that published round explicitly,
+     * so never infer "next round" from ESPN's tournament.currentRound.
      */
-    const tournamentRound =
-      Number(
-        tournament.currentRound ?? 0,
-      );
-
-    const fallbackRoundNumber =
-      tournamentRound >= 1 &&
-      tournamentRound <
-        EXPECTED_TOURNAMENT_ROUNDS
-        ? tournamentRound + 1
-        : null;
-
-    const needsFutureTeeFallback =
-      fallbackRoundNumber !== null &&
-      competitors.some(
-        (competitor) => {
-          const futureRound =
-            competitor.rounds.find(
-              (round) =>
-                Number(
-                  round.roundNumber,
-                ) ===
-                fallbackRoundNumber,
-            );
-
-          return (
-            futureRound !==
-              undefined &&
-            futureRound
-              .holesCompleted === 0 &&
-            !futureRound.teeTime &&
-            !futureRound.teeTimeRaw
-          );
-        },
-      );
+    let pgaPublishedRoundNumber:
+      number | null = null;
 
     const pgaTeeTimesByName =
       new Map<
@@ -1980,147 +1933,141 @@ export async function POST(request: Request) {
         }
       >();
 
-    if (
-      needsFutureTeeFallback &&
-      fallbackRoundNumber !== null
-    ) {
-      try {
-        const year =
-          tournament.startDate
-            ? new Date(
-                tournament.startDate,
-              ).getUTCFullYear()
-            : new Date()
-                .getUTCFullYear();
+    try {
+      const year =
+        tournament.startDate
+          ? new Date(
+              tournament.startDate,
+            ).getUTCFullYear()
+          : new Date()
+              .getUTCFullYear();
 
-        const pgaTournament =
-          await resolvePgaTourTournament(
+      const pgaTournament =
+        await resolvePgaTourTournament(
+          {
+            tournamentName:
+              tournament.name,
+            year,
+          },
+        );
+
+      if (pgaTournament) {
+        const pgaTeeTimes =
+          await fetchPgaTourTeeTimes(
             {
-              tournamentName:
-                tournament.name,
-              year,
+              tournamentUrl:
+                pgaTournament
+                  .tournamentUrl,
             },
+            competitors.map(
+              (competitor) =>
+                competitor.displayName,
+            ),
           );
 
-        if (pgaTournament) {
-          const pgaTeeTimes =
-            await fetchPgaTourTeeTimes(
-              {
-                tournamentUrl:
-                  pgaTournament
-                    .tournamentUrl,
-              },
-              competitors.map(
-                (competitor) =>
-                  competitor
-                    .displayName,
-              ),
-            );
+        pgaPublishedRoundNumber =
+          pgaTeeTimes[0]
+            ?.roundNumber ??
+          null;
 
-          for (
-            const row
-            of pgaTeeTimes
+        for (const row of pgaTeeTimes) {
+          if (
+            pgaPublishedRoundNumber !==
+              null &&
+            row.roundNumber !==
+              pgaPublishedRoundNumber
           ) {
-            pgaTeeTimesByName.set(
-              normalizeGolfNameKey(
-                row.playerName,
-              ),
-              {
-                raw:
-                  row.teeTimeRaw,
-                iso:
-                  pgaUtcTeeTimeToIso(
-                    {
-                      raw:
-                        row.teeTimeRaw,
-                      tournamentStartDate:
-                        tournament
-                          .startDate,
-                      roundNumber:
-                        fallbackRoundNumber,
-                    },
-                  ),
-              },
-            );
+            continue;
           }
 
-          console.log(
-            "PGA TOUR future-round tee-time fallback",
+          pgaTeeTimesByName.set(
+            normalizeGolfNameKey(
+              row.playerName,
+            ),
             {
-              tournament:
-                tournament.name,
-              round:
-                fallbackRoundNumber,
-              pgaTournamentId:
-                pgaTournament
-                  .tournamentId,
-              matched:
-                pgaTeeTimesByName
-                  .size,
-            },
-          );
-        } else {
-          console.warn(
-            "PGA TOUR tournament could not be resolved from schedule",
-            {
-              tournament:
-                tournament.name,
-              year,
+              raw:
+                row.teeTimeRaw,
+              iso:
+                pgaUtcTeeTimeToIso(
+                  {
+                    raw:
+                      row.teeTimeRaw,
+                    tournamentStartDate:
+                      tournament.startDate,
+                    roundNumber:
+                      row.roundNumber,
+                  },
+                ),
             },
           );
         }
-      } catch (error) {
-        /*
-         * PGA tee-time fallback must never break score refresh.
-         * If PGA is temporarily unavailable, ESPN data continues
-         * refreshing normally and the future tee times stay blank.
-         */
-        console.warn(
-          "PGA TOUR tee-time fallback failed",
-          error,
+
+        console.log(
+          "PGA TOUR round-aware tee-time reconciliation",
+          {
+            tournament:
+              tournament.name,
+            round:
+              pgaPublishedRoundNumber,
+            pgaTournamentId:
+              pgaTournament.tournamentId,
+            matched:
+              pgaTeeTimesByName.size,
+          },
         );
       }
+    } catch (error) {
+      /*
+       * PGA tee-time reconciliation must never break score refresh.
+       * ESPN scoring continues normally if PGA is unavailable.
+       */
+      console.warn(
+        "PGA TOUR tee-time reconciliation failed",
+        error,
+      );
     }
 
     /*
-     * A successfully resolved future round is authoritative evidence
-     * that the golfer has advanced beyond the round represented by
-     * the stale top-level ESPN competitor status.
-     *
-     * golf_event_players is initially persisted before the PGA TOUR
-     * future-round fallback runs. Without this reconciliation a golfer
-     * can have:
-     *
-     *   golf_rounds:        Round 3 scheduled + real tee time
-     *   golf_event_players: Round 2 / round_complete
-     *
-     * That stale top-level state then leaks into Scores, Home, and the
-     * notification monitor.
-     *
-     * Promote the top-level event-player state only when we have an
-     * actual zero-hole future round plus a resolved tee time. This keeps
-     * the fallback conservative and works generically for R2/R3/R4.
+     * golf_event_players was persisted before the PGA lookup above.
+     * Reconcile its scheduling fields only for the exact round PGA says
+     * it is publishing. This fixes current-round ESPN timezone errors and
+     * still allows a genuinely published future round to advance the
+     * scheduling state after the immediately preceding round is complete.
      */
-    const promotedFutureRoundEventRows =
-      [];
+    const pgaTeeTimeEventRows = [];
 
-    if (fallbackRoundNumber !== null) {
+    if (pgaPublishedRoundNumber !== null) {
       for (const competitor of competitors) {
-        const futureRound =
+        const publishedRound =
           competitor.rounds.find(
             (round) =>
               Number(
                 round.roundNumber,
               ) ===
-              fallbackRoundNumber,
+              pgaPublishedRoundNumber,
           );
 
         if (
-          !futureRound ||
+          !publishedRound ||
           Number(
-            futureRound.holesCompleted ??
+            publishedRound.holesCompleted ??
               0,
           ) !== 0
+        ) {
+          continue;
+        }
+
+        const pgaTeeTime =
+          pgaTeeTimesByName.get(
+            normalizeGolfNameKey(
+              competitor.displayName,
+            ),
+          ) ??
+          null;
+
+        if (
+          !pgaTeeTime?.iso &&
+          !pgaTeeTime?.raw
         ) {
           continue;
         }
@@ -2151,149 +2098,72 @@ export async function POST(request: Request) {
               0,
           );
 
+        const isCurrentScheduledRound =
+          Number(
+            eventRow.current_round ?? 0,
+          ) ===
+            pgaPublishedRoundNumber &&
+          Number(
+            eventRow.holes_completed ?? 0,
+          ) === 0;
+
+        const canAdvanceToPublishedRound =
+          roundsCompleted ===
+            pgaPublishedRoundNumber - 1;
+
         if (
-          fallbackRoundNumber <=
-          roundsCompleted
+          !isCurrentScheduledRound &&
+          !canAdvanceToPublishedRound
         ) {
           continue;
         }
-
-        /*
-         * A published future tee time is useful scheduling data,
-         * but it does NOT by itself mean the golfer has advanced
-         * to that round.
-         *
-         * Only promote the top-level current_round when the golfer
-         * has completed the immediately preceding round.
-         *
-         * Examples:
-         *
-         *   completed R2 + R3 tee time -> promote to R3
-         *   completed R2 + R4 tee time -> remain R3
-         *   completed R3 + R4 tee time -> promote to R4
-         *
-         * We may still persist farther-ahead tee-time rows; this gate
-         * affects only the golfer's current/top-level round state.
-         */
-        if (
-          roundsCompleted <
-          fallbackRoundNumber - 1
-        ) {
-          continue;
-        }
-
-        const pgaFallback =
-          pgaTeeTimesByName.get(
-            normalizeGolfNameKey(
-              competitor.displayName,
-            ),
-          ) ??
-          null;
-
-        const resolvedTeeTime =
-          futureRound.teeTime ??
-          pgaFallback?.iso ??
-          null;
-
-        const resolvedTeeTimeRaw =
-          futureRound.teeTimeRaw ??
-          pgaFallback?.raw ??
-          null;
-
-        /*
-         * Do not manufacture progression from a placeholder round.
-         * We only promote when a real future tee time exists.
-         */
-        if (
-          !resolvedTeeTime &&
-          !resolvedTeeTimeRaw
-        ) {
-          continue;
-        }
-
-        /*
-         * The future round and tee time are scheduling information.
-         * They must not erase the fact that the golfer has completed
-         * the immediately preceding round.
-         *
-         * Example after R1:
-         *
-         *   top-level status: round_complete
-         *   current_round:    2
-         *   persisted R2:     scheduled + tee time
-         *
-         * Once R2 actually begins, the normal provider refresh will
-         * replace round_complete with active.
-         */
-        const preserveCompletedRoundStatus =
-          eventRow.status ===
-          "round_complete";
 
         eventRow.current_round =
-          fallbackRoundNumber;
-
+          pgaPublishedRoundNumber;
         eventRow.last_hole = null;
+        eventRow.tee_time =
+          pgaTeeTime.iso;
+        eventRow.tee_time_raw =
+          pgaTeeTime.raw;
 
         if (
-          !preserveCompletedRoundStatus
+          eventRow.status !==
+            "round_complete"
         ) {
           eventRow.status =
             "scheduled";
         }
 
-        eventRow.tee_time =
-          resolvedTeeTime;
-
-        eventRow.tee_time_raw =
-          resolvedTeeTimeRaw;
-
-        promotedFutureRoundEventRows.push(
+        pgaTeeTimeEventRows.push(
           eventRow,
         );
       }
     }
 
-    if (
-      promotedFutureRoundEventRows.length >
-      0
-    ) {
+    if (pgaTeeTimeEventRows.length > 0) {
       const {
-        error:
-          futureRoundPromotionError,
+        error: pgaEventRowError,
       } =
         await supabaseAdmin
           .from("golf_event_players")
           .upsert(
-            promotedFutureRoundEventRows,
+            pgaTeeTimeEventRows,
             {
               onConflict:
                 "slate_id,player_id",
             },
           );
 
-      if (futureRoundPromotionError) {
+      if (pgaEventRowError) {
         return NextResponse.json(
           {
             error:
-              "Golf future-round state could not be reconciled: " +
-              futureRoundPromotionError.message,
+              "Golf PGA tee-time state could not be reconciled: " +
+              pgaEventRowError.message,
           },
           { status: 500 },
         );
       }
-
-      console.log(
-        "Promoted Golf future-round event state",
-        {
-          tournament:
-            tournament.name,
-          round:
-            fallbackRoundNumber,
-          golfers:
-            promotedFutureRoundEventRows
-              .length,
-        },
-      );
     }
 
     const roundRows = competitors.flatMap((competitor) => {
@@ -2330,8 +2200,26 @@ export async function POST(request: Request) {
             score_display: null,
             strokes: null,
             holes_completed: 0,
-            tee_time: competitor.teeTime,
-            tee_time_raw: competitor.teeTimeRaw,
+            tee_time:
+              scheduledRoundNumber ===
+                pgaPublishedRoundNumber
+                ? pgaTeeTimesByName.get(
+                    normalizeGolfNameKey(
+                      competitor.displayName,
+                    ),
+                  )?.iso ??
+                  competitor.teeTime
+                : competitor.teeTime,
+            tee_time_raw:
+              scheduledRoundNumber ===
+                pgaPublishedRoundNumber
+                ? pgaTeeTimesByName.get(
+                    normalizeGolfNameKey(
+                      competitor.displayName,
+                    ),
+                  )?.raw ??
+                  competitor.teeTimeRaw
+                : competitor.teeTimeRaw,
             status: "scheduled" as const,
             updated_at: refreshedAt,
           },
@@ -2349,15 +2237,13 @@ export async function POST(request: Request) {
       const persistedRounds =
         competitor.rounds.map(
           (round) => {
-            const isFallbackRound =
-              fallbackRoundNumber !==
+            const isPgaPublishedRound =
+              pgaPublishedRoundNumber !==
                 null &&
               round.roundNumber ===
-                fallbackRoundNumber &&
+                pgaPublishedRoundNumber &&
               round.holesCompleted ===
-                0 &&
-              !round.teeTime &&
-              !round.teeTimeRaw;
+                0;
 
             return {
               event_player_id:
@@ -2373,23 +2259,15 @@ export async function POST(request: Request) {
               holes_completed:
                 round.holesCompleted,
               tee_time:
-                round.teeTime ??
-                (
-                  isFallbackRound
-                    ? pgaFallback
-                        ?.iso ??
-                      null
-                    : null
-                ),
+                isPgaPublishedRound
+                  ? pgaFallback?.iso ??
+                    round.teeTime
+                  : round.teeTime,
               tee_time_raw:
-                round.teeTimeRaw ??
-                (
-                  isFallbackRound
-                    ? pgaFallback
-                        ?.raw ??
-                      null
-                    : null
-                ),
+                isPgaPublishedRound
+                  ? pgaFallback?.raw ??
+                    round.teeTimeRaw
+                  : round.teeTimeRaw,
               status:
                 getRoundStatus(
                   round,

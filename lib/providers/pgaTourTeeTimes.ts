@@ -3,6 +3,7 @@ import "server-only";
 export type PgaTourTeeTime = {
   playerName: string;
   teeTimeRaw: string;
+  roundNumber: number;
 };
 
 export type PgaTourTournamentRef = {
@@ -181,6 +182,58 @@ function findClosestTimeBefore(
     : time;
 }
 
+function findPublishedRoundNumber(
+  pageText: string,
+): number | null {
+  /*
+   * PGA's TeeTimesV2 payload exposes the tee sheet that is
+   * actually selected/published as:
+   *
+   *   "defaultRound":1
+   *
+   * This is much safer than inferring the round from ESPN,
+   * because tomorrow's pairings may not exist yet even after
+   * today's round has started.
+   */
+  const defaultRoundMatch =
+    pageText.match(
+      /"defaultRound"\s*:\s*([1-4])/i,
+    );
+
+  if (defaultRoundMatch) {
+    return Number(
+      defaultRoundMatch[1],
+    );
+  }
+
+  /*
+   * Conservative fallbacks for PGA page variants.
+   */
+  const roundDisplayMatch =
+    pageText.match(
+      /"roundDisplay"\s*:\s*"R([1-4])"/i,
+    );
+
+  if (roundDisplayMatch) {
+    return Number(
+      roundDisplayMatch[1],
+    );
+  }
+
+  const visibleRoundMatch =
+    pageText.match(
+      /\bR([1-4])\b/i,
+    );
+
+  if (visibleRoundMatch) {
+    return Number(
+      visibleRoundMatch[1],
+    );
+  }
+
+  return null;
+}
+
 async function fetchPgaHtml(
   url: string,
 ) {
@@ -349,6 +402,21 @@ export async function fetchPgaTourTeeTimes(
   const normalizedText =
     normalizeName(text);
 
+  const publishedRoundNumber =
+    findPublishedRoundNumber(text);
+
+  if (publishedRoundNumber === null) {
+    console.warn(
+      "PGA TOUR tee-time page did not expose its published round",
+      {
+        tournamentUrl:
+          input.tournamentUrl,
+      },
+    );
+
+    return [];
+  }
+
   const results:
     PgaTourTeeTime[] = [];
 
@@ -410,6 +478,8 @@ export async function fetchPgaTourTeeTimes(
     results.push({
       playerName,
       teeTimeRaw,
+      roundNumber:
+        publishedRoundNumber,
     });
   }
 
