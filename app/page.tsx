@@ -136,6 +136,8 @@ type SlateRosterRow = {
   leaderboardOrder?: number | null;
   status?: string | null;
   statusLabel?: string | null;
+  teeTime?: string | null;
+  teeTimeRaw?: string | null;
   currentRound?: number | null;
   lastHole?: number | null;
   holesCompleted?: number | null;
@@ -286,6 +288,31 @@ function formatGolfRosterStatus(
   if (
     normalizedStatus === "scheduled"
   ) {
+    if (row.teeTime) {
+      const teeTime =
+        new Date(
+          row.teeTime,
+        );
+
+      if (
+        !Number.isNaN(
+          teeTime.getTime(),
+        )
+      ) {
+        return `⏰ ${teeTime.toLocaleTimeString(
+          "en-US",
+          {
+            hour:
+              "numeric",
+            minute:
+              "2-digit",
+            timeZone:
+              "America/New_York",
+          },
+        )}`;
+      }
+    }
+
     return rawLabel &&
       /tee|upcoming|scheduled|not started/i.test(
         rawLabel,

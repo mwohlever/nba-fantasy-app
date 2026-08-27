@@ -293,7 +293,7 @@ export async function GET(
         supabaseAdmin
           .from("golf_event_players")
           .select(
-            "id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed",
+            "id, player_id, leaderboard_order, official_score_to_par, official_score_display, fantasy_score, penalty_strokes, status, current_round, last_hole, holes_completed, rounds_completed, tee_time, tee_time_raw",
           )
           .eq("slate_id", slateId)
           .in("player_id", playerIds),
@@ -481,6 +481,12 @@ export async function GET(
             status:
               eventPlayer?.status ??
               "scheduled",
+            teeTime:
+              eventPlayer?.tee_time ??
+              null,
+            teeTimeRaw:
+              eventPlayer?.tee_time_raw ??
+              null,
             statusLabel:
               golfStatusLabel({
                 status:
