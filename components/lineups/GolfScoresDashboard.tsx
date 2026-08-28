@@ -360,6 +360,105 @@ function medalForPosition(position: number) {
   return `${position}.`;
 }
 
+function getTeamRoundProgress(
+  players: Player[],
+  getRawPlayerStat: (playerId: number) => PlayerStat | null,
+) {
+  const stats = players
+    .map((player) => getRawPlayerStat(player.id))
+    .filter((stat): stat is PlayerStat => stat !== null);
+
+  const terminalStatuses = new Set([
+    "finished",
+    "cut",
+    "withdrawn",
+    "disqualified",
+    "did_not_start",
+  ]);
+
+  const eligibleStats = stats.filter(
+    (stat) =>
+      !terminalStatuses.has(
+        String(stat.status ?? "").toLowerCase(),
+      ),
+  );
+
+  const playingRounds = eligibleStats.flatMap((stat) =>
+    (stat.rounds ?? [])
+      .filter(
+        (round) =>
+          Number(round.holes_completed ?? 0) > 0 &&
+          Number(round.holes_completed ?? 0) < 18,
+      )
+      .map((round) => Number(round.round_number)),
+  );
+
+  const scheduledRounds = eligibleStats.flatMap((stat) =>
+    (stat.rounds ?? [])
+      .filter(
+        (round) =>
+          Number(round.holes_completed ?? 0) === 0 &&
+          (Boolean(round.tee_time) ||
+            Boolean(round.tee_time_raw)),
+      )
+      .map((round) => Number(round.round_number)),
+  );
+
+  const completedRounds = eligibleStats.flatMap((stat) =>
+    (stat.rounds ?? [])
+      .filter(
+        (round) =>
+          Number(round.holes_completed ?? 0) >= 18,
+      )
+      .map((round) => Number(round.round_number)),
+  );
+
+  const currentRound =
+    playingRounds.length > 0
+      ? Math.max(...playingRounds)
+      : scheduledRounds.length > 0
+        ? Math.max(...scheduledRounds)
+        : completedRounds.length > 0
+          ? Math.max(...completedRounds)
+          : 1;
+
+  let holesRemaining = 0;
+  let live = 0;
+  let complete = 0;
+
+  eligibleStats.forEach((stat) => {
+    const round =
+      (stat.rounds ?? []).find(
+        (candidate) =>
+          Number(candidate.round_number) === currentRound,
+      ) ?? null;
+
+    const holesPlayed = Math.min(
+      18,
+      Math.max(
+        0,
+        Number(round?.holes_completed ?? 0),
+      ),
+    );
+
+    holesRemaining += Math.max(0, 18 - holesPlayed);
+
+    if (holesPlayed >= 18) {
+      complete += 1;
+    } else if (holesPlayed > 0) {
+      live += 1;
+    }
+  });
+
+  return {
+    round: currentRound,
+    holesRemaining,
+    live,
+    complete,
+    eligible: eligibleStats.length,
+  };
+}
+
 type GolfTieMetrics = {
   bestTeamRound: number;
   bestIndividualRound: number;
@@ -623,6 +722,10 @@ export default function GolfScoresDashboard({
               upcoming,
               filled: teamPlayers.length,
             },
+            roundProgress: getTeamRoundProgress(
+              teamPlayers,
+              getRawPlayerStat,
+            ),
           };
         })
         .sort((a, b) => {
@@ -1084,11 +1187,14 @@ export default function GolfScoresDashboard({
                   </div>
                 ) : null}
 
-                <div className="mt-3 text-xs text-slate-500">
-                  {row.rosterStatus.completed} complete ·{" "}
-                  {row.rosterStatus.live} live ·{" "}
-                  {row.rosterStatus.upcoming} upcoming ·{" "}
-                  {row.rosterStatus.filled}/{totalSlots} filled
+                <div className="mt-3 text-xs font-semibold text-slate-600">
+                  R{row.roundProgress.round} ·{" "}
+                  {row.roundProgress.live}/{row.roundProgress.eligible} golfers live ·{" "}
+                  {row.roundProgress.holesRemaining}{" "}
+                  {row.roundProgress.holesRemaining === 1
+                    ? "hole"
+                    : "holes"}{" "}
+                  left
                 </div>
               </button>
             );

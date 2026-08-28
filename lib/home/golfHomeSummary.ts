@@ -737,15 +737,22 @@ export async function getGolfHomeSummary() {
         ),
     );
 
+    const latestCompletedRound =
+      completedRounds.length > 0
+        ? Math.max(...completedRounds)
+        : 0;
+
+    const latestScheduledRound =
+      scheduledRounds.length > 0
+        ? Math.max(...scheduledRounds)
+        : 1;
+
     const currentRound =
       activelyPlayingRounds.length > 0
         ? Math.max(...activelyPlayingRounds)
-        : completedRounds.length > 0
-          ? Math.max(...completedRounds)
-          : Math.max(
-              1,
-              ...scheduledRounds,
-            );
+        : latestScheduledRound > latestCompletedRound
+          ? latestScheduledRound
+          : Math.max(1, latestCompletedRound);
 
     function currentRoundHoles(
       player: GolfEventPlayerRow,
@@ -864,49 +871,41 @@ export async function getGolfHomeSummary() {
         },
       );
 
-    const completedCurrentRound =
-      eligiblePlayers.filter(
-        (player) => {
-          /*
-           * rounds_completed is authoritative for whether this
-           * golfer has actually completed the team round.
-           *
-           * Do not infer completion from a future current_round
-           * value that was promoted only to carry the next tee time.
-           */
-          const roundsCompleted =
-            Math.max(
-              0,
-              Number(
-                player.rounds_completed ?? 0,
-              ),
-            );
-
-          return (
-            roundsCompleted >= currentRound
+    const holesRemaining =
+      eligiblePlayers.reduce(
+        (total, player) => {
+          const roundsCompleted = Math.max(
+            0,
+            Number(player.rounds_completed ?? 0),
           );
+
+          if (roundsCompleted >= currentRound) {
+            return total;
+          }
+
+          const playerRound = Math.max(
+            1,
+            Number(
+              player.current_round ??
+                roundsCompleted + 1,
+            ),
+          );
+
+          const holesPlayed =
+            playerRound === currentRound
+              ? currentRoundHoles(player)
+              : 0;
+
+          return total + Math.max(0, 18 - holesPlayed);
         },
+        0,
       );
 
-    if (
-      completedCurrentRound.length ===
-      eligiblePlayers.length
-    ) {
-      return `R${currentRound} complete`;
-    }
-
-    const progressLabel =
-      `${completedCurrentRound.length}/${eligiblePlayers.length} complete`;
-
-    if (livePlayers.length > 0) {
-      return (
-        `R${currentRound} · ` +
-        `${livePlayers.length} live · ` +
-        progressLabel
-      );
-    }
-
-    return `R${currentRound} · ${progressLabel}`;
+    return (
+      `R${currentRound} · ` +
+      `${livePlayers.length}/${eligiblePlayers.length} golfers live · ` +
+      `${holesRemaining} ${holesRemaining === 1 ? "hole" : "holes"} left`
+    );
   }
 
   const latestRows = latestSlate
