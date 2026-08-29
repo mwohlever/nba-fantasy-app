@@ -1034,11 +1034,7 @@ function HomePageContent() {
           : "bg-slate-50 text-slate-900"
       }`}
     >
-      <div
-        className={`mx-auto space-y-6 ${
-          isGolf ? "max-w-6xl" : "max-w-7xl"
-        }`}
-      >
+      <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
 
         <FunFactCarousel facts={funFacts} sport={sport} />
