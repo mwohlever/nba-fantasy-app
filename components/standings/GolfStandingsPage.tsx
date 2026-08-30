@@ -15,6 +15,12 @@ type TournamentState =
   | "live"
   | "upcoming";
 
+const GOLF_ROUNDS =
+  [1, 2, 3, 4] as const;
+
+type GolfRoundNumber =
+  (typeof GOLF_ROUNDS)[number];
+
 type TournamentHistoryRow = {
   slate_id: number;
   tournament_name: string;
@@ -22,6 +28,12 @@ type TournamentHistoryRow = {
   state: TournamentState;
   score: number | null;
   finish_position: number | null;
+};
+
+type AverageRoundScore = {
+  round_number: number;
+  average_score: number | null;
+  observation_count: number;
 };
 
 type GolfStanding = {
@@ -50,6 +62,9 @@ type GolfStanding = {
   bogeys: number;
   double_bogeys_or_worse: number;
   rounds_under_par: number;
+
+  average_round_scores:
+    AverageRoundScore[];
 
   tournament_history:
     TournamentHistoryRow[];
@@ -296,6 +311,14 @@ export default function GolfStandingsPage() {
       name: string;
     } | null>(null);
 
+  const [
+    roundSort,
+    setRoundSort,
+  ] = useState<{
+    roundNumber: GolfRoundNumber;
+    direction: "best" | "worst";
+  } | null>(null);
+
   async function loadStandings(
     season?:
       | number
@@ -469,6 +492,48 @@ export default function GolfStandingsPage() {
         null,
       [standings],
     );
+
+  const roundComparisonStandings =
+    useMemo(() => {
+      if (!roundSort) {
+        return standings;
+      }
+
+      return [...standings].sort(
+        (a, b) => {
+          const aScore =
+            a.average_round_scores.find(
+              (round) =>
+                round.round_number ===
+                roundSort.roundNumber,
+            )?.average_score ??
+            null;
+
+          const bScore =
+            b.average_round_scores.find(
+              (round) =>
+                round.round_number ===
+                roundSort.roundNumber,
+            )?.average_score ??
+            null;
+
+          if (aScore === null) {
+            return bScore === null
+              ? 0
+              : 1;
+          }
+
+          if (bScore === null) {
+            return -1;
+          }
+
+          return roundSort.direction ===
+            "best"
+            ? aScore - bScore
+            : bScore - aScore;
+        },
+      );
+    }, [roundSort, standings]);
 
   const overviewCards = [
     {
@@ -929,6 +994,180 @@ export default function GolfStandingsPage() {
                           />
                         );
                       },
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-sm">
+              <header className="border-b border-slate-800 px-5 py-4">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-400">
+                  Round comparison
+                </div>
+
+                <h2 className="mt-1 text-xl font-black">
+                  Average Score by Round
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Completed full-team
+                  rounds from finalized
+                  tournaments.
+                </p>
+              </header>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[680px] border-collapse text-sm">
+                  <thead className="bg-slate-950 text-left text-[10px] uppercase tracking-wider text-slate-500">
+                    <tr>
+                      <th className="sticky left-0 z-10 bg-slate-950 px-4 py-3">
+                        Team
+                      </th>
+
+                      {GOLF_ROUNDS.map(
+                        (roundNumber) => (
+                          <th
+                            key={
+                              roundNumber
+                            }
+                            aria-sort={
+                              roundSort?.roundNumber ===
+                              roundNumber
+                                ? roundSort.direction ===
+                                  "best"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
+                            className={`px-3 py-2 text-center ${
+                              roundSort?.roundNumber ===
+                              roundNumber
+                                ? "bg-emerald-950/50 text-emerald-300"
+                                : ""
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRoundSort(
+                                  (current) => ({
+                                    roundNumber,
+                                    direction:
+                                      current?.roundNumber ===
+                                        roundNumber &&
+                                      current.direction ===
+                                        "best"
+                                        ? "worst"
+                                        : "best",
+                                  }),
+                                )
+                              }
+                              className="inline-flex min-h-7 items-center justify-center gap-1 rounded-md px-2 font-black hover:bg-slate-800 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                            >
+                              R{roundNumber}
+
+                              <span
+                                aria-hidden="true"
+                                className={
+                                  roundSort?.roundNumber ===
+                                  roundNumber
+                                    ? "text-emerald-300"
+                                    : "text-slate-600"
+                                }
+                              >
+                                {roundSort?.roundNumber ===
+                                roundNumber
+                                  ? roundSort.direction ===
+                                    "best"
+                                    ? "↑"
+                                    : "↓"
+                                  : "↕"}
+                              </span>
+                            </button>
+                          </th>
+                        ),
+                      )}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {roundComparisonStandings.map(
+                      (row) => (
+                        <tr
+                          key={
+                            row.team_id
+                          }
+                          className="border-t border-slate-800"
+                        >
+                          <td className="sticky left-0 z-10 bg-slate-900 px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProfileTeam(
+                                  {
+                                    id: row.team_id,
+                                    name: row.name,
+                                  },
+                                )
+                              }
+                              className="flex items-center gap-2 font-bold"
+                            >
+                              <TeamAvatar
+                                teamName={
+                                  row.name
+                                }
+                                size="xs"
+                              />
+
+                              <span className="max-w-32 truncate">
+                                {
+                                  row.name
+                                }
+                              </span>
+                            </button>
+                          </td>
+
+                          {GOLF_ROUNDS.map(
+                            (roundNumber) => {
+                              const round =
+                                row.average_round_scores.find(
+                                  (item) =>
+                                    item.round_number ===
+                                    roundNumber,
+                                );
+
+                              const count =
+                                round?.observation_count ??
+                                0;
+
+                              return (
+                                <td
+                                  key={
+                                    roundNumber
+                                  }
+                                  className="px-3 py-3 text-center"
+                                >
+                                  <strong className="font-black text-emerald-300">
+                                    {formatScore(
+                                      round?.average_score,
+                                      2,
+                                    )}
+                                  </strong>
+
+                                  <span className="ml-1.5 whitespace-nowrap text-[11px] text-slate-500">
+                                    · {count}{" "}
+                                    {count ===
+                                    1
+                                      ? "round"
+                                      : "rounds"}
+                                  </span>
+                                </td>
+                              );
+                            },
+                          )}
+                        </tr>
+                      ),
                     )}
                   </tbody>
                 </table>
