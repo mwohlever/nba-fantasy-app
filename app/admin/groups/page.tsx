@@ -25,6 +25,34 @@ import {
 } from "@/lib/rules/leagueRules";
 
 
+const CANONICAL_NFL_SCORING =
+  getDefaultLeagueRules(
+    "nfl",
+  ).scoring as NflScoringRules;
+
+
+function getNflScoringInputValue(
+  scoring:
+    NflScoringRules,
+
+  key:
+    keyof NflScoringRules,
+) {
+  const value =
+    scoring[
+      key
+    ];
+
+  return Number.isFinite(
+    value,
+  )
+    ? value
+    : CANONICAL_NFL_SCORING[
+        key
+      ];
+}
+
+
 type LeagueRow = {
   id: string;
   group_id: string;
@@ -1056,52 +1084,24 @@ export default function GroupsAdminPage() {
             ];
       }
 
-      setNflScoring({
-        passingYards:
-          readScoringValue(
-            "passingYards",
+      setNflScoring(
+        Object.fromEntries(
+          (
+            Object.keys(
+              defaultScoring,
+            ) as Array<
+              keyof NflScoringRules
+            >
+          ).map(
+            (key) => [
+              key,
+              readScoringValue(
+                key,
+              ),
+            ],
           ),
-
-        passingTouchdowns:
-          readScoringValue(
-            "passingTouchdowns",
-          ),
-
-        passingInterceptions:
-          readScoringValue(
-            "passingInterceptions",
-          ),
-
-        rushingYards:
-          readScoringValue(
-            "rushingYards",
-          ),
-
-        rushingTouchdowns:
-          readScoringValue(
-            "rushingTouchdowns",
-          ),
-
-        receivingYards:
-          readScoringValue(
-            "receivingYards",
-          ),
-
-        receivingTouchdowns:
-          readScoringValue(
-            "receivingTouchdowns",
-          ),
-
-        receptions:
-          readScoringValue(
-            "receptions",
-          ),
-
-        fumblesLost:
-          readScoringValue(
-            "fumblesLost",
-          ),
-      });
+        ) as NflScoringRules,
+      );
     },
     [
       nflLeague?.id,
@@ -3269,8 +3269,12 @@ export default function GroupsAdminPage() {
                         </div>
 
                         <p className="mt-0.5 text-xs text-slate-500">
-                          Offensive scoring applies to new slates only. D/ST scoring controls will be added with the defense stat pipeline.
+                          Scoring changes apply to new slates only. Existing slates retain their frozen rules.
                         </p>
+                      </div>
+
+                      <div className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Offense
                       </div>
 
                       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -3354,6 +3358,120 @@ export default function GroupsAdminPage() {
                             />
                           </label>
                         ))}
+                      </div>
+
+                      <div className="mt-5 border-t border-slate-200 pt-4">
+                        <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Defense / Special Teams
+                        </div>
+
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                          {[
+                            { key: "dstSacks" as const, label: "Sack" },
+                            { key: "dstInterceptions" as const, label: "Interception" },
+                            { key: "dstFumbleRecoveries" as const, label: "Fumble recovery" },
+                            { key: "dstSafeties" as const, label: "Safety" },
+                            { key: "dstTouchdowns" as const, label: "Defensive/ST TD" },
+                          ].map((item) => (
+                            <label key={item.key} className="block">
+                              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                {item.label}
+                              </span>
+
+                              <input
+                                type="number"
+                                step={0.5}
+                                value={getNflScoringInputValue(
+                                  nflScoring,
+                                  item.key,
+                                )}
+                                onChange={(event) =>
+                                  setNflScoring((current) => ({
+                                    ...current,
+                                    [item.key]: Number(event.target.value || 0),
+                                  }))
+                                }
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                              />
+                            </label>
+                          ))}
+                        </div>
+
+                        <div className="mt-4 text-xs font-semibold text-slate-600">
+                          Points allowed
+                        </div>
+
+                        <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+                          {[
+                            { key: "dstPointsAllowed0" as const, label: "0" },
+                            { key: "dstPointsAllowed1To6" as const, label: "1–6" },
+                            { key: "dstPointsAllowed7To13" as const, label: "7–13" },
+                            { key: "dstPointsAllowed14To20" as const, label: "14–20" },
+                            { key: "dstPointsAllowed21To27" as const, label: "21–27" },
+                            { key: "dstPointsAllowed28To34" as const, label: "28–34" },
+                            { key: "dstPointsAllowed35Plus" as const, label: "35+" },
+                          ].map((item) => (
+                            <label key={item.key} className="block">
+                              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                {item.label}
+                              </span>
+
+                              <input
+                                type="number"
+                                step={0.5}
+                                value={getNflScoringInputValue(
+                                  nflScoring,
+                                  item.key,
+                                )}
+                                onChange={(event) =>
+                                  setNflScoring((current) => ({
+                                    ...current,
+                                    [item.key]: Number(event.target.value || 0),
+                                  }))
+                                }
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                              />
+                            </label>
+                          ))}
+                        </div>
+
+                        <div className="mt-4 text-xs font-semibold text-slate-600">
+                          Yards allowed
+                        </div>
+
+                        <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+                          {[
+                            { key: "dstYardsAllowedUnder100" as const, label: "Under 100" },
+                            { key: "dstYardsAllowed100To199" as const, label: "100–199" },
+                            { key: "dstYardsAllowed200To299" as const, label: "200–299" },
+                            { key: "dstYardsAllowed300To349" as const, label: "300–349" },
+                            { key: "dstYardsAllowed350To399" as const, label: "350–399" },
+                            { key: "dstYardsAllowed400To449" as const, label: "400–449" },
+                            { key: "dstYardsAllowed450Plus" as const, label: "450+" },
+                          ].map((item) => (
+                            <label key={item.key} className="block">
+                              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                {item.label}
+                              </span>
+
+                              <input
+                                type="number"
+                                step={0.5}
+                                value={getNflScoringInputValue(
+                                  nflScoring,
+                                  item.key,
+                                )}
+                                onChange={(event) =>
+                                  setNflScoring((current) => ({
+                                    ...current,
+                                    [item.key]: Number(event.target.value || 0),
+                                  }))
+                                }
+                                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                              />
+                            </label>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="mt-3 flex items-center gap-3">

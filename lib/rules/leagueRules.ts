@@ -38,6 +38,28 @@ export type NflScoringRules = {
   receptions: number;
 
   fumblesLost: number;
+
+  dstSacks: number;
+  dstInterceptions: number;
+  dstFumbleRecoveries: number;
+  dstSafeties: number;
+  dstTouchdowns: number;
+
+  dstPointsAllowed0: number;
+  dstPointsAllowed1To6: number;
+  dstPointsAllowed7To13: number;
+  dstPointsAllowed14To20: number;
+  dstPointsAllowed21To27: number;
+  dstPointsAllowed28To34: number;
+  dstPointsAllowed35Plus: number;
+
+  dstYardsAllowedUnder100: number;
+  dstYardsAllowed100To199: number;
+  dstYardsAllowed200To299: number;
+  dstYardsAllowed300To349: number;
+  dstYardsAllowed350To399: number;
+  dstYardsAllowed400To449: number;
+  dstYardsAllowed450Plus: number;
 };
 
 
@@ -237,6 +259,63 @@ const NFL_DEFAULT_RULES:
 
     fumblesLost:
       -2,
+
+    dstSacks:
+      1,
+
+    dstInterceptions:
+      2,
+
+    dstFumbleRecoveries:
+      2,
+
+    dstSafeties:
+      2,
+
+    dstTouchdowns:
+      6,
+
+    dstPointsAllowed0:
+      10,
+
+    dstPointsAllowed1To6:
+      7,
+
+    dstPointsAllowed7To13:
+      4,
+
+    dstPointsAllowed14To20:
+      1,
+
+    dstPointsAllowed21To27:
+      0,
+
+    dstPointsAllowed28To34:
+      -1,
+
+    dstPointsAllowed35Plus:
+      -4,
+
+    dstYardsAllowedUnder100:
+      5,
+
+    dstYardsAllowed100To199:
+      3,
+
+    dstYardsAllowed200To299:
+      2,
+
+    dstYardsAllowed300To349:
+      0,
+
+    dstYardsAllowed350To399:
+      -1,
+
+    dstYardsAllowed400To449:
+      -3,
+
+    dstYardsAllowed450Plus:
+      -5,
   },
 };
 

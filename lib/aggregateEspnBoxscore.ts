@@ -1,4 +1,5 @@
 import type { EspnGameSummary, EspnStatGroup } from "@/lib/providers/nfl";
+import type { NflDstStats } from "@/lib/scoring/nfl";
 
 export type AggregatedNflStat = {
   espnPlayerId: string;
@@ -86,4 +87,87 @@ export function aggregateEspnBoxscore(
   }
 
   return byPlayer;
+}
+
+function teamStatValue(
+  summary: EspnGameSummary,
+  teamId: string,
+  name: string,
+  label?: string,
+) {
+  const team = summary.boxscore?.teams?.find(
+    (candidate) => String(candidate.team?.id ?? "") === teamId,
+  );
+
+  const statistic = team?.statistics?.find(
+    (candidate) =>
+      candidate.name === name &&
+      (!label || candidate.label === label),
+  );
+
+  return statistic?.displayValue ?? null;
+}
+
+function numericTeamStat(
+  summary: EspnGameSummary,
+  teamId: string,
+  name: string,
+  label?: string,
+) {
+  const value = Number(teamStatValue(summary, teamId, name, label));
+  return Number.isFinite(value) ? value : 0;
+}
+
+export function aggregateEspnDstBoxscore(
+  summary: EspnGameSummary,
+  defenseTeamId: string,
+): NflDstStats | null {
+  const competition = summary.header?.competitions?.[0];
+  const competitors = competition?.competitors ?? [];
+  const defense = competitors.find(
+    (competitor) => String(competitor.team?.id ?? "") === defenseTeamId,
+  );
+  const opponent = competitors.find(
+    (competitor) => String(competitor.team?.id ?? "") !== defenseTeamId,
+  );
+  const opponentTeamId = String(opponent?.team?.id ?? "");
+  const opponentTotalYards =
+    teamStatValue(summary, opponentTeamId, "totalYards");
+
+  if (!defense || !opponentTeamId || opponentTotalYards === null) {
+    return null;
+  }
+
+  const sacksYardsLost =
+    teamStatValue(summary, opponentTeamId, "sacksYardsLost") ?? "";
+  const sackCount = Number(sacksYardsLost.split("-")[0]);
+  const pointsAllowed = Number(opponent?.score);
+  const safeties = (summary.scoringPlays ?? []).filter(
+    (play) =>
+      play.type?.id === "20" &&
+      String(play.team?.id ?? "") === defenseTeamId,
+  ).length;
+
+  return {
+    sacks: Number.isFinite(sackCount) ? sackCount : 0,
+    interceptions: numericTeamStat(
+      summary,
+      opponentTeamId,
+      "interceptions",
+      "Interceptions thrown",
+    ),
+    fumbleRecoveries: numericTeamStat(
+      summary,
+      opponentTeamId,
+      "fumblesLost",
+    ),
+    safeties,
+    touchdowns: numericTeamStat(
+      summary,
+      defenseTeamId,
+      "defensiveTouchdowns",
+    ),
+    pointsAllowed: Number.isFinite(pointsAllowed) ? pointsAllowed : 0,
+    yardsAllowed: Number(opponentTotalYards),
+  };
 }

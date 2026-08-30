@@ -70,6 +70,12 @@ export type EspnScoreboardEvent = {
   id: string;
   name: string;
   date: string;
+  status?: {
+    type?: EspnGameStatusType;
+  };
+  competitions?: Array<{
+    competitors?: EspnCompetitor[];
+  }>;
 };
 
 export async function fetchScoreboardForDate(dateCode: string): Promise<EspnScoreboardEvent[]> {
@@ -98,19 +104,67 @@ export type EspnStatGroup = {
 };
 
 export type EspnTeamBoxscore = {
-  team: { id: string; displayName: string };
+  team: {
+    id: string;
+    displayName: string;
+    abbreviation?: string;
+  };
   statistics: EspnStatGroup[];
+};
+
+export type EspnGameStatusType = {
+  state?: string;
+  completed?: boolean;
+  description?: string;
+};
+
+export type EspnCompetitor = {
+  team?: {
+    id?: string;
+    abbreviation?: string;
+  };
+  score?: string;
+  homeAway?: string;
+};
+
+export type EspnTeamStatistic = {
+  name?: string;
+  label?: string;
+  displayValue?: string;
+};
+
+export type EspnSummaryTeam = {
+  team?: {
+    id?: string;
+    abbreviation?: string;
+  };
+  statistics?: EspnTeamStatistic[];
+};
+
+export type EspnScoringPlay = {
+  type?: {
+    id?: string;
+    text?: string;
+    abbreviation?: string;
+  };
+  team?: {
+    id?: string;
+    abbreviation?: string;
+  };
 };
 
 export type EspnGameSummary = {
   header?: {
     competitions?: Array<{
-      status?: { type?: { completed?: boolean; description?: string } };
+      status?: { type?: EspnGameStatusType };
+      competitors?: EspnCompetitor[];
     }>;
   };
   boxscore?: {
     players?: EspnTeamBoxscore[];
+    teams?: EspnSummaryTeam[];
   };
+  scoringPlays?: EspnScoringPlay[];
 };
 
 export async function fetchGameSummary(eventId: string): Promise<EspnGameSummary | null> {
