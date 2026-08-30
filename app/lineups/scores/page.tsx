@@ -8,6 +8,9 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveLeagueForSport,
 } from "@/lib/groups/context";
+import {
+  getRosterSlotsFromRulesSnapshot,
+} from "@/lib/rules/leagueRules";
 
 function getTodayDateString() {
   const now = new Date();
@@ -26,6 +29,10 @@ type Slate = {
   is_locked: boolean;
   sport?: string;
   has_cut?: boolean;
+
+  rules_snapshot?:
+    Record<string, unknown> |
+    null;
 };
 
 type SavedLineup = {
@@ -144,7 +151,7 @@ export default async function ScoresLineupsPage({
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, is_locked, sport, display_name, has_cut",
+        "id, date, start_date, end_date, is_locked, sport, display_name, has_cut, rules_snapshot",
       )
       .eq("sport", sport)
       .eq(
@@ -357,6 +364,19 @@ export default async function ScoresLineupsPage({
           sport === "golf"
             ? slate.has_cut !== false
             : true,
+
+        rules_snapshot:
+          slate.rules_snapshot &&
+          typeof slate.rules_snapshot ===
+            "object" &&
+          !Array.isArray(
+            slate.rules_snapshot,
+          )
+            ? slate.rules_snapshot as Record<
+                string,
+                unknown
+              >
+            : null,
       };
     }) ?? [];
 
@@ -442,20 +462,21 @@ export default async function ScoresLineupsPage({
   let savedLineupsForInitialSlate: SavedLineup[] = [];
   let playerStats: any[] = [];
   let teamResults: any[] = [];
-  let rosterSlots: Array<{
-    sport: string;
-    position: string;
-    slot_count: number;
-    display_order: number | null;
-  }> = [];
+  const initialSelectedSlate =
+    safeSlates.find(
+      (slate) =>
+        slate.id ===
+        selectedSlateId,
+    ) ??
+    null;
 
-  const { data: rosterSlotsData } = await supabaseAdmin
-    .from("roster_slots")
-    .select("sport, position, slot_count, display_order")
-    .eq("sport", sport)
-    .order("display_order", { ascending: true });
 
-  rosterSlots = rosterSlotsData ?? [];
+  const rosterSlots =
+    getRosterSlotsFromRulesSnapshot(
+      initialSelectedSlate?.rules_snapshot ??
+        null,
+      sport,
+    );
 
   if (selectedSlateId) {
     const { data: lineupsData } = await supabaseAdmin

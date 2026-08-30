@@ -656,6 +656,134 @@ export async function getGolfHomeSummary() {
     );
   });
 
+  let latestGolfRosterSize =
+    4;
+
+  if (latestSlate) {
+    const {
+      data: latestRulesData,
+      error: latestRulesError,
+    } =
+      await supabaseAdmin
+        .from("slates")
+        .select("rules_snapshot")
+        .eq(
+          "id",
+          latestSlate.id,
+        )
+        .maybeSingle();
+
+    if (latestRulesError) {
+      console.warn(
+        "Failed to load Golf roster size from rules snapshot:",
+        latestRulesError.message,
+      );
+    } else {
+      const snapshot =
+        latestRulesData?.rules_snapshot;
+
+      if (
+        snapshot &&
+        typeof snapshot ===
+          "object" &&
+        !Array.isArray(
+          snapshot,
+        )
+      ) {
+        const roster =
+          (
+            snapshot as Record<
+              string,
+              unknown
+            >
+          ).roster;
+
+        if (
+          roster &&
+          typeof roster ===
+            "object" &&
+          !Array.isArray(
+            roster,
+          )
+        ) {
+          const slots =
+            (
+              roster as Record<
+                string,
+                unknown
+              >
+            ).slots;
+
+          if (
+            Array.isArray(
+              slots,
+            )
+          ) {
+            const golferSlot =
+              slots.find(
+                (slot) =>
+                  Boolean(
+                    slot &&
+                    typeof slot ===
+                      "object" &&
+                    !Array.isArray(
+                      slot,
+                    ) &&
+                    String(
+                      (
+                        slot as Record<
+                          string,
+                          unknown
+                        >
+                      ).position ??
+                        "",
+                    )
+                      .trim()
+                      .toUpperCase() ===
+                      "GOLFER",
+                  ),
+              );
+
+            if (
+              golferSlot &&
+              typeof golferSlot ===
+                "object" &&
+              !Array.isArray(
+                golferSlot,
+              )
+            ) {
+              const count =
+                Number(
+                  (
+                    golferSlot as Record<
+                      string,
+                      unknown
+                    >
+                  ).slotCount ??
+                    (
+                      golferSlot as Record<
+                        string,
+                        unknown
+                      >
+                    ).slot_count,
+                );
+
+              if (
+                Number.isInteger(
+                  count,
+                ) &&
+                count > 0
+              ) {
+                latestGolfRosterSize =
+                  count;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   function getTeamGolfStatus(teamId: number) {
     const playerIds =
       playerIdsByTeamId.get(teamId) ?? [];
@@ -676,7 +804,7 @@ export async function getGolfHomeSummary() {
       );
 
     if (players.length === 0) {
-      return `${playerIds.length}/4 drafted`;
+      return `${playerIds.length}/${latestGolfRosterSize} drafted`;
     }
 
     /*

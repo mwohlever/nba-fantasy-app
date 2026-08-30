@@ -6,6 +6,10 @@ import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import GolfScoresDashboard from "@/components/lineups/GolfScoresDashboard";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { getStatColumns } from "@/lib/statColumns";
+import {
+  assignPlayersToRosterSlots,
+  getDefaultRosterSlotsForSport,
+} from "@/lib/rules/leagueRules";
 import type {
   OrderedTeam,
   Player,
@@ -59,11 +63,6 @@ type Props = {
   controls?: ReactNode;
   setProfilePlayer: (player: Player | null) => void;
 };
-
-const FALLBACK_ROSTER_SLOTS: RosterSlotConfig[] = [
-  { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
-  { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
-];
 
 function formatScore(value: number | null | undefined) {
   const numeric = Number(value ?? 0);
@@ -150,9 +149,15 @@ function TraditionalScoresDashboard({
   const statColumns = getStatColumns(sport);
 
   const effectiveRosterSlots =
-    rosterSlots && rosterSlots.length > 0
+    rosterSlots &&
+    rosterSlots.length > 0
       ? rosterSlots
-      : FALLBACK_ROSTER_SLOTS;
+      : getDefaultRosterSlotsForSport(
+          sport as
+            | "nba"
+            | "nfl"
+            | "golf",
+        );
 
   const totalRosterSlots = effectiveRosterSlots.reduce(
     (sum, slot) => sum + slot.slot_count,
@@ -250,30 +255,43 @@ function TraditionalScoresDashboard({
     selectedTeam.id
   );
 
-  const playersByPosition = new Map<string, Player[]>();
-  players.forEach((player) => {
-    const existing =
-      playersByPosition.get(player.position_group) ?? [];
-    existing.push(player);
-    playersByPosition.set(player.position_group, existing);
-  });
+  const rosterAssignment =
+    assignPlayersToRosterSlots({
+      sport:
+        sport as
+          | "nba"
+          | "nfl"
+          | "golf",
+
+      playerPositions:
+        players.map(
+          (player) =>
+            player.position_group,
+        ),
+
+      rosterSlots:
+        effectiveRosterSlots,
+    });
+
 
   const rosterRows: Array<{
     slot: string;
     player: Player | null;
-  }> = [];
+  }> =
+    rosterAssignment.slots.map(
+      (slot) => ({
+        slot:
+          slot.position,
 
-  effectiveRosterSlots.forEach((slotConfig) => {
-    const positionPlayers =
-      playersByPosition.get(slotConfig.position) ?? [];
-
-    for (let i = 0; i < slotConfig.slot_count; i += 1) {
-      rosterRows.push({
-        slot: slotConfig.position,
-        player: positionPlayers[i] ?? null,
-      });
-    }
-  });
+        player:
+          slot.playerIndex >= 0
+            ? players[
+                slot.playerIndex
+              ] ??
+              null
+            : null,
+      }),
+    );
 
   const progressTotal =
     selectedStats.games_completed +

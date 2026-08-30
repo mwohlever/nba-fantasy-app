@@ -18,6 +18,12 @@ import {
   useGroupContext,
 } from "@/components/providers/GroupProvider";
 
+import {
+  getDefaultLeagueRules,
+  type NbaScoringRules,
+  type NflScoringRules,
+} from "@/lib/rules/leagueRules";
+
 
 type LeagueRow = {
   id: string;
@@ -27,6 +33,12 @@ type LeagueRow = {
   name: string;
   slug: string;
   is_enabled: boolean;
+
+  settings_version?: number | null;
+
+  settings?:
+    Record<string, unknown> |
+    null;
 };
 
 
@@ -402,6 +414,100 @@ export default function GroupsAdminPage() {
     );
 
   const [
+    nbaRosterGuards,
+    setNbaRosterGuards,
+  ] =
+    useState(
+      2,
+    );
+
+
+  const [
+    nbaRosterForwardsCenters,
+    setNbaRosterForwardsCenters,
+  ] =
+    useState(
+      3,
+    );
+
+
+  const [
+    nbaRosterUtility,
+    setNbaRosterUtility,
+  ] =
+    useState(
+      0,
+    );
+
+
+  const [
+    nflRoster,
+    setNflRoster,
+  ] =
+    useState({
+      QB: 1,
+      RB: 2,
+      WR: 2,
+      TE: 1,
+      K: 0,
+      FLEX: 0,
+      SF: 0,
+      "D/ST": 0,
+    });
+
+
+  const [
+    settingsTab,
+    setSettingsTab,
+  ] =
+    useState<
+      | "overview"
+      | "rules"
+      | "members"
+      | "invites"
+    >(
+      "overview",
+    );
+
+
+  const [
+    rulesSport,
+    setRulesSport,
+  ] =
+    useState<
+      | "nba"
+      | "nfl"
+      | "golf"
+    >(
+      "nba",
+    );
+
+
+  const [
+    nbaScoring,
+    setNbaScoring,
+  ] =
+    useState<NbaScoringRules>(
+      () =>
+        getDefaultLeagueRules(
+          "nba",
+        ).scoring as NbaScoringRules,
+    );
+
+
+  const [
+    nflScoring,
+    setNflScoring,
+  ] =
+    useState<NflScoringRules>(
+      () =>
+        getDefaultLeagueRules(
+          "nfl",
+        ).scoring as NflScoringRules,
+    );
+
+
+  const [
     newGroupName,
     setNewGroupName,
   ] =
@@ -536,6 +642,472 @@ export default function GroupsAdminPage() {
         selectedGroupId,
       ],
     );
+
+
+  const nbaLeague =
+    selectedGroup?.leagues.find(
+      (league) =>
+        league.sport_key ===
+          "nba" &&
+        league.game_mode ===
+          "standard",
+    ) ??
+    null;
+
+
+  const nflLeague =
+    selectedGroup?.leagues.find(
+      (league) =>
+        league.sport_key ===
+          "nfl" &&
+        league.game_mode ===
+          "standard",
+    ) ??
+    null;
+
+
+  useEffect(
+    () => {
+      const settings =
+        nbaLeague?.settings &&
+        typeof nbaLeague.settings ===
+          "object" &&
+        !Array.isArray(
+          nbaLeague.settings,
+        )
+          ? nbaLeague.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+
+      const roster =
+        settings.roster &&
+        typeof settings.roster ===
+          "object" &&
+        !Array.isArray(
+          settings.roster,
+        )
+          ? settings.roster as Record<
+              string,
+              unknown
+            >
+          : {};
+
+
+      const slots =
+        Array.isArray(
+          roster.slots,
+        )
+          ? roster.slots
+          : [];
+
+
+      function readCount(
+        position:
+          string,
+
+        fallback:
+          number,
+      ) {
+        const slot =
+          slots.find(
+            (
+              candidate,
+            ) =>
+              candidate &&
+              typeof candidate ===
+                "object" &&
+              !Array.isArray(
+                candidate,
+              ) &&
+              String(
+                (
+                  candidate as Record<
+                    string,
+                    unknown
+                  >
+                ).position ??
+                  "",
+              )
+                .trim()
+                .toUpperCase() ===
+                position,
+          ) as
+            | Record<
+                string,
+                unknown
+              >
+            | undefined;
+
+
+        const value =
+          Number(
+            slot?.slotCount ??
+            slot?.slot_count,
+          );
+
+
+        return Number.isInteger(
+          value,
+        ) &&
+        value >= 0
+          ? value
+          : fallback;
+      }
+
+
+      setNbaRosterGuards(
+        readCount(
+          "G",
+          2,
+        ),
+      );
+
+      setNbaRosterForwardsCenters(
+        readCount(
+          "F/C",
+          3,
+        ),
+      );
+
+      setNbaRosterUtility(
+        readCount(
+          "UTIL",
+          0,
+        ),
+      );
+
+
+      const defaultScoring =
+        getDefaultLeagueRules(
+          "nba",
+        ).scoring as NbaScoringRules;
+
+      const savedScoring =
+        settings.scoring &&
+        typeof settings.scoring ===
+          "object" &&
+        !Array.isArray(
+          settings.scoring,
+        )
+          ? settings.scoring as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      setNbaScoring({
+        points:
+          Number.isFinite(
+            Number(
+              savedScoring.points,
+            ),
+          )
+            ? Number(
+                savedScoring.points,
+              )
+            : defaultScoring.points,
+
+        rebounds:
+          Number.isFinite(
+            Number(
+              savedScoring.rebounds,
+            ),
+          )
+            ? Number(
+                savedScoring.rebounds,
+              )
+            : defaultScoring.rebounds,
+
+        assists:
+          Number.isFinite(
+            Number(
+              savedScoring.assists,
+            ),
+          )
+            ? Number(
+                savedScoring.assists,
+              )
+            : defaultScoring.assists,
+
+        steals:
+          Number.isFinite(
+            Number(
+              savedScoring.steals,
+            ),
+          )
+            ? Number(
+                savedScoring.steals,
+              )
+            : defaultScoring.steals,
+
+        blocks:
+          Number.isFinite(
+            Number(
+              savedScoring.blocks,
+            ),
+          )
+            ? Number(
+                savedScoring.blocks,
+              )
+            : defaultScoring.blocks,
+
+        turnovers:
+          Number.isFinite(
+            Number(
+              savedScoring.turnovers,
+            ),
+          )
+            ? Number(
+                savedScoring.turnovers,
+              )
+            : defaultScoring.turnovers,
+      });
+    },
+    [
+      nbaLeague?.id,
+      nbaLeague?.settings,
+    ],
+  );
+
+
+  useEffect(
+    () => {
+      const settings =
+        nflLeague?.settings &&
+        typeof nflLeague.settings ===
+          "object" &&
+        !Array.isArray(
+          nflLeague.settings,
+        )
+          ? nflLeague.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const defaultRoster =
+        getDefaultLeagueRules(
+          "nfl",
+        ).roster.slots;
+
+      const roster =
+        settings.roster &&
+        typeof settings.roster ===
+          "object" &&
+        !Array.isArray(
+          settings.roster,
+        )
+          ? settings.roster as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const savedSlots =
+        Array.isArray(
+          roster.slots,
+        )
+          ? roster.slots
+          : [];
+
+      function readRosterCount(
+        position:
+          string,
+      ) {
+        const savedSlot =
+          savedSlots.find(
+            (
+              candidate,
+            ) =>
+              candidate &&
+              typeof candidate ===
+                "object" &&
+              !Array.isArray(
+                candidate,
+              ) &&
+              String(
+                (
+                  candidate as Record<
+                    string,
+                    unknown
+                  >
+                ).position ??
+                  "",
+              )
+                .trim()
+                .toUpperCase() ===
+                position,
+          ) as
+            | Record<
+                string,
+                unknown
+              >
+            | undefined;
+
+        const savedValue =
+          Number(
+            savedSlot?.slotCount ??
+              savedSlot?.slot_count,
+          );
+
+        if (
+          Number.isInteger(
+            savedValue,
+          ) &&
+          savedValue >= 0
+        ) {
+          return savedValue;
+        }
+
+        const defaultSlot =
+          defaultRoster.find(
+            (slot) =>
+              slot.position ===
+              position,
+          );
+
+        return Number(
+          defaultSlot?.slotCount ??
+            0,
+        );
+      }
+
+      setNflRoster({
+        QB:
+          readRosterCount(
+            "QB",
+          ),
+
+        RB:
+          readRosterCount(
+            "RB",
+          ),
+
+        WR:
+          readRosterCount(
+            "WR",
+          ),
+
+        TE:
+          readRosterCount(
+            "TE",
+          ),
+
+        K:
+          readRosterCount(
+            "K",
+          ),
+
+        FLEX:
+          readRosterCount(
+            "FLEX",
+          ),
+
+        SF:
+          readRosterCount(
+            "SF",
+          ),
+
+        "D/ST":
+          readRosterCount(
+            "D/ST",
+          ),
+      });
+
+
+      const defaultScoring =
+        getDefaultLeagueRules(
+          "nfl",
+        ).scoring as NflScoringRules;
+
+      const savedScoring =
+        settings.scoring &&
+        typeof settings.scoring ===
+          "object" &&
+        !Array.isArray(
+          settings.scoring,
+        )
+          ? settings.scoring as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      function readScoringValue(
+        key:
+          keyof NflScoringRules,
+      ) {
+        const value =
+          Number(
+            savedScoring[
+              key
+            ],
+          );
+
+        return Number.isFinite(
+          value,
+        )
+          ? value
+          : defaultScoring[
+              key
+            ];
+      }
+
+      setNflScoring({
+        passingYards:
+          readScoringValue(
+            "passingYards",
+          ),
+
+        passingTouchdowns:
+          readScoringValue(
+            "passingTouchdowns",
+          ),
+
+        passingInterceptions:
+          readScoringValue(
+            "passingInterceptions",
+          ),
+
+        rushingYards:
+          readScoringValue(
+            "rushingYards",
+          ),
+
+        rushingTouchdowns:
+          readScoringValue(
+            "rushingTouchdowns",
+          ),
+
+        receivingYards:
+          readScoringValue(
+            "receivingYards",
+          ),
+
+        receivingTouchdowns:
+          readScoringValue(
+            "receivingTouchdowns",
+          ),
+
+        receptions:
+          readScoringValue(
+            "receptions",
+          ),
+
+        fumblesLost:
+          readScoringValue(
+            "fumblesLost",
+          ),
+      });
+    },
+    [
+      nflLeague?.id,
+      nflLeague?.settings,
+    ],
+  );
 
 
   const filteredGroups =
@@ -1334,6 +1906,196 @@ export default function GroupsAdminPage() {
   }
 
 
+  async function saveNbaRosterRules() {
+    if (
+      !selectedGroup ||
+      !nbaLeague
+    ) {
+      return;
+    }
+
+
+    const result =
+      await runAction({
+        action:
+          "update_nba_roster_rules",
+
+        groupId:
+          selectedGroup.id,
+
+        leagueId:
+          nbaLeague.id,
+
+        roster: {
+          guards:
+            nbaRosterGuards,
+
+          forwardsCenters:
+            nbaRosterForwardsCenters,
+
+          utility:
+            nbaRosterUtility,
+        },
+      });
+
+
+    if (!result) {
+      return;
+    }
+
+
+    setMessage(
+      `NBA roster updated to ${
+        nbaRosterGuards +
+        nbaRosterForwardsCenters +
+        nbaRosterUtility
+      } players. New slates will use this roster.`,
+    );
+
+
+    await Promise.all([
+      loadGroups(
+        selectedGroup.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
+  }
+
+
+  async function saveNflRosterRules() {
+    if (
+      !selectedGroup ||
+      !nflLeague
+    ) {
+      return;
+    }
+
+
+    const total =
+      Object.values(
+        nflRoster,
+      ).reduce(
+        (
+          sum,
+          count,
+        ) =>
+          sum +
+          count,
+        0,
+      );
+
+
+    if (
+      total < 1
+    ) {
+      setMessage(
+        "NFL roster must contain at least one player.",
+      );
+
+      return;
+    }
+
+
+    const result =
+      await runAction({
+        action:
+          "update_nfl_roster_rules",
+
+        groupId:
+          selectedGroup.id,
+
+        leagueId:
+          nflLeague.id,
+
+        roster:
+          nflRoster,
+      });
+
+
+    if (!result) {
+      return;
+    }
+
+
+    setMessage(
+      `NFL roster updated to ${total} players. New slates will use this roster.`,
+    );
+
+
+    await Promise.all([
+      loadGroups(
+        selectedGroup.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
+  }
+
+
+  async function saveScoringRules(
+    sport:
+      "nba" |
+      "nfl",
+  ) {
+    if (
+      !selectedGroup
+    ) {
+      return;
+    }
+
+    const league =
+      sport ===
+      "nba"
+        ? nbaLeague
+        : nflLeague;
+
+    if (
+      !league
+    ) {
+      return;
+    }
+
+    const scoring =
+      sport ===
+      "nba"
+        ? nbaScoring
+        : nflScoring;
+
+    const result =
+      await runAction({
+        action:
+          "update_scoring_rules",
+
+        groupId:
+          selectedGroup.id,
+
+        leagueId:
+          league.id,
+
+        scoring,
+      });
+
+    if (
+      !result
+    ) {
+      return;
+    }
+
+    setMessage(
+      `${sport.toUpperCase()} scoring updated. New slates will use these scoring rules.`,
+    );
+
+    await Promise.all([
+      loadGroups(
+        selectedGroup.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
+  }
+
+
   async function addGroupGame(
     sportKey:
       string,
@@ -1886,12 +2648,66 @@ export default function GroupsAdminPage() {
 
             {selectedGroup ? (
               <>
-                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="border-b border-slate-200 px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <h2 className="font-semibold">
-                          Enabled Games
+                <div className="flex overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                  {[
+                    {
+                      key:
+                        "overview" as const,
+                      label:
+                        "Overview",
+                    },
+                    {
+                      key:
+                        "rules" as const,
+                      label:
+                        "Games & Rules",
+                    },
+                    {
+                      key:
+                        "members" as const,
+                      label:
+                        "Members",
+                    },
+                    {
+                      key:
+                        "invites" as const,
+                      label:
+                        "Invites",
+                    },
+                  ].map(
+                    (tab) => (
+                      <button
+                        key={
+                          tab.key
+                        }
+                        type="button"
+                        onClick={() =>
+                          setSettingsTab(
+                            tab.key,
+                          )
+                        }
+                        className={`whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-bold transition ${
+                          settingsTab ===
+                          tab.key
+                            ? "border-sky-400 bg-sky-500 text-white shadow-sm"
+                            : "border-slate-600 bg-slate-800/60 text-slate-300 hover:border-slate-500 hover:bg-slate-700 hover:text-white"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ),
+                  )}
+                </div>
+
+
+                {settingsTab ===
+                "overview" ? (
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-200 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h2 className="font-semibold">
+                            Enabled Games
                         </h2>
 
                         <p className="text-xs text-slate-500">
@@ -2033,14 +2849,560 @@ export default function GroupsAdminPage() {
                       </tbody>
                     </table>
                   </div>
+
+
+                  </section>
+                ) : null}
+
+
+                {settingsTab ===
+                "rules" ? (
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-200 px-4 py-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h2 className="font-semibold">
+                            Games & Rules
+                          </h2>
+
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            Set the defaults used when new slates are created. Existing slates keep their frozen rules.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-1 rounded-lg bg-slate-100 p-1">
+                        {[
+                          {
+                            key:
+                              "nba" as const,
+                            label:
+                              "🏀 NBA",
+                            available:
+                              Boolean(
+                                nbaLeague,
+                              ),
+                          },
+                          {
+                            key:
+                              "nfl" as const,
+                            label:
+                              "🏈 NFL",
+                            available:
+                              Boolean(
+                                nflLeague,
+                              ),
+                          },
+                          {
+                            key:
+                              "golf" as const,
+                            label:
+                              "⛳ Golf",
+                            available:
+                              selectedGroup.leagues.some(
+                                (league) =>
+                                  league.sport_key ===
+                                    "golf" &&
+                                  league.game_mode ===
+                                    "standard",
+                              ),
+                          },
+                        ].map(
+                          (
+                            sportOption,
+                          ) => (
+                            <button
+                              key={
+                                sportOption.key
+                              }
+                              type="button"
+                              disabled={
+                                !sportOption.available
+                              }
+                              onClick={() =>
+                                setRulesSport(
+                                  sportOption.key,
+                                )
+                              }
+                              className={`rounded-md px-3 py-1.5 text-xs font-bold transition ${
+                                rulesSport ===
+                                sportOption.key
+                                  ? "bg-white text-slate-900 shadow-sm"
+                                  : "text-slate-500 hover:text-slate-900"
+                              } disabled:cursor-not-allowed disabled:opacity-35`}
+                            >
+                              {
+                                sportOption.label
+                              }
+                            </button>
+                          ),
+                        )}
+                      </div>
+                    </div>
+
+
+                    {rulesSport ===
+                      "nba" &&
+                    nbaLeague?.is_enabled ? (
+                      <>
+                        <div className="px-4 py-3">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold">
+                                Roster
+                              </div>
+
+                              <p className="mt-0.5 text-xs text-slate-500">
+                                Configure the standard NBA lineup.
+                              </p>
+                            </div>
+
+                            <div className="text-xs font-semibold text-slate-500">
+                              {nbaRosterGuards +
+                                nbaRosterForwardsCenters +
+                                nbaRosterUtility}{" "}
+                              total
+                            </div>
+                          </div>
+
+                        <div className="mt-3 flex flex-wrap items-end gap-3">
+                          {[
+                            {
+                              label: "Guards",
+                              value: nbaRosterGuards,
+                              setValue: setNbaRosterGuards,
+                            },
+                            {
+                              label: "F/C",
+                              value: nbaRosterForwardsCenters,
+                              setValue: setNbaRosterForwardsCenters,
+                            },
+                            {
+                              label: "UTIL",
+                              value: nbaRosterUtility,
+                              setValue: setNbaRosterUtility,
+                            },
+                          ].map((item) => (
+                            <label
+                              key={item.label}
+                              className="block"
+                            >
+                              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                {item.label}
+                              </span>
+
+                              <input
+                                type="number"
+                                min={0}
+                                max={20}
+                                step={1}
+                                value={item.value}
+                                onChange={(event) =>
+                                  item.setValue(
+                                    Math.max(
+                                      0,
+                                      Math.min(
+                                        20,
+                                        Number(
+                                          event.target.value ||
+                                            0,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                }
+                                className="w-20 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                              />
+                            </label>
+                          ))}
+
+                          <button
+                            type="button"
+                            disabled={
+                              saving ||
+                              nbaRosterGuards +
+                                nbaRosterForwardsCenters +
+                                nbaRosterUtility <
+                                1
+                            }
+                            onClick={() =>
+                              void saveNbaRosterRules()
+                            }
+                            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                          >
+                            Save roster
+                          </button>
+                        </div>
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          UTIL can be filled by either a Guard or F/C.
+                        </p>
+                      </div>
+
+                      <div className="border-t border-slate-200 px-4 py-3">
+                        <div>
+                          <div className="text-sm font-semibold">
+                            Scoring
+                          </div>
+
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            Point values apply to new slates only. Existing slates keep their frozen scoring rules.
+                          </p>
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-end gap-3">
+                          {[
+                            {
+                              key: "points" as const,
+                              label: "Point",
+                            },
+                            {
+                              key: "rebounds" as const,
+                              label: "Rebound",
+                            },
+                            {
+                              key: "assists" as const,
+                              label: "Assist",
+                            },
+                            {
+                              key: "steals" as const,
+                              label: "Steal",
+                            },
+                            {
+                              key: "blocks" as const,
+                              label: "Block",
+                            },
+                            {
+                              key: "turnovers" as const,
+                              label: "Turnover",
+                            },
+                          ].map((item) => (
+                            <label
+                              key={item.key}
+                              className="block"
+                            >
+                              <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                {item.label}
+                              </span>
+
+                              <input
+                                type="number"
+                                step={0.1}
+                                value={
+                                  nbaScoring[
+                                    item.key
+                                  ]
+                                }
+                                onChange={(event) =>
+                                  setNbaScoring(
+                                    (current) => ({
+                                      ...current,
+
+                                      [item.key]:
+                                        Number(
+                                          event.target.value ||
+                                            0,
+                                        ),
+                                    }),
+                                  )
+                                }
+                                className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                              />
+                            </label>
+                          ))}
+
+                          <button
+                            type="button"
+                            disabled={saving}
+                            onClick={() =>
+                              void saveScoringRules(
+                                "nba",
+                              )
+                            }
+                            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                          >
+                            Save scoring
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
+
+
+                  {rulesSport ===
+                    "nfl" &&
+                  nflLeague?.is_enabled ? (
+                    <>
+                      <div className="px-4 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-semibold">
+                              Roster
+                            </div>
+
+                            <p className="mt-0.5 text-xs text-slate-500">
+                              Configure the standard NFL lineup.
+                            </p>
+                          </div>
+
+                          <div className="text-xs font-semibold text-slate-500">
+                            {Object.values(
+                              nflRoster,
+                            ).reduce(
+                              (
+                                total,
+                                count,
+                              ) =>
+                                total +
+                                count,
+                              0,
+                            )}{" "}
+                            total
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-8">
+                          {[
+                            "QB",
+                            "RB",
+                            "WR",
+                            "TE",
+                            "K",
+                            "FLEX",
+                            "SF",
+                            "D/ST",
+                          ].map(
+                            (
+                              position,
+                            ) => (
+                              <label
+                                key={
+                                  position
+                                }
+                                className="block"
+                              >
+                                <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                                  {
+                                    position
+                                  }
+                                </span>
+
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={20}
+                                  step={1}
+                                  value={
+                                    nflRoster[
+                                      position as keyof typeof nflRoster
+                                    ]
+                                  }
+                                  onChange={(
+                                    event,
+                                  ) =>
+                                    setNflRoster(
+                                      (
+                                        current,
+                                      ) => ({
+                                        ...current,
+
+                                        [position]:
+                                          Math.max(
+                                            0,
+                                            Math.min(
+                                              20,
+                                              Number(
+                                                event
+                                                  .target
+                                                  .value ||
+                                                  0,
+                                              ),
+                                            ),
+                                          ),
+                                      }),
+                                    )
+                                  }
+                                  className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                                />
+                              </label>
+                            ),
+                          )}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <button
+                            type="button"
+                            disabled={
+                              saving ||
+                              Object.values(
+                                nflRoster,
+                              ).reduce(
+                                (
+                                  total,
+                                  count,
+                                ) =>
+                                  total +
+                                  count,
+                                0,
+                              ) <
+                                1
+                            }
+                            onClick={() =>
+                              void saveNflRosterRules()
+                            }
+                            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                          >
+                            Save roster
+                          </button>
+
+                          <span className="text-xs text-slate-400">
+                            FLEX accepts RB/WR/TE · SF also accepts QB.
+                          </span>
+                        </div>
+                      </div>
+
+
+                      <div className="border-t border-slate-200 px-4 py-3">
+                        <div>
+                          <div className="text-sm font-semibold">
+                            Scoring
+                        </div>
+
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Offensive scoring applies to new slates only. D/ST scoring controls will be added with the defense stat pipeline.
+                        </p>
+                      </div>
+
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                        {[
+                          {
+                            key: "passingYards" as const,
+                            label: "Passing yard",
+                            step: 0.01,
+                          },
+                          {
+                            key: "passingTouchdowns" as const,
+                            label: "Passing TD",
+                            step: 0.5,
+                          },
+                          {
+                            key: "passingInterceptions" as const,
+                            label: "Interception",
+                            step: 0.5,
+                          },
+                          {
+                            key: "rushingYards" as const,
+                            label: "Rushing yard",
+                            step: 0.01,
+                          },
+                          {
+                            key: "rushingTouchdowns" as const,
+                            label: "Rushing TD",
+                            step: 0.5,
+                          },
+                          {
+                            key: "receivingYards" as const,
+                            label: "Receiving yard",
+                            step: 0.01,
+                          },
+                          {
+                            key: "receivingTouchdowns" as const,
+                            label: "Receiving TD",
+                            step: 0.5,
+                          },
+                          {
+                            key: "receptions" as const,
+                            label: "Reception",
+                            step: 0.5,
+                          },
+                          {
+                            key: "fumblesLost" as const,
+                            label: "Fumble lost",
+                            step: 0.5,
+                          },
+                        ].map((item) => (
+                          <label
+                            key={item.key}
+                            className="block"
+                          >
+                            <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                              {item.label}
+                            </span>
+
+                            <input
+                              type="number"
+                              step={item.step}
+                              value={
+                                nflScoring[
+                                  item.key
+                                ]
+                              }
+                              onChange={(event) =>
+                                setNflScoring(
+                                  (current) => ({
+                                    ...current,
+
+                                    [item.key]:
+                                      Number(
+                                        event.target.value ||
+                                          0,
+                                      ),
+                                  }),
+                                )
+                              }
+                              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                            />
+                          </label>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 flex items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() =>
+                            void saveScoringRules(
+                              "nfl",
+                            )
+                          }
+                          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                        >
+                          Save scoring
+                        </button>
+
+                        <span className="text-xs text-slate-400">
+                          Current defaults are standard PPR scoring.
+                        </span>
+                      </div>
+                    </div>
+                    </>
+                  ) : null}
+
+
+                  {rulesSport ===
+                  "golf" ? (
+                    <div className="px-4 py-5">
+                      <div className="text-sm font-semibold">
+                        ⛳ Golf
+                      </div>
+
+                      <p className="mt-1 max-w-2xl text-sm text-slate-500">
+                        Golf currently uses slate-level golfer counts and scoring settings. Commissioner-level Golf rules will be added when we return to the expanded Golf game modes after Groups launches.
+                      </p>
+                    </div>
+                  ) : null}
                 </section>
+                ) : null}
 
 
-                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
-                    <div>
-                      <h2 className="font-semibold">
-                        Members
+                {settingsTab ===
+                "members" ? (
+                  <>
+                    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+                        <div>
+                          <h2 className="font-semibold">
+                            Members
                       </h2>
 
                       <p className="text-xs text-slate-500">
@@ -2326,12 +3688,18 @@ export default function GroupsAdminPage() {
                 ) : null}
 
 
-                <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="border-b border-slate-200 px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <h2 className="font-semibold">
-                          Invitations
+                  </>
+                ) : null}
+
+
+                {settingsTab ===
+                "invites" ? (
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-200 px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h2 className="font-semibold">
+                            Invitations
                         </h2>
 
                         <p className="text-xs text-slate-500">
@@ -2530,7 +3898,8 @@ export default function GroupsAdminPage() {
                       </tbody>
                     </table>
                   </div>
-                </section>
+                  </section>
+                ) : null}
               </>
             ) : null}
           </>

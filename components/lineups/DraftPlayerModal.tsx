@@ -47,7 +47,7 @@ type Props = {
   handleAssignPlayerToTeam: (
     player: Player,
     teamId: number
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   targetDraftSlot: TargetDraftSlot | null;
   handleDraftToTargetSlot: (
     player: Player

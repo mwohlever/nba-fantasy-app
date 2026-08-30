@@ -693,6 +693,13 @@ export type ActiveSlateAccess = {
       | "golf";
 
     leagueId: string;
+
+    rulesVersion:
+      number | null;
+
+    rulesSnapshot:
+      Record<string, unknown> |
+      null;
   };
 };
 
@@ -731,7 +738,9 @@ export async function getActiveSlateAccessForUser(
         `
           id,
           sport,
-          league_id
+          league_id,
+          rules_version,
+          rules_snapshot
         `,
       )
       .eq(
@@ -804,6 +813,29 @@ export async function getActiveSlateAccessForUser(
 
       leagueId:
         data.league_id,
+
+      rulesVersion:
+        data.rules_version ===
+          null ||
+        data.rules_version ===
+          undefined
+          ? null
+          : Number(
+              data.rules_version,
+            ),
+
+      rulesSnapshot:
+        data.rules_snapshot &&
+        typeof data.rules_snapshot ===
+          "object" &&
+        !Array.isArray(
+          data.rules_snapshot,
+        )
+          ? data.rules_snapshot as Record<
+              string,
+              unknown
+            >
+          : null,
     },
   };
 }

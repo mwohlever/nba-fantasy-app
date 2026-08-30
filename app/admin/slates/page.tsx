@@ -10,6 +10,16 @@ import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type SportKey = "nba" | "nfl" | "golf";
 
+type SlateRulesSnapshot = {
+  roster?: {
+    slots?: Array<{
+      position?: string;
+      slotCount?: number;
+      slot_count?: number;
+    }>;
+  };
+};
+
 type SlateListRow = {
   id: number;
   date: string;
@@ -18,6 +28,8 @@ type SlateListRow = {
   is_locked: boolean;
   label: string;
   sport?: SportKey;
+  rules_version?: number | null;
+  rules_snapshot?: SlateRulesSnapshot | null;
   display_name?: string | null;
   external_event_id?: string | null;
   cut_penalty_per_round?: number | null;
@@ -89,6 +101,53 @@ function normalizeTeamOrder(rows: SlateTeamRow[]) {
     ...team,
     draft_order: index + 1,
   }));
+}
+
+function getSlateRosterSlots(
+  slate: SlateListRow | null,
+) {
+  const rawSlots =
+    slate?.rules_snapshot?.roster?.slots;
+
+  if (!Array.isArray(rawSlots)) {
+    return [];
+  }
+
+  return rawSlots
+    .map((slot) => {
+      const position =
+        typeof slot?.position === "string"
+          ? slot.position.trim()
+          : "";
+
+      const slotCount =
+        Number(
+          slot?.slotCount ??
+            slot?.slot_count ??
+            0,
+        );
+
+      if (
+        !position ||
+        !Number.isInteger(slotCount) ||
+        slotCount < 0
+      ) {
+        return null;
+      }
+
+      return {
+        position,
+        slotCount,
+      };
+    })
+    .filter(
+      (
+        slot,
+      ): slot is {
+        position: string;
+        slotCount: number;
+      } => slot !== null,
+    );
 }
 
 function formatDateRange(
@@ -1150,6 +1209,47 @@ export default function AdminSlatesPage() {
                   </div>
 
 
+                </div>
+              ) : null}
+
+              {selectedSlate.sport === "nba" ? (
+                <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                  <div className="flex flex-col gap-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                      Roster Positions
+                    </div>
+
+                    <div className="text-xs text-slate-500">
+                      Frozen when this slate was created.
+                    </div>
+                  </div>
+
+                  {getSlateRosterSlots(
+                    selectedSlate,
+                  ).length > 0 ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {getSlateRosterSlots(
+                        selectedSlate,
+                      ).map((slot) => (
+                        <div
+                          key={slot.position}
+                          className="flex min-w-20 items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2"
+                        >
+                          <span className="text-xs font-semibold text-slate-400">
+                            {slot.position}
+                          </span>
+
+                          <span className="text-sm font-bold text-white">
+                            {slot.slotCount}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-3 text-sm text-slate-500">
+                      No roster snapshot is stored for this slate.
+                    </div>
+                  )}
                 </div>
               ) : null}
 

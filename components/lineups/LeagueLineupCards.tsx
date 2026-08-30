@@ -2,6 +2,9 @@
 
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
+import {
+  assignPlayersToRosterSlots,
+} from "@/lib/rules/leagueRules";
 import type {
   OrderedTeam,
   Player,
@@ -24,6 +27,7 @@ type Props = {
 type MiniSlotProps = {
   player: Player | null;
   positionGroup: string;
+  slotIndex: number;
   team: OrderedTeam;
   isLocked: boolean;
   setResearchPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
@@ -33,6 +37,7 @@ type MiniSlotProps = {
 function MiniSlot({
   player,
   positionGroup,
+  slotIndex,
   team,
   isLocked,
   setResearchPlayer,
@@ -54,6 +59,7 @@ function MiniSlot({
           teamId: team.id,
           teamName: team.name,
           positionGroup,
+          slotIndex,
         });
       }}
       className={`league-lineup-mini-slot ${
@@ -82,11 +88,6 @@ function MiniSlot({
   );
 }
 
-const FALLBACK_ROSTER_SLOTS: RosterSlotConfig[] = [
-  { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
-  { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
-];
-
 export default function LeagueLineupCards({
   teams,
   currentTeamId,
@@ -107,7 +108,7 @@ export default function LeagueLineupCards({
   }
 
   const effectiveSlots =
-    rosterSlots.length > 0 ? rosterSlots : FALLBACK_ROSTER_SLOTS;
+    rosterSlots;
 
   const totalSlots = effectiveSlots.reduce(
     (sum, slot) => sum + slot.slot_count,
@@ -138,13 +139,33 @@ export default function LeagueLineupCards({
         {otherTeams.map((team) => {
           const rosterPlayers = getPlayersForTeam(team.id);
 
-          const playersByPosition = new Map<string, Player[]>();
-          rosterPlayers.forEach((player) => {
-            const existing =
-              playersByPosition.get(player.position_group) ?? [];
-            existing.push(player);
-            playersByPosition.set(player.position_group, existing);
-          });
+          const activeSport =
+            (
+              effectiveSlots[
+                0
+              ]?.sport ??
+              "nba"
+            ) as
+              | "nba"
+              | "nfl"
+              | "golf";
+
+
+          const rosterAssignment =
+            assignPlayersToRosterSlots({
+              sport:
+                activeSport,
+
+              playerPositions:
+                rosterPlayers.map(
+                  (player) =>
+                    player.position_group,
+                ),
+
+              rosterSlots:
+                effectiveSlots,
+            });
+
 
           const projectedTotal = rosterPlayers.reduce(
             (sum, player) =>
@@ -196,34 +217,72 @@ export default function LeagueLineupCards({
               </div>
 
               <div className="league-lineup-formation">
-                {effectiveSlots.map((slotConfig) => {
-                  const positionPlayers =
-                    playersByPosition.get(slotConfig.position) ?? [];
+                {effectiveSlots.map(
+                  (
+                    slotConfig,
+                  ) => {
+                    const matchingSlots =
+                      rosterAssignment.slots.filter(
+                        (slot) =>
+                          slot.position ===
+                          slotConfig.position,
+                      );
 
-                  const slotList: Array<Player | null> = Array.from(
-                    { length: slotConfig.slot_count },
-                    (_, index) => positionPlayers[index] ?? null
-                  );
 
-                  return (
-                    <div
-                      key={slotConfig.position}
-                      className="league-lineup-row"
-                    >
-                      {slotList.map((player, index) => (
-                        <MiniSlot
-                          key={`${slotConfig.position}-${team.id}-${index}`}
-                          player={player}
-                          positionGroup={slotConfig.position}
-                          team={team}
-                          isLocked={isLocked}
-                          setResearchPlayer={setResearchPlayer}
-                          setTargetDraftSlot={setTargetDraftSlot}
-                        />
-                      ))}
-                    </div>
-                  );
-                })}
+                    return (
+                      <div
+                        key={
+                          slotConfig.position
+                        }
+                        className="league-lineup-row"
+                      >
+                        {matchingSlots.map(
+                          (
+                            slot,
+                            index,
+                          ) => {
+                            const player =
+                              slot.playerIndex >=
+                              0
+                                ? rosterPlayers[
+                                    slot.playerIndex
+                                  ] ??
+                                  null
+                                : null;
+
+
+                            return (
+                              <MiniSlot
+                                key={`${slotConfig.position}-${team.id}-${index}`}
+                                player={
+                                  player
+                                }
+                                positionGroup={
+                                  slotConfig.position
+                                }
+                                slotIndex={
+                                  slot.slotIndex
+                                }
+                                team={
+                                  team
+                                }
+                                isLocked={
+                                  isLocked
+                                }
+                                setResearchPlayer={
+                                  setResearchPlayer
+                                }
+                                setTargetDraftSlot={
+                                  setTargetDraftSlot
+                                }
+                              />
+                            );
+                          },
+                        )}
+                      </div>
+                    );
+                  },
+                )}
               </div>
 
               <div className="league-lineup-progress">

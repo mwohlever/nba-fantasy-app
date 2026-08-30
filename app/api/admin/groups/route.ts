@@ -25,6 +25,11 @@ const INVITE_LIFETIME_DAYS =
   7;
 
 
+import {
+  getDefaultLeagueRules,
+  type SlateSport,
+} from "@/lib/rules/leagueRules";
+
 const LEAGUE_TEMPLATES = {
   nba: {
     sport_key:
@@ -109,6 +114,22 @@ type ActionBody = {
   leagueId?: string;
 
   sportKey?: string;
+
+  roster?: {
+    guards?: number;
+    forwardsCenters?: number;
+    utility?: number;
+    QB?: number;
+    RB?: number;
+    WR?: number;
+    TE?: number;
+    K?: number;
+    FLEX?: number;
+    SF?: number;
+    "D/ST"?: number;
+  };
+
+  scoring?: Record<string, number>;
 
   role?:
     | "member"
@@ -593,7 +614,9 @@ export async function GET() {
               game_mode,
               name,
               slug,
-              is_enabled
+              is_enabled,
+              settings_version,
+              settings
             `,
           )
           .in(
@@ -2684,6 +2707,829 @@ export async function POST(
           name:
             group.name,
         },
+      });
+    }
+
+
+    // ==========================================================
+    // UPDATE NBA ROSTER RULES
+    // ==========================================================
+
+    if (
+      action ===
+      "update_nba_roster_rules"
+    ) {
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+      const leagueId =
+        String(
+          body.leagueId ??
+            "",
+        ).trim();
+
+
+      if (
+        !(
+          await requireGroupAdmin(
+            user,
+            groupId,
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group administrator access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+
+      if (
+        !leagueId
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NBA League is required.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
+      const guards =
+        Number(
+          body.roster?.guards,
+        );
+
+      const forwardsCenters =
+        Number(
+          body.roster?.forwardsCenters,
+        );
+
+      const utility =
+        Number(
+          body.roster?.utility,
+        );
+
+
+      const counts = [
+        guards,
+        forwardsCenters,
+        utility,
+      ];
+
+
+      if (
+        counts.some(
+          (count) =>
+            !Number.isInteger(
+              count,
+            ) ||
+            count < 0 ||
+            count > 20,
+        ) ||
+        guards +
+          forwardsCenters +
+          utility <
+          1
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Roster counts must be whole numbers from 0–20, with at least one total roster spot.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
+      const {
+        data:
+          league,
+        error:
+          leagueError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .select(
+            `
+              id,
+              group_id,
+              sport_key,
+              game_mode,
+              settings_version,
+              settings
+            `,
+          )
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .maybeSingle();
+
+
+      if (
+        leagueError
+      ) {
+        throw new Error(
+          `Unable to load NBA rules: ${leagueError.message}`,
+        );
+      }
+
+
+      if (
+        !league ||
+        league.sport_key !==
+          "nba" ||
+        league.game_mode !==
+          "standard"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NBA League not found in this Group.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+
+      const currentSettings =
+        league.settings &&
+        typeof league.settings ===
+          "object" &&
+        !Array.isArray(
+          league.settings,
+        )
+          ? league.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+
+      const nextSettings = {
+        ...currentSettings,
+
+        roster: {
+          slots: [
+            {
+              position:
+                "G",
+
+              slotCount:
+                guards,
+            },
+
+            {
+              position:
+                "F/C",
+
+              slotCount:
+                forwardsCenters,
+            },
+
+            {
+              position:
+                "UTIL",
+
+              slotCount:
+                utility,
+            },
+          ],
+        },
+      };
+
+
+      const {
+        error:
+          updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .update({
+            settings:
+              nextSettings,
+
+            settings_version:
+              Number(
+                league.settings_version ??
+                  1,
+              ),
+          })
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+
+      if (
+        updateError
+      ) {
+        throw new Error(
+          `Unable to save NBA roster rules: ${updateError.message}`,
+        );
+      }
+
+
+      return NextResponse.json({
+        success:
+          true,
+
+        roster: {
+          guards,
+          forwardsCenters,
+          utility,
+
+          total:
+            guards +
+            forwardsCenters +
+            utility,
+        },
+      });
+    }
+
+
+    // ==========================================================
+    // UPDATE NFL ROSTER RULES
+    // ==========================================================
+
+    if (
+      action ===
+      "update_nfl_roster_rules"
+    ) {
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+      const leagueId =
+        String(
+          body.leagueId ??
+            "",
+        ).trim();
+
+      if (
+        !(
+          await requireGroupAdmin(
+            user,
+            groupId,
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group administrator access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+      if (!leagueId) {
+        return NextResponse.json(
+          {
+            error:
+              "NFL League is required.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+      const roster =
+        body.roster &&
+        typeof body.roster ===
+          "object" &&
+        !Array.isArray(
+          body.roster,
+        )
+          ? body.roster
+          : {};
+
+      const positions = [
+        "QB",
+        "RB",
+        "WR",
+        "TE",
+        "K",
+        "FLEX",
+        "SF",
+        "D/ST",
+      ] as const;
+
+      const counts =
+        Object.fromEntries(
+          positions.map(
+            (position) => [
+              position,
+              Number(
+                roster[
+                  position
+                ],
+              ),
+            ],
+          ),
+        ) as Record<
+          (typeof positions)[number],
+          number
+        >;
+
+      if (
+        positions.some(
+          (position) =>
+            !Number.isInteger(
+              counts[
+                position
+              ],
+            ) ||
+            counts[
+              position
+            ] < 0 ||
+            counts[
+              position
+            ] > 20,
+        ) ||
+        positions.reduce(
+          (
+            total,
+            position,
+          ) =>
+            total +
+            counts[
+              position
+            ],
+          0,
+        ) < 1
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Roster counts must be whole numbers from 0–20, with at least one total roster spot.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+      const {
+        data:
+          league,
+        error:
+          leagueError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .select(
+            `
+              id,
+              group_id,
+              sport_key,
+              game_mode,
+              settings_version,
+              settings
+            `,
+          )
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .maybeSingle();
+
+      if (
+        leagueError
+      ) {
+        throw new Error(
+          `Unable to load NFL rules: ${leagueError.message}`,
+        );
+      }
+
+      if (
+        !league ||
+        league.sport_key !==
+          "nfl" ||
+        league.game_mode !==
+          "standard"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NFL League not found in this Group.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+      const currentSettings =
+        league.settings &&
+        typeof league.settings ===
+          "object" &&
+        !Array.isArray(
+          league.settings,
+        )
+          ? league.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const nextSettings = {
+        ...currentSettings,
+
+        roster: {
+          slots:
+            positions.map(
+              (
+                position,
+              ) => ({
+                position,
+
+                slotCount:
+                  counts[
+                    position
+                  ],
+              }),
+            ),
+        },
+      };
+
+      const nextSettingsVersion =
+        Number(
+          league.settings_version ??
+            1,
+        ) +
+        1;
+
+      const {
+        error:
+          updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .update({
+            settings:
+              nextSettings,
+
+            settings_version:
+              nextSettingsVersion,
+          })
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+      if (
+        updateError
+      ) {
+        throw new Error(
+          `Unable to save NFL roster rules: ${updateError.message}`,
+        );
+      }
+
+      return NextResponse.json({
+        success:
+          true,
+
+        roster:
+          counts,
+
+        total:
+          positions.reduce(
+            (
+              total,
+              position,
+            ) =>
+              total +
+              counts[
+                position
+              ],
+            0,
+          ),
+
+        settingsVersion:
+          nextSettingsVersion,
+      });
+    }
+
+
+    // ==========================================================
+    // UPDATE NBA / NFL SCORING RULES
+    // ==========================================================
+
+    if (
+      action ===
+      "update_scoring_rules"
+    ) {
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+      const leagueId =
+        String(
+          body.leagueId ??
+            "",
+        ).trim();
+
+      if (
+        !(
+          await requireGroupAdmin(
+            user,
+            groupId,
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group administrator access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+      if (
+        !leagueId
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "League is required.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+      const {
+        data:
+          league,
+        error:
+          leagueError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .select(
+            `
+              id,
+              group_id,
+              sport_key,
+              game_mode,
+              settings_version,
+              settings
+            `,
+          )
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .maybeSingle();
+
+      if (
+        leagueError
+      ) {
+        throw new Error(
+          `Unable to load scoring rules: ${leagueError.message}`,
+        );
+      }
+
+      if (
+        !league ||
+        league.game_mode !==
+          "standard" ||
+        (
+          league.sport_key !==
+            "nba" &&
+          league.sport_key !==
+            "nfl"
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NBA or NFL standard League not found in this Group.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+      const sport =
+        league.sport_key as SlateSport;
+
+      const defaultScoring =
+        getDefaultLeagueRules(
+          sport,
+        ).scoring as Record<
+          string,
+          number
+        >;
+
+      const submittedScoring =
+        body.scoring &&
+        typeof body.scoring ===
+          "object" &&
+        !Array.isArray(
+          body.scoring,
+        )
+          ? body.scoring
+          : {};
+
+      const nextScoring:
+        Record<
+          string,
+          number
+        > = {
+          ...defaultScoring,
+        };
+
+      for (
+        const key
+        of Object.keys(
+          defaultScoring,
+        )
+      ) {
+        if (
+          !Object.prototype.hasOwnProperty.call(
+            submittedScoring,
+            key,
+          )
+        ) {
+          continue;
+        }
+
+        const value =
+          Number(
+            submittedScoring[
+              key
+            ],
+          );
+
+        if (
+          !Number.isFinite(
+            value,
+          ) ||
+          value <
+            -1000 ||
+          value >
+            1000
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                `Invalid scoring value for ${key}.`,
+            },
+            {
+              status:
+                400,
+            },
+          );
+        }
+
+        nextScoring[
+          key
+        ] =
+          value;
+      }
+
+      const currentSettings =
+        league.settings &&
+        typeof league.settings ===
+          "object" &&
+        !Array.isArray(
+          league.settings,
+        )
+          ? league.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const nextSettings = {
+        ...currentSettings,
+
+        scoring:
+          nextScoring,
+      };
+
+      const nextSettingsVersion =
+        Number(
+          league.settings_version ??
+            1,
+        ) +
+        1;
+
+      const {
+        error:
+          updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .update({
+            settings:
+              nextSettings,
+
+            settings_version:
+              nextSettingsVersion,
+          })
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+      if (
+        updateError
+      ) {
+        throw new Error(
+          `Unable to save scoring rules: ${updateError.message}`,
+        );
+      }
+
+      return NextResponse.json({
+        success:
+          true,
+
+        sport,
+
+        scoring:
+          nextScoring,
+
+        settingsVersion:
+          nextSettingsVersion,
       });
     }
 

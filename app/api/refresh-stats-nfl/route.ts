@@ -5,7 +5,11 @@ import {
   fetchGameSummary,
 } from "@/lib/providers/nfl";
 import { aggregateEspnBoxscore } from "@/lib/aggregateEspnBoxscore";
-import { calculateNflFantasyPoints } from "@/lib/scoring/nfl";
+import {
+  calculateNflFantasyPoints,
+  DEFAULT_NFL_SCORING_RULES,
+  type NflScoringRules,
+} from "@/lib/scoring/nfl";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 
@@ -20,6 +24,7 @@ type SlateRecord = {
   start_date: string;
   end_date: string;
   is_locked: boolean;
+  rules_snapshot: Record<string, unknown> | null;
 };
 
 type LineupWithPlayers = {
@@ -70,7 +75,7 @@ export async function POST(request: Request) {
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
-      .select("id, sport, date, start_date, end_date, is_locked")
+      .select("id, sport, date, start_date, end_date, is_locked, rules_snapshot")
       .eq("id", slateId)
       .single();
 
@@ -93,6 +98,28 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const snapshotScoring =
+      safeSlate.rules_snapshot &&
+      typeof safeSlate.rules_snapshot === "object" &&
+      !Array.isArray(safeSlate.rules_snapshot) &&
+      safeSlate.rules_snapshot.scoring &&
+      typeof safeSlate.rules_snapshot.scoring === "object" &&
+      !Array.isArray(safeSlate.rules_snapshot.scoring)
+        ? (safeSlate.rules_snapshot.scoring as Record<string, unknown>)
+        : {};
+
+    const nflScoringRules: NflScoringRules = {
+      ...DEFAULT_NFL_SCORING_RULES,
+      ...Object.fromEntries(
+        Object.entries(snapshotScoring)
+          .filter(([key, value]) =>
+            key in DEFAULT_NFL_SCORING_RULES &&
+            Number.isFinite(Number(value))
+          )
+          .map(([key, value]) => [key, Number(value)])
+      ),
+    };
 
     const { data: lineupsData, error: lineupsError } = await supabaseAdmin
       .from("lineups")
@@ -227,7 +254,13 @@ export async function POST(request: Request) {
         row.receiving_tds = stat.receiving_tds;
         row.receptions = stat.receptions;
         row.fumbles_lost = stat.fumbles_lost;
-        row.fantasy_points = Math.round(calculateNflFantasyPoints(stat) * 10) / 10;
+        row.fantasy_points =
+          Math.round(
+            calculateNflFantasyPoints(
+              stat,
+              nflScoringRules,
+            ) * 10,
+          ) / 10;
         row.game_status_text = statusText;
         // Matches NBA's convention: 3 = final, 2 = in progress
         row.game_status = isCompleted ? 3 : 2;

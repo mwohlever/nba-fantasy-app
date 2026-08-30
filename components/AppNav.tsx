@@ -966,7 +966,8 @@ function AppNavContent() {
             "/admin/",
           )
         ) &&
-        !isPlatformAdminPath
+        !isPlatformAdminPath &&
+        !isCommissionerGroupSettings
       );
     }
 

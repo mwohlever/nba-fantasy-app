@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
 
-const VALID_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
+const VALID_POSITIONS = new Set([
+  "QB",
+  "RB",
+  "WR",
+  "TE",
+  "K",
+  "D/ST",
+]);
 
 export async function GET() {
   const authError = await requireAdminApi();

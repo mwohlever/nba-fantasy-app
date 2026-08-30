@@ -7,6 +7,12 @@ import {
 } from "@/lib/groups/context";
 import { notifyNextDrafter } from "@/lib/draftNotifications";
 import { getPlayerProjectionsForSeason } from "@/lib/playerProjections";
+import {
+  assignPlayersToRosterSlots,
+  canPlayerFillRosterSlot,
+  getDefaultRosterSlotsForSport,
+  getRosterSlotsFromRulesSnapshot,
+} from "@/lib/rules/leagueRules";
 
 type Sport = "nba" | "nfl" | "golf";
 
@@ -15,6 +21,11 @@ type SaveLineupBody = {
   teamId?: number;
   playerIds?: number[];
   notifyNextDrafter?: boolean;
+  rosterSlot?: {
+    playerId: number;
+    position: string;
+    slotIndex: number;
+  } | null;
 };
 
 type LineupRow = {
@@ -27,6 +38,8 @@ type LineupPlayerRow = {
   lineup_id: number;
   player_id: number;
   projected_fantasy_points: number | null;
+  roster_slot_position: string | null;
+  roster_slot_index: number | null;
 };
 
 type SlateRow = {
@@ -61,24 +74,12 @@ function getSlateSeason(date: string | null | undefined) {
   return year && /^\d{4}$/.test(year) ? year : "2026";
 }
 
-function getDefaultRosterSlots(sport: Sport): RosterSlotRow[] {
-  if (sport === "nfl") {
-    return [
-      { position: "QB", slot_count: 1 },
-      { position: "RB", slot_count: 2 },
-      { position: "WR", slot_count: 2 },
-      { position: "TE", slot_count: 1 },
-    ];
-  }
-
-  if (sport === "golf") {
-    return [{ position: "GOLFER", slot_count: 4 }];
-  }
-
-  return [
-    { position: "G", slot_count: 2 },
-    { position: "F/C", slot_count: 3 },
-  ];
+function getDefaultRosterSlots(
+  sport: Sport,
+): RosterSlotRow[] {
+  return getDefaultRosterSlotsForSport(
+    sport,
+  );
 }
 
 async function loadPlayersForSport(
@@ -265,7 +266,7 @@ export async function GET(request: NextRequest) {
       await supabaseAdmin
         .from("lineup_players")
         .select(
-          "lineup_id, player_id, projected_fantasy_points",
+          "lineup_id, player_id, projected_fantasy_points, roster_slot_position, roster_slot_index",
         )
         .in("lineup_id", lineupIds);
 
@@ -303,9 +304,28 @@ export async function GET(request: NextRequest) {
 
       return {
         team_id: lineup.team_id,
-        player_ids: lineupPlayerRows.map(
-          (lineupPlayer) => lineupPlayer.player_id,
-        ),
+        player_ids:
+          lineupPlayerRows.map(
+            (lineupPlayer) =>
+              lineupPlayer.player_id,
+          ),
+
+        player_slots:
+          lineupPlayerRows.map(
+            (lineupPlayer) => ({
+              player_id:
+                lineupPlayer.player_id,
+
+              roster_slot_position:
+                lineupPlayer.roster_slot_position ??
+                null,
+
+              roster_slot_index:
+                lineupPlayer.roster_slot_index ??
+                null,
+            }),
+          ),
+
         pregame_projected_points:
           hasCompleteProjectionSnapshot
             ? Number(
@@ -360,6 +380,32 @@ export async function POST(request: Request) {
     const playerIds = Array.isArray(body.playerIds)
       ? body.playerIds.map(Number)
       : [];
+
+
+    const requestedRosterSlot =
+      body.rosterSlot &&
+      typeof body.rosterSlot ===
+        "object"
+        ? {
+            playerId:
+              Number(
+                body.rosterSlot.playerId,
+              ),
+
+            position:
+              String(
+                body.rosterSlot.position ??
+                  "",
+              )
+                .trim()
+                .toUpperCase(),
+
+            slotIndex:
+              Number(
+                body.rosterSlot.slotIndex,
+              ),
+          }
+        : null;
 
     if (
       !Number.isInteger(slateId) ||
@@ -500,28 +546,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: rosterSlotData, error: rosterSlotError } =
-      await supabaseAdmin
-        .from("roster_slots")
-        .select("position, slot_count")
-        .eq("sport", sport)
-        .order("display_order", { ascending: true });
-
-    if (rosterSlotError) {
-      return NextResponse.json(
-        {
-          error:
-            `Failed to load ${sport.toUpperCase()} roster rules: ` +
-            rosterSlotError.message,
-        },
-        { status: 500 },
-      );
-    }
-
     const rosterSlots =
-      (rosterSlotData ?? []).length > 0
-        ? ((rosterSlotData ?? []) as RosterSlotRow[])
-        : getDefaultRosterSlots(sport);
+      getRosterSlotsFromRulesSnapshot(
+        slateAccess.slate.rulesSnapshot,
+        sport,
+      );
+
 
     const totalRosterSlots = rosterSlots.reduce(
       (sum, slot) => sum + Number(slot.slot_count),
@@ -639,55 +669,115 @@ export async function POST(request: Request) {
       }
     }
 
-    const positionCounts = new Map<string, number>();
+    const rosterAssignment =
+      assignPlayersToRosterSlots({
+        sport,
 
-    players.forEach((player) => {
-      positionCounts.set(
-        player.position,
-        (positionCounts.get(player.position) ?? 0) + 1,
+        playerPositions:
+          players.map(
+            (player) =>
+              player.position,
+          ),
+
+        rosterSlots,
+      });
+
+
+    if (
+      !rosterAssignment.fits
+    ) {
+      const invalidPlayerIndex =
+        rosterAssignment
+          .unmatchedPlayerIndexes[
+            0
+          ];
+
+
+      const invalidPlayer =
+        players[
+          invalidPlayerIndex
+        ];
+
+
+      return NextResponse.json(
+        {
+          error:
+            invalidPlayer
+              ? `${invalidPlayer.name} does not fit an open ${sport.toUpperCase()} roster slot.`
+              : `That lineup does not fit the configured ${sport.toUpperCase()} roster.`,
+        },
+        {
+          status:
+            400,
+        },
       );
-    });
+    }
 
-    for (const slot of rosterSlots) {
-      const count =
-        positionCounts.get(slot.position) ?? 0;
 
-      if (count > Number(slot.slot_count)) {
+    if (
+      requestedRosterSlot
+    ) {
+      const requestedPlayer =
+        players.find(
+          (player) =>
+            Number(
+              player.id,
+            ) ===
+            requestedRosterSlot.playerId,
+        );
+
+
+      const requestedSlotConfig =
+        rosterSlots.find(
+          (slot) =>
+            slot.position
+              .trim()
+              .toUpperCase() ===
+            requestedRosterSlot.position,
+        );
+
+
+      if (
+        !requestedPlayer ||
+        !uniquePlayerIds.includes(
+          requestedRosterSlot.playerId,
+        ) ||
+        !requestedSlotConfig ||
+        !Number.isInteger(
+          requestedRosterSlot.slotIndex,
+        ) ||
+        requestedRosterSlot.slotIndex <
+          0 ||
+        requestedRosterSlot.slotIndex >=
+          Number(
+            requestedSlotConfig.slot_count,
+          ) ||
+        !canPlayerFillRosterSlot(
+          sport,
+          requestedPlayer.position,
+          requestedRosterSlot.position,
+        )
+      ) {
         return NextResponse.json(
           {
             error:
-              `A ${sport.toUpperCase()} lineup can have at most ` +
-              `${slot.slot_count} ${slot.position}.`,
+              "The requested roster slot is not valid for this player.",
           },
-          { status: 400 },
+          {
+            status:
+              400,
+          },
         );
       }
     }
 
-    const allowedPositions = new Set(
-      rosterSlots.map((slot) => slot.position),
-    );
-
-    const invalidPositionPlayer = players.find(
-      (player) =>
-        !allowedPositions.has(player.position),
-    );
-
-    if (invalidPositionPlayer) {
-      return NextResponse.json(
-        {
-          error:
-            `${invalidPositionPlayer.name} does not fit a valid ` +
-            `${sport.toUpperCase()} roster slot.`,
-        },
-        { status: 400 },
-      );
-    }
 
     const { data: existingLineup, error: existingLineupError } =
       await supabaseAdmin
         .from("lineups")
-        .select("id, lineup_players(player_id)")
+        .select(
+          "id, lineup_players(player_id, roster_slot_position, roster_slot_index)",
+        )
         .eq("team_id", teamId)
         .eq("slate_id", slateId)
         .maybeSingle();
@@ -708,7 +798,11 @@ export async function POST(request: Request) {
           (
             existingLineup as {
               lineup_players?:
-                | { player_id: number }[]
+                | {
+                    player_id: number;
+                    roster_slot_position: string | null;
+                    roster_slot_index: number | null;
+                  }[]
                 | null;
             }
           ).lineup_players ?? []
@@ -811,7 +905,23 @@ export async function POST(request: Request) {
 
         return {
           lineup_id: lineupId,
-          player_id: playerId,
+          player_id:
+            playerId,
+
+          roster_slot_position:
+            requestedRosterSlot &&
+            requestedRosterSlot.playerId ===
+              playerId
+              ? requestedRosterSlot.position
+              : null,
+
+          roster_slot_index:
+            requestedRosterSlot &&
+            requestedRosterSlot.playerId ===
+              playerId
+              ? requestedRosterSlot.slotIndex
+              : null,
+
           projected_fantasy_points:
             projectedFantasyPoints,
           projection_confidence:

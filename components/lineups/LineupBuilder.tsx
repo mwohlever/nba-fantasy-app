@@ -17,6 +17,11 @@ import LineupControls from "@/components/lineups/LineupControls";
 import { getStatColumns } from "@/lib/statColumns";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import { getSportConfig } from "@/lib/sports";
+import {
+  assignPlayersToRosterSlots,
+  canPlayerFillRosterSlot,
+  getRosterSlotsFromRulesSnapshot,
+} from "@/lib/rules/leagueRules";
 import type {
   Player,
   PlayerHistoryDetailRow,
@@ -96,6 +101,13 @@ export default function LineupBuilder({
     teamId: number;
     displayName: string;
     role: "player" | "admin";
+
+    /*
+     * teamId is the legacy/default-team pointer.
+     * Group-aware drafting must use the active Group's team.
+     */
+    activeGroupTeamId: number | null;
+    activeGroupTeamName: string | null;
   } | null>(null);
   const [
     notifyNextDrafterForProxyPicks,
@@ -121,6 +133,24 @@ export default function LineupBuilder({
     useState<Player | null>(null);
   const [targetDraftSlot, setTargetDraftSlot] =
     useState<TargetDraftSlot | null>(null);
+
+
+  const [
+    pendingRosterSlotChoice,
+    setPendingRosterSlotChoice,
+  ] =
+    useState<{
+      player: Player;
+      teamId: number;
+
+      slots: Array<{
+        position: string;
+        slotIndex: number;
+      }>;
+    } | null>(
+      null,
+    );
+
 
   const [draftPageTab, setDraftPageTab] = useState<
     "lineup" | "players"
@@ -156,6 +186,43 @@ export default function LineupBuilder({
   const selectedSlate =
     slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
 
+
+  const effectiveRosterSlots =
+    useMemo(
+      () => {
+        const activeSport =
+          (
+            selectedSlate?.sport ??
+            sport ??
+            selectedSport
+          ) as
+            | "nba"
+            | "nfl"
+            | "golf";
+
+
+        /*
+         * New slates use their immutable rules snapshot.
+         *
+         * Historical slates have no snapshot, so the rule helper
+         * deliberately returns the legacy 111 defaults.
+         */
+        return getRosterSlotsFromRulesSnapshot(
+          selectedSlate?.rules_snapshot ??
+            null,
+          activeSport,
+        );
+      },
+      [
+        selectedSlate?.id,
+        selectedSlate?.sport,
+        selectedSlate?.rules_snapshot,
+        sport,
+        selectedSport,
+      ],
+    );
+
+
   const selectedSlateDisplay =
     selectedSlate?.label ?? selectedSlate?.date ?? "No slate selected";
 
@@ -184,7 +251,35 @@ export default function LineupBuilder({
           return;
         }
 
-        setCurrentUser(result.user ?? null);
+        const loadedUser =
+          result.user ??
+          null;
+
+        const activeGroupTeam =
+          result.groupContext?.team ??
+          null;
+
+        setCurrentUser(
+          loadedUser
+            ? {
+                ...loadedUser,
+
+                activeGroupTeamId:
+                  activeGroupTeam?.id !==
+                    null &&
+                  activeGroupTeam?.id !==
+                    undefined
+                    ? Number(
+                        activeGroupTeam.id,
+                      )
+                    : null,
+
+                activeGroupTeamName:
+                  activeGroupTeam?.name ??
+                  null,
+              }
+            : null,
+        );
       } catch (error) {
         console.error("Failed to load current user", error);
 
@@ -472,6 +567,17 @@ export default function LineupBuilder({
     return [...configuredTeams, ...missingTeams];
   }, [selectedSlateIdNumber, slateTeamConfigs, teams, teamsById]);
 
+  const currentTeamId =
+    currentUser?.activeGroupTeamId ??
+    currentUser?.teamId ??
+    null;
+
+  const currentTeamName =
+    currentUser?.activeGroupTeamName ??
+    currentUser?.displayName ??
+    null;
+
+
   const participatingTeamIds = useMemo(() => {
     return new Set(
       orderedTeamsForSlate
@@ -490,8 +596,19 @@ export default function LineupBuilder({
           return false;
         }
 
-        if (positionFilter !== "All" && player.position_group !== positionFilter) {
-          return false;
+        if (positionFilter !== "All") {
+          const matchesPositionFilter =
+            selectedSport === "nfl"
+              ? canPlayerFillRosterSlot(
+                  "nfl",
+                  player.position_group,
+                  positionFilter,
+                )
+              : player.position_group === positionFilter;
+
+          if (!matchesPositionFilter) {
+            return false;
+          }
         }
 
         if (onSlateOnly && !isAvailabilityLoading) {
@@ -815,27 +932,7 @@ export default function LineupBuilder({
   const liveWinPctMap = computeWinPctMap();
 
   function getEffectiveRosterSlots() {
-    if (rosterSlots.length > 0) {
-      return rosterSlots;
-    }
-
-    const activeSport = selectedSlate?.sport ?? selectedSport;
-
-    if (activeSport === "golf") {
-      return [
-        {
-          sport: "golf",
-          position: "GOLFER",
-          slot_count: 4,
-          display_order: 1,
-        },
-      ];
-    }
-
-    return [
-      { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
-      { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
-    ];
+    return effectiveRosterSlots;
   }
 
   function getRosterTotalSlots() {
@@ -856,25 +953,92 @@ export default function LineupBuilder({
     return map;
   }
 
-  function getDraftNeeds(teamId: number) {
-    const teamPlayers = getPlayersForTeam(teamId);
-    const counts = countPlayersByPosition(teamPlayers);
-    const slots = getEffectiveRosterSlots();
+  function getDraftNeeds(
+    teamId:
+      number,
+  ) {
+    const teamPlayers =
+      getPlayersForTeam(
+        teamId,
+      );
 
-    const parts: string[] = [];
 
-    slots.forEach((slot) => {
-      const have = counts.get(slot.position) ?? 0;
-      const needed = Math.max(0, slot.slot_count - have);
-      if (needed > 0) parts.push(`${needed} ${slot.position}`);
-    });
+    const activeSport =
+      (
+        selectedSlate?.sport ??
+        sport ??
+        selectedSport
+      ) as
+        | "nba"
+        | "nfl"
+        | "golf";
 
-    if (parts.length === 0) {
+
+    const assignment =
+      assignPlayersToRosterSlots({
+        sport:
+          activeSport,
+
+        playerPositions:
+          teamPlayers.map(
+            (player) =>
+              player.position_group,
+          ),
+
+        rosterSlots:
+          getEffectiveRosterSlots(),
+      });
+
+
+    const needCounts =
+      new Map<
+        string,
+        number
+      >();
+
+
+    for (
+      const slot
+      of assignment.remainingSlots
+    ) {
+      needCounts.set(
+        slot.position,
+        (
+          needCounts.get(
+            slot.position,
+          ) ??
+          0
+        ) +
+          1,
+      );
+    }
+
+
+    const parts =
+      Array.from(
+        needCounts.entries(),
+      ).map(
+        (
+          [
+            position,
+            count,
+          ],
+        ) =>
+          `${count} ${position}`,
+      );
+
+
+    if (
+      parts.length ===
+      0
+    ) {
       return "Roster full";
     }
 
+
     return `Needs ${parts.join(" • ")}`;
   }
+
 
   const dailySummary = useMemo(() => {
     const rows = orderedTeamsForSlate.map((team) => {
@@ -930,17 +1094,53 @@ export default function LineupBuilder({
       return { canAssign: false, reason: "Lineup full" };
     }
 
-    const nextCounts = countPlayersByPosition(nextPlayers);
-    const slots = getEffectiveRosterSlots();
+    const activeSport =
+      (
+        selectedSlate?.sport ??
+        sport ??
+        selectedSport
+      ) as
+        | "nba"
+        | "nfl"
+        | "golf";
 
-    for (const slot of slots) {
-      const count = nextCounts.get(slot.position) ?? 0;
-      if (count > slot.slot_count) {
-        return { canAssign: false, reason: `Too many ${slot.position}` };
-      }
+
+    const assignment =
+      assignPlayersToRosterSlots({
+        sport:
+          activeSport,
+
+        playerPositions:
+          nextPlayers.map(
+            (item) =>
+              item.position_group,
+          ),
+
+        rosterSlots:
+          getEffectiveRosterSlots(),
+      });
+
+
+    if (
+      !assignment.fits
+    ) {
+      return {
+        canAssign:
+          false,
+
+        reason:
+          "No compatible roster spot",
+      };
     }
 
-    return { canAssign: true, reason: "" };
+
+    return {
+      canAssign:
+        true,
+
+      reason:
+        "",
+    };
   }
 
   async function loadSlateLineups(nextSlateId: number) {
@@ -1188,6 +1388,245 @@ export default function LineupBuilder({
     }
   }
 
+  function getCompatibleOpenSlotsForPlayer(
+    teamId: number,
+    player: Player,
+  ) {
+    const activeSport =
+      (
+        selectedSlate?.sport ??
+        sport ??
+        selectedSport
+      ) as
+        | "nba"
+        | "nfl"
+        | "golf";
+
+
+    const teamPlayers =
+      getPlayersForTeam(
+        teamId,
+      );
+
+
+    const lineupWithSlots =
+      getLineupForTeam(
+        teamId,
+      ) as
+        | (
+            SavedLineup & {
+              player_slots?: Array<{
+                player_id: number;
+                roster_slot_position:
+                  string | null;
+                roster_slot_index:
+                  number | null;
+              }>;
+            }
+          )
+        | null;
+
+
+    const savedSlots =
+      lineupWithSlots?.player_slots ??
+      [];
+
+
+    const savedSlotByPlayerId =
+      new Map<
+        number,
+        {
+          position: string;
+          slotIndex: number;
+        }
+      >();
+
+
+    for (
+      const savedSlot
+      of savedSlots
+    ) {
+      if (
+        !savedSlot.roster_slot_position ||
+        savedSlot.roster_slot_index ===
+          null ||
+        savedSlot.roster_slot_index ===
+          undefined
+      ) {
+        continue;
+      }
+
+
+      savedSlotByPlayerId.set(
+        savedSlot.player_id,
+        {
+          position:
+            savedSlot.roster_slot_position,
+
+          slotIndex:
+            savedSlot.roster_slot_index,
+        },
+      );
+    }
+
+
+    /*
+     * For new configurable-roster slates, persisted slot
+     * assignments are authoritative.
+     *
+     * Do not re-run the generic position matcher here:
+     * a Guard intentionally saved to UTIL must remain in
+     * UTIL when determining whether G is still open.
+     */
+    const hasCompleteSavedSlotState =
+      teamPlayers.every(
+        (teamPlayer) =>
+          savedSlotByPlayerId.has(
+            teamPlayer.id,
+          ),
+      );
+
+
+    let openSlots: Array<{
+      position: string;
+      slotIndex: number;
+    }>;
+
+
+    if (
+      hasCompleteSavedSlotState
+    ) {
+      const occupiedSlotKeys =
+        new Set(
+          Array.from(
+            savedSlotByPlayerId.values(),
+          ).map(
+            (slot) =>
+              `${slot.position}:${slot.slotIndex}`,
+          ),
+        );
+
+
+      openSlots =
+        getEffectiveRosterSlots()
+          .flatMap(
+            (slotConfig) =>
+              Array.from(
+                {
+                  length:
+                    slotConfig.slot_count,
+                },
+                (
+                  _,
+                  slotIndex,
+                ) => ({
+                  position:
+                    slotConfig.position,
+
+                  slotIndex,
+                }),
+              ),
+          )
+          .filter(
+            (slot) =>
+              !occupiedSlotKeys.has(
+                `${slot.position}:${slot.slotIndex}`,
+              ),
+          );
+    } else {
+      /*
+       * Legacy lineups may not have persisted slot metadata.
+       * Keep the existing inferred behavior for those rows.
+       */
+      const assignment =
+        assignPlayersToRosterSlots({
+          sport:
+            activeSport,
+
+          playerPositions:
+            teamPlayers.map(
+              (teamPlayer) =>
+                teamPlayer.position_group,
+            ),
+
+          rosterSlots:
+            getEffectiveRosterSlots(),
+        });
+
+
+      openSlots =
+        assignment.remainingSlots.map(
+          (slot) => ({
+            position:
+              slot.position,
+
+            slotIndex:
+              slot.slotIndex,
+          }),
+        );
+    }
+
+
+    return openSlots
+      .filter(
+        (slot) =>
+          canPlayerFillRosterSlot(
+            activeSport,
+            player.position_group,
+            slot.position,
+          ),
+      )
+      .sort(
+        (
+          a,
+          b,
+        ) => {
+          /*
+           * Present the player's natural roster position
+           * before FLEX/UTIL-style alternatives.
+           */
+          const aNatural =
+            a.position.toUpperCase() ===
+            player.position_group.toUpperCase();
+
+          const bNatural =
+            b.position.toUpperCase() ===
+            player.position_group.toUpperCase();
+
+
+          if (
+            aNatural !==
+            bNatural
+          ) {
+            return aNatural
+              ? -1
+              : 1;
+          }
+
+
+          const positionCompare =
+            a.position.localeCompare(
+              b.position,
+            );
+
+
+          if (
+            positionCompare !==
+            0
+          ) {
+            return positionCompare;
+          }
+
+
+          return (
+            a.slotIndex -
+            b.slotIndex
+          );
+        },
+      );
+  }
+
+
   async function persistLineupForTeam(
     teamId: number,
     playerList: Player[],
@@ -1195,6 +1634,12 @@ export default function LineupBuilder({
     options?: {
       allowEmpty?: boolean;
       notifyNextDrafter?: boolean;
+
+      rosterSlot?: {
+        playerId: number;
+        position: string;
+        slotIndex: number;
+      };
     }
   ) {
     setSaveMessage("");
@@ -1217,24 +1662,59 @@ export default function LineupBuilder({
       return false;
     }
 
-    const totalSlots = getRosterTotalSlots();
-    const slots = getEffectiveRosterSlots();
-    const listCounts = countPlayersByPosition(playerList);
+    const totalSlots =
+      getRosterTotalSlots();
 
-    if (playerList.length > totalSlots) {
-      setSaveMessage(`A lineup can have at most ${totalSlots} players.`);
+    const slots =
+      getEffectiveRosterSlots();
+
+
+    if (
+      playerList.length >
+      totalSlots
+    ) {
+      setSaveMessage(
+        `A lineup can have at most ${totalSlots} players.`,
+      );
+
       return false;
     }
 
-    const overLimitSlot = slots.find(
-      (slot) => (listCounts.get(slot.position) ?? 0) > slot.slot_count
-    );
 
-    if (overLimitSlot) {
-      const limitDescription = slots
-        .map((slot) => `${slot.slot_count} ${slot.position}`)
-        .join(" and ");
-      setSaveMessage(`A lineup can have at most ${limitDescription}.`);
+    const activeSport =
+      (
+        selectedSlate?.sport ??
+        sport ??
+        selectedSport
+      ) as
+        | "nba"
+        | "nfl"
+        | "golf";
+
+
+    const assignment =
+      assignPlayersToRosterSlots({
+        sport:
+          activeSport,
+
+        playerPositions:
+          playerList.map(
+            (player) =>
+              player.position_group,
+          ),
+
+        rosterSlots:
+          slots,
+      });
+
+
+    if (
+      !assignment.fits
+    ) {
+      setSaveMessage(
+        "That player combination does not fit the configured roster.",
+      );
+
       return false;
     }
 
@@ -1247,8 +1727,19 @@ export default function LineupBuilder({
         body: JSON.stringify({
           slateId: selectedSlateIdNumber,
           teamId,
-          playerIds: playerList.map((player) => player.id),
-          notifyNextDrafter: options?.notifyNextDrafter === true,
+          playerIds:
+            playerList.map(
+              (player) =>
+                player.id,
+            ),
+
+          notifyNextDrafter:
+            options?.notifyNextDrafter ===
+            true,
+
+          rosterSlot:
+            options?.rosterSlot ??
+            null,
         }),
         cache: "no-store",
       });
@@ -1256,7 +1747,11 @@ export default function LineupBuilder({
       const result = await response.json();
 
       if (!response.ok) {
-        setSaveMessage(result.error || "Failed to save lineup.");
+        setSaveMessage(
+          result.error ||
+            "Failed to save lineup.",
+        );
+
         return false;
       }
 
@@ -1282,22 +1777,139 @@ export default function LineupBuilder({
     }
   }
 
-  async function handleAssignPlayerToTeam(player: Player, targetTeamId: number) {
-    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
-    if (!targetTeam) return;
+  async function handleAssignPlayerToTeam(
+    player: Player,
+    targetTeamId: number,
 
-    const assignmentStatus = getTeamAssignmentStatus(targetTeamId, player);
-    if (!assignmentStatus.canAssign) {
-      setSaveMessage(assignmentStatus.reason);
-      return;
+    explicitSlot?: {
+      position: string;
+      slotIndex: number;
+    },
+  ) {
+    const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
+    if (!targetTeam) return false;
+
+    /*
+     * Normal Players-tab drafting needs the generic assignment check.
+     *
+     * Explicit slot drafting already has a concrete destination
+     * (for example GOLFER #1). Let the explicit-slot path continue
+     * to the authoritative API validation instead of rejecting it
+     * through the generic roster-fit check first.
+     */
+    if (!explicitSlot) {
+      const assignmentStatus =
+        getTeamAssignmentStatus(
+          targetTeamId,
+          player,
+        );
+
+      if (!assignmentStatus.canAssign) {
+        setSaveMessage(
+          assignmentStatus.reason,
+        );
+
+        return false;
+      }
     }
 
-    const currentOwnerTeamId = getOwnerTeamIdForPlayer(player.id);
-    const targetPlayers = getPlayersForTeam(targetTeamId);
+    const currentOwnerTeamId =
+      getOwnerTeamIdForPlayer(
+        player.id,
+      );
+
+    const targetPlayers =
+      getPlayersForTeam(
+        targetTeamId,
+      );
+
+
+    let chosenSlot =
+      explicitSlot ??
+      null;
+
+
+    if (
+      !chosenSlot
+    ) {
+      const compatibleSlots =
+        getCompatibleOpenSlotsForPlayer(
+          targetTeamId,
+          player,
+        );
+
+
+      if (
+        compatibleSlots.length ===
+        0
+      ) {
+        setSaveMessage(
+          `${player.name} does not fit an open roster spot.`,
+        );
+
+        return false;
+      }
+
+
+      const compatiblePositionSlots =
+        Array.from(
+          new Map(
+            compatibleSlots.map(
+              (slot) => [
+                slot.position,
+                slot,
+              ],
+            ),
+          ).values(),
+        );
+
+
+      if (
+        compatiblePositionSlots.length >
+        1
+      ) {
+        /*
+         * Players-tab flow:
+         * team is known, but there is more than one legal
+         * roster-position type.
+         *
+         * Multiple physical slots of the same type collapse
+         * to one choice. For example, two open G slots plus
+         * UTIL should present:
+         *
+         *   G
+         *   UTIL
+         *
+         * The first open physical slot for the chosen position
+         * is retained behind that choice.
+         */
+        setDraftingPlayer(
+          null,
+        );
+
+        setPendingRosterSlotChoice({
+          player,
+          teamId:
+            targetTeamId,
+
+          slots:
+            compatiblePositionSlots,
+        });
+
+        return false;
+      }
+
+
+      chosenSlot =
+        compatiblePositionSlots[
+          0
+        ];
+    }
+
 
     if (currentOwnerTeamId === targetTeamId) {
       setSaveMessage(`${player.name} is already on ${targetTeam.name}.`);
-      return;
+      return false;
     }
 
     try {
@@ -1315,12 +1927,12 @@ export default function LineupBuilder({
           { allowEmpty: true }
         );
 
-        if (!removed) return;
+        if (!removed) return false;
       }
 
       const isAdminProxyPick =
         currentUser?.role === "admin" &&
-        targetTeamId !== currentUser.teamId;
+        targetTeamId !== currentTeamId;
 
       const shouldNotifyNextDrafter = isAdminProxyPick
         ? notifyNextDrafterForProxyPicks
@@ -1331,11 +1943,23 @@ export default function LineupBuilder({
         [...targetPlayers, player],
         `${player.name} drafted to ${targetTeam.name}.`,
         {
-          notifyNextDrafter: shouldNotifyNextDrafter,
+          notifyNextDrafter:
+            shouldNotifyNextDrafter,
+
+          rosterSlot: {
+            playerId:
+              player.id,
+
+            position:
+              chosenSlot.position,
+
+            slotIndex:
+              chosenSlot.slotIndex,
+          },
         }
       );
 
-      if (!added) return;
+      if (!added) return false;
 
       setDraftingPlayer(null);
       setSearchTerm("");
@@ -1343,6 +1967,8 @@ export default function LineupBuilder({
       if (selectedSlateIdNumber) {
         void loadSlateLineups(selectedSlateIdNumber);
       }
+
+      return true;
     } finally {
       setIsAssigningPlayer(false);
     }
@@ -1429,7 +2055,14 @@ export default function LineupBuilder({
 
     await handleAssignPlayerToTeam(
       player,
-      targetDraftSlot.teamId
+      targetDraftSlot.teamId,
+      {
+        position:
+          targetDraftSlot.positionGroup,
+
+        slotIndex:
+          targetDraftSlot.slotIndex,
+      },
     );
 
     setDraftingPlayer(null);
@@ -1450,7 +2083,7 @@ export default function LineupBuilder({
               !selectedSlateIdNumber ||
               isRefreshingStats
             }
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-sky-500 bg-sky-950 px-3 py-2.5 text-sm font-black text-sky-200 transition hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-sky-500 bg-sky-950 px-3 py-2 text-sm font-black text-sky-200 transition hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-4"
           >
             <span
               aria-hidden="true"
@@ -1770,9 +2403,9 @@ export default function LineupBuilder({
               <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
               <span>Lineup</span>
 
-              {currentUser?.teamId ? (
+              {currentTeamId ? (
                 <span className="draft-page-tab-count">
-                  {getPlayersForTeam(currentUser.teamId).length}/{getRosterTotalSlots()}
+                  {getPlayersForTeam(currentTeamId).length}/{getRosterTotalSlots()}
                 </span>
               ) : null}
             </button>
@@ -1793,16 +2426,45 @@ export default function LineupBuilder({
 
           {draftPageTab === "lineup" ? (
             <DraftRosterCourt
-              teamId={currentUser?.teamId ?? null}
-              teamName={currentUser?.displayName ?? null}
+              teamId={currentTeamId}
+              teamName={currentTeamName}
               players={
-                currentUser?.teamId
-                  ? getPlayersForTeam(currentUser.teamId)
+                currentTeamId
+                  ? getPlayersForTeam(currentTeamId)
                   : []
               }
-              rosterSlots={rosterSlots}
+              rosterSlots={effectiveRosterSlots}
+
+              slotAssignments={
+                (
+                  lineupsState.find(
+                    (lineup) =>
+                      lineup.team_id ===
+                      currentTeamId,
+                  ) as
+                    | {
+                        player_slots?: Array<{
+                          player_id: number;
+                          roster_slot_position: string | null;
+                          roster_slot_index: number | null;
+                        }>;
+                      }
+                    | undefined
+                )?.player_slots ??
+                []
+              }
+
               isLocked={Boolean(selectedSlate?.is_locked)}
-              setDraftingPlayer={setLeagueResearchPlayer}
+              setDraftingPlayer={(value) => {
+                const player =
+                  typeof value === "function"
+                    ? value(null)
+                    : value;
+
+                if (player) {
+                  inspectPlayerFromSlot(player);
+                }
+              }}
               setTargetDraftSlot={setTargetDraftSlot}
             />
           ) : (
@@ -1826,20 +2488,20 @@ export default function LineupBuilder({
               pillBase={pillBase}
               activePill={activePill}
               inactivePill={inactivePill}
-              rosterSlots={rosterSlots}
+              rosterSlots={effectiveRosterSlots}
               selectedSeason={selectedSeason}
             />
           )}
 
           <LeagueLineupCards
             teams={orderedTeamsForSlate}
-            currentTeamId={currentUser?.teamId ?? null}
+            currentTeamId={currentTeamId}
             getPlayersForTeam={getPlayersForTeam}
             getPlayerProjectionScore={
               getPlayerProjectionScore
             }
             getDraftNeeds={getDraftNeeds}
-            rosterSlots={rosterSlots}
+            rosterSlots={effectiveRosterSlots}
             setResearchPlayer={setLeagueResearchPlayer}
             setTargetDraftSlot={setTargetDraftSlot}
             isLocked={Boolean(
@@ -1852,7 +2514,7 @@ export default function LineupBuilder({
           players={players}
           teams={orderedTeamsForSlate}
           selectedSlate={selectedSlate}
-          rosterSlots={rosterSlots}
+          rosterSlots={effectiveRosterSlots}
           lastRefreshSummary={lastRefreshSummary}
           getPlayersForTeam={getPlayersForTeam}
           getTeamStats={getTeamStats}
@@ -1876,6 +2538,93 @@ export default function LineupBuilder({
         />
       )}
 
+      {pendingRosterSlotChoice ? (
+        <div
+          className="fixed inset-0 z-[13000] flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setPendingRosterSlotChoice(
+                null,
+              );
+            }
+          }}
+        >
+          <section className="w-full max-w-sm overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 text-white shadow-2xl">
+            <header className="border-b border-slate-800 px-5 py-4">
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-sky-400">
+                Choose roster spot
+              </div>
+
+              <h3 className="mt-1 text-xl font-black">
+                {pendingRosterSlotChoice.player.name}
+              </h3>
+
+              <p className="mt-1 text-sm text-slate-400">
+                This player can fill more than one open spot.
+              </p>
+            </header>
+
+            <div className="grid gap-2 p-4">
+              {pendingRosterSlotChoice.slots.map(
+                (
+                  slot,
+                ) => (
+                  <button
+                    key={`${slot.position}-${slot.slotIndex}`}
+                    type="button"
+                    disabled={
+                      isAssigningPlayer ||
+                      isSaving
+                    }
+                    onClick={() => {
+                      const pending =
+                        pendingRosterSlotChoice;
+
+                      setPendingRosterSlotChoice(
+                        null,
+                      );
+
+                      void handleAssignPlayerToTeam(
+                        pending.player,
+                        pending.teamId,
+                        slot,
+                      );
+                    }}
+                    className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left transition hover:border-sky-500 hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    <span className="font-bold">
+                      {slot.position}
+                    </span>
+
+                    <span className="text-xs font-semibold uppercase tracking-wide text-sky-400">
+                      Draft here
+                    </span>
+                  </button>
+                ),
+              )}
+            </div>
+
+            <div className="border-t border-slate-800 p-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setPendingRosterSlotChoice(
+                    null,
+                  )
+                }
+                className="w-full rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-bold text-slate-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+
       <SlotDraftModal
         targetDraftSlot={targetDraftSlot}
         setTargetDraftSlot={setTargetDraftSlot}
@@ -1889,7 +2638,7 @@ export default function LineupBuilder({
         setDraftingPlayer={setDraftingPlayerWithSlotRestore}
         handleAssignPlayerToTeam={handleAssignPlayerToTeam}
         selectedSeason={selectedSeason}
-        rosterSlots={rosterSlots}
+        rosterSlots={effectiveRosterSlots}
         hidden={isInspectingPlayerFromSlot}
         isAssigningPlayer={isAssigningPlayer}
       />

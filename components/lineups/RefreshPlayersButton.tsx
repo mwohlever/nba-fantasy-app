@@ -2,10 +2,21 @@
 
 "use client";
 
-export default function RefreshPlayersButton() {
+type RefreshPlayersButtonProps = {
+  sport?: "nba" | "nfl";
+};
+
+export default function RefreshPlayersButton({
+  sport = "nba",
+}: RefreshPlayersButtonProps) {
   async function handleRefreshPlayers() {
     try {
-      const res = await fetch("/api/sync-players", {
+      const endpoint =
+        sport === "nfl"
+          ? "/api/sync-players-nfl"
+          : "/api/sync-players";
+
+      const res = await fetch(endpoint, {
         method: "POST",
       });
 
@@ -16,8 +27,14 @@ export default function RefreshPlayersButton() {
         return;
       }
 
+      const nflDetails =
+        data.kickerCount !== undefined ||
+        data.defenseCount !== undefined
+          ? `\nKickers found: ${data.kickerCount ?? 0}\nDefenses found: ${data.defenseCount ?? 0}`
+          : "";
+
       alert(
-        `Players synced! Added: ${data.insertedCount ?? 0}, Updated: ${data.updatedCount ?? 0}`
+        `Players synced! Added: ${data.insertedCount ?? 0}, Updated: ${data.updatedCount ?? 0}${nflDetails}`
       );
 
       window.location.reload();

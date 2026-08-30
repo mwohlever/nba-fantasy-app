@@ -48,6 +48,16 @@ export type TargetDraftSlot = {
   teamId: number;
   teamName: string;
   positionGroup: string;
+
+  /*
+   * Zero-based index inside this slot type.
+   *
+   * Example:
+   *   G #1    -> 0
+   *   G #2    -> 1
+   *   UTIL #1 -> 0
+   */
+  slotIndex: number;
 };
 
 export type PlayerHistoryDetailRow = {
@@ -79,11 +89,22 @@ export type Slate = {
   is_locked: boolean;
   sport?: string;
   has_cut?: boolean;
+
+  rules_snapshot?:
+    Record<string, unknown> |
+    null;
 };
 
 export type SavedLineup = {
   team_id: number;
   player_ids: number[];
+
+  player_slots?: Array<{
+    player_id: number;
+    roster_slot_position: string | null;
+    roster_slot_index: number | null;
+  }>;
+
   pregame_projected_points?: number | null;
 };
 

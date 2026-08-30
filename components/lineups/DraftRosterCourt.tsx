@@ -1,6 +1,9 @@
 "use client";
 
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import {
+  assignPlayersToRosterSlots,
+} from "@/lib/rules/leagueRules";
 import type {
   Player,
   RosterSlotConfig,
@@ -12,6 +15,13 @@ type Props = {
   teamName: string | null;
   players: Player[];
   rosterSlots: RosterSlotConfig[];
+
+  slotAssignments?: Array<{
+    player_id: number;
+    roster_slot_position: string | null;
+    roster_slot_index: number | null;
+  }>;
+
   isLocked: boolean;
   setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
   setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
@@ -23,7 +33,11 @@ type SlotProps = {
   slotNumber: number;
   disabled: boolean;
   onPlayerClick: (player: Player) => void;
-  onEmptyClick: (positionGroup: string) => void;
+
+  onEmptyClick: (
+    positionGroup: string,
+    slotIndex: number,
+  ) => void;
 };
 
 function DraftRosterSlot({
@@ -46,7 +60,10 @@ function DraftRosterSlot({
           return;
         }
 
-        onEmptyClick(positionGroup);
+        onEmptyClick(
+          positionGroup,
+          slotNumber - 1,
+        );
       }}
       aria-label={
         player
@@ -93,42 +110,105 @@ export default function DraftRosterCourt({
   teamName,
   players,
   rosterSlots,
+  slotAssignments = [],
   isLocked,
   setDraftingPlayer,
   setTargetDraftSlot,
 }: Props) {
-  // Fallback to NBA's 2G/3F-C shape if no roster_slots rows were found,
-  // so nothing breaks if this ever runs before the config is seeded.
-  const effectiveSlots: RosterSlotConfig[] =
-    rosterSlots.length > 0
-      ? rosterSlots
-      : [
-          { sport: "nba", position: "G", slot_count: 2, display_order: 1 },
-          { sport: "nba", position: "F/C", slot_count: 3, display_order: 2 },
-        ];
+  const effectiveSlots =
+    rosterSlots;
+
 
   const totalSlots = effectiveSlots.reduce(
     (sum, slot) => sum + slot.slot_count,
     0
   );
 
-  const playersByPosition = new Map<string, Player[]>();
-  for (const player of players) {
-    const existing = playersByPosition.get(player.position_group) ?? [];
-    existing.push(player);
-    playersByPosition.set(player.position_group, existing);
+  const activeSport =
+    (
+      effectiveSlots[
+        0
+      ]?.sport ??
+      "nba"
+    ) as
+      | "nba"
+      | "nfl"
+      | "golf";
+
+
+  const assignment =
+    assignPlayersToRosterSlots({
+      sport:
+        activeSport,
+
+      playerPositions:
+        players.map(
+          (player) =>
+            player.position_group,
+        ),
+
+      rosterSlots:
+        effectiveSlots,
+    });
+
+
+  const playerById =
+    new Map(
+      players.map(
+        (player) => [
+          player.id,
+          player,
+        ],
+      ),
+    );
+
+
+  const savedPlayerIdBySlot =
+    new Map<string, number>();
+
+
+  const explicitlyAssignedPlayerIds =
+    new Set<number>();
+
+
+  for (
+    const savedSlot
+    of slotAssignments
+  ) {
+    if (
+      !savedSlot.roster_slot_position ||
+      savedSlot.roster_slot_index === null ||
+      savedSlot.roster_slot_index === undefined
+    ) {
+      continue;
+    }
+
+
+    savedPlayerIdBySlot.set(
+      `${savedSlot.roster_slot_position}:${savedSlot.roster_slot_index}`,
+      savedSlot.player_id,
+    );
+
+    explicitlyAssignedPlayerIds.add(
+      savedSlot.player_id,
+    );
   }
+
 
   const completedSlots = Math.min(players.length, totalSlots);
   const progressPercent = totalSlots > 0 ? (completedSlots / totalSlots) * 100 : 0;
 
-  function openEmptySlot(positionGroup: string) {
+  function openEmptySlot(
+    positionGroup: string,
+    slotIndex: number,
+  ) {
     if (!teamId || !teamName || isLocked) return;
 
     setTargetDraftSlot({
       teamId,
       teamName,
       positionGroup,
+      slotIndex,
     });
   }
 
@@ -159,33 +239,92 @@ export default function DraftRosterCourt({
       </div>
 
       <div className="draft-roster-formation">
-        {effectiveSlots.map((slotConfig) => {
-          const positionPlayers = playersByPosition.get(slotConfig.position) ?? [];
+        {effectiveSlots.map(
+          (
+            slotConfig,
+          ) => {
+            const matchingSlots =
+              assignment.slots.filter(
+                (slot) =>
+                  slot.position ===
+                  slotConfig.position,
+              );
 
-          const slots: Array<Player | null> = Array.from(
-            { length: slotConfig.slot_count },
-            (_, index) => positionPlayers[index] ?? null
-          );
 
-          return (
-            <div
-              key={slotConfig.position}
-              className="draft-roster-row"
-            >
-              {slots.map((player, index) => (
-                <DraftRosterSlot
-                  key={`${slotConfig.position}-${index}`}
-                  player={player}
-                  positionGroup={slotConfig.position}
-                  slotNumber={index + 1}
-                  disabled={!teamId || isLocked}
-                  onPlayerClick={setDraftingPlayer}
-                  onEmptyClick={openEmptySlot}
-                />
-              ))}
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={
+                  slotConfig.position
+                }
+                className="draft-roster-row"
+              >
+                {matchingSlots.map(
+                  (
+                    slot,
+                    index,
+                  ) => {
+                    const savedPlayerId =
+                      savedPlayerIdBySlot.get(
+                        `${slot.position}:${slot.slotIndex}`,
+                      );
+
+
+                    const inferredPlayer =
+                      slot.playerIndex >=
+                      0
+                        ? players[
+                            slot.playerIndex
+                          ] ??
+                          null
+                        : null;
+
+
+                    const player =
+                      savedPlayerId !==
+                      undefined
+                        ? playerById.get(
+                            savedPlayerId,
+                          ) ??
+                          null
+                        : inferredPlayer &&
+                          !explicitlyAssignedPlayerIds.has(
+                            inferredPlayer.id,
+                          )
+                          ? inferredPlayer
+                          : null;
+
+
+                    return (
+                      <DraftRosterSlot
+                        key={`${slotConfig.position}-${index}`}
+                        player={
+                          player
+                        }
+                        positionGroup={
+                          slotConfig.position
+                        }
+                        slotNumber={
+                          index +
+                          1
+                        }
+                        disabled={
+                          !teamId ||
+                          isLocked
+                        }
+                        onPlayerClick={
+                          setDraftingPlayer
+                        }
+                        onEmptyClick={
+                          openEmptySlot
+                        }
+                      />
+                    );
+                  },
+                )}
+              </div>
+            );
+          },
+        )}
       </div>
 
       <div className="draft-roster-footer">
