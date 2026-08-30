@@ -879,6 +879,12 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
       ? "in_progress"
       : reportedStatus;
 
+  const hasAuthoritativeFinalStatus =
+    normalizedReportedStatus === "final" &&
+    statusSource?.completed === true &&
+    statusSource.state?.toLowerCase() === "post" &&
+    statusSource.name?.toUpperCase() === "STATUS_FINAL";
+
   const preliminaryCompetitors = safeArray(competition?.competitors)
     .map((competitor) =>
       parseCompetitor(
@@ -910,7 +916,9 @@ function parseTournament(event: EspnEvent): GolfTournament | null {
   );
 
   const status: GolfTournamentStatus =
-    normalizedReportedStatus === "final" && hasPartialRoundActivity
+    normalizedReportedStatus === "final" &&
+    hasPartialRoundActivity &&
+    !hasAuthoritativeFinalStatus
       ? "in_progress"
       : normalizedReportedStatus;
 
@@ -1217,4 +1225,3 @@ export async function fetchGolfCoursesByEventId(
         course.holes.length > 0,
     );
 }
-

@@ -6,6 +6,7 @@ import {
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
+import { decomposeGolfFantasyScoreByRound } from "@/lib/scoring/golf";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ type SlateRow = {
   start_date: string;
   end_date: string | null;
   display_name: string | null;
+  cut_penalty_per_round: number | null;
 };
 
 type TeamResultRow = {
@@ -57,6 +59,8 @@ type GolfEventPlayerRow = {
   status: string | null;
   rounds_completed: number | null;
   holes_completed: number | null;
+  penalty_strokes: number | null;
+  fantasy_score: number | null;
   golf_rounds: GolfRoundRow[] | null;
 };
 
@@ -329,7 +333,7 @@ export async function GET(
       supabaseAdmin
         .from("slates")
         .select(
-          "id, start_date, end_date, display_name",
+          "id, start_date, end_date, display_name, cut_penalty_per_round",
         )
         .eq("sport", "golf")
         .eq(
@@ -553,6 +557,8 @@ export async function GET(
           status,
           rounds_completed,
           holes_completed,
+          penalty_strokes,
+          fantasy_score,
           golf_rounds (
             round_number,
             score_to_par,
@@ -973,74 +979,57 @@ export async function GET(
         continue;
       }
 
-      for (
-        const roundNumber of
-        [1, 2, 3, 4]
-      ) {
-        const completedScores =
-          lineup.lineup_players.map(
-            (lineupPlayer) => {
-              const eventPlayer =
-                eventPlayerBySlatePlayer.get(
-                  `${lineup.slate_id}:${lineupPlayer.player_id}`,
-                );
+      const slate = selectedSlates.find(
+        (candidate) => Number(candidate.id) === Number(lineup.slate_id),
+      );
+      const result = resultBySlateTeam.get(
+        `${lineup.slate_id}:${lineup.team_id}`,
+      );
 
-              const round =
-                eventPlayer?.golf_rounds?.find(
-                  (candidate) =>
-                    Number(
-                      candidate.round_number,
-                    ) ===
-                    roundNumber,
-                );
+      if (!slate || !result || result.fantasy_points === null) {
+        continue;
+      }
 
-              if (
-                !round ||
-                round.score_to_par ===
-                  null ||
-                round.score_to_par ===
-                  undefined ||
-                Number(
-                  round.holes_completed ??
-                    0,
-                ) < 18
-              ) {
-                return null;
-              }
+      const teamRoundScores = [0, 0, 0, 0];
 
-              const score =
-                Number(
-                  round.score_to_par,
-                );
+      for (const lineupPlayer of lineup.lineup_players) {
+        const eventPlayer = eventPlayerBySlatePlayer.get(
+          `${lineup.slate_id}:${lineupPlayer.player_id}`,
+        );
 
-              return Number.isFinite(
-                score,
-              )
-                ? score
-                : null;
-            },
-          );
-
-        if (
-          completedScores.some(
-            (score) =>
-              score === null,
-          )
-        ) {
+        if (!eventPlayer) {
           continue;
         }
 
-        accumulator.teamRoundScores[
-          roundNumber
-        ].push(
-          completedScores.reduce<number>(
-            (total, score) =>
-              total +
-              Number(score),
-            0,
-          ),
-        );
+        const golferRoundScores = decomposeGolfFantasyScoreByRound({
+          rounds: (eventPlayer.golf_rounds ?? []).map((round) => ({
+            roundNumber: Number(round.round_number),
+            scoreToPar:
+              round.score_to_par === null
+                ? null
+                : Number(round.score_to_par),
+            holesCompleted: Number(round.holes_completed ?? 0),
+          })),
+          penaltyStrokes: Number(eventPlayer.penalty_strokes ?? 0),
+          penaltyPerRound: Number(slate.cut_penalty_per_round ?? 0),
+          fantasyScore: Number(eventPlayer.fantasy_score ?? 0),
+        });
+
+        golferRoundScores.forEach((score, index) => {
+          teamRoundScores[index] += score;
+        });
       }
+
+      const canonicalTeamScore = Number(result.fantasy_points);
+      const decomposedTeamScore = teamRoundScores.reduce(
+        (total, score) => total + score,
+        0,
+      );
+      teamRoundScores[3] += canonicalTeamScore - decomposedTeamScore;
+
+      teamRoundScores.forEach((score, index) => {
+        accumulator.teamRoundScores[index + 1].push(score);
+      });
     }
 
     for (
