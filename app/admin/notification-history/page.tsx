@@ -1,5 +1,9 @@
 "use client";
 
+import { useGroupContext } from "@/components/providers/GroupProvider";
+
+import Link from "next/link";
+
 import AppNav from "@/components/AppNav";
 import AdminPushDevices from "@/components/admin/AdminPushDevices";
 import {
@@ -7,6 +11,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -51,6 +56,8 @@ type HistoryRow = {
   teamName: string | null;
   playerName: string | null;
   slateLabel: string | null;
+  groupName?: string | null;
+
   metadata: {
     devices?: DeviceResult[];
     [key: string]: unknown;
@@ -68,6 +75,27 @@ type Summary = {
   missed: number;
   devicesSent: number;
   devicesFailed: number;
+};
+
+
+type GroupOption = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+
+type HistoryScope = {
+  isSuperAdmin: boolean;
+
+  activeGroupId: string;
+  activeGroupName: string;
+
+  selectedGroupIds:
+    string[];
+
+  availableGroups:
+    GroupOption[];
 };
 
 const EMPTY_SUMMARY: Summary = {
@@ -261,12 +289,12 @@ function SummaryCard({
   detail?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3">
+    <div className="border-r border-slate-800 px-3 py-2 last:border-r-0">
       <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </div>
 
-      <div className="mt-1 text-2xl font-black text-white">
+      <div className="mt-0.5 text-xl font-black text-white">
         {value}
       </div>
 
@@ -288,6 +316,15 @@ export default function NotificationHistoryPage() {
   const [selectedDate, setSelectedDate] =
     useState(() => localDateKey(new Date()));
 
+  const {
+    groupContext,
+  } = useGroupContext();
+
+  const activeGroupId =
+    groupContext?.group.id ??
+    null;
+
+
   const [history, setHistory] = useState<
     HistoryRow[]
   >([]);
@@ -303,11 +340,85 @@ export default function NotificationHistoryPage() {
   const [searchFilter, setSearchFilter] =
     useState("");
 
+
+  const [
+    scope,
+    setScope,
+  ] =
+    useState<
+      HistoryScope |
+      null
+    >(
+      null,
+    );
+
+
+  const [
+    selectedGroupIds,
+    setSelectedGroupIds,
+  ] =
+    useState<string[]>(
+      [],
+    );
+
+
+  const [
+    groupSearch,
+    setGroupSearch,
+  ] =
+    useState(
+      "",
+    );
+
+
   const [expandedRows, setExpandedRows] =
     useState<Set<string>>(new Set());
 
+
+  /*
+   * The API returns the authoritative default Group scope.
+   *
+   * Use it to initialize the selector once per active Group,
+   * but never let a later/stale History response overwrite a
+   * Super Admin's in-progress multi-Group selection.
+   */
+  const initializedActiveGroupRef =
+    useRef<string | null>(
+      null,
+    );
+
+
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
+
+
+  /*
+   * The global GroupProvider is authoritative for an actual
+   * app-level Group switch.
+   *
+   * When the user changes Groups in AppNav, reset Notification
+   * History to that active Group only. After this reset,
+   * selectedGroupIds remains user-controlled so Super Admin can
+   * freely select multiple Groups from the History filter.
+   */
+  useEffect(() => {
+    if (
+      !activeGroupId ||
+      initializedActiveGroupRef.current ===
+        activeGroupId
+    ) {
+      return;
+    }
+
+    initializedActiveGroupRef.current =
+      activeGroupId;
+
+    setSelectedGroupIds([
+      activeGroupId,
+    ]);
+  }, [
+    activeGroupId,
+  ]);
 
   const [
     actionRowId,
@@ -327,6 +438,20 @@ export default function NotificationHistoryPage() {
       params.set("start", range.start);
       params.set("end", range.end);
       params.set("date", selectedDate);
+
+
+      if (
+        selectedGroupIds.length >
+        0
+      ) {
+        params.set(
+          "groups",
+          selectedGroupIds.join(
+            ",",
+          ),
+        );
+      }
+
 
       if (typeFilter) {
         params.set("type", typeFilter);
@@ -364,6 +489,46 @@ export default function NotificationHistoryPage() {
       setSummary(
         result.summary ?? EMPTY_SUMMARY
       );
+
+
+      if (
+        result.scope
+      ) {
+        const nextScope =
+          result.scope as HistoryScope;
+
+
+        setScope(
+          nextScope,
+        );
+
+
+        /*
+         * Initialize from the server only:
+         *   - on first page load
+         *   - when the app's active Group actually changes
+         *
+         * After initialization, selectedGroupIds is controlled by
+         * the user. This prevents older in-flight responses from
+         * bouncing the selector between different Group sets.
+         */
+        if (
+          initializedActiveGroupRef
+            .current !==
+          nextScope.activeGroupId
+        ) {
+          initializedActiveGroupRef.current =
+            nextScope.activeGroupId;
+
+
+          setSelectedGroupIds(
+            nextScope
+              .selectedGroupIds,
+          );
+        }
+      }
+
+
       setExpandedRows(new Set());
     } catch (error) {
       console.error(error);
@@ -379,6 +544,7 @@ export default function NotificationHistoryPage() {
     statusFilter,
     typeFilter,
     sportFilter,
+    selectedGroupIds,
   ]);
 
   useEffect(() => {
@@ -416,6 +582,193 @@ export default function NotificationHistoryPage() {
         );
     });
   }, [history, searchFilter]);
+
+  const filteredGroupOptions =
+    useMemo(
+      () => {
+        const search =
+          groupSearch
+            .trim()
+            .toLowerCase();
+
+
+        if (
+          !scope
+        ) {
+          return [];
+        }
+
+
+        if (
+          !search
+        ) {
+          return scope.availableGroups;
+        }
+
+
+        return scope
+          .availableGroups
+          .filter(
+            (
+              group,
+            ) =>
+              group.name
+                .toLowerCase()
+                .includes(
+                  search,
+                ) ||
+              group.slug
+                .toLowerCase()
+                .includes(
+                  search,
+                ),
+          );
+      },
+      [
+        scope,
+        groupSearch,
+      ],
+    );
+
+
+  const allGroupsSelected =
+    Boolean(
+      scope?.isSuperAdmin &&
+      scope.availableGroups.length >
+        0 &&
+      selectedGroupIds.length ===
+        scope.availableGroups.length,
+    );
+
+
+  function toggleSelectedGroup(
+    groupId:
+      string,
+  ) {
+    setSelectedGroupIds(
+      (
+        current,
+      ) => {
+        if (
+          current.includes(
+            groupId,
+          )
+        ) {
+          /*
+           * Keep at least one Group selected.
+           */
+          if (
+            current.length <=
+            1
+          ) {
+            return current;
+          }
+
+
+          return current.filter(
+            (
+              id,
+            ) =>
+              id !== groupId,
+          );
+        }
+
+
+        return [
+          ...current,
+          groupId,
+        ];
+      },
+    );
+  }
+
+
+  function selectAllGroups() {
+    if (
+      !scope
+    ) {
+      return;
+    }
+
+
+    setSelectedGroupIds(
+      scope.availableGroups.map(
+        (
+          group,
+        ) =>
+          group.id,
+      ),
+    );
+  }
+
+
+  function selectActiveGroupOnly() {
+    if (
+      !scope
+    ) {
+      return;
+    }
+
+
+    setSelectedGroupIds([
+      scope.activeGroupId,
+    ]);
+  }
+
+
+  function selectedGroupLabel() {
+    if (
+      !scope
+    ) {
+      return "Group";
+    }
+
+
+    if (
+      allGroupsSelected
+    ) {
+      return "All Groups";
+    }
+
+
+    if (
+      selectedGroupIds.length ===
+      1
+    ) {
+      return (
+        scope.availableGroups.find(
+          (
+            group,
+          ) =>
+            group.id ===
+            selectedGroupIds[
+              0
+            ],
+        )?.name ??
+        scope.activeGroupName
+      );
+    }
+
+
+    const first =
+      scope.availableGroups.find(
+        (
+          group,
+        ) =>
+          group.id ===
+          selectedGroupIds[
+            0
+          ],
+      )?.name ??
+      "Groups";
+
+
+    return `${first} + ${
+      selectedGroupIds.length -
+      1
+    } more`;
+  }
+
 
   async function runRecoveryAction(
     row: HistoryRow,
@@ -489,42 +842,47 @@ export default function NotificationHistoryPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 px-3 py-5 text-slate-100 sm:px-4 sm:py-6">
-      <div className="mx-auto max-w-[1500px] space-y-5">
+      <div className="mx-auto max-w-[1500px] space-y-4">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <header className="px-1 py-1">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-sky-400">
-                Admin Operations
-              </div>
+              <Link
+                href="/admin"
+                className="mb-2 inline-flex text-sm font-semibold text-sky-400 hover:underline"
+              >
+                ← Commissioner Center
+              </Link>
 
-              <h1 className="mt-1 text-3xl font-black tracking-tight">
-                Notification Monitor
+              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                Notification History
               </h1>
 
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                Expected-event and delivery audit for 111 Sports.
-                Golf round-finished notifications appear here before
-                delivery, making missing triggers visible alongside
-                successful and failed pushes.
+              <p className="mt-1 text-sm text-slate-400">
+                Delivery history and expected notification events
+                {scope
+                  ? ` for ${scope.activeGroupName}.`
+                  : "."}
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() => void loadHistory()}
+              onClick={() =>
+                void loadHistory()
+              }
               disabled={isLoading}
-              className="rounded-xl border border-slate-600 bg-slate-950 px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sky-400 hover:bg-slate-800 disabled:opacity-50"
+              className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300 hover:border-sky-500 disabled:opacity-50"
             >
               {isLoading
                 ? "Refreshing…"
                 : "Refresh"}
             </button>
           </div>
-        </section>
+        </header>
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-9">
+        <section className="grid grid-cols-3 overflow-hidden rounded-xl border border-slate-800 bg-slate-900 sm:grid-cols-5 lg:grid-cols-9">
           <SummaryCard
             label="Expected"
             value={summary.total}
@@ -576,10 +934,115 @@ export default function NotificationHistoryPage() {
           />
         </section>
 
-        <AdminPushDevices />
+        {scope?.isSuperAdmin ? (
+          <AdminPushDevices />
+        ) : null}
 
-        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+        <section className="rounded-xl border border-slate-800 bg-slate-900 p-3 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="text-xs text-slate-500">
+              Group:
+            </div>
+
+            {scope?.isSuperAdmin ? (
+              <details className="relative">
+                <summary className="cursor-pointer list-none rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-200">
+                  {selectedGroupLabel()} ▾
+                </summary>
+
+                <div className="absolute left-0 z-50 mt-2 w-[290px] rounded-xl border border-slate-700 bg-slate-950 p-3 shadow-2xl">
+                  <input
+                    type="search"
+                    value={groupSearch}
+                    onChange={(
+                      event,
+                    ) =>
+                      setGroupSearch(
+                        event.target.value,
+                      )
+                    }
+                    placeholder="Search groups…"
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+                  />
+
+                  <div className="mt-2 flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <button
+                      type="button"
+                      onClick={
+                        selectAllGroups
+                      }
+                      className="text-xs font-semibold text-sky-400 hover:underline"
+                    >
+                      Select all
+                    </button>
+
+                    <span className="text-slate-700">
+                      ·
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={
+                        selectActiveGroupOnly
+                      }
+                      className="text-xs font-semibold text-slate-400 hover:text-white"
+                    >
+                      Current only
+                    </button>
+                  </div>
+
+                  <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                    {filteredGroupOptions.map(
+                      (
+                        group,
+                      ) => (
+                        <label
+                          key={
+                            group.id
+                          }
+                          className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-slate-900"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              selectedGroupIds.includes(
+                                group.id,
+                              )
+                            }
+                            onChange={() =>
+                              toggleSelectedGroup(
+                                group.id,
+                              )
+                            }
+                          />
+
+                          <span className="min-w-0 flex-1 truncate">
+                            {
+                              group.name
+                            }
+                          </span>
+                        </label>
+                      ),
+                    )}
+
+                    {filteredGroupOptions.length ===
+                    0 ? (
+                      <div className="px-2 py-3 text-xs text-slate-500">
+                        No Groups match that search.
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </details>
+            ) : (
+              <span className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-200">
+                {scope?.activeGroupName ??
+                  "Active Group"}
+              </span>
+            )}
+          </div>
+
+          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-5">
             <label className="space-y-1">
               <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
                 Date
@@ -592,7 +1055,7 @@ export default function NotificationHistoryPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               >
                 {dateOptions.map((option) => (
                   <option
@@ -617,7 +1080,7 @@ export default function NotificationHistoryPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="all">
                   All sports
@@ -640,7 +1103,7 @@ export default function NotificationHistoryPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="">
                   All notification types
@@ -678,7 +1141,7 @@ export default function NotificationHistoryPage() {
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
               >
                 <option value="">
                   All statuses
@@ -721,7 +1184,7 @@ export default function NotificationHistoryPage() {
                   )
                 }
                 placeholder="Person, athlete, event…"
-                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-600"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600"
               />
             </label>
           </div>
@@ -748,12 +1211,28 @@ export default function NotificationHistoryPage() {
               <table className="min-w-[1200px] w-full border-collapse text-left text-xs">
                 <thead className="bg-slate-950 text-[10px] font-bold uppercase tracking-wide text-slate-500">
                   <tr>
+                    <th
+                      className="w-10 px-2 py-3 text-center"
+                      aria-label="Details"
+                    >
+                      <span className="sr-only">
+                        Details
+                      </span>
+                    </th>
+
                     <th className="px-3 py-3">
                       Time
                     </th>
                     <th className="px-3 py-3">
                       Sport
                     </th>
+
+                    {scope?.isSuperAdmin ? (
+                      <th className="px-3 py-3">
+                        Group
+                      </th>
+                    ) : null}
+
                     <th className="px-3 py-3">
                       Type
                     </th>
@@ -797,6 +1276,36 @@ export default function NotificationHistoryPage() {
                         <tr
                           className="border-t border-slate-800 align-top hover:bg-slate-800/50"
                         >
+                          <td className="w-10 px-2 py-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                toggleRow(
+                                  row.id
+                                )
+                              }
+                              aria-label={
+                                expanded
+                                  ? "Hide notification details"
+                                  : "Show notification details"
+                              }
+                              title={
+                                expanded
+                                  ? "Hide details"
+                                  : "Show details"
+                              }
+                              className={`inline-flex h-7 w-7 items-center justify-center rounded-md border text-sm font-bold transition ${
+                                expanded
+                                  ? "border-sky-600 bg-sky-950 text-sky-300"
+                                  : "border-slate-700 bg-slate-950 text-slate-400 hover:border-sky-600 hover:text-sky-300"
+                              }`}
+                            >
+                              {expanded
+                                ? "⌄"
+                                : "›"}
+                            </button>
+                          </td>
+
                           <td className="whitespace-nowrap px-3 py-3 font-mono text-slate-300">
                             {formatTime(
                               row.created_at,
@@ -811,6 +1320,13 @@ export default function NotificationHistoryPage() {
                               row.sport
                             )}
                           </td>
+
+                          {scope?.isSuperAdmin ? (
+                            <td className="whitespace-nowrap px-3 py-3 text-slate-300">
+                              {row.groupName ??
+                                "Unknown Group"}
+                            </td>
+                          ) : null}
 
                           <td className="whitespace-nowrap px-3 py-3 font-semibold text-slate-200">
                             {getTypeLabel(row)}
@@ -930,19 +1446,7 @@ export default function NotificationHistoryPage() {
                                 </button>
                               ) : null}
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  toggleRow(
-                                    row.id
-                                  )
-                                }
-                                className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-[11px] font-semibold text-sky-300 hover:border-sky-600"
-                              >
-                                {expanded
-                                  ? "Hide"
-                                  : "Details"}
-                              </button>
+
                             </div>
                           </td>
                         </tr>
@@ -953,7 +1457,11 @@ export default function NotificationHistoryPage() {
                             className="border-t border-slate-800 bg-slate-950/70"
                           >
                             <td
-                              colSpan={11}
+                              colSpan={
+                                scope?.isSuperAdmin
+                                  ? 13
+                                  : 12
+                              }
                               className="px-4 py-4"
                             >
                               <div className="grid gap-4 lg:grid-cols-3">

@@ -9,6 +9,9 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveLeagueForSport,
 } from "@/lib/groups/context";
+import {
+  getRosterSlotsFromRulesSnapshot,
+} from "@/lib/rules/leagueRules";
 
 function getTodayDateString() {
   const now = new Date();
@@ -29,6 +32,7 @@ type Slate = {
   is_locked: boolean;
   sport?: string;
   display_name?: string | null;
+  rules_snapshot?: Record<string, unknown> | null;
 };
 
 type SavedLineup = {
@@ -141,7 +145,7 @@ export default async function DraftLineupsPage({
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, is_locked, sport, display_name",
+        "id, date, start_date, end_date, is_locked, sport, display_name, rules_snapshot",
       )
       .eq("sport", sport)
       .eq(
@@ -282,6 +286,18 @@ export default async function DraftLineupsPage({
       is_locked: Boolean(slate.is_locked),
       sport: slate.sport ?? sport,
       display_name: slate.display_name ?? null,
+
+      rules_snapshot:
+        slate.rules_snapshot &&
+        typeof slate.rules_snapshot === "object" &&
+        !Array.isArray(
+          slate.rules_snapshot,
+        )
+          ? slate.rules_snapshot as Record<
+              string,
+              unknown
+            >
+          : null,
     };
   });
 
@@ -392,7 +408,7 @@ export default async function DraftLineupsPage({
                 </p>
               </div>
 
-              {sport !== "golf" ? <RefreshPlayersButton /> : null}
+              {sport !== "golf" ? <RefreshPlayersButton sport={sport} /> : null}
             </div>
 
             <div className="mt-6 rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
@@ -409,28 +425,22 @@ export default async function DraftLineupsPage({
   let playerStats: any[] = [];
   let teamResults: any[] = [];
 
-  let rosterSlots: Array<{
-    sport: string;
-    position: string;
-    slot_count: number;
-    display_order: number | null;
-  }> = [];
+  const initialSlate =
+    safeSlates.find(
+      (slate) =>
+        slate.id ===
+        selectedSlateId,
+    ) ??
+    null;
 
-  const { data: rosterSlotsData, error: rosterSlotsError } =
-    await supabaseAdmin
-      .from("roster_slots")
-      .select("sport, position, slot_count, display_order")
-      .eq("sport", sport)
-      .order("display_order", { ascending: true });
 
-  if (rosterSlotsError) {
-    console.error(
-      "Failed to load roster slots:",
-      rosterSlotsError.message,
+  const rosterSlots =
+    getRosterSlotsFromRulesSnapshot(
+      initialSlate?.rules_snapshot ??
+        null,
+      sport,
     );
-  }
 
-  rosterSlots = rosterSlotsData ?? [];
 
   if (selectedSlateId) {
     const { data: lineupsData, error: lineupsError } =
@@ -580,7 +590,7 @@ export default async function DraftLineupsPage({
             </p>
           </div>
 
-          {sport !== "golf" ? <RefreshPlayersButton /> : null}
+          {sport !== "golf" ? <RefreshPlayersButton sport={sport} /> : null}
         </section>
 
         <LineupBuilder

@@ -9,7 +9,44 @@ import {
   type EspnRosterAthlete,
 } from "@/lib/providers/nfl";
 
-const FANTASY_POSITIONS = new Set(["QB", "RB", "WR", "TE"]);
+const FANTASY_POSITIONS = new Set([
+  "QB",
+  "RB",
+  "WR",
+  "TE",
+  "K",
+  "D/ST",
+]);
+
+/*
+ * ESPN's normal team-roster endpoint does not currently include
+ * specialists, so kickers are supplemented from the season-specific
+ * Core athlete collection.
+ *
+ * Team defenses are represented as synthetic players so the existing
+ * lineup/draft machinery can treat D/ST like any other exclusive
+ * roster position.
+ *
+ * Keep synthetic ids well outside ESPN's current athlete-id range.
+ */
+const DST_PLAYER_ID_BASE = 100_000_000;
+
+type EspnCoreAthleteCollection = {
+  items?: Array<{
+    $ref?: string;
+  }>;
+};
+
+type EspnCoreAthlete = {
+  id?: string;
+  displayName?: string;
+  fullName?: string;
+  active?: boolean;
+  position?: {
+    abbreviation?: string;
+    name?: string;
+  };
+};
 
 type ExistingPlayerNfl = {
   id: number;
@@ -38,6 +75,88 @@ async function fetchAllRostersConcurrently(
       team,
       roster: await fetchTeamRoster(team.id),
     }))
+  );
+}
+
+function getCurrentNflSeasonYear() {
+  const now = new Date();
+  const month = now.getUTCMonth() + 1;
+
+  /*
+   * NFL seasons beginning Jan-Feb still belong to the season
+   * that started in the previous calendar year.
+   */
+  return month <= 2
+    ? now.getUTCFullYear() - 1
+    : now.getUTCFullYear();
+}
+
+async function fetchCoreTeamKickers(
+  team: EspnTeam,
+  season: number,
+): Promise<EspnCoreAthlete[]> {
+  const collectionUrl =
+    `https://sports.core.api.espn.com/v2/sports/football/` +
+    `leagues/nfl/seasons/${season}/teams/${team.id}/athletes?limit=100`;
+
+  const collectionResponse = await fetch(collectionUrl, {
+    cache: "no-store",
+  });
+
+  if (!collectionResponse.ok) {
+    throw new Error(
+      `ESPN Core athletes request failed for ${team.abbreviation}: ` +
+        `${collectionResponse.status}`,
+    );
+  }
+
+  const collection =
+    (await collectionResponse.json()) as EspnCoreAthleteCollection;
+
+  const athleteRefs =
+    collection.items
+      ?.map((item) => item.$ref)
+      .filter((ref): ref is string => Boolean(ref)) ??
+    [];
+
+  const athletes = await Promise.all(
+    athleteRefs.map(async (rawRef) => {
+      const ref = rawRef.replace(/^http:/, "https:");
+
+      const response = await fetch(ref, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return (await response.json()) as EspnCoreAthlete;
+    }),
+  );
+
+  return athletes.filter(
+    (athlete): athlete is EspnCoreAthlete =>
+      Boolean(
+        athlete &&
+          athlete.position?.abbreviation === "PK" &&
+          athlete.active !== false,
+      ),
+  );
+}
+
+async function fetchAllKickersConcurrently(
+  teams: EspnTeam[],
+  season: number,
+) {
+  return Promise.all(
+    teams.map(async (team) => ({
+      team,
+      kickers: await fetchCoreTeamKickers(
+        team,
+        season,
+      ),
+    })),
   );
 }
 
@@ -73,6 +192,14 @@ export async function POST() {
     timings.fetchRostersMs = Date.now() - stepStart;
 
     stepStart = Date.now();
+    const nflSeason = getCurrentNflSeasonYear();
+    const teamKickers = await fetchAllKickersConcurrently(
+      teams,
+      nflSeason,
+    );
+    timings.fetchKickersMs = Date.now() - stepStart;
+
+    stepStart = Date.now();
     const { data: existingPlayers, error: existingPlayersError } =
       await supabaseAdmin
         .from("players_nfl")
@@ -100,6 +227,8 @@ export async function POST() {
       existingByName.set(normalizeName(player.name), player);
     }
 
+    const espnPositionCounts: Record<string, number> = {};
+
     const updates: Array<{
       id: number;
       nfl_player_id: number;
@@ -121,8 +250,28 @@ export async function POST() {
 
     for (const { team, roster } of teamRosters) {
       for (const athlete of roster) {
-        const positionAbbr = athlete.position?.abbreviation;
-        if (!positionAbbr || !FANTASY_POSITIONS.has(positionAbbr)) continue;
+        const rawPositionAbbr =
+          athlete.position?.abbreviation;
+
+        const diagnosticPosition =
+          rawPositionAbbr || "(missing)";
+
+        espnPositionCounts[diagnosticPosition] =
+          (espnPositionCounts[diagnosticPosition] ?? 0) + 1;
+
+        const positionAbbr =
+          rawPositionAbbr === "PK"
+            ? "K"
+            : rawPositionAbbr;
+
+        if (
+          !positionAbbr ||
+          !FANTASY_POSITIONS.has(
+            positionAbbr,
+          )
+        ) {
+          continue;
+        }
 
         const espnId = Number(athlete.id);
         const displayName = athlete.displayName;
@@ -155,6 +304,130 @@ export async function POST() {
             is_playing_this_week: isPlayingThisWeek,
           });
         }
+      }
+    }
+
+    /*
+     * Supplement the normal ESPN roster data with kickers.
+     * Core reports place kickers as PK; 111 Sports stores K.
+     */
+    for (const { team, kickers } of teamKickers) {
+      for (const athlete of kickers) {
+        const espnId = Number(athlete.id);
+        const displayName =
+          athlete.displayName ??
+          athlete.fullName;
+
+        if (
+          !espnId ||
+          !displayName
+        ) {
+          continue;
+        }
+
+        const normalizedDisplayName =
+          normalizeName(displayName);
+
+        const isPlayingThisWeek =
+          playingThisWeek.has(
+            team.abbreviation,
+          );
+
+        const existing =
+          existingByEspnId.get(espnId) ??
+          existingByName.get(
+            normalizedDisplayName,
+          );
+
+        if (existing) {
+          updates.push({
+            id: existing.id,
+            nfl_player_id: espnId,
+            name: displayName,
+            position: "K",
+            team_abbreviation:
+              team.abbreviation,
+            is_active: true,
+            is_playing_this_week:
+              isPlayingThisWeek,
+          });
+        } else {
+          inserts.push({
+            name: displayName,
+            nfl_player_id: espnId,
+            position: "K",
+            team_abbreviation:
+              team.abbreviation,
+            is_active: true,
+            is_playing_this_week:
+              isPlayingThisWeek,
+          });
+        }
+      }
+    }
+
+    /*
+     * Add one synthetic fantasy player per NFL team for D/ST.
+     *
+     * The synthetic id is deterministic, so every refresh updates
+     * the same row rather than creating duplicate defenses.
+     */
+    for (const team of teams) {
+      const numericTeamId =
+        Number(team.id);
+
+      if (!Number.isFinite(numericTeamId)) {
+        continue;
+      }
+
+      const syntheticEspnId =
+        DST_PLAYER_ID_BASE +
+        numericTeamId;
+
+      const displayName =
+        `${team.abbreviation} D/ST`;
+
+      const normalizedDisplayName =
+        normalizeName(displayName);
+
+      const isPlayingThisWeek =
+        playingThisWeek.has(
+          team.abbreviation,
+        );
+
+      const existing =
+        existingByEspnId.get(
+          syntheticEspnId,
+        ) ??
+        existingByName.get(
+          normalizedDisplayName,
+        );
+
+      if (existing) {
+        updates.push({
+          id: existing.id,
+          nfl_player_id:
+            syntheticEspnId,
+          name: displayName,
+          position: "D/ST",
+          team_abbreviation:
+            team.abbreviation,
+          is_active: true,
+          is_playing_this_week:
+            isPlayingThisWeek,
+        });
+      } else {
+        inserts.push({
+          name: displayName,
+          nfl_player_id:
+            syntheticEspnId,
+          position: "D/ST",
+          team_abbreviation:
+            team.abbreviation,
+          is_active: true,
+          is_playing_this_week:
+            isPlayingThisWeek,
+        });
       }
     }
 
@@ -205,8 +478,15 @@ export async function POST() {
       teamsProcessed: teamRosters.length,
       updatedCount,
       insertedCount,
+      kickerCount: teamKickers.reduce(
+        (total, item) =>
+          total + item.kickers.length,
+        0,
+      ),
+      defenseCount: teams.length,
       playingThisWeekTeams: playingThisWeek.size,
       timings,
+      espnPositionCounts,
     });
   } catch (error) {
     console.error(error);

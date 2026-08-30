@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
+import {
+  getDefaultLeagueRules,
+  type NbaScoringRules,
+} from "@/lib/rules/leagueRules";
 
 type RefreshBody = {
   slateId?: number;
@@ -13,6 +17,7 @@ type SlateRecord = {
   start_date: string;
   end_date: string;
   is_locked: boolean;
+  rules_snapshot: Record<string, unknown> | null;
 };
 
 type LineupWithPlayers = {
@@ -95,21 +100,27 @@ function toNumber(value: unknown) {
   return 0;
 }
 
-function calculateFantasyPoints(stats: {
-  points: number;
-  rebounds: number;
-  assists: number;
-  steals: number;
-  blocks: number;
-  turnovers: number;
-}) {
+const DEFAULT_NBA_SCORING_RULES =
+  getDefaultLeagueRules("nba").scoring as NbaScoringRules;
+
+function calculateFantasyPoints(
+  stats: {
+    points: number;
+    rebounds: number;
+    assists: number;
+    steals: number;
+    blocks: number;
+    turnovers: number;
+  },
+  scoring: NbaScoringRules = DEFAULT_NBA_SCORING_RULES,
+) {
   return (
-    stats.points +
-    stats.rebounds * 1.2 +
-    stats.assists * 1.5 +
-    stats.steals * 2 +
-    stats.blocks * 2 -
-    stats.turnovers
+    stats.points * scoring.points +
+    stats.rebounds * scoring.rebounds +
+    stats.assists * scoring.assists +
+    stats.steals * scoring.steals +
+    stats.blocks * scoring.blocks +
+    stats.turnovers * scoring.turnovers
   );
 }
 
@@ -235,7 +246,7 @@ export async function POST(request: Request) {
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
-      .select("id, date, start_date, end_date, is_locked")
+      .select("id, date, start_date, end_date, is_locked, rules_snapshot")
       .eq("id", slateId)
       .single();
 
@@ -251,6 +262,28 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const snapshotScoring =
+      safeSlate.rules_snapshot &&
+      typeof safeSlate.rules_snapshot === "object" &&
+      !Array.isArray(safeSlate.rules_snapshot) &&
+      safeSlate.rules_snapshot.scoring &&
+      typeof safeSlate.rules_snapshot.scoring === "object" &&
+      !Array.isArray(safeSlate.rules_snapshot.scoring)
+        ? (safeSlate.rules_snapshot.scoring as Record<string, unknown>)
+        : {};
+
+    const nbaScoringRules: NbaScoringRules = {
+      ...DEFAULT_NBA_SCORING_RULES,
+      ...Object.fromEntries(
+        Object.entries(snapshotScoring)
+          .filter(([key, value]) =>
+            key in DEFAULT_NBA_SCORING_RULES &&
+            Number.isFinite(Number(value))
+          )
+          .map(([key, value]) => [key, Number(value)])
+      ),
+    };
 
     const { data: lineupsData, error: lineupsError } = await supabaseAdmin
       .from("lineups")
@@ -486,7 +519,11 @@ export async function POST(request: Request) {
         existing.steals += stats.steals;
         existing.blocks += stats.blocks;
         existing.turnovers += stats.turnovers;
-        existing.fantasy_points = calculateFantasyPoints(existing);
+        existing.fantasy_points =
+          calculateFantasyPoints(
+            existing,
+            nbaScoringRules,
+          );
 
         existing.games_completed += buckets.games_completed;
         existing.games_in_progress += buckets.games_in_progress;

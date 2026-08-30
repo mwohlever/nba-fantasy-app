@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/requireAdminApi";
+
+import {
+  resolveNotificationHistoryScope,
+} from "@/lib/notificationHistoryScope";
+
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type SportKey = "nba" | "nfl" | "golf";
@@ -25,6 +30,56 @@ export async function GET(request: NextRequest) {
   if (authError) return authError;
 
   try {
+    const requestedGroupIds =
+      (
+        request.nextUrl.searchParams
+          .get("groups")
+          ?.split(",") ??
+        []
+      )
+        .map(
+          (
+            value,
+          ) =>
+            value.trim(),
+        )
+        .filter(Boolean);
+
+
+    const historyScope =
+      await resolveNotificationHistoryScope(
+        requestedGroupIds,
+      );
+
+
+    if (
+      !historyScope
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Group admin access required.",
+        },
+        {
+          status:
+            403,
+        },
+      );
+    }
+
+
+    const leagueFilterIds =
+      historyScope
+        .selectedLeagueIds
+        .length >
+      0
+        ? historyScope
+            .selectedLeagueIds
+        : [
+            "00000000-0000-0000-0000-000000000000",
+          ];
+
+
     const type =
       request.nextUrl.searchParams.get("type")?.trim() ?? "";
 
@@ -63,7 +118,11 @@ export async function GET(request: NextRequest) {
         await supabaseAdmin
           .from("slates")
           .select("id")
-          .eq("sport", normalizedSport);
+          .eq("sport", normalizedSport)
+          .in(
+            "league_id",
+            leagueFilterIds,
+          );
 
       if (sportSlatesError) {
         return NextResponse.json(
@@ -88,6 +147,7 @@ export async function GET(request: NextRequest) {
           id,
           event_key,
           notification_type,
+          league_id,
           user_id,
           team_id,
           slate_id,
@@ -103,6 +163,10 @@ export async function GET(request: NextRequest) {
           created_at,
           completed_at
         `
+      )
+      .in(
+        "league_id",
+        leagueFilterIds,
       )
       .order("created_at", { ascending: false })
       .limit(1000);
@@ -191,7 +255,7 @@ export async function GET(request: NextRequest) {
         ? supabaseAdmin
             .from("slates")
             .select(
-              "id, date, start_date, end_date, sport, display_name"
+              "id, date, start_date, end_date, sport, display_name, league_id"
             )
             .in("id", slateIds)
         : Promise.resolve({ data: [] }),
@@ -217,6 +281,26 @@ export async function GET(request: NextRequest) {
         normalizeSport(row.sport),
       ])
     );
+
+    const slateLeagueMap =
+      new Map(
+        (slates ?? []).map(
+          (
+            row,
+          ) => [
+            Number(
+              row.id,
+            ),
+
+            row.league_id
+              ? String(
+                  row.league_id,
+                )
+              : null,
+          ],
+        ),
+      );
+
 
     const slateMap = new Map(
       (slates ?? []).map((row) => {
@@ -387,6 +471,7 @@ export async function GET(request: NextRequest) {
       teamName: string | null;
       playerName: string | null;
       slateLabel: string | null;
+      groupName: string;
     };
 
     const realEventKeys = new Set(
@@ -408,9 +493,13 @@ export async function GET(request: NextRequest) {
         await supabaseAdmin
           .from("slates")
           .select(
-            "id, date, start_date, end_date, sport, display_name"
+            "id, date, start_date, end_date, sport, display_name, league_id"
           )
-          .eq("sport", "golf");
+          .eq("sport", "golf")
+          .in(
+            "league_id",
+            leagueFilterIds,
+          );
 
       if (golfSlatesError) {
         return NextResponse.json(
@@ -498,6 +587,7 @@ export async function GET(request: NextRequest) {
               id,
               event_key,
               notification_type,
+              league_id,
               user_id,
               team_id,
               slate_id,
@@ -1113,6 +1203,17 @@ export async function GET(request: NextRequest) {
                 `Team ${teamId}`,
               playerName,
               slateLabel,
+
+              groupName:
+                slate.league_id
+                  ? historyScope
+                      .groupNameByLeagueId[
+                        String(
+                          slate.league_id,
+                        )
+                      ] ??
+                    "Unknown Group"
+                  : "Unknown Group",
             };
 
             /*
@@ -1231,8 +1332,36 @@ export async function GET(request: NextRequest) {
         ? slateSportMap.get(Number(row.slate_id)) ?? "nba"
         : null;
 
+
+      const rowLeagueId =
+        row.league_id
+          ? String(
+              row.league_id,
+            )
+          : (
+              row.slate_id
+                ? slateLeagueMap.get(
+                    Number(
+                      row.slate_id,
+                    ),
+                  ) ??
+                  null
+                : null
+            );
+
+
       return {
         ...row,
+
+        groupName:
+          rowLeagueId
+            ? historyScope
+                .groupNameByLeagueId[
+                  rowLeagueId
+                ] ??
+              "Unknown Group"
+            : "Unknown Group",
+
         sport: rowSport,
         recipientName: row.user_id
           ? userMap.get(String(row.user_id)) ??
@@ -1325,8 +1454,34 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      history: filteredHistory,
+
+      history:
+        filteredHistory,
+
       summary,
+
+      scope: {
+        isSuperAdmin:
+          historyScope
+            .isSuperAdmin,
+
+        activeGroupId:
+          historyScope
+            .activeGroupId,
+
+        activeGroupName:
+          historyScope
+            .activeGroupName,
+
+        selectedGroupIds:
+          historyScope
+            .selectedGroupIds,
+
+        availableGroups:
+          historyScope
+            .availableGroups,
+      },
+
       range: {
         start,
         end,

@@ -17,6 +17,11 @@ type TeamSelection = {
 
 type SportKey = "nba" | "nfl" | "golf";
 
+type RosterSlotConfig = {
+  position: string;
+  slot_count: number;
+};
+
 type PreviousSlate = {
   id: number;
   start_date: string;
@@ -36,6 +41,7 @@ type SetupResponse = {
     draft_order: number;
     is_participating: boolean;
   }>;
+  suggestedRosterSlots?: RosterSlotConfig[];
 };
 
 type GolfTournament = {
@@ -77,6 +83,8 @@ export default function NewSlatePage() {
   const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [previousSlateLabel, setPreviousSlateLabel] = useState("");
+  const [rosterSlots, setRosterSlots] =
+    useState<RosterSlotConfig[]>([]);
   const [sport, setSport] = useState<SportKey>(() => {
     const requestedSport = searchParams.get("sport");
 
@@ -153,6 +161,10 @@ setTeams(
     return a.draft_order - b.draft_order;
   })
 );
+
+      setRosterSlots(
+        safeResult.suggestedRosterSlots ?? [],
+      );
 
       const previousSlate =
         safeResult.previousCompletedSlate ??
@@ -416,6 +428,60 @@ setTeams(
     effectiveEndDate,
   ]);
 
+  function getRosterSlotCount(
+    position: string,
+  ) {
+    return (
+      rosterSlots.find(
+        (slot) =>
+          slot.position === position,
+      )?.slot_count ?? 0
+    );
+  }
+
+  function setRosterSlotCount(
+    position: string,
+    slotCount: number,
+  ) {
+    const safeCount =
+      Math.max(
+        0,
+        Math.min(
+          50,
+          Number.isFinite(slotCount)
+            ? Math.floor(slotCount)
+            : 0,
+        ),
+      );
+
+    setRosterSlots((current) => {
+      const exists =
+        current.some(
+          (slot) =>
+            slot.position === position,
+        );
+
+      if (exists) {
+        return current.map((slot) =>
+          slot.position === position
+            ? {
+                ...slot,
+                slot_count: safeCount,
+              }
+            : slot,
+        );
+      }
+
+      return [
+        ...current,
+        {
+          position,
+          slot_count: safeCount,
+        },
+      ];
+    });
+  }
+
   function toggleParticipation(teamId: number) {
     setTeams((prev) => {
       const next = prev.map((team) =>
@@ -505,6 +571,31 @@ setTeams(
       }
     }
 
+    if (
+      sport === "nba" &&
+      ["G", "F/C", "UTIL"].reduce(
+        (total, position) =>
+          total +
+          getRosterSlotCount(position),
+        0,
+      ) <= 0
+    ) {
+      setMessage(
+        "The NBA roster must have at least one position.",
+      );
+      return;
+    }
+
+    if (
+      sport === "golf" &&
+      getRosterSlotCount("GOLFER") <= 0
+    ) {
+      setMessage(
+        "A Golf roster must have at least one golfer.",
+      );
+      return;
+    }
+
     try {
       setIsSaving(true);
 
@@ -533,14 +624,53 @@ setTeams(
             sport === "golf"
               ? hasCut
               : undefined,
-teamSelections: teams
-  .filter((team) => team.is_participating)
-  .sort((a, b) => a.draft_order - b.draft_order)
-  .map((team, index) => ({
-    team_id: team.id,
-    draft_order: index + 1,
-    is_participating: true,
-  })),
+          rosterSlots:
+            sport === "nba"
+              ? ["G", "F/C", "UTIL"].map(
+                  (position) => ({
+                    position,
+                    slot_count:
+                      getRosterSlotCount(
+                        position,
+                      ),
+                  }),
+                )
+              : sport === "nfl"
+                ? [
+                    "QB",
+                    "RB",
+                    "WR",
+                    "TE",
+                    "K",
+                    "FLEX",
+                    "SF",
+                    "D/ST",
+                  ].map(
+                    (position) => ({
+                      position,
+                      slot_count:
+                        getRosterSlotCount(
+                          position,
+                        ),
+                    }),
+                  )
+                : sport === "golf"
+                  ? [
+                      {
+                        position:
+                          "GOLFER",
+                        slot_count:
+                          getRosterSlotCount(
+                            "GOLFER",
+                          ),
+                      },
+                    ]
+                  : undefined,
+teamSelections: normalizeDraftOrder(teams).map((team) => ({
+  team_id: team.id,
+  draft_order: team.draft_order,
+  is_participating: team.is_participating,
+})),
         }),
       });
 
@@ -919,6 +1049,115 @@ teamSelections: teams
                 ) : null}
               </>
             )}
+
+            {sport === "nba" ||
+            sport === "nfl" ||
+            sport === "golf" ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    {sport === "golf"
+                      ? "Roster Size"
+                      : "Roster Positions"}
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Defaults to your Group&apos;s current{" "}
+                    {sport === "golf"
+                      ? "Golf"
+                      : sport.toUpperCase()}{" "}
+                    rules. Changes here apply only to this new slate.
+                  </p>
+                </div>
+
+                <div
+                  className={`mt-3 grid gap-2 ${
+                    sport === "nfl"
+                      ? "grid-cols-4 sm:grid-cols-8"
+                      : sport === "golf"
+                        ? "grid-cols-1 sm:max-w-[180px]"
+                        : "grid-cols-3"
+                  }`}
+                >
+                  {(sport === "nba"
+                    ? ["G", "F/C", "UTIL"]
+                    : sport === "nfl"
+                      ? [
+                          "QB",
+                          "RB",
+                          "WR",
+                          "TE",
+                          "K",
+                          "FLEX",
+                          "SF",
+                          "D/ST",
+                        ]
+                      : ["GOLFER"]
+                  ).map(
+                    (position) => (
+                      <label
+                        key={position}
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-2"
+                      >
+                        <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                          {position === "GOLFER"
+                            ? "Golfers"
+                            : position}
+                        </span>
+
+                        <input
+                          type="number"
+                          min={
+                            sport === "golf"
+                              ? 1
+                              : 0
+                          }
+                          max={50}
+                          step={1}
+                          value={getRosterSlotCount(
+                            position,
+                          )}
+                          onChange={(event) =>
+                            setRosterSlotCount(
+                              position,
+                              Number(
+                                event.target.value,
+                              ),
+                            )
+                          }
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+                        />
+                      </label>
+                    ),
+                  )}
+                </div>
+
+                <div className="mt-3 text-xs text-slate-500">
+                  Total roster spots:{" "}
+                  {(sport === "nfl"
+                    ? [
+                        "QB",
+                        "RB",
+                        "WR",
+                        "TE",
+                        "K",
+                        "FLEX",
+                        "SF",
+                        "D/ST",
+                      ]
+                    : sport === "golf"
+                      ? ["GOLFER"]
+                      : ["G", "F/C", "UTIL"]
+                  ).reduce(
+                    (total, position) =>
+                      total +
+                      getRosterSlotCount(
+                        position,
+                      ),
+                    0,
+                  )}
+                </div>
+              </div>
+            ) : null}
 
             <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4">
               <div className="text-xs uppercase tracking-wide text-orange-700">

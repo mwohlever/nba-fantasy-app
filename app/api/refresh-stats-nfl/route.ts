@@ -3,9 +3,18 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   fetchScoreboardForRange,
   fetchGameSummary,
+  type EspnGameStatusType,
 } from "@/lib/providers/nfl";
-import { aggregateEspnBoxscore } from "@/lib/aggregateEspnBoxscore";
-import { calculateNflFantasyPoints } from "@/lib/scoring/nfl";
+import {
+  aggregateEspnBoxscore,
+  aggregateEspnDstBoxscore,
+} from "@/lib/aggregateEspnBoxscore";
+import {
+  calculateNflDstFantasyPoints,
+  calculateNflFantasyPoints,
+  DEFAULT_NFL_SCORING_RULES,
+  type NflScoringRules,
+} from "@/lib/scoring/nfl";
 import { notifyNewlyFinishedPlayers } from "@/lib/playerFinishedNotifications";
 import { notifyCompletedSlate } from "@/lib/slateCompleteNotifications";
 
@@ -20,6 +29,7 @@ type SlateRecord = {
   start_date: string;
   end_date: string;
   is_locked: boolean;
+  rules_snapshot: Record<string, unknown> | null;
 };
 
 type LineupWithPlayers = {
@@ -33,7 +43,15 @@ type PlayerNflRecord = {
   name: string;
   nfl_player_id: number | null;
   team_abbreviation: string | null;
+  position: string;
 };
+
+type ExistingNflStatusRow = {
+  player_id: number;
+  game_status: number | null;
+};
+
+const DST_PLAYER_ID_BASE = 100_000_000;
 
 function formatDateToCode(dateString: string) {
   return dateString.replace(/-/g, "");
@@ -59,6 +77,43 @@ function blankRow() {
   };
 }
 
+function getDstEspnTeamId(player: PlayerNflRecord) {
+  if (player.position !== "D/ST") return null;
+
+  const teamId = Number(player.nfl_player_id) - DST_PLAYER_ID_BASE;
+  return Number.isInteger(teamId) && teamId > 0
+    ? String(teamId)
+    : null;
+}
+
+function applyGameStatus(
+  row: ReturnType<typeof blankRow>,
+  status: EspnGameStatusType | undefined,
+) {
+  row.game_status_text = status?.description ?? null;
+
+  if (status?.completed === true || status?.state === "post") {
+    row.game_status = 3;
+    row.games_completed = 1;
+    row.games_in_progress = 0;
+    row.games_remaining = 0;
+    return;
+  }
+
+  if (status?.state === "in") {
+    row.game_status = 2;
+    row.games_completed = 0;
+    row.games_in_progress = 1;
+    row.games_remaining = 0;
+    return;
+  }
+
+  row.game_status = null;
+  row.games_completed = 0;
+  row.games_in_progress = 0;
+  row.games_remaining = 1;
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RefreshBody;
@@ -70,7 +125,7 @@ export async function POST(request: Request) {
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
-      .select("id, sport, date, start_date, end_date, is_locked")
+      .select("id, sport, date, start_date, end_date, is_locked, rules_snapshot")
       .eq("id", slateId)
       .single();
 
@@ -93,6 +148,28 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const snapshotScoring =
+      safeSlate.rules_snapshot &&
+      typeof safeSlate.rules_snapshot === "object" &&
+      !Array.isArray(safeSlate.rules_snapshot) &&
+      safeSlate.rules_snapshot.scoring &&
+      typeof safeSlate.rules_snapshot.scoring === "object" &&
+      !Array.isArray(safeSlate.rules_snapshot.scoring)
+        ? (safeSlate.rules_snapshot.scoring as Record<string, unknown>)
+        : {};
+
+    const nflScoringRules: NflScoringRules = {
+      ...DEFAULT_NFL_SCORING_RULES,
+      ...Object.fromEntries(
+        Object.entries(snapshotScoring)
+          .filter(([key, value]) =>
+            key in DEFAULT_NFL_SCORING_RULES &&
+            Number.isFinite(Number(value))
+          )
+          .map(([key, value]) => [key, Number(value)])
+      ),
+    };
 
     const { data: lineupsData, error: lineupsError } = await supabaseAdmin
       .from("lineups")
@@ -130,7 +207,7 @@ export async function POST(request: Request) {
 
     const { data: playersData, error: playersError } = await supabaseAdmin
       .from("players_nfl")
-      .select("id, name, nfl_player_id, team_abbreviation")
+      .select("id, name, nfl_player_id, team_abbreviation, position")
       .in("id", draftedPlayerIds);
 
     if (playersError) {
@@ -143,10 +220,15 @@ export async function POST(request: Request) {
     const players = (playersData ?? []) as PlayerNflRecord[];
 
     const playerByEspnId = new Map<string, PlayerNflRecord>();
+    const dstPlayerByEspnTeamId = new Map<string, PlayerNflRecord>();
     const draftedTeamAbbreviations = new Set<string>();
 
     for (const player of players) {
-      if (player.nfl_player_id) {
+      const dstEspnTeamId = getDstEspnTeamId(player);
+
+      if (dstEspnTeamId) {
+        dstPlayerByEspnTeamId.set(dstEspnTeamId, player);
+      } else if (player.nfl_player_id) {
         playerByEspnId.set(String(player.nfl_player_id), player);
       }
       if (player.team_abbreviation) {
@@ -169,19 +251,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const previousStatuses = (existingStatsData ?? []).map((row: any) => ({
-      playerId: Number(row.player_id),
-      gameStatus: row.game_status ?? null,
-    }));
+    const previousStatuses =
+      ((existingStatsData ?? []) as ExistingNflStatusRow[]).map((row) => ({
+        playerId: Number(row.player_id),
+        gameStatus: row.game_status ?? null,
+      }));
 
     const startCode = formatDateToCode(safeSlate.start_date);
     const endCode = formatDateToCode(safeSlate.end_date);
 
     const events = await fetchScoreboardForRange(startCode, endCode);
 
-    const relevantEvents = events.filter((event: any) => {
+    const relevantEvents = events.filter((event) => {
       const competitors = event.competitions?.[0]?.competitors ?? [];
-      return competitors.some((competitor: any) =>
+      return competitors.some((competitor) =>
         draftedTeamAbbreviations.has(
           String(competitor.team?.abbreviation ?? "").toUpperCase()
         )
@@ -196,8 +279,22 @@ export async function POST(request: Request) {
     let allRelevantGamesFinal = relevantEvents.length > 0;
 
     for (const event of relevantEvents) {
+      const eventStatus = event.status?.type;
+      const eventCompetitors = event.competitions?.[0]?.competitors ?? [];
       const summary = await fetchGameSummary(String(event.id));
       if (!summary) {
+        for (const competitor of eventCompetitors) {
+          const dstPlayer = dstPlayerByEspnTeamId.get(
+            String(competitor.team?.id ?? ""),
+          );
+
+          if (!dstPlayer) continue;
+
+          const row = statByPlayerId.get(dstPlayer.id) ?? blankRow();
+          applyGameStatus(row, eventStatus);
+          statByPlayerId.set(dstPlayer.id, row);
+        }
+
         allRelevantGamesFinal = false;
         continue;
       }
@@ -227,7 +324,13 @@ export async function POST(request: Request) {
         row.receiving_tds = stat.receiving_tds;
         row.receptions = stat.receptions;
         row.fumbles_lost = stat.fumbles_lost;
-        row.fantasy_points = Math.round(calculateNflFantasyPoints(stat) * 10) / 10;
+        row.fantasy_points =
+          Math.round(
+            calculateNflFantasyPoints(
+              stat,
+              nflScoringRules,
+            ) * 10,
+          ) / 10;
         row.game_status_text = statusText;
         // Matches NBA's convention: 3 = final, 2 = in progress
         row.game_status = isCompleted ? 3 : 2;
@@ -236,6 +339,32 @@ export async function POST(request: Request) {
         row.games_remaining = 0;
 
         statByPlayerId.set(player.id, row);
+      }
+
+      const summaryCompetitors =
+        summary.header?.competitions?.[0]?.competitors ?? eventCompetitors;
+
+      for (const competitor of summaryCompetitors) {
+        const espnTeamId = String(competitor.team?.id ?? "");
+        const dstPlayer = dstPlayerByEspnTeamId.get(espnTeamId);
+
+        if (!dstPlayer) continue;
+
+        const row = statByPlayerId.get(dstPlayer.id) ?? blankRow();
+        const dstStats = aggregateEspnDstBoxscore(summary, espnTeamId);
+
+        if (dstStats) {
+          row.fantasy_points =
+            Math.round(
+              calculateNflDstFantasyPoints(
+                dstStats,
+                nflScoringRules,
+              ) * 10,
+            ) / 10;
+        }
+
+        applyGameStatus(row, statusInfo ?? eventStatus);
+        statByPlayerId.set(dstPlayer.id, row);
       }
     }
 

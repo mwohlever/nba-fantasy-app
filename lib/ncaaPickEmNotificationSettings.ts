@@ -1,4 +1,8 @@
 import {
+  getLeagueNotificationOverride,
+  NCAA_PICKEM_REMINDER_NOTIFICATION_TYPE,
+} from "@/lib/leagueNotificationSettings";
+import {
   supabaseAdmin,
 } from "@/lib/supabaseAdmin";
 
@@ -28,7 +32,7 @@ export const NCAA_PICKEM_NOTIFICATION_PLACEHOLDERS = [
   "{weekNumber}",
 ] as const;
 
-export async function getNcaaPickEmNotificationSettings():
+async function getLegacyNcaaPickEmNotificationSettings():
   Promise<NcaaPickEmNotificationSettings> {
   const {
     data,
@@ -49,7 +53,7 @@ export async function getNcaaPickEmNotificationSettings():
 
   if (error) {
     console.error(
-      "Failed to load NCAA Pick 'Em notification settings",
+      "Failed to load legacy NCAA Pick 'Em notification settings",
       error,
     );
 
@@ -83,6 +87,48 @@ export async function getNcaaPickEmNotificationSettings():
           "",
       ).trim() ||
       NCAA_PICKEM_NOTIFICATION_DEFAULTS.bodyTemplate,
+  };
+}
+
+export async function getNcaaPickEmNotificationSettings(
+  leagueId?: string | null,
+): Promise<NcaaPickEmNotificationSettings> {
+  const fallback =
+    await getLegacyNcaaPickEmNotificationSettings();
+
+  if (!leagueId) {
+    return fallback;
+  }
+
+  const override =
+    await getLeagueNotificationOverride(
+      leagueId,
+      NCAA_PICKEM_REMINDER_NOTIFICATION_TYPE,
+    );
+
+  if (!override) {
+    return fallback;
+  }
+
+  return {
+    enabled:
+      override.isEnabled,
+
+    reminderHours:
+      override.reminderHours &&
+      Number.isFinite(
+        override.reminderHours,
+      )
+        ? override.reminderHours
+        : fallback.reminderHours,
+
+    titleTemplate:
+      override.titleTemplate ??
+      fallback.titleTemplate,
+
+    bodyTemplate:
+      override.bodyTemplate ??
+      fallback.bodyTemplate,
   };
 }
 

@@ -25,6 +25,11 @@ const INVITE_LIFETIME_DAYS =
   7;
 
 
+import {
+  getDefaultLeagueRules,
+  type SlateSport,
+} from "@/lib/rules/leagueRules";
+
 const LEAGUE_TEMPLATES = {
   nba: {
     sport_key:
@@ -98,6 +103,8 @@ type ActionBody = {
 
   sports?: string[];
 
+  initialAdminUserId?: string;
+
   email?: string;
 
   inviteId?: string;
@@ -105,6 +112,24 @@ type ActionBody = {
   membershipId?: string;
 
   leagueId?: string;
+
+  sportKey?: string;
+
+  roster?: {
+    guards?: number;
+    forwardsCenters?: number;
+    utility?: number;
+    QB?: number;
+    RB?: number;
+    WR?: number;
+    TE?: number;
+    K?: number;
+    FLEX?: number;
+    SF?: number;
+    "D/ST"?: number;
+  };
+
+  scoring?: Record<string, number>;
 
   role?:
     | "member"
@@ -428,6 +453,66 @@ export async function GET() {
     );
 
 
+    let platformUsers:
+      Array<{
+        id: string;
+        display_name: string;
+        email: string | null;
+        avatar_url: string | null;
+        system_role: string;
+      }> =
+      [];
+
+
+    if (
+      user.systemRole ===
+      "super_admin"
+    ) {
+      const {
+        data:
+          platformUserData,
+        error:
+          platformUserError,
+      } =
+        await supabaseAdmin
+          .from(
+            "app_users",
+          )
+          .select(
+            `
+              id,
+              display_name,
+              email,
+              avatar_url,
+              system_role
+            `,
+          )
+          .order(
+            "display_name",
+            {
+              ascending:
+                true,
+            },
+          );
+
+
+      if (
+        platformUserError
+      ) {
+        throw new Error(
+          `Unable to load platform users: ${platformUserError.message}`,
+        );
+      }
+
+
+      platformUsers =
+        (
+          platformUserData ??
+          []
+        ) as typeof platformUsers;
+    }
+
+
     if (
       groupIds.length ===
       0
@@ -445,6 +530,8 @@ export async function GET() {
             user.systemRole ===
             "super_admin",
         },
+
+        platformUsers,
 
         groups:
           [],
@@ -527,7 +614,9 @@ export async function GET() {
               game_mode,
               name,
               slug,
-              is_enabled
+              is_enabled,
+              settings_version,
+              settings
             `,
           )
           .in(
@@ -829,6 +918,8 @@ export async function GET() {
           user.systemRole,
       },
 
+      platformUsers,
+
       groups:
         resultGroups,
     });
@@ -1020,6 +1111,78 @@ export async function POST(
       }
 
 
+      const initialAdminUserId =
+        String(
+          body.initialAdminUserId ??
+            "",
+        ).trim();
+
+
+      if (
+        !initialAdminUserId
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Choose an initial Group Admin.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
+      const {
+        data:
+          initialAdminUser,
+        error:
+          initialAdminUserError,
+      } =
+        await supabaseAdmin
+          .from(
+            "app_users",
+          )
+          .select(
+            `
+              id,
+              display_name,
+              email
+            `,
+          )
+          .eq(
+            "id",
+            initialAdminUserId,
+          )
+          .maybeSingle();
+
+
+      if (
+        initialAdminUserError
+      ) {
+        throw new Error(
+          `Unable to validate initial Group Admin: ${initialAdminUserError.message}`,
+        );
+      }
+
+
+      if (
+        !initialAdminUser
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "That initial Group Admin account no longer exists.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
       const {
         data:
           createdGroup,
@@ -1096,7 +1259,7 @@ export async function POST(
               groupId,
 
             user_id:
-              user.id,
+              initialAdminUser.id,
 
             role:
               "admin",
@@ -1127,13 +1290,14 @@ export async function POST(
 
 
       /*
-       * The Group creator is already an active Admin member.
-       * They also need their own Group-specific fantasy team,
-       * just like users who join later through an invitation.
+       * The selected initial Group Admin becomes the first
+       * active member and receives the Group-specific fantasy
+       * team identity. The Super Admin who created the Group
+       * does not need Group membership.
        */
       const creatorTeamBaseName =
         String(
-          user.displayName ??
+          initialAdminUser.display_name ??
             "Player",
         )
           .trim()
@@ -1166,7 +1330,7 @@ export async function POST(
           )
           .eq(
             "user_id",
-            user.id,
+            initialAdminUser.id,
           )
           .maybeSingle();
 
@@ -1262,7 +1426,7 @@ export async function POST(
                 groupId,
 
               user_id:
-                user.id,
+                initialAdminUser.id,
             });
 
 
@@ -2548,12 +2712,567 @@ export async function POST(
 
 
     // ==========================================================
-    // ENABLE / DISABLE A GAME INSIDE A GROUP
+    // UPDATE NBA ROSTER RULES
     // ==========================================================
 
     if (
       action ===
-      "set_league_enabled"
+      "update_nba_roster_rules"
+    ) {
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+      const leagueId =
+        String(
+          body.leagueId ??
+            "",
+        ).trim();
+
+
+      if (
+        !(
+          await requireGroupAdmin(
+            user,
+            groupId,
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group administrator access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+
+      if (
+        !leagueId
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NBA League is required.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
+      const guards =
+        Number(
+          body.roster?.guards,
+        );
+
+      const forwardsCenters =
+        Number(
+          body.roster?.forwardsCenters,
+        );
+
+      const utility =
+        Number(
+          body.roster?.utility,
+        );
+
+
+      const counts = [
+        guards,
+        forwardsCenters,
+        utility,
+      ];
+
+
+      if (
+        counts.some(
+          (count) =>
+            !Number.isInteger(
+              count,
+            ) ||
+            count < 0 ||
+            count > 20,
+        ) ||
+        guards +
+          forwardsCenters +
+          utility <
+          1
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Roster counts must be whole numbers from 0–20, with at least one total roster spot.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+
+      const {
+        data:
+          league,
+        error:
+          leagueError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .select(
+            `
+              id,
+              group_id,
+              sport_key,
+              game_mode,
+              settings_version,
+              settings
+            `,
+          )
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .maybeSingle();
+
+
+      if (
+        leagueError
+      ) {
+        throw new Error(
+          `Unable to load NBA rules: ${leagueError.message}`,
+        );
+      }
+
+
+      if (
+        !league ||
+        league.sport_key !==
+          "nba" ||
+        league.game_mode !==
+          "standard"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NBA League not found in this Group.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+
+      const currentSettings =
+        league.settings &&
+        typeof league.settings ===
+          "object" &&
+        !Array.isArray(
+          league.settings,
+        )
+          ? league.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+
+      const nextSettings = {
+        ...currentSettings,
+
+        roster: {
+          slots: [
+            {
+              position:
+                "G",
+
+              slotCount:
+                guards,
+            },
+
+            {
+              position:
+                "F/C",
+
+              slotCount:
+                forwardsCenters,
+            },
+
+            {
+              position:
+                "UTIL",
+
+              slotCount:
+                utility,
+            },
+          ],
+        },
+      };
+
+
+      const {
+        error:
+          updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .update({
+            settings:
+              nextSettings,
+
+            settings_version:
+              Number(
+                league.settings_version ??
+                  1,
+              ),
+          })
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+
+      if (
+        updateError
+      ) {
+        throw new Error(
+          `Unable to save NBA roster rules: ${updateError.message}`,
+        );
+      }
+
+
+      return NextResponse.json({
+        success:
+          true,
+
+        roster: {
+          guards,
+          forwardsCenters,
+          utility,
+
+          total:
+            guards +
+            forwardsCenters +
+            utility,
+        },
+      });
+    }
+
+
+    // ==========================================================
+    // UPDATE NFL ROSTER RULES
+    // ==========================================================
+
+    if (
+      action ===
+      "update_nfl_roster_rules"
+    ) {
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+      const leagueId =
+        String(
+          body.leagueId ??
+            "",
+        ).trim();
+
+      if (
+        !(
+          await requireGroupAdmin(
+            user,
+            groupId,
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group administrator access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+      if (!leagueId) {
+        return NextResponse.json(
+          {
+            error:
+              "NFL League is required.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+      const roster =
+        body.roster &&
+        typeof body.roster ===
+          "object" &&
+        !Array.isArray(
+          body.roster,
+        )
+          ? body.roster
+          : {};
+
+      const positions = [
+        "QB",
+        "RB",
+        "WR",
+        "TE",
+        "K",
+        "FLEX",
+        "SF",
+        "D/ST",
+      ] as const;
+
+      const counts =
+        Object.fromEntries(
+          positions.map(
+            (position) => [
+              position,
+              Number(
+                roster[
+                  position
+                ],
+              ),
+            ],
+          ),
+        ) as Record<
+          (typeof positions)[number],
+          number
+        >;
+
+      if (
+        positions.some(
+          (position) =>
+            !Number.isInteger(
+              counts[
+                position
+              ],
+            ) ||
+            counts[
+              position
+            ] < 0 ||
+            counts[
+              position
+            ] > 20,
+        ) ||
+        positions.reduce(
+          (
+            total,
+            position,
+          ) =>
+            total +
+            counts[
+              position
+            ],
+          0,
+        ) < 1
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Roster counts must be whole numbers from 0–20, with at least one total roster spot.",
+          },
+          {
+            status:
+              400,
+          },
+        );
+      }
+
+      const {
+        data:
+          league,
+        error:
+          leagueError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .select(
+            `
+              id,
+              group_id,
+              sport_key,
+              game_mode,
+              settings_version,
+              settings
+            `,
+          )
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .maybeSingle();
+
+      if (
+        leagueError
+      ) {
+        throw new Error(
+          `Unable to load NFL rules: ${leagueError.message}`,
+        );
+      }
+
+      if (
+        !league ||
+        league.sport_key !==
+          "nfl" ||
+        league.game_mode !==
+          "standard"
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NFL League not found in this Group.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+      const currentSettings =
+        league.settings &&
+        typeof league.settings ===
+          "object" &&
+        !Array.isArray(
+          league.settings,
+        )
+          ? league.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const nextSettings = {
+        ...currentSettings,
+
+        roster: {
+          slots:
+            positions.map(
+              (
+                position,
+              ) => ({
+                position,
+
+                slotCount:
+                  counts[
+                    position
+                  ],
+              }),
+            ),
+        },
+      };
+
+      const nextSettingsVersion =
+        Number(
+          league.settings_version ??
+            1,
+        ) +
+        1;
+
+      const {
+        error:
+          updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .update({
+            settings:
+              nextSettings,
+
+            settings_version:
+              nextSettingsVersion,
+          })
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+      if (
+        updateError
+      ) {
+        throw new Error(
+          `Unable to save NFL roster rules: ${updateError.message}`,
+        );
+      }
+
+      return NextResponse.json({
+        success:
+          true,
+
+        roster:
+          counts,
+
+        total:
+          positions.reduce(
+            (
+              total,
+              position,
+            ) =>
+              total +
+              counts[
+                position
+              ],
+            0,
+          ),
+
+        settingsVersion:
+          nextSettingsVersion,
+      });
+    }
+
+
+    // ==========================================================
+    // UPDATE NBA / NFL SCORING RULES
+    // ==========================================================
+
+    if (
+      action ===
+      "update_scoring_rules"
     ) {
       const groupId =
         String(
@@ -2601,6 +3320,473 @@ export async function POST(
           },
         );
       }
+
+      const {
+        data:
+          league,
+        error:
+          leagueError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .select(
+            `
+              id,
+              group_id,
+              sport_key,
+              game_mode,
+              settings_version,
+              settings
+            `,
+          )
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          )
+          .maybeSingle();
+
+      if (
+        leagueError
+      ) {
+        throw new Error(
+          `Unable to load scoring rules: ${leagueError.message}`,
+        );
+      }
+
+      if (
+        !league ||
+        league.game_mode !==
+          "standard" ||
+        (
+          league.sport_key !==
+            "nba" &&
+          league.sport_key !==
+            "nfl"
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "NBA or NFL standard League not found in this Group.",
+          },
+          {
+            status:
+              404,
+          },
+        );
+      }
+
+      const sport =
+        league.sport_key as SlateSport;
+
+      const defaultScoring =
+        getDefaultLeagueRules(
+          sport,
+        ).scoring as Record<
+          string,
+          number
+        >;
+
+      const submittedScoring =
+        body.scoring &&
+        typeof body.scoring ===
+          "object" &&
+        !Array.isArray(
+          body.scoring,
+        )
+          ? body.scoring
+          : {};
+
+      const nextScoring:
+        Record<
+          string,
+          number
+        > = {
+          ...defaultScoring,
+        };
+
+      for (
+        const key
+        of Object.keys(
+          defaultScoring,
+        )
+      ) {
+        if (
+          !Object.prototype.hasOwnProperty.call(
+            submittedScoring,
+            key,
+          )
+        ) {
+          continue;
+        }
+
+        const value =
+          Number(
+            submittedScoring[
+              key
+            ],
+          );
+
+        if (
+          !Number.isFinite(
+            value,
+          ) ||
+          value <
+            -1000 ||
+          value >
+            1000
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                `Invalid scoring value for ${key}.`,
+            },
+            {
+              status:
+                400,
+            },
+          );
+        }
+
+        nextScoring[
+          key
+        ] =
+          value;
+      }
+
+      const currentSettings =
+        league.settings &&
+        typeof league.settings ===
+          "object" &&
+        !Array.isArray(
+          league.settings,
+        )
+          ? league.settings as Record<
+              string,
+              unknown
+            >
+          : {};
+
+      const nextSettings = {
+        ...currentSettings,
+
+        scoring:
+          nextScoring,
+      };
+
+      const nextSettingsVersion =
+        Number(
+          league.settings_version ??
+            1,
+        ) +
+        1;
+
+      const {
+        error:
+          updateError,
+      } =
+        await supabaseAdmin
+          .from(
+            "leagues",
+          )
+          .update({
+            settings:
+              nextSettings,
+
+            settings_version:
+              nextSettingsVersion,
+          })
+          .eq(
+            "id",
+            leagueId,
+          )
+          .eq(
+            "group_id",
+            groupId,
+          );
+
+      if (
+        updateError
+      ) {
+        throw new Error(
+          `Unable to save scoring rules: ${updateError.message}`,
+        );
+      }
+
+      return NextResponse.json({
+        success:
+          true,
+
+        sport,
+
+        scoring:
+          nextScoring,
+
+        settingsVersion:
+          nextSettingsVersion,
+      });
+    }
+
+
+    // ==========================================================
+    // ENABLE / DISABLE A GAME INSIDE A GROUP
+    // ==========================================================
+
+    if (
+      action ===
+      "set_league_enabled"
+    ) {
+      const groupId =
+        String(
+          body.groupId ??
+            "",
+        ).trim();
+
+      const leagueId =
+        String(
+          body.leagueId ??
+            "",
+        ).trim();
+
+      if (
+        !(
+          await requireGroupAdmin(
+            user,
+            groupId,
+          )
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Group administrator access required.",
+          },
+          {
+            status:
+              403,
+          },
+        );
+      }
+
+      if (
+        !leagueId
+      ) {
+        const requestedSportKey =
+          String(
+            body.sportKey ??
+              "",
+          ).trim();
+
+
+        if (
+          body.isActive !==
+            true ||
+          !Object.prototype.hasOwnProperty.call(
+            LEAGUE_TEMPLATES,
+            requestedSportKey,
+          )
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Choose a valid game to enable.",
+            },
+            {
+              status:
+                400,
+            },
+          );
+        }
+
+
+        const template =
+          LEAGUE_TEMPLATES[
+            requestedSportKey as
+              LeagueKey
+          ];
+
+
+        /*
+         * If this Group had the game previously and it was disabled,
+         * re-enable that existing League rather than creating another.
+         */
+        const {
+          data:
+            existingLeague,
+          error:
+            existingLeagueError,
+        } =
+          await supabaseAdmin
+            .from(
+              "leagues",
+            )
+            .select(
+              `
+                id,
+                name,
+                is_enabled
+              `,
+            )
+            .eq(
+              "group_id",
+              groupId,
+            )
+            .eq(
+              "sport_key",
+              template.sport_key,
+            )
+            .eq(
+              "game_mode",
+              template.game_mode,
+            )
+            .maybeSingle();
+
+
+        if (
+          existingLeagueError
+        ) {
+          throw new Error(
+            `Unable to inspect Group game: ${existingLeagueError.message}`,
+          );
+        }
+
+
+        if (
+          existingLeague
+        ) {
+          const {
+            error:
+              enableExistingError,
+          } =
+            await supabaseAdmin
+              .from(
+                "leagues",
+              )
+              .update({
+                is_enabled:
+                  true,
+              })
+              .eq(
+                "id",
+                existingLeague.id,
+              )
+              .eq(
+                "group_id",
+                groupId,
+              );
+
+
+          if (
+            enableExistingError
+          ) {
+            throw new Error(
+              `Unable to enable Group game: ${enableExistingError.message}`,
+            );
+          }
+
+
+          return NextResponse.json({
+            success:
+              true,
+
+            league: {
+              id:
+                String(
+                  existingLeague.id,
+                ),
+
+              name:
+                existingLeague.name,
+
+              isEnabled:
+                true,
+            },
+          });
+        }
+
+
+        const {
+          data:
+            createdLeague,
+          error:
+            createLeagueError,
+        } =
+          await supabaseAdmin
+            .from(
+              "leagues",
+            )
+            .insert({
+              group_id:
+                groupId,
+
+              sport_key:
+                template.sport_key,
+
+              game_mode:
+                template.game_mode,
+
+              name:
+                template.name,
+
+              slug:
+                template.slug,
+
+              is_enabled:
+                true,
+
+              settings_version:
+                1,
+
+              settings:
+                {},
+            })
+            .select(
+              `
+                id,
+                name,
+                is_enabled
+              `,
+            )
+            .single();
+
+
+        if (
+          createLeagueError ||
+          !createdLeague
+        ) {
+          throw new Error(
+            createLeagueError?.message
+              ? `Unable to add Group game: ${createLeagueError.message}`
+              : "Unable to add Group game.",
+          );
+        }
+
+
+        return NextResponse.json({
+          success:
+            true,
+
+          league: {
+            id:
+              String(
+                createdLeague.id,
+              ),
+
+            name:
+              createdLeague.name,
+
+            isEnabled:
+              true,
+          },
+        });
+      }
+
 
       const {
         data:

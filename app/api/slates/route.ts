@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
+import { resolveLeagueRules } from "@/lib/rules/leagueRules";
 
 function isoDateFromGameCode(gameCode: string | null | undefined) {
   const raw = String(gameCode ?? "").slice(0, 8);
@@ -472,14 +473,58 @@ export async function GET(request: NextRequest) {
       league,
     } = activeLeague;
 
-    const { data: teams, error: teamsError } = await supabaseAdmin
-      .from("teams")
-      .select("id, name")
+    const {
+      data: activeMemberships,
+      error: activeMembershipsError,
+    } = await supabaseAdmin
+      .from("group_memberships")
+      .select("user_id")
       .eq(
         "group_id",
         context.group.id,
       )
-      .order("name", { ascending: true });
+      .eq(
+        "is_active",
+        true,
+      );
+
+    if (activeMembershipsError) {
+      return NextResponse.json(
+        {
+          error: `Failed to load active Group members: ${activeMembershipsError.message}`,
+        },
+        { status: 500 }
+      );
+    }
+
+    const activeUserIds =
+      (activeMemberships ?? []).map(
+        (membership) =>
+          String(
+            membership.user_id,
+          ),
+      );
+
+    const { data: teams, error: teamsError } =
+      activeUserIds.length > 0
+        ? await supabaseAdmin
+            .from("teams")
+            .select("id, name")
+            .eq(
+              "group_id",
+              context.group.id,
+            )
+            .in(
+              "user_id",
+              activeUserIds,
+            )
+            .order("name", {
+              ascending: true,
+            })
+        : {
+            data: [],
+            error: null,
+          };
 
     if (teamsError) {
       return NextResponse.json(
@@ -494,6 +539,19 @@ export async function GET(request: NextRequest) {
         sport,
         league.id,
       );
+
+    const suggestedRules =
+      resolveLeagueRules({
+        sport,
+        settings:
+          league.settings,
+      });
+
+    const suggestedRosterSlots =
+      suggestedRules.roster.slots.map((slot) => ({
+        position: slot.position,
+        slot_count: slot.slotCount,
+      }));
 
     const suggestedOrderIds = buildSuggestedOrderIds(
       previousCompleted.results,
@@ -529,6 +587,7 @@ export async function GET(request: NextRequest) {
       latestSlate: previousCompleted.slate,
       previousCompletedSlate: previousCompleted.slate,
       suggestedTeamConfigs,
+      suggestedRosterSlots,
     });
   } catch (error) {
     console.error(error);
@@ -592,6 +651,93 @@ export async function POST(request: NextRequest) {
       context,
       league,
     } = activeLeague;
+
+
+    const baseResolvedRules =
+      resolveLeagueRules({
+        sport,
+
+        settings:
+          league.settings,
+      });
+
+    const requestedRosterSlots =
+      Array.isArray(body?.rosterSlots)
+        ? body.rosterSlots
+            .map((slot: unknown) => {
+              if (
+                !slot ||
+                typeof slot !== "object"
+              ) {
+                return null;
+              }
+
+              const value =
+                slot as {
+                  position?: unknown;
+                  slot_count?: unknown;
+                  slotCount?: unknown;
+                };
+
+              const position =
+                typeof value.position === "string"
+                  ? value.position.trim().toUpperCase()
+                  : "";
+
+              const slotCount =
+                Number(
+                  value.slot_count ??
+                    value.slotCount,
+                );
+
+              if (
+                !position ||
+                !Number.isInteger(slotCount) ||
+                slotCount < 0 ||
+                slotCount > 50
+              ) {
+                return null;
+              }
+
+              return {
+                position,
+                slotCount,
+              };
+            })
+            .filter(
+              (
+                slot: {
+                  position: string;
+                  slotCount: number;
+                } | null,
+              ): slot is {
+                position: string;
+                slotCount: number;
+              } => slot !== null,
+            )
+        : [];
+
+    const resolvedRules =
+      requestedRosterSlots.length > 0
+        ? resolveLeagueRules({
+            sport,
+            settings: {
+              ...baseResolvedRules,
+              roster: {
+                slots:
+                  requestedRosterSlots,
+              },
+            },
+          })
+        : baseResolvedRules;
+
+
+    const rulesVersion =
+      Number(
+        league.settingsVersion ??
+          resolvedRules.schemaVersion,
+      );
+
 
     const displayName =
       typeof body?.displayName === "string"
@@ -665,23 +811,68 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data: teams, error: teamsError } = await supabaseAdmin
-      .from("teams")
-      .select("id, name")
+    const {
+      data: activeMemberships,
+      error: activeMembershipsError,
+    } = await supabaseAdmin
+      .from("group_memberships")
+      .select("user_id")
       .eq(
         "group_id",
         context.group.id,
       )
-      .order("name", { ascending: true });
+      .eq(
+        "is_active",
+        true,
+      );
 
-    if (teamsError || !teams) {
+    if (activeMembershipsError) {
       return NextResponse.json(
-        { error: `Failed to load teams: ${teamsError?.message}` },
+        {
+          error: `Failed to load active Group members: ${activeMembershipsError.message}`,
+        },
         { status: 500 }
       );
     }
 
-    const safeTeams = teams as TeamRow[];
+    const activeUserIds =
+      (activeMemberships ?? []).map(
+        (membership) =>
+          String(
+            membership.user_id,
+          ),
+      );
+
+    const { data: teams, error: teamsError } =
+      activeUserIds.length > 0
+        ? await supabaseAdmin
+            .from("teams")
+            .select("id, name")
+            .eq(
+              "group_id",
+              context.group.id,
+            )
+            .in(
+              "user_id",
+              activeUserIds,
+            )
+            .order("name", {
+              ascending: true,
+            })
+        : {
+            data: [],
+            error: null,
+          };
+
+    if (teamsError) {
+      return NextResponse.json(
+        { error: `Failed to load teams: ${teamsError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const safeTeams =
+      (teams ?? []) as TeamRow[];
     const previousCompleted =
       await getMostRecentCompletedSlateSetup(
         sport,
@@ -766,6 +957,13 @@ export async function POST(request: NextRequest) {
         is_locked: false,
         sport,
         league_id: league.id,
+
+        rules_version:
+          rulesVersion,
+
+        rules_snapshot:
+          resolvedRules,
+
         display_name:
           sport === "golf" ? displayName : null,
         external_event_id:
@@ -780,7 +978,7 @@ export async function POST(request: NextRequest) {
           sport === "nba" ? firstGameStartTime : null,
       })
       .select(
-        "id, date, start_date, end_date, is_locked, sport, league_id, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations, first_game_start_time"
+        "id, date, start_date, end_date, is_locked, sport, league_id, rules_version, rules_snapshot, display_name, external_event_id, cut_penalty_per_round, has_cut, nba_team_abbreviations, first_game_start_time"
       )
       .single();
 

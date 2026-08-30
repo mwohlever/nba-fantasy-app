@@ -61,6 +61,77 @@ function formatGolfScore(value: number | null | undefined) {
   return numeric > 0 ? `+${numeric}` : String(numeric);
 }
 
+
+function formatGolfTeeTime(
+  rawValue: string | null | undefined,
+  parsedValue?: string | null,
+) {
+  const raw =
+    rawValue?.trim() ?? "";
+
+
+  /*
+   * PGA TOUR future-round fallback values can explicitly say UTC.
+   * In that case, trust the parsed ISO instant and display Eastern.
+   */
+  if (
+    /\bUTC\b/i.test(raw) &&
+    parsedValue
+  ) {
+    const parsedUtc =
+      new Date(parsedValue);
+
+    if (
+      !Number.isNaN(
+        parsedUtc.getTime(),
+      )
+    ) {
+      return parsedUtc.toLocaleString(
+        [],
+        {
+          weekday: "short",
+          hour: "numeric",
+          minute: "2-digit",
+          timeZone:
+            "America/New_York",
+        },
+      );
+    }
+  }
+
+
+  const value =
+    parsedValue ??
+    rawValue;
+
+  if (!value) {
+    return null;
+  }
+
+
+  const parsed =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      parsed.getTime(),
+    )
+  ) {
+    return raw || value;
+  }
+
+
+  return parsed.toLocaleString(
+    [],
+    {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    },
+  );
+}
+
+
 function formatLeaderboardPosition(value: number | null | undefined) {
   if (!value) return "—";
   return `T${value}`;
@@ -69,11 +140,34 @@ function formatLeaderboardPosition(value: number | null | undefined) {
 function statusMeta(
   stat: PlayerStat | null,
   _playingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
-  _upcomingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
+  upcomingRound: NonNullable<PlayerStat["rounds"]>[number] | null,
   _mostRecentRound: NonNullable<PlayerStat["rounds"]>[number] | null,
 ) {
   const meta =
     getGolfStatusMeta(stat);
+
+
+  const upcomingTeeTime =
+    formatGolfTeeTime(
+      upcomingRound
+        ?.tee_time_raw ??
+        stat?.tee_time_raw,
+      upcomingRound
+        ?.tee_time ??
+        stat?.tee_time,
+    );
+
+
+  const detail =
+    meta.state === "upcoming" &&
+    upcomingTeeTime
+      ? (
+          upcomingRound
+            ? `R${upcomingRound.round_number} · ${upcomingTeeTime}`
+            : upcomingTeeTime
+        )
+      : meta.detail;
+
 
   const className =
     meta.state === "playing"
@@ -89,6 +183,7 @@ function statusMeta(
 
   return {
     ...meta,
+    detail,
     className,
   };
 }
@@ -188,6 +283,59 @@ function relativeLabel(relative: number | null | undefined) {
   if (relative === 0) return "E";
   return relative > 0 ? `+${relative}` : String(relative);
 }
+
+
+function effectiveHoleRelative(
+  hole:
+    | {
+        par?: number | null;
+        strokes: number | null;
+        relative_to_par: number | null;
+      }
+    | null
+    | undefined,
+) {
+  if (
+    hole?.relative_to_par !== null &&
+    hole?.relative_to_par !== undefined &&
+    Number.isFinite(
+      Number(
+        hole.relative_to_par,
+      ),
+    )
+  ) {
+    return Number(
+      hole.relative_to_par,
+    );
+  }
+
+
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined
+  ) {
+    return null;
+  }
+
+
+  const par =
+    holePar(hole);
+
+  if (par === null) {
+    return null;
+  }
+
+
+  const relative =
+    Number(hole.strokes) -
+    par;
+
+
+  return Number.isFinite(relative)
+    ? relative
+    : null;
+}
+
 
 function holeResultName(
   relative: number | null | undefined,
@@ -1372,8 +1520,9 @@ export default function GolfScoresDashboard({
                                   yardage,
                                   result:
                                     holeResultName(
-                                      hole
-                                        ?.relative_to_par,
+                                      effectiveHoleRelative(
+                                        hole,
+                                      ),
                                     ),
                                 });
                               }
@@ -1406,8 +1555,9 @@ export default function GolfScoresDashboard({
                                   yardage,
                                   result:
                                     holeResultName(
-                                      hole
-                                        ?.relative_to_par,
+                                      effectiveHoleRelative(
+                                        hole,
+                                      ),
                                     ),
                                 });
                               }
@@ -1418,11 +1568,15 @@ export default function GolfScoresDashboard({
                                   ? "relative z-10 ring-2 ring-inset ring-emerald-400"
                                   : ""
                               } ${relativeClass(
-                                hole?.relative_to_par,
+                                effectiveHoleRelative(
+                                  hole,
+                                ),
                               )}`}
                             >
                               {relativeLabel(
-                                hole?.relative_to_par,
+                                effectiveHoleRelative(
+                                  hole,
+                                ),
                               )}
                             </div>
 

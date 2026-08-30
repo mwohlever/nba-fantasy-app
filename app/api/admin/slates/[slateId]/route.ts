@@ -89,7 +89,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
       supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, sport, display_name, external_event_id, cut_penalty_per_round, has_cut, tournament_analysis, show_tournament_analysis, nba_team_abbreviations"
+          "id, date, start_date, end_date, is_locked, sport, rules_version, rules_snapshot, display_name, external_event_id, cut_penalty_per_round, has_cut, tournament_analysis, show_tournament_analysis, nba_team_abbreviations"
         )
         .eq("id", slateId)
         .single(),

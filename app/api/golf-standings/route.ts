@@ -44,6 +44,7 @@ type GolfHoleRow = {
 };
 
 type GolfRoundRow = {
+  round_number: number;
   score_to_par: number | null;
   holes_completed: number | null;
   golf_holes: GolfHoleRow[] | null;
@@ -102,6 +103,11 @@ type GolfStandingAccumulator = {
   bogeys: number;
   doubleBogeysOrWorse: number;
   roundsUnderPar: number;
+
+  teamRoundScores: Record<
+    number,
+    number[]
+  >;
 
   history: TournamentHistoryRow[];
 };
@@ -464,6 +470,17 @@ export async function GET(
                 double_bogeys_or_worse:
                   0,
                 rounds_under_par: 0,
+                average_round_scores:
+                  [1, 2, 3, 4].map(
+                    (roundNumber) => ({
+                      round_number:
+                        roundNumber,
+                      average_score:
+                        null,
+                      observation_count:
+                        0,
+                    }),
+                  ),
                 tournament_history:
                   [],
               }),
@@ -537,6 +554,7 @@ export async function GET(
           rounds_completed,
           holes_completed,
           golf_rounds (
+            round_number,
             score_to_par,
             holes_completed,
             golf_holes (
@@ -755,6 +773,13 @@ export async function GET(
                 0,
               roundsUnderPar: 0,
 
+              teamRoundScores: {
+                1: [],
+                2: [],
+                3: [],
+                4: [],
+              },
+
               history: [],
             },
           ],
@@ -896,6 +921,22 @@ export async function GET(
     const ownerBySlatePlayer =
       new Map<string, number>();
 
+    const eventPlayerBySlatePlayer =
+      new Map<
+        string,
+        GolfEventPlayerRow
+      >();
+
+    for (
+      const eventPlayer of
+      eventPlayers
+    ) {
+      eventPlayerBySlatePlayer.set(
+        `${eventPlayer.slate_id}:${eventPlayer.player_id}`,
+        eventPlayer,
+      );
+    }
+
     for (
       const lineup of lineups
     ) {
@@ -908,6 +949,95 @@ export async function GET(
           `${lineup.slate_id}:${lineupPlayer.player_id}`,
           Number(
             lineup.team_id,
+          ),
+        );
+      }
+
+      if (
+        !finalizedSlateIds.has(
+          Number(lineup.slate_id),
+        ) ||
+        !lineup.lineup_players ||
+        lineup.lineup_players.length ===
+          0
+      ) {
+        continue;
+      }
+
+      const accumulator =
+        accumulatorByTeamId.get(
+          Number(lineup.team_id),
+        );
+
+      if (!accumulator) {
+        continue;
+      }
+
+      for (
+        const roundNumber of
+        [1, 2, 3, 4]
+      ) {
+        const completedScores =
+          lineup.lineup_players.map(
+            (lineupPlayer) => {
+              const eventPlayer =
+                eventPlayerBySlatePlayer.get(
+                  `${lineup.slate_id}:${lineupPlayer.player_id}`,
+                );
+
+              const round =
+                eventPlayer?.golf_rounds?.find(
+                  (candidate) =>
+                    Number(
+                      candidate.round_number,
+                    ) ===
+                    roundNumber,
+                );
+
+              if (
+                !round ||
+                round.score_to_par ===
+                  null ||
+                round.score_to_par ===
+                  undefined ||
+                Number(
+                  round.holes_completed ??
+                    0,
+                ) < 18
+              ) {
+                return null;
+              }
+
+              const score =
+                Number(
+                  round.score_to_par,
+                );
+
+              return Number.isFinite(
+                score,
+              )
+                ? score
+                : null;
+            },
+          );
+
+        if (
+          completedScores.some(
+            (score) =>
+              score === null,
+          )
+        ) {
+          continue;
+        }
+
+        accumulator.teamRoundScores[
+          roundNumber
+        ].push(
+          completedScores.reduce<number>(
+            (total, score) =>
+              total +
+              Number(score),
+            0,
           ),
         );
       }
@@ -1080,6 +1210,35 @@ export async function GET(
 
           rounds_under_par:
             row.roundsUnderPar,
+
+          average_round_scores:
+            [1, 2, 3, 4].map(
+              (roundNumber) => {
+                const scores =
+                  row.teamRoundScores[
+                    roundNumber
+                  ];
+
+                return {
+                  round_number:
+                    roundNumber,
+                  average_score:
+                    scores.length > 0
+                      ? roundTo(
+                          scores.reduce(
+                            (total, score) =>
+                              total +
+                              score,
+                            0,
+                          ) /
+                            scores.length,
+                        )
+                      : null,
+                  observation_count:
+                    scores.length,
+                };
+              },
+            ),
 
           tournament_history:
             [...row.history].sort(

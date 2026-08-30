@@ -84,7 +84,7 @@ type DraftProps = SharedProps & {
   getTeamStats: (teamId: number) => TeamStats;
   getTeamAssignmentStatus: (teamId: number, player: Player) => AssignmentStatus;
   getOwnerTeamIdForPlayer: (playerId: number) => number | null;
-  handleAssignPlayerToTeam: (player: Player, teamId: number) => Promise<void>;
+  handleAssignPlayerToTeam: (player: Player, teamId: number) => Promise<boolean>;
   targetDraftSlot?: {
     teamId: number;
     teamName: string;

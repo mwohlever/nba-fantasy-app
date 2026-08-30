@@ -1,7 +1,9 @@
 import {
-  getNotificationTemplate,
   renderNotificationTemplate,
 } from "@/lib/notificationTemplates";
+import {
+  getLeagueNotificationTemplate,
+} from "@/lib/leagueNotificationSettings";
 import { sendLoggedNotification } from "@/lib/notifications";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -12,6 +14,7 @@ type SlateInput = {
   end_date: string;
   sport?: string;
   display_name?: string | null;
+  league_id?: string | null;
 };
 
 type TeamResultInput = {
@@ -182,7 +185,7 @@ export async function notifyCompletedSlate(input: {
   const { data: slateLabelData, error: slateLabelError } =
     await supabaseAdmin
       .from("slates")
-      .select("display_name")
+      .select("display_name, league_id")
       .eq("id", input.slate.id)
       .maybeSingle();
 
@@ -203,10 +206,35 @@ export async function notifyCompletedSlate(input: {
     (startDate === endDate
       ? startDate
       : `${startDate} - ${endDate}`);
-  const [standardTemplate, winnerTemplate] = await Promise.all([
-    getNotificationTemplate("slate_complete", sport),
-    getNotificationTemplate("slate_complete_winner", sport),
+
+  const leagueId =
+    input.slate.league_id
+      ? String(input.slate.league_id)
+      : slateLabelData?.league_id
+        ? String(slateLabelData.league_id)
+        : null;
+
+  const [
+    standardNotification,
+    winnerNotification,
+  ] = await Promise.all([
+    getLeagueNotificationTemplate(
+      "slate_complete",
+      sport,
+      leagueId,
+    ),
+    getLeagueNotificationTemplate(
+      "slate_complete_winner",
+      sport,
+      leagueId,
+    ),
   ]);
+
+  const standardTemplate =
+    standardNotification.template;
+
+  const winnerTemplate =
+    winnerNotification.template;
 
   let sent = 0;
   let skipped = 0;
@@ -249,7 +277,10 @@ export async function notifyCompletedSlate(input: {
 
     let skipReason: string | null = null;
 
-    if (!user) {
+    if (!standardNotification.enabled) {
+      skipReason =
+        "Slate-complete notifications are disabled by the commissioner.";
+    } else if (!user) {
       skipReason =
         "This team does not have an active league account.";
     } else if (
@@ -257,7 +288,8 @@ export async function notifyCompletedSlate(input: {
       !preference.notifications_enabled ||
       !preference.slate_final_enabled
     ) {
-      skipReason = "Slate-complete notifications are disabled.";
+      skipReason =
+        "Slate-complete notifications are disabled.";
     }
 
     const notificationResult = await sendLoggedNotification({
@@ -266,6 +298,7 @@ export async function notifyCompletedSlate(input: {
       userId: user?.id ?? null,
       teamId,
       slateId: input.slate.id,
+      leagueId,
       title,
       body,
       url:

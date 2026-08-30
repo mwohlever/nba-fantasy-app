@@ -152,6 +152,58 @@ function holePar(
   return Number.isFinite(par) ? par : null;
 }
 
+function effectiveHoleRelative(
+  hole:
+    | {
+        par?: number | null;
+        strokes: number | null;
+        relative_to_par: number | null;
+      }
+    | null
+    | undefined,
+) {
+  if (
+    hole?.relative_to_par !== null &&
+    hole?.relative_to_par !== undefined &&
+    Number.isFinite(
+      Number(
+        hole.relative_to_par,
+      ),
+    )
+  ) {
+    return Number(
+      hole.relative_to_par,
+    );
+  }
+
+
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined
+  ) {
+    return null;
+  }
+
+
+  const par =
+    holePar(hole);
+
+  if (par === null) {
+    return null;
+  }
+
+
+  const relative =
+    Number(hole.strokes) -
+    par;
+
+
+  return Number.isFinite(relative)
+    ? relative
+    : null;
+}
+
+
 function resultName(relative: number | null | undefined) {
   if (relative === null || relative === undefined) {
     return "Not played";
@@ -1176,8 +1228,9 @@ export default function GolfLeagueView({
                                   yardage: yards,
                                   result:
                                     resultName(
-                                      hole
-                                        ?.relative_to_par,
+                                      effectiveHoleRelative(
+                                        hole,
+                                      ),
                                     ),
                                 });
                               }}
@@ -1193,11 +1246,15 @@ export default function GolfLeagueView({
                                   ? "relative z-10 ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-950"
                                   : ""
                               } ${relativeClass(
-                                hole?.relative_to_par,
+                                effectiveHoleRelative(
+                                  hole,
+                                ),
                               )}`}
                             >
                               {relativeLabel(
-                                hole?.relative_to_par,
+                                effectiveHoleRelative(
+                                  hole,
+                                ),
                               )}
                             </button>
                           </div>

@@ -186,6 +186,9 @@ function AppNavContent() {
   const displayedAdminGroups =
     getAdminMenuGroups(
       activeSport,
+      Boolean(
+        groupContext?.isSuperAdmin,
+      ),
     );
 
 
@@ -275,6 +278,31 @@ function AppNavContent() {
       fallbackSport,
     );
 
+
+    const isCommissionerGroupSettings =
+      pathname.startsWith(
+        "/admin/groups",
+      ) &&
+      searchParams.get(
+        "view",
+      ) ===
+        "commissioner";
+
+
+    /*
+     * Group Settings is Group-scoped, not sport-page-scoped.
+     *
+     * If the newly active Group does not offer the previously
+     * selected sport, update the nav's selected sport but remain
+     * on Group Settings instead of redirecting to that sport's Home.
+     */
+    if (
+      isCommissionerGroupSettings
+    ) {
+      return;
+    }
+
+
     router.replace(
       getSportDestination(
         fallbackSport,
@@ -286,6 +314,8 @@ function AppNavContent() {
     selectedSport,
     setSelectedSport,
     router,
+    pathname,
+    searchParams,
   ]);
 
   /*
@@ -300,25 +330,50 @@ function AppNavContent() {
    *     -> infinite state loop.
    */
   useEffect(() => {
+    /*
+     * Notification administration is a shared cross-sport route.
+     *
+     * Its ?sport= value must be authoritative even for dedicated
+     * game keys such as NCAA Pick 'Em and NBA Skins. The general
+     * routeSport resolver is designed primarily around game-page
+     * routes and can otherwise leave the previous fantasy sport
+     * mounted after the URL has already changed.
+     */
+    const notificationRouteSport =
+      pathname.startsWith(
+        "/admin/notification",
+      )
+        ? searchParams.get(
+            "sport",
+          )
+        : null;
+
+    const effectiveRouteSport =
+      notificationRouteSport ??
+      routeSport;
+
     const routeSportIsEnabled =
-      routeSport
+      effectiveRouteSport
         ? displayedSports.some(
             (sport) =>
               sport.key ===
-              routeSport,
+              effectiveRouteSport,
           )
         : false;
 
     if (
-      routeSport &&
+      effectiveRouteSport &&
       routeSportIsEnabled &&
-      routeSport !== selectedSport
+      effectiveRouteSport !==
+        selectedSport
     ) {
       setSelectedSport(
-        routeSport,
+        effectiveRouteSport,
       );
     }
   }, [
+    pathname,
+    searchParams,
     routeSport,
     displayedSports,
     selectedSport,
@@ -652,10 +707,20 @@ function AppNavContent() {
   function handleSelectSport(
     sportKey: string,
   ) {
-    const destination =
-      getSportDestination(
-        sportKey,
+    const isNotificationAdminRoute =
+      pathname.startsWith(
+        "/admin/notification",
       );
+
+    const destination =
+      isNotificationAdminRoute
+        ? appendSportParam(
+            pathname,
+            sportKey,
+          )
+        : getSportDestination(
+            sportKey,
+          );
 
     const currentSection =
       getCurrentSportSection();
@@ -689,8 +754,16 @@ function AppNavContent() {
       );
 
     if (
-      usesDedicatedFallback
+      usesDedicatedFallback ||
+      isNotificationAdminRoute
     ) {
+      /*
+       * Navigate first and let routeSport synchronize selectedSport.
+       *
+       * Notification admin pages preserve their route across sports,
+       * so updating selectedSport before the URL changes can race with
+       * the still-stale ?sport= value and immediately switch back.
+       */
       router.push(
         destination,
       );
@@ -842,6 +915,66 @@ function AppNavContent() {
       href === "/ncaa-pickem"
     ) {
       return pathname === href;
+    }
+
+    /*
+     * Commissioner administration and platform administration
+     * currently share the /admin route tree, but they are
+     * separate navigation scopes.
+     *
+     * Groups & Access belongs to the Super Admin surface even
+     * though its legacy route remains /admin/groups.
+     */
+    const isCommissionerGroupSettings =
+      pathname.startsWith(
+        "/admin/groups",
+      ) &&
+      searchParams.get(
+        "view",
+      ) ===
+        "commissioner";
+
+
+    const isPlatformAdminPath =
+      pathname.startsWith(
+        "/admin/platform",
+      ) ||
+      (
+        pathname.startsWith(
+          "/admin/groups",
+        ) &&
+        !isCommissionerGroupSettings
+      );
+
+    if (
+      href ===
+        "/admin/groups?view=commissioner"
+    ) {
+      return (
+        isCommissionerGroupSettings
+      );
+    }
+
+
+    if (
+      href === "/admin"
+    ) {
+      return (
+        (
+          pathname === "/admin" ||
+          pathname.startsWith(
+            "/admin/",
+          )
+        ) &&
+        !isPlatformAdminPath &&
+        !isCommissionerGroupSettings
+      );
+    }
+
+    if (
+      href === "/admin/platform"
+    ) {
+      return isPlatformAdminPath;
     }
 
     return (

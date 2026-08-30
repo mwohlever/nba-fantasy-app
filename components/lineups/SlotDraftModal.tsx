@@ -6,6 +6,9 @@ import {
 } from "react";
 
 import PlayerPool from "@/components/lineups/PlayerPool";
+import {
+  canPlayerFillRosterSlot,
+} from "@/lib/rules/leagueRules";
 
 import type {
   Player,
@@ -55,7 +58,12 @@ type Props = {
   handleAssignPlayerToTeam: (
     player: Player,
     teamId: number,
-  ) => Promise<void>;
+
+    explicitSlot?: {
+      position: string;
+      slotIndex: number;
+    },
+  ) => Promise<boolean>;
 
   selectedSeason:
     string;
@@ -116,9 +124,50 @@ export default function SlotDraftModal({
 
       return players.filter(
         (player) => {
+          const rosterPositions =
+            rosterSlots.map(
+              (slot) =>
+                String(
+                  slot.position ??
+                    "",
+                )
+                  .trim()
+                  .toUpperCase(),
+            );
+
+          const activeSport:
+            | "nba"
+            | "nfl"
+            | "golf" =
+            rosterPositions.includes(
+              "GOLFER",
+            )
+              ? "golf"
+              : rosterPositions.some(
+                    (position) =>
+                      [
+                        "QB",
+                        "RB",
+                        "WR",
+                        "TE",
+                        "K",
+                        "FLEX",
+                        "SF",
+                        "D/ST",
+                      ].includes(
+                        position,
+                      ),
+                  )
+                ? "nfl"
+                : "nba";
+
+
           if (
-            player.position_group !==
-            targetDraftSlot.positionGroup
+            !canPlayerFillRosterSlot(
+              activeSport,
+              player.position_group,
+              targetDraftSlot.positionGroup,
+            )
           ) {
             return false;
           }
@@ -180,10 +229,22 @@ export default function SlotDraftModal({
       return;
     }
 
-    await handleAssignPlayerToTeam(
-      player,
-      targetDraftSlot.teamId,
-    );
+    const assigned =
+      await handleAssignPlayerToTeam(
+        player,
+        targetDraftSlot.teamId,
+        {
+          position:
+            targetDraftSlot.positionGroup,
+
+          slotIndex:
+            targetDraftSlot.slotIndex,
+        },
+      );
+
+    if (!assigned) {
+      return;
+    }
 
     setTargetDraftSlot(
       null,
@@ -239,10 +300,10 @@ export default function SlotDraftModal({
               </div>
 
               <div className="mt-1 text-sm text-slate-400">
-                Choose an available{" "}
-                {
-                  targetDraftSlot.positionGroup
-                }.
+                {targetDraftSlot.positionGroup ===
+                "UTIL"
+                  ? "Choose any available Guard or F/C."
+                  : `Choose an available ${targetDraftSlot.positionGroup}.`}
               </div>
             </div>
 

@@ -3,10 +3,18 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
+import Link from "next/link";
+
 import AppNav from "@/components/AppNav";
+
+import {
+  useGroupContext,
+} from "@/components/providers/GroupProvider";
+
 
 type Settings = {
   enabled: boolean;
@@ -15,6 +23,7 @@ type Settings = {
   bodyTemplate: string;
 };
 
+
 type Payload = {
   success: boolean;
   settings: Settings;
@@ -22,6 +31,7 @@ type Payload = {
   availablePlaceholders: string[];
   error?: string;
 };
+
 
 function renderPreview(
   value: string,
@@ -47,6 +57,7 @@ function renderPreview(
         "1",
     };
 
+
   return Object.entries(
     examples,
   ).reduce(
@@ -61,34 +72,59 @@ function renderPreview(
         placeholder,
         replacement,
       ),
+
     value,
   );
 }
 
+
 export default function NcaaPickEmNotificationControl() {
+  const {
+    groupContext,
+  } =
+    useGroupContext();
+
+
+  const activeGroupId =
+    groupContext?.group.id ??
+    null;
+
+
   const [
     saved,
     setSaved,
   ] =
-    useState<Settings | null>(
+    useState<
+      Settings |
+      null
+    >(
       null,
     );
+
 
   const [
     defaults,
     setDefaults,
   ] =
-    useState<Settings | null>(
+    useState<
+      Settings |
+      null
+    >(
       null,
     );
+
 
   const [
     draft,
     setDraft,
   ] =
-    useState<Settings | null>(
+    useState<
+      Settings |
+      null
+    >(
       null,
     );
+
 
   const [
     placeholders,
@@ -98,6 +134,7 @@ export default function NcaaPickEmNotificationControl() {
       [],
     );
 
+
   const [
     loading,
     setLoading,
@@ -105,6 +142,7 @@ export default function NcaaPickEmNotificationControl() {
     useState(
       true,
     );
+
 
   const [
     saving,
@@ -114,105 +152,180 @@ export default function NcaaPickEmNotificationControl() {
       false,
     );
 
+
+  const [
+    justSaved,
+    setJustSaved,
+  ] =
+    useState(
+      false,
+    );
+
+
+  const [
+    editing,
+    setEditing,
+  ] =
+    useState(
+      false,
+    );
+
+
   const [
     message,
     setMessage,
   ] =
-    useState("");
+    useState(
+      "",
+    );
 
-  useEffect(() => {
-    const controller =
-      new AbortController();
 
-    async function load() {
-      try {
-        setLoading(
-          true,
-        );
+  const savedTimer =
+    useRef<
+      ReturnType<typeof setTimeout> |
+      null
+    >(
+      null,
+    );
 
-        const response =
-          await fetch(
-            "/api/admin/ncaa-pickem/notification-settings",
-            {
-              cache:
-                "no-store",
 
-              signal:
-                controller.signal,
-            },
-          );
+  useEffect(
+    () => {
+      const controller =
+        new AbortController();
 
-        const result =
-          await response.json() as
-            Payload;
 
+      async function load() {
         if (
-          controller.signal.aborted
+          !activeGroupId
         ) {
           return;
         }
 
-        if (
-          !response.ok
-        ) {
-          setMessage(
-            result.error ??
-              "Unable to load NCAA Pick 'Em notification settings.",
-          );
 
-          return;
-        }
-
-        setSaved(
-          result.settings,
-        );
-
-        setDraft(
-          result.settings,
-        );
-
-        setDefaults(
-          result.defaults,
-        );
-
-        setPlaceholders(
-          result.availablePlaceholders ??
-            [],
-        );
-      } catch (error) {
-        if (
-          error instanceof
-            DOMException &&
-          error.name ===
-            "AbortError"
-        ) {
-          return;
-        }
-
-        console.error(
-          error,
-        );
-
-        setMessage(
-          "Unable to load NCAA Pick 'Em notification settings.",
-        );
-      } finally {
-        if (
-          !controller.signal.aborted
-        ) {
+        try {
           setLoading(
+            true,
+          );
+
+          setMessage(
+            "",
+          );
+
+          setEditing(
             false,
           );
+
+
+          const response =
+            await fetch(
+              "/api/admin/ncaa-pickem/notification-settings",
+              {
+                cache:
+                  "no-store",
+
+                signal:
+                  controller.signal,
+              },
+            );
+
+
+          const result =
+            await response.json() as Payload;
+
+
+          if (
+            controller.signal.aborted
+          ) {
+            return;
+          }
+
+
+          if (
+            !response.ok
+          ) {
+            setMessage(
+              result.error ??
+                "Unable to load NCAA Pick 'Em notification settings.",
+            );
+
+            return;
+          }
+
+
+          setSaved(
+            result.settings,
+          );
+
+          setDraft(
+            result.settings,
+          );
+
+          setDefaults(
+            result.defaults,
+          );
+
+          setPlaceholders(
+            result.availablePlaceholders ??
+              [],
+          );
+        } catch (
+          error
+        ) {
+          if (
+            error instanceof DOMException &&
+            error.name === "AbortError"
+          ) {
+            return;
+          }
+
+
+          console.error(
+            error,
+          );
+
+          setMessage(
+            "Unable to load NCAA Pick 'Em notification settings.",
+          );
+        } finally {
+          if (
+            !controller.signal.aborted
+          ) {
+            setLoading(
+              false,
+            );
+          }
         }
       }
-    }
 
-    void load();
 
-    return () => {
-      controller.abort();
-    };
-  }, []);
+      void load();
+
+
+      return () => {
+        controller.abort();
+      };
+    },
+    [
+      activeGroupId,
+    ],
+  );
+
+
+  useEffect(
+    () =>
+      () => {
+        if (
+          savedTimer.current
+        ) {
+          clearTimeout(
+            savedTimer.current,
+          );
+        }
+      },
+    [],
+  );
+
 
   const changed =
     useMemo(
@@ -237,6 +350,30 @@ export default function NcaaPickEmNotificationControl() {
       ],
     );
 
+
+  function update(
+    patch:
+      Partial<Settings>,
+  ) {
+    if (
+      !draft
+    ) {
+      return;
+    }
+
+
+    setDraft({
+      ...draft,
+      ...patch,
+    });
+
+
+    setJustSaved(
+      false,
+    );
+  }
+
+
   async function save(
     resetToDefault =
       false,
@@ -247,12 +384,16 @@ export default function NcaaPickEmNotificationControl() {
       return;
     }
 
+
     try {
       setSaving(
         true,
       );
 
-      setMessage("");
+      setMessage(
+        "",
+      );
+
 
       const response =
         await fetch(
@@ -274,8 +415,10 @@ export default function NcaaPickEmNotificationControl() {
           },
         );
 
+
       const result =
         await response.json();
+
 
       if (
         !response.ok
@@ -288,6 +431,7 @@ export default function NcaaPickEmNotificationControl() {
         return;
       }
 
+
       setSaved(
         result.settings,
       );
@@ -296,12 +440,38 @@ export default function NcaaPickEmNotificationControl() {
         result.settings,
       );
 
+      setJustSaved(
+        true,
+      );
+
+
+      if (
+        savedTimer.current
+      ) {
+        clearTimeout(
+          savedTimer.current,
+        );
+      }
+
+
+      savedTimer.current =
+        setTimeout(
+          () =>
+            setJustSaved(
+              false,
+            ),
+          1800,
+        );
+
+
       setMessage(
         resetToDefault
-          ? "Pick 'Em reminder settings restored to default."
-          : "Pick 'Em reminder settings saved.",
+          ? "Pick 'Em reminder settings restored to platform defaults."
+          : "Pick 'Em reminder settings saved for this league.",
       );
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         error,
       );
@@ -316,8 +486,10 @@ export default function NcaaPickEmNotificationControl() {
     }
   }
 
+
   function appendPlaceholder(
-    placeholder: string,
+    placeholder:
+      string,
   ) {
     if (
       !draft
@@ -325,316 +497,423 @@ export default function NcaaPickEmNotificationControl() {
       return;
     }
 
-    const current =
-      draft.bodyTemplate;
 
     const separator =
-      !current ||
-      current.endsWith(
+      !draft.bodyTemplate ||
+      draft.bodyTemplate.endsWith(
         " ",
       )
         ? ""
         : " ";
 
-    setDraft({
-      ...draft,
 
+    update({
       bodyTemplate:
-        `${current}${separator}${placeholder}`,
+        `${draft.bodyTemplate}${separator}${placeholder}`,
     });
   }
 
+
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+      <div className="mx-auto max-w-6xl space-y-4">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-700 bg-slate-900 p-6">
-          <div className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">
+
+        <header className="px-1 py-2">
+          <Link
+            href="/admin?sport=ncaa"
+            className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-sky-700 hover:underline"
+          >
+            ← Commissioner Center
+          </Link>
+
+          <div className="text-xs font-bold uppercase tracking-widest text-slate-500">
             NCAA Pick &apos;Em
           </div>
 
-          <h1 className="mt-2 text-3xl font-black tracking-tight">
-            Notification Control
+          <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+            Notification Controls
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            Control the missing-picks reminder sent before the weekly card locks.
-            The first available 111 Sports heartbeat inside this window sends it
-            once to anyone who still has picks to save.
+          <p className="mt-1 text-sm text-slate-600">
+            Manage the reminder sent when users still have picks to submit.
           </p>
-        </section>
+        </header>
+
 
         {message ? (
           <div
-            className={`rounded-2xl border px-4 py-3 text-sm ${
-              message.includes(
-                "saved",
-              ) ||
-              message.includes(
-                "restored",
-              )
-                ? "border-emerald-500/30 bg-emerald-950/30 text-emerald-200"
-                : "border-red-500/30 bg-red-950/30 text-red-200"
+            className={`rounded-xl border px-4 py-3 text-sm ${
+              message
+                .toLowerCase()
+                .includes(
+                  "saved",
+                ) ||
+              message
+                .toLowerCase()
+                .includes(
+                  "restored",
+                )
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-700"
             }`}
           >
             {message}
           </div>
         ) : null}
 
+
         {loading ||
         !draft ||
         !saved ||
         !defaults ? (
-          <section className="rounded-3xl border border-slate-700 bg-slate-900 p-6 text-slate-400">
+          <div className="border-y border-slate-200 bg-white px-4 py-8 text-sm text-slate-500">
             Loading Pick &apos;Em notification settings…
-          </section>
+          </div>
         ) : (
-          <section className="rounded-3xl border border-slate-700 bg-slate-900 p-6">
-            <div className="flex flex-col gap-4 border-b border-slate-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-xl font-black">
-                  🏈 Pick &apos;Em Reminder
-                </h2>
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
-                <p className="mt-1 text-sm text-slate-400">
-                  Sent once to users with missing picks before the weekly lock.
-                </p>
+            <div className="hidden grid-cols-[minmax(180px,1fr)_90px_130px_minmax(220px,1fr)_70px] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500 sm:grid">
+              <div>
+                Notification
               </div>
 
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={
-                    draft.enabled
-                  }
-                  onChange={(
-                    event,
-                  ) =>
-                    setDraft({
-                      ...draft,
+              <div>
+                Status
+              </div>
 
-                      enabled:
-                        event
-                          .target
-                          .checked,
-                    })
-                  }
-                  className="h-4 w-4"
-                />
+              <div>
+                Timing
+              </div>
 
-                <span className="font-bold">
-                  {draft.enabled
-                    ? "Enabled"
-                    : "Disabled"}
-                </span>
-              </label>
+              <div>
+                Message
+              </div>
+
+              <div className="text-right">
+                Action
+              </div>
             </div>
 
-            <div className="mt-6 space-y-6">
+
+            <div className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(180px,1fr)_90px_130px_minmax(220px,1fr)_70px] sm:items-center sm:gap-4">
+
               <div>
-                <label className="text-sm font-bold">
-                  Reminder window
-                </label>
-
-                <div className="mt-2 flex max-w-sm items-center gap-3">
-                  <input
-                    type="number"
-                    min={1}
-                    max={168}
-                    step={1}
-                    value={
-                      draft.reminderHours
-                    }
-                    onChange={(
-                      event,
-                    ) =>
-                      setDraft({
-                        ...draft,
-
-                        reminderHours:
-                          Number(
-                            event
-                              .target
-                              .value,
-                          ),
-                      })
-                    }
-                    className="w-28 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 font-bold text-white"
-                  />
-
-                  <span className="text-sm text-slate-400">
-                    hours before picks lock
-                  </span>
+                <div className="font-semibold">
+                  🏈 Pick &apos;Em Reminder
                 </div>
 
-                <p className="mt-2 text-xs text-slate-500">
-                  Because reminders use normal app activity rather than a guaranteed scheduler,
-                  the notification sends on the first available heartbeat inside this window.
-                </p>
+                <div className="mt-0.5 text-xs text-slate-500">
+                  Sent once when a weekly card is incomplete.
+                </div>
               </div>
 
-              <div>
-                <label className="text-sm font-bold">
-                  Notification title
-                </label>
 
-                <input
-                  value={
+              <div>
+                <span
+                  className={`inline-flex min-w-16 justify-center rounded-full px-3 py-1.5 text-xs font-bold ${
+                    draft.enabled
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-slate-200 text-slate-600"
+                  }`}
+                >
+                  {draft.enabled
+                    ? "ON"
+                    : "OFF"}
+                </span>
+              </div>
+
+
+              <div className="text-sm text-slate-700">
+                {
+                  draft.reminderHours
+                }h before lock
+              </div>
+
+
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium">
+                  {
                     draft.titleTemplate
                   }
-                  maxLength={100}
-                  onChange={(
-                    event,
-                  ) =>
-                    setDraft({
-                      ...draft,
+                </div>
 
-                      titleTemplate:
-                        event
-                          .target
-                          .value,
-                    })
-                  }
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-bold">
-                  Notification message
-                </label>
-
-                <textarea
-                  value={
+                <div className="mt-0.5 truncate text-xs text-slate-500">
+                  {
                     draft.bodyTemplate
                   }
-                  maxLength={240}
-                  rows={4}
-                  onChange={(
-                    event,
-                  ) =>
-                    setDraft({
-                      ...draft,
-
-                      bodyTemplate:
-                        event
-                          .target
-                          .value,
-                    })
-                  }
-                  className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-                />
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-blue-500/30 bg-blue-950/25 p-4">
-                <div className="text-sm font-bold text-blue-200">
-                  Available placeholders
-                </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {placeholders.map(
-                    (
-                      placeholder,
-                    ) => (
-                      <button
-                        key={
-                          placeholder
+              <div className="sm:text-right">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditing(
+                      (
+                        current,
+                      ) =>
+                        !current,
+                    )
+                  }
+                  className="text-sm font-semibold text-sky-700 hover:underline"
+                >
+                  {editing
+                    ? "Close"
+                    : "Edit"}
+                </button>
+              </div>
+            </div>
+
+
+            {editing ? (
+              <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+
+                  <div className="space-y-4">
+                    <label className="flex items-center gap-3 text-sm font-medium">
+                      <input
+                        type="checkbox"
+                        checked={
+                          draft.enabled
                         }
-                        type="button"
-                        onClick={() =>
-                          appendPlaceholder(
+                        onChange={(
+                          event,
+                        ) =>
+                          update({
+                            enabled:
+                              event.target.checked,
+                          })
+                        }
+                        className="h-4 w-4"
+                      />
+
+                      Send this reminder
+                    </label>
+
+
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Hours before lock
+                      </label>
+
+                      <input
+                        type="number"
+                        min={
+                          1
+                        }
+                        max={
+                          168
+                        }
+                        step={
+                          1
+                        }
+                        value={
+                          draft.reminderHours
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          update({
+                            reminderHours:
+                              Number(
+                                event.target.value,
+                              ),
+                          })
+                        }
+                        className="mt-1 block w-32 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm"
+                      />
+                    </div>
+
+
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Title
+                      </label>
+
+                      <input
+                        value={
+                          draft.titleTemplate
+                        }
+                        maxLength={
+                          100
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          update({
+                            titleTemplate:
+                              event.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm"
+                      />
+                    </div>
+
+
+                    <div>
+                      <label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Message
+                      </label>
+
+                      <textarea
+                        value={
+                          draft.bodyTemplate
+                        }
+                        maxLength={
+                          240
+                        }
+                        rows={
+                          3
+                        }
+                        onChange={(
+                          event,
+                        ) =>
+                          update({
+                            bodyTemplate:
+                              event.target.value,
+                          })
+                        }
+                        className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm"
+                      />
+                    </div>
+
+
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Placeholders
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {placeholders.map(
+                          (
                             placeholder,
+                          ) => (
+                            <button
+                              key={
+                                placeholder
+                              }
+                              type="button"
+                              onClick={() =>
+                                appendPlaceholder(
+                                  placeholder,
+                                )
+                              }
+                              className="rounded-md border border-slate-300 bg-white px-2 py-1 font-mono text-[11px] text-slate-600"
+                            >
+                              {
+                                placeholder
+                              }
+                            </button>
+                          ),
+                        )}
+                      </div>
+                    </div>
+
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        disabled={
+                          saving ||
+                          (
+                            !changed &&
+                            !justSaved
                           )
                         }
-                        className="rounded-full border border-blue-500/30 bg-slate-950 px-3 py-1.5 font-mono text-xs text-blue-200"
-                      >
-                        {
-                          placeholder
+                        onClick={() =>
+                          void save(
+                            false,
+                          )
                         }
+                        className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+                          justSaved
+                            ? "bg-emerald-600 text-white"
+                            : "bg-sky-600 text-white disabled:bg-slate-300"
+                        }`}
+                      >
+                        {saving
+                          ? "Saving…"
+                          : justSaved
+                            ? "Saved ✓"
+                            : "Save Changes"}
                       </button>
-                    ),
-                  )}
-                </div>
-              </div>
 
-              <div className="rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                  Preview
-                </div>
 
-                <div className="mt-3 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-                  <div className="font-black">
-                    {renderPreview(
-                      draft.titleTemplate,
-                    )}
+                      <button
+                        type="button"
+                        disabled={
+                          saving
+                        }
+                        onClick={() =>
+                          void save(
+                            true,
+                          )
+                        }
+                        className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
+                      >
+                        Restore Default
+                      </button>
+
+
+                      {changed ? (
+                        <button
+                          type="button"
+                          disabled={
+                            saving
+                          }
+                          onClick={() =>
+                            setDraft(
+                              saved,
+                            )
+                          }
+                          className="px-3 py-2 text-sm font-medium text-slate-500"
+                        >
+                          Discard
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <div className="mt-1 text-sm text-slate-300">
-                    {renderPreview(
-                      draft.bodyTemplate,
-                    )}
-                  </div>
+
+                  <aside className="space-y-3">
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Preview
+                      </div>
+
+                      <div className="mt-1 rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="text-sm font-semibold">
+                          {renderPreview(
+                            draft.titleTemplate,
+                          )}
+                        </div>
+
+                        <div className="mt-1 text-xs leading-5 text-slate-600">
+                          {renderPreview(
+                            draft.bodyTemplate,
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+
+                    <div className="text-[11px] leading-4 text-slate-400">
+                      Platform default:
+                      <div className="mt-1 font-medium text-slate-500">
+                        {
+                          defaults.reminderHours
+                        }h · {
+                          defaults.titleTemplate
+                        }
+                      </div>
+                    </div>
+                  </aside>
                 </div>
               </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  disabled={
-                    saving ||
-                    !changed
-                  }
-                  onClick={() =>
-                    void save(
-                      false,
-                    )
-                  }
-                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
-                >
-                  {saving
-                    ? "Saving…"
-                    : "Save Changes"}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={
-                    saving
-                  }
-                  onClick={() =>
-                    void save(
-                      true,
-                    )
-                  }
-                  className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-bold"
-                >
-                  Restore Default
-                </button>
-
-                {changed ? (
-                  <button
-                    type="button"
-                    disabled={
-                      saving
-                    }
-                    onClick={() =>
-                      setDraft(
-                        saved,
-                      )
-                    }
-                    className="rounded-xl px-5 py-3 text-sm font-bold text-slate-400"
-                  >
-                    Discard Changes
-                  </button>
-                ) : null}
-              </div>
-
-              <p className="text-xs text-slate-500">
-                Default: enabled · {defaults.reminderHours} hours · “
-                {defaults.titleTemplate}”
-              </p>
-            </div>
+            ) : null}
           </section>
         )}
       </div>

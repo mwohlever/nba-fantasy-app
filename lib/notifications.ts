@@ -8,6 +8,7 @@ type LoggedNotificationInput = {
   userId?: string | null;
   teamId?: number | null;
   slateId?: number | null;
+  leagueId?: string | null;
   playerId?: number | null;
 
   title: string;
@@ -41,6 +42,7 @@ export async function sendLoggedNotification(
     .insert({
       event_key: input.eventKey ?? null,
       notification_type: input.notificationType,
+      league_id: input.leagueId ?? null,
       user_id: input.userId ?? null,
       team_id: input.teamId ?? null,
       slate_id: input.slateId ?? null,

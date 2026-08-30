@@ -2,6 +2,41 @@
 
 import { useEffect, useState } from "react";
 
+const NFL_DST_PLAYER_ID_BASE = 100_000_000;
+
+function getNflTeamLogoUrl(
+  nflPlayerId: number | string | null | undefined,
+) {
+  const numericId = Number(nflPlayerId);
+
+  if (
+    !Number.isFinite(numericId) ||
+    numericId <= NFL_DST_PLAYER_ID_BASE
+  ) {
+    return null;
+  }
+
+  const teamId =
+    numericId - NFL_DST_PLAYER_ID_BASE;
+
+  /*
+   * Synthetic D/ST ids are:
+   *   100_000_000 + ESPN NFL team id
+   *
+   * Real ESPN athlete ids remain below this range.
+   */
+  if (
+    !Number.isInteger(teamId) ||
+    teamId <= 0 ||
+    teamId > 100
+  ) {
+    return null;
+  }
+
+  return `https://a.espncdn.com/i/teamlogos/nfl/500/${teamId}.png`;
+}
+
+
 type PlayerHeadshotProps = {
   nbaPlayerId?: number | null;
   nflPlayerId?: number | null;
@@ -40,17 +75,26 @@ export default function PlayerHeadshot({
   size = "sm",
   className = "",
 }: PlayerHeadshotProps) {
+
+  const nflTeamLogoUrl =
+    getNflTeamLogoUrl(
+      nflPlayerId,
+    );
+
   const [imageFailed, setImageFailed] = useState(false);
 
   const resolvedImageUrl =
-    imageUrl?.trim() ||
-    (nbaPlayerId
-      ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaPlayerId}.png`
-      : nflPlayerId
-        ? `https://a.espncdn.com/i/headshots/nfl/players/full/${nflPlayerId}.png`
-        : espnGolfPlayerId
-          ? `https://a.espncdn.com/i/headshots/golf/players/full/${espnGolfPlayerId}.png`
-          : null);
+    nflTeamLogoUrl ??
+    (
+      imageUrl?.trim() ||
+      (nbaPlayerId
+        ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaPlayerId}.png`
+        : nflPlayerId
+          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${nflPlayerId}.png`
+          : espnGolfPlayerId
+            ? `https://a.espncdn.com/i/headshots/golf/players/full/${espnGolfPlayerId}.png`
+            : null)
+    );
 
   useEffect(() => {
     setImageFailed(false);

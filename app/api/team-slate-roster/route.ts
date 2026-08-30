@@ -4,6 +4,10 @@ import {
 } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStatColumns } from "@/lib/statColumns";
+import {
+  assignPlayersToRosterSlots,
+  getRosterSlotsFromRulesSnapshot,
+} from "@/lib/rules/leagueRules";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveSlateAccessForUser,
@@ -733,6 +737,72 @@ export async function GET(
       ),
     );
 
+    const rosterSlots =
+      getRosterSlotsFromRulesSnapshot(
+        slateAccess.slate.rulesSnapshot,
+        sport,
+      );
+
+
+    const rosterAssignment =
+      assignPlayersToRosterSlots({
+        sport,
+
+        playerPositions:
+          playerIds.map(
+            (playerId) =>
+              String(
+                playerMap.get(
+                  playerId,
+                )?.position_group ??
+                playerMap.get(
+                  playerId,
+                )?.position ??
+                "",
+              ),
+          ),
+
+        rosterSlots,
+      });
+
+
+    const rosterSlotByPlayerIndex =
+      new Map<
+        number,
+        {
+          position:
+            string;
+
+          order:
+            number;
+        }
+      >();
+
+
+    rosterAssignment.slots.forEach(
+      (
+        slot,
+        slotOrder,
+      ) => {
+        if (
+          slot.playerIndex >=
+          0
+        ) {
+          rosterSlotByPlayerIndex.set(
+            slot.playerIndex,
+            {
+              position:
+                slot.position,
+
+              order:
+                slotOrder,
+            },
+          );
+        }
+      },
+    );
+
+
     const roster = playerIds
       .map((playerId, index) => {
         const player =
@@ -763,7 +833,17 @@ export async function GET(
           nflPlayerId: null,
           positionGroup:
             player?.position_group ??
+            player?.position ??
             null,
+
+          rosterSlot:
+            rosterSlotByPlayerIndex.get(
+              index,
+            )?.position ??
+            player?.position_group ??
+            player?.position ??
+            null,
+
           ...statValues,
           fantasyPoints:
             stat?.fantasy_points ?? 0,
@@ -775,11 +855,16 @@ export async function GET(
           period: stat?.period ?? null,
           gameClock:
             stat?.game_clock ?? null,
-          sortOrder: getSlotOrder(
-            player?.position_group ??
-              null,
-            index,
-          ),
+          sortOrder:
+            rosterSlotByPlayerIndex.get(
+              index,
+            )?.order ??
+            getSlotOrder(
+              player?.position_group ??
+              player?.position ??
+                null,
+              index,
+            ),
         };
       })
       .sort(

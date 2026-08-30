@@ -2,11 +2,16 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { PushResult } from "@/lib/push";
 import { sendLoggedNotification } from "@/lib/notifications";
 import {
-  getNotificationTemplate,
   renderNotificationTemplate,
   type NotificationTemplateType,
 } from "@/lib/notificationTemplates";
+import {
+  getLeagueNotificationTemplate,
+} from "@/lib/leagueNotificationSettings";
 import { getSportConfig } from "@/lib/sports";
+import {
+  getRosterSlotsFromRulesSnapshot,
+} from "@/lib/rules/leagueRules";
 
 type SlateTeamRow = {
   team_id: number;
@@ -120,7 +125,7 @@ export async function notifyNextDrafter(
 ): Promise<DraftNotificationResult> {
   const { data: slate, error: slateError } = await supabaseAdmin
     .from("slates")
-    .select("id, display_name, date, start_date, end_date, sport")
+    .select("id, display_name, date, start_date, end_date, sport, league_id, rules_snapshot")
     .eq("id", slateId)
     .single();
 
@@ -135,20 +140,23 @@ export async function notifyNextDrafter(
         ? "golf"
         : "nba";
 
-  const { data: rosterSlotsData, error: rosterSlotsError } =
-    await supabaseAdmin
-      .from("roster_slots")
-      .select("position, slot_count")
-      .eq("sport", sport)
-      .order("display_order", { ascending: true });
-
-  if (rosterSlotsError) {
-    throw new Error(
-      `Failed to load roster slot configuration: ${rosterSlotsError.message}`
+  const rosterSlots =
+    getRosterSlotsFromRulesSnapshot(
+      slate.rules_snapshot &&
+      typeof slate.rules_snapshot ===
+        "object" &&
+      !Array.isArray(
+        slate.rules_snapshot,
+      )
+        ? slate.rules_snapshot as Record<
+            string,
+            unknown
+          >
+        : null,
+      sport,
     );
-  }
 
-  const rosterSlots = (rosterSlotsData ?? []) as RosterSlotConfig[];
+
   const totalSlots = rosterSlots.reduce(
     (sum, slot) => sum + slot.slot_count,
     0
@@ -345,8 +353,33 @@ export async function notifyNextDrafter(
     ? "draft_final_pick"
     : "draft_turn";
 
-  const notificationTemplate =
-    await getNotificationTemplate(templateType, sport);
+  const leagueId =
+    slate.league_id
+      ? String(slate.league_id)
+      : null;
+
+  const {
+    enabled: leagueNotificationEnabled,
+    template: notificationTemplate,
+  } =
+    await getLeagueNotificationTemplate(
+      templateType,
+      sport,
+      leagueId,
+    );
+
+  if (!leagueNotificationEnabled) {
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason:
+        "Draft notifications are disabled by the commissioner.",
+      devices: [],
+      nextTeamId: nextTeam.team_id,
+      nextTeamName,
+    };
+  }
 
   const picksRemaining = Math.max(
     0,
@@ -389,6 +422,7 @@ export async function notifyNextDrafter(
     userId: user.id,
     teamId: nextTeam.team_id,
     slateId,
+    leagueId,
     title: renderedTitle,
     body: renderedBody,
     url: `/lineups/draft?slateId=${slateId}`,
