@@ -91,6 +91,7 @@ type GroupProviderValue = {
   setActiveGroup:
     (
       groupSlug: string,
+      destination?: string,
     ) => Promise<void>;
 };
 
@@ -245,12 +246,19 @@ export default function GroupProvider({
       async (
         groupSlug:
           string,
+        destination?: string,
       ) => {
         if (
-          !groupSlug ||
-          groupSlug ===
-            groupContext?.group.slug
+          !groupSlug
         ) {
+          return;
+        }
+
+        const target = destination ??
+          `/groups/${encodeURIComponent(groupSlug)}`;
+
+        if (groupSlug === groupContext?.group.slug) {
+          router.push(target);
           return;
         }
 
@@ -295,9 +303,7 @@ export default function GroupProvider({
 
           await loadContext();
 
-          router.push(
-            `${window.location.pathname}${window.location.search}`,
-          );
+          router.push(target);
 
           router.refresh();
         } finally {

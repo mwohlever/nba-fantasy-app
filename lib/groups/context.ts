@@ -332,6 +332,86 @@ async function loadGroupLeagues(
 }
 
 
+async function buildGroupContext(
+  user: AppUser,
+  membership: MembershipRow,
+): Promise<GroupContext | null> {
+  const group =
+    unwrapRelated(
+      membership.groups,
+    );
+
+  if (
+    !group ||
+    !group.is_active ||
+    !membership.is_active
+  ) {
+    return null;
+  }
+
+  const [
+    team,
+    leagueRows,
+  ] = await Promise.all([
+    loadGroupTeam(
+      user.id,
+      group.id,
+    ),
+    loadGroupLeagues(
+      group.id,
+    ),
+  ]);
+
+  const leagues: GroupLeague[] =
+    leagueRows.map(
+      (league) => ({
+        id: league.id,
+        sportKey: league.sport_key,
+        gameMode: league.game_mode,
+        name: league.name,
+        slug: league.slug,
+        isEnabled: league.is_enabled,
+        settingsVersion: Number(
+          league.settings_version,
+        ),
+        settings: league.settings ?? {},
+      }),
+    );
+
+  const isSuperAdmin =
+    user.systemRole === "super_admin";
+  const isGroupAdmin =
+    membership.role === "admin";
+
+  return {
+    group: {
+      id: group.id,
+      name: group.name,
+      slug: group.slug,
+      isActive: group.is_active,
+    },
+    membership: {
+      id: membership.id,
+      role: membership.role,
+      isActive: membership.is_active,
+    },
+    team: team
+      ? {
+          id: Number(team.id),
+          name: team.name,
+          displayOrder:
+            team.display_order ?? null,
+        }
+      : null,
+    leagues,
+    isGroupAdmin,
+    isSuperAdmin,
+    canAdministerGroup:
+      isSuperAdmin || isGroupAdmin,
+  };
+}
+
+
 export async function getGroupContextForUser(
   user: AppUser,
 ): Promise<GroupContext | null> {
@@ -356,106 +436,58 @@ export async function getGroupContextForUser(
     return null;
   }
 
-  const group =
-    unwrapRelated(
-      membership.groups,
-    );
+  return buildGroupContext(
+    user,
+    membership,
+  );
+}
 
-  if (
-    !group ||
-    !group.is_active
-  ) {
+
+export async function getGroupContextForUserBySlug(
+  user: AppUser,
+  groupSlug: string,
+): Promise<GroupContext | null> {
+  const normalizedSlug =
+    groupSlug.trim().toLowerCase();
+
+  if (!normalizedSlug) {
     return null;
   }
 
-  const [
-    team,
-    leagueRows,
-  ] =
-    await Promise.all([
-      loadGroupTeam(
-        user.id,
-        group.id,
-      ),
+  const memberships =
+    await loadMemberships(user.id);
+  const membership =
+    memberships.find(
+      (candidate) =>
+        candidate.is_active &&
+        unwrapRelated(candidate.groups)
+          ?.slug.trim().toLowerCase() ===
+          normalizedSlug &&
+        unwrapRelated(candidate.groups)
+          ?.is_active,
+    ) ?? null;
 
-      loadGroupLeagues(
-        group.id,
-      ),
-    ]);
+  return membership
+    ? buildGroupContext(user, membership)
+    : null;
+}
 
-  const leagues:
-    GroupLeague[] =
-    leagueRows.map(
-      (league) => ({
-        id: league.id,
-        sportKey:
-          league.sport_key,
-        gameMode:
-          league.game_mode,
-        name:
-          league.name,
-        slug:
-          league.slug,
-        isEnabled:
-          league.is_enabled,
-        settingsVersion:
-          Number(
-            league.settings_version,
-          ),
-        settings:
-          league.settings ??
-          {},
-      }),
-    );
 
-  const isSuperAdmin =
-    user.systemRole ===
-    "super_admin";
+export async function getAvailableGroupContextsForUser(
+  user: AppUser,
+): Promise<GroupContext[]> {
+  const memberships =
+    await loadMemberships(user.id);
+  const contexts = await Promise.all(
+    memberships.map((membership) =>
+      buildGroupContext(user, membership),
+    ),
+  );
 
-  const isGroupAdmin =
-    membership.role ===
-    "admin";
-
-  return {
-    group: {
-      id: group.id,
-      name: group.name,
-      slug: group.slug,
-      isActive:
-        group.is_active,
-    },
-
-    membership: {
-      id:
-        membership.id,
-      role:
-        membership.role,
-      isActive:
-        membership.is_active,
-    },
-
-    team: team
-      ? {
-          id: Number(
-            team.id,
-          ),
-          name:
-            team.name,
-          displayOrder:
-            team.display_order ??
-            null,
-        }
-      : null,
-
-    leagues,
-
-    isGroupAdmin,
-    isSuperAdmin,
-
-    canAdministerGroup:
-      isSuperAdmin ||
-      isGroupAdmin,
-  };
+  return contexts.filter(
+    (context): context is GroupContext =>
+      context !== null,
+  );
 }
 
 
