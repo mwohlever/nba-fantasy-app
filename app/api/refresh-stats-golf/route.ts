@@ -782,6 +782,28 @@ export async function POST(request: Request) {
       );
     }
 
+    if (
+      slate.is_locked &&
+      body.reconcileLockedLifecycle === true &&
+      body.scoreboardPayload === undefined
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Locked Golf lifecycle reconciliation requires a browser-fetched ESPN scoreboard payload.",
+          provider: {
+            eventId:
+              slate.external_event_id,
+            year:
+              getTournamentYear(
+                slate.start_date,
+              ),
+          },
+        },
+        { status: 400 },
+      );
+    }
+
     const tournament =
       await fetchTournamentForSlate(
         slate,
