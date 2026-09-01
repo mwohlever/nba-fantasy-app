@@ -3,6 +3,7 @@
 import AppNav from "@/components/AppNav";
 
 import {
+  useEffect,
   useState,
 } from "react";
 
@@ -10,6 +11,7 @@ type AdminGame = {
   espnEventId: string;
   kickoffAt: string;
   included: boolean;
+  commissionerSelected?: boolean;
   automatic: boolean;
 
   away: {
@@ -52,6 +54,7 @@ type ImportResult = {
     rankedVsRankedEvents?: number;
     rankedTeamGames?: number;
     rankingPoll?: string | null;
+    rankingPollType?: string | null;
     rankedTeams?: number;
   };
 
@@ -168,6 +171,70 @@ export default function NcaaPickEmAdminPage() {
     setIsWorking,
   ] =
     useState(false);
+
+  useEffect(() => {
+    const seasonNumber = Number(season);
+    const weekNumber = Number(week);
+
+    if (
+      !Number.isInteger(seasonNumber) ||
+      seasonNumber <= 0 ||
+      !Number.isInteger(weekNumber) ||
+      weekNumber <= 0
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      try {
+        setResult(null);
+
+        const params = new URLSearchParams({
+          season: String(seasonNumber),
+          week: String(weekNumber),
+        });
+        const response = await fetch(
+          `/api/admin/ncaa-pickem/import-week?${params.toString()}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+        const data = (await response.json()) as ImportResult;
+
+        if (response.status === 404) {
+          setAnalysis("");
+          setShowAnalysis(false);
+          setMessage("");
+          return;
+        }
+
+        if (!response.ok) {
+          setMessage(data.error || "Unable to load the saved week.");
+          return;
+        }
+
+        setResult(data);
+        setAnalysis(data.analysis ?? "");
+        setShowAnalysis(data.showAnalysis === true);
+        setMessage("");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        console.error(error);
+        setMessage("Unable to load the saved week.");
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [season, week]);
 
   async function importWeek(
     includedEventIds?:
@@ -476,11 +543,13 @@ export default function NcaaPickEmAdminPage() {
                 value={season}
                 onChange={(
                   event,
-                ) =>
+                ) => {
+                  setResult(null);
                   setSeason(
                     event.target
                       .value,
-                  )
+                  );
+                }
                 }
                 className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2"
               />
@@ -495,11 +564,13 @@ export default function NcaaPickEmAdminPage() {
                 value={week}
                 onChange={(
                   event,
-                ) =>
+                ) => {
+                  setResult(null);
                   setWeek(
                     event.target
                       .value,
-                  )
+                  );
+                }
                 }
                 className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2"
               />

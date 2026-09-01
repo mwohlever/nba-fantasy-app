@@ -95,8 +95,7 @@ export async function GET(
         {
           ascending: false,
         },
-      )
-      .limit(3);
+      );
 
   if (error) {
     return NextResponse.json(

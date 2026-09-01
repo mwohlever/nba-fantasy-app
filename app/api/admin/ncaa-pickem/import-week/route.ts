@@ -4,8 +4,17 @@ import {
 } from "next/server";
 
 import {
-  requireAdmin,
+  getCurrentUser,
 } from "@/lib/auth";
+
+import { getNcaaPickEmAccess } from "@/lib/ncaaPickEm/access";
+import {
+  getNcaaIncludedEventIds,
+  getNcaaLockAt,
+  getNewlySelectedCompletedOptionalIds,
+  hasExactlyOneNcaaRankedTeam,
+  isNcaaRankedVsRanked,
+} from "@/lib/ncaaPickEm/gameSelection";
 
 import {
   supabaseAdmin,
@@ -45,15 +54,6 @@ function stringArray(
     .filter(Boolean);
 }
 
-function isRankedVsRanked(
-  game: NcaaEspnGame,
-) {
-  return (
-    game.awayTeam.rank !== null &&
-    game.homeTeam.rank !== null
-  );
-}
-
 function hasRankedTeam(
   game: NcaaEspnGame,
 ) {
@@ -67,6 +67,7 @@ function gameRow(
   weekId: number,
   game: NcaaEspnGame,
   included: boolean,
+  commissionerSelected: boolean,
 ) {
   return {
     week_id:
@@ -131,23 +132,182 @@ function gameRow(
 
     included,
 
+    commissioner_selected:
+      commissionerSelected,
+
     updated_at:
       new Date().toISOString(),
   };
+}
+
+type StoredGame = {
+  espn_event_id: string;
+  kickoff_at: string;
+  included: boolean;
+  commissioner_selected: boolean;
+  away_team_id: string;
+  away_team_name: string;
+  away_team_abbreviation: string | null;
+  away_team_logo_url: string | null;
+  away_rank: number | null;
+  away_record: string | null;
+  home_team_id: string;
+  home_team_name: string;
+  home_team_abbreviation: string | null;
+  home_team_logo_url: string | null;
+  home_rank: number | null;
+  home_record: string | null;
+  status: string;
+  status_detail: string | null;
+};
+
+function storedAdminGame(game: StoredGame) {
+  return {
+    espnEventId: String(game.espn_event_id),
+    kickoffAt: game.kickoff_at,
+    included: game.included === true,
+    commissionerSelected: game.commissioner_selected === true,
+    automatic: game.away_rank !== null && game.home_rank !== null,
+    away: {
+      id: String(game.away_team_id),
+      name: game.away_team_name,
+      abbreviation: game.away_team_abbreviation,
+      logo: game.away_team_logo_url,
+      rank: game.away_rank,
+      record: game.away_record,
+    },
+    home: {
+      id: String(game.home_team_id),
+      name: game.home_team_name,
+      abbreviation: game.home_team_abbreviation,
+      logo: game.home_team_logo_url,
+      rank: game.home_rank,
+      record: game.home_record,
+    },
+    status: game.status,
+    statusDetail: game.status_detail,
+  };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Login required." }, { status: 401 });
+    }
+
+    const access = await getNcaaPickEmAccess(user);
+    if (!access) {
+      return NextResponse.json(
+        { error: "NCAA Pick 'Em is not enabled for this Group." },
+        { status: 404 },
+      );
+    }
+    if (!access.context.canAdministerGroup) {
+      return NextResponse.json(
+        { error: "Group admin access required." },
+        { status: 403 },
+      );
+    }
+
+    const searchParams = new URL(request.url).searchParams;
+    const season = positiveInteger(searchParams.get("season"));
+    const week = positiveInteger(searchParams.get("week"));
+    if (!season || !week) {
+      return NextResponse.json(
+        { error: "Valid season and week are required." },
+        { status: 400 },
+      );
+    }
+
+    const { data: storedWeek, error: weekError } = await supabaseAdmin
+      .from("ncaa_pickem_weeks")
+      .select("id, season, week_number, label, lock_at, analysis, show_analysis")
+      .eq("league_id", access.league.id)
+      .eq("season", season)
+      .eq("week_number", week)
+      .maybeSingle();
+
+    if (weekError) throw new Error(weekError.message);
+    if (!storedWeek) {
+      return NextResponse.json(
+        { error: "NCAA Pick 'Em week has not been imported." },
+        { status: 404 },
+      );
+    }
+
+    const { data: storedGames, error: gamesError } = await supabaseAdmin
+      .from("ncaa_pickem_games")
+      .select("espn_event_id, kickoff_at, included, commissioner_selected, away_team_id, away_team_name, away_team_abbreviation, away_team_logo_url, away_rank, away_record, home_team_id, home_team_name, home_team_abbreviation, home_team_logo_url, home_rank, home_record, status, status_detail")
+      .eq("week_id", storedWeek.id)
+      .order("kickoff_at", { ascending: true });
+
+    if (gamesError) throw new Error(gamesError.message);
+
+    const allGames = (storedGames ?? []) as StoredGame[];
+    const rankedGames = allGames
+      .filter((game) => game.away_rank !== null || game.home_rank !== null)
+      .map(storedAdminGame);
+    const automaticGames = rankedGames.filter((game) => game.automatic);
+    const rankedTeamIds = new Set<string>();
+    for (const game of allGames) {
+      if (game.away_rank !== null) rankedTeamIds.add(String(game.away_team_id));
+      if (game.home_rank !== null) rankedTeamIds.add(String(game.home_team_id));
+    }
+
+    return NextResponse.json({
+      success: true,
+      season: Number(storedWeek.season),
+      week: Number(storedWeek.week_number),
+      weekId: Number(storedWeek.id),
+      label: storedWeek.label,
+      lockAt: storedWeek.lock_at,
+      analysis: storedWeek.analysis ?? null,
+      showAnalysis: storedWeek.show_analysis === true,
+      importedGames: allGames.filter((game) => game.included).length,
+      normalEligibleGames: automaticGames.length,
+      optionalGames: rankedGames.length - automaticGames.length,
+      diagnostics: {
+        totalEvents: allGames.length,
+        mappedEvents: allGames.length,
+        rankedVsRankedEvents: automaticGames.length,
+        rankedTeamGames: rankedGames.length,
+        rankingPoll: "AP Top 25",
+        rankingPollType: "ap",
+        rankedTeams: rankedTeamIds.size,
+      },
+      games: rankedGames,
+    });
+  } catch (error) {
+    console.error("Failed to load persisted NCAA Pick 'Em week", error);
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to load NCAA Pick 'Em week.",
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(
   request: NextRequest,
 ) {
   try {
-    const admin =
-      await requireAdmin();
-
-    if (!admin) {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Login required." }, { status: 401 });
+    }
+    const access = await getNcaaPickEmAccess(user);
+    if (!access) {
+      return NextResponse.json({ error: "NCAA Pick 'Em is not enabled for this Group." }, { status: 404 });
+    }
+    if (!access.context.canAdministerGroup) {
       return NextResponse.json(
         {
-          error:
-            "Admin access required.",
+          error: "Group admin access required.",
         },
         { status: 403 },
       );
@@ -204,6 +364,10 @@ export async function POST(
         )
         .select(
           "id, season, week_number, label, lock_at, status, analysis, show_analysis",
+        )
+        .eq(
+          "league_id",
+          access.league.id,
         )
         .eq(
           "season",
@@ -271,6 +435,9 @@ export async function POST(
             "ncaa_pickem_weeks",
           )
           .insert({
+            league_id:
+              access.league.id,
+
             season,
             week_number:
               week,
@@ -320,7 +487,7 @@ export async function POST(
           "ncaa_pickem_games",
         )
         .select(
-          "espn_event_id, included",
+          "espn_event_id, included, commissioner_selected",
         )
         .eq(
           "week_id",
@@ -337,7 +504,7 @@ export async function POST(
       );
     }
 
-    const previouslyIncluded =
+    const previouslyCommissionerSelected =
       new Set(
         (
           existingGames ??
@@ -345,7 +512,7 @@ export async function POST(
         )
           .filter(
             (game) =>
-              game.included ===
+              game.commissioner_selected ===
               true,
           )
           .map(
@@ -356,65 +523,23 @@ export async function POST(
           ),
       );
 
-    const scheduleIdSet =
-      new Set(
-        espnWeek.scheduleGames.map(
-          (game) =>
-            game.espnEventId,
-        ),
-      );
-
-    const includedIds =
-      new Set<string>();
-
-    if (hasExplicitSelection) {
-      for (
-        const id
-        of explicitSelection
-      ) {
-        if (
-          scheduleIdSet.has(
-            id,
-          )
-        ) {
-          includedIds.add(
-            id,
-          );
-        }
-      }
-    } else {
-      /*
-       * Ranked-vs-ranked is automatic.
-       */
-      for (
-        const game
-        of espnWeek.eligibleGames
-      ) {
-        includedIds.add(
-          game.espnEventId,
-        );
-      }
-
-      /*
-       * Preserve anything the commissioner previously
-       * added manually, as long as ESPN still has it in
-       * this week's schedule.
-       */
-      for (
-        const id
-        of previouslyIncluded
-      ) {
-        if (
-          scheduleIdSet.has(
-            id,
-          )
-        ) {
-          includedIds.add(
-            id,
-          );
-        }
-      }
+    const commissionerSelectedIds = new Set<string>();
+    const requestedIds = hasExplicitSelection ? explicitSelection : previouslyCommissionerSelected;
+    for (const game of espnWeek.scheduleGames) {
+      if (
+        requestedIds.has(game.espnEventId) &&
+        (hasExactlyOneNcaaRankedTeam(game) || previouslyCommissionerSelected.has(game.espnEventId))
+      ) commissionerSelectedIds.add(game.espnEventId);
     }
+    const completedSelections = getNewlySelectedCompletedOptionalIds({
+      games: espnWeek.scheduleGames,
+      requestedIncludedEventIds: commissionerSelectedIds,
+      previouslyCommissionerSelectedEventIds: previouslyCommissionerSelected,
+    });
+    if (completedSelections.length) {
+      return NextResponse.json({ error: "Completed optional games cannot be newly selected." }, { status: 409 });
+    }
+    const includedIds = getNcaaIncludedEventIds(espnWeek.scheduleGames, commissionerSelectedIds);
 
     /*
      * Upsert every ESPN schedule game. That gives the
@@ -431,6 +556,7 @@ export async function POST(
             includedIds.has(
               game.espnEventId,
             ),
+            commissionerSelectedIds.has(game.espnEventId),
           ),
       );
 
@@ -446,7 +572,7 @@ export async function POST(
             rows,
             {
               onConflict:
-                "espn_event_id",
+                "week_id,espn_event_id",
             },
           );
 
@@ -483,12 +609,7 @@ export async function POST(
      * Weekly lock follows the earliest INCLUDED game,
      * not simply the first ESPN event of the week.
      */
-    const lockAt =
-      selectedGames.length >
-      0
-        ? selectedGames[0]
-            .kickoffAt
-        : null;
+    const lockAt = getNcaaLockAt(espnWeek.scheduleGames, includedIds);
 
     const {
       error: weekUpdateError,
@@ -544,8 +665,13 @@ export async function POST(
                 game.espnEventId,
               ),
 
+            commissionerSelected:
+              commissionerSelectedIds.has(
+                game.espnEventId,
+              ),
+
             automatic:
-              isRankedVsRanked(
+              isNcaaRankedVsRanked(
                 game,
               ),
 

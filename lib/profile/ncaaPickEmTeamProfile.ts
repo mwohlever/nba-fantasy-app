@@ -335,21 +335,14 @@ export async function getNcaaPickEmTeamProfile(
     string | null,
   scope: ProfileScope,
 ) {
-  const [
-    teamResult,
-    userResult,
-    weeksResult,
-    gamesResult,
-    picksResult,
-    teamsResult,
-  ] =
+  const [teamResult, weeksResult, teamsResult] =
     await Promise.all([
       supabaseAdmin
         .from(
           "teams",
         )
         .select(
-          "id, name",
+          "id, name, user_id",
         )
         .eq(
           "id",
@@ -358,19 +351,6 @@ export async function getNcaaPickEmTeamProfile(
         .eq(
           "group_id",
           scope.groupId,
-        )
-        .maybeSingle(),
-
-      supabaseAdmin
-        .from(
-          "app_users",
-        )
-        .select(
-          "avatar_url",
-        )
-        .eq(
-          "team_id",
-          teamId,
         )
         .maybeSingle(),
 
@@ -398,33 +378,6 @@ export async function getNcaaPickEmTeamProfile(
             ascending:
               true,
           },
-        ),
-
-      supabaseAdmin
-        .from(
-          "ncaa_pickem_games",
-        )
-        .select(
-          "id, week_id, kickoff_at, included, winner_team_id",
-        )
-        .eq(
-          "included",
-          true,
-        )
-        .order(
-          "kickoff_at",
-          {
-            ascending:
-              true,
-          },
-        ),
-
-      supabaseAdmin
-        .from(
-          "ncaa_pickem_picks",
-        )
-        .select(
-          "id, week_id, game_id, team_id, picked_team_id, is_correct",
         ),
 
       supabaseAdmin
@@ -470,6 +423,25 @@ export async function getNcaaPickEmTeamProfile(
     );
   }
 
+  const scopedWeekIds = (weeksResult.data ?? []).map((week) => Number(week.id));
+  const scopedTeamIds = (teamsResult.data ?? []).map((team) => Number(team.id));
+  const teamUserId = teamResult.data?.user_id ? String(teamResult.data.user_id) : null;
+  const [userResult, gamesResult, picksResult] = await Promise.all([
+    teamUserId
+      ? supabaseAdmin.from("app_users").select("id, avatar_url").eq("id", teamUserId).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    scopedWeekIds.length
+      ? supabaseAdmin.from("ncaa_pickem_games").select("id, week_id, kickoff_at, included, winner_team_id").in("week_id", scopedWeekIds).eq("included", true).order("kickoff_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    scopedWeekIds.length && scopedTeamIds.length
+      ? supabaseAdmin.from("ncaa_pickem_picks").select("id, week_id, game_id, team_id, picked_team_id, is_correct").in("week_id", scopedWeekIds).in("team_id", scopedTeamIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (userResult.error) {
+    return NextResponse.json({ error: userResult.error.message }, { status: 500 });
+  }
+
   if (
     gamesResult.error
   ) {
@@ -508,6 +480,8 @@ export async function getNcaaPickEmTeamProfile(
       name:
         `Team ${teamId}`,
     };
+
+  const profileUser = userResult.data;
 
   const weeks =
     (
@@ -1271,7 +1245,7 @@ export async function getNcaaPickEmTeamProfile(
         team.name,
 
       avatarUrl:
-        userResult.data
+        profileUser
           ?.avatar_url ??
         null,
     },
