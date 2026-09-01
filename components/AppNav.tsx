@@ -279,14 +279,19 @@ function AppNavContent() {
     );
 
 
-    const isCommissionerGroupSettings =
+    const isGroupNeutralDestination =
       pathname.startsWith(
-        "/admin/groups",
-      ) &&
-      searchParams.get(
-        "view",
-      ) ===
-        "commissioner";
+        "/groups/",
+      ) ||
+      (
+        pathname.startsWith(
+          "/admin/groups",
+        ) &&
+        searchParams.get(
+          "view",
+        ) ===
+          "commissioner"
+      );
 
 
     /*
@@ -297,7 +302,7 @@ function AppNavContent() {
      * on Group Settings instead of redirecting to that sport's Home.
      */
     if (
-      isCommissionerGroupSettings
+      isGroupNeutralDestination
     ) {
       return;
     }

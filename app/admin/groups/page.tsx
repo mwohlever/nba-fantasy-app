@@ -1900,9 +1900,13 @@ export default function GroupsAdminPage() {
       `${league.name} ${isEnabled ? "enabled" : "disabled"} for ${selectedGroup.name}.`,
     );
 
-    await loadGroups(
-      selectedGroup.id,
-    );
+    await Promise.all([
+      loadGroups(
+        selectedGroup.id,
+      ),
+
+      refreshGroupContext(),
+    ]);
   }
 
 
