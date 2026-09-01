@@ -8,6 +8,12 @@ export type AppLaunchTraceEvent =
   | "launch_mount"
   | "launch_resolve"
   | "launch_replace"
+  | "restore_check"
+  | "restore_waiting_for_group"
+  | "restore_candidate"
+  | "restore_validation_result"
+  | "restore_replace"
+  | "restore_skipped"
   | "tracker_observe"
   | "tracker_write";
 
@@ -23,6 +29,7 @@ export type AppLaunchTraceRecord = {
   groupReady?: boolean;
   resolvedDestination?: string;
   accepted?: boolean;
+  reason?: string;
 };
 
 function isBrowser() {
@@ -77,6 +84,7 @@ export function appendAppLaunchTrace(
       | "groupReady"
       | "resolvedDestination"
       | "accepted"
+      | "reason"
     >
   > = {},
 ) {

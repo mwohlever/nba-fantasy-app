@@ -15,6 +15,12 @@ type ResumeGroupContext = {
   isSuperAdmin?: boolean;
 };
 
+type AppBootState = {
+  location: string;
+  standalone: boolean;
+  navigationType: string | null;
+};
+
 function groupHome(groupSlug: string) {
   return `/groups/${encodeURIComponent(groupSlug)}`;
 }
@@ -30,6 +36,14 @@ function parseDestination(destination: string) {
     search: url.search,
     destination: `${url.pathname}${url.search}`,
   };
+}
+
+export function shouldRestoreStandaloneBoot({
+  location,
+  standalone,
+  navigationType,
+}: AppBootState) {
+  return standalone && location === "/" && navigationType === "navigate";
 }
 
 export function createAppResumeRecord(

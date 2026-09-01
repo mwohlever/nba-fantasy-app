@@ -16,6 +16,7 @@ const {
   createAppResumeRecord,
   parseAppResumeRecord,
   resolveAppResumeDestination,
+  shouldRestoreStandaloneBoot,
 } = require("../lib/groups/resume.ts");
 
 const context = {
@@ -73,5 +74,40 @@ test("stored values reject malformed and external destinations", () => {
       destination: "https://example.com",
     })),
     null,
+  );
+});
+
+test("only a standalone initial navigation at exact root triggers boot restore", () => {
+  assert.equal(
+    shouldRestoreStandaloneBoot({
+      location: "/",
+      standalone: true,
+      navigationType: "navigate",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldRestoreStandaloneBoot({
+      location: "/",
+      standalone: false,
+      navigationType: "navigate",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldRestoreStandaloneBoot({
+      location: "/",
+      standalone: true,
+      navigationType: "reload",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldRestoreStandaloneBoot({
+      location: "/home?sport=nfl",
+      standalone: true,
+      navigationType: "navigate",
+    }),
+    false,
   );
 });
