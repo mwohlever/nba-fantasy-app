@@ -381,14 +381,6 @@ function MobileAccountMenuContent() {
             Account
           </div>
 
-          <Link
-            href="/debug/launch"
-            onClick={() => setIsOpen(false)}
-            className="block rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-100"
-          >
-            Launch Diagnostics
-          </Link>
-
           <button
             type="button"
             onClick={() => void handleLogout()}

@@ -8,7 +8,6 @@ import {
   parseAppResumeRecord,
   resolveAppResumeDestination,
 } from "@/lib/groups/resume";
-import { appendAppLaunchTrace } from "@/lib/groups/launchTrace";
 import { sportKeyFromLeagueSportKey } from "@/lib/sports";
 
 export default function AppResumeLaunch() {
@@ -16,35 +15,9 @@ export default function AppResumeLaunch() {
   const { groupContext, isLoading } = useGroupContext();
 
   useEffect(() => {
-    let storedValue: string | null = null;
-    try {
-      storedValue = window.localStorage.getItem(APP_RESUME_STORAGE_KEY);
-    } catch {
-      // The trace helper must not affect launch behavior.
-    }
-
-    appendAppLaunchTrace("launch_mount", {
-      groupLoading: isLoading,
-      groupReady: Boolean(groupContext),
-      lastLocation: storedValue,
-    });
-    // This records the initial mount only; resolution readiness is traced below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
     if (isLoading) return;
 
     if (!groupContext) {
-      appendAppLaunchTrace("launch_resolve", {
-        groupLoading: false,
-        groupReady: false,
-        resolvedDestination: "/",
-        accepted: false,
-      });
-      appendAppLaunchTrace("launch_replace", {
-        resolvedDestination: "/",
-      });
       router.replace("/");
       return;
     }
@@ -69,21 +42,6 @@ export default function AppResumeLaunch() {
       },
     );
 
-    appendAppLaunchTrace("launch_resolve", {
-      lastLocation: storedValue,
-      groupLoading: false,
-      groupReady: true,
-      resolvedDestination: destination,
-      accepted: Boolean(
-        storedRecord &&
-          storedRecord.groupSlug === groupContext.group.slug &&
-          storedRecord.destination === destination,
-      ),
-    });
-
-    appendAppLaunchTrace("launch_replace", {
-      resolvedDestination: destination,
-    });
     router.replace(destination);
   }, [groupContext, isLoading, router]);
 

@@ -10,11 +10,27 @@ import {
   resolveAppResumeDestination,
   shouldRestoreStandaloneBoot,
 } from "@/lib/groups/resume";
-import {
-  appendAppLaunchTrace,
-  getCurrentLaunchDiagnosticState,
-} from "@/lib/groups/launchTrace";
 import { sportKeyFromLeagueSportKey } from "@/lib/sports";
+
+function getStandaloneBootState() {
+  try {
+    const navigationEntry = performance
+      .getEntriesByType("navigation")
+      .at(0) as PerformanceNavigationTiming | undefined;
+
+    return {
+      location: `${window.location.pathname}${window.location.search}`,
+      standalone:
+        window.matchMedia("(display-mode: standalone)").matches ||
+        ("standalone" in window.navigator &&
+          (window.navigator as Navigator & { standalone?: boolean }).standalone === true),
+      navigationType: navigationEntry?.type ?? null,
+      lastLocation: window.localStorage.getItem(APP_RESUME_STORAGE_KEY),
+    };
+  } catch {
+    return null;
+  }
+}
 
 function AppResumeTrackerContent() {
   const router = useRouter();
@@ -23,69 +39,36 @@ function AppResumeTrackerContent() {
   const { groupContext, isLoading } = useGroupContext();
   const search = searchParams.toString();
   const restoreState = useRef<"pending" | "complete">("pending");
-  const restoreCheckTraced = useRef(false);
-  const restoreWaitingTraced = useRef(false);
-
-  useEffect(() => {
-    appendAppLaunchTrace("app_boot");
-  }, []);
+  const bootStateRef = useRef<ReturnType<typeof getStandaloneBootState> | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (restoreState.current === "complete") return;
 
-    const bootState = getCurrentLaunchDiagnosticState();
-    if (!bootState) {
-      restoreState.current = "complete";
-      appendAppLaunchTrace("restore_skipped", {
-        reason: "diagnostic_state_unavailable",
-      });
-      return;
+    if (bootStateRef.current === undefined) {
+      bootStateRef.current = getStandaloneBootState();
     }
 
-    if (!restoreCheckTraced.current) {
-      restoreCheckTraced.current = true;
-      appendAppLaunchTrace("restore_check", {
-        lastLocation: bootState.lastLocation,
-      });
+    const bootState = bootStateRef.current;
+    if (!bootState) {
+      restoreState.current = "complete";
+      return;
     }
 
     if (!shouldRestoreStandaloneBoot(bootState)) {
       restoreState.current = "complete";
-      appendAppLaunchTrace("restore_skipped", {
-        reason: "not_standalone_root_navigation",
-      });
       return;
     }
 
-    if (isLoading) {
-      if (!restoreWaitingTraced.current) {
-        restoreWaitingTraced.current = true;
-        appendAppLaunchTrace("restore_waiting_for_group", {
-          groupLoading: true,
-          groupReady: false,
-          lastLocation: bootState.lastLocation,
-        });
-      }
-      return;
-    }
+    if (isLoading) return;
 
     if (!groupContext) {
       restoreState.current = "complete";
-      appendAppLaunchTrace("restore_skipped", {
-        groupLoading: false,
-        groupReady: false,
-        reason: "no_authenticated_group_context",
-      });
       return;
     }
 
     const storedRecord = parseAppResumeRecord(bootState.lastLocation);
-    appendAppLaunchTrace("restore_candidate", {
-      lastLocation: bootState.lastLocation,
-      groupLoading: false,
-      groupReady: true,
-    });
-
     const destination = resolveAppResumeDestination(storedRecord, {
       groupSlug: groupContext.group.slug,
       enabledSports: groupContext.leagues.map((league) =>
@@ -94,25 +77,8 @@ function AppResumeTrackerContent() {
       canAdministerGroup: groupContext.canAdministerGroup,
       isSuperAdmin: groupContext.isSuperAdmin,
     });
-    const accepted = Boolean(
-      storedRecord &&
-        storedRecord.groupSlug === groupContext.group.slug &&
-        storedRecord.destination === destination,
-    );
-
-    appendAppLaunchTrace("restore_validation_result", {
-      lastLocation: bootState.lastLocation,
-      groupLoading: false,
-      groupReady: true,
-      resolvedDestination: destination,
-      accepted,
-    });
 
     restoreState.current = "complete";
-    appendAppLaunchTrace("restore_replace", {
-      resolvedDestination: destination,
-      accepted,
-    });
     router.replace(destination);
   }, [groupContext, isLoading, router]);
 
@@ -132,10 +98,6 @@ function AppResumeTrackerContent() {
       },
     );
 
-    appendAppLaunchTrace("tracker_observe", {
-      accepted: Boolean(record),
-    });
-
     if (!record) return;
 
     try {
@@ -143,10 +105,6 @@ function AppResumeTrackerContent() {
         APP_RESUME_STORAGE_KEY,
         JSON.stringify(record),
       );
-      appendAppLaunchTrace("tracker_write", {
-        lastLocation: JSON.stringify(record),
-        accepted: true,
-      });
     } catch (error) {
       console.error("Failed to remember the last 111 Sports location", error);
     }
