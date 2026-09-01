@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGroupContext } from "@/components/providers/GroupProvider";
@@ -143,6 +144,15 @@ export default function PlatformAccountMenu({
           <div className="px-3 pb-1 pt-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
             Account
           </div>
+
+          <Link
+            href="/debug/launch"
+            role="menuitem"
+            onClick={() => setIsOpen(false)}
+            className="block rounded-xl px-3 py-2.5 text-sm text-slate-200 transition hover:bg-slate-800"
+          >
+            Launch Diagnostics
+          </Link>
 
           <button
             type="button"
