@@ -5,6 +5,13 @@ export type SportConfig = {
   logo: string;
 };
 
+export type PlatformGameConfig = {
+  key: "nba" | "nfl" | "golf" | "ncaa" | "nba-skins";
+  label: string;
+  description: string;
+  logo: string;
+};
+
 export const SPORTS: SportConfig[] = [
   { key: "nba", label: "NBA", emoji: "🏀", logo: "/logos/nba.png" },
   {
@@ -22,6 +29,52 @@ export const SPORTS: SportConfig[] = [
   },
   { key: "golf", label: "Golf", emoji: "⛳", logo: "/logos/golf.png" },
 ];
+
+export const PLATFORM_GAMES: PlatformGameConfig[] = [
+  {
+    key: "nba",
+    label: "NBA",
+    description:
+      "Daily fantasy drafts throughout the NBA calendar.",
+    logo: "/logos/nba.png",
+  },
+  {
+    key: "nfl",
+    label: "NFL",
+    description:
+      "Weekly fantasy drafts.",
+    logo: "/logos/nfl.png",
+  },
+  {
+    key: "golf",
+    label: "Golf",
+    description:
+      "Fantasy drafts for PGA TOUR tournaments.",
+    logo: "/logos/golf.png",
+  },
+  {
+    key: "ncaa",
+    label: "College Football Pick'em",
+    description:
+      "Weekly picks against your friends.",
+    logo: "/logos/nfl.png",
+  },
+  {
+    key: "nba-skins",
+    label: "NBA Skins",
+    description:
+      "A season-long NBA prediction game.",
+    logo: "/logos/nba.png",
+  },
+];
+
+export function getPlatformGameConfig(
+  sportKey: string | null | undefined,
+) {
+  return PLATFORM_GAMES.find(
+    (game) => game.key === sportKey,
+  ) ?? null;
+}
 
 export function getSportConfig(
   sportKey: string | null | undefined,

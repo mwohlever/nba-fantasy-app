@@ -280,6 +280,9 @@ export default function GroupInvitePage() {
       );
     }
 
+    const invitedGroupSlug =
+      String(result?.group?.slug ?? inviteData?.group?.slug ?? "").trim();
+
 
     /*
      * Invitation is now consumed and the account exists.
@@ -320,6 +323,17 @@ export default function GroupInvitePage() {
       );
     }
 
+    if (invitedGroupSlug) {
+      const activeGroupResponse = await fetch("/api/groups/active", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupSlug: invitedGroupSlug }),
+      });
+      if (!activeGroupResponse.ok) {
+        throw new Error("Your Group was joined, but it could not be opened.");
+      }
+    }
+
 
     const supabase =
       getSupabaseBrowserClient();
@@ -331,7 +345,9 @@ export default function GroupInvitePage() {
 
 
     router.replace(
-      "/",
+      invitedGroupSlug
+        ? `/groups/${encodeURIComponent(invitedGroupSlug)}`
+        : "/",
     );
 
     router.refresh();

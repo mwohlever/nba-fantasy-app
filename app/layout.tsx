@@ -18,6 +18,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
+  applicationName: "111 Sports",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "111 Sports",
+  },
   title: "111 Sports",
   description:
     "Fantasy sports drafts, live scoring, standings, profiles, and stats",

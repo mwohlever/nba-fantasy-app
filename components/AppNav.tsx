@@ -38,7 +38,7 @@ function getFallbackProfileImage(displayName: string) {
 }
 
 const mainLinks = [
-  { href: "/", label: "Home", icon: "⌂" },
+  { href: "/home", label: "Home", icon: "⌂" },
   { href: "/lineups/draft", label: "Draft", icon: "✎" },
   { href: "/lineups/scores", label: "Scores", icon: "▦" },
 ];
@@ -79,6 +79,11 @@ function AppNavContent() {
     pathname.startsWith("/profile")
       ? searchParams.get("tab") ?? "overview"
       : null;
+
+  const isGroupHomeRoute =
+    pathname.startsWith(
+      "/groups/",
+    );
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isUserLoading, setIsUserLoading] = useState(true);
@@ -280,9 +285,7 @@ function AppNavContent() {
 
 
     const isGroupNeutralDestination =
-      pathname.startsWith(
-        "/groups/",
-      ) ||
+      isGroupHomeRoute ||
       (
         pathname.startsWith(
           "/admin/groups",
@@ -321,6 +324,7 @@ function AppNavContent() {
     router,
     pathname,
     searchParams,
+    isGroupHomeRoute,
   ]);
 
   /*
@@ -386,70 +390,6 @@ function AppNavContent() {
   ]);
 
 
-  /*
-   * INTERIM PLATFORM-HOME BEHAVIOR
-   *
-   * "/" is still the shared fantasy Home page today, not yet a
-   * true 111 Sports platform landing page.
-   *
-   * If a fresh tab opens at bare "/", make the route agree with
-   * the persisted sport instead of allowing the nav and page
-   * data to disagree.
-   *
-   * Once Groups gets a true platform landing page, remove this
-   * effect and let "/" become that sport-neutral landing page.
-   */
-  useEffect(() => {
-    if (
-      pathname !== "/" ||
-      searchParams.get(
-        "sport",
-      )
-    ) {
-      return;
-    }
-
-    if (
-      selectedSport ===
-      "nba-skins"
-    ) {
-      router.replace(
-        "/nba-skins",
-      );
-
-      return;
-    }
-
-    if (
-      selectedSport ===
-      "ncaa"
-    ) {
-      router.replace(
-        "/ncaa-pickem",
-      );
-
-      return;
-    }
-
-    if (
-      selectedSport === "nba" ||
-      selectedSport === "nfl" ||
-      selectedSport === "golf"
-    ) {
-      router.replace(
-        appendSportParam(
-          "/",
-          selectedSport,
-        ),
-      );
-    }
-  }, [
-    pathname,
-    searchParams,
-    selectedSport,
-    router,
-  ]);
-
   const displayedMainLinks = isNbaSkins
     ? [
         {
@@ -484,7 +424,7 @@ function AppNavContent() {
       : mainLinks;
 
   const sportScopedPaths = [
-    "/",
+    "/home",
     "/profile",
     "/standings",
     "/player-history",
@@ -524,7 +464,7 @@ function AppNavContent() {
   function getCurrentSportSection():
     SportSection {
     if (
-      pathname === "/" ||
+      pathname === "/home" ||
       pathname === "/nba-skins" ||
       pathname === "/ncaa-pickem"
     ) {
@@ -703,7 +643,7 @@ function AppNavContent() {
     }
 
     return appendSportParam(
-      "/",
+      "/home",
       sportKey,
     );
   }
@@ -915,7 +855,7 @@ function AppNavContent() {
 
   function isLinkActive(href: string) {
     if (
-      href === "/" ||
+      href === "/home" ||
       href === "/nba-skins" ||
       href === "/ncaa-pickem"
     ) {
@@ -1039,7 +979,14 @@ function AppNavContent() {
       <nav className="app-desktop-nav mb-6 hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:block">
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            {displayedMainLinks.map((link) => (
+            <Link
+              href="/"
+              aria-label="111 Sports platform home"
+              className="mr-1 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-950"
+            >
+              <img src="/logos/logo_all_sports.png" alt="" className="h-8 w-8 rounded-full object-cover" />
+            </Link>
+            {!isGroupHomeRoute ? displayedMainLinks.map((link) => (
               <Link
                 key={link.href}
                 href={
@@ -1051,9 +998,9 @@ function AppNavContent() {
               >
                 {link.label}
               </Link>
-            ))}
+            )) : null}
 
-            {!isNcaaPickEm && !isNbaSkins ? (
+            {!isGroupHomeRoute && !isNcaaPickEm && !isNbaSkins ? (
               <>
                 <Link
                   href={getLinkHref(
@@ -1136,9 +1083,9 @@ function AppNavContent() {
                               false,
                             );
 
-                            if (
-                              !isActive
-                            ) {
+                            if (isActive) {
+                              router.push(`/groups/${encodeURIComponent(group.slug)}`);
+                            } else {
                               void setActiveGroup(
                                 group.slug,
                               );
@@ -1162,6 +1109,7 @@ function AppNavContent() {
             <div className="h-9 w-16 animate-pulse rounded-full bg-slate-800" />
           ) : null}
 
+          {!isGroupHomeRoute ? (
           <div className="relative" ref={desktopSportRef}>
             <button
               type="button"
@@ -1195,6 +1143,7 @@ function AppNavContent() {
               </div>
             ) : null}
           </div>
+          ) : null}
 
           <div className="relative" ref={desktopUserRef}>
             {isUserLoading ? (
@@ -1342,6 +1291,19 @@ function AppNavContent() {
       <nav className="app-mobile-header mb-6 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm sm:hidden">
         <div className="flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
+            {isGroupHomeRoute ? (
+              <Link
+                href="/"
+                aria-label="111 Sports platform home"
+                className="block h-12 w-12 shrink-0 rounded-full bg-slate-950"
+              >
+                <img
+                  src="/logos/logo_all_sports.png"
+                  alt=""
+                  className="h-12 w-12 rounded-full object-cover shadow-sm"
+                />
+              </Link>
+            ) : (
             <div className="relative shrink-0" ref={mobileSportRef}>
               <button
                 type="button"
@@ -1392,22 +1354,21 @@ function AppNavContent() {
                 </div>
               ) : null}
             </div>
+            )}
 
-            <Link
-              href="/"
-              aria-label="111 Fantasy Sports home"
-              className="min-w-0"
-            >
+            <div className="min-w-0">
+              <Link href="/" aria-label="111 Sports platform home" className="block min-w-0">
               <span className="block truncate text-lg font-bold tracking-tight text-slate-900">
-                111 Fantasy Sports
+                111 Sports
               </span>
+              </Link>
 
               {groupContext ? (
-                <span className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <Link href={`/groups/${encodeURIComponent(groupContext.group.slug)}`} className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-sky-600">
                   Group: {groupContext.group.name}
-                </span>
+                </Link>
               ) : null}
-            </Link>
+            </div>
           </div>
 
           <MobileAccountMenu />
@@ -1415,12 +1376,15 @@ function AppNavContent() {
       </nav>
 
       {/* White shield behind mobile nav */}
+      {!isGroupHomeRoute ? (
       <div
         className="app-mobile-nav-shield pointer-events-none fixed bottom-[-52px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
         aria-hidden="true"
       />
+      ) : null}
 
       {/* Mobile bottom nav only */}
+      {!isGroupHomeRoute ? (
       <div
         ref={mobileMoreRef}
         className="app-mobile-bottom-nav fixed bottom-[-42px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[42px] pt-1 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
@@ -1495,6 +1459,7 @@ function AppNavContent() {
           ) : null}
         </div>
       </div>
+      ) : null}
     </>
   );
 }

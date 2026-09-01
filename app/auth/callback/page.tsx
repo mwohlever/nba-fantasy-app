@@ -139,6 +139,8 @@ export default function AuthCallbackPage() {
                 "",
             ).trim();
 
+          let invitedGroupSlug = "";
+
 
           if (
             inviteToken
@@ -181,8 +183,10 @@ export default function AuthCallbackPage() {
               throw new Error(
                 inviteResult.error ||
                   "Unable to accept your Group invitation.",
-              );
+                );
             }
+
+            invitedGroupSlug = String(inviteResult?.group?.slug ?? "").trim();
           }
 
 
@@ -216,6 +220,16 @@ export default function AuthCallbackPage() {
           if (
             response.ok
           ) {
+            if (invitedGroupSlug) {
+              const activeGroupResponse = await fetch("/api/groups/active", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ groupSlug: invitedGroupSlug }),
+              });
+              if (!activeGroupResponse.ok) {
+                throw new Error("Your Group was joined, but it could not be opened.");
+              }
+            }
             sessionStorage.removeItem(
               PENDING_AUTH_TOKEN_KEY,
             );
@@ -235,7 +249,9 @@ export default function AuthCallbackPage() {
               !cancelled
             ) {
               router.replace(
-                "/",
+                invitedGroupSlug
+                  ? `/groups/${encodeURIComponent(invitedGroupSlug)}`
+                  : "/",
               );
 
               router.refresh();
