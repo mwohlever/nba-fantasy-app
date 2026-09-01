@@ -4,8 +4,10 @@ import {
 } from "next/server";
 
 import {
-  requireAdmin,
+  getCurrentUser,
 } from "@/lib/auth";
+
+import { getNcaaPickEmAccess } from "@/lib/ncaaPickEm/access";
 
 import {
   supabaseAdmin,
@@ -22,14 +24,15 @@ export async function POST(
   request: NextRequest,
 ) {
   try {
-    const admin =
-      await requireAdmin();
-
-    if (!admin) {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
+    const access = await getNcaaPickEmAccess(user);
+    if (!access) return NextResponse.json({ error: "NCAA Pick 'Em is not enabled for this Group." }, { status: 404 });
+    if (!access.context.canAdministerGroup) {
       return NextResponse.json(
         {
           error:
-            "Admin access required.",
+            "Group admin access required.",
         },
         { status: 403 },
       );
@@ -154,6 +157,10 @@ export async function POST(
       .eq(
         "id",
         weekId,
+      )
+      .eq(
+        "league_id",
+        access.league.id,
       )
       .select(
         "id, season, week_number, label, lock_at, status, analysis, show_analysis",

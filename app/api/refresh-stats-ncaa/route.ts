@@ -11,10 +11,10 @@ import {
   fetchNcaaPickEmWeek,
 } from "@/lib/providers/ncaa";
 
+import { loadNcaaPickEmParticipants } from "@/lib/ncaaPickEm/access";
+
 type RefreshBody = {
   weekId?: number;
-  season?: number;
-  week?: number;
 };
 
 type WeekRow = {
@@ -23,6 +23,7 @@ type WeekRow = {
   week_number: number;
   lock_at: string | null;
   status: "open" | "locked" | "final";
+  league_id: string;
 };
 
 type GameRow = {
@@ -62,50 +63,11 @@ export async function POST(
         body.weekId,
       );
 
-    const requestedSeason =
-      positiveInteger(
-        body.season,
-      );
-
-    const requestedWeek =
-      positiveInteger(
-        body.week,
-      );
-
-    let weekQuery =
-      supabaseAdmin
-        .from(
-          "ncaa_pickem_weeks",
-        )
-        .select(
-          "id, season, week_number, lock_at, status",
-        );
-
-    if (requestedWeekId) {
-      weekQuery =
-        weekQuery.eq(
-          "id",
-          requestedWeekId,
-        );
-    } else if (
-      requestedSeason &&
-      requestedWeek
-    ) {
-      weekQuery =
-        weekQuery
-          .eq(
-            "season",
-            requestedSeason,
-          )
-          .eq(
-            "week_number",
-            requestedWeek,
-          );
-    } else {
+    if (!requestedWeekId) {
       return NextResponse.json(
         {
           error:
-            "weekId or season/week is required.",
+            "weekId is required.",
         },
         {
           status: 400,
@@ -117,7 +79,10 @@ export async function POST(
       data: weekData,
       error: weekError,
     } =
-      await weekQuery
+      await supabaseAdmin
+        .from("ncaa_pickem_weeks")
+        .select("id, season, week_number, lock_at, status, league_id")
+        .eq("id", requestedWeekId)
         .limit(1)
         .maybeSingle();
 
@@ -147,6 +112,17 @@ export async function POST(
 
     const week =
       weekData as WeekRow;
+
+    const { data: league, error: leagueError } = await supabaseAdmin
+      .from("leagues")
+      .select("group_id")
+      .eq("id", week.league_id)
+      .single();
+    if (leagueError || !league) {
+      return NextResponse.json({ error: leagueError?.message ?? "NCAA Pick 'Em league not found." }, { status: 404 });
+    }
+    const participants = await loadNcaaPickEmParticipants(String(league.group_id));
+    const participantIds = participants.map((participant) => participant.teamId);
 
     const espnWeek =
       await fetchNcaaPickEmWeek({
@@ -343,7 +319,7 @@ export async function POST(
             gameUpdates,
             {
               onConflict:
-                "espn_event_id",
+                "week_id,espn_event_id",
             },
           );
 
@@ -409,7 +385,8 @@ export async function POST(
           .eq(
             "game_id",
             localGame.id,
-          );
+          )
+          .in("team_id", participantIds.length ? participantIds : [-1]);
 
       if (picksError) {
         return NextResponse.json(

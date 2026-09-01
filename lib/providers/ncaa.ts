@@ -42,6 +42,7 @@ export type NcaaEspnWeek = {
     rankedVsRankedEvents: number;
     rankedTeamGames: number;
     rankingPoll: string | null;
+    rankingPollType: string | null;
     rankedTeams: number;
   };
 };
@@ -49,7 +50,27 @@ export type NcaaEspnWeek = {
 type RankingResult = {
   ranksByTeamId: Map<string, number>;
   pollName: string | null;
+  pollType: string | null;
 };
+
+type RankingGroup = {
+  type?: unknown;
+  name?: unknown;
+  shortName?: unknown;
+  ranks?: unknown;
+};
+
+export function selectNcaaApRankingGroup(
+  rankingGroups: unknown,
+): RankingGroup | null {
+  if (!Array.isArray(rankingGroups)) return null;
+
+  return (
+    rankingGroups.find(
+      (group: RankingGroup) => String(group?.type ?? "").toLowerCase() === "ap",
+    ) ?? null
+  );
+}
 
 function finiteInteger(
   value: unknown,
@@ -325,8 +346,6 @@ async function fetchRankings(
 
         headers: {
           Accept: "application/json",
-          "User-Agent":
-            "Mozilla/5.0 (compatible; 111-Sports/1.0)",
         },
       },
     );
@@ -345,44 +364,13 @@ async function fetchRankings(
       ? payload.rankings
       : [];
 
-  /*
-   * Prefer the Coaches Poll while it is the poll ESPN
-   * currently exposes for 2026 preseason. If ESPN later
-   * supplies the AP poll too, prefer AP.
-   */
-  const poll =
-    rankingGroups.find(
-      (group: any) => {
-        const name =
-          String(
-            group?.name ??
-            group?.shortName ??
-            "",
-          ).toLowerCase();
+  const poll = selectNcaaApRankingGroup(rankingGroups);
 
-        return (
-          name.includes("ap poll") ||
-          name.includes("associated press")
-        );
-      },
-    ) ??
-    rankingGroups.find(
-      (group: any) => {
-        const name =
-          String(
-            group?.name ??
-            group?.shortName ??
-            "",
-          ).toLowerCase();
-
-        return (
-          name.includes("coaches") ||
-          name.includes("afca")
-        );
-      },
-    ) ??
-    rankingGroups[0] ??
-    null;
+  if (!poll) {
+    throw new Error(
+      "ESPN NCAA rankings did not include the AP Top 25 poll.",
+    );
+  }
 
   const ranks =
     Array.isArray(poll?.ranks)
@@ -423,6 +411,11 @@ async function fetchRankings(
         : typeof poll?.shortName === "string"
           ? poll.shortName
           : null,
+
+    pollType:
+      typeof poll?.type === "string"
+        ? poll.type
+        : null,
   };
 }
 
@@ -454,8 +447,6 @@ export async function fetchNcaaPickEmWeek({
 
           headers: {
             Accept: "application/json",
-            "User-Agent":
-              "Mozilla/5.0 (compatible; 111-Sports/1.0)",
           },
         },
       ),
@@ -541,6 +532,9 @@ export async function fetchNcaaPickEmWeek({
 
       rankingPoll:
         rankingResult.pollName,
+
+      rankingPollType:
+        rankingResult.pollType,
 
       rankedTeams:
         rankingResult

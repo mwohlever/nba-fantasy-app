@@ -7,6 +7,8 @@ import {
   getCurrentUser,
 } from "@/lib/auth";
 
+import { getNcaaPickEmAccess } from "@/lib/ncaaPickEm/access";
+
 import {
   supabaseAdmin,
 } from "@/lib/supabaseAdmin";
@@ -62,6 +64,15 @@ export async function POST(
       );
     }
 
+    const access = await getNcaaPickEmAccess(user);
+    if (!access) {
+      return NextResponse.json({ error: "NCAA Pick 'Em is not enabled for this Group." }, { status: 404 });
+    }
+    if (!access.viewerTeam) {
+      return NextResponse.json({ error: "No active team is available for this Group." }, { status: 409 });
+    }
+    const viewerTeamId = access.viewerTeam.teamId;
+
     const body =
       await request.json();
 
@@ -92,9 +103,10 @@ export async function POST(
     } = await supabaseAdmin
       .from("ncaa_pickem_weeks")
       .select(
-        "id, lock_at, status",
+        "id, lock_at, status, league_id",
       )
       .eq("id", weekId)
+      .eq("league_id", access.league.id)
       .maybeSingle();
 
     if (weekError || !week) {
@@ -227,7 +239,7 @@ export async function POST(
             pick.gameId,
 
           team_id:
-            user.teamId,
+            viewerTeamId,
 
           picked_team_id:
             pick.pickedTeamId,

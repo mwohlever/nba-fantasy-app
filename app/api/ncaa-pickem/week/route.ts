@@ -1,17 +1,10 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import {
-  getCurrentUser,
-} from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
+import { getNcaaPickEmAccess } from "@/lib/ncaaPickEm/access";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-import {
-  supabaseAdmin,
-} from "@/lib/supabaseAdmin";
-
-type PickEmWeekRow = {
+type WeekRow = {
   id: number;
   season: number;
   week_number: number;
@@ -22,451 +15,69 @@ type PickEmWeekRow = {
   show_analysis: boolean;
 };
 
-function numericParam(
-  value: string | null,
-): number | null {
-  if (!value) return null;
-
-  const number =
-    Number(value);
-
-  return Number.isInteger(number) &&
-    number > 0
-    ? number
-    : null;
+function positive(value: string | null) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
-function isWeekLocked(
-  week: PickEmWeekRow,
-) {
-  if (week.status !== "open") {
-    return true;
-  }
-
-  if (!week.lock_at) {
-    return false;
-  }
-
-  const lockTime =
-    new Date(
-      week.lock_at,
-    ).getTime();
-
-  return (
-    Number.isFinite(lockTime) &&
-    Date.now() >= lockTime
-  );
+function locked(week: WeekRow) {
+  return week.status !== "open" || Boolean(week.lock_at && Date.now() >= new Date(week.lock_at).getTime());
 }
 
-export async function GET(
-  request: NextRequest,
-) {
+export async function GET(request: NextRequest) {
   try {
-    const user =
-      await getCurrentUser();
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
 
-    if (!user) {
-      return NextResponse.json(
-        {
-          error:
-            "Login required.",
-        },
-        { status: 401 },
-      );
+    const access = await getNcaaPickEmAccess(user);
+    if (!access) {
+      return NextResponse.json({ error: "NCAA Pick 'Em is not enabled for this Group." }, { status: 404 });
+    }
+    if (!access.viewerTeam) {
+      return NextResponse.json({ error: "No active team is available for this Group." }, { status: 409 });
     }
 
-    const { searchParams } =
-      new URL(request.url);
-
-    const requestedSeason =
-      numericParam(
-        searchParams.get(
-          "season",
-        ),
-      );
-
-    const requestedWeek =
-      numericParam(
-        searchParams.get(
-          "week",
-        ),
-      );
-
-    const {
-      data: weeksData,
-      error: weeksError,
-    } = await supabaseAdmin
+    const params = new URL(request.url).searchParams;
+    const season = positive(params.get("season"));
+    const weekNumber = positive(params.get("week"));
+    const { data, error } = await supabaseAdmin
       .from("ncaa_pickem_weeks")
-      .select(
-        "id, season, week_number, label, lock_at, status, analysis, show_analysis",
-      )
-      .order(
-        "season",
-        {
-          ascending: false,
-        },
-      )
-      .order(
-        "week_number",
-        {
-          ascending: false,
-        },
-      );
+      .select("id, season, week_number, label, lock_at, status, analysis, show_analysis")
+      .eq("league_id", access.league.id)
+      .order("season", { ascending: false })
+      .order("week_number", { ascending: false });
+    if (error) throw new Error(error.message);
+    const weeks = (data ?? []) as WeekRow[];
+    const selected = (season && weekNumber
+      ? weeks.find((item) => Number(item.season) === season && Number(item.week_number) === weekNumber)
+      : null) ?? weeks[0] ?? null;
 
-    if (weeksError) {
-      return NextResponse.json(
-        {
-          error:
-            weeksError.message,
-        },
-        { status: 500 },
-      );
+    const viewer = {
+      teamId: access.viewerTeam.teamId,
+      displayName: access.viewerTeam.name,
+      avatarUrl: access.viewerTeam.avatarUrl,
+    };
+    if (!selected) return NextResponse.json({ success: true, viewer, participants: access.participants, weeks, week: null, games: [], picks: [], groupPicks: [], locked: false });
+
+    const isLocked = locked(selected);
+    const participantIds = access.participants.map((item) => item.teamId);
+    const [gamesResult, picksResult] = await Promise.all([
+      supabaseAdmin.from("ncaa_pickem_games").select("*").eq("week_id", selected.id).eq("included", true).order("kickoff_at", { ascending: true }),
+      supabaseAdmin.from("ncaa_pickem_picks").select("id, week_id, game_id, team_id, picked_team_id, is_correct").eq("week_id", selected.id).eq("team_id", access.viewerTeam.teamId),
+    ]);
+    if (gamesResult.error) throw new Error(gamesResult.error.message);
+    if (picksResult.error) throw new Error(picksResult.error.message);
+
+    let groupPicks: unknown[] = [];
+    if (isLocked && participantIds.length > 0) {
+      const result = await supabaseAdmin.from("ncaa_pickem_picks").select("game_id, team_id, picked_team_id, is_correct").eq("week_id", selected.id).in("team_id", participantIds);
+      if (result.error) throw new Error(result.error.message);
+      groupPicks = result.data ?? [];
     }
 
-    const weeks =
-      (weeksData ??
-        []) as PickEmWeekRow[];
-
-    let selectedWeek:
-      | PickEmWeekRow
-      | null =
-      null;
-
-    if (
-      requestedSeason !== null &&
-      requestedWeek !== null
-    ) {
-      selectedWeek =
-        weeks.find(
-          (week) =>
-            Number(
-              week.season,
-            ) ===
-              requestedSeason &&
-            Number(
-              week.week_number,
-            ) ===
-              requestedWeek,
-        ) ?? null;
-    }
-
-    if (!selectedWeek) {
-      selectedWeek =
-        weeks[0] ?? null;
-    }
-
-    if (!selectedWeek) {
-      return NextResponse.json({
-        success: true,
-
-        viewer: {
-          teamId:
-            user.teamId,
-
-          displayName:
-            user.displayName,
-
-          avatarUrl:
-            user.avatarUrl,
-        },
-
-        weeks,
-        week: null,
-        games: [],
-        picks: [],
-        groupPicks: [],
-        locked: false,
-      });
-    }
-
-    const locked =
-      isWeekLocked(
-        selectedWeek,
-      );
-
-    const [
-      gamesResult,
-      viewerPicksResult,
-      teamsResult,
-    ] =
-      await Promise.all([
-        supabaseAdmin
-          .from(
-            "ncaa_pickem_games",
-          )
-          .select("*")
-          .eq(
-            "week_id",
-            selectedWeek.id,
-          )
-          .eq(
-            "included",
-            true,
-          )
-          .order(
-            "kickoff_at",
-            {
-              ascending: true,
-            },
-          ),
-
-        supabaseAdmin
-          .from(
-            "ncaa_pickem_picks",
-          )
-          .select(
-            "id, week_id, game_id, team_id, picked_team_id, is_correct",
-          )
-          .eq(
-            "week_id",
-            selectedWeek.id,
-          )
-          .eq(
-            "team_id",
-            user.teamId,
-          ),
-
-        supabaseAdmin
-          .from("teams")
-          .select(
-            "id, name",
-          )
-          .order(
-            "id",
-            {
-              ascending: true,
-            },
-          ),
-      ]);
-
-    if (gamesResult.error) {
-      return NextResponse.json(
-        {
-          error:
-            gamesResult.error.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    if (
-      viewerPicksResult.error
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            viewerPicksResult.error.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    if (teamsResult.error) {
-      return NextResponse.json(
-        {
-          error:
-            teamsResult.error.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const {
-      data: appUsers,
-      error: usersError,
-    } = await supabaseAdmin
-      .from("app_users")
-      .select(
-        "team_id, display_name, avatar_url",
-      )
-      .eq(
-        "is_active",
-        true,
-      );
-
-    if (usersError) {
-      return NextResponse.json(
-        {
-          error:
-            usersError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const userByTeamId =
-      new Map<
-        number,
-        {
-          displayName:
-            string;
-          avatarUrl:
-            string | null;
-        }
-      >();
-
-    for (
-      const appUser
-      of appUsers ?? []
-    ) {
-      userByTeamId.set(
-        Number(
-          appUser.team_id,
-        ),
-        {
-          displayName:
-            String(
-              appUser.display_name ??
-                "",
-            ),
-
-          avatarUrl:
-            appUser.avatar_url ??
-            null,
-        },
-      );
-    }
-
-    const participants =
-      (teamsResult.data ??
-        []).map(
-        (team) => {
-          const teamId =
-            Number(team.id);
-
-          const appUser =
-            userByTeamId.get(
-              teamId,
-            );
-
-          return {
-            teamId,
-
-            name:
-              appUser?.displayName ||
-              String(
-                team.name,
-              ),
-
-            avatarUrl:
-              appUser?.avatarUrl ??
-              null,
-          };
-        },
-      );
-
-    let groupPicks:
-      Array<{
-        game_id: number;
-        team_id: number;
-        picked_team_id:
-          string;
-        is_correct:
-          boolean | null;
-      }> = [];
-
-    /*
-     * CRITICAL:
-     * Other players' picked_team_id values are not queried
-     * at all until the weekly card is locked.
-     *
-     * This is server-side secrecy, not UI hiding.
-     */
-    if (locked) {
-      const {
-        data,
-        error,
-      } = await supabaseAdmin
-        .from(
-          "ncaa_pickem_picks",
-        )
-        .select(
-          "game_id, team_id, picked_team_id, is_correct",
-        )
-        .eq(
-          "week_id",
-          selectedWeek.id,
-        );
-
-      if (error) {
-        return NextResponse.json(
-          {
-            error:
-              error.message,
-          },
-          { status: 500 },
-        );
-      }
-
-      groupPicks =
-        (data ?? []).map(
-          (row) => ({
-            game_id:
-              Number(
-                row.game_id,
-              ),
-
-            team_id:
-              Number(
-                row.team_id,
-              ),
-
-            picked_team_id:
-              String(
-                row.picked_team_id,
-              ),
-
-            is_correct:
-              row.is_correct ??
-              null,
-          }),
-        );
-    }
-
-    return NextResponse.json({
-      success: true,
-
-      viewer: {
-        teamId:
-          user.teamId,
-
-        displayName:
-          user.displayName,
-
-        avatarUrl:
-          user.avatarUrl,
-      },
-
-      participants,
-      weeks,
-
-      week:
-        selectedWeek,
-
-      games:
-        gamesResult.data ??
-        [],
-
-      picks:
-        viewerPicksResult.data ??
-        [],
-
-      groupPicks,
-
-      locked,
-    });
+    return NextResponse.json({ success: true, viewer, participants: access.participants, weeks, week: selected, games: gamesResult.data ?? [], picks: picksResult.data ?? [], groupPicks, locked: isLocked });
   } catch (error) {
-    console.error(
-      "Failed to load NCAA Pick 'Em week",
-      error,
-    );
-
-    return NextResponse.json(
-      {
-        error:
-          "Unable to load NCAA Pick 'Em.",
-      },
-      { status: 500 },
-    );
+    console.error("Failed to load NCAA Pick 'Em week", error);
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load NCAA Pick 'Em." }, { status: 500 });
   }
 }
