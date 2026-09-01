@@ -80,12 +80,7 @@ function MobileAccountMenuContent() {
   const searchParams = useSearchParams();
   const { selectedSport } = useSelectedSport();
 
-  const {
-    groupContext,
-    availableGroups,
-    isSwitchingGroup,
-    setActiveGroup,
-  } = useGroupContext();
+  const { groupContext } = useGroupContext();
 
   const isNbaSkins =
     pathname.startsWith("/nba-skins") ||
@@ -344,38 +339,6 @@ function MobileAccountMenuContent() {
           })}
 
           <div className="my-2 border-t border-slate-200" />
-
-          {groupContext ? (
-            <>
-              <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Groups
-              </div>
-              <Link
-                href={`/groups/${encodeURIComponent(groupContext.group.slug)}`}
-                onClick={() => setIsOpen(false)}
-                className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                {groupContext.group.name} Home
-              </Link>
-              {availableGroups.length > 1 ? availableGroups
-                .filter((group) => group.slug !== groupContext.group.slug)
-                .map((group) => (
-                  <button
-                    key={group.id}
-                    type="button"
-                    disabled={isSwitchingGroup}
-                    onClick={() => {
-                      setIsOpen(false);
-                      void setActiveGroup(group.slug);
-                    }}
-                    className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                  >
-                    Switch to {group.name}
-                  </button>
-                )) : null}
-              <div className="my-2 border-t border-slate-200" />
-            </>
-          ) : null}
 
           <DarkModeToggle />
 

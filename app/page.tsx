@@ -1,9 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import InstallAppButton from "@/components/platform/InstallAppButton";
+import PlatformAccountMenu from "@/components/platform/PlatformAccountMenu";
 import PlatformGroupCard from "@/components/platform/PlatformGroupCard";
 import ProductShowcase from "@/components/platform/ProductShowcase";
-import TeamAvatar from "@/components/ui/TeamAvatar";
 import { getCurrentUser } from "@/lib/auth";
 import { getAvailableGroupContextsForUser, getGroupContextForUser } from "@/lib/groups/context";
 import { PLATFORM_GAMES } from "@/lib/sports";
@@ -20,6 +20,7 @@ export default async function PlatformLandingPage() {
     : [null, []];
   const groups = contexts
     .map((context) => ({
+      id: context.group.id,
       name: context.group.name,
       slug: context.group.slug,
       role: context.membership.role,
@@ -39,10 +40,16 @@ export default async function PlatformLandingPage() {
           </Link>
           <div className="flex items-center gap-2 text-sm">
             {user ? (
-              <Link href="/profile?tab=overview" className="flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 py-1.5 pl-1.5 pr-3 font-semibold text-slate-200 transition hover:border-teal-400">
-                <TeamAvatar teamName={user.displayName} avatarUrl={user.avatarUrl} size="sm" />
-                <span className="max-w-28 truncate">{user.displayName}</span>
-              </Link>
+              <PlatformAccountMenu
+                displayName={user.displayName}
+                avatarUrl={user.avatarUrl}
+                groups={groups.map((group) => ({
+                  id: group.id,
+                  name: group.name,
+                  slug: group.slug,
+                  isActive: group.isActive,
+                }))}
+              />
             ) : (
               <Link href="/login" className="rounded-full bg-teal-300 px-4 py-2 font-bold text-slate-950">Sign in</Link>
             )}

@@ -103,6 +103,9 @@ function AppNavContent() {
   const mobileSportRef =
     useRef<HTMLDivElement | null>(null);
 
+  const mobileGroupRef =
+    useRef<HTMLDivElement | null>(null);
+
   const [
     desktopGroupOpen,
     setDesktopGroupOpen,
@@ -118,6 +121,12 @@ function AppNavContent() {
   const [
     mobileSportOpen,
     setMobileSportOpen,
+  ] =
+    useState(false);
+
+  const [
+    mobileGroupOpen,
+    setMobileGroupOpen,
   ] =
     useState(false);
 
@@ -821,6 +830,13 @@ function AppNavContent() {
       if (mobileSportRef.current && !mobileSportRef.current.contains(target)) {
         setMobileSportOpen(false);
       }
+
+      if (
+        mobileGroupRef.current &&
+        !mobileGroupRef.current.contains(target)
+      ) {
+        setMobileGroupOpen(false);
+      }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
@@ -1364,9 +1380,75 @@ function AppNavContent() {
               </Link>
 
               {groupContext ? (
-                <Link href={`/groups/${encodeURIComponent(groupContext.group.slug)}`} className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-sky-600">
-                  Group: {groupContext.group.name}
-                </Link>
+                displayedGroups.length > 1 ? (
+                  <div ref={mobileGroupRef} className="relative">
+                    <button
+                      type="button"
+                      disabled={isSwitchingGroup}
+                      onClick={() => setMobileGroupOpen((open) => !open)}
+                      aria-expanded={mobileGroupOpen}
+                      aria-haspopup="menu"
+                      aria-label={`Active Group: ${groupContext.group.name}`}
+                      className="flex max-w-full items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 transition hover:text-sky-600 disabled:opacity-60"
+                    >
+                      <span className="truncate">Group: {groupContext.group.name}</span>
+                      <span aria-hidden="true" className="shrink-0 text-[9px]">
+                        ▾
+                      </span>
+                    </button>
+
+                    {mobileGroupOpen ? (
+                      <div
+                        role="menu"
+                        className="app-dropdown-panel absolute left-0 top-full z-[10000] mt-2 min-w-44 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
+                      >
+                        {displayedGroups.map((group) => {
+                          const isActive =
+                            group.slug === groupContext.group.slug;
+
+                          return (
+                            <button
+                              key={group.id}
+                              type="button"
+                              role="menuitem"
+                              disabled={isSwitchingGroup}
+                              onClick={() => {
+                                setMobileGroupOpen(false);
+
+                                if (isActive) {
+                                  router.push(
+                                    `/groups/${encodeURIComponent(group.slug)}`,
+                                  );
+                                } else {
+                                  void setActiveGroup(group.slug);
+                                }
+                              }}
+                              className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
+                                isActive
+                                  ? "bg-sky-100 font-semibold text-sky-900"
+                                  : "text-slate-700 hover:bg-slate-100"
+                              }`}
+                            >
+                              {group.name}
+                              {isActive ? (
+                                <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-sky-600">
+                                  Active
+                                </span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <Link
+                    href={`/groups/${encodeURIComponent(groupContext.group.slug)}`}
+                    className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-sky-600"
+                  >
+                    Group: {groupContext.group.name}
+                  </Link>
+                )
               ) : null}
             </div>
           </div>
