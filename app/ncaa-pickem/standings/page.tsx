@@ -8,6 +8,8 @@ import {
 
 import AppNav from "@/components/AppNav";
 
+import TeamAvatar from "@/components/ui/TeamAvatar";
+
 import {
   useSelectedSport,
 } from "@/components/providers/SportProvider";
@@ -316,24 +318,17 @@ export default function NcaaPickEmStandings() {
                       </div>
 
                       <div className="flex min-w-0 items-center gap-3">
-                        {row.avatarUrl ? (
-                          <img
-                            src={
+                        <div className="shrink-0">
+                          <TeamAvatar
+                            teamName={
+                              row.name
+                            }
+                            avatarUrl={
                               row.avatarUrl
                             }
-                            alt=""
-                            className="h-10 w-10 shrink-0 rounded-full object-cover"
+                            size="md"
                           />
-                        ) : (
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-800 font-black">
-                            {row.name
-                              .slice(
-                                0,
-                                1,
-                              )
-                              .toUpperCase()}
-                          </div>
-                        )}
+                        </div>
 
                         <div className="min-w-0">
                           <div className="truncate font-bold">
@@ -420,24 +415,15 @@ export default function NcaaPickEmStandings() {
                           }
                         </div>
 
-                        {row.avatarUrl ? (
-                          <img
-                            src={
-                              row.avatarUrl
-                            }
-                            alt=""
-                            className="h-11 w-11 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-800 font-black">
-                            {row.name
-                              .slice(
-                                0,
-                                1,
-                              )
-                              .toUpperCase()}
-                          </div>
-                        )}
+                        <TeamAvatar
+                          teamName={
+                            row.name
+                          }
+                          avatarUrl={
+                            row.avatarUrl
+                          }
+                          size="md"
+                        />
 
                         <div>
                           <div className="font-black">
