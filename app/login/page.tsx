@@ -285,7 +285,7 @@ export default function LoginPage() {
 
 
       router.push(
-        "/",
+        "/launch",
       );
 
       router.refresh();
@@ -569,7 +569,7 @@ export default function LoginPage() {
 
 
         router.push(
-          "/",
+          "/launch",
         );
 
         router.refresh();
@@ -626,7 +626,7 @@ export default function LoginPage() {
 
 
       router.push(
-        "/",
+        "/launch",
       );
 
       router.refresh();

@@ -346,10 +346,6 @@ function MobileAccountMenuContent() {
             <>
               <div className="my-2 border-t border-slate-200" />
 
-              <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Admin
-              </div>
-
               {displayedAdminGroups.map((group, groupIndex) => (
                 <div key={group.label}>
                   {groupIndex > 0 ? (
@@ -380,6 +376,10 @@ function MobileAccountMenuContent() {
           ) : null}
 
           <div className="my-2 border-t border-slate-200" />
+
+          <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Account
+          </div>
 
           <button
             type="button"

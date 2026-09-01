@@ -9,13 +9,11 @@ export type AdminMenuGroup = {
 };
 
 
-function getCommissionerLinks(
-  sport: string,
-): AdminMenuLink[] {
-  const links: AdminMenuLink[] = [
+function getCommissionerLinks(): AdminMenuLink[] {
+  return [
     {
       href: "/admin",
-      label: "Overview",
+      label: "Commissioner Center",
     },
 
     {
@@ -26,121 +24,11 @@ function getCommissionerLinks(
         "Group Settings",
     },
   ];
-
-
-  /*
-   * NBA Skins intentionally has a minimal commissioner surface.
-   */
-  if (
-    sport === "nba-skins"
-  ) {
-    return links;
-  }
-
-
-  /*
-   * NCAA Pick 'Em has no draft/slate administration.
-   */
-  if (
-    sport === "ncaa"
-  ) {
-    return [
-      ...links,
-
-      {
-        href: "/admin/ncaa-pickem",
-        label: "NCAA Pick 'Em",
-      },
-
-      {
-        href: "/admin/notification-templates",
-        label: "Notification Control",
-      },
-
-      {
-        href: "/admin/notification-history",
-        label: "Notification History",
-      },
-    ];
-  }
-
-
-  /*
-   * NBA / NFL / Golf slate operations.
-   */
-  links.push(
-    {
-      href: "/slates/new",
-      label: "Create Slate",
-    },
-
-    {
-      href: "/admin/slates",
-      label: "Manage Slates",
-    },
-  );
-
-
-  if (
-    sport === "nba"
-  ) {
-    links.push({
-      href: "/admin/slate-games",
-      label: "Slate NBA Games",
-    });
-  }
-
-
-  links.push(
-    {
-      href: "/admin/corrections",
-      label: "Corrections",
-    },
-
-    {
-      href: "/admin/notification-templates",
-      label: "Notification Control",
-    },
-
-    {
-      href: "/admin/notification-history",
-      label: "Notification History",
-    },
-  );
-
-
-  if (
-    sport === "nba"
-  ) {
-    links.push({
-      href: "/admin/players",
-      label: "Manage NBA Players",
-    });
-  }
-
-
-  if (
-    sport === "nfl"
-  ) {
-    links.push({
-      href: "/admin/players-nfl",
-      label: "Manage NFL Players",
-    });
-  }
-
-
-  links.push({
-    href: "/admin/league-awards",
-    label: "League Awards",
-  });
-
-
-  return links;
 }
 
 
 export function getAdminMenuGroups(
-  sport: string,
+  _sport: string,
   isSuperAdmin = false,
 ): AdminMenuGroup[] {
   const groups: AdminMenuGroup[] = [];
@@ -163,12 +51,10 @@ export function getAdminMenuGroups(
 
 
   groups.push({
-    label: "Commissioner Center",
+    label: "Commissioner",
 
     links:
-      getCommissionerLinks(
-        sport,
-      ),
+      getCommissionerLinks(),
   });
 
 

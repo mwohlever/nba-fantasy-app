@@ -251,7 +251,7 @@ export default function AuthCallbackPage() {
               router.replace(
                 invitedGroupSlug
                   ? `/groups/${encodeURIComponent(invitedGroupSlug)}`
-                  : "/",
+                  : "/launch",
               );
 
               router.refresh();

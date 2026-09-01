@@ -7,7 +7,7 @@ import AppNav from "@/components/AppNav";
 import GameCard from "@/components/platform/GameCard";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import TeamAvatar from "@/components/ui/TeamAvatar";
-import type { GroupGameSummary } from "@/lib/groups/landing";
+import type { GroupGameSummary, GroupPulseFact } from "@/lib/groups/landing";
 import {
   PLATFORM_GAMES,
   getPlatformGameConfig,
@@ -20,9 +20,34 @@ type Props = {
   isGroupAdmin: boolean;
   canAdministerGroup: boolean;
   games: GroupGameSummary[];
+  pulse: GroupPulseFact[];
 };
 
-export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin, canAdministerGroup, games }: Props) {
+function mobilePulseText(fact: GroupPulseFact) {
+  if (fact.label === "Completed matchups") {
+    return `${fact.value} completed matchups`;
+  }
+
+  if (fact.label === "NBA slates") {
+    return `NBA: ${fact.value.replace(/ completed$/, "")}`;
+  }
+
+  if (fact.label === "NFL slates") {
+    return `NFL: ${fact.value.replace(/ completed$/, "")}`;
+  }
+
+  if (fact.label === "Golf tournaments") {
+    return `Golf: ${fact.value.replace(/ completed$/, "")}`;
+  }
+
+  if (fact.label === "Most fantasy wins") {
+    return `Most wins: ${fact.value}`;
+  }
+
+  return `${fact.label}: ${fact.value}`;
+}
+
+export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin, canAdministerGroup, games, pulse }: Props) {
   const { groupContext, isLoading, refreshGroupContext } = useGroupContext();
   const [syncing, setSyncing] = useState(true);
   const [error, setError] = useState("");
@@ -85,24 +110,33 @@ export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin,
     <main className="min-h-screen bg-slate-950 px-4 pb-10 pt-4 text-white sm:px-6">
       <div className="mx-auto max-w-6xl">
         <AppNav />
-        <section className="relative overflow-hidden border-b border-slate-800 pb-6 pt-2 sm:pb-8 sm:pt-4">
-          <div aria-hidden="true" className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-teal-400/10 blur-3xl" />
-          <div className="relative flex items-start justify-between gap-4">
+        <section className="relative overflow-hidden border-b border-slate-800 pb-6 pt-2 sm:pb-7 sm:pt-4">
+          <div aria-hidden="true" className="absolute -right-10 -top-20 h-64 w-64 rounded-full bg-teal-400/10 blur-3xl" />
+          <div aria-hidden="true" className="absolute bottom-0 left-1/3 h-px w-1/2 bg-gradient-to-r from-transparent via-teal-300/30 to-transparent" />
+          <div className="relative grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.24em] text-teal-300">
-                Group Home
+                111 Sports Group
               </p>
-              <h1 className="mt-2 truncate text-3xl font-black tracking-tight sm:text-4xl">
+              <h1 className="mt-1 truncate text-4xl font-black tracking-[-0.04em] sm:text-5xl">
                 {group.name}
               </h1>
+              <p className="mt-2 text-sm text-slate-400">
+                Your clubhouse for every game this Group plays.
+              </p>
+            </div>
 
-              <div className="mt-4 flex items-center gap-3">
+            <div className="flex items-center justify-between gap-4 sm:justify-end">
+              <div className="flex min-w-0 items-center gap-3 border-l-2 border-teal-300/50 pl-3">
                 <TeamAvatar
                   teamName={team?.name ?? "Team"}
                   avatarUrl={avatarUrl}
                   size="md"
                 />
                 <div className="min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    Your team
+                  </p>
                   <p className="truncate text-sm font-bold text-white">
                     {team?.name ?? "Team setup pending"}
                   </p>
@@ -113,20 +147,104 @@ export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin,
                   ) : null}
                 </div>
               </div>
-            </div>
 
-            {canAdministerGroup ? (
-              <Link
-                href="/admin/groups?view=commissioner"
-                className="shrink-0 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-teal-300 hover:text-white"
-              >
-                Group Settings
-              </Link>
-            ) : null}
+              {canAdministerGroup ? (
+                <Link
+                  href="/admin/groups?view=commissioner"
+                  className="shrink-0 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs font-bold text-slate-200 transition hover:border-teal-300 hover:text-white"
+                >
+                  Group Settings
+                </Link>
+              ) : null}
+            </div>
           </div>
         </section>
 
-        <section className="mt-7">
+        {pulse.length ? (
+          <section className="mt-5" aria-labelledby="group-pulse-heading">
+            <h2 id="group-pulse-heading" className="sr-only">
+              Group Pulse
+            </h2>
+            <div className="group-pulse-mobile overflow-hidden border-y border-slate-800 py-2 sm:hidden">
+              <div className="group-pulse-ticker flex w-max whitespace-nowrap text-xs font-bold text-slate-200">
+                {[0, 1].map((copyIndex) => (
+                  <div
+                    key={copyIndex}
+                    aria-hidden={copyIndex === 1 ? "true" : undefined}
+                    className="flex shrink-0 items-center gap-3 pr-3"
+                  >
+                    <span className="font-black uppercase tracking-[0.16em] text-teal-300">
+                      Group Pulse
+                    </span>
+                    {pulse.map((fact) => (
+                      <span key={`${copyIndex}:${fact.label}:${fact.value}`} className="flex items-center gap-3">
+                        <span aria-hidden="true" className="text-teal-400/70">•</span>
+                        <span>{mobilePulseText(fact)}</span>
+                      </span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="hidden snap-x gap-5 overflow-x-auto border-y border-slate-800 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex sm:gap-7">
+              <div className="flex min-w-max snap-start items-center gap-2 pr-1">
+                <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-teal-300" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-300">
+                  Group Pulse
+                </span>
+              </div>
+              {pulse.map((fact) => (
+                <div key={`${fact.label}:${fact.value}`} className="min-w-max snap-start">
+                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                    {fact.label}
+                  </p>
+                  <p className="mt-0.5 text-sm font-bold text-slate-100">
+                    {fact.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <style jsx>{`
+              .group-pulse-ticker {
+                animation: group-pulse-scroll 38s linear infinite;
+              }
+
+              .group-pulse-mobile:hover .group-pulse-ticker,
+              .group-pulse-mobile:focus-within .group-pulse-ticker {
+                animation-play-state: paused;
+              }
+
+              @keyframes group-pulse-scroll {
+                from {
+                  transform: translateX(0);
+                }
+
+                to {
+                  transform: translateX(-50%);
+                }
+              }
+
+              @media (prefers-reduced-motion: reduce) {
+                .group-pulse-mobile {
+                  overflow-x: auto;
+                  scrollbar-width: none;
+                }
+
+                .group-pulse-mobile::-webkit-scrollbar {
+                  display: none;
+                }
+
+                .group-pulse-ticker {
+                  animation: none;
+                }
+              }
+            `}</style>
+          </section>
+        ) : null}
+
+        <section className="mt-6">
           <div className="mb-4">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-teal-300">
               Play together
@@ -137,7 +255,7 @@ export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin,
           </div>
 
           {games.length ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 sm:[&>*:last-child:nth-child(odd)]:col-span-2">
               {games.map((game) => (
                 <GameCard
                   key={game.leagueId}

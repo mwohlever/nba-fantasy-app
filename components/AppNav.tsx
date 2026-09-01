@@ -971,6 +971,78 @@ function AppNavContent() {
     { href: "/player-history", label: "Player History" },
   ];
 
+  const mobileGroupControl = groupContext ? (
+    displayedGroups.length > 1 ? (
+      <div
+        ref={mobileGroupRef}
+        className="relative min-w-0 max-w-[8.5rem]"
+      >
+        <button
+          type="button"
+          disabled={isSwitchingGroup}
+          onClick={() => setMobileGroupOpen((open) => !open)}
+          aria-expanded={mobileGroupOpen}
+          aria-haspopup="menu"
+          aria-label={`Active Group: ${groupContext.group.name}`}
+          className="flex min-h-9 max-w-full items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600 shadow-sm transition hover:border-sky-300 hover:text-sky-700 disabled:opacity-60"
+        >
+          <span className="truncate">{groupContext.group.name}</span>
+          <span aria-hidden="true" className="shrink-0 text-[9px]">
+            ▾
+          </span>
+        </button>
+
+        {mobileGroupOpen ? (
+          <div
+            role="menu"
+            className="app-dropdown-panel absolute right-0 top-full z-[10000] mt-2 min-w-44 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
+          >
+            {displayedGroups.map((group) => {
+              const isActive = group.slug === groupContext.group.slug;
+
+              return (
+                <button
+                  key={group.id}
+                  type="button"
+                  role="menuitem"
+                  disabled={isSwitchingGroup}
+                  onClick={() => {
+                    setMobileGroupOpen(false);
+
+                    if (isActive) {
+                      router.push(`/groups/${encodeURIComponent(group.slug)}`);
+                    } else {
+                      void setActiveGroup(group.slug);
+                    }
+                  }}
+                  className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
+                    isActive
+                      ? "bg-sky-100 font-semibold text-sky-900"
+                      : "text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  {group.name}
+                  {isActive ? (
+                    <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-sky-600">
+                      Active
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+    ) : (
+      <Link
+        href={`/groups/${encodeURIComponent(groupContext.group.slug)}`}
+        className="block min-h-9 max-w-[8.5rem] truncate rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-semibold uppercase leading-6 tracking-wide text-slate-600 shadow-sm transition hover:border-sky-300 hover:text-sky-700"
+      >
+        {groupContext.group.name}
+      </Link>
+    )
+  ) : null;
+
   return (
     <>
       <style jsx global>{`
@@ -1244,10 +1316,6 @@ function AppNavContent() {
                       <>
                         <div className="my-2 border-t border-slate-200" />
 
-                        <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                          Admin
-                        </div>
-
                         {displayedAdminGroups.map((group, groupIndex) => (
                           <div key={group.label}>
                             {groupIndex > 0 ? (
@@ -1278,6 +1346,10 @@ function AppNavContent() {
                     ) : null}
 
                     <div className="my-2 border-t border-slate-200" />
+
+                    <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Account
+                    </div>
 
                     <button
                       type="button"
@@ -1320,140 +1392,69 @@ function AppNavContent() {
                 />
               </Link>
             ) : (
-            <div className="relative shrink-0" ref={mobileSportRef}>
-              <button
-                type="button"
-                onClick={() => setMobileSportOpen((open) => !open)}
-                aria-label={`Switch sport, currently ${getSportConfig(activeSport).label}`}
-                className="block"
-              >
-                <span className="relative block h-12 w-12">
-                  <img
-                    src={getSportConfig(activeSport).logo}
-                    alt={`${getSportConfig(activeSport).label} logo`}
-                    className="h-12 w-12 rounded-full object-cover shadow-sm"
-                  />
+              <div className="relative shrink-0" ref={mobileSportRef}>
+                <button
+                  type="button"
+                  onClick={() => setMobileSportOpen((open) => !open)}
+                  aria-label={`Switch sport, currently ${getSportConfig(activeSport).label}`}
+                  aria-expanded={mobileSportOpen}
+                  aria-haspopup="menu"
+                  className="block"
+                >
+                  <span className="relative block h-12 w-12">
+                    <img
+                      src={getSportConfig(activeSport).logo}
+                      alt={`${getSportConfig(activeSport).label} logo`}
+                      className="h-12 w-12 rounded-full object-cover shadow-sm"
+                    />
+                    {activeSport === "ncaa" || activeSport === "nba-skins" ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute -bottom-1 -right-1 rounded-full border border-slate-700 bg-slate-950 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-white shadow-md"
+                      >
+                        {activeSport === "nba-skins" ? "SKINS" : "NCAA"}
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
 
-                  {activeSport === "ncaa" ||
-                  activeSport === "nba-skins" ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -bottom-1 -right-1 rounded-full border border-slate-700 bg-slate-950 px-1.5 py-0.5 text-[8px] font-black tracking-wide text-white shadow-md"
-                    >
-                      {activeSport === "nba-skins"
-                        ? "SKINS"
-                        : "NCAA"}
-                    </span>
-                  ) : null}
-                </span>
-              </button>
-
-              {mobileSportOpen ? (
-                <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
-                  {displayedSports.map((sport) => (
-                    <button
-                      key={sport.key}
-                      type="button"
-                      onClick={() => {
-                        handleSelectSport(sport.key);
-                        setMobileSportOpen(false);
-                      }}
-                      className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
-                        activeSport === sport.key
-                          ? "bg-sky-100 font-semibold text-sky-900"
-                          : "text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      {sport.emoji} {sport.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+                {mobileSportOpen ? (
+                  <div className="app-dropdown-panel absolute left-0 top-full z-50 mt-2 w-40 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+                    {displayedSports.map((sport) => (
+                      <button
+                        key={sport.key}
+                        type="button"
+                        onClick={() => {
+                          handleSelectSport(sport.key);
+                          setMobileSportOpen(false);
+                        }}
+                        className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition ${
+                          activeSport === sport.key
+                            ? "bg-sky-100 font-semibold text-sky-900"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        {sport.emoji} {sport.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             )}
 
             <div className="min-w-0">
               <Link href="/" aria-label="111 Sports platform home" className="block min-w-0">
-              <span className="block truncate text-lg font-bold tracking-tight text-slate-900">
-                111 Sports
-              </span>
+                <span className="block truncate text-lg font-bold tracking-tight text-slate-900">
+                  111 Sports
+                </span>
               </Link>
-
-              {groupContext ? (
-                displayedGroups.length > 1 ? (
-                  <div ref={mobileGroupRef} className="relative">
-                    <button
-                      type="button"
-                      disabled={isSwitchingGroup}
-                      onClick={() => setMobileGroupOpen((open) => !open)}
-                      aria-expanded={mobileGroupOpen}
-                      aria-haspopup="menu"
-                      aria-label={`Active Group: ${groupContext.group.name}`}
-                      className="flex max-w-full items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 transition hover:text-sky-600 disabled:opacity-60"
-                    >
-                      <span className="truncate">Group: {groupContext.group.name}</span>
-                      <span aria-hidden="true" className="shrink-0 text-[9px]">
-                        ▾
-                      </span>
-                    </button>
-
-                    {mobileGroupOpen ? (
-                      <div
-                        role="menu"
-                        className="app-dropdown-panel absolute left-0 top-full z-[10000] mt-2 min-w-44 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
-                      >
-                        {displayedGroups.map((group) => {
-                          const isActive =
-                            group.slug === groupContext.group.slug;
-
-                          return (
-                            <button
-                              key={group.id}
-                              type="button"
-                              role="menuitem"
-                              disabled={isSwitchingGroup}
-                              onClick={() => {
-                                setMobileGroupOpen(false);
-
-                                if (isActive) {
-                                  router.push(
-                                    `/groups/${encodeURIComponent(group.slug)}`,
-                                  );
-                                } else {
-                                  void setActiveGroup(group.slug);
-                                }
-                              }}
-                              className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition disabled:opacity-50 ${
-                                isActive
-                                  ? "bg-sky-100 font-semibold text-sky-900"
-                                  : "text-slate-700 hover:bg-slate-100"
-                              }`}
-                            >
-                              {group.name}
-                              {isActive ? (
-                                <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-sky-600">
-                                  Active
-                                </span>
-                              ) : null}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <Link
-                    href={`/groups/${encodeURIComponent(groupContext.group.slug)}`}
-                    className="block truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:text-sky-600"
-                  >
-                    Group: {groupContext.group.name}
-                  </Link>
-                )
-              ) : null}
             </div>
           </div>
 
-          <MobileAccountMenu />
+          <div className="flex min-w-0 items-center gap-2">
+            {mobileGroupControl}
+            <MobileAccountMenu />
+          </div>
         </div>
       </nav>
 

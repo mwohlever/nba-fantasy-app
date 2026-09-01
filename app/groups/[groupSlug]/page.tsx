@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import GroupLandingPage from "@/components/platform/GroupLandingPage";
 import { getCurrentUser } from "@/lib/auth";
 import { getGroupContextForUserBySlug } from "@/lib/groups/context";
-import { getGroupGameSummaries } from "@/lib/groups/landing";
+import { getGroupLandingData } from "@/lib/groups/landing";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupSlu
   const { groupSlug } = await params;
   const context = await getGroupContextForUserBySlug(user, decodeURIComponent(groupSlug));
   if (!context) notFound();
-  const games = await getGroupGameSummaries(context);
+  const { games, pulse } = await getGroupLandingData(context);
 
-  return <GroupLandingPage group={context.group} team={context.team} avatarUrl={user.avatarUrl} isGroupAdmin={context.isGroupAdmin} canAdministerGroup={context.canAdministerGroup} games={games} />;
+  return <GroupLandingPage group={context.group} team={context.team} avatarUrl={user.avatarUrl} isGroupAdmin={context.isGroupAdmin} canAdministerGroup={context.canAdministerGroup} games={games} pulse={pulse} />;
 }

@@ -5,6 +5,7 @@ import SportProvider from "@/components/providers/SportProvider";
 import GroupProvider from "@/components/providers/GroupProvider";
 import "./globals.css";
 import AppHeartbeat from "@/components/AppHeartbeat";
+import AppResumeTracker from "@/components/platform/AppResumeTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,6 +79,7 @@ export default function RootLayout({
         <ThemeProvider>
           <GroupProvider>
             <SportProvider>
+              <AppResumeTracker />
               {children}
             </SportProvider>
           </GroupProvider>
