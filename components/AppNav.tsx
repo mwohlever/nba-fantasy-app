@@ -1023,7 +1023,7 @@ function AppNavContent() {
                 >
                   {group.name}
                   {isActive ? (
-                    <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-sky-600">
+                    <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide">
                       Active
                     </span>
                   ) : null}

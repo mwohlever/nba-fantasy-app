@@ -9,6 +9,13 @@ type Props = {
   onAvatarChanged: (avatarUrl: string | null) => void;
 };
 
+type RecentAvatar = {
+  id: string;
+  url: string;
+  createdAt: string;
+  isActive: boolean;
+};
+
 export default function ProfilePictureSettings({
   displayName,
   avatarUrl,
@@ -18,9 +25,34 @@ export default function ProfilePictureSettings({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [recentAvatars, setRecentAvatars] = useState<RecentAvatar[]>([]);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] =
     useState<"success" | "error" | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRecentAvatars() {
+      try {
+        const response = await fetch("/api/account/profile-picture", {
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (!cancelled && response.ok) setRecentAvatars(result.avatars ?? []);
+      } catch (error) {
+        console.error("Failed to load recent profile pictures", error);
+      } finally {
+        if (!cancelled) setIsLoadingRecent(false);
+      }
+    }
+
+    void loadRecentAvatars();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -29,6 +61,14 @@ export default function ProfilePictureSettings({
       }
     };
   }, [previewUrl]);
+
+  function applyAvatarResult(result: {
+    avatarUrl?: string | null;
+    avatars?: RecentAvatar[];
+  }) {
+    onAvatarChanged(result.avatarUrl ?? null);
+    setRecentAvatars(result.avatars ?? []);
+  }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -88,7 +128,7 @@ export default function ProfilePictureSettings({
         return;
       }
 
-      onAvatarChanged(result.avatarUrl ?? null);
+      applyAvatarResult(result);
       setSelectedFile(null);
 
       if (previewUrl?.startsWith("blob:")) {
@@ -125,7 +165,7 @@ export default function ProfilePictureSettings({
         return;
       }
 
-      onAvatarChanged(null);
+      applyAvatarResult(result);
       setSelectedFile(null);
 
       if (previewUrl?.startsWith("blob:")) {
@@ -138,6 +178,40 @@ export default function ProfilePictureSettings({
     } catch (error) {
       console.error("Failed to remove profile picture", error);
       setMessage("Unable to remove your profile picture.");
+      setMessageType("error");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function selectRecentAvatar(avatarImageId: string) {
+    try {
+      setIsSaving(true);
+      setMessage("");
+      setMessageType(null);
+
+      const response = await fetch("/api/account/profile-picture", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarImageId }),
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Unable to select your profile picture.");
+        setMessageType("error");
+        return;
+      }
+
+      applyAvatarResult(result);
+      setSelectedFile(null);
+      if (previewUrl?.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      setMessage("Profile picture updated.");
+      setMessageType("success");
+    } catch (error) {
+      console.error("Failed to select profile picture", error);
+      setMessage("Unable to select your profile picture.");
       setMessageType("error");
     } finally {
       setIsSaving(false);
@@ -244,6 +318,44 @@ export default function ProfilePictureSettings({
           </div>
         </div>
       </div>
+
+      {isLoadingRecent || recentAvatars.length > 0 ? (
+        <div className="mt-5 border-t border-slate-200 pt-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="text-sm font-bold text-slate-900">Recent pictures</h3>
+            <span className="text-xs text-slate-500">Up to 5 uploads</span>
+          </div>
+
+          {isLoadingRecent ? (
+            <p className="mt-3 text-sm text-slate-500">Loading recent pictures…</p>
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-3">
+              {recentAvatars.map((avatar, index) => (
+                <button
+                  key={avatar.id}
+                  type="button"
+                  onClick={() => void selectRecentAvatar(avatar.id)}
+                  disabled={isSaving || avatar.isActive}
+                  aria-label={`Use recent profile picture ${index + 1}`}
+                  aria-pressed={avatar.isActive}
+                  className={`relative h-16 w-16 overflow-hidden rounded-2xl border-2 transition focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 disabled:cursor-default ${
+                    avatar.isActive
+                      ? "border-sky-500 ring-2 ring-sky-100"
+                      : "border-slate-200 hover:border-sky-300"
+                  }`}
+                >
+                  <img src={avatar.url} alt="" className="h-full w-full object-cover" />
+                  {avatar.isActive ? (
+                    <span className="absolute inset-x-0 bottom-0 bg-sky-700/90 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                      Current
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

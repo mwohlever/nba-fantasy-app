@@ -106,6 +106,8 @@ export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin,
         !enabledGameKeys.has(game.key),
     );
 
+  const pulseDurationSeconds = Math.max((pulse.length + 1) * 3.2, 12);
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 pb-10 pt-4 text-white sm:px-6">
       <div className="mx-auto max-w-6xl">
@@ -166,7 +168,10 @@ export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin,
               Group Pulse
             </h2>
             <div className="group-pulse-mobile overflow-hidden border-y border-slate-800 py-2 sm:hidden">
-              <div className="group-pulse-ticker flex w-max whitespace-nowrap text-xs font-bold text-slate-200">
+              <div
+                className="group-pulse-ticker flex w-max whitespace-nowrap text-xs font-bold text-slate-200"
+                style={{ animationDuration: `${pulseDurationSeconds}s` }}
+              >
                 {[0, 1].map((copyIndex) => (
                   <div
                     key={copyIndex}
@@ -208,7 +213,9 @@ export default function GroupLandingPage({ group, team, avatarUrl, isGroupAdmin,
 
             <style jsx>{`
               .group-pulse-ticker {
-                animation: group-pulse-scroll 38s linear infinite;
+                animation-name: group-pulse-scroll;
+                animation-timing-function: linear;
+                animation-iteration-count: infinite;
               }
 
               .group-pulse-mobile:hover .group-pulse-ticker,
