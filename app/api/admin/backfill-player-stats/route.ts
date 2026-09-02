@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { requireSuperAdminApi } from "@/lib/requireAdminApi";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 
 type BackfillBody = {
   slateId?: number;
@@ -554,13 +555,13 @@ async function backfillSlate(slateId: number): Promise<SlateBackfillResult> {
 }
 
 export async function POST(request: Request) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
   try {
     const body = (await request.json()) as BackfillBody;
 
     if (body.all) {
+      const authError = await requireSuperAdminApi();
+      if (authError) return authError;
+
       const { data: slates, error: slatesError } = await supabaseAdmin
         .from("slates")
         .select("id, date, start_date, end_date, is_locked")
@@ -608,6 +609,14 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      Number(body.slateId),
+      { requireCommissioner: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const result = await backfillSlate(body.slateId);
 

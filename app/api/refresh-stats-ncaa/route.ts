@@ -12,6 +12,7 @@ import {
 } from "@/lib/providers/ncaa";
 
 import { loadNcaaPickEmParticipants } from "@/lib/ncaaPickEm/access";
+import { authorizeNcaaWeekResource } from "@/lib/security/resourceAuthorization";
 
 type RefreshBody = {
   weekId?: number;
@@ -74,6 +75,14 @@ export async function POST(
         },
       );
     }
+
+    const authorization = await authorizeNcaaWeekResource(
+      request,
+      requestedWeekId,
+      { allowInternal: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const {
       data: weekData,

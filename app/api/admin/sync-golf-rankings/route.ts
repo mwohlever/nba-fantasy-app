@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { requireSuperAdminApi } from "@/lib/requireAdminApi";
 import {
   fetchEspnGolfWorldRankings,
   type GolfWorldRanking,
@@ -59,7 +59,7 @@ function buildRankingMaps(
 }
 
 export async function POST() {
-  const authError = await requireAdminApi();
+  const authError = await requireSuperAdminApi();
   if (authError) return authError;
 
   try {

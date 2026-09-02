@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/requireAdminApi";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
 import { resolveLeagueRules } from "@/lib/rules/leagueRules";
+import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
 
 function isoDateFromGameCode(gameCode: string | null | undefined) {
   const raw = String(gameCode ?? "").slice(0, 8);
@@ -911,6 +912,18 @@ export async function POST(request: NextRequest) {
             safeTeams,
             suggestedOrderIds
           );
+
+    const teamValidation = validateSlateTeamConfigurations(
+      normalizedTeamConfigs,
+      safeTeams.map((team) => Number(team.id)),
+    );
+
+    if (!teamValidation.ok) {
+      return NextResponse.json(
+        { error: teamValidation.error },
+        { status: 400 },
+      );
+    }
 
     const dates = buildDateRange(startDate, endDate);
     const nbaTeamSet = new Set<string>();

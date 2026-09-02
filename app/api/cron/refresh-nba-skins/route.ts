@@ -29,11 +29,14 @@ type SeasonRow = {
     | "open"
     | "locked"
     | "final";
+  participant_count: number;
+  nba_teams_per_participant: number;
 };
 
 
 type PickRow = {
   id: number;
+  season_id: number;
   nba_team_abbreviation: string;
   pick_type:
     | "wins"
@@ -62,7 +65,7 @@ function authorized(
 }
 
 
-async function findRefreshSeason() {
+async function findRefreshSeasons() {
   const {
     data: seasonsRaw,
     error: seasonsError,
@@ -72,7 +75,7 @@ async function findRefreshSeason() {
         "nba_skins_seasons",
       )
       .select(
-        "id, season, status",
+        "id, season, status, participant_count, nba_teams_per_participant",
       )
       .neq(
         "status",
@@ -103,13 +106,23 @@ async function findRefreshSeason() {
    * A Skins season should not begin live record maintenance
    * merely because its season row exists.
    *
-   * The annual draft is authoritative. Only a complete
-   * 28-pick draft activates the season.
+   * The annual draft is authoritative. A complete draft,
+   * using the season's frozen format, activates the season.
    */
+  const refreshSeasons: SeasonRow[] = [];
+  let refreshYear: number | null = null;
+
   for (
     const season
     of seasons
   ) {
+    if (
+      refreshYear !== null &&
+      season.season < refreshYear
+    ) {
+      break;
+    }
+
     const {
       count,
       error,
@@ -138,12 +151,20 @@ async function findRefreshSeason() {
       );
     }
 
-    if (count === 28) {
-      return season;
+    const expectedPicks =
+      Number(season.participant_count) *
+      Number(season.nba_teams_per_participant);
+
+    if (count === expectedPicks) {
+      refreshYear ??= season.season;
+
+      if (season.season === refreshYear) {
+        refreshSeasons.push(season);
+      }
     }
   }
 
-  return null;
+  return refreshSeasons;
 }
 
 
@@ -169,18 +190,20 @@ export async function GET(
 
 
   try {
-    const season =
-      await findRefreshSeason();
+    const seasons =
+      await findRefreshSeasons();
 
 
-    if (!season) {
+    if (seasons.length === 0) {
       return NextResponse.json({
         success: true,
         skipped: true,
         reason:
-          "No non-final NBA Skins season has a complete 28-pick draft.",
+          "No non-final NBA Skins season has a complete draft.",
       });
     }
+
+    const season = seasons[0];
 
 
     let recordResult:
@@ -296,7 +319,8 @@ export async function GET(
 
 
     const teamRows =
-      records.map(
+      seasons.flatMap(
+        (targetSeason) => records.map(
         (record) => {
           const projection =
             projectionByTeam.get(
@@ -305,7 +329,7 @@ export async function GET(
 
           return {
             season_id:
-              season.id,
+              targetSeason.id,
 
             nba_team_abbreviation:
               record.abbreviation,
@@ -346,7 +370,7 @@ export async function GET(
                 }
               : {}),
           };
-        },
+        }),
       );
 
 
@@ -423,11 +447,11 @@ export async function GET(
           "nba_skins_picks",
         )
         .select(
-          "id, nba_team_abbreviation, pick_type",
+          "id, season_id, nba_team_abbreviation, pick_type",
         )
-        .eq(
+        .in(
           "season_id",
-          season.id,
+          seasons.map((targetSeason) => targetSeason.id),
         );
 
 
@@ -519,6 +543,9 @@ export async function GET(
 
       skinsSeason:
         season.season,
+
+      seasonsUpdated:
+        seasons.length,
 
       espnSeason,
 

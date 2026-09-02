@@ -95,6 +95,48 @@ export type LeagueSettingsInput =
     unknown
   >;
 
+export type NbaSkinsRules = {
+  participantCount: number;
+  nbaTeamsPerParticipant: number;
+};
+
+const NBA_SKINS_DEFAULT_RULES: NbaSkinsRules = {
+  participantCount: 4,
+  nbaTeamsPerParticipant: 7,
+};
+
+export function getDefaultNbaSkinsRules(): NbaSkinsRules {
+  return { ...NBA_SKINS_DEFAULT_RULES };
+}
+
+export function resolveNbaSkinsRules(
+  settings: LeagueSettingsInput | null | undefined,
+): NbaSkinsRules {
+  const safeSettings = settings && typeof settings === "object" && !Array.isArray(settings)
+    ? settings
+    : {};
+  const draft = safeSettings.draft && typeof safeSettings.draft === "object" &&
+    !Array.isArray(safeSettings.draft)
+    ? safeSettings.draft as Record<string, unknown>
+    : {};
+  const participantCount = Number(
+    draft.participantCount ?? draft.participant_count,
+  );
+  const nbaTeamsPerParticipant = Number(
+    draft.nbaTeamsPerParticipant ?? draft.nba_teams_per_participant,
+  );
+
+  return {
+    participantCount: Number.isInteger(participantCount) && participantCount >= 2
+      ? participantCount
+      : NBA_SKINS_DEFAULT_RULES.participantCount,
+    nbaTeamsPerParticipant:
+      Number.isInteger(nbaTeamsPerParticipant) && nbaTeamsPerParticipant >= 1
+        ? nbaTeamsPerParticipant
+        : NBA_SKINS_DEFAULT_RULES.nbaTeamsPerParticipant,
+  };
+}
+
 
 const NBA_DEFAULT_RULES:
   LeagueRules = {

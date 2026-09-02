@@ -10,6 +10,8 @@ import {
   useState,
 } from "react";
 
+import { getDefaultNbaSkinsRules } from "@/lib/rules/leagueRules";
+
 
 const FULL_SEASON_GAMES =
   7 * 82;
@@ -101,6 +103,12 @@ type Standing = {
 
 
 type StandingsResponse = {
+  rules: {
+    participantCount: number;
+    nbaTeamsPerParticipant: number;
+    totalPicks: number;
+  };
+
   availableSeasons:
     Array<{
       season: number;
@@ -118,6 +126,9 @@ type StandingsResponse = {
           | "open"
           | "locked"
           | "final";
+        participantCount: number;
+        nbaTeamsPerParticipant: number;
+        totalPicks: number;
       }
     | null;
 
@@ -503,6 +514,12 @@ export default function NbaSkinsHomePage() {
     null;
 
 
+  const teamsPerParticipant =
+    season?.nbaTeamsPerParticipant ??
+    data?.rules.nbaTeamsPerParticipant ??
+    getDefaultNbaSkinsRules().nbaTeamsPerParticipant;
+
+
   const newestAvailableSeason =
     data?.availableSeasons
       .reduce(
@@ -549,7 +566,7 @@ export default function NbaSkinsHomePage() {
                     )} until the ${seasonLabel(
                       newestAvailableSeason,
                     )} draft is saved.`
-                  : "Points earned from your seven Wins / Losses selections."}
+                  : `Points earned from each participant's ${teamsPerParticipant} Wins / Losses selections.`}
               </p>
             </div>
 
@@ -595,7 +612,7 @@ export default function NbaSkinsHomePage() {
 
             <p className="mt-2 text-sm text-slate-500">
               The standings table will populate as soon as the season&apos;s
-              28 picks are saved.
+              {season.totalPicks} picks are saved.
             </p>
           </section>
         ) : (

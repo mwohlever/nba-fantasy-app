@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 
 export async function POST(request: NextRequest) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
   try {
     const body = await request.json();
     const slateId = Number(body.slateId);
@@ -13,6 +10,14 @@ export async function POST(request: NextRequest) {
     if (!Number.isFinite(slateId)) {
       return NextResponse.json({ error: "Valid slateId is required." }, { status: 400 });
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { requireCommissioner: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const { data: lineups, error: lineupsError } = await supabaseAdmin
       .from("lineups")

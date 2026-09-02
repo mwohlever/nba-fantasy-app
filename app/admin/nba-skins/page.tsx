@@ -46,6 +46,9 @@ type Season = {
     DraftOrderEntry[];
   pickCount: number;
   canDelete: boolean;
+  participantCount: number;
+  nbaTeamsPerParticipant: number;
+  totalPicks: number;
 };
 
 
@@ -53,6 +56,11 @@ type AdminResponse = {
   success: boolean;
   teams: Team[];
   seasons: Season[];
+  rules: {
+    participantCount: number;
+    nbaTeamsPerParticipant: number;
+    totalPicks: number;
+  };
   error?: string;
 };
 
@@ -118,6 +126,11 @@ export default function NbaSkinsAdminPage() {
     setNewSeason,
   ] =
     useState("");
+
+  const [
+    newSeasonParticipantIds,
+    setNewSeasonParticipantIds,
+  ] = useState<number[]>([]);
 
   const [
     loading,
@@ -190,6 +203,15 @@ export default function NbaSkinsAdminPage() {
         result,
       );
 
+      setNewSeasonParticipantIds((current) => {
+        const validCurrent = current.filter((teamId) =>
+          result.teams.some((team) => team.id === teamId),
+        );
+        return validCurrent.length === result.rules.participantCount
+          ? validCurrent
+          : result.teams.slice(0, result.rules.participantCount).map((team) => team.id);
+      });
+
       const nextSeason =
         result.seasons.find(
           (season) =>
@@ -204,9 +226,10 @@ export default function NbaSkinsAdminPage() {
         null,
       );
 
-      if (
-        nextSeason?.draftOrder
-          .length === 4
+      if (!nextSeason) {
+        setOrder([]);
+      } else if (
+        nextSeason.draftOrder.length === nextSeason.participantCount
       ) {
         setOrder(
           nextSeason.draftOrder
@@ -222,7 +245,7 @@ export default function NbaSkinsAdminPage() {
         );
       } else {
         setOrder(
-          result.teams.map(
+          result.teams.slice(0, nextSeason.participantCount).map(
             (team) =>
               team.id,
           ),
@@ -280,7 +303,7 @@ export default function NbaSkinsAdminPage() {
     if (
       selectedSeason
         .draftOrder
-        .length === 4
+        .length === selectedSeason.participantCount
     ) {
       setOrder(
         [...selectedSeason.draftOrder]
@@ -296,7 +319,7 @@ export default function NbaSkinsAdminPage() {
       );
     } else {
       setOrder(
-        data.teams.map(
+        data.teams.slice(0, selectedSeason.participantCount).map(
           (team) =>
             team.id,
         ),
@@ -554,6 +577,16 @@ export default function NbaSkinsAdminPage() {
       return;
     }
 
+    if (
+      !data ||
+      newSeasonParticipantIds.length !== data.rules.participantCount
+    ) {
+      setError(
+        `Select exactly ${data?.rules.participantCount ?? 0} participants for the new season.`,
+      );
+      return;
+    }
+
     try {
       setBusy(true);
       setError("");
@@ -574,6 +607,8 @@ export default function NbaSkinsAdminPage() {
             body:
               JSON.stringify({
                 season,
+                participantTeamIds:
+                  newSeasonParticipantIds,
               }),
           },
         );
@@ -808,7 +843,7 @@ export default function NbaSkinsAdminPage() {
                       {
                         selectedSeason.pickCount
                       }
-                      /28 picks
+                      /{selectedSeason.totalPicks} picks
                     </div>
                   </div>
                 ) : null}
@@ -830,7 +865,7 @@ export default function NbaSkinsAdminPage() {
                       </h2>
 
                       <p className="mt-1 text-sm text-slate-500">
-                        This order drives Pick #1 and the seven-round snake.
+                        This order drives Pick #1 and the {selectedSeason.nbaTeamsPerParticipant}-round snake.
                       </p>
                     </div>
 
@@ -838,16 +873,15 @@ export default function NbaSkinsAdminPage() {
                       type="button"
                       disabled={
                         busy ||
-                        selectedSeason.status ===
-                          "final"
+                        selectedSeason.status !==
+                          "open"
                       }
                       onClick={() => {
                         setOrder(
                           shuffle(
-                            data.teams.map(
-                              (team) =>
-                                team.id,
-                            ),
+                            (order.length === selectedSeason.participantCount
+                              ? order
+                              : data.teams.slice(0, selectedSeason.participantCount).map((team) => team.id)),
                           ),
                         );
 
@@ -861,12 +895,10 @@ export default function NbaSkinsAdminPage() {
 
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    {[
-                      0,
-                      1,
-                      2,
-                      3,
-                    ].map(
+                    {Array.from(
+                      { length: selectedSeason.participantCount },
+                      (_, index) => index,
+                    ).map(
                       (index) => (
                         <label
                           key={index}
@@ -886,8 +918,8 @@ export default function NbaSkinsAdminPage() {
                             }
                             disabled={
                               busy ||
-                              selectedSeason.status ===
-                                "final"
+                              selectedSeason.status !==
+                                "open"
                             }
                             onChange={(
                               event,
@@ -903,18 +935,18 @@ export default function NbaSkinsAdminPage() {
                             }
                             className="mt-2 w-full rounded-xl border border-slate-600 bg-slate-950 px-3 py-2.5 font-black text-white outline-none focus:border-blue-400 disabled:opacity-50"
                           >
-                            {data.teams.map(
-                              (team) => (
+                            {selectedSeason.draftOrder.map(
+                              (entry) => (
                                 <option
                                   key={
-                                    team.id
+                                    entry.teamId
                                   }
                                   value={
-                                    team.id
+                                    entry.teamId
                                   }
                                 >
                                   {
-                                    team.name
+                                    entry.teamName
                                   }
                                 </option>
                               ),
@@ -954,9 +986,9 @@ export default function NbaSkinsAdminPage() {
                     disabled={
                       busy ||
                       order.length !==
-                        4 ||
-                      selectedSeason.status ===
-                        "final"
+                        selectedSeason.participantCount ||
+                      selectedSeason.status !==
+                        "open"
                     }
                     className="mt-4 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
@@ -1027,7 +1059,7 @@ export default function NbaSkinsAdminPage() {
                   {selectedSeason.status ===
                   "open" ? (
                     <div className="mt-4 text-xs text-slate-500">
-                      Locking requires a saved four-person draft order and all 28 picks.
+                      Locking requires a saved {selectedSeason.participantCount}-participant draft order and all {selectedSeason.totalPicks} picks.
                     </div>
                   ) : null}
                 </section>
@@ -1081,8 +1113,42 @@ export default function NbaSkinsAdminPage() {
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Enter the starting year. For example, 2027 creates 2027-28.
+                Enter the starting year and choose exactly {data.rules.participantCount} participants. The season will freeze a {data.rules.participantCount} × {data.rules.nbaTeamsPerParticipant} format.
               </p>
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {data.teams.map((team) => {
+                  const selected = newSeasonParticipantIds.includes(team.id);
+                  return (
+                    <label
+                      key={team.id}
+                      className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-bold ${
+                        selected
+                          ? "border-blue-400/60 bg-blue-950/40 text-blue-100"
+                          : "border-slate-700 bg-slate-950/40 text-slate-300"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        disabled={!selected && newSeasonParticipantIds.length >= data.rules.participantCount}
+                        onChange={() => setNewSeasonParticipantIds((current) =>
+                          current.includes(team.id)
+                            ? current.filter((teamId) => teamId !== team.id)
+                            : [...current, team.id]
+                        )}
+                      />
+                      {team.name}
+                    </label>
+                  );
+                })}
+              </div>
+
+              {data.teams.length < data.rules.participantCount ? (
+                <p className="mt-3 text-xs font-semibold text-amber-300">
+                  {data.rules.participantCount} participants are required, but only {data.teams.length} active Group {data.teams.length === 1 ? "member is" : "members are"} available.
+                </p>
+              ) : null}
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <input
@@ -1106,7 +1172,8 @@ export default function NbaSkinsAdminPage() {
                 <button
                   type="button"
                   disabled={
-                    busy
+                    busy ||
+                    newSeasonParticipantIds.length !== data.rules.participantCount
                   }
                   onClick={
                     createSeason

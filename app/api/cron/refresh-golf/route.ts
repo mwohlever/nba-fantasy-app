@@ -63,6 +63,8 @@ export async function GET(
     );
   }
 
+  const internalSecret = process.env.GOLF_CRON_SECRET!.trim();
+
   const today = new Date();
 
   const earliestDate =
@@ -204,6 +206,8 @@ export async function GET(
           headers: {
             "Content-Type":
               "application/json",
+            authorization:
+              `Bearer ${internalSecret}`,
           },
           body: JSON.stringify({
             slateId: slate.id,

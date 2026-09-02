@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { requireSuperAdminApi } from "@/lib/requireAdminApi";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type PushSubscriptionRow = {
@@ -17,7 +17,7 @@ type UserRow = {
 };
 
 export async function GET() {
-  const authError = await requireAdminApi();
+  const authError = await requireSuperAdminApi();
   if (authError) return authError;
 
   try {
@@ -153,7 +153,7 @@ export async function GET() {
 export async function DELETE(
   request: NextRequest,
 ) {
-  const authError = await requireAdminApi();
+  const authError = await requireSuperAdminApi();
   if (authError) return authError;
 
   try {

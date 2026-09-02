@@ -6,6 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 type SeasonOption = {
   season: number;
   status: "open" | "locked" | "final";
+  participantCount?: number;
+  nbaTeamsPerParticipant?: number;
+  totalPicks?: number;
 };
 
 type Pick = {
@@ -192,7 +195,7 @@ export default function NbaSkinsStandingsPage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Season results and all seven picks for each player.
+                Season results and all {selectedSeasonData?.nbaTeamsPerParticipant ?? 7} picks for each participant.
               </p>
             </div>
 
@@ -298,7 +301,7 @@ export default function NbaSkinsStandingsPage() {
                     </div>
 
                     <div className="mt-4 border-t border-slate-800 pt-3 text-xs text-slate-400">
-                      {standing.pickCount}/7 picks
+                      {standing.pickCount}/{selectedSeasonData?.nbaTeamsPerParticipant ?? 7} picks
                     </div>
                   </div>
                 ),

@@ -4,7 +4,7 @@ import {
 } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import {
   fetchPgaTourField,
   type PgaTourFieldPlayer,
@@ -82,38 +82,9 @@ function countryFlagUrl(
   return null;
 }
 
-async function authorize(
-  request: NextRequest,
-) {
-  const configuredSecret =
-    process.env.GOLF_CRON_SECRET?.trim();
-
-  const supplied =
-    request.headers
-      .get("authorization")
-      ?.replace(/^Bearer\s+/i, "")
-      .trim();
-
-  if (
-    configuredSecret &&
-    supplied === configuredSecret
-  ) {
-    return null;
-  }
-
-  return requireAdminApi();
-}
-
 export async function POST(
   request: NextRequest,
 ) {
-  const authError =
-    await authorize(request);
-
-  if (authError) {
-    return authError;
-  }
-
   try {
     let body: RequestBody;
 
@@ -142,6 +113,17 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      {
+        allowInternal: true,
+        requireCommissioner: true,
+      },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const {
       data: slateData,

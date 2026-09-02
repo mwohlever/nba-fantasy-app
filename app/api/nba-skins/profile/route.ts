@@ -28,6 +28,8 @@ type SeasonRow = {
     | "open"
     | "locked"
     | "final";
+  participant_count: number;
+  nba_teams_per_participant: number;
 };
 
 
@@ -214,7 +216,7 @@ export async function GET(
             "nba_skins_seasons",
           )
           .select(
-            "id, season, status, league_id",
+            "id, season, status, league_id, participant_count, nba_teams_per_participant",
           )
           .eq(
             "league_id",
@@ -378,7 +380,8 @@ export async function GET(
 
           if (
             seasonPicks.length !==
-            28
+            Number(season.participant_count) *
+              Number(season.nba_teams_per_participant)
           ) {
             return false;
           }

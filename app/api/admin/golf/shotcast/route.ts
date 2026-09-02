@@ -11,9 +11,7 @@ import {
   resolvePgaTourTournament,
 } from "@/lib/providers/pgaTourField";
 
-import {
-  requireAdminApi,
-} from "@/lib/requireAdminApi";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 
 import {
   supabaseAdmin,
@@ -35,13 +33,6 @@ function parseSlateId(value: unknown) {
 export async function GET(
   request: NextRequest,
 ) {
-  const authError =
-    await requireAdminApi();
-
-  if (authError) {
-    return authError;
-  }
-
   const slateId =
     parseSlateId(
       request.nextUrl.searchParams.get(
@@ -58,6 +49,14 @@ export async function GET(
       { status: 400 },
     );
   }
+
+  const authorization = await authorizeSlateResource(
+    request,
+    slateId,
+    { requireCommissioner: true },
+  );
+
+  if (!authorization.ok) return authorization.response;
 
   const {
     data,
@@ -108,13 +107,6 @@ export async function GET(
 export async function POST(
   request: NextRequest,
 ) {
-  const authError =
-    await requireAdminApi();
-
-  if (authError) {
-    return authError;
-  }
-
   try {
     const body = await request.json();
 
@@ -140,6 +132,14 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { requireCommissioner: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     if (
       suppliedTournamentId &&

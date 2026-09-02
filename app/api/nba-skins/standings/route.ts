@@ -1,828 +1,191 @@
-import {
-  NextRequest,
-  NextResponse,
-} from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-import {
-  createClient,
-} from "@supabase/supabase-js";
+import { getCurrentUser } from "@/lib/auth";
+import { getNbaSkinsAccess } from "@/lib/nbaSkins/access";
+import { selectNbaSkinsSeasonTeamIds } from "@/lib/nbaSkins/policy";
+import { resolveNbaSkinsRules } from "@/lib/rules/leagueRules";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-
-export const dynamic =
-  "force-dynamic";
-
+export const dynamic = "force-dynamic";
 
 type SeasonRow = {
-  id: number;
-  season: number;
-  status:
-    | "open"
-    | "locked"
-    | "final";
+  id: number; season: number; status: "open" | "locked" | "final";
+  participant_count: number; nba_teams_per_participant: number;
 };
-
-
-type LeagueTeamRow = {
-  id: number;
-  name: string;
-};
-
-
 type PickRow = {
-  id: number;
-  season_id: number;
-  team_id: number;
-  nba_team_abbreviation: string;
-  pick_type:
-    | "wins"
-    | "losses";
-  draft_round:
-    number | null;
-  final_points:
-    number | null;
+  id: number; season_id: number; team_id: number; nba_team_abbreviation: string;
+  pick_type: "wins" | "losses"; draft_round: number | null; final_points: number | null;
 };
-
-
-type NbaTeamRow = {
-  abbreviation: string;
-  display_name: string;
-};
-
-
 type TeamRecordRow = {
-  nba_team_abbreviation: string;
-  wins: number;
-  losses: number;
-  games_played: number;
-
-  projected_wins:
-    number | null;
-
-  projected_losses:
-    number | null;
-
-  projection_source:
-    string | null;
+  nba_team_abbreviation: string; wins: number; losses: number; games_played: number;
+  projected_wins: number | null; projected_losses: number | null; projection_source: string | null;
 };
 
-
-const OWNER_NAMES =
-  [
-    "Mark",
-    "Josh",
-    "Jon",
-    "Andy",
-  ] as const;
-
-
-function getSupabaseAdmin() {
-  const url =
-    process.env
-      .NEXT_PUBLIC_SUPABASE_URL ??
-    process.env
-      .SUPABASE_URL;
-
-  const serviceKey =
-    process.env
-      .SUPABASE_SERVICE_ROLE_KEY ??
-    process.env
-      .SUPABASE_SERVICE_KEY;
-
-  if (
-    !url ||
-    !serviceKey
-  ) {
-    throw new Error(
-      "Missing Supabase URL/service-role key for NBA Skins standings.",
-    );
-  }
-
-  return createClient(
-    url,
-    serviceKey,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    },
-  );
-}
-
-
-export async function GET(
-  request: NextRequest,
-) {
+export async function GET(request: NextRequest) {
   try {
-    const supabase =
-      getSupabaseAdmin();
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
 
-    const {
-      data:
-        seasonRowsRaw,
-      error:
-        seasonsError,
-    } =
-      await supabase
-        .from(
-          "nba_skins_seasons",
-        )
-        .select(
-          "id, season, status",
-        )
-        .order(
-          "season",
-          {
-            ascending: false,
-          },
-        );
-
-    if (seasonsError) {
-      throw new Error(
-        seasonsError.message,
+    const access = await getNbaSkinsAccess(user);
+    if (!access) {
+      return NextResponse.json(
+        { error: "NBA Skins is not enabled for the active Group." },
+        { status: 404 },
       );
     }
 
-    const seasonRows =
-      (
-        seasonRowsRaw ??
-        []
-      ) as unknown as
-        SeasonRow[];
-
-    if (
-      seasonRows.length ===
-      0
-    ) {
+    const { data: seasonRowsRaw, error: seasonsError } = await supabaseAdmin
+      .from("nba_skins_seasons")
+      .select("id, season, status, participant_count, nba_teams_per_participant")
+      .eq("league_id", access.league.id)
+      .order("season", { ascending: false });
+    if (seasonsError) throw new Error(seasonsError.message);
+    const seasonRows = (seasonRowsRaw ?? []) as SeasonRow[];
+    const leagueRules = resolveNbaSkinsRules(access.league.settings);
+    const rules = {
+      ...leagueRules,
+      totalPicks:
+        leagueRules.participantCount * leagueRules.nbaTeamsPerParticipant,
+    };
+    if (seasonRows.length === 0) {
       return NextResponse.json({
         availableSeasons: [],
         selectedSeason: null,
         standings: [],
+        rules,
       });
     }
 
-    const rawRequestedSeason =
-      request.nextUrl
-        .searchParams
-        .get("season");
-
-    const requestedSeason =
-      rawRequestedSeason ===
-      null
-        ? null
-        : Number(
-            rawRequestedSeason,
-          );
-
-    const homeMode =
-      request.nextUrl
-        .searchParams
-        .get("home") ===
-      "1";
-
-
+    const rawRequestedSeason = request.nextUrl.searchParams.get("season");
+    const requestedSeason = rawRequestedSeason === null ? null : Number(rawRequestedSeason);
+    const homeMode = request.nextUrl.searchParams.get("home") === "1";
     let selectedSeason =
-      (
-        requestedSeason !==
-          null &&
-        Number.isFinite(
-          requestedSeason,
-        )
-          ? seasonRows.find(
-              (row) =>
-                row.season ===
-                requestedSeason,
-            )
-          : null
-      ) ??
-      seasonRows[0];
+      (requestedSeason !== null && Number.isFinite(requestedSeason)
+        ? seasonRows.find((row) => row.season === requestedSeason)
+        : null) ?? seasonRows[0];
 
-
-    /*
-     * NBA Skins Home should continue showing the latest real
-     * completed/active league season until the new annual draft
-     * has actually been saved.
-     *
-     * This fallback is HOME-ONLY. Historical Standings remains
-     * free to display the empty upcoming season explicitly.
-     */
-    if (
-      homeMode &&
-      rawRequestedSeason ===
-        null
-    ) {
-      const seasonIds =
-        seasonRows.map(
-          (row) =>
-            row.id,
-        );
-
-      const {
-        data:
-          allPickSeasonsRaw,
-        error:
-          allPickSeasonsError,
-      } =
-        await supabase
-          .from(
-            "nba_skins_picks",
-          )
-          .select(
-            "season_id",
-          )
-          .in(
-            "season_id",
-            seasonIds,
-          );
-
-
-      if (
-        allPickSeasonsError
-      ) {
-        throw new Error(
-          allPickSeasonsError
-            .message,
-        );
+    if (homeMode && rawRequestedSeason === null) {
+      const { data, error } = await supabaseAdmin
+        .from("nba_skins_picks")
+        .select("season_id")
+        .in("season_id", seasonRows.map((row) => row.id));
+      if (error) throw new Error(error.message);
+      const pickCounts = new Map<number, number>();
+      for (const row of data ?? []) {
+        const seasonId = Number(row.season_id);
+        pickCounts.set(seasonId, (pickCounts.get(seasonId) ?? 0) + 1);
       }
-
-
-      const pickCountBySeasonId =
-        new Map<
-          number,
-          number
-        >();
-
-
-      (
-        allPickSeasonsRaw ??
-        []
-      ).forEach(
-        (
-          row: {
-            season_id:
-              number;
-          },
-        ) => {
-          const seasonId =
-            Number(
-              row.season_id,
-            );
-
-          pickCountBySeasonId.set(
-            seasonId,
-            (
-              pickCountBySeasonId.get(
-                seasonId,
-              ) ??
-              0
-            ) + 1,
-          );
-        },
-      );
-
-
-      selectedSeason =
-        seasonRows.find(
-          (row) =>
-            (
-              pickCountBySeasonId.get(
-                row.id,
-              ) ??
-              0
-            ) === 28,
-        ) ??
-        seasonRows[0];
+      selectedSeason = seasonRows.find((row) =>
+        pickCounts.get(row.id) === Number(row.participant_count) * Number(row.nba_teams_per_participant)
+      ) ?? seasonRows[0];
     }
 
-
-    const [
-      leagueTeamsResult,
-      picksResult,
-      nbaTeamsResult,
-      recordsResult,
-      usersResult,
-    ] =
-      await Promise.all([
-        supabase
-          .from("teams")
-          .select(
-            "id, name",
-          )
-          .in(
-            "name",
-            [...OWNER_NAMES],
-          ),
-
-        supabase
-          .from(
-            "nba_skins_picks",
-          )
-          .select(
-            [
-              "id",
-              "season_id",
-              "team_id",
-              "nba_team_abbreviation",
-              "pick_type",
-              "draft_round",
-              "final_points",
-            ].join(","),
-          )
-          .eq(
-            "season_id",
-            selectedSeason.id,
-          ),
-
-        supabase
-          .from(
-            "nba_skins_nba_teams",
-          )
-          .select(
-            "abbreviation, display_name",
-          ),
-
-        supabase
-          .from(
-            "nba_skins_team_records",
-          )
-          .select(
-            [
-              "nba_team_abbreviation",
-              "wins",
-              "losses",
-              "games_played",
-              "projected_wins",
-              "projected_losses",
-              "projection_source",
-            ].join(","),
-          )
-          .eq(
-            "season_id",
-            selectedSeason.id,
-          ),
-
-        supabase
-          .from(
-            "app_users",
-          )
-          .select(
-            "team_id, avatar_url",
-          )
-          .not(
-            "team_id",
-            "is",
-            null,
-          ),
-      ]);
-
-
-    if (
-      leagueTeamsResult.error
-    ) {
-      throw new Error(
-        leagueTeamsResult
-          .error.message,
-      );
+    const [picksResult, nbaTeamsResult, recordsResult, orderResult] = await Promise.all([
+      supabaseAdmin.from("nba_skins_picks")
+        .select("id, season_id, team_id, nba_team_abbreviation, pick_type, draft_round, final_points")
+        .eq("season_id", selectedSeason.id),
+      supabaseAdmin.from("nba_skins_nba_teams").select("abbreviation, display_name"),
+      supabaseAdmin.from("nba_skins_team_records")
+        .select("nba_team_abbreviation, wins, losses, games_played, projected_wins, projected_losses, projection_source")
+        .eq("season_id", selectedSeason.id),
+      supabaseAdmin.from("nba_skins_draft_order").select("team_id, draft_position")
+        .eq("season_id", selectedSeason.id).order("draft_position", { ascending: true }),
+    ]);
+    for (const result of [picksResult, nbaTeamsResult, recordsResult, orderResult]) {
+      if (result.error) throw new Error(result.error.message);
     }
 
-    if (
-      picksResult.error
-    ) {
-      throw new Error(
-        picksResult
-          .error.message,
-      );
-    }
-
-    if (
-      nbaTeamsResult.error
-    ) {
-      throw new Error(
-        nbaTeamsResult
-          .error.message,
-      );
-    }
-
-    if (
-      recordsResult.error
-    ) {
-      throw new Error(
-        recordsResult
-          .error.message,
-      );
-    }
-
-    if (
-      usersResult.error
-    ) {
-      throw new Error(
-        usersResult
-          .error.message,
-      );
-    }
-
-
-    const leagueTeams =
-      (
-        leagueTeamsResult.data ??
-        []
-      ) as unknown as
-        LeagueTeamRow[];
-
-    const picks =
-      (
-        picksResult.data ??
-        []
-      ) as unknown as
-        PickRow[];
-
-    const nbaTeams =
-      (
-        nbaTeamsResult.data ??
-        []
-      ) as unknown as
-        NbaTeamRow[];
-
-    const teamRecords =
-      (
-        recordsResult.data ??
-        []
-      ) as unknown as
-        TeamRecordRow[];
-
-    const teamUsers =
-      (
-        usersResult.data ??
-        []
-      ) as unknown as Array<{
-        team_id: number | null;
-        avatar_url: string | null;
-      }>;
-
-
-    const avatarByTeamId =
-      new Map<
-        number,
-        string | null
-      >();
-
-    teamUsers.forEach(
-      (user) => {
-        if (
-          user.team_id === null ||
-          user.team_id === undefined
-        ) {
-          return;
-        }
-
-        avatarByTeamId.set(
-          Number(
-            user.team_id,
-          ),
-          user.avatar_url ??
-            null,
-        );
-      },
+    const picks = (picksResult.data ?? []) as PickRow[];
+    const teamIdsForSeason = selectNbaSkinsSeasonTeamIds({
+      groupTeamIds: access.teams.map((team) => team.teamId),
+      activeTeamIds: access.participants.map((team) => team.teamId),
+      referencedTeamIds: [
+      ...picks.map((pick) => Number(pick.team_id)),
+      ...(orderResult.data ?? []).map((row) => Number(row.team_id)),
+      ],
+    });
+    const seasonTeamIdSet = new Set(teamIdsForSeason);
+    const seasonTeams = access.teams.filter((team) => seasonTeamIdSet.has(team.teamId));
+    const nbaTeamNames = new Map(
+      (nbaTeamsResult.data ?? []).map((row) => [String(row.abbreviation), String(row.display_name)]),
+    );
+    const records = new Map(
+      ((recordsResult.data ?? []) as TeamRecordRow[]).map((row) => [row.nba_team_abbreviation, row]),
     );
 
-
-    const leagueTeamByName =
-      new Map(
-        leagueTeams.map(
-          (row) => [
-            row.name,
-            row,
-          ],
-        ),
-      );
-
-    const nbaTeamNameByAbbreviation =
-      new Map(
-        nbaTeams.map(
-          (row) => [
-            row.abbreviation,
-            row.display_name,
-          ],
-        ),
-      );
-
-    const recordByAbbreviation =
-      new Map(
-        teamRecords.map(
-          (row) => [
-            row.nba_team_abbreviation,
-            row,
-          ],
-        ),
-      );
-
-
-    const standings =
-      OWNER_NAMES.map(
-        (ownerName) => {
-          const leagueTeam =
-            leagueTeamByName.get(
-              ownerName,
-            );
-
-          const ownerPicks =
-            leagueTeam
-              ? picks
-                  .filter(
-                    (pick) =>
-                      pick.team_id ===
-                      leagueTeam.id,
-                  )
-                  .sort(
-                    (a, b) => {
-                      const roundA =
-                        a.draft_round ??
-                        999;
-
-                      const roundB =
-                        b.draft_round ??
-                        999;
-
-                      return (
-                        roundA -
-                        roundB
-                      );
-                    },
-                  )
-              : [];
-
-          const hasCompleteFinalPoints =
-            ownerPicks.length === 7 &&
-            ownerPicks.every(
-              (pick) =>
-                pick.final_points !==
-                null,
-            );
-
-          const finalTotal =
-            hasCompleteFinalPoints
-              ? ownerPicks.reduce(
-                  (
-                    sum,
-                    pick,
-                  ) =>
-                    sum +
-                    Number(
-                      pick.final_points ??
-                      0,
-                    ),
-                  0,
-                )
-              : null;
-
+    const standings = seasonTeams.map((team) => {
+      const ownerPicks = picks.filter((pick) => Number(pick.team_id) === team.teamId)
+        .sort((a, b) => (a.draft_round ?? 999) - (b.draft_round ?? 999));
+      const hasCompleteFinalPoints = ownerPicks.length === Number(selectedSeason.nba_teams_per_participant) &&
+        ownerPicks.every((pick) => pick.final_points !== null);
+      return {
+        ownerName: team.teamName,
+        leagueTeamId: team.teamId,
+        avatarUrl: team.avatarUrl,
+        pickCount: ownerPicks.length,
+        finalTotal: hasCompleteFinalPoints
+          ? ownerPicks.reduce((sum, pick) => sum + Number(pick.final_points), 0)
+          : null,
+        hasCompleteFinalPoints,
+        picks: ownerPicks.map((pick) => {
+          const record = records.get(pick.nba_team_abbreviation);
           return {
-            ownerName,
-
-            leagueTeamId:
-              leagueTeam?.id ??
-              null,
-
-            avatarUrl:
-              leagueTeam
-                ? avatarByTeamId.get(
-                    Number(
-                      leagueTeam.id,
-                    ),
-                  ) ??
-                  null
-                : null,
-
-            pickCount:
-              ownerPicks.length,
-
-            finalTotal,
-
-            hasCompleteFinalPoints,
-
-            picks:
-              ownerPicks.map(
-                (pick) => {
-                  const record =
-                    recordByAbbreviation.get(
-                      pick.nba_team_abbreviation,
-                    );
-
-                  return {
-                    id:
-                      pick.id,
-
-                    nbaTeamAbbreviation:
-                      pick.nba_team_abbreviation,
-
-                    nbaTeamName:
-                      nbaTeamNameByAbbreviation.get(
-                        pick.nba_team_abbreviation,
-                      ) ??
-                      pick.nba_team_abbreviation,
-
-                    pickType:
-                      pick.pick_type,
-
-                    /*
-                     * Historical draft-order data before 2026 is
-                     * intentionally not considered authoritative.
-                     */
-                    draftRound:
-                      selectedSeason.season >=
-                      2026
-                        ? pick.draft_round
-                        : null,
-
-                    finalPoints:
-                      pick.final_points,
-
-                    record:
-                      record
-                        ? {
-                            wins:
-                              record.wins,
-
-                            losses:
-                              record.losses,
-
-                            gamesPlayed:
-                              record.games_played,
-
-                            projectedWins:
-                              record.projected_wins,
-
-                            projectedLosses:
-                              record.projected_losses,
-
-                            projectionSource:
-                              record.projection_source,
-                          }
-                        : null,
-                  };
-                },
-              ),
+            id: pick.id,
+            nbaTeamAbbreviation: pick.nba_team_abbreviation,
+            nbaTeamName: nbaTeamNames.get(pick.nba_team_abbreviation) ?? pick.nba_team_abbreviation,
+            pickType: pick.pick_type,
+            draftRound: selectedSeason.season >= 2026 ? pick.draft_round : null,
+            finalPoints: pick.final_points,
+            record: record ? {
+              wins: record.wins, losses: record.losses, gamesPlayed: record.games_played,
+              projectedWins: record.projected_wins, projectedLosses: record.projected_losses,
+              projectionSource: record.projection_source,
+            } : null,
           };
-        },
-      );
+        }),
+      };
+    });
 
-
-    const ranked =
-      standings
-        .filter(
-          (entry) =>
-            entry.finalTotal !==
-            null,
-        )
-        .sort(
-          (a, b) =>
-            Number(
-              b.finalTotal,
-            ) -
-            Number(
-              a.finalTotal,
-            ),
-        );
-
-
-    const rankByOwner =
-      new Map<
-        string,
-        number
-      >();
-
-    let previousTotal:
-      | number
-      | null = null;
-
+    const ranked = standings.filter((entry) => entry.finalTotal !== null)
+      .sort((a, b) => Number(b.finalTotal) - Number(a.finalTotal));
+    const rankByTeamId = new Map<number, number>();
+    let previousTotal: number | null = null;
     let previousRank = 0;
-
-
-    ranked.forEach(
-      (
-        entry,
-        index,
-      ) => {
-        const total =
-          Number(
-            entry.finalTotal,
-          );
-
-        const rank =
-          previousTotal !==
-            null &&
-          total ===
-            previousTotal
-            ? previousRank
-            : index + 1;
-
-        rankByOwner.set(
-          entry.ownerName,
-          rank,
-        );
-
-        previousTotal =
-          total;
-
-        previousRank =
-          rank;
-      },
-    );
-
+    ranked.forEach((entry, index) => {
+      const total = Number(entry.finalTotal);
+      const rank = previousTotal !== null && total === previousTotal ? previousRank : index + 1;
+      rankByTeamId.set(entry.leagueTeamId, rank);
+      previousTotal = total;
+      previousRank = rank;
+    });
 
     return NextResponse.json({
-      availableSeasons:
-        seasonRows.map(
-          (row) => ({
-            season:
-              row.season,
-
-            status:
-              row.status,
-          }),
-        ),
-
+      availableSeasons: seasonRows.map((row) => ({ season: row.season, status: row.status })),
       selectedSeason: {
-        id:
-          selectedSeason.id,
-
-        season:
-          selectedSeason.season,
-
-        status:
-          selectedSeason.status,
+        id: selectedSeason.id,
+        season: selectedSeason.season,
+        status: selectedSeason.status,
+        participantCount: Number(selectedSeason.participant_count),
+        nbaTeamsPerParticipant: Number(selectedSeason.nba_teams_per_participant),
+        totalPicks: Number(selectedSeason.participant_count) * Number(selectedSeason.nba_teams_per_participant),
       },
-
-      standings:
-        standings
-          .map(
-            (entry) => ({
-              ...entry,
-
-              rank:
-                rankByOwner.get(
-                  entry.ownerName,
-                ) ??
-                null,
-            }),
-          )
-          .sort(
-            (a, b) => {
-              if (
-                a.rank !== null &&
-                b.rank !== null
-              ) {
-                return (
-                  a.rank -
-                  b.rank
-                );
-              }
-
-              if (
-                a.rank !== null
-              ) {
-                return -1;
-              }
-
-              if (
-                b.rank !== null
-              ) {
-                return 1;
-              }
-
-              return (
-                OWNER_NAMES.indexOf(
-                  a.ownerName as
-                    (
-                      typeof OWNER_NAMES
-                    )[number],
-                ) -
-                OWNER_NAMES.indexOf(
-                  b.ownerName as
-                    (
-                      typeof OWNER_NAMES
-                    )[number],
-                )
-              );
-            },
-          ),
+      rules,
+      standings: standings.map((entry) => ({
+        ...entry,
+        rank: rankByTeamId.get(entry.leagueTeamId) ?? null,
+      })).sort((a, b) => {
+        if (a.rank !== null && b.rank !== null) return a.rank - b.rank;
+        if (a.rank !== null) return -1;
+        if (b.rank !== null) return 1;
+        return seasonTeams.findIndex((team) => team.teamId === a.leagueTeamId) -
+          seasonTeams.findIndex((team) => team.teamId === b.leagueTeamId);
+      }),
     });
   } catch (error) {
-    console.error(
-      "NBA Skins standings error:",
-      error,
-    );
-
+    console.error("NBA Skins standings error:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof
-          Error
-            ? error.message
-            : "Failed to load NBA Skins standings.",
-      },
-      {
-        status: 500,
-      },
+      { error: error instanceof Error ? error.message : "Failed to load NBA Skins standings." },
+      { status: 500 },
     );
   }
 }

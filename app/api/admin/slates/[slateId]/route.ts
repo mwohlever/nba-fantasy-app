@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
+import {
+  authorizeSlateResource,
+  loadActiveGroupTeamIds,
+} from "@/lib/security/resourceAuthorization";
+import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveSlateAccessForUser,
@@ -205,9 +210,6 @@ export async function GET(_: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);
@@ -219,6 +221,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         { status: 400 }
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { requireCommissioner: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const teams = body.teams ?? [];
     const isLocked = body.is_locked;
@@ -266,6 +276,25 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         ...team,
         draft_order: index + 1,
       }));
+
+    const activeTeamIds = await loadActiveGroupTeamIds(
+      authorization.target.groupId,
+    );
+    const teamValidation = validateSlateTeamConfigurations(
+      normalizedTeams.map((team) => ({
+        team_id: Number(team.team_id),
+        draft_order: Number(team.draft_order),
+        is_participating: Boolean(team.is_participating),
+      })),
+      activeTeamIds,
+    );
+
+    if (!teamValidation.ok) {
+      return NextResponse.json(
+        { error: teamValidation.error },
+        { status: 400 },
+      );
+    }
 
     const { data: existingSlate, error: existingSlateError } = await supabaseAdmin
       .from("slates")
@@ -376,9 +405,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(_: NextRequest, context: RouteContext) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);
@@ -389,6 +415,14 @@ export async function DELETE(_: NextRequest, context: RouteContext) {
         { status: 400 }
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      _,
+      slateId,
+      { requireCommissioner: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const { data: lineups, error: lineupsError } = await supabaseAdmin
       .from("lineups")

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { requireSuperAdminApi } from "@/lib/requireAdminApi";
 
 export async function GET() {
-  const authError = await requireAdminApi();
+  const authError = await requireSuperAdminApi();
   if (authError) return authError;
 
   try {
@@ -33,7 +33,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const authError = await requireAdminApi();
+  const authError = await requireSuperAdminApi();
   if (authError) return authError;
 
   try {

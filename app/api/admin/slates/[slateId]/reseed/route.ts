@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 
 type RouteContext = {
   params: Promise<{
@@ -22,10 +22,7 @@ type TeamResultRow = {
   fantasy_points: number | null;
 };
 
-export async function POST(_: Request, context: RouteContext) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
+export async function POST(request: Request, context: RouteContext) {
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);
@@ -36,6 +33,14 @@ export async function POST(_: Request, context: RouteContext) {
         { status: 400 }
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { requireCommissioner: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const { data: currentSlate, error: currentSlateError } = await supabaseAdmin
       .from("slates")

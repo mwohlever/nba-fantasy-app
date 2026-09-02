@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 
 function isoDateFromGameCode(gameCode: string | null | undefined) {
   const raw = String(gameCode ?? "").slice(0, 8);
@@ -14,16 +16,51 @@ function dateInSlateRange(gameDate: string | null, startDate: string, endDate: s
 }
 
 export async function GET(request: NextRequest) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
   const slateId = Number(request.nextUrl.searchParams.get("slateId") ?? "");
 
-  const { data: slates } = await supabaseAdmin
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Login required." }, { status: 401 });
+  }
+
+  const activeLeague =
+    user.systemRole === "super_admin"
+      ? null
+      : await getActiveLeagueForSport(user, "nba");
+
+  if (
+    user.systemRole !== "super_admin" &&
+    (!activeLeague || !activeLeague.context.canAdministerGroup)
+  ) {
+    return NextResponse.json(
+      { error: "Group admin access required." },
+      { status: 403 },
+    );
+  }
+
+  if (slateId) {
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { requireCommissioner: true },
+    );
+    if (!authorization.ok) return authorization.response;
+    if (authorization.target.sportKey !== "nba") {
+      return NextResponse.json({ error: "Resource not found." }, { status: 404 });
+    }
+  }
+
+  let slatesQuery = supabaseAdmin
     .from("slates")
     .select("id,start_date,end_date")
     .order("start_date", { ascending: false })
     .limit(20);
+
+  if (activeLeague) {
+    slatesQuery = slatesQuery.eq("league_id", activeLeague.league.id);
+  }
+
+  const { data: slates } = await slatesQuery;
 
   let savedGames: any[] = [];
 
@@ -45,14 +82,21 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
   const body = await request.json();
   const slateId = Number(body.slateId);
 
   if (!slateId) {
     return NextResponse.json({ error: "slateId required" }, { status: 400 });
+  }
+
+  const authorization = await authorizeSlateResource(
+    request,
+    slateId,
+    { requireCommissioner: true },
+  );
+  if (!authorization.ok) return authorization.response;
+  if (authorization.target.sportKey !== "nba") {
+    return NextResponse.json({ error: "Resource not found." }, { status: 404 });
   }
 
   // Pull games for the selected slate date range.

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import {
   fetchScoreboardForRange,
   fetchGameSummary,
@@ -122,6 +123,14 @@ export async function POST(request: Request) {
     if (!slateId) {
       return NextResponse.json({ error: "slateId is required." }, { status: 400 });
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      Number(slateId),
+      { allowInternal: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")

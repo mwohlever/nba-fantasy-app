@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { requireSuperAdminApi } from "@/lib/requireAdminApi";
 
 function normalizeNbaTeamCode(value: string | null | undefined) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -135,7 +135,7 @@ function rowToObject(
 }
 
 export async function POST() {
-  const authError = await requireAdminApi();
+  const authError = await requireSuperAdminApi();
   if (authError) return authError;
 
   try {

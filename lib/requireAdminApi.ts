@@ -67,3 +67,23 @@ export async function requireAdminApi() {
 
   return null;
 }
+
+export async function requireSuperAdminApi() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Login required." },
+      { status: 401 },
+    );
+  }
+
+  if (user.systemRole !== "super_admin") {
+    return NextResponse.json(
+      { error: "Super Admin access required." },
+      { status: 403 },
+    );
+  }
+
+  return null;
+}

@@ -69,6 +69,8 @@ export async function GET(
     );
   }
 
+  const internalSecret = process.env.GOLF_CRON_SECRET!.trim();
+
   const {
     data,
     error,
@@ -136,6 +138,8 @@ export async function GET(
           headers: {
             "Content-Type":
               "application/json",
+            authorization:
+              `Bearer ${internalSecret}`,
           },
 
           body:

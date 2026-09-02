@@ -290,12 +290,34 @@ export default function NbaSkinsProfilePage() {
         const currentUser =
           me.user as CurrentUser;
 
+        const activeGroupTeamId =
+          Number(
+            me.groupContext?.team?.id,
+          );
+
+        if (
+          !Number.isInteger(
+            activeGroupTeamId,
+          ) ||
+          activeGroupTeamId <= 0
+        ) {
+          throw new Error(
+            "Your active Group team could not be resolved.",
+          );
+        }
+
+        const groupScopedUser = {
+          ...currentUser,
+          teamId:
+            activeGroupTeamId,
+        };
+
         if (cancelled) {
           return;
         }
 
         setUser(
-          currentUser,
+          groupScopedUser,
         );
 
         const requestedTeamId =
@@ -313,7 +335,7 @@ export default function NbaSkinsProfilePage() {
           ) &&
           requestedTeamId > 0
             ? requestedTeamId
-            : currentUser.teamId;
+            : activeGroupTeamId;
 
         const profileResponse =
           await fetch(

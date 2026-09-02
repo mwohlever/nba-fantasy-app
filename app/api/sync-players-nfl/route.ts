@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { requireSuperAdminApi } from "@/lib/requireAdminApi";
 import {
   fetchTeams,
   fetchTeamRoster,
@@ -165,7 +165,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const authError = await requireAdminApi();
+  const authError = await requireSuperAdminApi();
   if (authError) return authError;
 
   const timings: Record<string, number> = {};

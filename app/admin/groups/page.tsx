@@ -20,6 +20,8 @@ import {
 
 import {
   getDefaultLeagueRules,
+  getDefaultNbaSkinsRules,
+  resolveNbaSkinsRules,
   type NbaScoringRules,
   type NflScoringRules,
 } from "@/lib/rules/leagueRules";
@@ -505,6 +507,7 @@ export default function GroupsAdminPage() {
     useState<
       | "nba"
       | "nfl"
+      | "nba-skins"
       | "golf"
     >(
       "nba",
@@ -533,6 +536,13 @@ export default function GroupsAdminPage() {
           "nfl",
         ).scoring as NflScoringRules,
     );
+
+  const [
+    nbaSkinsRules,
+    setNbaSkinsRules,
+  ] = useState(
+    () => getDefaultNbaSkinsRules(),
+  );
 
 
   const [
@@ -692,6 +702,21 @@ export default function GroupsAdminPage() {
           "standard",
     ) ??
     null;
+
+  const nbaSkinsLeague =
+    selectedGroup?.leagues.find(
+      (league) =>
+        league.sport_key === "nba_skins" &&
+        league.game_mode === "standard",
+    ) ?? null;
+
+  useEffect(() => {
+    // Keep this editable form synchronized when the selected Group/league changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNbaSkinsRules(
+      resolveNbaSkinsRules(nbaSkinsLeague?.settings),
+    );
+  }, [nbaSkinsLeague?.id, nbaSkinsLeague?.settings]);
 
 
   useEffect(
@@ -2036,6 +2061,38 @@ export default function GroupsAdminPage() {
     ]);
   }
 
+  async function saveNbaSkinsRules() {
+    if (!selectedGroup || !nbaSkinsLeague) return;
+
+    const totalPicks =
+      nbaSkinsRules.participantCount * nbaSkinsRules.nbaTeamsPerParticipant;
+    if (
+      nbaSkinsRules.participantCount < 2 ||
+      nbaSkinsRules.nbaTeamsPerParticipant < 1 ||
+      totalPicks > 30
+    ) {
+      setMessage("NBA Skins requires at least two participants and a draft of no more than 30 NBA teams.");
+      return;
+    }
+
+    const result = await runAction({
+      action: "update_nba_skins_rules",
+      groupId: selectedGroup.id,
+      leagueId: nbaSkinsLeague.id,
+      participantCount: nbaSkinsRules.participantCount,
+      nbaTeamsPerParticipant: nbaSkinsRules.nbaTeamsPerParticipant,
+    });
+    if (!result) return;
+
+    setMessage(
+      `NBA Skins updated to ${nbaSkinsRules.participantCount} participants × ${nbaSkinsRules.nbaTeamsPerParticipant} NBA teams. New seasons will use this format.`,
+    );
+    await Promise.all([
+      loadGroups(selectedGroup.id),
+      refreshGroupContext(),
+    ]);
+  }
+
 
   async function saveScoringRules(
     sport:
@@ -2899,6 +2956,16 @@ export default function GroupsAdminPage() {
                           },
                           {
                             key:
+                              "nba-skins" as const,
+                            label:
+                              "🎯 NBA Skins",
+                            available:
+                              Boolean(
+                                nbaSkinsLeague,
+                              ),
+                          },
+                          {
+                            key:
                               "golf" as const,
                             label:
                               "⛳ Golf",
@@ -3498,6 +3565,82 @@ export default function GroupsAdminPage() {
                       </div>
                     </div>
                     </>
+                  ) : null}
+
+
+                  {rulesSport === "nba-skins" && nbaSkinsLeague?.is_enabled ? (
+                    <div className="px-4 py-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold">
+                            Annual Draft Format
+                          </div>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            New seasons freeze these values. Existing seasons keep their saved format.
+                          </p>
+                        </div>
+                        <div className="text-xs font-semibold text-slate-500">
+                          {nbaSkinsRules.participantCount * nbaSkinsRules.nbaTeamsPerParticipant} total picks
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid max-w-xl grid-cols-2 gap-3">
+                        <label className="block">
+                          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                            Participants
+                          </span>
+                          <input
+                            type="number"
+                            min={2}
+                            max={30}
+                            step={1}
+                            value={nbaSkinsRules.participantCount}
+                            onChange={(event) => setNbaSkinsRules((current) => ({
+                              ...current,
+                              participantCount: Number(event.target.value || 0),
+                            }))}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                          />
+                        </label>
+
+                        <label className="block">
+                          <span className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                            NBA Teams Per Participant
+                          </span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={30}
+                            step={1}
+                            value={nbaSkinsRules.nbaTeamsPerParticipant}
+                            onChange={(event) => setNbaSkinsRules((current) => ({
+                              ...current,
+                              nbaTeamsPerParticipant: Number(event.target.value || 0),
+                            }))}
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold outline-none focus:border-sky-500"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          disabled={
+                            saving ||
+                            nbaSkinsRules.participantCount < 2 ||
+                            nbaSkinsRules.nbaTeamsPerParticipant < 1 ||
+                            nbaSkinsRules.participantCount * nbaSkinsRules.nbaTeamsPerParticipant > 30
+                          }
+                          onClick={() => void saveNbaSkinsRules()}
+                          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+                        >
+                          Save NBA Skins rules
+                        </button>
+                        <span className="text-xs text-slate-400">
+                          {nbaSkinsRules.participantCount} participants × {nbaSkinsRules.nbaTeamsPerParticipant} NBA teams = {nbaSkinsRules.participantCount * nbaSkinsRules.nbaTeamsPerParticipant} total picks
+                        </span>
+                      </div>
+                    </div>
                   ) : null}
 
 

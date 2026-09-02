@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { calculateGolfCutLine } from "@/lib/golf/cutLine";
 import {
   calculateGolfPenaltyStrokes,
@@ -679,54 +679,20 @@ export async function POST(request: Request) {
     const slateId =
       parseSlateId(body.slateId);
 
-    const isPayloadIngestion =
-      body.scoreboardPayload !==
-      undefined;
-
-    if (isPayloadIngestion) {
-      const expectedSecret =
-        process.env
-          .GOLF_CRON_SECRET
-          ?.trim();
-
-      const authorization =
-        request.headers.get(
-          "authorization",
-        );
-
-      const hasCronAuthorization =
-        Boolean(
-          expectedSecret &&
-          authorization ===
-            `Bearer ${expectedSecret}`,
-        );
-
-      const currentUser =
-        hasCronAuthorization
-          ? null
-          : await getCurrentUser();
-
-      if (
-        !hasCronAuthorization &&
-        !currentUser
-      ) {
-        return NextResponse.json(
-          {
-            error: "Login required.",
-          },
-          {
-            status: 401,
-          },
-        );
-      }
-    }
-
     if (!slateId) {
       return NextResponse.json(
         { error: "A valid slateId is required." },
         { status: 400 },
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { allowInternal: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const { data: slateData, error: slateError } = await supabaseAdmin
       .from("slates")

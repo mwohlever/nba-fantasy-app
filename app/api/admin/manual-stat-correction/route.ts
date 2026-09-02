@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 
 function calculateFantasyPoints({
   points,
@@ -30,9 +30,6 @@ function calculateFantasyPoints({
 }
 
 export async function POST(request: NextRequest) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
   try {
     const body = await request.json();
 
@@ -52,6 +49,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { requireCommissioner: true },
+    );
+
+    if (!authorization.ok) return authorization.response;
 
     const fantasyPoints = calculateFantasyPoints({
       points,

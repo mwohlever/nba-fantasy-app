@@ -15,6 +15,7 @@ import {
 import {
   supabaseAdmin,
 } from "@/lib/supabaseAdmin";
+import { hasGroupCompetitiveHistory } from "@/lib/security/resourcePolicy";
 
 
 export const dynamic =
@@ -27,6 +28,7 @@ const INVITE_LIFETIME_DAYS =
 
 import {
   getDefaultLeagueRules,
+  resolveNbaSkinsRules,
   type SlateSport,
 } from "@/lib/rules/leagueRules";
 
@@ -114,6 +116,10 @@ type ActionBody = {
   leagueId?: string;
 
   sportKey?: string;
+
+  participantCount?: number;
+
+  nbaTeamsPerParticipant?: number;
 
   roster?: {
     guards?: number;
@@ -2565,59 +2571,52 @@ export async function POST(
 
 
       /*
-       * Permanent Group deletion is intentionally limited to
-       * Groups that have never accumulated slate history.
+       * Fail closed before invoking the transactional delete.
+       * Every competitive table is owned through a League.
        */
       if (
         leagueIds.length >
         0
       ) {
-        const {
-          count:
-            slateCount,
-          error:
-            slateCountError,
-        } =
-          await supabaseAdmin
-            .from(
-              "slates",
-            )
-            .select(
-              "id",
-              {
-                count:
-                  "exact",
+        const historyResults = await Promise.all([
+          supabaseAdmin
+            .from("slates")
+            .select("id", { count: "exact", head: true })
+            .in("league_id", leagueIds),
+          supabaseAdmin
+            .from("ncaa_pickem_weeks")
+            .select("id", { count: "exact", head: true })
+            .in("league_id", leagueIds),
+          supabaseAdmin
+            .from("nba_skins_seasons")
+            .select("id", { count: "exact", head: true })
+            .in("league_id", leagueIds),
+          supabaseAdmin
+            .from("league_awards")
+            .select("id", { count: "exact", head: true })
+            .in("league_id", leagueIds),
+        ]);
 
-                head:
-                  true,
-              },
-            )
-            .in(
-              "league_id",
-              leagueIds,
-            );
+        const historyError = historyResults.find(
+          (result) => result.error,
+        )?.error;
 
-
-        if (
-          slateCountError
-        ) {
+        if (historyError) {
           throw new Error(
-            `Unable to inspect Group history: ${slateCountError.message}`,
+            `Unable to inspect Group history: ${historyError.message}`,
           );
         }
 
-
-        if (
-          Number(
-            slateCount ??
-              0,
-          ) >
-          0
-        ) {
+        if (hasGroupCompetitiveHistory({
+          fantasySlates: Number(historyResults[0].count ?? 0),
+          ncaaWeeks: Number(historyResults[1].count ?? 0),
+          nbaSkinsSeasons: Number(historyResults[2].count ?? 0),
+          leagueAwards: Number(historyResults[3].count ?? 0),
+        })) {
           return NextResponse.json(
             {
               error:
-                "This Group has slate history and cannot be permanently deleted. Leave it inactive instead.",
+                "This Group has competitive history and cannot be permanently deleted. Leave it inactive instead.",
             },
             {
               status:
@@ -2628,62 +2627,17 @@ export async function POST(
       }
 
 
-      /*
-       * These Groups have no competitive history, so delete their
-       * platform scaffolding in dependency-safe order.
-       *
-       * The app_users records themselves are deliberately NOT
-       * deleted because accounts can belong to other Groups.
-       */
-      const cleanupTables = [
-        "group_invites",
-        "group_memberships",
-        "teams",
-        "leagues",
-      ];
-
-
-      for (
-        const table of
-        cleanupTables
-      ) {
-        const {
-          error:
-            cleanupError,
-        } =
-          await supabaseAdmin
-            .from(
-              table,
-            )
-            .delete()
-            .eq(
-              "group_id",
-              groupId,
-            );
-
-
-        if (
-          cleanupError
-        ) {
-          throw new Error(
-            `Unable to delete ${table}: ${cleanupError.message}`,
-          );
-        }
-      }
-
-
       const {
         error:
           deleteGroupError,
       } =
         await supabaseAdmin
-          .from(
-            "groups",
-          )
-          .delete()
-          .eq(
-            "id",
-            groupId,
+          .rpc(
+            "delete_empty_group",
+            {
+              target_group_id:
+                groupId,
+            },
           );
 
 
@@ -2710,6 +2664,88 @@ export async function POST(
       });
     }
 
+
+    // ==========================================================
+    // UPDATE NBA SKINS DRAFT RULES
+    // ==========================================================
+
+    if (action === "update_nba_skins_rules") {
+      const groupId = String(body.groupId ?? "").trim();
+      const leagueId = String(body.leagueId ?? "").trim();
+
+      if (!(await requireGroupAdmin(user, groupId))) {
+        return NextResponse.json(
+          { error: "Group administrator access required." },
+          { status: 403 },
+        );
+      }
+
+      const participantCount = Number(body.participantCount);
+      const nbaTeamsPerParticipant = Number(body.nbaTeamsPerParticipant);
+      if (
+        !Number.isInteger(participantCount) || participantCount < 2 ||
+        !Number.isInteger(nbaTeamsPerParticipant) || nbaTeamsPerParticipant < 1
+      ) {
+        return NextResponse.json(
+          { error: "NBA Skins requires at least two participants and one NBA team per participant." },
+          { status: 400 },
+        );
+      }
+
+      const [leagueResult, nbaTeamsResult] = await Promise.all([
+        supabaseAdmin.from("leagues")
+          .select("id, group_id, sport_key, game_mode, settings_version, settings")
+          .eq("id", leagueId).eq("group_id", groupId).maybeSingle(),
+        supabaseAdmin.from("nba_skins_nba_teams")
+          .select("abbreviation", { count: "exact" }).eq("is_active", true),
+      ]);
+      if (leagueResult.error) throw new Error(`Unable to load NBA Skins rules: ${leagueResult.error.message}`);
+      if (nbaTeamsResult.error) throw new Error(`Unable to load NBA Skins teams: ${nbaTeamsResult.error.message}`);
+      const league = leagueResult.data;
+      if (!league || league.sport_key !== "nba_skins" || league.game_mode !== "standard") {
+        return NextResponse.json({ error: "NBA Skins League not found in this Group." }, { status: 404 });
+      }
+
+      const draftableTeamCount = nbaTeamsResult.count ?? 0;
+      const totalPicks = participantCount * nbaTeamsPerParticipant;
+      if (totalPicks > draftableTeamCount) {
+        return NextResponse.json(
+          { error: `NBA Skins draft size cannot exceed the ${draftableTeamCount} active NBA teams.` },
+          { status: 400 },
+        );
+      }
+
+      const currentSettings = league.settings && typeof league.settings === "object" &&
+        !Array.isArray(league.settings)
+        ? league.settings as Record<string, unknown>
+        : {};
+      const currentRules = resolveNbaSkinsRules(currentSettings);
+      const nextSettingsVersion = Number(league.settings_version ?? 1) + 1;
+      const nextSettings = {
+        ...currentSettings,
+        draft: {
+          ...(currentSettings.draft && typeof currentSettings.draft === "object" &&
+            !Array.isArray(currentSettings.draft)
+            ? currentSettings.draft as Record<string, unknown>
+            : {}),
+          participantCount,
+          nbaTeamsPerParticipant,
+        },
+      };
+
+      const { error: updateError } = await supabaseAdmin.from("leagues").update({
+        settings: nextSettings,
+        settings_version: nextSettingsVersion,
+      }).eq("id", leagueId).eq("group_id", groupId);
+      if (updateError) throw new Error(`Unable to save NBA Skins rules: ${updateError.message}`);
+
+      return NextResponse.json({
+        success: true,
+        previousRules: currentRules,
+        rules: { participantCount, nbaTeamsPerParticipant, totalPicks },
+        settingsVersion: nextSettingsVersion,
+      });
+    }
 
     // ==========================================================
     // UPDATE NBA ROSTER RULES

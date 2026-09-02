@@ -56,6 +56,9 @@ type DraftResponse = {
       | "locked"
       | "final";
     editable: boolean;
+    participantCount: number;
+    nbaTeamsPerParticipant: number;
+    totalPicks: number;
   };
 
   draftOrder: Array<{
@@ -262,10 +265,10 @@ export default function NbaSkinsDraftPage() {
     }
 
     if (
-      completedCount !== 28
+      completedCount !== data.season.totalPicks
     ) {
       setError(
-        `Complete all 28 picks before saving. ${completedCount}/28 are filled.`,
+        `Complete all ${data.season.totalPicks} picks before saving. ${completedCount}/${data.season.totalPicks} are filled.`,
       );
 
       return;
@@ -417,7 +420,7 @@ export default function NbaSkinsDraftPage() {
                 </div>
 
                 <p className="mt-2 text-sm leading-6 text-amber-100/70">
-                  Set all four league members in the NBA Skins admin page
+                  Set all {data.season.participantCount} participants in the NBA Skins admin page
                   before filling out the draft.
                 </p>
               </section>
@@ -446,7 +449,7 @@ export default function NbaSkinsDraftPage() {
                     </div>
 
                     <div className="text-sm font-bold tabular-nums text-slate-400">
-                      {completedCount}/28 filled
+                      {completedCount}/{data.season.totalPicks} filled
                     </div>
                   </div>
                 </section>
@@ -660,7 +663,7 @@ export default function NbaSkinsDraftPage() {
 
                       <div className="mt-1 text-sm text-slate-500">
                         {data.season.editable
-                          ? "Saving replaces the current open-season draft with the 28 selections above."
+                          ? `Saving replaces the current open-season draft with the ${data.season.totalPicks} selections above.`
                           : data.season.status ===
                               "open"
                             ? "Only an admin can edit and save the draft sheet."
@@ -677,13 +680,13 @@ export default function NbaSkinsDraftPage() {
                         disabled={
                           saving ||
                           completedCount !==
-                            28
+                            data.season.totalPicks
                         }
                         className="rounded-xl border border-blue-400/40 bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {saving
                           ? "Saving…"
-                          : `Save Draft (${completedCount}/28)`}
+                          : `Save Draft (${completedCount}/${data.season.totalPicks})`}
                       </button>
                     ) : null}
                   </div>
