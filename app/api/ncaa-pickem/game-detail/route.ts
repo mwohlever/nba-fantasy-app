@@ -184,6 +184,7 @@ type SeasonPlayerStat = {
     displayName: string;
     shortName?: string;
     position?: string;
+    headshot?: string;
   };
   categories: Array<{
     name: string;
@@ -259,6 +260,7 @@ async function loadSeasonPlayerStats(
       displayName: string;
       shortName?: string;
       position?: string;
+      headshot?: string;
     };
 
     const rosterPlayers: RosterPlayer[] = (
@@ -270,6 +272,7 @@ async function loadSeasonPlayerStats(
           displayName?: string;
           shortName?: string;
           position?: { abbreviation?: string };
+          headshot?: { href?: string };
         }>;
       }): RosterPlayer[] =>
         Array.isArray(group?.items)
@@ -282,6 +285,7 @@ async function loadSeasonPlayerStats(
                   displayName: string;
                   shortName?: string;
                   position?: { abbreviation?: string };
+                  headshot?: { href?: string };
                 } =>
                   typeof player?.id === "string" &&
                   typeof player?.displayName === "string",
@@ -291,6 +295,7 @@ async function loadSeasonPlayerStats(
                 displayName: player.displayName,
                 shortName: player.shortName,
                 position: player.position?.abbreviation,
+                headshot: player.headshot?.href,
               }))
           : [],
     );
@@ -516,6 +521,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       eventId: id,
+      seasonYear,
       header: summary?.header ?? null,
       matchupPreview,
       seasonPlayerStats,

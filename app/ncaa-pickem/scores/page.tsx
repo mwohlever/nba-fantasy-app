@@ -83,9 +83,84 @@ export default function NcaaScoresPage() {
   const [week, setWeek] = useState(1);
   const [filter, setFilter] = useState("top25");
   const [games, setGames] = useState<Game[]>([]);
+  const [favoriteTeamIds, setFavoriteTeamIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFavorites() {
+      try {
+        const response = await fetch("/api/ncaa-pickem/favorites", {
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as {
+          teamIds?: string[];
+        };
+
+        if (!response.ok) return;
+
+        if (!cancelled) {
+          setFavoriteTeamIds(new Set(data.teamIds ?? []));
+        }
+      } catch {
+        // Favorites are optional UI state; scores should still load normally.
+      }
+    }
+
+    void loadFavorites();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function toggleFavorite(teamId: string) {
+    const wasFavorite = favoriteTeamIds.has(teamId);
+
+    setFavoriteTeamIds((current) => {
+      const next = new Set(current);
+
+      if (wasFavorite) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+
+      return next;
+    });
+
+    try {
+      const response = await fetch("/api/ncaa-pickem/favorites", {
+        method: wasFavorite ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ teamId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to update favorite team.");
+      }
+    } catch {
+      setFavoriteTeamIds((current) => {
+        const next = new Set(current);
+
+        if (wasFavorite) {
+          next.add(teamId);
+        } else {
+          next.delete(teamId);
+        }
+
+        return next;
+      });
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -146,6 +221,29 @@ export default function NcaaScoresPage() {
         game.homeTeam.conferenceId === filter,
     );
   }, [filter, games]);
+
+  const favoriteGames = useMemo(() => {
+    const statusOrder = { in: 0, pre: 1, post: 2 } as Record<string, number>;
+
+    return filteredGames
+      .filter(
+        (game) =>
+          favoriteTeamIds.has(game.awayTeam.id) ||
+          favoriteTeamIds.has(game.homeTeam.id),
+      )
+      .sort((a, b) => {
+        const statusDifference =
+          (statusOrder[a.status] ?? 1) -
+          (statusOrder[b.status] ?? 1);
+
+        if (statusDifference !== 0) return statusDifference;
+
+        return (
+          new Date(a.kickoffAt).getTime() -
+          new Date(b.kickoffAt).getTime()
+        );
+      });
+  }, [filteredGames, favoriteTeamIds]);
 
   const groupedGames = useMemo(() => {
     const statusOrder = { in: 0, pre: 1, post: 2 } as Record<string, number>;
@@ -277,6 +375,26 @@ export default function NcaaScoresPage() {
               {filteredGames.length === 1 ? "" : "s"}
             </div>
 
+            {favoriteGames.length > 0 ? (
+              <div className="space-y-2">
+                <div className="px-1 text-xs font-black uppercase tracking-wider text-amber-600">
+                  ★ Favorites
+                </div>
+
+                <div className="grid gap-2 lg:grid-cols-2">
+                  {favoriteGames.map((game) => (
+                    <NcaaScoreCard
+                      key={`favorite-${game.espnEventId}`}
+                      game={game}
+                      onClick={() => setSelectedGame(game)}
+                      favoriteTeamIds={favoriteTeamIds}
+                      onToggleFavorite={toggleFavorite}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {groupedGames.map((group) => (
               <div key={group.key} className="space-y-2">
                 <div className="px-1 text-xs font-black uppercase tracking-wider text-slate-500">
@@ -289,6 +407,8 @@ export default function NcaaScoresPage() {
                       key={game.espnEventId}
                       game={game}
                       onClick={() => setSelectedGame(game)}
+                      favoriteTeamIds={favoriteTeamIds}
+                      onToggleFavorite={toggleFavorite}
                     />
                   ))}
                 </div>

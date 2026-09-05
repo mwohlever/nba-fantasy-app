@@ -137,6 +137,7 @@ type SeasonPlayerStat = {
     displayName: string;
     shortName?: string;
     position?: string;
+    headshot?: string;
   };
   categories: Array<{
     name: string;
@@ -151,10 +152,50 @@ type SeasonPlayerTeam = {
   players: SeasonPlayerStat[];
 };
 
+type SelectedPlayer = {
+  id: string;
+  displayName: string;
+  shortName?: string;
+  headshot?: string;
+  teamId: string;
+  teamName: string;
+};
+
+type PlayerDetailResponse = {
+  success?: boolean;
+  error?: string;
+  season?: number;
+  seasonCategories?: Array<{
+    name: string;
+    displayName: string;
+    labels: string[];
+    stats: string[];
+  }>;
+  gameLog?: {
+    labels?: string[];
+    displayNames?: string[];
+    events?: Array<{
+      eventId: string;
+      gameDate?: string;
+      atVs?: string;
+      gameResult?: string;
+      score?: string;
+      opponent?: {
+        id?: string;
+        abbreviation?: string;
+        displayName?: string;
+        shortDisplayName?: string;
+      };
+      stats: string[];
+    }>;
+  };
+};
+
 type GameDetailResponse = {
   success?: boolean;
   error?: string;
   eventId?: string;
+  seasonYear?: number;
   header?: {
     competitions?: Array<{
       date?: string;
@@ -259,6 +300,9 @@ function seasonStatsToPlayerBoxes(
             shortName:
               player.athlete.shortName ||
               player.athlete.displayName,
+            headshot: player.athlete.headshot
+              ? { href: player.athlete.headshot }
+              : undefined,
           },
           stats: category.stats,
         });
@@ -291,6 +335,291 @@ function seasonStatsToPlayerBoxes(
   return boxes;
 }
 
+function NcaaPlayerDetail({
+  player,
+  season,
+  onBack,
+}: {
+  player: SelectedPlayer;
+  season: number;
+  onBack: () => void;
+}) {
+  const [tab, setTab] = useState<"season" | "gamelog">("season");
+  const [detail, setDetail] = useState<PlayerDetailResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await fetch(
+          `/api/ncaa-pickem/player-detail?athleteId=${encodeURIComponent(
+            player.id,
+          )}&teamId=${encodeURIComponent(
+            player.teamId,
+          )}&season=${season}`,
+          { cache: "no-store" },
+        );
+
+        const payload = (await response.json()) as PlayerDetailResponse;
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Unable to load player details.");
+        }
+
+        if (!cancelled) {
+          setDetail(payload);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to load player details.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [player.id, player.teamId, season]);
+
+  const seasonCategories = detail?.seasonCategories || [];
+  const gameLogEvents = detail?.gameLog?.events || [];
+  const gameLogLabels = detail?.gameLog?.labels || [];
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] bg-slate-950/55 p-0 sm:p-3"
+      onClick={onBack}
+    >
+      <div
+        className="mx-auto flex h-full w-full max-w-2xl flex-col overflow-hidden bg-white shadow-2xl sm:mt-8 sm:h-auto sm:max-h-[88vh] sm:rounded-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-lg px-2 py-1 text-lg font-black text-slate-600 hover:bg-slate-100"
+            aria-label="Back to game stats"
+          >
+            ←
+          </button>
+
+          {player.headshot ? (
+            <img
+              src={player.headshot}
+              alt=""
+              className="h-10 w-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-slate-100" />
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-base font-black text-slate-950">
+              {player.displayName}
+            </div>
+            <div className="text-xs font-semibold text-slate-500">
+              {player.teamName} · {season}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-lg px-2 py-1 text-xl text-slate-500 hover:bg-slate-100"
+            aria-label="Close player details"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 border-b border-slate-200">
+          {[
+            ["season", "Season"],
+            ["gamelog", "Game Log"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() =>
+                setTab(value as "season" | "gamelog")
+              }
+              className={`px-4 py-3 text-sm font-black ${
+                tab === value
+                  ? "border-b-2 border-sky-500 text-sky-700"
+                  : "text-slate-500"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-24 sm:pb-6">
+          {loading ? (
+            <div className="py-10 text-center text-sm text-slate-500">
+              Loading player details…
+            </div>
+          ) : error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
+            </div>
+          ) : tab === "season" ? (
+            seasonCategories.length ? (
+              <div className="space-y-5">
+                {seasonCategories.map((category, categoryIndex) => (
+                  <section
+                    key={category.name || categoryIndex}
+                  >
+                    <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
+                      {category.displayName}
+                    </div>
+
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="min-w-full text-xs">
+                        <thead className="bg-slate-50 text-slate-500">
+                          <tr>
+                            {category.labels.map((label, index) => (
+                              <th
+                                key={`${label}-${index}`}
+                                className="whitespace-nowrap px-3 py-2 text-right font-black first:text-left"
+                              >
+                                {label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-t border-slate-100">
+                            {category.stats.map((stat, index) => (
+                              <td
+                                key={index}
+                                className="whitespace-nowrap px-3 py-2 text-right font-semibold text-slate-800 first:text-left"
+                              >
+                                {stat}
+                              </td>
+                            ))}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center">
+                <div className="text-sm font-bold text-slate-800">
+                  No season stats available
+                </div>
+                <div className="mt-1 text-xs text-slate-500">
+                  ESPN has not published current-season stats for this player yet.
+                </div>
+              </div>
+            )
+          ) : gameLogEvents.length ? (
+            <div className="space-y-3">
+              {gameLogEvents.map((event) => {
+                const opponent =
+                  event.opponent?.shortDisplayName ||
+                  event.opponent?.displayName ||
+                  event.opponent?.abbreviation ||
+                  "Opponent";
+
+                return (
+                  <section
+                    key={event.eventId}
+                    className="overflow-hidden rounded-xl border border-slate-200"
+                  >
+                    <div className="flex items-center justify-between gap-3 bg-slate-50 px-3 py-2">
+                      <div>
+                        <div className="text-sm font-black text-slate-900">
+                          {event.atVs ? `${event.atVs} ` : ""}
+                          {opponent}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {event.gameDate
+                            ? new Date(event.gameDate).toLocaleDateString([], {
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : ""}
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="text-sm font-black text-slate-900">
+                          {event.gameResult || ""}
+                        </div>
+                        <div className="text-xs font-semibold text-slate-500">
+                          {event.score || ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    {event.stats.length ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-xs">
+                          <thead className="text-slate-500">
+                            <tr>
+                              {gameLogLabels.map((label, index) => (
+                                <th
+                                  key={`${label}-${index}`}
+                                  className="whitespace-nowrap px-2 py-2 text-right font-black"
+                                >
+                                  {label}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-t border-slate-100">
+                              {event.stats.map((stat, index) => (
+                                <td
+                                  key={index}
+                                  className="whitespace-nowrap px-2 py-2 text-right font-semibold text-slate-800"
+                                >
+                                  {stat}
+                                </td>
+                              ))}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center">
+              <div className="text-sm font-bold text-slate-800">
+                No game log available
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                ESPN has not published a current-season game log for this player yet.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function NcaaGameCenterModal({
   game,
   onClose,
@@ -305,6 +634,8 @@ export default function NcaaGameCenterModal({
   const [error, setError] = useState("");
   const [statsTeamId, setStatsTeamId] = useState<string>("");
   const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null);
+  const [selectedPlayer, setSelectedPlayer] =
+    useState<SelectedPlayer | null>(null);
 
   const loadGameDetail = useCallback(
     async ({ initial = false }: { initial?: boolean } = {}) => {
@@ -987,7 +1318,55 @@ export default function NcaaGameCenterModal({
                                         row.athlete?.id ||
                                         `${categoryIndex}-${rowIndex}`
                                       }
-                                      className="border-t border-slate-100"
+                                      onClick={() => {
+                                        if (
+                                          !row.athlete?.id ||
+                                          !selectedPlayerTeam?.team?.id
+                                        ) {
+                                          return;
+                                        }
+
+                                        setSelectedPlayer({
+                                          id: row.athlete.id,
+                                          displayName:
+                                            row.athlete.displayName ||
+                                            row.athlete.shortName ||
+                                            "Player",
+                                          shortName: row.athlete.shortName,
+                                          headshot:
+                                            row.athlete.headshot?.href,
+                                          teamId:
+                                            selectedPlayerTeam.team.id,
+                                          teamName:
+                                            selectedPlayerTeam.team
+                                              .shortDisplayName ||
+                                            selectedPlayerTeam.team
+                                              .abbreviation ||
+                                            "Team",
+                                        });
+                                      }}
+                                      onKeyDown={(event) => {
+                                        if (
+                                          event.key === "Enter" ||
+                                          event.key === " "
+                                        ) {
+                                          event.preventDefault();
+                                          event.currentTarget.click();
+                                        }
+                                      }}
+                                      role={
+                                        row.athlete?.id
+                                          ? "button"
+                                          : undefined
+                                      }
+                                      tabIndex={
+                                        row.athlete?.id ? 0 : undefined
+                                      }
+                                      className={`border-t border-slate-100 ${
+                                        row.athlete?.id
+                                          ? "cursor-pointer hover:bg-slate-50"
+                                          : ""
+                                      }`}
                                     >
                                       <td className="sticky left-0 bg-white px-3 py-2">
                                         <div className="flex min-w-[135px] items-center gap-2">
@@ -1002,7 +1381,7 @@ export default function NcaaGameCenterModal({
                                           ) : (
                                             <div className="h-7 w-7 rounded-full bg-slate-100" />
                                           )}
-                                          <span className="font-bold text-slate-900">
+                                          <span className="font-bold text-slate-900 underline decoration-slate-300 underline-offset-2">
                                             {row.athlete?.shortName ||
                                               row.athlete?.displayName ||
                                               "Player"}
@@ -1040,6 +1419,18 @@ export default function NcaaGameCenterModal({
           )}
         </div>
       </div>
+
+      {selectedPlayer ? (
+        <NcaaPlayerDetail
+          player={selectedPlayer}
+          season={
+            detail?.seasonYear ||
+            detail?.matchupPreview?.seasonYear ||
+            new Date(game.kickoffAt).getFullYear()
+          }
+          onBack={() => setSelectedPlayer(null)}
+        />
+      ) : null}
     </div>
   );
 }

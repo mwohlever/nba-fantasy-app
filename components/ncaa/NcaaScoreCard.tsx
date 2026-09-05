@@ -34,9 +34,13 @@ export type NcaaScoreGame = {
 function TeamRow({
   team,
   showScore,
+  favorite,
+  onToggleFavorite,
 }: {
   team: Team;
   showScore: boolean;
+  favorite: boolean;
+  onToggleFavorite?: (teamId: string) => void;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -74,6 +78,29 @@ function TeamRow({
           </div>
         ) : null}
       </div>
+
+      {onToggleFavorite ? (
+        <button
+          type="button"
+          aria-label={
+            favorite
+              ? `Remove ${team.displayName} from favorites`
+              : `Add ${team.displayName} to favorites`
+          }
+          aria-pressed={favorite}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-lg leading-none ${
+            favorite
+              ? "text-amber-500"
+              : "text-slate-300 hover:text-amber-400"
+          }`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggleFavorite(team.id);
+          }}
+        >
+          {favorite ? "★" : "☆"}
+        </button>
+      ) : null}
 
       {showScore ? (
         <div
@@ -125,9 +152,13 @@ function bettingLine(game: NcaaScoreGame) {
 export default function NcaaScoreCard({
   game,
   onClick,
+  favoriteTeamIds,
+  onToggleFavorite,
 }: {
   game: NcaaScoreGame;
   onClick?: () => void;
+  favoriteTeamIds?: Set<string>;
+  onToggleFavorite?: (teamId: string) => void;
 }) {
   const started = game.status !== "pre";
   const line = bettingLine(game);
@@ -157,10 +188,14 @@ export default function NcaaScoreCard({
         <TeamRow
           team={game.awayTeam}
           showScore={started}
+          favorite={favoriteTeamIds?.has(game.awayTeam.id) ?? false}
+          onToggleFavorite={onToggleFavorite}
         />
         <TeamRow
           team={game.homeTeam}
           showScore={started}
+          favorite={favoriteTeamIds?.has(game.homeTeam.id) ?? false}
+          onToggleFavorite={onToggleFavorite}
         />
       </div>
 
