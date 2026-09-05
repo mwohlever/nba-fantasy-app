@@ -18,7 +18,7 @@ require.extensions[".ts"] = function compile(module, filename) {
   }).outputText, filename);
 };
 
-const { selectNcaaApRankingGroup } = require("../lib/providers/ncaa.ts");
+const { selectNcaaApRankingGroup, selectNcaaOdds } = require("../lib/providers/ncaa.ts");
 const {
   getNcaaIncludedEventIds,
   getNcaaLockAt,
@@ -107,4 +107,77 @@ test("completed optional games cannot be newly commissioner-selected", () => {
   const completed = game("optional", null, 11, "2026-09-05T23:30:00.000Z", true);
   assert.deepEqual(getNewlySelectedCompletedOptionalIds({ games: [completed], requestedIncludedEventIds: new Set(["optional"]), previouslyCommissionerSelectedEventIds: new Set() }), ["optional"]);
   assert.deepEqual(getNewlySelectedCompletedOptionalIds({ games: [completed], requestedIncludedEventIds: new Set(["optional"]), previouslyCommissionerSelectedEventIds: new Set(["optional"]) }), []);
+});
+
+
+test("ESPN odds parser returns favorite, spread, total, and provider", () => {
+  const odds = selectNcaaOdds([
+    {
+      spread: 3,
+      overUnder: 48.5,
+      provider: {
+        name: "DraftKings",
+      },
+      awayTeamOdds: {
+        favorite: true,
+        team: {
+          id: "1",
+        },
+      },
+      homeTeamOdds: {
+        favorite: false,
+        team: {
+          id: "2",
+        },
+      },
+    },
+  ]);
+
+  assert.deepEqual(odds, {
+    favoriteTeamId: "1",
+    spread: -3,
+    overUnder: 48.5,
+    provider: "DraftKings",
+  });
+});
+
+test("ESPN odds parser treats missing odds as unavailable", () => {
+  assert.equal(
+    selectNcaaOdds(undefined),
+    null,
+  );
+
+  assert.equal(
+    selectNcaaOdds([]),
+    null,
+  );
+
+  assert.equal(
+    selectNcaaOdds([
+      {
+        spread: null,
+        overUnder: null,
+      },
+    ]),
+    null,
+  );
+});
+
+test("ESPN odds parser supports total-only odds", () => {
+  const odds = selectNcaaOdds([
+    {
+      spread: null,
+      overUnder: 55.5,
+      provider: {
+        name: "DraftKings",
+      },
+    },
+  ]);
+
+  assert.deepEqual(odds, {
+    favoriteTeamId: null,
+    spread: null,
+    overUnder: 55.5,
+    provider: "DraftKings",
+  });
 });

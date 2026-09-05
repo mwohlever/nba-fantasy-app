@@ -59,6 +59,13 @@ type PickEmGame = {
   status_detail: string | null;
   winner_team_id:
     string | null;
+
+  spread_favorite_team_id:
+    string | null;
+  spread: number | null;
+  over_under: number | null;
+  odds_provider: string | null;
+  odds_updated_at: string | null;
 };
 
 type Participant = {
@@ -157,6 +164,58 @@ function gameStatus(
   return formatKickoff(
     game.kickoff_at,
   );
+}
+
+function bettingLine(
+  game: PickEmGame,
+) {
+  const parts: string[] = [];
+
+  if (
+    game.spread !== null &&
+    Number.isFinite(Number(game.spread))
+  ) {
+    const spread = Number(game.spread);
+
+    if (
+      spread === 0 ||
+      !game.spread_favorite_team_id
+    ) {
+      parts.push("PK");
+    } else {
+      const favorite =
+        String(game.spread_favorite_team_id) ===
+        String(game.away_team_id)
+          ? game.away_team_abbreviation ||
+            game.away_team_name
+          : String(game.spread_favorite_team_id) ===
+              String(game.home_team_id)
+            ? game.home_team_abbreviation ||
+              game.home_team_name
+            : null;
+
+      if (favorite) {
+        parts.push(
+          `${favorite} ${
+            spread > 0
+              ? `+${spread}`
+              : spread
+          }`,
+        );
+      }
+    }
+  }
+
+  if (
+    game.over_under !== null &&
+    Number.isFinite(Number(game.over_under))
+  ) {
+    parts.push(
+      `O/U ${Number(game.over_under)}`,
+    );
+  }
+
+  return parts.join(" · ");
 }
 
 function avatarFallback(
@@ -869,12 +928,22 @@ export default function NcaaPickEmHome() {
                       }
                       className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm"
                     >
-                      <div className="border-b border-slate-800 px-3 py-1.5">
-                        <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                      <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-1.5">
+                        <div className="min-w-0 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                           {gameStatus(
                             game,
                           )}
                         </div>
+
+                        {bettingLine(
+                          game,
+                        ) ? (
+                          <div className="shrink-0 text-[10px] font-bold text-blue-300">
+                            {bettingLine(
+                              game,
+                            )}
+                          </div>
+                        ) : null}
                       </div>
 
                       <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-1.5 p-2">

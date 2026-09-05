@@ -301,6 +301,31 @@ export async function POST(
             included:
               localGame.included,
 
+            ...(
+              Date.now() <
+                new Date(
+                  espnGame.kickoffAt,
+                ).getTime() &&
+              espnGame.odds
+                ? {
+                    spread_favorite_team_id:
+                      espnGame.odds.favoriteTeamId,
+
+                    spread:
+                      espnGame.odds.spread,
+
+                    over_under:
+                      espnGame.odds.overUnder,
+
+                    odds_provider:
+                      espnGame.odds.provider,
+
+                    odds_updated_at:
+                      now,
+                  }
+                : {}
+            ),
+
             updated_at:
               now,
           };

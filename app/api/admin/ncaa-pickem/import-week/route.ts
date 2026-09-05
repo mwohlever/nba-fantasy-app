@@ -130,6 +130,25 @@ function gameRow(
     winner_team_id:
       game.winnerTeamId,
 
+    ...(game.odds
+      ? {
+          spread_favorite_team_id:
+            game.odds.favoriteTeamId,
+
+          spread:
+            game.odds.spread,
+
+          over_under:
+            game.odds.overUnder,
+
+          odds_provider:
+            game.odds.provider,
+
+          odds_updated_at:
+            new Date().toISOString(),
+        }
+      : {}),
+
     included,
 
     commissioner_selected:

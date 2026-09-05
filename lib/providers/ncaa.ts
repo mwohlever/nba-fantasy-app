@@ -12,6 +12,13 @@ export type NcaaEspnTeam = {
   winner: boolean;
 };
 
+export type NcaaEspnOdds = {
+  favoriteTeamId: string | null;
+  spread: number | null;
+  overUnder: number | null;
+  provider: string | null;
+};
+
 export type NcaaEspnGame = {
   espnEventId: string;
   name: string;
@@ -26,6 +33,7 @@ export type NcaaEspnGame = {
   completed: boolean;
 
   winnerTeamId: string | null;
+  odds: NcaaEspnOdds | null;
 };
 
 export type NcaaEspnWeek = {
@@ -191,6 +199,77 @@ function mapTeam(
   };
 }
 
+function finiteOddsNumber(
+  value: unknown,
+): number | null {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : null;
+}
+
+export function selectNcaaOdds(
+  oddsInput: unknown,
+): NcaaEspnOdds | null {
+  if (!Array.isArray(oddsInput)) {
+    return null;
+  }
+
+  const odds = oddsInput.find(
+    (entry: any) =>
+      entry &&
+      (
+        finiteOddsNumber(entry.spread) !== null ||
+        finiteOddsNumber(entry.overUnder) !== null
+      ),
+  ) as any;
+
+  if (!odds) {
+    return null;
+  }
+
+  const favoriteTeamId =
+    odds?.awayTeamOdds?.favorite === true &&
+    odds?.awayTeamOdds?.team?.id != null
+      ? String(odds.awayTeamOdds.team.id)
+      : odds?.homeTeamOdds?.favorite === true &&
+          odds?.homeTeamOdds?.team?.id != null
+        ? String(odds.homeTeamOdds.team.id)
+        : null;
+
+  const rawSpread =
+    finiteOddsNumber(odds.spread);
+
+  const spread =
+    rawSpread !== null && favoriteTeamId
+      ? -Math.abs(rawSpread)
+      : rawSpread;
+
+  const overUnder =
+    finiteOddsNumber(odds.overUnder);
+
+  const provider =
+    typeof odds?.provider?.name === "string"
+      ? odds.provider.name
+      : null;
+
+  return {
+    favoriteTeamId,
+    spread,
+    overUnder,
+    provider,
+  };
+}
+
 function mapEvent(
   event: any,
   ranksByTeamId: Map<string, number>,
@@ -307,6 +386,11 @@ function mapEvent(
       statusType?.completed === true,
 
     winnerTeamId,
+
+    odds:
+      selectNcaaOdds(
+        competition?.odds,
+      ),
   };
 }
 
