@@ -425,6 +425,11 @@ function AppNavContent() {
             icon: "⌂",
           },
           {
+            href: "/ncaa-pickem/scores",
+            label: "Scores",
+            icon: "◫",
+          },
+          {
             href: "/ncaa-pickem/standings",
             label: "Standings",
             icon: "▦",
@@ -515,7 +520,10 @@ function AppNavContent() {
 
     if (
       pathname ===
-      "/lineups/scores"
+        "/lineups/scores" ||
+      pathname.startsWith(
+        "/ncaa-pickem/scores",
+      )
     ) {
       return "scores";
     }
@@ -595,6 +603,13 @@ function AppNavContent() {
         "standings"
       ) {
         return "/ncaa-pickem/standings";
+      }
+
+      if (
+        section ===
+        "scores"
+      ) {
+        return "/ncaa-pickem/scores";
       }
 
       return "/ncaa-pickem";
@@ -1505,7 +1520,7 @@ function AppNavContent() {
         <div
           className={`mx-auto grid max-w-xl gap-1 ${
             isNcaaPickEm
-              ? "grid-cols-2"
+              ? "grid-cols-3"
               : isNbaSkins
                 ? "grid-cols-3"
                 : "grid-cols-4"

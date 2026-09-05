@@ -8,6 +8,7 @@ export type NcaaEspnTeam = {
   logo: string | null;
   rank: number | null;
   record: string | null;
+  conferenceId: string | null;
   score: number | null;
   winner: boolean;
 };
@@ -190,6 +191,11 @@ function mapTeam(
 
     record:
       competitorRecord(competitor),
+
+    conferenceId:
+      competitor?.team?.conferenceId != null
+        ? String(competitor.team.conferenceId)
+        : null,
 
     score:
       scoreValue(competitor?.score),
