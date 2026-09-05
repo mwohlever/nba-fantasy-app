@@ -5,6 +5,7 @@ import AppNav from "@/components/AppNav";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -294,6 +295,9 @@ export default function NcaaPickEmHome() {
   ] =
     useState("");
 
+  const refreshedWeekIdRef =
+    useRef<number | null>(null);
+
   useEffect(() => {
     if (
       selectedSport !==
@@ -353,7 +357,7 @@ export default function NcaaPickEmHome() {
           },
         );
 
-      const result =
+      let result =
         (await response.json()) as WeekResponse;
 
       if (!response.ok) {
@@ -364,6 +368,45 @@ export default function NcaaPickEmHome() {
 
         setData(null);
         return;
+      }
+
+      if (
+        result.week &&
+        refreshedWeekIdRef.current !== result.week.id
+      ) {
+        refreshedWeekIdRef.current = result.week.id;
+
+        try {
+          const refreshResponse = await fetch(
+            "/api/refresh-stats-ncaa",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                weekId: result.week.id,
+              }),
+            },
+          );
+
+          if (refreshResponse.ok) {
+            const refreshedResponse = await fetch(
+              `/api/ncaa-pickem/week${suffix}`,
+              { cache: "no-store" },
+            );
+
+            if (refreshedResponse.ok) {
+              result =
+                (await refreshedResponse.json()) as WeekResponse;
+            }
+          }
+        } catch (refreshError) {
+          console.error(
+            "Unable to refresh NCAA scores.",
+            refreshError,
+          );
+        }
       }
 
       setData(result);
