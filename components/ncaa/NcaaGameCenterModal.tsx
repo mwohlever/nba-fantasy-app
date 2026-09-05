@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { NcaaScoreGame } from "./NcaaScoreCard";
 
@@ -103,6 +103,54 @@ type EspnPlayerBox = {
   statistics?: EspnPlayerCategory[];
 };
 
+type PreviewStat = {
+  value: string;
+  rank?: number;
+  rankDisplayValue?: string;
+};
+
+type PreviewTeam = {
+  teamId: string;
+  offense: {
+    scoring?: PreviewStat;
+    total?: PreviewStat;
+    passing?: PreviewStat;
+    rushing?: PreviewStat;
+  };
+  defense: {
+    scoring?: PreviewStat;
+    total?: PreviewStat;
+    passing?: PreviewStat;
+    rushing?: PreviewStat;
+  };
+};
+
+type MatchupPreview = {
+  seasonYear: number;
+  away: PreviewTeam | null;
+  home: PreviewTeam | null;
+};
+
+type SeasonPlayerStat = {
+  athlete: {
+    id: string;
+    displayName: string;
+    shortName?: string;
+    position?: string;
+  };
+  categories: Array<{
+    name: string;
+    displayName: string;
+    labels: string[];
+    stats: string[];
+  }>;
+};
+
+type SeasonPlayerTeam = {
+  teamId: string;
+  players: SeasonPlayerStat[];
+};
+
 type GameDetailResponse = {
   success?: boolean;
   error?: string;
@@ -130,6 +178,11 @@ type GameDetailResponse = {
     teams?: EspnTeamBox[];
     players?: EspnPlayerBox[];
   } | null;
+  matchupPreview?: MatchupPreview | null;
+  seasonPlayerStats?: {
+    away: SeasonPlayerTeam | null;
+    home: SeasonPlayerTeam | null;
+  } | null;
 };
 
 function teamLogo(team?: { logos?: EspnLogo[] }) {
@@ -156,6 +209,88 @@ function categoryTitle(category?: EspnPlayerCategory) {
   return category?.displayName || category?.name || "Stats";
 }
 
+function seasonStatsToPlayerBoxes(
+  detail: GameDetailResponse | null,
+  away?: EspnCompetitor,
+  home?: EspnCompetitor,
+): EspnPlayerBox[] {
+  const seasonStats = detail?.seasonPlayerStats;
+  if (!seasonStats) return [];
+
+  const categoryOrder = [
+    "passing",
+    "rushing",
+    "receiving",
+    "defensive",
+    "kicking",
+    "punting",
+    "returning",
+  ];
+
+  const boxes: EspnPlayerBox[] = [];
+
+  for (const { teamStats, competitor } of [
+    { teamStats: seasonStats.away, competitor: away },
+    { teamStats: seasonStats.home, competitor: home },
+  ]) {
+    if (!teamStats?.players?.length) continue;
+
+    const statistics: EspnPlayerCategory[] = [];
+
+    for (const categoryName of categoryOrder) {
+      const athletes: EspnAthleteStat[] = [];
+      let labels: string[] = [];
+      let displayName = categoryName;
+
+      for (const player of teamStats.players) {
+        const category = player.categories.find(
+          (candidate) => candidate.name === categoryName,
+        );
+
+        if (!category) continue;
+
+        if (!labels.length) labels = category.labels;
+        displayName = category.displayName || categoryName;
+
+        athletes.push({
+          athlete: {
+            id: player.athlete.id,
+            displayName: player.athlete.displayName,
+            shortName:
+              player.athlete.shortName ||
+              player.athlete.displayName,
+          },
+          stats: category.stats,
+        });
+      }
+
+      if (!athletes.length) continue;
+
+      statistics.push({
+        name: categoryName,
+        displayName,
+        labels,
+        athletes,
+      });
+    }
+
+    if (!statistics.length) continue;
+
+    boxes.push({
+      team: {
+        id: teamStats.teamId,
+        abbreviation: competitor?.team?.abbreviation,
+        displayName: competitor?.team?.displayName,
+        shortDisplayName: competitor?.team?.shortDisplayName,
+        logos: competitor?.team?.logos,
+      },
+      statistics,
+    });
+  }
+
+  return boxes;
+}
+
 export default function NcaaGameCenterModal({
   game,
   onClose,
@@ -166,17 +301,21 @@ export default function NcaaGameCenterModal({
   const [tab, setTab] = useState<"game" | "stats">("game");
   const [detail, setDetail] = useState<GameDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [statsTeamId, setStatsTeamId] = useState<string>("");
   const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadGameDetail = useCallback(
+    async ({ initial = false }: { initial?: boolean } = {}) => {
+      if (initial) {
+        setLoading(true);
+        setDetail(null);
+      } else {
+        setRefreshing(true);
+      }
 
-    async function load() {
-      setLoading(true);
       setError("");
-      setDetail(null);
 
       try {
         const response = await fetch(
@@ -192,32 +331,41 @@ export default function NcaaGameCenterModal({
           throw new Error(body.error || "Unable to load game detail.");
         }
 
-        if (!cancelled) {
-          setDetail(body);
-        }
+        setDetail(body);
       } catch (loadError) {
-        if (!cancelled) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Unable to load game detail.",
-          );
-        }
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load game detail.",
+        );
       } finally {
-        if (!cancelled) {
+        if (initial) {
           setLoading(false);
+        } else {
+          setRefreshing(false);
         }
       }
-    }
+    },
+    [game.espnEventId],
+  );
 
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [game.espnEventId]);
+  useEffect(() => {
+    void loadGameDetail({ initial: true });
+  }, [loadGameDetail]);
 
   const competition = detail?.header?.competitions?.[0];
+  const isLive = competition?.status?.type?.state === "in";
+
+  useEffect(() => {
+    if (!isLive) return;
+
+    const interval = window.setInterval(() => {
+      void loadGameDetail();
+    }, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [isLive, loadGameDetail]);
+
   const competitors = competition?.competitors || [];
   const away = competitors.find((team) => team.homeAway === "away");
   const home = competitors.find((team) => team.homeAway === "home");
@@ -250,15 +398,13 @@ export default function NcaaGameCenterModal({
       }
     }
 
-    const isLive = competition?.status?.type?.state === "in";
-
     return Array.from(map.entries())
       .sort(([a], [b]) => b - a)
       .map(([period, plays]) => ({
         period,
         plays: [...plays].reverse(),
       }));
-  }, [competition?.status?.type?.state, drives]);
+  }, [drives]);
 
   useEffect(() => {
     if (!playsByQuarter.length) {
@@ -316,7 +462,37 @@ export default function NcaaGameCenterModal({
     }>;
   }, [awayTeamStats?.statistics, homeTeamStats?.statistics]);
 
-  const playerTeams = detail?.boxscore?.players || [];
+  const playerTeams = useMemo(() => {
+    if (game.status !== "pre") {
+      return detail?.boxscore?.players || [];
+    }
+
+    const statBoxes = seasonStatsToPlayerBoxes(detail, away, home);
+
+    return [away, home]
+      .filter((competitor): competitor is EspnCompetitor =>
+        Boolean(competitor?.id),
+      )
+      .map((competitor) => {
+        const existing = statBoxes.find(
+          (team) => team.team?.id === competitor.id,
+        );
+
+        if (existing) return existing;
+
+        return {
+          team: {
+            id: competitor.id,
+            abbreviation: competitor.team?.abbreviation,
+            displayName: competitor.team?.displayName,
+            shortDisplayName: competitor.team?.shortDisplayName,
+            logos: competitor.team?.logos,
+          },
+          statistics: [],
+        } satisfies EspnPlayerBox;
+      });
+  }, [game.status, detail, away, home]);
+
   const selectedPlayerTeam =
     playerTeams.find((team) => team.team?.id === statsTeamId) ||
     playerTeams[0];
@@ -371,14 +547,33 @@ export default function NcaaGameCenterModal({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="ml-3 text-2xl font-bold leading-none text-slate-500"
-            aria-label="Close game center"
-          >
-            ×
-          </button>
+          <div className="ml-3 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void loadGameDetail()}
+              disabled={refreshing}
+              className="text-xl font-bold leading-none text-slate-500 disabled:opacity-40"
+              aria-label="Refresh game center"
+              title="Refresh game center"
+            >
+              <span
+                className={
+                  refreshing ? "inline-block animate-spin" : "inline-block"
+                }
+              >
+                ↻
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-2xl font-bold leading-none text-slate-500"
+              aria-label="Close game center"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         <div className="border-b border-slate-200 px-4 py-3">
@@ -467,7 +662,7 @@ export default function NcaaGameCenterModal({
           ))}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto pb-24 sm:pb-6">
           {loading ? (
             <div className="p-6 text-center text-sm text-slate-500">
               Loading game details…
@@ -481,15 +676,112 @@ export default function NcaaGameCenterModal({
           ) : tab === "game" ? (
             <div className="space-y-5 p-4">
               {game.status === "pre" ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-sm font-black text-slate-900">
-                    Matchup Preview
+                <section>
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-xs font-black uppercase tracking-wider text-slate-500">
+                      Matchup Preview
+                    </div>
+                    {detail?.matchupPreview?.seasonYear ? (
+                      <div className="text-[11px] text-slate-400">
+                        {detail.matchupPreview.seasonYear} season
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="mt-1 text-sm text-slate-500">
-                    Pregame national team rankings and season player stats are
-                    coming in the next phase.
-                  </div>
-                </div>
+
+                  {detail?.matchupPreview?.away ||
+                  detail?.matchupPreview?.home ? (
+                    <div className="overflow-hidden rounded-xl border border-slate-200">
+                      <div className="grid grid-cols-[1fr_minmax(110px,1.15fr)_1fr] items-center bg-slate-50 px-3 py-2 text-xs font-black text-slate-500">
+                        <div className="text-left">
+                          {away?.team?.abbreviation || "Away"}
+                        </div>
+                        <div className="text-center">Season Stats</div>
+                        <div className="text-right">
+                          {home?.team?.abbreviation || "Home"}
+                        </div>
+                      </div>
+
+                      {(
+                        [
+                          {
+                            section: "Offense",
+                            rows: [
+                              ["PPG", "scoring"],
+                              ["Total Offense", "total"],
+                              ["Passing Offense", "passing"],
+                              ["Rushing Offense", "rushing"],
+                            ],
+                          },
+                          {
+                            section: "Defense",
+                            rows: [
+                              ["PPG Allowed", "scoring"],
+                            ],
+                          },
+                        ] as const
+                      ).map((group) => (
+                        <div key={group.section}>
+                          <div className="border-t border-slate-200 bg-slate-50/70 px-3 py-1.5 text-center text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            {group.section}
+                          </div>
+
+                          {group.rows.map(([label, key]) => {
+                            const awayStat =
+                              detail.matchupPreview?.away?.[
+                                group.section === "Offense"
+                                  ? "offense"
+                                  : "defense"
+                              ]?.[key];
+
+                            const homeStat =
+                              detail.matchupPreview?.home?.[
+                                group.section === "Offense"
+                                  ? "offense"
+                                  : "defense"
+                              ]?.[key];
+
+                            return (
+                              <div
+                                key={`${group.section}-${key}`}
+                                className="grid grid-cols-[1fr_minmax(110px,1.15fr)_1fr] items-center border-t border-slate-100 px-3 py-2.5"
+                              >
+                                <div>
+                                  <div className="text-sm font-black text-slate-900">
+                                    {awayStat?.value ?? "—"}
+                                  </div>
+                                  {awayStat?.rankDisplayValue ? (
+                                    <div className="mt-0.5 text-[10px] font-bold text-sky-600">
+                                      {awayStat.rankDisplayValue}
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <div className="px-2 text-center text-[11px] font-bold leading-tight text-slate-500">
+                                  {label}
+                                </div>
+
+                                <div className="text-right">
+                                  <div className="text-sm font-black text-slate-900">
+                                    {homeStat?.value ?? "—"}
+                                  </div>
+                                  {homeStat?.rankDisplayValue ? (
+                                    <div className="mt-0.5 text-[10px] font-bold text-sky-600">
+                                      {homeStat.rankDisplayValue}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                      Season matchup stats are not available yet.
+                    </div>
+                  )}
+                </section>
               ) : (
                 <>
                   <section>
@@ -616,16 +908,7 @@ export default function NcaaGameCenterModal({
             </div>
           ) : (
             <div className="space-y-4 p-4">
-              {game.status === "pre" ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="text-sm font-black text-slate-900">
-                    Season Player Stats
-                  </div>
-                  <div className="mt-1 text-sm text-slate-500">
-                    Pregame season player stats are coming in the next phase.
-                  </div>
-                </div>
-              ) : playerTeams.length ? (
+              {playerTeams.length ? (
                 <>
                   <div className="grid grid-cols-2 gap-2">
                     {playerTeams.map((team) => (
@@ -647,6 +930,17 @@ export default function NcaaGameCenterModal({
                       </button>
                     ))}
                   </div>
+
+                  {!selectedPlayerTeam?.statistics?.length ? (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-center">
+                      <div className="text-sm font-bold text-slate-800">
+                        No season player stats yet
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        ESPN has not published current-season player stats for this team yet.
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="space-y-4">
                     {(selectedPlayerTeam?.statistics || []).map(
