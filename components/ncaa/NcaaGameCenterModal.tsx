@@ -717,11 +717,25 @@ export default function NcaaGameCenterModal({
 
   const playsByQuarter = useMemo(() => {
     const map = new Map<number, EspnPlay[]>();
+    const seen = new Set<string>();
 
     for (const drive of drives) {
       for (const play of drive.plays || []) {
         const period = play.period?.number;
         if (!period) continue;
+
+        const playKey =
+          play.id ||
+          [
+            period,
+            play.clock?.displayValue || "",
+            play.text || "",
+            play.awayScore ?? "",
+            play.homeScore ?? "",
+          ].join("|");
+
+        if (seen.has(playKey)) continue;
+        seen.add(playKey);
 
         const existing = map.get(period) || [];
         existing.push(play);
