@@ -124,8 +124,10 @@ function bettingLine(game: NcaaScoreGame) {
 
 export default function NcaaScoreCard({
   game,
+  onClick,
 }: {
   game: NcaaScoreGame;
+  onClick?: () => void;
 }) {
   const started = game.status !== "pre";
   const line = bettingLine(game);
@@ -142,6 +144,9 @@ export default function NcaaScoreCard({
 
   return (
     <article
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       className={`rounded-xl bg-white px-3 py-2.5 shadow-sm ${
         game.status === "in"
           ? "border border-sky-400 ring-1 ring-sky-400/20"

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AppNav from "@/components/AppNav";
 import NcaaScoreCard from "@/components/ncaa/NcaaScoreCard";
+import NcaaGameCenterModal from "@/components/ncaa/NcaaGameCenterModal";
 
 type Team = {
   id: string;
@@ -84,6 +85,7 @@ export default function NcaaScoresPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -286,6 +288,7 @@ export default function NcaaScoresPage() {
                     <NcaaScoreCard
                       key={game.espnEventId}
                       game={game}
+                      onClick={() => setSelectedGame(game)}
                     />
                   ))}
                 </div>
@@ -294,6 +297,12 @@ export default function NcaaScoresPage() {
           </section>
         )}
       </div>
+      {selectedGame ? (
+        <NcaaGameCenterModal
+          game={selectedGame}
+          onClose={() => setSelectedGame(null)}
+        />
+      ) : null}
     </main>
   );
 }
