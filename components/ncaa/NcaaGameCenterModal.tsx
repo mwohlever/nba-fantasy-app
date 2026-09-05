@@ -42,6 +42,9 @@ type EspnPlay = {
   clock?: {
     displayValue?: string;
   };
+  start?: {
+    shortDownDistanceText?: string;
+  };
 };
 
 type EspnDrive = {
@@ -1326,8 +1329,15 @@ export default function NcaaGameCenterModal({
                                 }`}
                               >
                                 <div className="flex gap-3">
-                                  <div className="w-11 shrink-0 text-xs font-black text-slate-500">
-                                    {play.clock?.displayValue || ""}
+                                  <div className="w-14 shrink-0">
+                                    <div className="text-xs font-black text-slate-500">
+                                      {play.clock?.displayValue || ""}
+                                    </div>
+                                    {play.start?.shortDownDistanceText ? (
+                                      <div className="mt-0.5 whitespace-nowrap text-[10px] font-bold text-slate-400">
+                                        {play.start.shortDownDistanceText}
+                                      </div>
+                                    ) : null}
                                   </div>
 
                                   <div className="min-w-0 flex-1">
