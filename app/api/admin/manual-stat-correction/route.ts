@@ -5,7 +5,11 @@ import {
   type CorrectionSport,
 } from "@/lib/corrections/correctionPolicy";
 import { recomputeCorrectedSlateResults } from "@/lib/corrections/recomputeSlateResults";
-import { resolveLeagueRules } from "@/lib/rules/leagueRules";
+import {
+  resolveLeagueRules,
+  type NbaScoringRules,
+  type NflScoringRules,
+} from "@/lib/rules/leagueRules";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { getStatColumns } from "@/lib/statColumns";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -70,7 +74,10 @@ export async function POST(request: NextRequest) {
     const statValues = Object.fromEntries(
       getStatColumns(sport).map(({ key }) => [key, Number(body.stats?.[key] ?? body[key] ?? 0)]),
     );
-    const scoring = resolveLeagueRules({ sport, settings: slate.rules_snapshot }).scoring;
+    const scoring = resolveLeagueRules({
+      sport,
+      settings: slate.rules_snapshot,
+    }).scoring as NbaScoringRules | NflScoringRules;
     const fantasyPoints = Number(
       calculateCorrectionFantasyPoints({ sport, stats: statValues, scoring }).toFixed(1),
     );
