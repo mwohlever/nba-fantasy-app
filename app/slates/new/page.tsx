@@ -3,6 +3,11 @@
 import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+import {
+  getCreateSlateHref,
+  resolveCreateSlateSport,
+} from "@/lib/slates/createSlateSport";
+import { getSportConfig } from "@/lib/sports";
 
 import AppNav from "@/components/AppNav";
 import { useEffect, useMemo, useState } from "react";
@@ -85,15 +90,8 @@ export default function NewSlatePage() {
   const [previousSlateLabel, setPreviousSlateLabel] = useState("");
   const [rosterSlots, setRosterSlots] =
     useState<RosterSlotConfig[]>([]);
-  const [sport, setSport] = useState<SportKey>(() => {
-    const requestedSport = searchParams.get("sport");
-
-    if (requestedSport === "nfl" || requestedSport === "golf") {
-      return requestedSport;
-    }
-
-    return "nba";
-  });
+  const requestedSport = searchParams.get("sport");
+  const sport = resolveCreateSlateSport(requestedSport);
 
   const [golfYear, setGolfYear] = useState(() =>
     String(new Date().getUTCFullYear())
@@ -103,6 +101,12 @@ export default function NewSlatePage() {
   const [cutPenaltyPerRound, setCutPenaltyPerRound] = useState(5);
   const [hasCut, setHasCut] = useState(true);
   const [isLoadingGolfSchedule, setIsLoadingGolfSchedule] = useState(false);
+
+  useEffect(() => {
+    if (requestedSport !== sport) {
+      router.replace(getCreateSlateHref(sport));
+    }
+  }, [requestedSport, router, sport]);
 
   useEffect(() => {
     void loadSlateSetup(sport);
@@ -826,7 +830,9 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
         <AppNav />
 
         <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <h1 className="text-3xl font-bold tracking-tight">Create New Slate</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Create New {getSportConfig(sport).label} Slate
+          </h1>
           <p className="mt-2 text-sm text-slate-600">
             Participating teams are ordered from the inverse of the previous slate standings,
             and you can manually adjust the order below.
@@ -840,32 +846,6 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                Sport
-              </label>
-
-              <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                {(["nba", "nfl", "golf"] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => {
-                      setSport(option);
-                      setMessage("");
-                    }}
-                    className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-                      sport === option
-                        ? "bg-sky-600 text-white"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    {option === "golf" ? "GOLF" : option.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {sport === "golf" ? (
               <div className="space-y-5">
                 <div className="grid gap-5 md:grid-cols-[180px_1fr]">

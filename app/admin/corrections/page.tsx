@@ -1,122 +1,103 @@
 "use client";
 
-import AppNav from "@/components/AppNav";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
+import AppNav from "@/components/AppNav";
+import { useSelectedSport } from "@/components/providers/SportProvider";
+import {
+  calculateCorrectionFantasyPoints,
+  parseCorrectionSport,
+  type CorrectionSport,
+  type CorrectionStatValues,
+} from "@/lib/corrections/correctionPolicy";
+import type { NbaScoringRules, NflScoringRules } from "@/lib/rules/leagueRules";
+import type { StatColumn } from "@/lib/statColumns";
 
 type Slate = {
   id: number;
   label: string;
-  start_date: string;
-  end_date: string;
   is_locked: boolean;
 };
 
-type Team = {
-  id: number;
-  name: string;
-};
-
+type Team = { id: number; name: string };
 type Player = {
   id: number;
   name: string;
-  position_group: "G" | "F/C" | null;
-  is_active: boolean;
-  team_abbreviation: string | null;
+  positionGroup: string | null;
+  teamAbbreviation: string | null;
 };
-
-type RosterRow = {
+type RosterRow = CorrectionStatValues & {
   playerId: number;
   name: string;
   positionGroup: string | null;
-  points: number;
-  rebounds: number;
-  assists: number;
-  steals: number;
-  blocks: number;
-  turnovers: number;
   fantasyPoints: number;
 };
+type ScoringRules = NbaScoringRules | NflScoringRules;
 
-type StatDraft = {
-  points: number;
-  rebounds: number;
-  assists: number;
-  steals: number;
-  blocks: number;
-  turnovers: number;
-};
-
-function emptyStats(): StatDraft {
-  return {
-    points: 0,
-    rebounds: 0,
-    assists: 0,
-    steals: 0,
-    blocks: 0,
-    turnovers: 0,
-  };
-}
-
-function calculateFantasy(stats: StatDraft) {
-  return Number(
-    (
-      Number(stats.points || 0) +
-      Number(stats.rebounds || 0) * 1.2 +
-      Number(stats.assists || 0) * 1.5 +
-      Number(stats.steals || 0) * 2 +
-      Number(stats.blocks || 0) * 2 -
-      Number(stats.turnovers || 0)
-    ).toFixed(1)
-  );
+function emptyStats(columns: StatColumn[]): CorrectionStatValues {
+  return Object.fromEntries(columns.map(({ key }) => [key, 0]));
 }
 
 export default function AdminCorrectionsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { selectedSport, isHydrated } = useSelectedSport();
+  const routeSport = parseCorrectionSport(searchParams.get("sport"));
+  const sport: CorrectionSport = routeSport ?? (selectedSport === "nfl" ? "nfl" : "nba");
+
   const [slates, setSlates] = useState<Slate[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-
+  const [statColumns, setStatColumns] = useState<StatColumn[]>([]);
+  const [scoring, setScoring] = useState<ScoringRules | null>(null);
   const [selectedSlateId, setSelectedSlateId] = useState<number | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
-
   const [roster, setRoster] = useState<RosterRow[]>([]);
-  const [statDrafts, setStatDrafts] = useState<Record<number, StatDraft>>({});
+  const [statDrafts, setStatDrafts] = useState<Record<number, CorrectionStatValues>>({});
   const [replacementPlayerId, setReplacementPlayerId] = useState<number | null>(null);
-
   const [isLoadingSetup, setIsLoadingSetup] = useState(true);
   const [isLoadingRoster, setIsLoadingRoster] = useState(false);
   const [message, setMessage] = useState("");
 
   const selectedSlate = slates.find((slate) => slate.id === selectedSlateId) ?? null;
   const selectedTeam = teams.find((team) => team.id === selectedTeamId) ?? null;
+  const playerOptions = useMemo(
+    () => [...players].sort((a, b) => a.name.localeCompare(b.name)),
+    [players],
+  );
 
-  const playerOptions = useMemo(() => {
-    return players.filter((player) => player.name).sort((a, b) => a.name.localeCompare(b.name));
-  }, [players]);
+  async function loadSetup(targetSlateId?: number) {
+    setIsLoadingSetup(true);
+    setMessage("");
+    setRoster([]);
+    setStatDrafts({});
+    setSelectedTeamId(null);
 
-  async function loadSetup() {
     try {
-      setIsLoadingSetup(true);
-      setMessage("");
-
-      const response = await fetch("/api/admin/correction-data", {
-        cache: "no-store",
-      });
+      const query = new URLSearchParams({ sport });
+      if (targetSlateId) query.set("slateId", String(targetSlateId));
+      const response = await fetch(`/api/admin/correction-data?${query}`, { cache: "no-store" });
       const result = await response.json();
 
       if (!response.ok) {
+        setSlates([]);
+        setTeams([]);
+        setPlayers([]);
+        setSelectedSlateId(null);
         setMessage(result.error || "Failed to load correction data.");
         return;
       }
 
-      const nextSlates = result.slates ?? [];
-      const nextTeams = result.teams ?? [];
-
+      const nextSlates = (result.slates ?? []) as Slate[];
+      const nextTeams = (result.teams ?? []) as Team[];
       setSlates(nextSlates);
       setTeams(nextTeams);
       setPlayers(result.players ?? []);
-
-      if (nextSlates.length > 0) setSelectedSlateId(nextSlates[0].id);
-      if (nextTeams.length > 0) setSelectedTeamId(nextTeams[0].id);
+      setScoring(result.scoring ?? null);
+      setSelectedSlateId(result.selectedSlateId ?? null);
+      setSelectedTeamId(nextTeams[0]?.id ?? null);
     } catch (error) {
       console.error(error);
       setMessage("Something went wrong loading correction data.");
@@ -126,39 +107,38 @@ export default function AdminCorrectionsPage() {
   }
 
   async function loadRoster() {
-    if (!selectedSlateId || !selectedTeamId) return;
+    if (!selectedSlateId || !selectedTeamId) {
+      setRoster([]);
+      setStatDrafts({});
+      return;
+    }
 
+    setIsLoadingRoster(true);
+    setMessage("");
     try {
-      setIsLoadingRoster(true);
-      setMessage("");
-
       const response = await fetch(
         `/api/team-slate-roster?slateId=${selectedSlateId}&teamId=${selectedTeamId}`,
-        { cache: "no-store" }
+        { cache: "no-store" },
       );
       const result = await response.json();
-
       if (!response.ok) {
+        setRoster([]);
         setMessage(result.error || "Failed to load roster.");
         return;
       }
 
-      const nextRoster = result.roster ?? [];
+      const nextColumns = (result.statColumns ?? []) as StatColumn[];
+      const nextRoster = (result.roster ?? []) as RosterRow[];
+      setStatColumns(nextColumns);
       setRoster(nextRoster);
-
-      const nextDrafts: Record<number, StatDraft> = {};
-      nextRoster.forEach((row: RosterRow) => {
-        nextDrafts[row.playerId] = {
-          points: Number(row.points ?? 0),
-          rebounds: Number(row.rebounds ?? 0),
-          assists: Number(row.assists ?? 0),
-          steals: Number(row.steals ?? 0),
-          blocks: Number(row.blocks ?? 0),
-          turnovers: Number(row.turnovers ?? 0),
-        };
-      });
-
-      setStatDrafts(nextDrafts);
+      setStatDrafts(
+        Object.fromEntries(
+          nextRoster.map((row) => [
+            row.playerId,
+            Object.fromEntries(nextColumns.map(({ key }) => [key, Number(row[key] ?? 0)])),
+          ]),
+        ),
+      );
     } catch (error) {
       console.error(error);
       setMessage("Something went wrong loading the roster.");
@@ -168,157 +148,78 @@ export default function AdminCorrectionsPage() {
   }
 
   useEffect(() => {
+    if (!isHydrated) return;
+    if (!routeSport) router.replace(`/admin/corrections?sport=${sport}`);
+    // The request response replaces Group/sport-specific setup atomically.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadSetup();
-  }, []);
+    // The active Group remounts this subtree; sport is URL-authoritative here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated, sport]);
 
   useEffect(() => {
-    if (selectedSlateId && selectedTeamId) {
-      void loadRoster();
-    }
+    // The request response replaces the selected slate/team roster atomically.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadRoster();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSlateId, selectedTeamId]);
 
-  function updateDraft(playerId: number, key: keyof StatDraft, value: string) {
-    setStatDrafts((prev) => ({
-      ...prev,
-      [playerId]: {
-        ...(prev[playerId] ?? emptyStats()),
-        [key]: Number(value),
-      },
+  function updateDraft(playerId: number, key: string, value: string) {
+    setStatDrafts((current) => ({
+      ...current,
+      [playerId]: { ...(current[playerId] ?? emptyStats(statColumns)), [key]: Number(value) },
     }));
+  }
+
+  async function runMutation(url: string, body: Record<string, unknown>, success: string) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      setMessage(result.error || "Correction failed.");
+      return false;
+    }
+    setMessage(success);
+    await loadRoster();
+    return true;
   }
 
   async function saveStats(playerId: number) {
     if (!selectedSlateId) return;
-
-    const stats = statDrafts[playerId] ?? emptyStats();
-
-    const response = await fetch("/api/admin/manual-stat-correction", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        slateId: selectedSlateId,
-        playerId,
-        ...stats,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setMessage(result.error || "Failed to save stat correction.");
-      return;
-    }
-
-    setMessage("Stat correction saved and slate totals recalculated.");
-    await loadRoster();
+    await runMutation(
+      "/api/admin/manual-stat-correction",
+      { slateId: selectedSlateId, playerId, stats: statDrafts[playerId] ?? emptyStats(statColumns) },
+      "Stat correction saved and slate totals recalculated.",
+    );
   }
 
-  async function replacePlayer(oldPlayerId: number) {
-    if (!selectedSlateId || !selectedTeamId || !replacementPlayerId) return;
-
-    const response = await fetch("/api/admin/lineup-correction", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        slateId: selectedSlateId,
-        teamId: selectedTeamId,
-        action: "replace",
-        oldPlayerId,
-        newPlayerId: replacementPlayerId,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setMessage(result.error || "Failed to replace player.");
-      return;
-    }
-
-    setMessage("Player replaced and slate totals recalculated.");
-    setReplacementPlayerId(null);
-    await loadRoster();
-  }
-
-  async function addPlayer() {
-    if (!selectedSlateId || !selectedTeamId || !replacementPlayerId) return;
-
-    const response = await fetch("/api/admin/lineup-correction", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        slateId: selectedSlateId,
-        teamId: selectedTeamId,
-        action: "add",
-        newPlayerId: replacementPlayerId,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setMessage(result.error || "Failed to add player.");
-      return;
-    }
-
-    setMessage("Player added and slate totals recalculated.");
-    setReplacementPlayerId(null);
-    await loadRoster();
-  }
-
-  async function removePlayer(oldPlayerId: number) {
+  async function correctLineup(action: "add" | "replace" | "remove", oldPlayerId?: number) {
     if (!selectedSlateId || !selectedTeamId) return;
-
-    const response = await fetch("/api/admin/lineup-correction", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    if ((action === "add" || action === "replace") && !replacementPlayerId) return;
+    const saved = await runMutation(
+      "/api/admin/lineup-correction",
+      {
         slateId: selectedSlateId,
         teamId: selectedTeamId,
-        action: "remove",
+        action,
         oldPlayerId,
-      }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setMessage(result.error || "Failed to remove player.");
-      return;
-    }
-
-    setMessage("Player removed and slate totals recalculated.");
-    await loadRoster();
+        newPlayerId: replacementPlayerId,
+      },
+      `Player ${action === "add" ? "added" : action === "replace" ? "replaced" : "removed"} and slate totals recalculated.`,
+    );
+    if (saved) setReplacementPlayerId(null);
   }
 
   async function recomputeSlate() {
     if (!selectedSlateId) return;
-
-    const response = await fetch("/api/admin/recompute-slate-results", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ slateId: selectedSlateId }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setMessage(result.error || "Failed to recompute slate.");
-      return;
-    }
-
-    setMessage("Slate totals and finish positions recalculated.");
-    await loadRoster();
+    await runMutation(
+      "/api/admin/recompute-slate-results",
+      { slateId: selectedSlateId },
+      "Slate totals and finish positions recalculated.",
+    );
   }
 
   return (
@@ -327,19 +228,19 @@ export default function AdminCorrectionsPage() {
         <AppNav />
 
         <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <Link href={`/admin?sport=${sport}`} className="text-sm font-semibold text-sky-700 hover:text-sky-900">
+            ← Commissioner Center
+          </Link>
+          <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-wide text-sky-700">
-                Admin
-              </p>
+              <p className="text-sm font-medium uppercase tracking-wide text-sky-700">Admin</p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight">
-                Corrections
+                {sport === "nfl" ? "NFL" : "NBA"} Corrections
               </h1>
               <p className="mt-2 text-sm text-slate-600">
                 Fix historical rosters, stat lines, slate totals, and finish positions.
               </p>
             </div>
-
             <button
               type="button"
               onClick={recomputeSlate}
@@ -362,15 +263,17 @@ export default function AdminCorrectionsPage() {
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               Loading correction tools...
             </div>
+          ) : slates.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+              No {sport.toUpperCase()} slates are available in the active Group.
+            </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-3">
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">
-                  Slate
-                </span>
+                <span className="mb-2 block text-sm font-medium text-slate-700">Slate</span>
                 <select
                   value={selectedSlateId ?? ""}
-                  onChange={(event) => setSelectedSlateId(Number(event.target.value))}
+                  onChange={(event) => void loadSetup(Number(event.target.value))}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm"
                 >
                   {slates.map((slate) => (
@@ -380,24 +283,18 @@ export default function AdminCorrectionsPage() {
                   ))}
                 </select>
               </label>
-
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-700">
-                  Team
-                </span>
+                <span className="mb-2 block text-sm font-medium text-slate-700">Team</span>
                 <select
                   value={selectedTeamId ?? ""}
                   onChange={(event) => setSelectedTeamId(Number(event.target.value))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm"
+                  disabled={teams.length === 0}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm disabled:opacity-60"
                 >
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
+                  {teams.length === 0 ? <option value="">No participating teams</option> : null}
+                  {teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
                 </select>
               </label>
-
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
                 <div className="font-semibold text-slate-900">Current Selection</div>
                 <div className="mt-1">{selectedSlate?.label ?? "—"}</div>
@@ -410,36 +307,29 @@ export default function AdminCorrectionsPage() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Roster + Stat Corrections
-              </h2>
+              <h2 className="text-2xl font-semibold text-slate-900">Roster + Stat Corrections</h2>
               <p className="mt-1 text-sm text-slate-600">
                 Edit stats directly, or replace/add a player for the selected team.
               </p>
             </div>
-
             <div className="flex flex-col gap-2 sm:flex-row">
               <select
                 value={replacementPlayerId ?? ""}
-                onChange={(event) =>
-                  setReplacementPlayerId(
-                    event.target.value ? Number(event.target.value) : null
-                  )
-                }
+                onChange={(event) => setReplacementPlayerId(event.target.value ? Number(event.target.value) : null)}
+                disabled={!selectedTeamId}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm sm:w-72"
               >
-                <option value="">Choose player...</option>
+                <option value="">Choose {sport.toUpperCase()} player...</option>
                 {playerOptions.map((player) => (
                   <option key={player.id} value={player.id}>
-                    {player.name} {player.team_abbreviation ? `(${player.team_abbreviation})` : ""}
+                    {player.name} {player.teamAbbreviation ? `(${player.teamAbbreviation})` : ""}
                   </option>
                 ))}
               </select>
-
               <button
                 type="button"
-                onClick={addPlayer}
-                disabled={!replacementPlayerId}
+                onClick={() => void correctLineup("add")}
+                disabled={!selectedTeamId || !replacementPlayerId}
                 className="rounded-xl border border-emerald-300 bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-900 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Add Player
@@ -448,93 +338,72 @@ export default function AdminCorrectionsPage() {
           </div>
 
           {isLoadingRoster ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              Loading roster...
-            </div>
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">Loading roster...</div>
           ) : roster.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-              No roster found.
-            </div>
+            <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">No roster found.</div>
           ) : (
             <div className="space-y-3">
               {roster.map((row) => {
-                const draft = statDrafts[row.playerId] ?? emptyStats();
+                const draft = statDrafts[row.playerId] ?? emptyStats(statColumns);
+                const supportsManualStats = sport !== "nfl" || row.positionGroup !== "D/ST";
+                const draftFantasy = scoring
+                  ? calculateCorrectionFantasyPoints({ sport, stats: draft, scoring })
+                  : Number(row.fantasyPoints ?? 0);
 
                 return (
-                  <div
-                    key={row.playerId}
-                    className="rounded-2xl border border-slate-200 bg-white p-4"
-                  >
+                  <div key={row.playerId} className="rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          {row.positionGroup ?? "—"}
-                        </div>
-                        <div className="text-lg font-semibold text-slate-900">
-                          {row.name}
-                        </div>
+                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{row.positionGroup ?? "—"}</div>
+                        <div className="text-lg font-semibold text-slate-900">{row.name}</div>
                         <div className="mt-1 text-sm text-slate-500">
-                          Current FP: {Number(row.fantasyPoints ?? 0).toFixed(1)} • Draft FP:{" "}
-                          {calculateFantasy(draft).toFixed(1)}
+                          Current FP: {Number(row.fantasyPoints ?? 0).toFixed(1)} • Draft FP: {draftFantasy.toFixed(1)}
                         </div>
                       </div>
-
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => replacePlayer(row.playerId)}
+                          onClick={() => void correctLineup("replace", row.playerId)}
                           disabled={!replacementPlayerId}
                           className="rounded-xl border border-sky-300 bg-sky-100 px-3 py-2 text-sm font-medium text-sky-900 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           Replace
                         </button>
-
                         <button
                           type="button"
-                          onClick={() => removePlayer(row.playerId)}
+                          onClick={() => void correctLineup("remove", row.playerId)}
                           className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700"
                         >
                           Remove
                         </button>
                       </div>
                     </div>
-
-                    <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-7">
-                      {[
-                        ["points", "PTS"],
-                        ["rebounds", "REB"],
-                        ["assists", "AST"],
-                        ["steals", "STL"],
-                        ["blocks", "BLK"],
-                        ["turnovers", "TO"],
-                      ].map(([key, label]) => (
+                    {!supportsManualStats ? (
+                      <p className="mt-4 text-sm text-slate-500">
+                        D/ST component stats are not stored for manual correction.
+                      </p>
+                    ) : (
+                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-10">
+                      {statColumns.map(({ key, label }) => (
                         <label key={key} className="block">
-                          <span className="mb-1 block text-xs font-medium text-slate-500">
-                            {label}
-                          </span>
+                          <span className="mb-1 block text-xs font-medium text-slate-500">{label}</span>
                           <input
                             type="number"
-                            value={draft[key as keyof StatDraft]}
-                            onChange={(event) =>
-                              updateDraft(
-                                row.playerId,
-                                key as keyof StatDraft,
-                                event.target.value
-                              )
-                            }
+                            value={draft[key] ?? 0}
+                            onChange={(event) => updateDraft(row.playerId, key, event.target.value)}
                             className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
                           />
                         </label>
                       ))}
-
                       <button
                         type="button"
-                        onClick={() => saveStats(row.playerId)}
-                        className="col-span-3 rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 sm:col-span-1 sm:self-end"
+                        onClick={() => void saveStats(row.playerId)}
+                        className="col-span-2 rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 sm:col-span-5 lg:col-span-1 lg:self-end"
                       >
                         Save Stats
                       </button>
                     </div>
+                    )}
                   </div>
                 );
               })}

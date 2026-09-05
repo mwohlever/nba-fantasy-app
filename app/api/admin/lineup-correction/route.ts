@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
+import { recomputeCorrectedSlateResults } from "@/lib/corrections/recomputeSlateResults";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,14 @@ export async function POST(request: NextRequest) {
 
     if (!authorization.ok) return authorization.response;
 
+    const sport = authorization.target.sportKey;
+    if (sport !== "nba" && sport !== "nfl") {
+      return NextResponse.json(
+        { error: "Lineup corrections are supported for NBA and NFL slates." },
+        { status: 400 }
+      );
+    }
+
     const { data: lineup, error: lineupError } = await supabaseAdmin
       .from("lineups")
       .select("id")
@@ -40,6 +49,25 @@ export async function POST(request: NextRequest) {
 
     if (!lineup) {
       return NextResponse.json({ error: "Lineup not found." }, { status: 404 });
+    }
+
+    if (newPlayerId) {
+      const { data: newPlayer, error: playerError } = await supabaseAdmin
+        .from(sport === "nfl" ? "players_nfl" : "players")
+        .select("id")
+        .eq("id", newPlayerId)
+        .maybeSingle();
+
+      if (playerError) {
+        return NextResponse.json({ error: playerError.message }, { status: 500 });
+      }
+
+      if (!newPlayer) {
+        return NextResponse.json(
+          { error: "Player not found for this sport." },
+          { status: 404 }
+        );
+      }
     }
 
     if (action === "replace") {
@@ -92,11 +120,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await fetch(`${request.nextUrl.origin}/api/admin/recompute-slate-results`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slateId }),
-    });
+    await recomputeCorrectedSlateResults(slateId, sport);
 
     return NextResponse.json({
       success: true,

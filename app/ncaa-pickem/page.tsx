@@ -555,152 +555,176 @@ export default function NcaaPickEmHome() {
 
   return (
     <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-4">
         <AppNav />
 
-        <section className="overflow-hidden rounded-3xl border border-blue-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 shadow-xl">
-          <div className="border-b border-slate-700/80 px-5 py-6 sm:px-7">
-            <div className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">
-              111 Sports
-            </div>
-
-            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">
-                  NCAA Pick &apos;Em
-                </h1>
-
-                <p className="mt-2 max-w-2xl text-sm text-slate-300 sm:text-base">
-                  Pick the winner of every Top-25-vs-Top-25 matchup. The entire weekly card locks when the first eligible game kicks off.
-                </p>
+        <section className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-300">
+                NCAA Pick &apos;Em
               </div>
 
-              {data?.week ? (
-                <div className="rounded-2xl border border-slate-700 bg-slate-950/70 px-4 py-3">
-                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    Card status
-                  </div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-black tracking-tight sm:text-2xl">
+                  Pick the winners
+                </h1>
 
-                  <div className="mt-1 font-bold">
+                {data?.week ? (
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                      data.locked
+                        ? "border-slate-600 bg-slate-800 text-slate-300"
+                        : "border-emerald-500/40 bg-emerald-950/40 text-emerald-300"
+                    }`}
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        data.locked
+                          ? "bg-slate-400"
+                          : "bg-emerald-400"
+                      }`}
+                    />
+
                     {data.locked
-                      ? "🔒 Locked"
-                      : "🟢 Open"}
-                  </div>
-                </div>
-              ) : null}
+                      ? "Locked"
+                      : "Open"}
+                  </span>
+                ) : null}
+              </div>
+
+              <p className="mt-1 text-xs text-slate-400">
+                Top-25 matchups for the selected week
+              </p>
             </div>
-          </div>
 
-          <div className="grid gap-3 px-5 py-4 sm:grid-cols-2 sm:px-7">
-            <label className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Season
-              </span>
+            <details className="group relative shrink-0">
+              <summary className="flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-950/70 px-2.5 py-1.5 text-xs font-bold text-slate-300 hover:border-slate-600 [&::-webkit-details-marker]:hidden">
+                <span>
+                  {selectedSeason ?? "Season"} · Week{" "}
+                  {selectedWeek ?? "—"}
+                </span>
 
-              <select
-                value={
-                  selectedSeason ??
-                  ""
-                }
-                onChange={(
-                  event,
-                ) => {
-                  const value =
-                    Number(
-                      event.target
-                        .value,
-                    );
+                <span
+                  aria-hidden="true"
+                  className="text-[9px] text-slate-500 transition-transform group-open:rotate-180"
+                >
+                  ▼
+                </span>
+              </summary>
 
-                  setSelectedSeason(
-                    Number.isFinite(
-                      value,
-                    )
-                      ? value
-                      : null,
-                  );
+              <div className="absolute right-0 z-30 mt-2 w-64 space-y-3 rounded-xl border border-slate-700 bg-slate-900 p-3 shadow-2xl">
+                <label className="block space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Season
+                  </span>
 
-                  setSelectedWeek(
-                    null,
-                  );
+                  <select
+                    value={
+                      selectedSeason ??
+                      ""
+                    }
+                    onChange={(
+                      event,
+                    ) => {
+                      const value =
+                        Number(
+                          event.target
+                            .value,
+                        );
 
-                  setMessage("");
-                }}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100"
-              >
-                {seasons.length ===
-                0 ? (
-                  <option value="">
-                    No seasons yet
-                  </option>
-                ) : null}
+                      setSelectedSeason(
+                        Number.isFinite(
+                          value,
+                        )
+                          ? value
+                          : null,
+                      );
 
-                {seasons.map(
-                  (season) => (
-                    <option
-                      key={season}
-                      value={season}
-                    >
-                      {season}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
+                      setSelectedWeek(
+                        null,
+                      );
 
-            <label className="space-y-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Week
-              </span>
+                      setMessage("");
+                    }}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-sm font-semibold text-slate-100"
+                  >
+                    {seasons.length ===
+                    0 ? (
+                      <option value="">
+                        No seasons yet
+                      </option>
+                    ) : null}
 
-              <select
-                value={
-                  selectedWeek ??
-                  ""
-                }
-                onChange={(
-                  event,
-                ) => {
-                  const value =
-                    Number(
-                      event.target
-                        .value,
-                    );
+                    {seasons.map(
+                      (season) => (
+                        <option
+                          key={season}
+                          value={season}
+                        >
+                          {season}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
 
-                  setSelectedWeek(
-                    Number.isFinite(
-                      value,
-                    )
-                      ? value
-                      : null,
-                  );
+                <label className="block space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Week
+                  </span>
 
-                  setMessage("");
-                }}
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-slate-100"
-              >
-                {weeksForSeason.length ===
-                0 ? (
-                  <option value="">
-                    No weeks yet
-                  </option>
-                ) : null}
+                  <select
+                    value={
+                      selectedWeek ??
+                      ""
+                    }
+                    onChange={(
+                      event,
+                    ) => {
+                      const value =
+                        Number(
+                          event.target
+                            .value,
+                        );
 
-                {weeksForSeason.map(
-                  (week) => (
-                    <option
-                      key={
-                        week.id
-                      }
-                      value={
-                        week.week_number
-                      }
-                    >
-                      {week.label}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
+                      setSelectedWeek(
+                        Number.isFinite(
+                          value,
+                        )
+                          ? value
+                          : null,
+                      );
+
+                      setMessage("");
+                    }}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-2 text-sm font-semibold text-slate-100"
+                  >
+                    {weeksForSeason.length ===
+                    0 ? (
+                      <option value="">
+                        No weeks yet
+                      </option>
+                    ) : null}
+
+                    {weeksForSeason.map(
+                      (week) => (
+                        <option
+                          key={
+                            week.id
+                          }
+                          value={
+                            week.week_number
+                          }
+                        >
+                          {week.label}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              </div>
+            </details>
           </div>
         </section>
 
@@ -743,20 +767,20 @@ export default function NcaaPickEmHome() {
         {!isLoading &&
         data?.week ? (
           <>
-            <section className="space-y-3">
+            <section className="mx-auto w-full max-w-3xl space-y-2">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300">
                     {data.week.season}
                   </div>
 
-                  <h2 className="mt-1 text-2xl font-black">
+                  <h2 className="mt-0.5 text-xl font-black sm:text-2xl">
                     {data.week.label}
                   </h2>
                 </div>
 
                 {data.week.lock_at ? (
-                  <div className="text-sm text-slate-400">
+                  <div className="text-xs text-slate-500 sm:text-sm">
                     {data.locked
                       ? "Locked "
                       : "Locks "}
@@ -838,42 +862,22 @@ export default function NcaaPickEmHome() {
                       ),
                     );
 
-                  const expanded =
-                    expandedGameId ===
-                    game.id;
-
                   return (
                     <article
                       key={
                         game.id
                       }
-                      className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-sm"
+                      className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm"
                     >
-                      <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      <div className="border-b border-slate-800 px-3 py-1.5">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                           {gameStatus(
                             game,
                           )}
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedGameId(
-                              expanded
-                                ? null
-                                : game.id,
-                            )
-                          }
-                          className="rounded-lg px-2 py-1 text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-                        >
-                          {expanded
-                            ? "▴"
-                            : "▾"}
-                        </button>
                       </div>
 
-                      <div className="grid gap-2 p-4 sm:grid-cols-2">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-1.5 p-2">
                         {[
                           {
                             side:
@@ -939,195 +943,186 @@ export default function NcaaPickEmHome() {
                         ].map(
                           (
                             team,
+                            index,
                           ) => (
-                            <label
+                            <div
                               key={
                                 team.id
                               }
-                              className={`relative flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition ${
-                                team.selected
-                                  ? "border-blue-400 bg-blue-950/50 ring-1 ring-blue-400/30"
-                                  : "border-slate-700 bg-slate-950/70 hover:border-slate-600"
-                              } ${
-                                data.locked
-                                  ? "cursor-default"
-                                  : ""
-                              }`}
+                              className="contents"
                             >
-                              <input
-                                type="radio"
-                                name={`game-${game.id}`}
-                                value={
-                                  team.id
-                                }
-                                checked={
-                                  team.selected
-                                }
-                                disabled={
-                                  data.locked
-                                }
-                                onChange={() => {
-                                  if (
-                                    data.locked
-                                  ) {
-                                    return;
-                                  }
-
-                                  setSelections(
-                                    (
-                                      current,
-                                    ) => ({
-                                      ...current,
-                                      [
-                                        game.id
-                                      ]:
-                                        team.id,
-                                    }),
-                                  );
-
-                                  setMessage(
-                                    "",
-                                  );
-                                }}
-                                className="h-4 w-4 shrink-0 accent-sky-400"
-                              />
-
-                              {team.logo ? (
-                                <img
-                                  src={
-                                    team.logo
-                                  }
-                                  alt=""
-                                  className="h-10 w-10 shrink-0 object-contain"
-                                />
-                              ) : (
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-black text-slate-400">
-                                  {team.name[0]}
+                              {index ===
+                              1 ? (
+                                <div className="flex items-center justify-center px-0.5 text-[10px] font-black uppercase tracking-wider text-slate-600">
+                                  vs
                                 </div>
-                              )}
+                              ) : null}
 
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="truncate font-bold">
-                                    {teamLabel(
-                                      team.rank,
-                                      team.name,
-                                    )}
+                              <label
+                                className={`relative flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2 py-2 transition ${
+                                  team.selected
+                                    ? "border-blue-400 bg-blue-950/60 ring-1 ring-blue-400/30"
+                                    : "border-slate-700 bg-slate-950/70 hover:border-slate-600"
+                                } ${
+                                  data.locked
+                                    ? "cursor-default"
+                                    : ""
+                                }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`game-${game.id}`}
+                                  value={
+                                    team.id
+                                  }
+                                  checked={
+                                    team.selected
+                                  }
+                                  disabled={
+                                    data.locked
+                                  }
+                                  onChange={() => {
+                                    if (
+                                      data.locked
+                                    ) {
+                                      return;
+                                    }
+
+                                    setSelections(
+                                      (
+                                        current,
+                                      ) => ({
+                                        ...current,
+                                        [
+                                          game.id
+                                        ]:
+                                          team.id,
+                                      }),
+                                    );
+
+                                    setMessage(
+                                      "",
+                                    );
+                                  }}
+                                  className="sr-only"
+                                />
+
+                                <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-800 text-[10px] font-black text-slate-500">
+                                  <span>
+                                    {team.name[0]}
+                                  </span>
+
+                                  <img
+                                    src={
+                                      team.logo ||
+                                      `https://a.espncdn.com/i/teamlogos/ncaa/500/${team.id}.png`
+                                    }
+                                    alt=""
+                                    className="absolute inset-0 h-full w-full object-contain p-0.5"
+                                    onError={(
+                                      event,
+                                    ) => {
+                                      event.currentTarget.style.display =
+                                        "none";
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex min-w-0 items-start gap-1">
+                                    <div className="min-w-0 flex-1 text-[12px] font-bold leading-tight text-slate-100">
+                                      <span className="line-clamp-2">
+                                        {teamLabel(
+                                          team.rank,
+                                          team.name,
+                                        )}
+                                      </span>
+                                    </div>
+
+                                    {team.score !==
+                                    null ? (
+                                      <div className="shrink-0 text-base font-black">
+                                        {
+                                          team.score
+                                        }
+                                      </div>
+                                    ) : null}
                                   </div>
 
-                                  {team.score !==
-                                  null ? (
-                                    <div className="ml-auto text-xl font-black">
-                                      {
-                                        team.score
-                                      }
-                                    </div>
-                                  ) : null}
-                                </div>
+                                  <div className="mt-0.5 flex items-center gap-1 text-[10px] leading-none text-slate-500">
+                                    <span>
+                                      {team.record ??
+                                        (team.side ===
+                                        "away"
+                                          ? "Away"
+                                          : "Home")}
+                                    </span>
 
-                                <div className="mt-1 text-xs text-slate-500">
-                                  {team.side ===
-                                  "away"
-                                    ? "Away"
-                                    : "Home"}
+                                  </div>
 
-                                  {team.record
-                                    ? ` · ${team.record}`
-                                    : ""}
-                                </div>
-
-                                {data.locked ? (
-                                  <div className="mt-3 flex flex-wrap gap-1.5">
-                                    {team.people.length >
+                                  {data.locked &&
+                                  team.people.length >
                                     0 ? (
-                                      team.people.map(
-                                        (
-                                          participant,
-                                        ) => (
-                                          <span
-                                            key={
-                                              participant.teamId
-                                            }
-                                            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] font-semibold text-slate-300"
-                                          >
-                                            {participant.avatarUrl ? (
+                                    <div className="mt-1 flex -space-x-1">
+                                      {team.people
+                                        .slice(
+                                          0,
+                                          4,
+                                        )
+                                        .map(
+                                          (
+                                            participant,
+                                          ) =>
+                                            participant.avatarUrl ? (
                                               <img
+                                                key={
+                                                  participant.teamId
+                                                }
                                                 src={
                                                   participant.avatarUrl
                                                 }
-                                                alt=""
-                                                className="h-5 w-5 rounded-full object-cover"
+                                                alt={
+                                                  participant.name
+                                                }
+                                                title={
+                                                  participant.name
+                                                }
+                                                className="h-5 w-5 rounded-full border border-slate-800 object-cover"
                                               />
                                             ) : (
-                                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[10px]">
+                                              <span
+                                                key={
+                                                  participant.teamId
+                                                }
+                                                title={
+                                                  participant.name
+                                                }
+                                                className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 bg-slate-700 text-[8px] font-bold text-slate-200"
+                                              >
                                                 {avatarFallback(
                                                   participant.name,
                                                 )}
                                               </span>
-                                            )}
+                                            ),
+                                        )}
 
-                                            {
-                                              participant.name
-                                            }
-                                          </span>
-                                        ),
-                                      )
-                                    ) : (
-                                      <span className="text-[11px] text-slate-600">
-                                        No picks
-                                      </span>
-                                    )}
-                                  </div>
-                                ) : null}
-                              </div>
-                            </label>
+                                      {team.people.length >
+                                      4 ? (
+                                        <span className="ml-1 text-[9px] text-slate-500">
+                                          +
+                                          {team.people.length -
+                                            4}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </label>
+                            </div>
                           ),
                         )}
                       </div>
 
-                      {expanded ? (
-                        <div className="border-t border-slate-800 bg-slate-950/50 px-4 py-4">
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-                              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                {teamLabel(
-                                  game.away_rank,
-                                  game.away_team_name,
-                                )}
-                              </div>
-
-                              <div className="mt-2 text-sm text-slate-300">
-                                Record:{" "}
-                                <strong>
-                                  {game.away_record ??
-                                    "—"}
-                                </strong>
-                              </div>
-                            </div>
-
-                            <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-                              <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                                {teamLabel(
-                                  game.home_rank,
-                                  game.home_team_name,
-                                )}
-                              </div>
-
-                              <div className="mt-2 text-sm text-slate-300">
-                                Record:{" "}
-                                <strong>
-                                  {game.home_record ??
-                                    "—"}
-                                </strong>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-3 text-xs text-slate-500">
-                            Passing, rushing, scoring and defensive averages will populate here once the team-stat feed is connected.
-                          </div>
-                        </div>
-                      ) : null}
                     </article>
                   );
                 },
@@ -1136,7 +1131,7 @@ export default function NcaaPickEmHome() {
 
             {data.games.length >
             0 ? (
-              <div className="rounded-2xl border border-slate-700 bg-slate-900 p-3 shadow-sm">
+              <div className="mx-auto flex w-full max-w-3xl justify-end rounded-xl border border-slate-800 bg-slate-900/70 p-2 shadow-sm">
                 {data.locked ? (
                   <div className="text-center text-sm font-semibold text-slate-400">
                     🔒 Picks are locked. Everyone&apos;s selections are now visible.
@@ -1151,7 +1146,7 @@ export default function NcaaPickEmHome() {
                     onClick={() =>
                       void savePicks()
                     }
-                    className="w-full rounded-xl bg-blue-600 px-5 py-3 font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="w-full rounded-lg bg-blue-600 px-5 py-2.5 font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:min-w-40"
                   >
                     {isSaving
                       ? "Saving…"

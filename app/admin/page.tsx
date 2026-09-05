@@ -12,6 +12,7 @@ import {
 import {
   getSportConfig,
 } from "@/lib/sports";
+import { getCreateSlateHref } from "@/lib/slates/createSlateSport";
 
 type AdminCard = {
   href: string;
@@ -215,7 +216,11 @@ function getAdminGroups(
           "Create, configure, and maintain Golf tournament slates.",
 
         cards:
-          FANTASY_SLATE_CARDS,
+          FANTASY_SLATE_CARDS.filter(
+            (card) =>
+              card.href !==
+              "/admin/corrections",
+          ),
       },
       {
         title:
@@ -468,7 +473,15 @@ export default function AdminPage() {
                             card.href
                           }
                           href={
-                            card.href
+                            card.href === "/slates/new" &&
+                            (selectedSport === "nba" ||
+                              selectedSport === "nfl" ||
+                              selectedSport === "golf")
+                              ? getCreateSlateHref(selectedSport)
+                              : card.href === "/admin/corrections" &&
+                                  (selectedSport === "nba" || selectedSport === "nfl")
+                                ? `/admin/corrections?sport=${selectedSport}`
+                                : card.href
                           }
                           className="group rounded-xl border border-slate-200 bg-slate-50 p-3 transition hover:border-sky-300 hover:bg-sky-50 sm:p-4"
                         >
