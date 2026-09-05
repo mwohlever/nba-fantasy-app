@@ -161,6 +161,21 @@ type SelectedPlayer = {
   teamName: string;
 };
 
+type LivePlayerGame = {
+  eventId: string;
+  gameDate?: string;
+  atVs: string;
+  opponent: string;
+  score: string;
+  status: string;
+  categories: Array<{
+    name: string;
+    displayName: string;
+    labels: string[];
+    stats: string[];
+  }>;
+};
+
 type PlayerDetailResponse = {
   success?: boolean;
   error?: string;
@@ -338,10 +353,12 @@ function seasonStatsToPlayerBoxes(
 function NcaaPlayerDetail({
   player,
   season,
+  liveGame,
   onBack,
 }: {
   player: SelectedPlayer;
   season: number;
+  liveGame?: LivePlayerGame | null;
   onBack: () => void;
 }) {
   const [tab, setTab] = useState<"season" | "gamelog">("season");
@@ -490,7 +507,7 @@ function NcaaPlayerDetail({
                     </div>
 
                     <div className="overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="min-w-full text-xs">
+                      <table className="min-w-full text-[11px]">
                         <thead className="bg-slate-50 text-slate-500">
                           <tr>
                             {category.labels.map((label, index) => (
@@ -530,9 +547,79 @@ function NcaaPlayerDetail({
                 </div>
               </div>
             )
-          ) : gameLogEvents.length ? (
+          ) : liveGame || gameLogEvents.length ? (
             <div className="space-y-3">
-              {gameLogEvents.map((event) => {
+              {liveGame ? (
+                <div className="space-y-4">
+                  {liveGame.categories.map((category, categoryIndex) => (
+                    <section
+                      key={`${category.name}-${categoryIndex}`}
+                    >
+                      <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
+                        {category.displayName}
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-slate-200">
+                        <table className="min-w-full text-xs">
+                          <thead className="bg-slate-50 text-slate-500">
+                            <tr>
+                              <th className="sticky left-0 z-10 bg-slate-50 px-3 py-2 text-left font-black">
+                                Game
+                              </th>
+
+                              {category.labels.map((label, index) => (
+                                <th
+                                  key={`${label}-${index}`}
+                                  className="whitespace-nowrap px-2 py-2 text-right font-black"
+                                >
+                                  {label}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+
+                          <tbody>
+                            <tr className="border-t border-slate-100">
+                              <td className="sticky left-0 bg-white px-3 py-2">
+                                <div className="flex min-w-[135px] items-center gap-2">
+                                  <div>
+                                    <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                                      <span>
+                                        {liveGame.atVs} {liveGame.opponent}
+                                      </span>
+
+                                      <span className="rounded-full bg-sky-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white">
+                                        Live
+                                      </span>
+                                    </div>
+
+                                    <div className="mt-0.5 text-[10px] text-slate-500">
+                                      {liveGame.status} · {liveGame.score}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+
+                              {category.stats.map((stat, index) => (
+                                <td
+                                  key={index}
+                                  className="whitespace-nowrap px-2 py-2 text-right font-medium text-slate-700"
+                                >
+                                  {stat}
+                                </td>
+                              ))}
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : null}
+
+              {gameLogEvents
+                .filter((event) => event.eventId !== liveGame?.eventId)
+                .map((event) => {
                 const opponent =
                   event.opponent?.shortDisplayName ||
                   event.opponent?.displayName ||
@@ -855,6 +942,72 @@ export default function NcaaGameCenterModal({
             hour: "numeric",
             minute: "2-digit",
           }));
+
+  const livePlayerGame = useMemo<LivePlayerGame | null>(() => {
+    if (!isLive || !selectedPlayer || !detail?.eventId) return null;
+
+    const teamBox = playerTeams.find(
+      (team) => team.team?.id === selectedPlayer.teamId,
+    );
+
+    const opponent =
+      selectedPlayer.teamId === away?.id ? home : away;
+
+    const categories = (teamBox?.statistics || []).flatMap((category) => {
+      const athlete = (category.athletes || []).find(
+        (row) => row.athlete?.id === selectedPlayer.id,
+      );
+
+      if (!athlete?.stats?.length) return [];
+
+      return [
+        {
+          name: category.name || category.displayName || "stats",
+          displayName: categoryTitle(category),
+          labels: category.labels || [],
+          stats: athlete.stats,
+        },
+      ];
+    });
+
+    if (!categories.length) return null;
+
+    const selectedIsAway = selectedPlayer.teamId === away?.id;
+
+    const awayName =
+      away?.team?.abbreviation || game.awayTeam.abbreviation;
+    const homeName =
+      home?.team?.abbreviation || game.homeTeam.abbreviation;
+
+    const awayScore = away?.score ?? game.awayTeam.score ?? "—";
+    const homeScore = home?.score ?? game.homeTeam.score ?? "—";
+
+    return {
+      eventId: detail.eventId,
+      gameDate: competition?.date,
+      atVs: selectedIsAway ? "@" : "vs",
+      opponent:
+        opponent?.team?.shortDisplayName ||
+        opponent?.team?.abbreviation ||
+        "Opponent",
+      score: `${awayName} ${awayScore} · ${homeName} ${homeScore}`,
+      status: statusText,
+      categories,
+    };
+  }, [
+    isLive,
+    selectedPlayer,
+    detail?.eventId,
+    competition?.date,
+    playerTeams,
+    away,
+    home,
+    game.awayTeam.abbreviation,
+    game.awayTeam.score,
+    game.homeTeam.abbreviation,
+    game.homeTeam.score,
+    statusText,
+  ]);
 
   const favoriteAbbreviation =
     game.odds?.favoriteTeamId === game.awayTeam.id
@@ -1442,6 +1595,7 @@ export default function NcaaGameCenterModal({
             detail?.matchupPreview?.seasonYear ||
             new Date(game.kickoffAt).getFullYear()
           }
+          liveGame={livePlayerGame}
           onBack={() => setSelectedPlayer(null)}
         />
       ) : null}
