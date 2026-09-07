@@ -1,3 +1,4 @@
+import { loadFantasyNotificationRecipients } from "@/lib/fantasyTeamIdentity";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { PushResult } from "@/lib/push";
 import { sendLoggedNotification } from "@/lib/notifications";
@@ -131,6 +132,10 @@ export async function notifyNextDrafter(
 
   if (slateError || !slate) {
     throw new Error(slateError?.message ?? "Slate not found.");
+  }
+
+  if (!["nba", "nfl", "golf"].includes(String(slate.sport))) {
+    return { sent: 0, failed: 0, skipped: true, reason: "Unsupported fantasy sport.", devices: [] };
   }
 
   const sport =
@@ -281,7 +286,9 @@ export async function notifyNextDrafter(
 
   const isFinalPick = nextTeamPlayerIds.length === totalSlots - 1;
 
-  const { data: appUser, error: appUserError } = await supabaseAdmin
+  const { data: appUser, error: appUserError } = sport !== "golf"
+    ? { data: (await loadFantasyNotificationRecipients(supabaseAdmin, slateId, sport, [nextTeam.team_id]))[0] ?? null, error: null }
+    : await supabaseAdmin
     .from("app_users")
     .select("id, display_name")
     .eq("team_id", nextTeam.team_id)

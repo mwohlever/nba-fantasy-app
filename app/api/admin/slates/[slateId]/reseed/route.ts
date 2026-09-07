@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
+import { authorizeSlateResource, loadActiveGroupTeamIds } from "@/lib/security/resourceAuthorization";
 
 type RouteContext = {
   params: Promise<{
@@ -44,7 +44,7 @@ export async function POST(request: Request, context: RouteContext) {
 
     const { data: currentSlate, error: currentSlateError } = await supabaseAdmin
       .from("slates")
-      .select("id, start_date, end_date")
+      .select("id, start_date, end_date, sport, league_id, is_locked")
       .eq("id", slateId)
       .single();
 
@@ -55,26 +55,36 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    const isFantasy = currentSlate.sport === "nba" || currentSlate.sport === "nfl";
+    if (isFantasy && (currentSlate.league_id !== authorization.target.leagueId ||
+        currentSlate.sport !== authorization.target.sportKey || currentSlate.is_locked)) {
+      return NextResponse.json({ error: "Cannot reseed this slate." }, { status: 400 });
+    }
+    const activeTeamIds = isFantasy
+      ? new Set(await loadActiveGroupTeamIds(authorization.target.groupId))
+      : null;
+    let previousQuery = supabaseAdmin.from("slates")
+      .select("id, start_date, end_date, is_locked")
+      .lt("start_date", currentSlate.start_date)
+      .eq("is_locked", true);
+    let teamsQuery = supabaseAdmin.from("teams").select("id, name");
+    if (isFantasy) {
+      previousQuery = previousQuery.eq("league_id", currentSlate.league_id!)
+        .eq("sport", currentSlate.sport);
+      teamsQuery = teamsQuery.eq("group_id", authorization.target.groupId);
+    }
+
     const [
       { data: previousSlates, error: previousSlatesError },
       { data: slateTeams, error: slateTeamsError },
       { data: teams, error: teamsError },
     ] = await Promise.all([
-      supabaseAdmin
-        .from("slates")
-        .select("id, start_date, end_date, is_locked")
-        .lt("start_date", currentSlate.start_date)
-        .eq("is_locked", true)
-        .order("start_date", { ascending: false })
-        .limit(1),
+      previousQuery.order("start_date", { ascending: false }).limit(1),
       supabaseAdmin
         .from("slate_teams")
         .select("slate_id, team_id, draft_order, is_participating")
         .eq("slate_id", slateId),
-      supabaseAdmin
-        .from("teams")
-        .select("id, name")
-        .order("name", { ascending: true }),
+      teamsQuery.order("name", { ascending: true }),
     ]);
 
     if (previousSlatesError || slateTeamsError || teamsError) {
@@ -131,12 +141,15 @@ export async function POST(request: Request, context: RouteContext) {
         previousOrderMap.set(row.team_id, row.finish_position ?? 999);
       });
 
-    const merged = (teams ?? []).map((team, index) => {
+    const merged = (teams ?? [])
+      .filter((team) => !activeTeamIds || activeTeamIds.has(team.id) || configMap.has(team.id))
+      .map((team, index) => {
       const config = configMap.get(team.id);
       return {
         team_id: team.id,
         draft_order: config?.draft_order ?? index + 1,
-        is_participating: config?.is_participating ?? true,
+        is_participating: activeTeamIds && !activeTeamIds.has(team.id)
+          ? false : config?.is_participating ?? true,
       };
     });
 

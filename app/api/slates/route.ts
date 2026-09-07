@@ -361,8 +361,13 @@ async function getNbaTeamsAndFirstGameTimeForDate(date: string) {
 async function getMostRecentCompletedSlateSetup(
   sport: "nba" | "nfl" | "golf",
   leagueId: string,
+  beforeDate?: string,
 ) {
-  const { data: slates, error: slatesError } = await supabaseAdmin
+  // A fantasy preview has no previous slate until its start date is selected.
+  if (sport !== "golf" && !beforeDate) {
+    return { slate: null, results: [] as TeamSlateResultRow[] };
+  }
+  let query = supabaseAdmin
     .from("slates")
     .select(
       "id, start_date, end_date, date, display_name, sport, league_id"
@@ -371,6 +376,8 @@ async function getMostRecentCompletedSlateSetup(
     .eq("league_id", leagueId)
     .order("start_date", { ascending: false })
     .order("end_date", { ascending: false });
+  if (sport !== "golf" && beforeDate) query = query.lt("start_date", beforeDate);
+  const { data: slates, error: slatesError } = await query;
 
   if (slatesError) throw new Error(slatesError.message);
 
@@ -539,6 +546,7 @@ export async function GET(request: NextRequest) {
       await getMostRecentCompletedSlateSetup(
         sport,
         league.id,
+        searchParams.get("beforeDate") ?? undefined,
       );
 
     const suggestedRules =
@@ -555,7 +563,9 @@ export async function GET(request: NextRequest) {
       }));
 
     const suggestedOrderIds = buildSuggestedOrderIds(
-      previousCompleted.results,
+      sport === "golf" ? previousCompleted.results : previousCompleted.results.filter(
+        (row) => safeTeams.some((team) => team.id === row.team_id),
+      ),
       safeTeams
     );
 
@@ -878,9 +888,12 @@ export async function POST(request: NextRequest) {
       await getMostRecentCompletedSlateSetup(
         sport,
         league.id,
+        startDate,
       );
     const suggestedOrderIds = buildSuggestedOrderIds(
-      previousCompleted.results,
+      sport === "golf" ? previousCompleted.results : previousCompleted.results.filter(
+        (row) => safeTeams.some((team) => team.id === row.team_id),
+      ),
       safeTeams
     );
 

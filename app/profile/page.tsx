@@ -328,6 +328,7 @@ function ProfilePageContent() {
   const searchParams = useSearchParams();
 
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [groupTeamId, setGroupTeamId] = useState<number | null>(null);
   const [profile, setProfile] = useState<TeamProfile | null>(null);
   const [season, setSeason] = useState<number | "all">("all");
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
@@ -378,6 +379,7 @@ function ProfilePageContent() {
 
         if (response.ok && result.authenticated && result.user) {
           setUser(result.user as CurrentUser);
+          setGroupTeamId(result.groupContext?.team?.id ?? null);
         } else {
           setUser(null);
         }
@@ -398,7 +400,14 @@ function ProfilePageContent() {
       return;
     }
 
-    const currentUser = user;
+    const profileTeamId = selectedSport === "nba" || selectedSport === "nfl"
+      ? groupTeamId : user.teamId;
+    if (!profileTeamId) {
+      setProfile(null);
+      setMessage("No team is available in the active Group.");
+      setIsLoadingProfile(false);
+      return;
+    }
     let active = true;
 
     async function loadProfile() {
@@ -407,7 +416,7 @@ function ProfilePageContent() {
         setMessage("");
 
         const response = await fetch(
-          `/api/team-profile?teamId=${currentUser.teamId}&season=${season}&sport=${selectedSport}`,
+          `/api/team-profile?teamId=${profileTeamId}&season=${season}&sport=${selectedSport}`,
           {
             cache: "no-store",
           }
@@ -445,7 +454,7 @@ function ProfilePageContent() {
     return () => {
       active = false;
     };
-  }, [user, season, selectedSport]);
+  }, [user, groupTeamId, season, selectedSport]);
 
 
   useEffect(() => {

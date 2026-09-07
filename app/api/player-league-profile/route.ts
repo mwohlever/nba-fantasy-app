@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getCurrentUser } from "@/lib/auth";
+import { getActiveLeagueForSport } from "@/lib/groups/context";
 import { getStatColumns } from "@/lib/statColumns";
 
 type PlayerRow = {
@@ -1168,6 +1170,18 @@ export async function GET(request: Request) {
       });
     }
 
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Login required." }, { status: 401 });
+    }
+    const activeLeague = await getActiveLeagueForSport(user, sport);
+    if (!activeLeague) {
+      return NextResponse.json(
+        { error: "This League is not enabled for the active Group." },
+        { status: 404 },
+      );
+    }
+
     const playersTable = sport === "nfl" ? "players_nfl" : "players";
     const playersSelect =
       sport === "nfl" ? "id, name, position_group:position" : "id, name, position_group";
@@ -1185,12 +1199,24 @@ export async function GET(request: Request) {
      */
     const db = supabaseAdmin as any;
 
+    // History follows actual league slates, not today's active membership list.
+    const slatesResponse = await db.from("slates")
+      .select("id, date, start_date, end_date")
+      .eq("league_id", activeLeague.league.id)
+      .eq("sport", sport);
+    if (slatesResponse.error) throw new Error(slatesResponse.error.message);
+    const slateIds = (slatesResponse.data ?? []).map((row: SlateRow) => row.id);
+    const lineupsResponse = slateIds.length
+      ? await db.from("lineups").select("id, slate_id, team_id").in("slate_id", slateIds)
+      : { data: [], error: null };
+    if (lineupsResponse.error) throw new Error(lineupsResponse.error.message);
+    const lineupIds = (lineupsResponse.data ?? []).map((row: LineupRow) => row.id);
+    const teamIds = [...new Set((lineupsResponse.data ?? []).map((row: LineupRow) => row.team_id))];
+
     const [
       playerResponse,
       lineupPlayersResponse,
-      lineupsResponse,
       teamsResponse,
-      slatesResponse,
       resultsResponse,
       statsResponse,
     ] = await Promise.all([
@@ -1200,27 +1226,23 @@ export async function GET(request: Request) {
         .eq("id", playerId)
         .maybeSingle(),
 
-      db
+      lineupIds.length ? db
         .from("lineup_players")
-        .select(
-          "lineup_id, player_id, projected_fantasy_points, projection_confidence, projection_source, projected_at",
-        )
-        .eq("player_id", playerId),
+        .select("lineup_id, player_id, projected_fantasy_points, projection_confidence, projection_source, projected_at")
+        .eq("player_id", playerId)
+        .in("lineup_id", lineupIds) : { data: [], error: null },
 
-      db.from("lineups").select("id, slate_id, team_id"),
+      teamIds.length ? db.from("teams").select("id, name")
+        .eq("group_id", activeLeague.context.group.id).in("id", teamIds)
+        : { data: [], error: null },
 
-      db.from("teams").select("id, name"),
+      slateIds.length ? db.from("team_slate_results")
+        .select("slate_id, team_id, finish_position").in("slate_id", slateIds)
+        : { data: [], error: null },
 
-      db.from("slates").select("id, date, start_date, end_date").eq("sport", sport),
-
-      db
-        .from("team_slate_results")
-        .select("slate_id, team_id, finish_position"),
-
-      db
-        .from(statsTable)
-        .select(statsSelect)
-        .eq("player_id", playerId),
+      slateIds.length ? db.from(statsTable).select(statsSelect)
+        .eq("player_id", playerId).in("slate_id", slateIds)
+        : { data: [], error: null },
     ]);
 
     const queryError =
@@ -1294,7 +1316,7 @@ export async function GET(request: Request) {
       .filter((row): row is DraftedRow => row !== null);
 
     const allHistory: RecentHistoryRow[] = draftedRows
-      .filter(({ lineup }) => slateById.has(lineup.slate_id))
+      .filter(({ lineup }) => slateById.has(lineup.slate_id) && teamById.has(lineup.team_id))
       .map(({ lineup, lineupPlayer }) => {
         const team = teamById.get(lineup.team_id);
         const slate = slateById.get(lineup.slate_id);

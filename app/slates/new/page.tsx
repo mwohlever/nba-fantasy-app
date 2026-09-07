@@ -108,24 +108,30 @@ export default function NewSlatePage() {
     }
   }, [requestedSport, router, sport]);
 
+  const setupBeforeDate = sport === "golf" ? "" : startDate;
   useEffect(() => {
-    void loadSlateSetup(sport);
-  }, [sport]);
+    const controller = new AbortController();
+    void loadSlateSetup(sport, setupBeforeDate, controller.signal);
+    return () => controller.abort();
+  }, [sport, setupBeforeDate]);
 
   useEffect(() => {
     if (sport !== "golf") return;
     void loadGolfSchedule(golfYear);
   }, [sport, golfYear]);
 
-  async function loadSlateSetup(targetSport: SportKey) {
+  async function loadSlateSetup(targetSport: SportKey, beforeDate: string, signal: AbortSignal) {
     try {
       setIsLoadingTeams(true);
       setMessage("");
 
       const response = await fetch(
-        `/api/slates?sport=${encodeURIComponent(targetSport)}`
+        `/api/slates?sport=${encodeURIComponent(targetSport)}` +
+          (beforeDate ? `&beforeDate=${encodeURIComponent(beforeDate)}` : ""),
+        { signal },
       );
       const result = (await response.json()) as SetupResponse | { error?: string };
+      if (signal.aborted) return;
 
       if (!response.ok) {
         setMessage(
@@ -188,10 +194,12 @@ setTeams(
         setPreviousSlateLabel("");
       }
     } catch (error) {
-      console.error(error);
-      setMessage("Something went wrong while loading slate setup.");
+      if (!signal.aborted) {
+        console.error(error);
+        setMessage("Something went wrong while loading slate setup.");
+      }
     } finally {
-      setIsLoadingTeams(false);
+      if (!signal.aborted) setIsLoadingTeams(false);
     }
   }
 
@@ -535,6 +543,7 @@ setTeams(
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (sport !== "golf" && isLoadingTeams) return;
     setMessage("");
 
     if (sport === "golf") {
@@ -1242,7 +1251,7 @@ checked={!!team.is_participating}
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || (sport !== "golf" && isLoadingTeams)}
                 className="w-full rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isSaving

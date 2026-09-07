@@ -1,3 +1,4 @@
+import { loadFantasyTeamAvatars } from "@/lib/fantasyTeamIdentity";
 export const dynamic = "force-dynamic";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -144,7 +145,7 @@ export default async function ScoresLineupsPage({
         "is_active",
         true,
       ),
-    supabaseAdmin
+    sport !== "golf" ? { data: [], error: null } : supabaseAdmin
       .from("app_users")
       .select("team_id, avatar_url")
       .not("team_id", "is", null),
@@ -208,7 +209,9 @@ export default async function ScoresLineupsPage({
     );
   }
 
-  const avatarUrlByTeamId = new Map<number, string | null>();
+  const avatarUrlByTeamId = sport !== "golf"
+    ? await loadFantasyTeamAvatars(supabaseAdmin, teams ?? [])
+    : new Map<number, string | null>();
 
   (teamUsers ?? []).forEach((user: any) => {
     if (user.team_id === null || user.team_id === undefined) return;

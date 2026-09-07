@@ -1,3 +1,4 @@
+import { loadFantasyTeamAvatars } from "@/lib/fantasyTeamIdentity";
 import { NextResponse } from "next/server";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -80,12 +81,11 @@ export async function getFantasyTeamProfile(
       { data: players },
       { data: playerStats },
       { data: slateTeamConfigs },
-      { data: teamUser },
       { data: leagueAwards },
     ] = await Promise.all([
       supabaseAdmin
         .from("teams")
-        .select("id, name")
+        .select("id, name, user_id")
         .eq("id", teamId)
         .eq("group_id", scope.groupId)
         .single(),
@@ -123,11 +123,6 @@ export async function getFantasyTeamProfile(
         .range(0, 20000),
       supabaseAdmin.from("slate_team_configs").select("slate_id, team_id, draft_order, is_participating"),
       supabaseAdmin
-        .from("app_users")
-        .select("avatar_url")
-        .eq("team_id", teamId)
-        .maybeSingle(),
-      supabaseAdmin
         .from("league_awards")
         .select(
           "id, season, team_id, title, emoji, description, rarity, display_order, featured"
@@ -144,6 +139,8 @@ export async function getFantasyTeamProfile(
         .order("id", { ascending: true }),
     ]);
 
+    const avatars = await loadFantasyTeamAvatars(supabaseAdmin, team ? [team] : []);
+    const teamUser = { avatar_url: avatars.get(teamId) ?? null };
     const safeTeam = team ?? { id: teamId, name: "Unknown Team" };
     const safeSlates = slates ?? [];
     const safeResults = results ?? [];

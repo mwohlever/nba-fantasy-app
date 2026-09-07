@@ -1,3 +1,4 @@
+import { loadFantasyNotificationRecipients } from "@/lib/fantasyTeamIdentity";
 import {
   renderNotificationTemplate,
 } from "@/lib/notificationTemplates";
@@ -88,6 +89,10 @@ export async function notifyNewlyFinishedPlayers(input: {
   previousStatuses: PreviousStatusInput[];
   currentStats: CurrentStatInput[];
 }) {
+  if (input.slate.sport && !["nba", "nfl", "golf"].includes(input.slate.sport)) {
+    return { attempted: 0, sent: 0, skipped: 0, failed: 0 };
+  }
+
   const previousStatusMap = new Map(
     input.previousStatuses.map((row) => [row.playerId, row.gameStatus])
   );
@@ -125,7 +130,11 @@ export async function notifyNewlyFinishedPlayers(input: {
 
   const [{ data: teams }, { data: appUsers }] = await Promise.all([
     supabaseAdmin.from("teams").select("id, name").in("id", teamIds),
-    supabaseAdmin
+    input.slate.sport !== "golf"
+      ? loadFantasyNotificationRecipients(supabaseAdmin, input.slate.id,
+          input.slate.sport === "nfl" ? "nfl" : "nba", teamIds)
+          .then((data) => ({ data, error: null }))
+      : supabaseAdmin
       .from("app_users")
       .select("id, team_id")
       .in("team_id", teamIds)

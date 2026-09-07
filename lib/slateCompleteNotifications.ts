@@ -1,3 +1,4 @@
+import { loadFantasyNotificationRecipients } from "@/lib/fantasyTeamIdentity";
 import {
   renderNotificationTemplate,
 } from "@/lib/notificationTemplates";
@@ -68,6 +69,10 @@ export async function notifyCompletedSlate(input: {
   slate: SlateInput;
   teamResults: TeamResultInput[];
 }) {
+  if (input.slate.sport && !["nba", "nfl", "golf"].includes(input.slate.sport)) {
+    return { attempted: 0, sent: 0, skipped: 0, failed: 0 };
+  }
+
   const sortedResults = [...input.teamResults]
     .filter((row) => row.finish_position !== null)
     .sort(
@@ -97,7 +102,11 @@ export async function notifyCompletedSlate(input: {
       .from("teams")
       .select("id, name")
       .in("id", teamIds),
-    supabaseAdmin
+    input.slate.sport !== "golf"
+      ? loadFantasyNotificationRecipients(supabaseAdmin, input.slate.id,
+          input.slate.sport === "nfl" ? "nfl" : "nba", teamIds)
+          .then((data) => ({ data, error: null }))
+      : supabaseAdmin
       .from("app_users")
       .select("id, team_id")
       .in("team_id", teamIds)
