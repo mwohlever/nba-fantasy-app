@@ -1385,6 +1385,7 @@ export async function POST(
               "name",
               creatorTeamName,
             )
+            .eq("group_id", groupId)
             .maybeSingle();
 
 

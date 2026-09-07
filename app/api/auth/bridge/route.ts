@@ -1,3 +1,4 @@
+import { resolvePinAccountId } from "@/lib/security/pinIdentity";
 import {
   NextResponse,
 } from "next/server";
@@ -14,6 +15,8 @@ import {
 
 type BridgeBody = {
   accessToken?: string;
+  legacyGroupSlug?: string;
+  legacyTeamName?: string;
 
   legacyTeamId?:
     number;
@@ -527,11 +530,6 @@ export async function POST(
     // without placing their email addresses in source code.
     // =========================================================
 
-    const legacyTeamId =
-      Number(
-        body.legacyTeamId,
-      );
-
     const legacyPin =
       String(
         body.legacyPin ??
@@ -540,15 +538,16 @@ export async function POST(
 
 
     if (
-      Number.isInteger(
-        legacyTeamId,
-      ) &&
-      legacyTeamId >
-        0 &&
       /^\d{4,8}$/.test(
         legacyPin,
       )
     ) {
+      const accountId = await resolvePinAccountId({
+        groupSlug: body.legacyGroupSlug, teamName: body.legacyTeamName,
+        legacyTeamId: body.legacyTeamId,
+      });
+      if (!accountId) return NextResponse.json({ error: "Invalid account or PIN." }, { status: 401 });
+
       const {
         data:
           legacyData,
@@ -574,8 +573,8 @@ export async function POST(
             `,
           )
           .eq(
-            "team_id",
-            legacyTeamId,
+            "id",
+            accountId,
           )
           .maybeSingle();
 

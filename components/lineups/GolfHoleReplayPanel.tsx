@@ -701,7 +701,7 @@ export default function GolfHoleReplayPanel({
 
         const databaseResponse =
           await fetch(
-            `/api/golf/shotcast-manifest?tournamentId=${encodeURIComponent(
+            `/api/golf/shotcast-manifest?slateId=${slateId}&tournamentId=${encodeURIComponent(
               tournamentId,
             )}`,
             {
@@ -769,7 +769,7 @@ export default function GolfHoleReplayPanel({
     void loadManifest();
 
     return () => controller.abort();
-  }, [replay?.tournamentId]);
+  }, [replay?.tournamentId, slateId]);
 
   /*
    * Hole-level PGA metadata is independent of the golfer's

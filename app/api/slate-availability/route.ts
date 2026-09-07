@@ -1,3 +1,4 @@
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
@@ -80,6 +81,9 @@ export async function GET(request: NextRequest) {
     const safeSlate = slate as SlateRecord;
 
     if (safeSlate.sport === "golf") {
+      const authorization = await authorizeSlateResource(request, slateId);
+      if (!authorization.ok) return authorization.response;
+
       const { data: eventPlayers, error: eventPlayersError } =
         await supabaseAdmin
           .from("golf_event_players")

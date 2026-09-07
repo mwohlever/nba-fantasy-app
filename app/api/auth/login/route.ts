@@ -1,9 +1,12 @@
+import { resolvePinAccountId } from "@/lib/security/pinIdentity";
 import { NextResponse } from "next/server";
 import { createUserSession, verifyPin } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 type LoginBody = {
   teamId?: number;
+  groupSlug?: string;
+  teamName?: string;
   pin?: string;
 };
 
@@ -20,22 +23,26 @@ type AppUserRow = {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as LoginBody;
-    const teamId = Number(body.teamId);
     const pin = String(body.pin ?? "").trim();
 
-    if (!Number.isInteger(teamId) || !/^\d{4,8}$/.test(pin)) {
+    if (!/^\d{4,8}$/.test(pin)) {
       return NextResponse.json(
-        { error: "Select your name and enter a valid PIN." },
+        { error: "Enter your Group, team name, and a valid PIN." },
         { status: 400 }
       );
     }
+
+    const accountId = await resolvePinAccountId({
+      groupSlug: body.groupSlug, teamName: body.teamName, legacyTeamId: body.teamId,
+    });
+    if (!accountId) return NextResponse.json({ error: "Invalid account or PIN." }, { status: 401 });
 
     const { data, error } = await supabaseAdmin
       .from("app_users")
       .select(
         "id, team_id, display_name, role, pin_salt, pin_hash, is_active"
       )
-      .eq("team_id", teamId)
+      .eq("id", accountId)
       .maybeSingle();
 
     if (error) {

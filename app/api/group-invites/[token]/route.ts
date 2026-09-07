@@ -271,6 +271,7 @@ function relatedGroup(
 
 
 async function makeUniqueTeamName(
+  groupId: string,
   desiredName:
     string,
 
@@ -324,6 +325,7 @@ async function makeUniqueTeamName(
           "name",
           candidate,
         )
+        .eq("group_id", groupId)
         .maybeSingle();
 
 
@@ -1274,6 +1276,7 @@ export async function POST(
     if (!team) {
       const teamName =
         await makeUniqueTeamName(
+          group.id,
           appUser.display_name,
           group.name,
         );

@@ -1,3 +1,4 @@
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import {
   NextRequest,
   NextResponse,
@@ -13,6 +14,13 @@ export const dynamic =
 export async function GET(
   request: NextRequest,
 ) {
+  const slateId = Number(request.nextUrl.searchParams.get("slateId"));
+  if (!Number.isSafeInteger(slateId) || slateId <= 0) {
+    return NextResponse.json({ error: "A valid slateId is required." }, { status: 400 });
+  }
+  const authorization = await authorizeSlateResource(request, slateId);
+  if (!authorization.ok) return authorization.response;
+
   const tournamentId =
     request.nextUrl.searchParams
       .get("tournamentId")
@@ -37,8 +45,9 @@ export async function GET(
     data,
     error,
   } = await supabaseAdmin
-    .from("shotcast_manifests")
+    .from("golf_slate_shotcast_manifests")
     .select("manifest")
+    .eq("slate_id", slateId)
     .eq(
       "tournament_id",
       tournamentId,

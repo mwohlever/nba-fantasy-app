@@ -120,6 +120,12 @@ export async function GET(request: Request) {
     }
 
     if (sport === "golf") {
+      const user = await getCurrentUser();
+      if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
+      const activeLeague = await getActiveLeagueForSport(user, "golf");
+      if (!activeLeague) return NextResponse.json(
+        { error: "Golf is not enabled for the active Group." }, { status: 404 },
+      );
       const db =
         supabaseAdmin as any;
 
@@ -169,7 +175,8 @@ export async function GET(request: Request) {
         .eq(
           "sport",
           "golf",
-        );
+        )
+        .eq("league_id", activeLeague.league.id);
 
       if (
         golfSlatesError
@@ -400,6 +407,7 @@ export async function GET(request: Request) {
           .select(
             "id, name",
           )
+          .eq("group_id", activeLeague.context.group.id)
           .in(
             "id",
             teamIds,

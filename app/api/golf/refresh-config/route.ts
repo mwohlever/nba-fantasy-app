@@ -3,7 +3,7 @@ import {
   NextResponse,
 } from "next/server";
 
-import { getCurrentUser } from "@/lib/auth";
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -31,20 +31,6 @@ function parseSlateId(
 export async function GET(
   request: NextRequest,
 ) {
-  const user =
-    await getCurrentUser();
-
-  if (!user) {
-    return NextResponse.json(
-      {
-        error: "Login required.",
-      },
-      {
-        status: 401,
-      },
-    );
-  }
-
   const slateId =
     parseSlateId(
       request.nextUrl.searchParams.get(
@@ -63,6 +49,9 @@ export async function GET(
       },
     );
   }
+
+  const authorization = await authorizeSlateResource(request, slateId);
+  if (!authorization.ok) return authorization.response;
 
   const {
     data,

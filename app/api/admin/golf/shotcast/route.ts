@@ -62,7 +62,7 @@ export async function GET(
     data,
     error,
   } = await supabaseAdmin
-    .from("shotcast_manifests")
+    .from("golf_slate_shotcast_manifests")
     .select(
       "tournament_id, manifest, generated_at, updated_at",
     )
@@ -354,7 +354,7 @@ export async function POST(
     const {
       error: upsertError,
     } = await supabaseAdmin
-      .from("shotcast_manifests")
+      .from("golf_slate_shotcast_manifests")
       .upsert(
         {
           tournament_id:
@@ -367,7 +367,7 @@ export async function POST(
         },
         {
           onConflict:
-            "tournament_id",
+            "slate_id,tournament_id",
         },
       );
 

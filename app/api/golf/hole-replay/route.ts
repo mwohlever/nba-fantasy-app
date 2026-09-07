@@ -1,3 +1,4 @@
+import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchGolfHoleReplay } from "@/lib/providers/pgaTourShots";
@@ -473,6 +474,9 @@ export async function GET(
         },
       );
     }
+
+    const authorization = await authorizeSlateResource(request, slateId);
+    if (!authorization.ok) return authorization.response;
 
     const [
       {

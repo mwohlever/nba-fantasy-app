@@ -15,12 +15,6 @@ import {
 } from "@/lib/supabaseBrowser";
 
 
-type Team = {
-  id: number;
-  name: string;
-};
-
-
 const PENDING_AUTH_TOKEN_KEY =
   "111_pending_auth_access_token";
 
@@ -30,21 +24,8 @@ export default function LoginPage() {
     useRouter();
 
 
-  const [
-    teams,
-    setTeams,
-  ] =
-    useState<Team[]>(
-      [],
-    );
-
-  const [
-    selectedTeamId,
-    setSelectedTeamId,
-  ] =
-    useState(
-      "",
-    );
+  const [groupSlug, setGroupSlug] = useState("111");
+  const [teamName, setTeamName] = useState("");
 
   const [
     pin,
@@ -95,14 +76,6 @@ export default function LoginPage() {
     );
 
   const [
-    isLoadingTeams,
-    setIsLoadingTeams,
-  ] =
-    useState(
-      true,
-    );
-
-  const [
     isSubmitting,
     setIsSubmitting,
   ] =
@@ -131,79 +104,6 @@ export default function LoginPage() {
 
   useEffect(
     () => {
-      async function loadTeams() {
-        try {
-          const response =
-            await fetch(
-              "/api/teams",
-              {
-                cache:
-                  "no-store",
-              },
-            );
-
-
-          const result =
-            await response
-              .json();
-
-
-          if (
-            !response.ok
-          ) {
-            setMessage(
-              result.error ||
-                "Failed to load existing 111 members.",
-            );
-
-            return;
-          }
-
-
-          const safeTeams =
-            (
-              result.teams ??
-              []
-            ) as Team[];
-
-
-          setTeams(
-            safeTeams,
-          );
-
-
-          if (
-            safeTeams.length >
-            0
-          ) {
-            setSelectedTeamId(
-              String(
-                safeTeams[0]
-                  .id,
-              ),
-            );
-          }
-        } catch (
-          error
-        ) {
-          console.error(
-            error,
-          );
-
-          setMessage(
-            "Failed to load existing 111 members.",
-          );
-        } finally {
-          setIsLoadingTeams(
-            false,
-          );
-        }
-      }
-
-
-      void loadTeams();
-
-
       const pending =
         sessionStorage.getItem(
           PENDING_AUTH_TOKEN_KEY,
@@ -524,10 +424,8 @@ export default function LoginPage() {
                     accessToken:
                       pendingAccessToken,
 
-                    legacyTeamId:
-                      Number(
-                        selectedTeamId,
-                      ),
+                    legacyGroupSlug: groupSlug,
+                    legacyTeamName: teamName,
 
                     legacyPin:
                       pin,
@@ -596,10 +494,8 @@ export default function LoginPage() {
             body:
               JSON.stringify(
                 {
-                  teamId:
-                    Number(
-                      selectedTeamId,
-                    ),
+                  groupSlug,
+                  teamName,
 
                   pin,
                 },
@@ -880,7 +776,7 @@ export default function LoginPage() {
 
               <p className="mt-1 text-xs leading-5 text-slate-400">
                 {pendingAccessToken
-                  ? "This is a one-time link. Choose your existing 111 identity and enter its current PIN."
+                  ? "This is a one-time link. Enter your Group, existing team name, and current PIN."
                   : "Temporary fallback during the Groups beta."}
               </p>
             </div>
@@ -893,52 +789,18 @@ export default function LoginPage() {
               }
             >
               <div>
-                <label
-                  htmlFor="team"
-                  className="mb-2 block text-sm font-semibold text-slate-300"
-                >
-                  Who are you?
-                </label>
-
-                <select
-                  id="team"
-                  value={
-                    selectedTeamId
-                  }
-                  onChange={
-                    (
-                      event,
-                    ) =>
-                      setSelectedTeamId(
-                        event
-                          .target
-                          .value,
-                      )
-                  }
-                  disabled={
-                    isLoadingTeams
-                  }
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-base outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-900"
-                >
-                  {teams.map(
-                    (
-                      team,
-                    ) => (
-                      <option
-                        key={
-                          team.id
-                        }
-                        value={
-                          team.id
-                        }
-                      >
-                        {team.name}
-                      </option>
-                    ),
-                  )}
-                </select>
+                <label htmlFor="pin-group" className="mb-2 block text-sm font-semibold text-slate-300">Group</label>
+                <input id="pin-group" value={groupSlug} onChange={(event) => setGroupSlug(event.target.value)}
+                  autoCapitalize="none" autoCorrect="off" placeholder="111" required
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-base outline-none focus:border-sky-500" />
+                <p className="mt-1 text-xs text-slate-400">Use the Group slug from your Group link.</p>
               </div>
-
+              <div>
+                <label htmlFor="team" className="mb-2 block text-sm font-semibold text-slate-300">Team name</label>
+                <input id="team" value={teamName} onChange={(event) => setTeamName(event.target.value)}
+                  autoComplete="username" autoCorrect="off" required
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-base outline-none focus:border-sky-500" />
+              </div>
 
               <div>
                 <label
@@ -1007,9 +869,9 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={
-                  isLoadingTeams ||
                   isSubmitting ||
-                  !selectedTeamId ||
+                  !groupSlug.trim() ||
+                  !teamName.trim() ||
                   pin.length <
                     4
                 }
