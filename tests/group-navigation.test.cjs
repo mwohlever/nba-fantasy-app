@@ -64,3 +64,11 @@ test("switching from any Group Home opens the target Group Home", () => {
   assert.equal(destination("/groups/111", ""), targetHome);
   assert.equal(destination("/groups/old-group", "?sport=nfl"), targetHome);
 });
+
+test("Live Scores retain only enabled NCAA/NFL route context on Group switch", () => {
+  assert.equal(destination('/live-scores', '?sport=nfl'), '/live-scores?sport=nfl');
+  assert.equal(destination('/live-scores', '?sport=nfl', { enabledSports: ['ncaa'] }), targetHome);
+  assert.equal(destination('/ncaa-pickem/scores', '?week=2'), '/ncaa-pickem/scores?week=2');
+  assert.equal(destination('/ncaa-pickem/scores', '', { enabledSports: ['nfl'] }), targetHome);
+  assert.equal(destination('/live-scores', '?sport=nfl&eventId=123'), targetHome);
+});

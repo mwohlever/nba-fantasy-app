@@ -1,10 +1,11 @@
 type TeamAvatarProps = {
   teamName: string;
   avatarUrl?: string | null;
-  size?: "xs" | "sm" | "md" | "lg";
+  size?: "chip" | "xs" | "sm" | "md" | "lg";
 };
 
 const sizeMap = {
+  chip: "h-5 w-5 text-[8px]",
   xs: "h-6 w-6 text-xs",
   sm: "h-8 w-8 text-sm",
   md: "h-10 w-10 text-base",

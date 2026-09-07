@@ -1,3 +1,4 @@
+import { canRefreshNcaaOdds } from "@/lib/ncaaPickEm/odds";
 import {
   NextRequest,
   NextResponse,
@@ -160,6 +161,10 @@ function gameRow(
 }
 
 type StoredGame = {
+  spread_favorite_team_id: string | null;
+  spread: number | null;
+  over_under: number | null;
+  odds_provider: string | null;
   espn_event_id: string;
   kickoff_at: string;
   included: boolean;
@@ -182,6 +187,7 @@ type StoredGame = {
 
 function storedAdminGame(game: StoredGame) {
   return {
+    odds: { favoriteTeamId: game.spread_favorite_team_id, spread: game.spread, overUnder: game.over_under, provider: game.odds_provider },
     espnEventId: String(game.espn_event_id),
     kickoffAt: game.kickoff_at,
     included: game.included === true,
@@ -241,7 +247,7 @@ export async function GET(request: NextRequest) {
 
     const { data: storedWeek, error: weekError } = await supabaseAdmin
       .from("ncaa_pickem_weeks")
-      .select("id, season, week_number, label, lock_at, analysis, show_analysis")
+      .select("id, season, week_number, label, lock_at, status, analysis, show_analysis")
       .eq("league_id", access.league.id)
       .eq("season", season)
       .eq("week_number", week)
@@ -257,7 +263,7 @@ export async function GET(request: NextRequest) {
 
     const { data: storedGames, error: gamesError } = await supabaseAdmin
       .from("ncaa_pickem_games")
-      .select("espn_event_id, kickoff_at, included, commissioner_selected, away_team_id, away_team_name, away_team_abbreviation, away_team_logo_url, away_rank, away_record, home_team_id, home_team_name, home_team_abbreviation, home_team_logo_url, home_rank, home_record, status, status_detail")
+      .select("espn_event_id, kickoff_at, included, commissioner_selected, away_team_id, away_team_name, away_team_abbreviation, away_team_logo_url, away_rank, away_record, home_team_id, home_team_name, home_team_abbreviation, home_team_logo_url, home_rank, home_record, status, status_detail, spread_favorite_team_id, spread, over_under, odds_provider")
       .eq("week_id", storedWeek.id)
       .order("kickoff_at", { ascending: true });
 
@@ -267,6 +273,19 @@ export async function GET(request: NextRequest) {
     const rankedGames = allGames
       .filter((game) => game.away_rank !== null || game.home_rank !== null)
       .map(storedAdminGame);
+    // Display-only refresh: never overwrite stored odds or refresh a locked week's lines.
+    if (storedWeek.status === "open" && (!storedWeek.lock_at || Date.now() < new Date(storedWeek.lock_at).getTime())) {
+      try {
+        const latest = await fetchNcaaPickEmWeek({ season, week });
+        const byId = new Map(latest.scheduleGames.map((game) => [game.espnEventId, game]));
+        for (const game of rankedGames) {
+          const live = byId.get(game.espnEventId);
+          if (game.status === "pre" && Date.now() < new Date(game.kickoffAt).getTime() && live?.status === "pre") {
+            game.odds = live.odds ?? { favoriteTeamId: null, spread: null, overUnder: null, provider: null };
+          }
+        }
+      } catch { /* Stored pregame lines remain available if ESPN is unavailable. */ }
+    }
     const automaticGames = rankedGames.filter((game) => game.automatic);
     const rankedTeamIds = new Set<string>();
     for (const game of allGames) {
@@ -506,7 +525,7 @@ export async function POST(
           "ncaa_pickem_games",
         )
         .select(
-          "espn_event_id, included, commissioner_selected",
+          "espn_event_id, included, commissioner_selected, kickoff_at, status, spread_favorite_team_id, spread, over_under, odds_provider, odds_updated_at",
         )
         .eq(
           "week_id",
@@ -578,6 +597,27 @@ export async function POST(
             commissionerSelectedIds.has(game.espnEventId),
           ),
       );
+
+    const storedByEvent = new Map((existingGames ?? []).map((game) => [String(game.espn_event_id), game]));
+    for (const row of rows) {
+      const stored = storedByEvent.get(row.espn_event_id);
+      if (stored && !canRefreshNcaaOdds(existingWeek, { status: row.status, kickoffAt: row.kickoff_at }, stored)) {
+        Object.assign(row, {
+          spread_favorite_team_id: stored.spread_favorite_team_id,
+          spread: stored.spread,
+          over_under: stored.over_under,
+          odds_provider: stored.odds_provider,
+          odds_updated_at: stored.odds_updated_at,
+        });
+      }
+    }
+
+    const savedOddsByEvent = new Map(rows.map((row) => [row.espn_event_id, {
+      favoriteTeamId: row.spread_favorite_team_id ?? null,
+      spread: row.spread ?? null,
+      overUnder: row.over_under ?? null,
+      provider: row.odds_provider ?? null,
+    }]));
 
     if (rows.length > 0) {
       const {
@@ -673,6 +713,7 @@ export async function POST(
         )
         .map(
           (game) => ({
+            odds: savedOddsByEvent.get(game.espnEventId) ?? null,
             espnEventId:
               game.espnEventId,
 

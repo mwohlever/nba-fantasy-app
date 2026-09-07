@@ -451,7 +451,7 @@ export default async function ScoresLineupsPage({
             </h1>
 
             <p className="mt-2 text-sm text-slate-600">
-              Create a slate before viewing live scores.
+              Create a slate before viewing fantasy scores.
             </p>
           </section>
         </div>

@@ -426,7 +426,7 @@ function AppNavContent() {
           },
           {
             href: "/ncaa-pickem/scores",
-            label: "Scores",
+            label: "Live Scores",
             icon: "◫",
           },
           {
@@ -435,9 +435,12 @@ function AppNavContent() {
             icon: "▦",
           },
         ]
-      : mainLinks;
+      : activeSport === "nfl"
+        ? [...mainLinks, { href: "/live-scores", label: "Live", icon: "◫" }]
+        : mainLinks;
 
   const sportScopedPaths = [
+    "/live-scores",
     "/home",
     "/profile",
     "/standings",
@@ -1523,7 +1526,7 @@ function AppNavContent() {
               ? "grid-cols-3"
               : isNbaSkins
                 ? "grid-cols-3"
-                : "grid-cols-4"
+                : activeSport === "nfl" ? "grid-cols-5" : "grid-cols-4"
           }`}
         >
           {displayedMainLinks.map((link) => (

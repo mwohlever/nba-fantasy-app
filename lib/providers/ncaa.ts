@@ -1,3 +1,7 @@
+import { possessionTeamId } from "@/lib/live-scores/possession";
+import { normalizeBroadcast } from "@/lib/live-scores/metadata";
+import { selectFootballOdds as selectNcaaOdds } from "@/lib/live-scores/odds";
+export { selectFootballOdds as selectNcaaOdds } from "@/lib/live-scores/odds";
 const ESPN_CFB_BASE =
   "https://site.api.espn.com/apis/site/v2/sports/football/college-football";
 
@@ -35,6 +39,8 @@ export type NcaaEspnGame = {
 
   winnerTeamId: string | null;
   odds: NcaaEspnOdds | null;
+  possessionTeamId?: string | null;
+  broadcast?: import("@/lib/live-scores/metadata").Broadcast | null;
 };
 
 export type NcaaEspnWeek = {
@@ -205,76 +211,6 @@ function mapTeam(
   };
 }
 
-function finiteOddsNumber(
-  value: unknown,
-): number | null {
-  if (
-    value === null ||
-    value === undefined ||
-    value === ""
-  ) {
-    return null;
-  }
-
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed)
-    ? parsed
-    : null;
-}
-
-export function selectNcaaOdds(
-  oddsInput: unknown,
-): NcaaEspnOdds | null {
-  if (!Array.isArray(oddsInput)) {
-    return null;
-  }
-
-  const odds = oddsInput.find(
-    (entry: any) =>
-      entry &&
-      (
-        finiteOddsNumber(entry.spread) !== null ||
-        finiteOddsNumber(entry.overUnder) !== null
-      ),
-  ) as any;
-
-  if (!odds) {
-    return null;
-  }
-
-  const favoriteTeamId =
-    odds?.awayTeamOdds?.favorite === true &&
-    odds?.awayTeamOdds?.team?.id != null
-      ? String(odds.awayTeamOdds.team.id)
-      : odds?.homeTeamOdds?.favorite === true &&
-          odds?.homeTeamOdds?.team?.id != null
-        ? String(odds.homeTeamOdds.team.id)
-        : null;
-
-  const rawSpread =
-    finiteOddsNumber(odds.spread);
-
-  const spread =
-    rawSpread !== null && favoriteTeamId
-      ? -Math.abs(rawSpread)
-      : rawSpread;
-
-  const overUnder =
-    finiteOddsNumber(odds.overUnder);
-
-  const provider =
-    typeof odds?.provider?.name === "string"
-      ? odds.provider.name
-      : null;
-
-  return {
-    favoriteTeamId,
-    spread,
-    overUnder,
-    provider,
-  };
-}
 
 function mapEvent(
   event: any,
@@ -392,10 +328,13 @@ function mapEvent(
       statusType?.completed === true,
 
     winnerTeamId,
+    broadcast: normalizeBroadcast(competition),
+    possessionTeamId: possessionTeamId(competition),
 
     odds:
       selectNcaaOdds(
         competition?.odds,
+        { away: awayTeam.id, home: homeTeam.id },
       ),
   };
 }

@@ -1,6 +1,9 @@
 "use client";
 
+import TeamAvatar from "@/components/ui/TeamAvatar";
 import AppNav from "@/components/AppNav";
+import NcaaGameCenterModal from "@/components/ncaa/NcaaGameCenterModal";
+import type { NcaaScoreGame } from "@/components/ncaa/NcaaScoreCard";
 
 import {
   useEffect,
@@ -113,6 +116,23 @@ type WeekResponse = {
   error?: string;
 };
 
+function gameCenterGame(game: PickEmGame): NcaaScoreGame {
+  const team = (side: "away" | "home") => ({
+    id: String(game[`${side}_team_id`]), displayName: game[`${side}_team_name`],
+    abbreviation: game[`${side}_team_abbreviation`], logo: game[`${side}_team_logo_url`],
+    rank: game[`${side}_rank`], record: game[`${side}_record`], score: game[`${side}_score`],
+    conferenceId: null, winner: game.winner_team_id === String(game[`${side}_team_id`]),
+  });
+  return {
+    espnEventId: String(game.espn_event_id), kickoffAt: game.kickoff_at,
+    name: `${game.away_team_name} at ${game.home_team_name}`, shortName: null,
+    awayTeam: team("away"), homeTeam: team("home"), status: game.status,
+    statusDetail: game.status_detail, completed: game.status === "post",
+    winnerTeamId: game.winner_team_id,
+    odds: { favoriteTeamId: game.spread_favorite_team_id, spread: game.spread, overUnder: game.over_under, provider: game.odds_provider },
+  };
+}
+
 function formatKickoff(
   value: string,
 ) {
@@ -219,16 +239,8 @@ function bettingLine(
   return parts.join(" · ");
 }
 
-function avatarFallback(
-  name: string,
-) {
-  return (
-    name.trim()[0]?.toUpperCase() ??
-    "?"
-  );
-}
-
 export default function NcaaPickEmHome() {
+  const [selectedGame, setSelectedGame] = useState<NcaaScoreGame | null>(null);
   const {
     selectedSport,
     setSelectedSport,
@@ -366,6 +378,7 @@ export default function NcaaPickEmHome() {
             "Failed to load NCAA Pick 'Em.",
         );
 
+        setSelectedGame(null);
         setData(null);
         return;
       }
@@ -409,6 +422,7 @@ export default function NcaaPickEmHome() {
         }
       }
 
+      setSelectedGame((current) => result.week?.id === data?.week?.id ? current : null);
       setData(result);
 
       const saved:
@@ -461,6 +475,7 @@ export default function NcaaPickEmHome() {
         "Unable to load NCAA Pick 'Em.",
       );
 
+      setSelectedGame(null);
       setData(null);
     } finally {
       setIsLoading(false);
@@ -969,10 +984,18 @@ export default function NcaaPickEmHome() {
                       key={
                         game.id
                       }
-                      className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm"
+                      role={data.locked ? "button" : undefined}
+                      tabIndex={data.locked ? 0 : undefined}
+                      aria-label={data.locked ? `Open ${game.away_team_name} at ${game.home_team_name} Game Center` : undefined}
+                      onClick={data.locked ? () => setSelectedGame(gameCenterGame(game)) : undefined}
+                      onKeyDown={data.locked ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelectedGame(gameCenterGame(game)); }
+                      } : undefined}
+                      className={`overflow-hidden rounded-xl border border-slate-700 bg-slate-900 shadow-sm ${data.locked ? "cursor-pointer hover:border-slate-500" : ""}`}
                     >
                       <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-3 py-1.5">
                         <div className="min-w-0 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                          {data.locked ? <span className="mr-2 text-blue-300">Game Center ›</span> : null}
                           {gameStatus(
                             game,
                           )}
@@ -1077,7 +1100,7 @@ export default function NcaaPickEmHome() {
                                     : "border-slate-700 bg-slate-950/70 hover:border-slate-600"
                                 } ${
                                   data.locked
-                                    ? "cursor-default"
+                                    ? "cursor-pointer"
                                     : ""
                                 }`}
                               >
@@ -1185,37 +1208,9 @@ export default function NcaaPickEmHome() {
                                           (
                                             participant,
                                           ) =>
-                                            participant.avatarUrl ? (
-                                              <img
-                                                key={
-                                                  participant.teamId
-                                                }
-                                                src={
-                                                  participant.avatarUrl
-                                                }
-                                                alt={
-                                                  participant.name
-                                                }
-                                                title={
-                                                  participant.name
-                                                }
-                                                className="h-5 w-5 rounded-full border border-slate-800 object-cover"
-                                              />
-                                            ) : (
-                                              <span
-                                                key={
-                                                  participant.teamId
-                                                }
-                                                title={
-                                                  participant.name
-                                                }
-                                                className="flex h-5 w-5 items-center justify-center rounded-full border border-slate-800 bg-slate-700 text-[8px] font-bold text-slate-200"
-                                              >
-                                                {avatarFallback(
-                                                  participant.name,
-                                                )}
-                                              </span>
-                                            ),
+                                            <span key={participant.teamId} title={participant.name} className="shrink-0">
+                                              <TeamAvatar teamName={participant.name} avatarUrl={participant.avatarUrl} size="chip" />
+                                            </span>,
                                         )}
 
                                       {team.people.length >
@@ -1272,6 +1267,7 @@ export default function NcaaPickEmHome() {
           </>
         ) : null}
       </div>
+      {selectedGame ? <NcaaGameCenterModal game={selectedGame} onClose={() => setSelectedGame(null)} /> : null}
     </main>
   );
 }

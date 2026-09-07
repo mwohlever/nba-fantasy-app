@@ -158,7 +158,8 @@ export function getGroupSwitchDestination({
 
   if (
     normalizedPathname === "/ncaa-pickem" ||
-    normalizedPathname === "/ncaa-pickem/standings"
+    normalizedPathname === "/ncaa-pickem/standings" ||
+    normalizedPathname === "/ncaa-pickem/scores"
   ) {
     return isEnabled(
       "ncaa",
@@ -186,6 +187,10 @@ export function getGroupSwitchDestination({
     searchParams.get(
       "sport",
     );
+
+  if (normalizedPathname === "/live-scores") {
+    return sport === "nfl" && isEnabled("nfl", targetEnabledSports) ? currentDestination : fallback;
+  }
 
   if (
     SHARED_FANTASY_PATHS.has(

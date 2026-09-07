@@ -1,3 +1,4 @@
+import { canRefreshNcaaOdds } from "@/lib/ncaaPickEm/odds";
 import {
   NextRequest,
   NextResponse,
@@ -31,6 +32,8 @@ type GameRow = {
   id: number;
   espn_event_id: string;
   included: boolean;
+  status: string;
+  kickoff_at: string;
 };
 
 function positiveInteger(
@@ -153,7 +156,7 @@ export async function POST(
           "ncaa_pickem_games",
         )
         .select(
-          "id, espn_event_id, included",
+          "id, espn_event_id, included, status, kickoff_at",
         )
         .eq(
           "week_id",
@@ -302,10 +305,7 @@ export async function POST(
               localGame.included,
 
             ...(
-              Date.now() <
-                new Date(
-                  espnGame.kickoffAt,
-                ).getTime() &&
+              canRefreshNcaaOdds(week, espnGame, localGame) &&
               espnGame.odds
                 ? {
                     spread_favorite_team_id:

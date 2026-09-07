@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     if (!selected) return NextResponse.json({ success: true, viewer, participants: access.participants, weeks, week: null, games: [], picks: [], groupPicks: [], locked: false });
 
     const isLocked = locked(selected);
-    const participantIds = access.participants.map((item) => item.teamId);
+    let participants = access.participants;
     const [gamesResult, picksResult] = await Promise.all([
       supabaseAdmin.from("ncaa_pickem_games").select("*").eq("week_id", selected.id).eq("included", true).order("kickoff_at", { ascending: true }),
       supabaseAdmin.from("ncaa_pickem_picks").select("id, week_id, game_id, team_id, picked_team_id, is_correct").eq("week_id", selected.id).eq("team_id", access.viewerTeam.teamId),
@@ -69,13 +69,30 @@ export async function GET(request: NextRequest) {
     if (picksResult.error) throw new Error(picksResult.error.message);
 
     let groupPicks: unknown[] = [];
-    if (isLocked && participantIds.length > 0) {
-      const result = await supabaseAdmin.from("ncaa_pickem_picks").select("game_id, team_id, picked_team_id, is_correct").eq("week_id", selected.id).in("team_id", participantIds);
+    if (isLocked) {
+      const result = await supabaseAdmin.from("ncaa_pickem_picks").select("game_id, team_id, picked_team_id, is_correct").eq("week_id", selected.id);
       if (result.error) throw new Error(result.error.message);
-      groupPicks = result.data ?? [];
+      const pickedTeamIds = Array.from(new Set((result.data ?? []).map((pick) => Number(pick.team_id))));
+      if (pickedTeamIds.length) {
+        const historicalTeams = await supabaseAdmin.from("teams").select("id, name, user_id").eq("group_id", access.context.group.id).in("id", pickedTeamIds);
+        if (historicalTeams.error) throw new Error(historicalTeams.error.message);
+        const userIds = Array.from(new Set((historicalTeams.data ?? []).flatMap((team) => team.user_id ? [String(team.user_id)] : [])));
+        const accounts = userIds.length ? await supabaseAdmin.from("app_users").select("id, avatar_url").in("id", userIds) : { data: [], error: null };
+        if (accounts.error) throw new Error(accounts.error.message);
+        const avatars = new Map((accounts.data ?? []).map((account) => [String(account.id), account.avatar_url]));
+        const byId = new Map(participants.map((participant) => [participant.teamId, participant]));
+        for (const team of historicalTeams.data ?? []) {
+          // Keep the canonical identity used by Standings; only append historical teams.
+          if (byId.has(Number(team.id))) continue;
+          byId.set(Number(team.id), { teamId: Number(team.id), userId: String(team.user_id ?? ""), name: String(team.name), avatarUrl: avatars.get(String(team.user_id)) ?? null });
+        }
+        participants = [...byId.values()];
+        const scopedTeamIds = new Set((historicalTeams.data ?? []).map((team) => Number(team.id)));
+        groupPicks = (result.data ?? []).filter((pick) => scopedTeamIds.has(Number(pick.team_id)));
+      }
     }
 
-    return NextResponse.json({ success: true, viewer, participants: access.participants, weeks, week: selected, games: gamesResult.data ?? [], picks: picksResult.data ?? [], groupPicks, locked: isLocked });
+    return NextResponse.json({ success: true, viewer, participants, weeks, week: selected, games: gamesResult.data ?? [], picks: picksResult.data ?? [], groupPicks, locked: isLocked });
   } catch (error) {
     console.error("Failed to load NCAA Pick 'Em week", error);
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load NCAA Pick 'Em." }, { status: 500 });

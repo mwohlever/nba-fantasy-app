@@ -8,6 +8,7 @@ import {
 } from "react";
 
 type AdminGame = {
+  odds?: { favoriteTeamId: string | null; spread: number | null; overUnder: number | null; provider: string | null } | null;
   espnEventId: string;
   kickoffAt: string;
   included: boolean;
@@ -35,6 +36,13 @@ type AdminGame = {
   status: string;
   statusDetail: string | null;
 };
+
+function CandidateLine({ game }: { game: AdminGame }) {
+  const favorite = game.odds?.favoriteTeamId === game.away.id ? game.away : game.odds?.favoriteTeamId === game.home.id ? game.home : null;
+  const line = [favorite?.abbreviation && game.odds?.spread != null ? `${favorite.abbreviation} ${game.odds.spread > 0 ? "+" : ""}${game.odds.spread}` : null,
+    game.odds?.overUnder != null ? `O/U ${game.odds.overUnder}` : null].filter(Boolean).join(" · ");
+  return <span className={`text-[11px] tabular-nums ${line ? "font-bold text-blue-300" : "text-slate-500"}`}>{line || "Line unavailable"}</span>;
+}
 
 type ImportResult = {
   success?: boolean;
@@ -865,6 +873,7 @@ export default function NcaaPickEmAdminPage() {
                           />
                         </div>
 
+                        <div className="mt-1"><CandidateLine game={game} /></div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 pt-3">
                           <div className="text-xs text-slate-500">
                             {gameTime(
@@ -941,6 +950,7 @@ export default function NcaaPickEmAdminPage() {
                           />
                         </div>
 
+                        <div className="mt-1"><CandidateLine game={game} /></div>
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3">
                           <div>
                             <div className="text-xs text-slate-500">

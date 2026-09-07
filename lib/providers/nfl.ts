@@ -1,4 +1,4 @@
-const ESPN_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl";
+export const ESPN_BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl";
 const ESPN_SUMMARY_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary";
 
 export type EspnTeam = {
