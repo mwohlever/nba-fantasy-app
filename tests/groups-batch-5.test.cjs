@@ -44,10 +44,24 @@ function setup(sport, {group = 'a', role = 'member', signedIn = true, enabled = 
     nba_team_abbreviations: empty ? [] : [owner === 'a' ? 'BOS' : 'LAL'],
   }));
   const stats = slates.map(s => ({slate_id:s.id, player_id:s.id * 10, fantasy_points:s.id * 100}));
+  const golfPlayers = stats.map(s => ({...s, fantasy_score:s.fantasy_points,
+    golf_rounds:[{accepted_revision:s.slate_id * 3, round_number:1,
+      golf_holes:[{hole_number:1, strokes:s.slate_id + 2, relative_to_par:s.slate_id - 2}]}],
+  }));
+  // Reconciliation reads accepted Golf state as relationships on the requested slate.
+  // This mock does not resolve PostgREST joins, so supply their nested response shape.
+  if (sport === 'golf') {
+    for (const slate of slates) {
+      slate.golf_event_players = golfPlayers.filter(row => row.slate_id === slate.id);
+      slate.golf_accepted_versions = {revision:slate.id * 3};
+      slate.team_slate_results = [{team_id:slate.id * 1000, fantasy_points:slate.id * 100}];
+    }
+  }
   const db = database({slates,
     leagues: ['a','b'].map(owner => ({id:`l${owner}`,group_id:owner,sport_key:sport})),
     player_slate_stats: stats, player_nfl_slate_stats: stats,
-    golf_event_players: stats.map(s => ({...s, fantasy_score:s.fantasy_points, golf_rounds:[]})),
+    golf_event_players: golfPlayers,
+    golf_course_holes: slates.map(s => ({slate_id:s.id, hole_number:1, par:4, yards:s.id * 150, is_host:true})),
     players: [{id:10,team_abbreviation:'BOS',is_active:true},{id:20,team_abbreviation:'LAL',is_active:true}],
   });
   const mocks = {'next/server':next, '@/lib/supabaseAdmin':{supabaseAdmin:db},
@@ -73,6 +87,18 @@ for (const endpoint of ['player-stats','slate-availability']) {
           assert.deepEqual(Array.from(result.body.playerStats,r=>r.player_id),[id*10]);
           assert.equal(result.body.playerStats[0].fantasy_points,id*100);
           assert.equal(result.body.sport,sport);
+          if (sport === 'golf') {
+            assert.equal(result.body.acceptedRevision,id*3);
+            assert.deepEqual(Array.from(result.body.teamResults,r=>r.team_id),[id*1000]);
+            assert.equal(result.body.teamResults[0].fantasy_points,id*100);
+            const [round] = result.body.playerStats[0].rounds;
+            assert.equal(round.accepted_revision,id*3);
+            assert.equal(round.holes.length,18);
+            assert.equal(round.holes[0].strokes,id+2);
+            assert.equal(round.holes[0].relative_to_par,id-2);
+            assert.equal(round.holes[0].par,4);
+            assert.equal(round.holes[0].yards,id*150);
+          }
         } else {
           assert.deepEqual(Array.from(result.body.availablePlayerIds),[id*10]);
           assert.equal(result.body.startDate,'2025-04-01');
@@ -93,6 +119,10 @@ for (const endpoint of ['player-stats','slate-availability']) {
         assert.deepEqual(db.calls.filter(c=>c[0]==='slates'&&c[1]==='select').map(c=>c[2]),['id, league_id']);
         assert.equal(result.body.playerStats,undefined);
         assert.equal(result.body.availablePlayerIds,undefined);
+        if (sport === 'golf' && endpoint === 'player-stats') {
+          assert.equal(result.body.acceptedRevision,undefined);
+          assert.equal(result.body.teamResults,undefined);
+        }
       }
     });
   }
