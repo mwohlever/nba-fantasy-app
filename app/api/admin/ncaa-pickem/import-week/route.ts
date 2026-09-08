@@ -1,3 +1,4 @@
+import { fetchNcaaSetupScoreboard, ncaaWeekSetup, type SetupScoreboard } from "@/lib/ncaaPickEm/weekSetup";
 import { canRefreshNcaaOdds } from "@/lib/ncaaPickEm/odds";
 import {
   NextRequest,
@@ -236,6 +237,20 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = new URL(request.url).searchParams;
+    if (searchParams.get("options") === "1") {
+      const requestedSeason = positiveInteger(searchParams.get("season")) ?? undefined;
+      const { data: saved, error } = await supabaseAdmin.from("ncaa_pickem_weeks")
+        .select("season, week_number").eq("league_id", access.league.id);
+      if (error) throw new Error(error.message);
+      const current: SetupScoreboard = await fetchNcaaSetupScoreboard().catch(() => ({}));
+      const selected = requestedSeason && requestedSeason !== current.season?.year
+        ? await fetchNcaaSetupScoreboard(requestedSeason).catch(() => ({})) : current;
+      const options = ncaaWeekSetup(current, selected, saved ?? [], requestedSeason);
+      if (!options.season || !options.week) {
+        return NextResponse.json({ error: "Week options unavailable. Please reload to retry." }, { status: 503 });
+      }
+      return NextResponse.json(options);
+    }
     const season = positiveInteger(searchParams.get("season"));
     const week = positiveInteger(searchParams.get("week"));
     if (!season || !week) {
@@ -271,7 +286,7 @@ export async function GET(request: NextRequest) {
 
     const allGames = (storedGames ?? []) as StoredGame[];
     const rankedGames = allGames
-      .filter((game) => game.away_rank !== null || game.home_rank !== null)
+      .filter((game) => game.away_rank !== null || game.home_rank !== null || game.commissioner_selected)
       .map(storedAdminGame);
     // Display-only refresh: never overwrite stored odds or refresh a locked week's lines.
     if (storedWeek.status === "open" && (!storedWeek.lock_at || Date.now() < new Date(storedWeek.lock_at).getTime())) {
@@ -300,6 +315,7 @@ export async function GET(request: NextRequest) {
       weekId: Number(storedWeek.id),
       label: storedWeek.label,
       lockAt: storedWeek.lock_at,
+      status: storedWeek.status,
       analysis: storedWeek.analysis ?? null,
       showAnalysis: storedWeek.show_analysis === true,
       importedGames: allGames.filter((game) => game.included).length,
@@ -708,9 +724,7 @@ export async function POST(
 
     const candidateGames =
       espnWeek.scheduleGames
-        .filter(
-          hasRankedTeam,
-        )
+        .filter((game) => hasRankedTeam(game) || commissionerSelectedIds.has(game.espnEventId))
         .map(
           (game) => ({
             odds: savedOddsByEvent.get(game.espnEventId) ?? null,
@@ -798,6 +812,7 @@ export async function POST(
         espnWeek.label,
 
       lockAt,
+      status: preservedStatus,
 
       analysis:
         preservedAnalysis,

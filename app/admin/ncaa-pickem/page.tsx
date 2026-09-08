@@ -4,6 +4,7 @@ import AppNav from "@/components/AppNav";
 
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -46,6 +47,7 @@ function CandidateLine({ game }: { game: AdminGame }) {
 
 type ImportResult = {
   success?: boolean;
+  status?: string;
   error?: string;
   weekId?: number;
   season?: number;
@@ -140,13 +142,13 @@ export default function NcaaPickEmAdminPage() {
     season,
     setSeason,
   ] =
-    useState("2026");
+    useState("");
 
   const [
     week,
     setWeek,
   ] =
-    useState("1");
+    useState("");
 
   const [
     result,
@@ -180,74 +182,92 @@ export default function NcaaPickEmAdminPage() {
   ] =
     useState(false);
 
+  const [options, setOptions] = useState<{ seasons: number[]; weeks: number[] } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [notImported, setNotImported] = useState(false);
+  const generation = useRef(0);
+  const analysisDirty = Boolean(result?.success && (analysis !== (result.analysis ?? "") || showAnalysis !== (result.showAnalysis === true)));
+
+  function canReplaceWeek() {
+    return !analysisDirty || window.confirm("Discard unsaved MW Analysis changes? Choose Cancel to save them first.");
+  }
+
+  function changeSelection(nextSeason: string, nextWeek: string) {
+    if (isWorking || !canReplaceWeek()) return;
+    generation.current++;
+    setResult(null);
+    setAnalysis("");
+    setShowAnalysis(false);
+    setMessage("");
+    setNotImported(false);
+    setIsLoading(true);
+    setSeason(nextSeason);
+    setWeek(nextWeek);
+  }
+
   useEffect(() => {
-    const seasonNumber = Number(season);
-    const weekNumber = Number(week);
-
-    if (
-      !Number.isInteger(seasonNumber) ||
-      seasonNumber <= 0 ||
-      !Number.isInteger(weekNumber) ||
-      weekNumber <= 0
-    ) {
-      return;
-    }
-
+    if (week) return;
     const controller = new AbortController();
-    const timeout = window.setTimeout(async () => {
+    let active = true;
+    async function loadOptions() {
       try {
-        setResult(null);
+        const params = new URLSearchParams({ options: "1" });
+        if (season) params.set("season", season);
+        const response = await fetch(`/api/admin/ncaa-pickem/import-week?${params}`, { cache: "no-store", signal: controller.signal });
+        const data = await response.json();
+        if (!active) return;
+        if (!response.ok) throw new Error(data.error || "Unable to load week options.");
+        setOptions(data);
+        setSeason(String(data.season));
+        setWeek(String(data.week));
+      } catch (error) {
+        if (!active) return;
+        setMessage(error instanceof Error ? error.message : "Unable to load week options.");
+        setIsLoading(false);
+      }
+    }
+    void loadOptions();
+    return () => { active = false; controller.abort(); };
+  }, [season, week]);
 
-        const params = new URLSearchParams({
-          season: String(seasonNumber),
-          week: String(weekNumber),
-        });
-        const response = await fetch(
-          `/api/admin/ncaa-pickem/import-week?${params.toString()}`,
-          {
-            method: "GET",
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
+  useEffect(() => {
+    if (!season || !week) return;
+    const controller = new AbortController();
+    const requestGeneration = generation.current;
+    let active = true;
+    const isCurrent = () => active && requestGeneration === generation.current;
+    setIsLoading(true);
+    async function loadWeek() {
+      try {
+        const params = new URLSearchParams({ season, week });
+        const response = await fetch(`/api/admin/ncaa-pickem/import-week?${params}`, { cache: "no-store", signal: controller.signal });
         const data = (await response.json()) as ImportResult;
-
-        if (response.status === 404) {
-          setAnalysis("");
-          setShowAnalysis(false);
-          setMessage("");
+        if (!isCurrent()) return;
+        if (response.status === 404 && data.error === "NCAA Pick 'Em week has not been imported.") {
+          setNotImported(true);
           return;
         }
-
-        if (!response.ok) {
-          setMessage(data.error || "Unable to load the saved week.");
-          return;
-        }
-
+        if (!response.ok) throw new Error(data.error || "Unable to load the saved week.");
         setResult(data);
         setAnalysis(data.analysis ?? "");
         setShowAnalysis(data.showAnalysis === true);
         setMessage("");
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-
-        console.error(error);
-        setMessage("Unable to load the saved week.");
+        if (!isCurrent()) return;
+        setMessage(error instanceof Error ? error.message : "Unable to load the saved week.");
+      } finally {
+        if (isCurrent()) setIsLoading(false);
       }
-    }, 250);
-
-    return () => {
-      window.clearTimeout(timeout);
-      controller.abort();
-    };
+    }
+    void loadWeek();
+    return () => { active = false; controller.abort(); };
   }, [season, week]);
 
   async function importWeek(
     includedEventIds?:
       string[],
   ) {
+    if (isLoading || isWorking || !canReplaceWeek()) return;
     try {
       setIsWorking(true);
       setMessage("");
@@ -294,11 +314,9 @@ export default function NcaaPickEmAdminPage() {
       const data =
         (await response.json()) as ImportResult;
 
-      setResult(
-        data,
-      );
-
       if (response.ok) {
+        setResult(data);
+        setNotImported(false);
         setAnalysis(
           data.analysis ??
             "",
@@ -320,7 +338,7 @@ export default function NcaaPickEmAdminPage() {
       }
 
       setMessage(
-        `✓ Week ${week} refreshed. ${data.importedGames ?? 0} game(s) on the Pick 'Em card.`,
+        `✓ Week ${week} ${notImported ? "imported" : "refreshed"}. ${data.importedGames ?? 0} game(s) on the Pick 'Em card.`,
       );
     } catch (error) {
       console.error(
@@ -419,6 +437,7 @@ export default function NcaaPickEmAdminPage() {
           true,
       );
 
+      setResult(previous => previous ? { ...previous, analysis: data.week?.analysis ?? "", showAnalysis: data.week?.show_analysis === true } : previous);
       setMessage(
         "✓ MW Analysis saved.",
       );
@@ -487,6 +506,7 @@ export default function NcaaPickEmAdminPage() {
         return;
       }
 
+      setResult(previous => previous ? { ...previous, status } : previous);
       setMessage(
         `✓ Week is now ${status}.`,
       );
@@ -547,20 +567,15 @@ export default function NcaaPickEmAdminPage() {
                 Season
               </div>
 
-              <input
+              <select
                 value={season}
-                onChange={(
-                  event,
-                ) => {
-                  setResult(null);
-                  setSeason(
-                    event.target
-                      .value,
-                  );
-                }
-                }
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2"
-              />
+                disabled={isWorking || !options || !week}
+                onChange={event => changeSelection(event.target.value, "")}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 disabled:opacity-40"
+              >
+                {!season && <option value="">Loading seasons…</option>}
+                {options?.seasons.map(value => <option key={value} value={value}>{value}</option>)}
+              </select>
             </label>
 
             <label className="space-y-1">
@@ -568,27 +583,22 @@ export default function NcaaPickEmAdminPage() {
                 Week
               </div>
 
-              <input
+              <select
                 value={week}
-                onChange={(
-                  event,
-                ) => {
-                  setResult(null);
-                  setWeek(
-                    event.target
-                      .value,
-                  );
-                }
-                }
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2"
-              />
+                disabled={isWorking || !options || !week}
+                onChange={event => changeSelection(season, event.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 disabled:opacity-40"
+              >
+                {!week && <option value="">Loading weeks…</option>}
+                {options?.weeks.map(value => <option key={value} value={value}>Week {value}</option>)}
+              </select>
             </label>
           </div>
 
           <button
             type="button"
             disabled={
-              isWorking
+              isWorking || isLoading || (!result?.success && !notImported)
             }
             onClick={() =>
               void importWeek()
@@ -597,9 +607,12 @@ export default function NcaaPickEmAdminPage() {
           >
             {isWorking
               ? "Working…"
-              : "Refresh Week from ESPN"}
+              : isLoading ? "Loading…" : notImported ? "Import Week from ESPN" : "Refresh Week from ESPN"}
           </button>
 
+          <div className="mt-3 text-sm text-slate-400" role="status">
+            {isLoading ? "Loading selected week…" : notImported ? `Week ${week} is not imported. Import its schedule to set up the card in advance.` : result?.success ? `Week ${week} — ${result.status === "final" ? "Final" : result.status === "locked" || (result.lockAt && Date.now() >= Date.parse(result.lockAt)) ? "Locked" : "Open"}` : ""}
+          </div>
           <div className="mt-3 text-xs leading-5 text-slate-500">
             Refreshing updates ESPN schedule, rankings, records and game data without removing commissioner-added games.
           </div>
