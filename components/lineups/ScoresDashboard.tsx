@@ -1,5 +1,7 @@
 "use client";
 
+import { NflFantasyGameAction } from "./NflFantasyGameCenter";
+
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
@@ -801,6 +803,8 @@ function TraditionalScoresDashboard({
                     ) : null}
                   </div>
                 </button>
+
+                <NflFantasyGameAction player={row.player} />
 
                 <div className="scores-player-primary-stats">
                   {primaryColumns.map((column) => (

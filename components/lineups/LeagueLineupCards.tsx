@@ -1,5 +1,7 @@
 "use client";
 
+import { NflFantasyRosterPlayer } from "./NflFantasyGameCenter";
+
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import {
@@ -44,6 +46,7 @@ function MiniSlot({
   setTargetDraftSlot,
 }: MiniSlotProps) {
   return (
+    <NflFantasyRosterPlayer player={player}>
     <button
       type="button"
       disabled={!player && isLocked}
@@ -85,6 +88,7 @@ function MiniSlot({
         <span aria-hidden="true">+</span>
       )}
     </button>
+    </NflFantasyRosterPlayer>
   );
 }
 

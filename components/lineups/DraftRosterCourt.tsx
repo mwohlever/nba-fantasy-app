@@ -1,5 +1,7 @@
 "use client";
 
+import { NflFantasyRosterPlayer } from "./NflFantasyGameCenter";
+
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import {
   assignPlayersToRosterSlots,
@@ -51,6 +53,7 @@ function DraftRosterSlot({
   const label = player?.name ?? positionGroup;
 
   return (
+    <NflFantasyRosterPlayer player={player}>
     <button
       type="button"
       disabled={!player && disabled}
@@ -102,6 +105,7 @@ function DraftRosterSlot({
         {player ? positionGroup : "Empty"}
       </span>
     </button>
+    </NflFantasyRosterPlayer>
   );
 }
 

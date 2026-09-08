@@ -27,6 +27,7 @@ export type Player = {
   is_playing_today?: boolean | null;
   nba_player_id?: number | null;
   nfl_player_id?: number | null;
+  team_abbreviation?: string | null;
   espn_player_id?: string | null;
   country?: string | null;
   country_flag_url?: string | null;

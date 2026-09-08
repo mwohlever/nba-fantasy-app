@@ -1,5 +1,7 @@
 "use client";
 
+import { NflFantasyGameCenter } from "@/components/lineups/NflFantasyGameCenter";
+
 import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
@@ -2330,6 +2332,10 @@ export default function LineupBuilder({
   );
 
   return (
+    <NflFantasyGameCenter
+      slateId={(selectedSlate?.sport ?? selectedSport) === "nfl" ? selectedSlateIdNumber : null}
+      refreshKey={lastUpdatedAt}
+    >
     <div className="space-y-6">
       {viewMode === "draft"
         ? lineupControls
@@ -2726,5 +2732,6 @@ export default function LineupBuilder({
         }
       />
     </div>
+    </NflFantasyGameCenter>
   );
 }
