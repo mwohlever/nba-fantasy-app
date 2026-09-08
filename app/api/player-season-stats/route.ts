@@ -1,3 +1,4 @@
+import { nflComparisonSeason } from "@/lib/lineups/nflDraftStats";
 import {
   NextRequest,
   NextResponse,
@@ -700,16 +701,10 @@ export async function GET(
       sport ===
       "nfl"
     ) {
-      const nflSeason =
-        getNflSeason(
-          season,
-        );
+      const nflBaseline = request.nextUrl.searchParams.get("nflBaseline");
+      let nflSeason = nflBaseline === "auto" || nflBaseline === "selected" ? season : getNflSeason(season);
 
-      const [
-        seasonStatsResult,
-        playersResult,
-      ] =
-        await Promise.all([
+      const loadNflRows = (year: number) =>
           supabaseAdmin
             .from(
               "player_nfl_season_stats",
@@ -746,10 +741,7 @@ export async function GET(
               fantasy_points_per_game
             `,
             )
-            .eq(
-              "season",
-              nflSeason,
-            )
+            .eq("season", year)
             .order(
               "fantasy_points_per_game",
               {
@@ -760,7 +752,9 @@ export async function GET(
             .range(
               0,
               5000,
-            ),
+            );
+      let [seasonStatsResult, playersResult] = await Promise.all([
+        loadNflRows(nflSeason),
 
           supabaseAdmin
             .from(
@@ -822,12 +816,15 @@ export async function GET(
         );
       }
 
-      const seasonRows =
-        (
-          seasonStatsResult.data ??
-          []
-        ) as
-          NflSeasonStatRow[];
+      if (nflBaseline === "auto") {
+        const comparisonSeason = nflComparisonSeason(nflSeason, seasonStatsResult.data ?? []);
+        if (comparisonSeason !== nflSeason) {
+          nflSeason = comparisonSeason;
+          seasonStatsResult = await loadNflRows(nflSeason);
+          if (seasonStatsResult.error) return NextResponse.json({ error: "Failed to load previous NFL season statistics." }, { status: 500, headers: noStoreHeaders() });
+        }
+      }
+      const seasonRows = (seasonStatsResult.data ?? []) as NflSeasonStatRow[];
 
       const localPlayers =
         (
@@ -864,7 +861,7 @@ export async function GET(
       }
 
       const playerStats =
-        seasonRows.map(
+        seasonRows.filter(row => !nflBaseline || localPlayerByNflId.has(Number(row.nfl_player_id))).map(
           (
             row,
           ) => {
@@ -1009,49 +1006,31 @@ export async function GET(
                * Season totals
                */
               passing_yards:
-                round1(
-                  row.passing_yards,
-                ),
+                row.passing_yards == null ? null : round1(row.passing_yards),
 
               passing_tds:
-                round1(
-                  row.passing_tds,
-                ),
+                row.passing_tds == null ? null : round1(row.passing_tds),
 
               passing_ints:
-                round1(
-                  row.passing_ints,
-                ),
+                row.passing_ints == null ? null : round1(row.passing_ints),
 
               rushing_yards:
-                round1(
-                  row.rushing_yards,
-                ),
+                row.rushing_yards == null ? null : round1(row.rushing_yards),
 
               rushing_tds:
-                round1(
-                  row.rushing_tds,
-                ),
+                row.rushing_tds == null ? null : round1(row.rushing_tds),
 
               receiving_targets:
-                round1(
-                  row.receiving_targets,
-                ),
+                row.receiving_targets == null ? null : round1(row.receiving_targets),
 
               receptions:
-                round1(
-                  row.receptions,
-                ),
+                row.receptions == null ? null : round1(row.receptions),
 
               receiving_yards:
-                round1(
-                  row.receiving_yards,
-                ),
+                row.receiving_yards == null ? null : round1(row.receiving_yards),
 
               receiving_tds:
-                round1(
-                  row.receiving_tds,
-                ),
+                row.receiving_tds == null ? null : round1(row.receiving_tds),
 
               fumbles_lost:
                 round1(

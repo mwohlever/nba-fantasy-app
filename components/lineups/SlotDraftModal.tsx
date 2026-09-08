@@ -68,6 +68,8 @@ type Props = {
   selectedSeason:
     string;
 
+  nflSeason?: string;
+
   rosterSlots?:
     RosterSlotConfig[];
 
@@ -90,6 +92,7 @@ export default function SlotDraftModal({
   setDraftingPlayer,
   handleAssignPlayerToTeam,
   selectedSeason,
+  nflSeason,
   rosterSlots = [],
   hidden = false,
   isAssigningPlayer,
@@ -384,6 +387,7 @@ export default function SlotDraftModal({
             selectedSeason={
               selectedSeason
             }
+            nflSeason={nflSeason}
             hidePositionFilter
             slotDraftContext={{
               targetDraftSlot,

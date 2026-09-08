@@ -1,3 +1,4 @@
+import { fetchNflWeek, isDuplicateNflWeek, validateNflWeekDates } from "@/lib/providers/nflWeeks";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
@@ -616,8 +617,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const startDate = String(body?.startDate ?? "").trim();
-    const endDate = String(body?.endDate ?? "").trim();
+    let startDate = String(body?.startDate ?? "").trim();
+    let endDate = String(body?.endDate ?? "").trim();
 
     const sport: "nba" | "nfl" | "golf" =
       body?.sport === "nfl"
@@ -663,6 +664,28 @@ export async function POST(request: NextRequest) {
       league,
     } = activeLeague;
 
+
+    let nflWeekName = "";
+    if (sport === "nfl") {
+      let selectedWeek;
+      try {
+        selectedWeek = await fetchNflWeek(Number(body.nflSeason), Number(body.nflWeek));
+      } catch (error) {
+        return NextResponse.json({ error: error instanceof Error ? error.message : "NFL week unavailable." }, { status: 400 });
+      }
+      if (!validateNflWeekDates(selectedWeek, startDate, endDate)) {
+        return NextResponse.json({ error: "NFL dates do not match the selected season/week. Reload the week preview." }, { status: 400 });
+      }
+      const { data: existingSlates, error: duplicateError } = await supabaseAdmin.from("slates")
+        .select("id, sport, league_id, display_name, date, start_date, end_date")
+        .eq("league_id", league.id).eq("sport", "nfl");
+      if (duplicateError) return NextResponse.json({ error: duplicateError.message }, { status: 500 });
+      const duplicate = (existingSlates ?? []).find(slate => isDuplicateNflWeek(slate, league.id, selectedWeek));
+      if (duplicate) return NextResponse.json({ error: `${selectedWeek.name} already has a slate in this league.`, existingSlateId: duplicate.id }, { status: 409 });
+      startDate = selectedWeek.startDate;
+      endDate = selectedWeek.endDate;
+      nflWeekName = selectedWeek.name;
+    }
 
     const baseResolvedRules =
       resolveLeagueRules({
@@ -991,7 +1014,7 @@ export async function POST(request: NextRequest) {
           resolvedRules,
 
         display_name:
-          sport === "golf" ? displayName : null,
+          sport === "golf" ? displayName : sport === "nfl" ? nflWeekName : null,
         external_event_id:
           sport === "golf" ? externalEventId : null,
         cut_penalty_per_round:

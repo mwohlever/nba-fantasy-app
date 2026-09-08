@@ -1,5 +1,6 @@
 "use client";
 
+import { compareNflStats, nflPositionStats, nflStatFields, nflStatValue, type NflDraftStat, type NflStatKey } from "@/lib/lineups/nflDraftStats";
 import { useEffect, useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
@@ -44,6 +45,7 @@ type PlayerPoolProps = {
   inactivePill: string;
   rosterSlots?: RosterSlotConfig[];
   selectedSeason: string;
+  nflSeason?: string;
 
   /*
    * Optional context used by the roster-slot workflow.
@@ -102,7 +104,7 @@ type SortOption =
   | "podium_lineups"
   | "avg_finish";
 
-type NflSeasonStat = {
+type NflSeasonStat = NflDraftStat & {
   player_id: number;
   player_name: string;
 
@@ -316,6 +318,7 @@ export default function PlayerPool({
   isAssigningPlayer,
   rosterSlots = [],
   selectedSeason,
+  nflSeason,
   slotDraftContext,
   hidePositionFilter = false,
 }: PlayerPoolProps) {
@@ -421,6 +424,14 @@ export default function PlayerPool({
   ] =
     useState(false);
 
+  const [nflStatsSeason, setNflStatsSeason] = useState<number | null>(null);
+  const [nflAscending, setNflAscending] = useState(false);
+  useEffect(() => {
+    if (!isNfl || researchMode !== "season") return;
+    setSortBy(nflPositionStats(positionFilter)[0] ?? "name");
+    setNflAscending(nflPositionStats(positionFilter).length === 0);
+  }, [isNfl, positionFilter, researchMode]);
+
   const [sortBy, setSortBy] =
     useState<SortOption>(
       selectedSport === "golf" ? "owgr" : "projection",
@@ -455,7 +466,7 @@ export default function PlayerPool({
       isGolf
         ? "golf_scoring_avg"
         : isNfl
-          ? "nfl_fp"
+          ? (nflPositionStats(positionFilter)[0] ?? "name")
           : "season_fp",
     );
   }, [
@@ -719,6 +730,8 @@ export default function PlayerPool({
       false;
 
     async function loadNflSeasonStats() {
+      setNflSeasonStats([]);
+      setNflStatsSeason(null);
       try {
         setIsSeasonStatsLoading(
           true,
@@ -730,7 +743,7 @@ export default function PlayerPool({
 
         const response =
           await fetch(
-            `/api/player-season-stats?season=${selectedSeason}&sport=nfl`,
+            `/api/player-season-stats?season=${nflSeason ?? selectedSeason}&sport=nfl&nflBaseline=auto`,
             {
               cache:
                 "no-store",
@@ -757,6 +770,7 @@ export default function PlayerPool({
           return;
         }
 
+        setNflStatsSeason(Number(result.professionalSeason));
         setNflSeasonStats(
           Array.isArray(
             result.playerStats,
@@ -805,6 +819,7 @@ export default function PlayerPool({
   }, [
     isNfl,
     selectedSeason,
+    nflSeason,
   ]);
 
   useEffect(() => {
@@ -1347,120 +1362,8 @@ export default function PlayerPool({
             b.id,
           );
 
-        const getValue = (
-          stat:
-            NflSeasonStat | undefined,
-        ) => {
-          if (
-            sortBy ===
-            "nfl_pass_yd"
-          ) {
-            return Number(
-              stat?.passing_yards_per_game ??
-                -999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_pass_td"
-          ) {
-            return Number(
-              stat?.passing_tds_per_game ??
-                -999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_int"
-          ) {
-            return Number(
-              stat?.passing_ints_per_game ??
-                999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_rush_yd"
-          ) {
-            return Number(
-              stat?.rushing_yards_per_game ??
-                -999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_rush_td"
-          ) {
-            return Number(
-              stat?.rushing_tds_per_game ??
-                -999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_targets"
-          ) {
-            return Number(
-              stat?.receiving_targets_per_game ??
-                -999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_receptions"
-          ) {
-            return Number(
-              stat?.receptions_per_game ??
-                -999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_rec_yd"
-          ) {
-            return Number(
-              stat?.receiving_yards_per_game ??
-                -999,
-            );
-          }
-
-          if (
-            sortBy ===
-            "nfl_rec_td"
-          ) {
-            return Number(
-              stat?.receiving_tds_per_game ??
-                -999,
-            );
-          }
-
-          return Number(
-            stat?.fantasy_points_per_game ??
-              -999,
-          );
-        };
-
-        const aValue =
-          getValue(
-            aStat,
-          );
-
-        const bValue =
-          getValue(
-            bStat,
-          );
-
-        return sortBy ===
-          "nfl_int"
-          ? aValue - bValue
-          : bValue - aValue;
+        if (sortBy === "name") return a.name.localeCompare(b.name) * (nflAscending ? 1 : -1);
+        return compareNflStats(aStat, bStat, sortBy, nflAscending) || a.name.localeCompare(b.name);
       }
 
       if (
@@ -1576,6 +1479,7 @@ export default function PlayerPool({
     isNfl,
     nbaSeasonStatByPlayerId,
     nflSeasonStatByPlayerId,
+    nflAscending,
     golfSeasonStatByPlayerId,
     leagueHistoryByPlayerId,
     isGolf,
@@ -1749,105 +1653,8 @@ export default function PlayerPool({
                 ? "TO"
                 : "FP";
 
-  const nflSeasonSortLabel =
-    sortBy ===
-      "nfl_pass_yd"
-      ? "PASS"
-      : sortBy ===
-          "nfl_pass_td"
-        ? "P TD"
-        : sortBy ===
-            "nfl_int"
-          ? "INT"
-          : sortBy ===
-              "nfl_rush_yd"
-            ? "RUSH"
-            : sortBy ===
-                "nfl_rush_td"
-              ? "R TD"
-              : sortBy ===
-                  "nfl_targets"
-                ? "TGT"
-                : sortBy ===
-                    "nfl_receptions"
-                  ? "REC"
-                  : sortBy ===
-                      "nfl_rec_yd"
-                    ? "REC YD"
-                    : sortBy ===
-                        "nfl_rec_td"
-                      ? "REC TD"
-                      : "FP/G";
-
-  function nflSeasonSortValue(
-    stat:
-      NflSeasonStat | undefined,
-  ) {
-    if (
-      sortBy ===
-      "nfl_pass_yd"
-    ) {
-      return stat?.passing_yards_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_pass_td"
-    ) {
-      return stat?.passing_tds_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_int"
-    ) {
-      return stat?.passing_ints_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_rush_yd"
-    ) {
-      return stat?.rushing_yards_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_rush_td"
-    ) {
-      return stat?.rushing_tds_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_targets"
-    ) {
-      return stat?.receiving_targets_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_receptions"
-    ) {
-      return stat?.receptions_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_rec_yd"
-    ) {
-      return stat?.receiving_yards_per_game;
-    }
-
-    if (
-      sortBy ===
-      "nfl_rec_td"
-    ) {
-      return stat?.receiving_tds_per_game;
-    }
-
-    return stat?.fantasy_points_per_game;
-  }
+  const nflSeasonSortLabel = nflStatFields[sortBy as NflStatKey]?.[1] ?? "Stats";
+  function nflSeasonSortValue(stat: NflSeasonStat | undefined) { return nflStatValue(stat, sortBy); }
 
   function seasonSortValue(
     stat:
@@ -1909,9 +1716,7 @@ export default function PlayerPool({
       "season",
     );
 
-    setSortBy(
-      "nfl_fp",
-    );
+    setSortBy(nflPositionStats(positionFilter)[0] ?? "name");
 
     setCompareMode(
       false,
@@ -1973,7 +1778,7 @@ export default function PlayerPool({
                   isGolf
                     ? "golf_scoring_avg"
                     : isNfl
-                      ? "nfl_fp"
+                      ? (nflPositionStats(positionFilter)[0] ?? "name")
                       : "season_fp",
                 );
 
@@ -2100,6 +1905,12 @@ export default function PlayerPool({
         </div>
       ) : null}
 
+      {isNfl && researchMode === "season" && <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-500">
+        <span>{nflStatsSeason ? `${nflStatsSeason} regular-season stats · Totals (FP/G is per game)` : "NFL season stats"}</span>
+        <button type="button" onClick={() => setNflAscending(value => !value)} className="shrink-0 rounded-lg border px-2 py-1" aria-label="Change NFL stat sort direction">
+          {nflAscending ? "Ascending ↑" : "Descending ↓"}
+        </button>
+      </div>}
       <div className="draft-player-toolbar">
         <div className="draft-player-search-row">
           <label className="draft-player-search">
@@ -2348,49 +2159,8 @@ export default function PlayerPool({
                 researchMode ===
                   "season" ? (
                 <>
-                  <option value="nfl_fp">
-                    Fantasy Points / Game
-                  </option>
-
-                  <option value="nfl_pass_yd">
-                    Pass Yards / Game
-                  </option>
-
-                  <option value="nfl_pass_td">
-                    Pass TD / Game
-                  </option>
-
-                  <option value="nfl_int">
-                    INT / Game
-                  </option>
-
-                  <option value="nfl_rush_yd">
-                    Rush Yards / Game
-                  </option>
-
-                  <option value="nfl_rush_td">
-                    Rush TD / Game
-                  </option>
-
-                  <option value="nfl_targets">
-                    Targets / Game
-                  </option>
-
-                  <option value="nfl_receptions">
-                    Receptions / Game
-                  </option>
-
-                  <option value="nfl_rec_yd">
-                    Receiving Yards / Game
-                  </option>
-
-                  <option value="nfl_rec_td">
-                    Receiving TD / Game
-                  </option>
-
-                  <option value="name">
-                    Player Name
-                  </option>
+                  {nflPositionStats(positionFilter).map(key => <option key={key} value={key}>{nflStatFields[key][1]}</option>)}
+                  <option value="name">Player Name</option>
                 </>
               ) : isNba &&
                 researchMode ===
@@ -3275,338 +3045,24 @@ export default function PlayerPool({
                   })()
                 ) : null}
 
-                {isNfl &&
-                researchMode ===
-                  "season" &&
-                nflSeasonStatByPlayerId.get(
-                  player.id,
-                ) ? (
-                  (() => {
-                    const stat =
-                      nflSeasonStatByPlayerId.get(
-                        player.id,
-                      )!;
-
-                    const position =
-                      String(
-                        player.position_group ??
-                          stat.position ??
-                          "",
-                      ).toUpperCase();
-
-                    const fpStat = {
-                      label:
-                        "FP/G",
-                      value:
-                        stat.fantasy_points_per_game,
-                      key:
-                        "nfl_fp",
-                      digits:
-                        1,
-                    };
-
-                    const qbFixed = [
-                      fpStat,
-                      {
-                        label:
-                          "PASS",
-                        value:
-                          stat.passing_yards_per_game,
-                        key:
-                          "nfl_pass_yd",
-                        digits:
-                          1,
-                      },
-                      {
-                        label:
-                          "P TD",
-                        value:
-                          stat.passing_tds_per_game,
-                        key:
-                          "nfl_pass_td",
-                        digits:
-                          2,
-                      },
-                    ];
-
-                    const rbFixed = [
-                      fpStat,
-                      {
-                        label:
-                          "RUSH",
-                        value:
-                          stat.rushing_yards_per_game,
-                        key:
-                          "nfl_rush_yd",
-                        digits:
-                          1,
-                      },
-                      {
-                        label:
-                          "TGT",
-                        value:
-                          stat.receiving_targets_per_game,
-                        key:
-                          "nfl_targets",
-                        digits:
-                          1,
-                      },
-                    ];
-
-                    const receiverFixed = [
-                      fpStat,
-                      {
-                        label:
-                          "TGT",
-                        value:
-                          stat.receiving_targets_per_game,
-                        key:
-                          "nfl_targets",
-                        digits:
-                          1,
-                      },
-                      {
-                        label:
-                          "REC",
-                        value:
-                          stat.receptions_per_game,
-                        key:
-                          "nfl_receptions",
-                        digits:
-                          1,
-                      },
-                    ];
-
-                    const fixedStats =
-                      position ===
-                      "QB"
-                        ? qbFixed
-                        : position ===
-                            "RB"
-                          ? rbFixed
-                          : receiverFixed;
-
-                    const dynamicBySort =
-                      sortBy ===
-                        "nfl_pass_yd"
-                        ? {
-                            label:
-                              "PASS",
-                            value:
-                              stat.passing_yards_per_game,
-                            key:
-                              "nfl_pass_yd",
-                            digits:
-                              1,
-                          }
-                        : sortBy ===
-                            "nfl_pass_td"
-                          ? {
-                              label:
-                                "P TD",
-                              value:
-                                stat.passing_tds_per_game,
-                              key:
-                                "nfl_pass_td",
-                              digits:
-                                2,
-                            }
-                          : sortBy ===
-                              "nfl_int"
-                            ? {
-                                label:
-                                  "INT",
-                                value:
-                                  stat.passing_ints_per_game,
-                                key:
-                                  "nfl_int",
-                                digits:
-                                  2,
-                              }
-                            : sortBy ===
-                                "nfl_rush_yd"
-                              ? {
-                                  label:
-                                    "RUSH",
-                                  value:
-                                    stat.rushing_yards_per_game,
-                                  key:
-                                    "nfl_rush_yd",
-                                  digits:
-                                    1,
-                                }
-                              : sortBy ===
-                                  "nfl_rush_td"
-                                ? {
-                                    label:
-                                      "R TD",
-                                    value:
-                                      stat.rushing_tds_per_game,
-                                    key:
-                                      "nfl_rush_td",
-                                    digits:
-                                      2,
-                                  }
-                                : sortBy ===
-                                    "nfl_targets"
-                                  ? {
-                                      label:
-                                        "TGT",
-                                      value:
-                                        stat.receiving_targets_per_game,
-                                      key:
-                                        "nfl_targets",
-                                      digits:
-                                        1,
-                                    }
-                                  : sortBy ===
-                                      "nfl_receptions"
-                                    ? {
-                                        label:
-                                          "REC",
-                                        value:
-                                          stat.receptions_per_game,
-                                        key:
-                                          "nfl_receptions",
-                                        digits:
-                                          1,
-                                      }
-                                    : sortBy ===
-                                        "nfl_rec_td"
-                                      ? {
-                                          label:
-                                            "REC TD",
-                                          value:
-                                            stat.receiving_tds_per_game,
-                                          key:
-                                            "nfl_rec_td",
-                                          digits:
-                                            2,
-                                        }
-                                      : {
-                                          label:
-                                            "REC YD",
-                                          value:
-                                            stat.receiving_yards_per_game,
-                                          key:
-                                            "nfl_rec_yd",
-                                          digits:
-                                            1,
-                                        };
-
-                    const fixedKeys =
-                      fixedStats.map(
-                        (
-                          item,
-                        ) =>
-                          item.key,
-                      );
-
-                    const defaultDynamic =
-                      position ===
-                      "QB"
-                        ? {
-                            label:
-                              "RUSH",
-                            value:
-                              stat.rushing_yards_per_game,
-                            key:
-                              "nfl_rush_yd",
-                            digits:
-                              1,
-                          }
-                        : position ===
-                            "RB"
-                          ? {
-                              label:
-                                "REC",
-                              value:
-                                stat.receptions_per_game,
-                              key:
-                                "nfl_receptions",
-                              digits:
-                                1,
-                            }
-                          : {
-                              label:
-                                "REC YD",
-                              value:
-                                stat.receiving_yards_per_game,
-                              key:
-                                "nfl_rec_yd",
-                              digits:
-                                1,
-                            };
-
-                    const dynamicStat =
-                      fixedKeys.includes(
-                        sortBy,
-                      )
-                        ? defaultDynamic
-                        : dynamicBySort;
-
-                    const cardStats = [
-                      ...fixedStats,
-                      dynamicStat,
-                    ];
-
-                    return (
-                      <div className="mt-2 grid grid-cols-4 gap-1 border-t border-slate-700/60 pt-2 text-center">
-                        {cardStats.map(
-                          (
-                            item,
-                          ) => {
-                            const active =
-                              item.key ===
-                              sortBy;
-
-                            return (
-                              <div
-                                key={
-                                  item.label
-                                }
-                                className={`rounded-lg border px-1 py-1.5 ${
-                                  active
-                                    ? "border-sky-400 bg-sky-950/70"
-                                    : "border-transparent bg-slate-900/35"
-                                }`}
-                              >
-                                <strong
-                                  className={`block text-[13px] font-black leading-tight ${
-                                    active
-                                      ? "text-sky-300"
-                                      : "text-white"
-                                  }`}
-                                >
-                                  {Number(
-                                    item.value ??
-                                      0,
-                                  ).toFixed(
-                                    item.digits,
-                                  )}
-                                </strong>
-
-                                <span
-                                  className={`mt-0.5 block text-[9px] font-bold uppercase ${
-                                    active
-                                      ? "text-sky-300"
-                                      : "text-slate-400"
-                                  }`}
-                                >
-                                  {
-                                    item.label
-                                  }
-                                </span>
-                              </div>
-                            );
-                          },
-                        )}
-                      </div>
-                    );
-                  })()
+                {isNfl && researchMode === "season" ? (
+                  <div
+                    className="draft-player-nfl-stats"
+                    style={{ gridTemplateColumns: `repeat(${Math.max(1, nflPositionStats(String(player.position_group)).length)}, minmax(0, 1fr))` }}
+                  >
+                    {nflPositionStats(String(player.position_group)).map(key => {
+                      const value = nflStatValue(nflSeasonStatByPlayerId.get(player.id), key);
+                      return <span key={key}
+                        className={`draft-player-nfl-stat${sortBy === key ? " draft-player-nfl-stat--active" : ""}`}>
+                        <span className="draft-player-nfl-stat-label">{nflStatFields[key][1].replace("Yards", "Yds")}</span>
+                        <strong className="draft-player-nfl-stat-value">{value === null ? "—" : value.toLocaleString()}</strong>
+                      </span>;
+                    })}
+                    {nflPositionStats(String(player.position_group)).length === 0 && <span className="draft-player-nfl-stats-unavailable">Season comparison stats unavailable</span>}
+                  </div>
                 ) : null}
-                </div>
 
+                </div>
                 {isNba &&
                 researchMode ===
                   "season" &&
@@ -3846,11 +3302,8 @@ export default function PlayerPool({
             | "nfl"
             | "golf"
         }
-        season={
-          Number(
-            selectedSeason,
-          )
-        }
+        season={Number(selectedSeason)}
+        nflStatsSeason={isNfl ? nflStatsSeason ?? undefined : undefined}
         defaultMode="season"
         actionLabel={
           researchPlayer
@@ -4031,7 +3484,7 @@ export default function PlayerPool({
                   {isGolf
                     ? `${selectedSeason} PGA Season Stats`
                     : isNfl
-                      ? `${selectedSeason} NFL Season Stats`
+                      ? `${nflStatsSeason ?? selectedSeason} NFL Season Stats`
                       : `${selectedSeason} NBA Season Stats`}
                 </div>
               </div>

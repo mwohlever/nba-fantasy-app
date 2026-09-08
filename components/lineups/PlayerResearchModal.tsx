@@ -44,6 +44,8 @@ type Props = {
   season:
     number | "all";
 
+  nflStatsSeason?: number;
+
   defaultMode:
     Mode;
 
@@ -444,6 +446,7 @@ export default function PlayerResearchModal({
   sport,
   season,
   defaultMode,
+  nflStatsSeason,
   actionLabel,
   onAction,
   onClose,
@@ -538,7 +541,7 @@ export default function PlayerResearchModal({
 
         const response =
           await fetch(
-            `/api/player-season-stats?season=${effectiveSeason}&sport=${sport}`,
+            `/api/player-season-stats?season=${sport === "nfl" && nflStatsSeason ? nflStatsSeason : effectiveSeason}&sport=${sport}${sport === "nfl" && nflStatsSeason ? "&nflBaseline=selected" : ""}`,
             {
               cache:
                 "no-store",
@@ -635,6 +638,7 @@ export default function PlayerResearchModal({
         false;
     };
   }, [
+    nflStatsSeason,
     player?.id,
     sport,
     effectiveSeason,
@@ -776,7 +780,7 @@ export default function PlayerResearchModal({
       ? `${effectiveSeason} PGA Season`
       : sport ===
           "nfl"
-        ? `${effectiveSeason} NFL Season`
+        ? `${nflStatsSeason ?? effectiveSeason} NFL Season`
         : `${effectiveSeason} NBA Season`;
 
   const identitySecondary =

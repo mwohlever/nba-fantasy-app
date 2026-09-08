@@ -13,6 +13,11 @@ import AppNav from "@/components/AppNav";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+type NflWeekSelection = {
+  season: number; week: number; name: string; startDate: string; endDate: string;
+  gameCount: number; weeks: Array<{ value: number; label: string }>; existingSlateId: number | null;
+};
+
 type TeamSelection = {
   id: number;
   name: string;
@@ -92,6 +97,37 @@ export default function NewSlatePage() {
     useState<RosterSlotConfig[]>([]);
   const requestedSport = searchParams.get("sport");
   const sport = resolveCreateSlateSport(requestedSport);
+
+  const [nflSeason, setNflSeason] = useState("");
+  const [nflWeek, setNflWeek] = useState("");
+  const [nflSelection, setNflSelection] = useState<NflWeekSelection | null>(null);
+  const [nflOptions, setNflOptions] = useState<NflWeekSelection | null>(null);
+  const [nflLoading, setNflLoading] = useState(false);
+  const [nflError, setNflError] = useState("");
+  useEffect(() => {
+    if (sport !== "nfl") return;
+    const controller = new AbortController();
+    setNflLoading(true);
+    setNflSelection(null);
+    setStartDate("");
+    setEndDate("");
+    setNflError("");
+    const params = new URLSearchParams();
+    if (nflSeason) params.set("season", nflSeason);
+    if (nflWeek) params.set("week", nflWeek);
+    void fetch(`/api/slates/nfl-week?${params}`, { signal: controller.signal, cache: "no-store" })
+      .then(async response => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error ?? "NFL schedule unavailable.");
+        if (controller.signal.aborted) return;
+        setNflSelection(result);
+        setNflOptions(result);
+        setStartDate(result.startDate);
+        setEndDate(result.endDate);
+      }).catch(error => { if (!controller.signal.aborted) setNflError(error.message); })
+      .finally(() => { if (!controller.signal.aborted) setNflLoading(false); });
+    return () => controller.abort();
+  }, [sport, nflSeason, nflWeek]);
 
   const [golfYear, setGolfYear] = useState(() =>
     String(new Date().getUTCFullYear())
@@ -420,7 +456,9 @@ setTeams(
   const effectiveEndDate =
     sport === "golf"
       ? golfEndDate
-      : multipleDays
+      : sport === "nfl"
+        ? endDate
+        : multipleDays
         ? endDate
         : startDate;
 
@@ -429,6 +467,7 @@ setTeams(
       return selectedGolfTournament?.name ?? "—";
     }
 
+    if (sport === "nfl") return nflSelection?.name ?? "—";
     if (!effectiveStartDate) return "—";
     if (!effectiveEndDate) return effectiveStartDate;
 
@@ -436,6 +475,7 @@ setTeams(
   }, [
     sport,
     selectedGolfTournament,
+    nflSelection,
     effectiveStartDate,
     effectiveEndDate,
   ]);
@@ -567,6 +607,11 @@ setTeams(
         );
         return;
       }
+    } else if (sport === "nfl") {
+      if (nflLoading || !nflSelection || nflSelection.existingSlateId) {
+        setMessage("Select an available NFL week before creating a slate.");
+        return;
+      }
     } else {
       if (!startDate) {
         setMessage("Please select a start date.");
@@ -621,6 +666,8 @@ setTeams(
           startDate: effectiveStartDate,
           endDate: effectiveEndDate,
           sport,
+          nflSeason: sport === "nfl" ? nflSelection?.season : undefined,
+          nflWeek: sport === "nfl" ? nflSelection?.week : undefined,
           displayName:
             sport === "golf"
               ? selectedGolfTournament?.name
@@ -971,6 +1018,31 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                   </div>
                 </div>
               </div>
+            ) : sport === "nfl" ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm font-medium">Season
+                    <select aria-label="NFL season" value={nflSeason || nflOptions?.season || ""}
+                      onChange={e => { setNflSelection(null); setStartDate(""); setEndDate(""); setNflSeason(e.target.value); setNflWeek(""); }}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3">
+                      {!nflOptions && <option value="">Loading…</option>}
+                      {nflOptions && Array.from(new Set([nflOptions.season - 1, nflOptions.season, nflOptions.season + 1, Number(nflSeason || nflOptions.season)])).sort().map(year => <option key={year} value={year}>{year}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-sm font-medium">Week
+                    <select aria-label="NFL week" value={nflWeek || nflOptions?.week || ""}
+                      onChange={e => { setNflSelection(null); setStartDate(""); setEndDate(""); setNflSeason(nflSeason || String(nflOptions?.season)); setNflWeek(e.target.value); }}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-3">
+                      {!nflOptions && <option value="">Loading…</option>}
+                      {nflOptions?.weeks.map(week => <option key={week.value} value={week.value}>{week.label}</option>)}
+                    </select>
+                  </label>
+                </div>
+                {nflLoading && <p className="text-sm text-slate-500">Loading NFL schedule…</p>}
+                {nflError && <p role="alert" className="text-sm text-red-700">{nflError}</p>}
+                {nflSelection && <p className="text-sm text-slate-600">{formatSlateDateLabel({ date: nflSelection.startDate, start_date: nflSelection.startDate, end_date: nflSelection.endDate })} · {nflSelection.gameCount} games</p>}
+                {nflSelection?.existingSlateId && <p role="status" className="text-sm text-amber-700">{nflSelection.name} is already created. <a className="underline" href="/admin/slates?sport=nfl">Manage slates</a></p>}
+              </div>
             ) : (
               <>
                 <div className="grid gap-5 md:grid-cols-2">
@@ -1251,7 +1323,7 @@ checked={!!team.is_participating}
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                disabled={isSaving || (sport !== "golf" && isLoadingTeams)}
+                disabled={isSaving || (sport !== "golf" && isLoadingTeams) || (sport === "nfl" && (nflLoading || !nflSelection || !!nflSelection.existingSlateId))}
                 className="w-full rounded-xl border border-sky-300 bg-sky-100 px-4 py-3 text-sm font-medium text-sky-900 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isSaving

@@ -278,7 +278,7 @@ export default async function DraftLineupsPage({
       start_date: startDate,
       end_date: endDate,
       label:
-        sport === "golf" && slate.display_name
+        (sport === "golf" || sport === "nfl") && slate.display_name
           ? String(slate.display_name)
           : formatSlateDateLabel({
               start_date: startDate,

@@ -201,6 +201,7 @@ for (const sport of ['nba', 'nfl']) test(`${sport}: creation preview and creatio
   ]);
   const db = database(tables);
   const route = load('app/api/slates/route.ts', {
+    '@/lib/providers/nflWeeks': {}, // GET preview does not resolve provider schedules.
     'next/server': next,
     '@/lib/supabaseAdmin': { supabaseAdmin: db },
     '@/lib/requireAdminApi': {},

@@ -1,5 +1,7 @@
 "use client";
 
+import { nflSeasonForSlate } from "@/lib/lineups/nflDraftStats";
+
 import { NflFantasyGameCenter } from "@/components/lineups/NflFantasyGameCenter";
 
 import { refreshGolfFromBrowser, shouldApplyGolfSnapshot } from "@/lib/client/refreshGolfFromBrowser";
@@ -2550,6 +2552,7 @@ export default function LineupBuilder({
               inactivePill={inactivePill}
               rosterSlots={effectiveRosterSlots}
               selectedSeason={selectedSeason}
+              nflSeason={selectedSport === "nfl" ? nflSeasonForSlate(selectedSlate, selectedSeason) : undefined}
             />
           )}
 
@@ -2698,6 +2701,7 @@ export default function LineupBuilder({
         setDraftingPlayer={setDraftingPlayerWithSlotRestore}
         handleAssignPlayerToTeam={handleAssignPlayerToTeam}
         selectedSeason={selectedSeason}
+        nflSeason={selectedSport === "nfl" ? nflSeasonForSlate(selectedSlate, selectedSeason) : undefined}
         rosterSlots={effectiveRosterSlots}
         hidden={isInspectingPlayerFromSlot}
         isAssigningPlayer={isAssigningPlayer}

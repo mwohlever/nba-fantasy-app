@@ -88,6 +88,7 @@ export type Slate = {
   start_date?: string;
   end_date?: string;
   label?: string;
+  display_name?: string | null;
   is_locked: boolean;
   sport?: string;
   has_cut?: boolean;
