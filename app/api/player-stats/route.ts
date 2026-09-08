@@ -78,12 +78,15 @@ export async function GET(request: NextRequest) {
 
     const slateId = Number(slateIdParam);
 
-    if (!Number.isFinite(slateId)) {
+    if (!Number.isSafeInteger(slateId) || slateId <= 0) {
       return NextResponse.json(
-        { error: "slateId must be a valid number." },
+        { error: "slateId must be a positive safe integer." },
         { status: 400, headers: noStoreHeaders() },
       );
     }
+
+    const authorization = await authorizeSlateResource(request, slateId);
+    if (!authorization.ok) return authorization.response;
 
     const { data: slate, error: slateError } = await supabaseAdmin
       .from("slates")
@@ -106,9 +109,6 @@ export async function GET(request: NextRequest) {
           : "nba";
 
     if (sport === "golf") {
-      const authorization = await authorizeSlateResource(request, slateId);
-      if (!authorization.ok) return authorization.response;
-
       const { data, error } = await supabaseAdmin
         .from("golf_event_players")
         .select(
