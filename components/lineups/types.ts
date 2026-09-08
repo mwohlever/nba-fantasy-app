@@ -8,6 +8,7 @@ export type GolfHoleStat = {
 };
 
 export type GolfRoundStat = {
+  accepted_revision?: number;
   round_number: number;
   score_to_par: number | null;
   score_display: string | null;

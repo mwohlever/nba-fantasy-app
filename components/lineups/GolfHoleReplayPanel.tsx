@@ -147,13 +147,14 @@ type Replay = {
 };
 
 type ReconciledHole = {
+  accepted_revision: number;
   hole_number: number;
-  strokes: number;
-  relative_to_par: number;
+  strokes: number | null;
+  relative_to_par: number | null;
   score_display: string;
   holes_completed: number;
   round_score_to_par: number;
-  round_strokes: number;
+  round_strokes: number | null;
 };
 
 type ResponseBody = {
@@ -163,6 +164,8 @@ type ResponseBody = {
   replay?: Replay | null;
   reconciledHole?: ReconciledHole | null;
   error?: string;
+  scoringChanged?: boolean;
+  acceptedRevision?: number;
 };
 
 type ShotCastCalibration = {
@@ -283,18 +286,6 @@ const DETROIT_HOLE_8_CALIBRATION: ShotCastCalibration = {
   yOffset: 0.127478,
   verified: true,
 };
-
-function titleCase(
-  value: string | null | undefined,
-) {
-  if (!value) return "";
-
-  return value
-    .toLowerCase()
-    .replace(/\b\w/g, (letter) =>
-      letter.toUpperCase(),
-    );
-}
 
 function locationLabel(
   value: string | null | undefined,
@@ -460,10 +451,11 @@ export default function GolfHoleReplayPanel({
    * Keep the latest reconciliation callback without making the replay
    * fetch depend on the callback's identity.
    *
-   * GolfPlayerModal passes onReconciled inline, so its function identity
-   * changes whenever the scorecard rerenders. If loadReplay depends on it,
+   * A caller may pass onReconciled inline, changing its identity on render.
+   * If loadReplay depends on it,
    * the loading effect restarts and creates a request loop.
    */
+  const [acceptedHole, setAcceptedHole] = useState<ReconciledHole | null>(null);
   const onReconciledRef =
     useRef(onReconciled);
 
@@ -498,6 +490,7 @@ export default function GolfHoleReplayPanel({
         } else {
           setIsLoading(true);
           setReplay(null);
+          setAcceptedHole(null);
         }
 
         setMessage("");
@@ -545,6 +538,8 @@ export default function GolfHoleReplayPanel({
         }
 
         setReplay(result.replay);
+        setAcceptedHole(result.reconciledHole ?? null);
+        if (result.acceptedRevision !== undefined) window.dispatchEvent(new CustomEvent("golf-accepted-change", { detail: { slateId } }));
 
         /*
          * Temporary PGA pin-coordinate audit.
@@ -993,12 +988,12 @@ export default function GolfHoleReplayPanel({
 
   const isHoleComplete = useMemo(
     () =>
-      Boolean(
+      acceptedHole ? acceptedHole.strokes !== null : Boolean(
         replay?.shots.some(
           (shot) => shot.finalStroke,
         ),
       ),
-    [replay],
+    [replay, acceptedHole],
   );
 
   /*
@@ -1050,47 +1045,13 @@ export default function GolfHoleReplayPanel({
     loadReplay,
   ]);
 
-  /*
-   * PGA's holeStatus can occasionally collapse exceptional
-   * scores into a broader label (for example, reporting a
-   * 2 on a par 5 as "Eagle").
-   *
-   * Once the hole is complete we have enough authoritative
-   * information to derive the result ourselves from strokes
-   * and par. Prefer that calculation over the provider label.
-   */
+  // Completion labels consume accepted scores. Shot geometry never computes a
+  // competing score, including when its old final-stroke reconstruction was retracted.
   const completedResult = useMemo(() => {
-    if (!isHoleComplete) {
-      return "";
-    }
-
-    const completedStrokes =
-      replay?.shots.length
-        ? Math.max(
-            ...replay.shots.map(
-              (shot) =>
-                Number(
-                  shot.strokeNumber ?? 0,
-                ),
-            ),
-          )
-        : null;
-
-    const holePar =
-      replay?.par ?? fallbackPar;
-
-    if (
-      completedStrokes !== null &&
-      Number.isFinite(completedStrokes) &&
-      completedStrokes > 0 &&
-      holePar !== null &&
-      holePar !== undefined &&
-      Number.isFinite(Number(holePar))
-    ) {
-      const relative =
-        completedStrokes -
-        Number(holePar);
-
+    if (!isHoleComplete) return "";
+    if (acceptedHole && acceptedHole.strokes === null) return "Result pending";
+    const relative = acceptedHole?.relative_to_par;
+    if (relative !== null && relative !== undefined) {
       if (relative <= -4) {
         return "Condor";
       }
@@ -1127,16 +1088,9 @@ export default function GolfHoleReplayPanel({
     }
 
     return (
-      fallbackResult ||
-      titleCase(replay?.holeStatus) ||
-      "Complete"
+      fallbackResult || "Result pending"
     );
-  }, [
-    fallbackPar,
-    fallbackResult,
-    isHoleComplete,
-    replay,
-  ]);
+  }, [fallbackResult, acceptedHole, isHoleComplete]);
 
   const displayStatus =
     isHoleComplete

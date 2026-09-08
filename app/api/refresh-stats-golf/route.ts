@@ -1,3 +1,7 @@
+import { shotcastObservation } from "@/lib/golf/holeAcceptance";
+import type { GolfObservationBatch } from "@/lib/golf/reconcileState";
+import { fetchGolfRoundScorecard } from "@/lib/providers/pgaTourShots";
+import { reconcileGolf } from "@/lib/golf/reconcileGolf";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
@@ -26,6 +30,7 @@ import {
 type RefreshBody = {
   slateId?: number | string;
   scoreboardPayload?: unknown;
+  observedAt?: string;
   reconcileLockedLifecycle?: boolean;
 };
 
@@ -639,28 +644,6 @@ async function fetchTournamentForSlate(
   );
 }
 
-async function upsertInBatches(
-  table: string,
-  rows: Record<string, unknown>[],
-  onConflict: string,
-): Promise<DatabaseError | null> {
-  for (const batch of chunkRows(rows, INSERT_BATCH_SIZE)) {
-    const { error } = await supabaseAdmin
-      .from(table)
-      .upsert(batch, {
-        onConflict,
-      });
-
-    if (error) {
-      return {
-        message: error.message,
-      };
-    }
-  }
-
-  return null;
-}
-
 export async function POST(request: Request) {
   try {
     let body: RefreshBody;
@@ -770,6 +753,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // Capture acquisition start, not the end of provider/database work.
+    const fetchStartedAt = new Date().toISOString();
+    const suppliedTime = Date.parse(body.observedAt ?? "");
+    const observedAt = Number.isFinite(suppliedTime) && suppliedTime <= Date.now()
+      ? new Date(suppliedTime).toISOString() : fetchStartedAt;
     const tournament =
       await fetchTournamentForSlate(
         slate,
@@ -878,16 +866,6 @@ export async function POST(request: Request) {
         }),
       );
 
-      if (lifecycleRows.length > 0) {
-        const { error } = await supabaseAdmin
-          .from("golf_event_players")
-          .upsert(lifecycleRows, { onConflict: "id" });
-
-        if (error) {
-          return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-      }
-
       const roundRows = matchedCompetitors.flatMap(
         ({ competitor, eventPlayer }) =>
           competitor.rounds.map((round) => ({
@@ -904,18 +882,27 @@ export async function POST(request: Request) {
           })),
       );
 
-      const roundsError = await upsertInBatches(
-        "golf_rounds",
-        roundRows,
-        "event_player_id,round_number",
-      );
-
-      if (roundsError) {
-        return NextResponse.json(
-          { error: roundsError.message },
-          { status: 500 },
+      for (const batch of chunkRows(roundRows, INSERT_BATCH_SIZE)) {
+        const { error } = await supabaseAdmin.from("golf_rounds").upsert(
+          batch.map(row => ({ event_player_id: row.event_player_id, round_number: row.round_number })),
+          { onConflict: "event_player_id,round_number", ignoreDuplicates: true },
         );
+        if (error) throw new Error(error.message);
       }
+      const { data: persistedRounds, error: roundError } = playerIds.length
+        ? await supabaseAdmin.from("golf_rounds").select("id, event_player_id, round_number")
+          .in("event_player_id", existingEventPlayers.map(row => row.id))
+        : { data: [], error: null };
+      if (roundError) throw new Error(roundError.message);
+      const holes = matchedCompetitors.flatMap(({ competitor, eventPlayer }) => competitor.rounds.flatMap(round => {
+        const saved = persistedRounds?.find(r => r.event_player_id === eventPlayer.id && r.round_number === round.roundNumber);
+        return saved ? round.holes.map(hole => ({
+          round_id: Number(saved.id), hole_number: hole.holeNumber, strokes: hole.strokes,
+          relative_to_par: hole.relativeToPar,
+          reconciliation: { source: "espn" as const, observedAt, final: hole.strokes !== null && hole.relativeToPar !== null },
+        })) : [];
+      }));
+      const accepted = await reconcileGolf(slateId, { observedAt, events: lifecycleRows, rounds: roundRows, holes });
 
       return NextResponse.json({
         success: true,
@@ -929,7 +916,9 @@ export async function POST(request: Request) {
         },
         eventPlayersUpdated: lifecycleRows.length,
         roundsUpserted: roundRows.length,
-        teamResultsUpdated: 0,
+        teamResultsUpdated: accepted.teamWrites.length,
+        acceptedRevision: accepted.revision,
+        scoringChanged: accepted.scoringChanged,
       });
     }
 
@@ -1685,193 +1674,7 @@ export async function POST(request: Request) {
       );
     }
 
-    /*
-     * Reconcile the pre-imported PGA field against ESPN's authoritative
-     * live competitor list.
-     *
-     * The PGA field importer intentionally seeds the slate before ESPN
-     * publishes live scoring. A late withdrawal can therefore remain in
-     * golf_event_players forever if ESPN simply REMOVES that golfer from
-     * the live field rather than returning an explicit WD competitor.
-     *
-     * Only reconcile after the tournament has started, and only golfers
-     * with absolutely no tournament activity. This protects us from
-     * accidentally changing an active/previously-played golfer if ESPN
-     * has a temporary feed issue.
-     */
-    const currentLivePlayerIds =
-      new Set(
-        Array.from(
-          playerIdByEspnId.values(),
-        ).map(Number),
-      );
-
-    const {
-      data: existingSlateEventData,
-      error: existingSlateEventError,
-    } =
-      await supabaseAdmin
-        .from("golf_event_players")
-        .select(
-          "id, player_id, leaderboard_order, official_score_to_par, official_score_display, penalty_strokes, fantasy_score, rounds_completed, holes_completed, current_round, last_hole, status, tee_time, tee_time_raw",
-        )
-        .eq("slate_id", slateId);
-
-    if (existingSlateEventError) {
-      return NextResponse.json(
-        {
-          error:
-            "Golf live-field reconciliation could not load the existing tournament field: " +
-            existingSlateEventError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const existingSlateRows =
-      existingSlateEventData ?? [];
-
-    const existingSlatePlayerIds =
-      existingSlateRows.map(
-        (row) => Number(row.player_id),
-      );
-
-    const {
-      data: existingSlateGolfPlayerData,
-      error: existingSlateGolfPlayerError,
-    } =
-      existingSlatePlayerIds.length > 0
-        ? await supabaseAdmin
-            .from("golf_players")
-            .select(
-              "id, display_name, espn_player_id",
-            )
-            .in(
-              "id",
-              existingSlatePlayerIds,
-            )
-        : {
-            data: [],
-            error: null,
-          };
-
-    if (existingSlateGolfPlayerError) {
-      return NextResponse.json(
-        {
-          error:
-            "Golf live-field reconciliation could not resolve existing golfers: " +
-            existingSlateGolfPlayerError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const existingGolferById =
-      new Map(
-        (existingSlateGolfPlayerData ?? []).map(
-          (player) => [
-            Number(player.id),
-            {
-              displayName:
-                String(
-                  player.display_name ??
-                    "Unknown golfer",
-                ),
-              espnPlayerId:
-                String(
-                  player.espn_player_id ??
-                    "",
-                ),
-            },
-          ],
-        ),
-      );
-
-    const alreadyTerminalStatuses =
-      new Set([
-        "finished",
-        "cut",
-        "withdrawn",
-        "disqualified",
-        "did_not_start",
-      ]);
-
-    const tournamentHasStarted =
-      tournament.status !== "scheduled";
-
-    const removedBeforeStartRows =
-      tournamentHasStarted
-        ? existingSlateRows.filter(
-            (row) => {
-              const playerId =
-                Number(row.player_id);
-
-              const holesCompleted =
-                Number(
-                  row.holes_completed ?? 0,
-                );
-
-              const roundsCompleted =
-                Number(
-                  row.rounds_completed ?? 0,
-                );
-
-              const status =
-                String(
-                  row.status ?? "scheduled",
-                ).toLowerCase();
-
-              return (
-                !currentLivePlayerIds.has(
-                  playerId,
-                ) &&
-                holesCompleted === 0 &&
-                roundsCompleted === 0 &&
-                !alreadyTerminalStatuses.has(
-                  status,
-                )
-              );
-            },
-          )
-        : [];
-
-    const removedBeforeStartPlayerIds =
-      new Set(
-        removedBeforeStartRows.map(
-          (row) =>
-            Number(row.player_id),
-        ),
-      );
-
-    if (
-      removedBeforeStartRows.length > 0
-    ) {
-      console.log(
-        "Golf live-field reconciliation found pre-start removals",
-        {
-          slateId,
-          tournament:
-            tournament.name,
-          golfers:
-            removedBeforeStartRows.map(
-              (row) => ({
-                playerId:
-                  Number(row.player_id),
-                name:
-                  existingGolferById.get(
-                    Number(
-                      row.player_id,
-                    ),
-                  )?.displayName ??
-                  "Unknown golfer",
-                priorStatus:
-                  row.status,
-              }),
-            ),
-        },
-      );
-    }
-
+    // Omission is not withdrawal evidence; only observed golfers enter reconciliation.
     const liveEventPlayerRows =
       competitors.map(
         (competitor) => {
@@ -1929,53 +1732,13 @@ export async function POST(request: Request) {
         },
       );
 
-    const removedBeforeStartEventRows =
-      removedBeforeStartRows.map(
-        (row) => {
-          const penaltyStrokes =
-            calculateGolfPenaltyStrokes({
-              status: "withdrawn",
-              roundsCompleted: 0,
-              penaltyPerRound,
-            });
+    const eventPlayerRows = liveEventPlayerRows;
 
-          return {
-            slate_id: slateId,
-            player_id:
-              Number(row.player_id),
-            leaderboard_order: null,
-            official_score_to_par: null,
-            official_score_display: null,
-            penalty_strokes:
-              penaltyStrokes,
-            fantasy_score:
-              penaltyStrokes > 0
-                ? penaltyStrokes
-                : null,
-            rounds_completed: 0,
-            holes_completed: 0,
-            current_round: null,
-            last_hole: null,
-            status:
-              "withdrawn" as const,
-            tee_time: null,
-            tee_time_raw: null,
-            updated_at:
-              refreshedAt,
-          };
-        },
-      );
-
-    const eventPlayerRows = [
-      ...liveEventPlayerRows,
-      ...removedBeforeStartEventRows,
-    ];
-
-    const { data: eventPlayersData, error: eventPlayersUpsertError } =
+    const { error: eventPlayersUpsertError } =
       await supabaseAdmin
         .from("golf_event_players")
-        .upsert(eventPlayerRows, {
-          onConflict: "slate_id,player_id",
+        .upsert(eventPlayerRows.map(row => ({ slate_id: row.slate_id, player_id: row.player_id })), {
+          onConflict: "slate_id,player_id", ignoreDuplicates: true,
         })
         .select("id, player_id");
 
@@ -1989,6 +1752,10 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
+
+    const { data: eventPlayersData, error: eventIdsError } = await supabaseAdmin
+      .from("golf_event_players").select("id, player_id").eq("slate_id", slateId);
+    if (eventIdsError) throw new Error(eventIdsError.message);
 
     const eventPlayers = (eventPlayersData ?? []) as GolfEventPlayerIdRow[];
 
@@ -2145,14 +1912,12 @@ export async function POST(request: Request) {
     }
 
     /*
-     * golf_event_players was persisted before the PGA lookup above.
+     * Add scheduling evidence to the shared reconciliation batch.
      * Reconcile its scheduling fields only for the exact round PGA says
      * it is publishing. This fixes current-round ESPN timezone errors and
      * still allows a genuinely published future round to advance the
      * scheduling state after the immediately preceding round is complete.
      */
-    const pgaTeeTimeEventRows = [];
-
     if (pgaPublishedRoundNumber !== null) {
       for (const competitor of competitors) {
         const publishedRound =
@@ -2251,35 +2016,6 @@ export async function POST(request: Request) {
             "scheduled";
         }
 
-        pgaTeeTimeEventRows.push(
-          eventRow,
-        );
-      }
-    }
-
-    if (pgaTeeTimeEventRows.length > 0) {
-      const {
-        error: pgaEventRowError,
-      } =
-        await supabaseAdmin
-          .from("golf_event_players")
-          .upsert(
-            pgaTeeTimeEventRows,
-            {
-              onConflict:
-                "slate_id,player_id",
-            },
-          );
-
-      if (pgaEventRowError) {
-        return NextResponse.json(
-          {
-            error:
-              "Golf PGA tee-time state could not be reconciled: " +
-              pgaEventRowError.message,
-          },
-          { status: 500 },
-        );
       }
     }
 
@@ -2463,17 +2199,13 @@ export async function POST(request: Request) {
       ];
     });
 
-    let savedRounds: GolfRoundIdRow[] = [];
-
     for (const batch of chunkRows(roundRows, INSERT_BATCH_SIZE)) {
-      const { data: insertedRoundsData, error: roundsInsertError } =
+      const { error: roundsInsertError } =
         await supabaseAdmin
           .from("golf_rounds")
-          .upsert(batch, {
-            onConflict:
-              "event_player_id,round_number",
-          })
-          .select("id, event_player_id, round_number");
+          .upsert(batch.map(row => ({ event_player_id: row.event_player_id, round_number: row.round_number })), {
+            onConflict: "event_player_id,round_number", ignoreDuplicates: true,
+          });
 
       if (roundsInsertError) {
         return NextResponse.json(
@@ -2485,10 +2217,13 @@ export async function POST(request: Request) {
         );
       }
 
-      savedRounds = savedRounds.concat(
-        (insertedRoundsData ?? []) as GolfRoundIdRow[],
-      );
     }
+
+    const { data: allRoundIds, error: allRoundIdsError } = await supabaseAdmin
+      .from("golf_rounds").select("id, event_player_id, round_number")
+      .in("event_player_id", [...eventPlayerIdByPlayerId.values()]);
+    if (allRoundIdsError) throw new Error(allRoundIdsError.message);
+    const savedRounds = (allRoundIds ?? []) as GolfRoundIdRow[];
 
     const roundIdByKey = new Map(
       savedRounds.map((round) => [
@@ -2497,7 +2232,7 @@ export async function POST(request: Request) {
       ]),
     );
 
-    const holeRows = competitors.flatMap((competitor) => {
+    const holeRows: GolfObservationBatch["holes"] = competitors.flatMap((competitor) => {
       const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
 
       const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
@@ -2517,52 +2252,10 @@ export async function POST(request: Request) {
           strokes: hole.strokes,
           relative_to_par: hole.relativeToPar,
           score_display: hole.scoreDisplay,
-          updated_at: refreshedAt,
+          reconciliation: { source: "espn" as const, observedAt, final: hole.strokes !== null && hole.relativeToPar !== null },
         }));
       });
     });
-
-    /*
-     * Upsert the holes present in this ESPN snapshot.
-     *
-     * Previously completed holes that are absent from a transient
-     * snapshot are intentionally left untouched in the database.
-     */
-    const holesInsertError =
-      await upsertInBatches(
-        "golf_holes",
-        holeRows,
-        "round_id,hole_number",
-      );
-
-    if (holesInsertError) {
-      return NextResponse.json(
-        {
-          error: "Golf holes could not be saved: " + holesInsertError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const statusCounts = competitors.reduce<
-      Record<GolfCompetitorStatus, number>
-    >(
-      (counts, competitor) => {
-        counts[competitor.status] += 1;
-        return counts;
-      },
-      {
-        scheduled: 0,
-        active: 0,
-        round_complete: 0,
-        finished: 0,
-        cut: 0,
-        withdrawn:
-          removedBeforeStartRows.length,
-        disqualified: 0,
-        did_not_start: 0,
-      },
-    );
 
     const { data: lineupsData, error: lineupsError } =
       await supabaseAdmin
@@ -2588,6 +2281,59 @@ export async function POST(request: Request) {
         { status: 500 },
       );
     }
+
+    // Supplement only drafted golfers' live round during the existing Refresh.
+    // No timer, field-wide scan, historical backfill, or per-hole replay requests.
+    const draftedPlayerIds = new Set((lineupsData ?? []).flatMap(lineup =>
+      (lineup.lineup_players ?? []).map(player => Number(player.player_id))));
+    const shotcastCandidates = tournament.status === "in_progress" ? competitors.filter(competitor =>
+      competitor.status === "active" && competitor.currentRound != null &&
+      draftedPlayerIds.has(playerIdByEspnId.get(competitor.espnPlayerId)!)) : [];
+    let shotcastFailures = 0;
+    for (const batch of chunkRows(shotcastCandidates, 4)) {
+      const cards = await Promise.allSettled(batch.map(async competitor => {
+        const playerId = playerIdByEspnId.get(competitor.espnPlayerId)!;
+        const eventPlayerId = eventPlayerIdByPlayerId.get(playerId)!;
+        const roundId = roundIdByKey.get(`${eventPlayerId}:${competitor.currentRound}`);
+        if (!roundId) return [];
+        const card = await fetchGolfRoundScorecard({
+          year: Number(slate.start_date.slice(0, 4)), tournamentName: slate.display_name ?? tournament.name,
+          playerName: competitor.displayName, roundNumber: competitor.currentRound!,
+        });
+        return card.holes.flatMap(hole => {
+          const observation = shotcastObservation(hole, card.observedAt);
+          return observation ? [{ ...observation, round_id: roundId }] : [];
+        });
+      }));
+      for (const card of cards) {
+        if (card.status === "fulfilled") holeRows.push(...card.value);
+        else { shotcastFailures += 1; console.warn("Golf ShotCast supplement unavailable", card.reason); }
+      }
+    }
+
+    const accepted = await reconcileGolf(slateId, {
+      observedAt, events: eventPlayerRows, rounds: roundRows, holes: holeRows,
+    });
+    const persistedTeamRows = accepted.teamRows;
+
+    const statusCounts = competitors.reduce<
+      Record<GolfCompetitorStatus, number>
+    >(
+      (counts, competitor) => {
+        counts[competitor.status] += 1;
+        return counts;
+      },
+      {
+        scheduled: 0,
+        active: 0,
+        round_complete: 0,
+        finished: 0,
+        cut: 0,
+        withdrawn: 0,
+        disqualified: 0,
+        did_not_start: 0,
+      },
+    );
 
     let playerFinishedNotifications = {
       attempted: 0,
@@ -2733,293 +2479,6 @@ export async function POST(request: Request) {
         "Golf stats saved, but round-complete notifications failed",
         notificationError,
       );
-    }
-
-    const eventRowByPlayerId = new Map(
-      eventPlayerRows.map((row) => [
-        Number(row.player_id),
-        row,
-      ]),
-    );
-
-    const competitorByPlayerId = new Map(
-      competitors.map((competitor) => {
-        const playerId = playerIdByEspnId.get(
-          competitor.espnPlayerId,
-        );
-
-        return [
-          Number(playerId),
-          competitor,
-        ] as const;
-      }),
-    );
-
-    const { data: slateTeamData, error: slateTeamError } =
-      await supabaseAdmin
-        .from("slate_teams")
-        .select("team_id, draft_order")
-        .eq("slate_id", slateId);
-
-    if (slateTeamError) {
-      return NextResponse.json(
-        {
-          error:
-            "Golf data was refreshed, but draft-order tiebreak data could not be loaded: " +
-            slateTeamError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const draftOrderByTeamId = new Map(
-      (slateTeamData ?? []).map((row) => [
-        Number(row.team_id),
-        Number(row.draft_order ?? 999),
-      ]),
-    );
-
-    const teamResultRows = (lineupsData ?? []).map((lineup: any) => {
-      const playerIds = (lineup.lineup_players ?? []).map(
-        (row: any) => Number(row.player_id),
-      );
-
-      const golferRows = playerIds
-        .map((playerId: number) => eventRowByPlayerId.get(playerId))
-        .filter(Boolean) as typeof eventPlayerRows;
-
-      const fantasyPoints = golferRows.reduce(
-        (sum, row) => sum + Number(row.fantasy_score ?? 0),
-        0,
-      );
-
-      const completedStatuses = new Set([
-        "round_complete",
-        "finished",
-        "cut",
-        "withdrawn",
-        "disqualified",
-      ]);
-
-      const gamesCompleted = golferRows.filter((row) =>
-        completedStatuses.has(String(row.status)),
-      ).length;
-
-      const gamesInProgress = golferRows.filter(
-        (row) => row.status === "active",
-      ).length;
-
-      const gamesRemaining = golferRows.filter((row) =>
-        ["scheduled", "did_not_start"].includes(String(row.status)),
-      ).length;
-
-      const golferCompetitors = playerIds
-        .map((playerId: number) =>
-          competitorByPlayerId.get(playerId),
-        )
-        .filter(Boolean);
-
-      const completedIndividualRounds =
-        golferCompetitors.flatMap((competitor: any) =>
-          (competitor.rounds ?? [])
-            .filter(
-              (round: any) =>
-                Number(round.holesCompleted ?? 0) >= 18 &&
-                round.scoreToPar !== null &&
-                round.scoreToPar !== undefined,
-            )
-            .map((round: any) => ({
-              roundNumber: Number(round.roundNumber),
-              score: Number(round.scoreToPar),
-            })),
-        );
-
-      const bestIndividualRound =
-        completedIndividualRounds.length > 0
-          ? Math.min(
-              ...completedIndividualRounds.map(
-                (round: any) => round.score,
-              ),
-            )
-          : Number.POSITIVE_INFINITY;
-
-      const teamRoundScores: number[] = [];
-
-      for (const roundNumber of [1, 2, 3, 4]) {
-        const roundScores = golferCompetitors
-          .map((competitor: any) =>
-            (competitor.rounds ?? []).find(
-              (round: any) =>
-                Number(round.roundNumber) === roundNumber &&
-                Number(round.holesCompleted ?? 0) >= 18 &&
-                round.scoreToPar !== null &&
-                round.scoreToPar !== undefined,
-            ),
-          )
-          .filter(Boolean)
-          .map((round: any) =>
-            Number(round.scoreToPar),
-          );
-
-        // A team round counts only after every drafted golfer has
-        // completed that round.
-        if (
-          golferCompetitors.length > 0 &&
-          roundScores.length === golferCompetitors.length
-        ) {
-          teamRoundScores.push(
-            roundScores.reduce(
-              (sum: number, score: number) =>
-                sum + score,
-              0,
-            ),
-          );
-        }
-      }
-
-      const bestTeamRound =
-        teamRoundScores.length > 0
-          ? Math.min(...teamRoundScores)
-          : Number.POSITIVE_INFINITY;
-
-      const playedHoles =
-        golferCompetitors.flatMap((competitor: any) =>
-          (competitor.rounds ?? []).flatMap(
-            (round: any) => round.holes ?? [],
-          ),
-        );
-
-      const birdiesOrBetter = playedHoles.filter(
-        (hole: any) =>
-          hole.relativeToPar !== null &&
-          hole.relativeToPar !== undefined &&
-          Number(hole.relativeToPar) <= -1,
-      ).length;
-
-      const bogeysOrWorse = playedHoles.filter(
-        (hole: any) =>
-          hole.relativeToPar !== null &&
-          hole.relativeToPar !== undefined &&
-          Number(hole.relativeToPar) >= 1,
-      ).length;
-
-      return {
-        slate_id: slateId,
-        team_id: Number(lineup.team_id),
-        fantasy_points: fantasyPoints,
-        finish_position: null as number | null,
-        games_completed: gamesCompleted,
-        games_in_progress: gamesInProgress,
-        games_remaining: gamesRemaining,
-
-        _tiebreak: {
-          bestTeamRound,
-          bestIndividualRound,
-          birdiesOrBetter,
-          bogeysOrWorse,
-          draftOrder:
-            draftOrderByTeamId.get(
-              Number(lineup.team_id),
-            ) ?? 999,
-        },
-      };
-    });
-
-    const compareGolfTeams = (
-      a: (typeof teamResultRows)[number],
-      b: (typeof teamResultRows)[number],
-    ) => {
-      // Lower tournament score wins.
-      if (a.fantasy_points !== b.fantasy_points) {
-        return a.fantasy_points - b.fantasy_points;
-      }
-
-      // 1. Lowest completed team round.
-      if (
-        a._tiebreak.bestTeamRound !==
-        b._tiebreak.bestTeamRound
-      ) {
-        return (
-          a._tiebreak.bestTeamRound -
-          b._tiebreak.bestTeamRound
-        );
-      }
-
-      // 2. Lowest completed individual golfer round.
-      if (
-        a._tiebreak.bestIndividualRound !==
-        b._tiebreak.bestIndividualRound
-      ) {
-        return (
-          a._tiebreak.bestIndividualRound -
-          b._tiebreak.bestIndividualRound
-        );
-      }
-
-      // 3. Most birdies or better.
-      if (
-        a._tiebreak.birdiesOrBetter !==
-        b._tiebreak.birdiesOrBetter
-      ) {
-        return (
-          b._tiebreak.birdiesOrBetter -
-          a._tiebreak.birdiesOrBetter
-        );
-      }
-
-      // 4. Fewest bogeys or worse.
-      if (
-        a._tiebreak.bogeysOrWorse !==
-        b._tiebreak.bogeysOrWorse
-      ) {
-        return (
-          a._tiebreak.bogeysOrWorse -
-          b._tiebreak.bogeysOrWorse
-        );
-      }
-
-      // 5. Earlier draft position guarantees a stable result.
-      if (
-        a._tiebreak.draftOrder !==
-        b._tiebreak.draftOrder
-      ) {
-        return (
-          a._tiebreak.draftOrder -
-          b._tiebreak.draftOrder
-        );
-      }
-
-      return a.team_id - b.team_id;
-    };
-
-    const rankedTeamRows =
-      [...teamResultRows].sort(compareGolfTeams);
-
-    rankedTeamRows.forEach((row, index) => {
-      row.finish_position = index + 1;
-    });
-
-    const persistedTeamRows = rankedTeamRows.map(
-      ({ _tiebreak, ...row }) => row,
-    );
-
-    if (persistedTeamRows.length > 0) {
-      const { error: teamResultsError } = await supabaseAdmin
-        .from("team_slate_results")
-        .upsert(persistedTeamRows, {
-          onConflict: "slate_id,team_id",
-        });
-
-      if (teamResultsError) {
-        return NextResponse.json(
-          {
-            error:
-              "Golf data was refreshed, but fantasy team totals could not be saved: " +
-              teamResultsError.message,
-          },
-          { status: 500 },
-        );
-      }
     }
 
     let slateAutoLocked = false;
@@ -3186,27 +2645,15 @@ export async function POST(request: Request) {
       },
       statusCounts,
       normalizationCorrections,
-      fieldReconciliation: {
-        removedBeforeStart:
-          removedBeforeStartRows.length,
-        playerIds:
-          Array.from(
-            removedBeforeStartPlayerIds,
-          ),
-        golfers:
-          removedBeforeStartRows.map(
-            (row) =>
-              existingGolferById.get(
-                Number(row.player_id),
-              )?.displayName ??
-              "Unknown golfer",
-          ),
-      },
+      fieldReconciliation: { removedBeforeStart: 0, playerIds: [], golfers: [] },
       gamesFound: 1,
       playersUpserted: golfPlayerRows.length,
       eventPlayersUpserted: eventPlayerRows.length,
       playerStatsUpserted: eventPlayerRows.length,
-      teamResultsUpserted: persistedTeamRows.length,
+      teamResultsUpserted: accepted.teamWrites.length,
+      shotcastFailures,
+      acceptedRevision: accepted.revision,
+      scoringChanged: accepted.scoringChanged,
       playerFinishedNotifications,
       slateAutoLocked,
       slateCompleteNotifications,

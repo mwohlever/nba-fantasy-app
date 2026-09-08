@@ -2,7 +2,7 @@
 
 import { NflFantasyGameCenter } from "@/components/lineups/NflFantasyGameCenter";
 
-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+import { refreshGolfFromBrowser, shouldApplyGolfSnapshot } from "@/lib/client/refreshGolfFromBrowser";
 
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
@@ -74,6 +74,8 @@ export default function LineupBuilder({
   });
   const [message, setMessage] = useState("");
   const latestSlateLoadRef = useRef(0);
+  const activeGolfSlateRef = useRef<number | null>(null);
+  const acceptedGolfRevisionRef = useRef({ slateId: 0, revision: -1 });
   const [saveMessage, setSaveMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isSlateLoading, setIsSlateLoading] = useState(false);
@@ -185,6 +187,7 @@ export default function LineupBuilder({
   }, [slates, selectedSeason, selectedSport]);
 
   const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
+  activeGolfSlateRef.current = selectedSlateIdNumber;
   const selectedSlate =
     slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
 
@@ -355,10 +358,20 @@ export default function LineupBuilder({
   }, [draftingPlayer, sport, selectedSport]);
 
   useEffect(() => {
+    if (selectedSlate?.sport === "golf" && acceptedGolfRevisionRef.current.slateId === selectedSlateIdNumber) {
+      // Parent props have no slate revision. Reload a consistent accepted snapshot.
+      window.dispatchEvent(new CustomEvent("golf-accepted-change", { detail: { slateId: selectedSlateIdNumber } }));
+      return;
+    }
     setPlayerStatsState(playerStats);
   }, [playerStats]);
 
   useEffect(() => {
+    if (selectedSlate?.sport === "golf" && acceptedGolfRevisionRef.current.slateId === selectedSlateIdNumber) {
+      // Parent props have no slate revision. Reload a consistent accepted snapshot.
+      window.dispatchEvent(new CustomEvent("golf-accepted-change", { detail: { slateId: selectedSlateIdNumber } }));
+      return;
+    }
     setTeamResultsState(teamResults);
   }, [teamResults]);
 
@@ -1145,6 +1158,19 @@ export default function LineupBuilder({
     };
   }
 
+  function applyAcceptedGolfSnapshot(slateId: number, snapshot: {
+    acceptedRevision?: number;
+    playerStats?: PlayerStat[];
+    teamResults?: TeamResult[];
+  }) {
+    const revision = Number(snapshot.acceptedRevision ?? -1);
+    const current = acceptedGolfRevisionRef.current;
+    if (activeGolfSlateRef.current !== slateId || !shouldApplyGolfSnapshot(current, slateId, revision)) return;
+    acceptedGolfRevisionRef.current = { slateId, revision };
+    setPlayerStatsState(snapshot.playerStats ?? []);
+    setTeamResultsState(snapshot.teamResults ?? []);
+  }
+
   async function loadSlateLineups(nextSlateId: number) {
     const loadId = ++latestSlateLoadRef.current;
 
@@ -1185,8 +1211,12 @@ export default function LineupBuilder({
       }
 
       setLineupsState(lineupsResult.lineups ?? []);
-      setPlayerStatsState(statsResult.playerStats ?? []);
-      setTeamResultsState(resultsResult.teamResults ?? []);
+      if (statsResult.sport === "golf") {
+        applyAcceptedGolfSnapshot(nextSlateId, statsResult);
+      } else {
+        setPlayerStatsState(statsResult.playerStats ?? []);
+        setTeamResultsState(resultsResult.teamResults ?? []);
+      }
       setSaveMessage("");
     } catch (error) {
       if (loadId !== latestSlateLoadRef.current) return;
@@ -1229,6 +1259,25 @@ export default function LineupBuilder({
       }
     }
   }
+
+  useEffect(() => {
+    if (selectedSlate?.sport !== "golf" || !selectedSlateIdNumber) return;
+    let cancelled = false;
+    let requestNumber = 0;
+    const reloadAcceptedGolf = async (event: Event) => {
+      if ((event as CustomEvent).detail?.slateId !== selectedSlateIdNumber) return;
+      const request = ++requestNumber;
+      try {
+        const stats = await fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, { cache: "no-store" });
+        if (!stats.ok) throw new Error("Could not reload accepted Golf results.");
+        const statsBody = await stats.json();
+        if (cancelled || request !== requestNumber) return;
+        applyAcceptedGolfSnapshot(selectedSlateIdNumber, statsBody);
+      } catch (error) { console.error(error); }
+    };
+    window.addEventListener("golf-accepted-change", reloadAcceptedGolf);
+    return () => { cancelled = true; window.removeEventListener("golf-accepted-change", reloadAcceptedGolf); };
+  }, [selectedSlateIdNumber, selectedSlate?.sport]);
 
   async function refreshStatsForSelectedSlate(isSilent = false) {
     if (!selectedSlateIdNumber) {
@@ -1334,8 +1383,13 @@ export default function LineupBuilder({
       const statsResult = await statsResponse.json();
       const resultsResult = await resultsResponse.json();
 
-      setPlayerStatsState(statsResult.playerStats ?? []);
-      setTeamResultsState(resultsResult.teamResults ?? []);
+      if (!statsResponse.ok || !resultsResponse.ok) throw new Error("Could not reload refreshed results.");
+      if (statsResult.sport === "golf") {
+        applyAcceptedGolfSnapshot(selectedSlateIdNumber, statsResult);
+      } else {
+        setPlayerStatsState(statsResult.playerStats ?? []);
+        setTeamResultsState(resultsResult.teamResults ?? []);
+      }
       setLastUpdatedAt(new Date().toISOString());
 
       if (!isSilent) {

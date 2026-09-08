@@ -330,6 +330,7 @@ export type GolfHoleReplayShot = {
 };
 
 export type GolfHoleReplay = {
+  observedAt: string;
   tournamentId: string;
   pgaPlayerId: string;
   playerName: string;
@@ -1042,6 +1043,7 @@ const loadRoundShots = unstable_cache(
       "includeRadar: $includeRadar" +
       ") { id payload } }";
 
+    const observedAt = new Date().toISOString();
     const data = await graphqlRequest(
       operationName,
       query,
@@ -1063,14 +1065,13 @@ const loadRoundShots = unstable_cache(
     ) {
       return {
         holes: [],
-      } satisfies RawShotPayload;
+        observedAt,
+      };
     }
 
-    return decompressPayload<RawShotPayload>(
-      response.payload,
-    );
+    return { ...decompressPayload<RawShotPayload>(response.payload), observedAt };
   },
-  ["pga-tour-round-shots-tourcast-v3"],
+  ["pga-tour-round-shots-tourcast-v3-observed-v1"],
   {
     // Live holes can change, but repeated taps should not
     // hammer the upstream API.
@@ -1078,16 +1079,9 @@ const loadRoundShots = unstable_cache(
   },
 );
 
-export async function fetchGolfHoleReplay(
-  input: {
-    year: number;
-    tournamentName: string;
-    playerName: string;
-    roundNumber: number;
-    holeNumber: number;
-    cacheBust?: string | null;
-  },
-): Promise<GolfHoleReplay | null> {
+async function loadPlayerRoundShots(input: {
+  year: number; tournamentName: string; playerName: string; roundNumber: number; cacheBust?: string | null;
+}) {
   const tournaments = await loadSchedule(
     input.year,
   );
@@ -1141,6 +1135,37 @@ export async function fetchGolfHoleReplay(
     input.roundNumber,
     input.cacheBust ?? null,
   );
+
+  return { tournamentId, pgaPlayerId, payload, playerName: player?.displayName ?? input.playerName };
+}
+
+/** Score evidence only: one existing cached round request, without replay rendering assets. */
+export async function fetchGolfRoundScorecard(input: {
+  year: number; tournamentName: string; playerName: string; roundNumber: number;
+}) {
+  const { payload } = await loadPlayerRoundShots(input);
+  return {
+    observedAt: payload.observedAt,
+    holes: (payload.holes ?? []).map(hole => ({
+      holeNumber: Number(hole.holeNumber), par: hole.par ?? null,
+      shots: (hole.strokes ?? []).filter(shot => Number(shot.strokeNumber) > 0).map(shot => ({
+        strokeNumber: Number(shot.strokeNumber), finalStroke: shot.finalStroke === true,
+      })),
+    })),
+  };
+}
+
+export async function fetchGolfHoleReplay(
+  input: {
+    year: number;
+    tournamentName: string;
+    playerName: string;
+    roundNumber: number;
+    holeNumber: number;
+    cacheBust?: string | null;
+  },
+): Promise<GolfHoleReplay | null> {
+  const { tournamentId, pgaPlayerId, payload, playerName } = await loadPlayerRoundShots(input);
 
   const hole = (payload.holes ?? []).find(
     (row) =>
@@ -1410,11 +1435,10 @@ export async function fetchGolfHoleReplay(
       : null;
 
   return {
+    observedAt: payload.observedAt,
     tournamentId,
     pgaPlayerId,
-    playerName:
-      player?.displayName ??
-      input.playerName,
+    playerName,
     roundNumber: input.roundNumber,
     holeNumber: input.holeNumber,
     par:

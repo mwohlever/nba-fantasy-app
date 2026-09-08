@@ -283,26 +283,8 @@ function RoundScorecard({
   slateId: number | null;
   playerId: number;
 }) {
-  const [reconciledHoleMap, setReconciledHoleMap] =
-    useState<Record<number, GolfHoleStat>>({});
-
-  const holesByNumber = new Map(
-    round.holes.map((hole) => [
-      hole.hole_number,
-      reconciledHoleMap[
-        hole.hole_number
-      ] ?? hole,
-    ]),
-  );
-
-  Object.values(
-    reconciledHoleMap,
-  ).forEach((hole) => {
-    holesByNumber.set(
-      hole.hole_number,
-      hole,
-    );
-  });
+  // Accepted server props are the only scorecard state. Replay requests reload the parent data.
+  const holesByNumber = new Map(round.holes.map(hole => [hole.hole_number, hole]));
 
   const playedHoles =
     Array.from(
@@ -508,6 +490,7 @@ function RoundScorecard({
 
             return slateId ? (
               <GolfHoleReplayPanel
+                key={`${slateId}:${playerId}:${round.round_number}:${selectedHoleNumber}:${round.accepted_revision ?? 0}`}
                 slateId={slateId}
                 playerId={playerId}
                 roundNumber={round.round_number}
@@ -523,35 +506,6 @@ function RoundScorecard({
                 onClose={() =>
                   setSelectedHoleNumber(null)
                 }
-                onReconciled={(hole) => {
-                  setReconciledHoleMap(
-                    (current) => ({
-                      ...current,
-                      [hole.hole_number]: {
-                        ...(
-                          holesByNumber.get(
-                            hole.hole_number,
-                          ) ?? {
-                            hole_number:
-                              hole.hole_number,
-                            par:
-                              selectedPar,
-                            yards:
-                              selectedYardage,
-                          }
-                        ),
-                        hole_number:
-                          hole.hole_number,
-                        strokes:
-                          hole.strokes,
-                        relative_to_par:
-                          hole.relative_to_par,
-                        score_display:
-                          hole.score_display,
-                      },
-                    }),
-                  );
-                }}
               />
             ) : (
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">

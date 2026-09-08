@@ -110,9 +110,12 @@ export async function GET(request: NextRequest) {
 
     if (sport === "golf") {
       const { data, error } = await supabaseAdmin
-        .from("golf_event_players")
+        .from("slates")
         .select(
           `
+          golf_accepted_versions(revision),
+          team_slate_results(team_id, fantasy_points, finish_position, games_completed, games_in_progress, games_remaining),
+          golf_event_players(
           player_id,
           leaderboard_order,
           official_score_to_par,
@@ -127,6 +130,7 @@ export async function GET(request: NextRequest) {
           tee_time,
           tee_time_raw,
           golf_rounds (
+            accepted_revision,
             round_number,
             score_to_par,
             score_display,
@@ -142,13 +146,15 @@ export async function GET(request: NextRequest) {
               score_display
             )
           )
+          )
         `,
         )
-        .eq("slate_id", slateId)
+        .eq("id", slateId)
         .order("leaderboard_order", {
+          referencedTable: "golf_event_players",
           ascending: true,
           nullsFirst: false,
-        });
+        }).single();
 
       if (error) {
         return NextResponse.json(
@@ -198,7 +204,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const playerStats = (data ?? []).map((row: any) => ({
+      const playerStats = (data?.golf_event_players ?? []).map((row: any) => ({
         player_id: Number(row.player_id),
         leaderboard_order:
           row.leaderboard_order === null
@@ -222,6 +228,7 @@ export async function GET(request: NextRequest) {
         tee_time_raw: row.tee_time_raw ?? null,
         rounds: (row.golf_rounds ?? [])
           .map((round: any) => ({
+            accepted_revision: Number(round.accepted_revision ?? 0),
             round_number: Number(round.round_number),
             score_to_par:
               round.score_to_par === null
@@ -250,6 +257,8 @@ export async function GET(request: NextRequest) {
           success: true,
           sport,
           playerStats,
+          acceptedRevision: Number([data?.golf_accepted_versions].flat()[0]?.revision ?? 0),
+          teamResults: data?.team_slate_results ?? [],
         },
         { headers: noStoreHeaders() },
       );

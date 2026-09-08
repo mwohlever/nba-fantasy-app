@@ -17,8 +17,20 @@ export type GolfRefreshResult = {
   playerStatsUpserted?: number;
   teamResultsUpserted?: number;
   refreshedAt?: string;
+  acceptedRevision?: number;
+  scoringChanged?: boolean;
   [key: string]: unknown;
 };
+
+/** Revision ordering applies to accepted server snapshots, never provider scores. */
+export function shouldApplyGolfSnapshot(
+  current: { slateId: number; revision: number },
+  slateId: number,
+  revision: number,
+) {
+  return Number.isSafeInteger(revision) && revision >= 0 &&
+    (current.slateId !== slateId || revision >= current.revision);
+}
 
 async function readJsonSafely(
   response: Response,
@@ -544,6 +556,7 @@ export async function refreshGolfFromBrowser(
       config.eventId,
     )}`;
 
+  const observedAt = new Date().toISOString();
   const espnResponse =
     await fetch(
       espnUrl,
@@ -575,6 +588,7 @@ export async function refreshGolfFromBrowser(
     JSON.stringify({
       slateId,
       scoreboardPayload,
+      observedAt,
     });
 
   console.log(

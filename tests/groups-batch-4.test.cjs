@@ -236,15 +236,21 @@ test('Golf lifecycle refresh writes only players belonging to the authorized his
       espnEventId:eventId,status:'final',completed:true,currentRound:4,
       competitors:[{espnPlayerId:'p7',status:'finished',rounds:[],roundsCompleted:4,holesCompleted:72,currentRound:4,lastHole:18}],
     })};
+    const acceptedCalls = [];
+    mocks['@/lib/golf/reconcileGolf'] = { reconcileGolf: async (slateId, batch) => {
+      acceptedCalls.push({ slateId, batch });
+      return { revision: 1, teamWrites: [], scoringChanged: false };
+    } };
     const req=request('');req.json=async()=>({slateId:id,reconcileLockedLifecycle:true,scoreboardPayload:{}});
     const result=await load(file,mocks).POST(req);
     assert.equal(result.status,200);
     assert.equal(result.body.slateId,id);
-    const writes=db.writes.filter(w=>w.table==='golf_event_players');
-    assert.equal(writes.length,1);
-    assert.equal(writes[0].value.length,1);
-    assert.equal(writes[0].value[0].slate_id,id);
-    assert.equal(writes[0].value[0].id,id===1?101:102);
+    assert.equal(db.writes.filter(w=>w.table==='golf_event_players').length,0);
+    assert.equal(acceptedCalls.length,1);
+    assert.equal(acceptedCalls[0].slateId,id);
+    assert.equal(acceptedCalls[0].batch.events.length,1);
+    assert.equal(acceptedCalls[0].batch.events[0].slate_id,id);
+    assert.equal(acceptedCalls[0].batch.events[0].id,id===1?101:102);
   }
 });
 test('account linking accepts scoped identity and legacy ID only after verified token and PIN',async()=>{
