@@ -9,6 +9,7 @@ import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import ScoresRefreshButton from "@/components/ui/ScoresRefreshButton";
 import { nflSeasonForSlate } from "@/lib/lineups/nflDraftStats";
 
+import type { LiveScoreGame } from "@/components/live-scores/LiveScoreCard";
 import { NflFantasyGameCenter } from "@/components/lineups/NflFantasyGameCenter";
 
 import { refreshGolfFromBrowser, shouldApplyGolfSnapshot } from "@/lib/client/refreshGolfFromBrowser";
@@ -20,7 +21,9 @@ import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import SlotDraftModal from "@/components/lineups/SlotDraftModal";
 import PlayerPool from "@/components/lineups/PlayerPool";
 import DraftRosterCourt from "@/components/lineups/DraftRosterCourt";
-import LeagueLineupCards from "@/components/lineups/LeagueLineupCards";
+import SecondaryControlsPanel from "@/components/ui/SecondaryControlsPanel";
+import RefreshPlayersButton from "@/components/lineups/RefreshPlayersButton";
+import Link from "next/link";
 import ScoresDashboard from "@/components/lineups/ScoresDashboard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -63,6 +66,7 @@ export default function LineupBuilder({
 }: Props) {
   const { selectedSport, setSelectedSport } = useSelectedSport();
   const pathname = usePathname();
+  const isDraftPage = pathname === "/lineups/draft";
   const isScoresPage = pathname === "/lineups/scores";
   const { groupContext, isLoading: isGroupLoading, isSwitchingGroup } = useGroupContext();
   const scoresSurfaceRef = useRef<HTMLDivElement>(null);
@@ -89,6 +93,16 @@ export default function LineupBuilder({
     const initialDate = initialSlate?.start_date ?? initialSlate?.date ?? "";
     return initialDate ? initialDate.slice(0, 4) : "2026";
   });
+  const [draftSettingsOpen, setDraftSettingsOpen] = useState(false);
+  const [draftContext, setDraftContext] = useState<{
+    scope: string;
+    participants: Team[];
+    canProxyDraft: boolean;
+    gamesByTeam: Record<string, LiveScoreGame>;
+    slate: { id: number; is_locked: boolean; rules_snapshot?: Record<string, unknown> | null };
+  } | null>(null);
+  const [viewedParticipant, setViewedParticipant] = useState<{ scope: string; id: number } | null>(null);
+  const draftMutationRef = useRef(false);
   const [message, setMessage] = useState("");
   const latestSlateLoadRef = useRef(0);
   const activeGolfSlateRef = useRef<number | null>(null);
@@ -122,6 +136,7 @@ export default function LineupBuilder({
     teamId: number;
     displayName: string;
     role: "player" | "admin";
+    systemRole?: "user" | "super_admin";
 
     /*
      * teamId is the legacy/default-team pointer.
@@ -205,12 +220,13 @@ export default function LineupBuilder({
 
   const selectedSlateIdNumber = selectedSlateId ? Number(selectedSlateId) : null;
   activeGolfSlateRef.current = selectedSlateIdNumber;
-  const selectedSlate =
-    slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
-  const scopeReady = Boolean(groupContext?.group.id && selectedSlate) && !isGroupLoading && !isSwitchingGroup &&
+  const baseSelectedSlate = slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
+  const scopeReady = Boolean(groupContext?.group.id && baseSelectedSlate) && !isGroupLoading && !isSwitchingGroup &&
     (!sport || sport === selectedSport);
   const refreshScopeKey = JSON.stringify([groupContext?.group.id, selectedSport, sport,
-    selectedSlateIdNumber, selectedSlate?.sport, pathname, scopeReady]);
+    selectedSlateIdNumber, baseSelectedSlate?.sport, pathname, scopeReady]);
+  const selectedSlate = isDraftPage && draftContext?.scope === refreshScopeKey
+    ? { ...baseSelectedSlate!, ...draftContext.slate } : baseSelectedSlate;
   refreshScopeRef.current.update(refreshScopeKey);
   const isRenderScopeCurrent = refreshScopeRef.current.capture();
   const lastUpdatedAt = refreshTimestamp?.scope === refreshScopeKey ? refreshTimestamp.value : null;
@@ -242,8 +258,12 @@ export default function LineupBuilder({
     Boolean(selectedSlate?.is_locked) || (selectedSlate?.sport !== "golf" && scoresStatus === "Final");
   const pull = usePullToRefresh({
     targetRef: scoresSurfaceRef,
-    onRefresh: () => refreshStatsForSelectedSlate(false),
-    enabled: isScoresPage && !refreshUnavailable && !profilePlayer && !isGolfSlateMenuOpen,
+    buttonStartSelector: isDraftPage ? 'button[data-draft-pull-start="true"]' : undefined,
+    onRefresh: () => isDraftPage ? refreshDraft() : refreshStatsForSelectedSlate(false),
+    enabled: isDraftPage
+      ? scopeReady && !isSlateLoading && !isSaving && !isAssigningPlayer && !draftSettingsOpen &&
+        !draftingPlayer && !targetDraftSlot && !profilePlayer && !leagueResearchPlayer && !pendingRosterSlotChoice
+      : isScoresPage && !refreshUnavailable && !profilePlayer && !isGolfSlateMenuOpen,
     isRefreshing: isRefreshingStats,
     scopeKey: refreshScopeKey,
   });
@@ -440,6 +460,8 @@ export default function LineupBuilder({
 
     let isActive = true;
 
+    if (isDraftPage) return;
+
     async function loadAvailability() {
       try {
         setIsAvailabilityLoading(true);
@@ -473,7 +495,7 @@ export default function LineupBuilder({
   }, [selectedSlateIdNumber]);
 
   useEffect(() => {
-    if (!selectedSlateIdNumber) return;
+    if (!selectedSlateIdNumber || isDraftPage) return;
 
     if (!scopeReady) return;
     const isGolf = selectedSlate?.sport === "golf";
@@ -530,6 +552,10 @@ export default function LineupBuilder({
 
   useEffect(() => {
     if (!selectedSlateIdNumber) return;
+    if (isDraftPage) {
+      setDraftingPlayer(null); setTargetDraftSlot(null); setPendingRosterSlotChoice(null);
+      setLeagueResearchPlayer(null); setProfilePlayer(null);
+    }
     void loadSlateLineups(selectedSlateIdNumber);
   }, [selectedSlateIdNumber, refreshScopeKey]);
 
@@ -609,6 +635,13 @@ export default function LineupBuilder({
   }, [teams]);
 
   const orderedTeamsForSlate = useMemo(() => {
+    if (isDraftPage) {
+      if (!scopeReady) return [];
+      if (draftContext?.scope === refreshScopeKey) return draftContext.participants;
+      // Server props may still describe the previous Group during navigation.
+      // Wait for this scope's authorized participant response instead of guessing.
+      return [];
+    }
     if (!selectedSlateIdNumber) return teams;
 
     const configs = slateTeamConfigs
@@ -642,18 +675,14 @@ export default function LineupBuilder({
       }));
 
     return [...configuredTeams, ...missingTeams];
-  }, [selectedSlateIdNumber, slateTeamConfigs, teams, teamsById]);
+  }, [selectedSlateIdNumber, slateTeamConfigs, teams, teamsById, isDraftPage, scopeReady, draftContext, refreshScopeKey]);
 
-  const currentTeamId =
-    currentUser?.activeGroupTeamId ??
-    currentUser?.teamId ??
-    null;
-
-  const currentTeamName =
-    currentUser?.activeGroupTeamName ??
-    currentUser?.displayName ??
-    null;
-
+  const currentTeamId = isDraftPage
+    ? orderedTeamsForSlate.find(team => team.id === groupContext?.team?.id)?.id ?? null
+    : currentUser?.activeGroupTeamId ?? currentUser?.teamId ?? null;
+  const canProxyDraft = scopeReady && draftContext?.scope === refreshScopeKey && draftContext.canProxyDraft === true;
+  const viewedTeam = orderedTeamsForSlate.find(team => viewedParticipant?.scope === refreshScopeKey && team.id === viewedParticipant.id)
+    ?? orderedTeamsForSlate.find(team => team.id === currentTeamId) ?? orderedTeamsForSlate[0] ?? null;
 
   const participatingTeamIds = useMemo(() => {
     return new Set(
@@ -1153,6 +1182,9 @@ export default function LineupBuilder({
     const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
     const isParticipating = (team as any)?.is_participating !== false;
 
+    if (isDraftPage && (!team || (teamId !== currentTeamId && !canProxyDraft))) {
+      return { canAssign: false, reason: "Commissioner access required" };
+    }
     if (!selectedSlateIdNumber) {
       return { canAssign: false, reason: "No slate selected" };
     }
@@ -1233,7 +1265,61 @@ export default function LineupBuilder({
     setTeamResultsState(snapshot.teamResults ?? []);
   }
 
+  async function refreshDraft(): Promise<RefreshOutcome> {
+    if (!refreshMountedRef.current || !isRenderScopeCurrent() || !scopeReady || !selectedSlateIdNumber ||
+      refreshInFlightRef.current || draftMutationRef.current || isSaving || isAssigningPlayer || isSlateLoading) return { status: "skipped" };
+    refreshInFlightRef.current = true;
+    setIsRefreshingStats(true);
+    setRefreshFeedback({ scope: refreshScopeKey, text: "Refreshing…" });
+    try { return await loadDraftState(selectedSlateIdNumber, true); }
+    finally { refreshInFlightRef.current = false; if (refreshMountedRef.current) setIsRefreshingStats(false); }
+  }
+
+  async function loadDraftState(slateId: number, routine = false): Promise<RefreshOutcome> {
+    if (!scopeReady || !isRenderScopeCurrent()) return { status: "skipped" };
+    const loadId = ++latestSlateLoadRef.current;
+    const isCurrent = refreshScopeRef.current.capture();
+    const valid = () => refreshMountedRef.current && isCurrent() && loadId === latestSlateLoadRef.current;
+    if (!routine) setIsSlateLoading(true);
+    try {
+      const responses = await Promise.all([
+        fetch(`/api/lineups?slateId=${slateId}&draft=true`, { cache: "no-store" }),
+        fetch(`/api/slate-availability?slateId=${slateId}`, { cache: "no-store" }),
+        fetch(`/api/player-stats?slateId=${slateId}`, { cache: "no-store" }),
+        fetch(`/api/team-results?slateId=${slateId}`, { cache: "no-store" }),
+        ...((sport ?? selectedSport) === "nfl" ? [fetch(`/api/lineups/nfl-games?slateId=${slateId}`, { cache: "no-store" })] : []),
+      ]);
+      const [lineups, availability, stats, results, games] = await Promise.all(responses.map(response => response.json()));
+      if (!valid()) return { status: "skipped" };
+      if (responses.some(response => !response.ok) || !Array.isArray(lineups.lineups) ||
+        !Array.isArray(lineups.draftContext?.participants) || !Array.isArray(availability.availablePlayerIds) ||
+        !Array.isArray(stats.playerStats) || !Array.isArray(results.teamResults) ||
+        lineups.draftContext.groupId !== groupContext?.group.id || lineups.draftContext.slateId !== slateId ||
+        lineups.draftContext.slate?.id !== slateId ||
+        ((sport ?? selectedSport) === "nfl" && (games?.slateId !== slateId || !games?.gamesByTeam))) throw new Error("Could not refresh Draft. Try again.");
+      setLineupsState(lineups.lineups);
+      // These GETs read stored data only; Draft never initiates scoring reconciliation.
+      if (stats.sport === "golf") applyAcceptedGolfSnapshot(slateId, stats);
+      else {
+        setPlayerStatsState(stats.playerStats);
+        setTeamResultsState(results.teamResults);
+      }
+      setAvailablePlayerIdsForSlate(availability.availablePlayerIds);
+      setDraftContext({ scope: refreshScopeKey, participants: lineups.draftContext.participants, canProxyDraft: lineups.draftContext.canProxyDraft === true, slate: lineups.draftContext.slate, gamesByTeam: games?.gamesByTeam ?? {} });
+      setRefreshTimestamp({ scope: refreshScopeKey, value: new Date().toISOString() });
+      setRefreshFeedback({ scope: refreshScopeKey, text: routine ? "Updated just now" : "" });
+      setSaveMessage("");
+      return { status: "success" };
+    } catch (error) {
+      if (!valid()) return { status: "skipped" };
+      const text = error instanceof Error ? error.message : "Could not refresh Draft.";
+      setRefreshFeedback({ scope: refreshScopeKey, text });
+      return { status: "error", message: text };
+    } finally { if (valid()) setIsSlateLoading(false); }
+  }
+
   async function loadSlateLineups(nextSlateId: number) {
+    if (isDraftPage) { await loadDraftState(nextSlateId); return; }
     const loadId = ++latestSlateLoadRef.current;
     const isCurrent = refreshScopeRef.current.capture();
 
@@ -1689,6 +1775,7 @@ export default function LineupBuilder({
     setSaveMessage("");
     setMessage("");
 
+    if (isDraftPage && (teamId !== currentTeamId && !canProxyDraft)) return false;
     if (!selectedSlateIdNumber) {
       setSaveMessage("Please choose a slate before saving.");
       return false;
@@ -1763,6 +1850,8 @@ export default function LineupBuilder({
     }
 
     try {
+      if (isDraftPage && (!isRenderScopeCurrent() || !scopeReady)) return false;
+      const isSaveCurrent = refreshScopeRef.current.capture();
       setIsSaving(true);
 
       const response = await fetch("/api/lineups", {
@@ -1789,6 +1878,7 @@ export default function LineupBuilder({
       });
 
       const result = await response.json();
+      if (isDraftPage && !isSaveCurrent()) return false;
 
       if (!response.ok) {
         setSaveMessage(
@@ -1830,6 +1920,7 @@ export default function LineupBuilder({
       slotIndex: number;
     },
   ) {
+    if (isDraftPage && (!scopeReady || !isRenderScopeCurrent() || isSlateLoading || draftMutationRef.current || (targetTeamId !== currentTeamId && !canProxyDraft))) return false;
     const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
     if (!targetTeam) return false;
 
@@ -1957,6 +2048,7 @@ export default function LineupBuilder({
     }
 
     try {
+      if (isDraftPage) { draftMutationRef.current = true; ++latestSlateLoadRef.current; setRefreshFeedback(null); }
       setIsAssigningPlayer(true);
 
       if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
@@ -2014,17 +2106,20 @@ export default function LineupBuilder({
 
       return true;
     } finally {
+      draftMutationRef.current = false;
       setIsAssigningPlayer(false);
     }
   }
 
   async function handleRemovePlayerFromTeam(player: Player) {
+    if (isDraftPage && (!scopeReady || !isRenderScopeCurrent() || isSlateLoading || draftMutationRef.current)) return;
     const ownerTeamId = getOwnerTeamIdForPlayer(player.id);
     const ownerTeam = getOwnerTeamForPlayer(player.id);
 
-    if (!ownerTeamId || !ownerTeam) return;
+    if (!ownerTeamId || !ownerTeam || (isDraftPage && ownerTeamId !== currentTeamId && !canProxyDraft)) return;
 
     try {
+      if (isDraftPage) { draftMutationRef.current = true; ++latestSlateLoadRef.current; setRefreshFeedback(null); }
       setIsAssigningPlayer(true);
 
       const nextPlayers = getPlayersForTeam(ownerTeamId).filter(
@@ -2047,6 +2142,7 @@ export default function LineupBuilder({
         void loadSlateLineups(selectedSlateIdNumber);
       }
     } finally {
+      draftMutationRef.current = false;
       setIsAssigningPlayer(false);
     }
   }
@@ -2356,11 +2452,62 @@ export default function LineupBuilder({
     <NflFantasyGameCenter
       slateId={(selectedSlate?.sport ?? selectedSport) === "nfl" ? selectedSlateIdNumber : null}
       refreshKey={lastUpdatedAt}
+      draftGames={isDraftPage ? draftContext?.scope === refreshScopeKey
+        ? { slateId: selectedSlateIdNumber!, gamesByTeam: draftContext.gamesByTeam } : null : undefined}
     >
-    <div ref={isScoresPage ? scoresSurfaceRef : undefined} className={isScoresPage ? `scores-page-content${["nba", "nfl"].includes(sport ?? selectedSport) ? " scores-pull-surface" : ""}` : "space-y-6"}>
-      {viewMode === "draft"
-        ? lineupControls
-        : null}
+    <div ref={isScoresPage || isDraftPage ? scoresSurfaceRef : undefined} className={isScoresPage ? `scores-page-content${["nba", "nfl"].includes(sport ?? selectedSport) ? " scores-pull-surface" : ""}` : "draft-workspace"}>
+      {viewMode === "draft" && <>
+        <header className="draft-header">
+          <div><h1>Draft</h1><p>{selectedSlateDisplay} · {selectedSlate?.is_locked ? "Locked" : "Open"}</p>
+            <p>{currentTeamId ? `${getPlayersForTeam(currentTeamId).length}/${getRosterTotalSlots()} rostered` : "Viewing participants"}</p></div>
+          <div className="draft-header-actions">
+            <ScoresRefreshButton label="Refresh Draft" onRefresh={() => { void refreshDraft(); }}
+              disabled={!scopeReady || isSlateLoading || isSaving || isAssigningPlayer || isRefreshingStats}
+              isRefreshing={isRefreshingStats} />
+            <SecondaryControlsPanel open={draftSettingsOpen} onOpenChange={setDraftSettingsOpen} label="Draft settings">
+              <label>Season<select value={selectedSeason} disabled={isSaving || isAssigningPlayer}
+                onChange={event => setSelectedSeason(event.target.value)}>{seasons.map(season => <option key={season}>{season}</option>)}</select></label>
+              <label>Slate<select value={selectedSlateId} disabled={isSaving || isAssigningPlayer}
+                onChange={event => setSelectedSlateId(event.target.value)}>{filteredSlates.map(slate => <option key={slate.id} value={slate.id}>{slate.label ?? slate.date}</option>)}</select></label>
+              <Link href={`/standings?sport=${sport ?? selectedSport}`}>View Standings →</Link>
+              {currentUser?.role === "admin" && viewMode === "draft" ? (
+                <section className="draft-admin-toggle">
+                  <div>
+                    <strong>Proxy Pick Notifications</strong>
+                    <span>
+                      Notify the next drafter after an admin-entered pick.
+                    </span>
+                  </div>
+
+                  <label className="draft-admin-switch">
+                    <input
+                      type="checkbox"
+                      checked={notifyNextDrafterForProxyPicks}
+                      onChange={(event) =>
+                        setNotifyNextDrafterForProxyPicks(
+                          event.target.checked
+                        )
+                      }
+                    />
+
+                    <span aria-hidden="true" />
+
+                    <em>
+                      {notifyNextDrafterForProxyPicks
+                        ? "On"
+                        : "Off"}
+                    </em>
+                  </label>
+                </section>
+              ) : null}
+
+              {currentUser?.systemRole === "super_admin" && (sport ?? selectedSport) !== "golf" &&
+                <RefreshPlayersButton sport={(sport ?? selectedSport) as "nba" | "nfl"} />}
+            </SecondaryControlsPanel>
+          </div>
+        </header>
+        {refreshIndicator}
+      </>}
 
       {message ? (
         <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
@@ -2368,36 +2515,6 @@ export default function LineupBuilder({
         </div>
       ) : null}
 
-      {currentUser?.role === "admin" && viewMode === "draft" ? (
-        <section className="draft-admin-toggle">
-          <div>
-            <strong>Proxy Pick Notifications</strong>
-            <span>
-              Notify the next drafter after an admin-entered pick.
-            </span>
-          </div>
-
-          <label className="draft-admin-switch">
-            <input
-              type="checkbox"
-              checked={notifyNextDrafterForProxyPicks}
-              onChange={(event) =>
-                setNotifyNextDrafterForProxyPicks(
-                  event.target.checked
-                )
-              }
-            />
-
-            <span aria-hidden="true" />
-
-            <em>
-              {notifyNextDrafterForProxyPicks
-                ? "On"
-                : "Off"}
-            </em>
-          </label>
-        </section>
-      ) : null}
 
       {saveMessage ? (
         <div
@@ -2417,9 +2534,11 @@ export default function LineupBuilder({
 
       {viewMode === "draft" ? (
         <>
-          <section className="draft-page-tabs">
+          <section className="draft-page-tabs" aria-label="Draft view">
             <button
               type="button"
+              data-draft-pull-start="true"
+              aria-pressed={draftPageTab === "lineup"}
               onClick={() => setDraftPageTab("lineup")}
               className={`draft-page-tab ${
                 draftPageTab === "lineup"
@@ -2428,17 +2547,14 @@ export default function LineupBuilder({
               }`}
             >
               <span aria-hidden="true">{getSportConfig(selectedSport).emoji}</span>
-              <span>Lineup</span>
+              <span>Positions</span>
 
-              {currentTeamId ? (
-                <span className="draft-page-tab-count">
-                  {getPlayersForTeam(currentTeamId).length}/{getRosterTotalSlots()}
-                </span>
-              ) : null}
             </button>
 
             <button
               type="button"
+              data-draft-pull-start="true"
+              aria-pressed={draftPageTab === "players"}
               onClick={() => setDraftPageTab("players")}
               className={`draft-page-tab ${
                 draftPageTab === "players"
@@ -2451,13 +2567,22 @@ export default function LineupBuilder({
             </button>
           </section>
 
-          {draftPageTab === "lineup" ? (
-            <DraftRosterCourt
-              teamId={currentTeamId}
-              teamName={currentTeamName}
+          <div hidden={draftPageTab !== "lineup"}>
+            <div className="draft-participants" aria-label="View participant roster">
+              {orderedTeamsForSlate.map(team => <button key={team.id} type="button" data-draft-pull-start="true"
+                aria-pressed={viewedTeam?.id === team.id} onClick={() => { setTargetDraftSlot(null); setPendingRosterSlotChoice(null); setDraftingPlayer(null); setViewedParticipant({ scope: refreshScopeKey, id: team.id }); }}>
+                {team.name}{team.id === currentTeamId ? " · You" : ""}
+              </button>)}
+            </div>
+            {isSlateLoading || draftContext?.scope !== refreshScopeKey ? <p role="status">{isSlateLoading ? "Loading roster…" : "Roster unavailable. Refresh to try again."}</p> : !viewedTeam ? <p>No active participants for this slate.</p> : <DraftRosterCourt
+              teamId={viewedTeam?.id ?? null}
+              teamName={viewedTeam?.name ?? null}
+              canProxyDraft={Boolean(canProxyDraft && viewedTeam?.id !== currentTeamId)}
+              proxyBusy={isSlateLoading || isSaving || isAssigningPlayer}
+              canDraft={Boolean(viewedTeam && viewedTeam.id === currentTeamId && scopeReady && !isSlateLoading && !isSaving && !isAssigningPlayer)}
               players={
-                currentTeamId
-                  ? getPlayersForTeam(currentTeamId)
+                viewedTeam
+                  ? getPlayersForTeam(viewedTeam.id)
                   : []
               }
               rosterSlots={effectiveRosterSlots}
@@ -2467,7 +2592,7 @@ export default function LineupBuilder({
                   lineupsState.find(
                     (lineup) =>
                       lineup.team_id ===
-                      currentTeamId,
+                      viewedTeam?.id,
                   ) as
                     | {
                         player_slots?: Array<{
@@ -2489,12 +2614,14 @@ export default function LineupBuilder({
                     : value;
 
                 if (player) {
-                  inspectPlayerFromSlot(player);
+                  if (viewedTeam?.id === currentTeamId) inspectPlayerFromSlot(player);
+                  else setLeagueResearchPlayer(player);
                 }
               }}
               setTargetDraftSlot={setTargetDraftSlot}
-            />
-          ) : (
+            />}
+          </div>
+          <div hidden={draftPageTab !== "players"}>
             <PlayerPool
               players={players}
               filteredPlayers={filteredPlayers}
@@ -2511,7 +2638,7 @@ export default function LineupBuilder({
               playerProjections={playerProjections}
               getOwnerTeamForPlayer={getOwnerTeamForPlayer}
               setDraftingPlayer={setDraftingPlayer}
-              isAssigningPlayer={isAssigningPlayer}
+              isAssigningPlayer={isAssigningPlayer || isSaving || isSlateLoading}
               pillBase={pillBase}
               activePill={activePill}
               inactivePill={inactivePill}
@@ -2519,23 +2646,7 @@ export default function LineupBuilder({
               selectedSeason={selectedSeason}
               nflSeason={selectedSport === "nfl" ? nflSeasonForSlate(selectedSlate, selectedSeason) : undefined}
             />
-          )}
-
-          <LeagueLineupCards
-            teams={orderedTeamsForSlate}
-            currentTeamId={currentTeamId}
-            getPlayersForTeam={getPlayersForTeam}
-            getPlayerProjectionScore={
-              getPlayerProjectionScore
-            }
-            getDraftNeeds={getDraftNeeds}
-            rosterSlots={effectiveRosterSlots}
-            setResearchPlayer={setLeagueResearchPlayer}
-            setTargetDraftSlot={setTargetDraftSlot}
-            isLocked={Boolean(
-              selectedSlate?.is_locked
-            )}
-          />
+          </div>
         </>
       ) : (
         <ScoresDashboard

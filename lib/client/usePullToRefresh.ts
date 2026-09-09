@@ -10,6 +10,7 @@ export function usePullToRefresh(options: {
   enabled: boolean;
   isRefreshing: boolean;
   scopeKey: string;
+  buttonStartSelector?: string;
 }) {
   const latest = useRef(options);
   latest.current = options;
@@ -19,11 +20,11 @@ export function usePullToRefresh(options: {
     const target = options.targetRef.current;
     if (!target || !options.enabled || options.isRefreshing) return;
     return attachPullToRefresh({
-      target, document,
+      target, document, buttonStartSelector: options.buttonStartSelector,
       getContext: () => latest.current,
       onChange: setPull,
       onRefresh: () => latest.current.onRefresh(),
     });
-  }, [options.targetRef, options.enabled, options.isRefreshing, options.scopeKey]);
+  }, [options.targetRef, options.enabled, options.isRefreshing, options.scopeKey, options.buttonStartSelector]);
   return pull;
 }

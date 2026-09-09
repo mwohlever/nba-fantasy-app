@@ -16,7 +16,7 @@ function element(node, parent = null) {
     closest(selector) { return this.matches(selector) ? this : parent?.closest(selector) ?? null; },
   };
 }
-function pullHarness(onRefresh = async () => ({ status: 'success' })) {
+function pullHarness(onRefresh = async () => ({ status: 'success' }), options = {}) {
   const listeners = new Map();
   const target = { contains: () => true,
     addEventListener: (type, handler, options) => listeners.set(type, { handler, options }),
@@ -25,7 +25,7 @@ function pullHarness(onRefresh = async () => ({ status: 'success' })) {
     documentElement: { style: { getPropertyValue: () => '', getPropertyPriority: () => '',
       setProperty() {}, removeProperty() {} } } };
   const context = { enabled: true, isRefreshing: false, scopeKey: 'group-a:nba:1' };
-  const dispose = attachPullToRefresh({ target, document, getContext: () => context, onChange() {}, onRefresh });
+  const dispose = attachPullToRefresh({ ...options, target, document, getContext: () => context, onChange() {}, onRefresh });
   function emit(type, target, x = 0, y = 0, cancelable = true) {
     const listener = listeners.get(type);
     const event = { target, cancelable, defaultPrevented: false,

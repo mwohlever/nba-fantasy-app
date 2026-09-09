@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
-import RefreshPlayersButton from "@/components/lineups/RefreshPlayersButton";
 import { formatFantasySlateLabel } from "@/lib/formatSlateLabel";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -403,7 +402,6 @@ export default async function DraftLineupsPage({
                 </p>
               </div>
 
-              {sport !== "golf" ? <RefreshPlayersButton sport={sport} /> : null}
             </div>
 
             <div className="mt-6 rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
@@ -562,31 +560,10 @@ export default async function DraftLineupsPage({
     teamResults = teamResultsData ?? [];
   }
 
-  const rosterSize =
-    rosterSlots.reduce(
-      (sum, slot) => sum + Number(slot.slot_count ?? 0),
-      0,
-    ) || (sport === "golf" ? 4 : sport === "nfl" ? 6 : 5);
-
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
       <div className="mx-auto max-w-[1600px] space-y-6">
         <AppNav />
-
-        <section className="draft-page-intro">
-          <div>
-            <div className="draft-page-intro-kicker">111 Sports</div>
-
-            <h1>Draft</h1>
-
-            <p>
-              Build your {rosterSize}-player{" "}
-              {sport === "golf" ? "Golf " : ""}lineup.
-            </p>
-          </div>
-
-          {sport !== "golf" ? <RefreshPlayersButton sport={sport} /> : null}
-        </section>
 
         <LineupBuilder
           players={normalizedPlayers}

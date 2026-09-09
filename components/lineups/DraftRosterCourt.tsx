@@ -25,6 +25,9 @@ type Props = {
   }>;
 
   isLocked: boolean;
+  canDraft?: boolean;
+  canProxyDraft?: boolean;
+  proxyBusy?: boolean;
   setDraftingPlayer: React.Dispatch<React.SetStateAction<Player | null>>;
   setTargetDraftSlot: React.Dispatch<React.SetStateAction<TargetDraftSlot | null>>;
 };
@@ -34,6 +37,7 @@ type SlotProps = {
   positionGroup: string;
   slotNumber: number;
   disabled: boolean;
+  proxyTeamName?: string;
   onPlayerClick: (player: Player) => void;
 
   onEmptyClick: (
@@ -47,6 +51,7 @@ function DraftRosterSlot({
   positionGroup,
   slotNumber,
   disabled,
+  proxyTeamName,
   onPlayerClick,
   onEmptyClick,
 }: SlotProps) {
@@ -56,6 +61,7 @@ function DraftRosterSlot({
     <NflFantasyRosterPlayer player={player}>
     <button
       type="button"
+      data-draft-pull-start="true"
       disabled={!player && disabled}
       onClick={() => {
         if (player) {
@@ -71,7 +77,7 @@ function DraftRosterSlot({
       aria-label={
         player
           ? `View ${player.name}`
-          : `Draft ${positionGroup} into slot ${slotNumber}`
+          : disabled ? `Empty ${positionGroup} slot ${slotNumber}, read-only` : proxyTeamName ? `Draft for ${proxyTeamName}: ${positionGroup} slot ${slotNumber}` : `Draft ${positionGroup} into slot ${slotNumber}`
       }
       className={`draft-roster-slot ${
         player
@@ -102,7 +108,7 @@ function DraftRosterSlot({
       </span>
 
       <span className="draft-roster-position">
-        {player ? positionGroup : "Empty"}
+        {player ? positionGroup : proxyTeamName && !disabled ? `Draft for ${proxyTeamName}` : "Empty"}
       </span>
     </button>
     </NflFantasyRosterPlayer>
@@ -116,6 +122,9 @@ export default function DraftRosterCourt({
   rosterSlots,
   slotAssignments = [],
   isLocked,
+  canDraft = false,
+  canProxyDraft = false,
+  proxyBusy = false,
   setDraftingPlayer,
   setTargetDraftSlot,
 }: Props) {
@@ -200,13 +209,13 @@ export default function DraftRosterCourt({
 
 
   const completedSlots = Math.min(players.length, totalSlots);
-  const progressPercent = totalSlots > 0 ? (completedSlots / totalSlots) * 100 : 0;
+
 
   function openEmptySlot(
     positionGroup: string,
     slotIndex: number,
   ) {
-    if (!teamId || !teamName || isLocked) return;
+    if ((!canDraft && !canProxyDraft) || proxyBusy || !teamId || !teamName || isLocked) return;
 
     setTargetDraftSlot({
       teamId,
@@ -218,28 +227,9 @@ export default function DraftRosterCourt({
 
   return (
     <section className="draft-roster-court">
-      <div className="draft-roster-header">
-        <div>
-          <div className="draft-roster-kicker">
-            Your lineup
-          </div>
-
-          <h2 className="draft-roster-title">
-            {teamName ?? "Loading your team..."}
-          </h2>
-        </div>
-
-        <div className="draft-roster-count">
-          <strong>{completedSlots}/{totalSlots}</strong>
-          <span>{completedSlots === totalSlots ? "Complete" : "Filled"}</span>
-        </div>
-      </div>
-
-      <div className="draft-roster-progress">
-        <div
-          className="draft-roster-progress-fill"
-          style={{ width: `${progressPercent}%` }}
-        />
+      <div className="draft-roster-summary">
+        <h2>{teamName ?? "No participating team"}</h2>
+        <span>{completedSlots}/{totalSlots} · {canProxyDraft ? "Commissioner" : canDraft ? "Your roster" : "Read-only"}</span>
       </div>
 
       <div className="draft-roster-formation">
@@ -312,9 +302,10 @@ export default function DraftRosterCourt({
                           1
                         }
                         disabled={
-                          !teamId ||
+                          (!canDraft && !canProxyDraft) || proxyBusy || !teamId ||
                           isLocked
                         }
+                        proxyTeamName={canProxyDraft ? teamName ?? undefined : undefined}
                         onPlayerClick={
                           setDraftingPlayer
                         }
@@ -331,15 +322,6 @@ export default function DraftRosterCourt({
         )}
       </div>
 
-      <div className="draft-roster-footer">
-        {isLocked ? (
-          <span>🔒 This slate is locked</span>
-        ) : completedSlots === totalSlots ? (
-          <span>✅ Lineup complete</span>
-        ) : (
-          <span>Tap an empty spot to draft a player</span>
-        )}
-      </div>
     </section>
   );
 }

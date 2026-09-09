@@ -1,3 +1,4 @@
+import { canProxyDraftForGroup } from "@/lib/lineups/draftPermissions";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
@@ -236,6 +237,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Optional Draft context is read-only and uses the same active-slate access check.
+    let draftContext;
+    if (request.nextUrl.searchParams.get("draft") === "true") {
+      const [teamsResult, membershipsResult, participantsResult, slateResult] = await Promise.all([
+        supabaseAdmin.from("teams").select("id, name, user_id").eq("group_id", slateAccess.context.group.id),
+        supabaseAdmin.from("group_memberships").select("user_id").eq("group_id", slateAccess.context.group.id).eq("is_active", true),
+        supabaseAdmin.from("slate_teams").select("team_id, draft_order").eq("slate_id", slateId).eq("is_participating", true).order("draft_order"),
+        supabaseAdmin.from("slates").select("id, is_locked, rules_snapshot").eq("id", slateId).single(),
+      ]);
+      const error = teamsResult.error || membershipsResult.error || participantsResult.error || slateResult.error;
+      if (error) return NextResponse.json({ error: "Failed to load Draft participants." }, { status: 500 });
+      const activeUsers = new Set((membershipsResult.data ?? []).map(row => String(row.user_id)));
+      const groupTeams = new Map((teamsResult.data ?? []).filter(row => activeUsers.has(String(row.user_id))).map(row => [Number(row.id), row]));
+      draftContext = {
+        canProxyDraft: canProxyDraftForGroup(slateAccess.context, currentUser),
+        groupId: slateAccess.context.group.id,
+        slateId,
+        slate: slateResult.data,
+        participants: (participantsResult.data ?? []).flatMap(row => {
+          const team = groupTeams.get(Number(row.team_id));
+          return team ? [{ id: Number(team.id), name: team.name, is_participating: true, draft_order: row.draft_order }] : [];
+        }),
+      };
+    }
+
     const { data: lineups, error: lineupsError } =
       await supabaseAdmin
         .from("lineups")
@@ -257,6 +283,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         lineups: [],
+        draftContext,
       });
     }
 
@@ -348,6 +375,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       lineups: grouped,
+      draftContext,
     });
   } catch (error) {
     console.error(error);
@@ -490,6 +518,10 @@ export async function POST(request: Request) {
             404,
         },
       );
+    }
+
+    if (teamId !== slateAccess.context.team?.id && !canProxyDraftForGroup(slateAccess.context, currentUser)) {
+      return NextResponse.json({ error: "Commissioner access is required to draft for another participant." }, { status: 403 });
     }
 
     const { data: slateData, error: slateError } =

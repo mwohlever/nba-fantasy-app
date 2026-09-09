@@ -278,14 +278,14 @@ export default function SlotDraftModal({
       <section
         role="dialog"
         aria-modal="true"
-        aria-label={`Draft to ${targetDraftSlot.positionGroup} roster spot`}
+        aria-label={`Draft for ${targetDraftSlot.teamName}: ${targetDraftSlot.positionGroup} roster spot`}
         className="flex h-full max-h-full w-full flex-col overflow-hidden bg-slate-950 text-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-4xl sm:rounded-[30px] sm:border sm:border-slate-700"
       >
         <header className="shrink-0 border-b border-slate-700 bg-slate-950/95 px-5 py-4 backdrop-blur">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="text-xs font-black uppercase tracking-[0.22em] text-sky-300">
-                Draft to roster spot
+                Draft for {targetDraftSlot.teamName}
               </div>
 
               <div className="mt-1 flex items-center gap-2">

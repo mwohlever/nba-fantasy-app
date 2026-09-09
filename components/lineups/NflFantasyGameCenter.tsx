@@ -12,19 +12,22 @@ type Context = {
 };
 export const NflFantasyGamesContext = createContext<Context | null>(null);
 
-export function NflFantasyGameCenter({ slateId, refreshKey, children }: {
+export function NflFantasyGameCenter({ slateId, refreshKey, children, draftGames }: {
+  draftGames?: { slateId: number; gamesByTeam: Record<string, LiveScoreGame> } | null;
   slateId: number | null;
   refreshKey: string | null;
   children: ReactNode;
 }) {
   const [loaded, setLoaded] = useState<{ slateId: number; games: Record<string, LiveScoreGame> } | null>(null);
-  const gamesByTeam = loaded?.slateId === slateId ? loaded.games : {};
+  const gamesByTeam = draftGames !== undefined
+    ? draftGames?.slateId === slateId ? draftGames.gamesByTeam : {}
+    : loaded?.slateId === slateId ? loaded.games : {};
   const [selectedGame, setSelectedGame] = useState<{ slateId: number; game: LiveScoreGame } | null>(null);
 
   useEffect(() => setSelectedGame(null), [slateId]);
 
   useEffect(() => {
-    if (!slateId) return;
+    if (!slateId || draftGames !== undefined) return;
     const controller = new AbortController();
     void fetch(`/api/lineups/nfl-games?slateId=${slateId}`, {
       cache: "no-store", signal: controller.signal,
@@ -38,7 +41,7 @@ export function NflFantasyGameCenter({ slateId, refreshKey, children }: {
       if (!controller.signal.aborted) setLoaded(null);
     });
     return () => controller.abort();
-  }, [slateId, refreshKey]);
+  }, [slateId, refreshKey, draftGames]);
 
   function openGameCenter({ sport, eventId }: GameRequest) {
     if (sport !== "nfl") return;

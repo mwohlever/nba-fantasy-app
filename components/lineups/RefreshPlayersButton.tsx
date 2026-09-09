@@ -50,7 +50,7 @@ export default function RefreshPlayersButton({
       onClick={handleRefreshPlayers}
       className="rounded-lg border border-blue-400/30 bg-blue-500/15 px-4 py-2 text-sm text-white hover:bg-blue-500/25"
     >
-      Refresh Players
+      Sync Player Directory
     </button>
   );
 }

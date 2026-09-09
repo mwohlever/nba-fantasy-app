@@ -8264,3 +8264,34 @@ html
   .scores-standing-toggle { padding: 0.75rem 0.5rem; }
   .scores-expanded-roster { padding-inline: 0.5rem; }
 }
+
+/* Draft: compact controls, one participant, research one tap away. */
+.draft-workspace { display: flex; flex-direction: column; gap: .75rem; overscroll-behavior-y: contain; }
+.draft-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; color: var(--app-text); }
+.draft-header h1 { font-size: 1.5rem; font-weight: 850; line-height: 1.2; }
+.draft-header p { margin-top: .2rem; font-size: .82rem; color: var(--app-text-muted); }
+.draft-header-actions { display: flex; flex-shrink: 0; gap: .25rem; }
+.secondary-controls { position: relative; }
+.secondary-controls-panel { position: absolute; right: 0; top: calc(100% + .4rem); z-index: 14000; width: min(22rem, calc(100vw - 2rem)); max-height: calc(100dvh - 12rem); overflow-y: auto; padding: 1rem; border: 1px solid var(--app-border); border-radius: 1rem; background: var(--app-surface); color: var(--app-text); box-shadow: 0 12px 40px #0005; display: grid; gap: .85rem; }
+.secondary-controls-panel header { display: flex; align-items: center; justify-content: space-between; }
+.secondary-controls-panel label { display: grid; gap: .3rem; font-size: .85rem; }
+.secondary-controls-panel select { width: 100%; min-height: 44px; border: 1px solid var(--app-border); border-radius: .5rem; padding: .5rem; background: var(--app-surface-soft); color: var(--app-text); font-size: 1rem; }
+.secondary-controls-panel .draft-admin-toggle { padding: 0; border: 0; background: none; box-shadow: none; }
+.draft-participants { display: flex; gap: .4rem; overflow-x: auto; padding: .2rem 0 .6rem; }
+.draft-participants button { flex-shrink: 0; min-height: 44px; border: 1px solid var(--app-border); border-radius: 999px; padding: .45rem .8rem; font-size: .85rem; color: var(--app-text); background: var(--app-surface); }
+.draft-participants button[aria-pressed="true"] { border-color: var(--app-blue); background: var(--app-blue); color: white; }
+.draft-workspace .draft-page-tabs { padding: .2rem; border-radius: .8rem; box-shadow: none; }
+.draft-workspace .draft-page-tab { min-height: 44px; border-radius: .6rem; }
+.draft-workspace .draft-roster-court { padding: .65rem; border-radius: .8rem; box-shadow: none; }
+.draft-roster-summary { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; font-size: .8rem; color: var(--app-text-muted); }
+.draft-roster-summary h2 { font-weight: 750; color: var(--app-text); }
+.draft-workspace .draft-roster-formation { margin-top: .6rem; }
+.draft-workspace .draft-roster-row { flex-wrap: wrap; }
+.draft-proxy-action { min-height: 44px; font-size: .85rem; color: var(--app-blue); }
+.draft-workspace button:focus-visible, .draft-workspace a:focus-visible, .draft-workspace select:focus-visible { outline: 2px solid var(--app-blue); outline-offset: 3px; }
+@media (max-width: 639px) {
+  .secondary-controls-panel { position: fixed; top: 7rem; right: 1rem; max-height: calc(100dvh - 14rem); }
+}
+
+/* Draft also includes the outer gutters as safe pull-start areas. */
+.draft-workspace { margin-inline: -1rem; padding-inline: 1rem; padding-bottom: 1rem; }
