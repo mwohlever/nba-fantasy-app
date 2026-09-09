@@ -337,3 +337,109 @@ test('NFL has no projection analysis even when expanded; NBA analysis stays in s
     else assert.match(renderToStaticMarkup(byClass(tree, 'scores-roster-totals')[0]), /Projected final.*win probability.*Pregame projection/);
   }
 });
+
+const { element, pullHarness } = require('./helpers/pull-harness.cjs');
+for (const sport of ['nba', 'nfl']) test(`${sport} actual standings control admits vertical pull and retains native tap/keyboard expansion`, async () => {
+  let refreshes = 0;
+  const props = dashboardProps({ selectedSlate: { id: 1, sport } }), h = dashboardHost(props);
+  const f = pullHarness(async () => { refreshes++; return { status: 'success' }; });
+  for (const [name, dx, dy, expected] of [['tap', 0, 0, false], ['short', 0, 6, false],
+    ['sub-threshold', 0, 60, false], ['horizontal', 100, 10, false], ['diagonal', 60, 80, false], ['pull', 0, 90, true]]) {
+    const row = byClass(h.render(props), 'scores-standing-toggle')[0];
+    assert.equal(row.type, 'button'); assert.equal(row.props.type, 'button');
+    assert.equal(row.props['data-scores-pull-start'], 'true');
+    const target = element({ type: 'strong' }, element(row));
+    f.emit('touchstart', target);
+    if (dy) f.emit('touchmove', target, dx, dy);
+    const release = f.emit('touchend', target);
+    assert.equal(release.defaultPrevented, expected, name);
+    // Model the browser's compatibility click only for a tap, or test short-release eligibility.
+    if (name === 'tap' || name === 'short') {
+      row.props.onClick();
+      assert.equal(byClass(h.render(props), 'scores-standing-toggle')[0].props['aria-expanded'], true);
+      byClass(h.render(props), 'scores-standing-toggle')[0].props.onClick();
+    }
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(refreshes, expected ? 1 : 0, name);
+    assert.equal(byClass(h.render(props), 'scores-standing-toggle')[0].props['aria-expanded'], false);
+  }
+  // Keyboard activation continues through the native button click; no custom key handlers.
+  const row = byClass(h.render(props), 'scores-standing-toggle')[0];
+  assert.equal(row.props.onKeyDown, undefined); row.props.onClick();
+  const expanded = h.render(props);
+  for (const action of byClass(expanded, 'scores-roster-player')) {
+    assert.equal(action.props['data-scores-pull-start'], undefined);
+    const target = element(action, element(byClass(expanded, 'scores-roster-row')[0]));
+    f.emit('touchstart', target); f.emit('touchmove', target, 0, 100); f.emit('touchend', target);
+  }
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(refreshes, 1);
+  f.dispose(); h.unmount();
+});
+test('Scores surface contains metadata and standings, with gutters limited to NBA/NFL', () => {
+  const fs = require('node:fs');
+  for (const sport of ['nba', 'nfl', 'golf']) {
+    context.sport = sport; const tree = host(Builder).render(builderProps(sport));
+    const surface = byClass(tree, 'scores-page-content')[0];
+    assert.equal(surface.props.className.includes('scores-pull-surface'), sport !== 'golf');
+    assert.ok(surface.props.ref);
+    assert.ok(nodes(surface).some(n => n.type === ScoresDashboard));
+    assert.ok(inspect(tree).dashboard.props.controls);
+  }
+  // Route sport wins while the shared sport context is still synchronizing.
+  for (const sport of ['nba', 'nfl', 'golf']) {
+    context.sport = sport === 'golf' ? 'nba' : 'golf';
+    const tree = host(Builder).render(builderProps(sport));
+    assert.equal(byClass(tree, 'scores-pull-surface').length, sport === 'golf' ? 0 : 1);
+  }
+  const css = fs.readFileSync('app/globals.css', 'utf8');
+  const surfaceRule = css.match(/\.scores-pull-surface\s*\{([^}]*)\}/)?.[1];
+  assert.ok(surfaceRule);
+  assert.match(surfaceRule, /margin-inline: -1rem;/);
+  assert.match(surfaceRule, /padding: 0.75rem 1rem 1rem;/);
+  assert.doesNotMatch(surfaceRule, /(?:min-)?height|width|position|overflow/);
+  // The page's existing gutters contain the negative margin; content width is preserved.
+  assert.match(fs.readFileSync('app/lineups/scores/page.tsx', 'utf8'), /<main className="[^"\n]*px-4/);
+  context.pathname = '/lineups/draft';
+  for (const sport of ['nba', 'nfl', 'golf']) {
+    context.sport = sport;
+    const tree = host(Builder).render({ ...builderProps(sport), defaultViewMode: 'draft' });
+    assert.equal(byClass(tree, 'scores-pull-surface').length, 0);
+    assert.equal(byClass(tree, 'scores-page-content').length, 0);
+  }
+  context.pathname = '/lineups/scores'; context.sport = 'nba';
+});
+
+test('Scores pull callback, refresh button and poll use the same in-flight guard', async () => {
+  context.capturePull = true;
+  delete require.cache[require.resolve('../components/lineups/LineupBuilder.tsx')];
+  const PullBuilder = require('../components/lineups/LineupBuilder.tsx').default;
+  context.capturePull = false;
+  const originalFetch = global.fetch;
+  try {
+    for (const sport of ['nba', 'nfl']) {
+      context.sport = sport; context.group = 'group-a';
+      const h = host(PullBuilder), props = builderProps(sport);
+      const page = inspect(h.render(props));
+      const pull = context.pullOptions;
+      assert.equal(pull.enabled, true);
+      let release, providerCalls = 0;
+      global.fetch = async url => {
+        if (url.startsWith('/api/refresh-stats')) {
+          providerCalls++;
+          return new Promise(resolve => { release = () => resolve(reply({})); });
+        }
+        return reply({ playerStats: [], teamResults: [] });
+      };
+      const pending = pull.onRefresh();
+      assert.equal((await page.refresh(false)).status, 'skipped');
+      assert.equal((await page.refresh(true)).status, 'skipped');
+      assert.equal((await pull.onRefresh()).status, 'skipped');
+      assert.equal(providerCalls, 1);
+      release(); assert.equal((await pending).status, 'success');
+      const polling = page.refresh(true);
+      assert.equal((await pull.onRefresh()).status, 'skipped');
+      release(); await polling;
+      h.unmount();
+    }
+  } finally { global.fetch = originalFetch; context.sport = 'nba'; context.capturePull = false; }
+});

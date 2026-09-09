@@ -455,6 +455,16 @@ function HomePageContent() {
     id: number;
     name: string;
   } | null>(null);
+  const profileScope = JSON.stringify([activeGroupId, sport]);
+  const [fantasyProfile, setFantasyProfile] = useState<{
+    scope: string; team: { id: number; name: string };
+  } | null>(null);
+  const activeFantasyProfile = !isGroupLoading && !isSwitchingGroup && selectedSport === sport &&
+    fantasyProfile?.scope === profileScope ? fantasyProfile.team : null;
+  useEffect(() => {
+    setFantasyProfile(null);
+  }, [profileScope, isGroupLoading, isSwitchingGroup]);
+
   const [slateRosterModal, setSlateRosterModal] =
     useState<SlateRosterModalState>(null);
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
@@ -1008,7 +1018,7 @@ function HomePageContent() {
     : "No slate";
 
   const homePullEnabled = (sport === "nba" || sport === "nfl") && Boolean(activeGroupId && latestSlate?.id) &&
-    dataSport === sport && dataGroupId === activeGroupId && !isLoading && !isGroupLoading && !isSwitchingGroup && !profileTeam;
+    dataSport === sport && dataGroupId === activeGroupId && !isLoading && !isGroupLoading && !isSwitchingGroup && !profileTeam && !activeFantasyProfile;
   async function refreshHomeManually(): Promise<RefreshOutcome> {
     if (!homePullEnabled || !homeMountedRef.current || !renderRefreshCurrent() || homeGolfRefreshInFlightRef.current) return { status: "skipped" };
     const isCurrent = homeRefreshScope.current.capture();
@@ -1873,7 +1883,11 @@ function HomePageContent() {
                   )}
                 </div>
               ) : (
-                <FantasyHomeStandings rows={latestSlateRows} />
+                <FantasyHomeStandings rows={latestSlateRows} onProfile={team => {
+                  if (dataGroupId === activeGroupId && dataSport === sport && !isGroupLoading && !isSwitchingGroup) {
+                    setFantasyProfile({ scope: profileScope, team });
+                  }
+                }} />
               )}
             </>
           )}
@@ -2095,7 +2109,9 @@ function HomePageContent() {
         }
       />}
 
-      <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
+      {isGolf ? <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} /> :
+        <TeamProfileModal key={profileScope} team={activeFantasyProfile}
+          setTeam={() => setFantasyProfile(null)} />}
     </main>
   );
 }

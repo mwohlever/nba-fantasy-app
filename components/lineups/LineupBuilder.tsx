@@ -2357,7 +2357,7 @@ export default function LineupBuilder({
       slateId={(selectedSlate?.sport ?? selectedSport) === "nfl" ? selectedSlateIdNumber : null}
       refreshKey={lastUpdatedAt}
     >
-    <div ref={isScoresPage ? scoresSurfaceRef : undefined} className={isScoresPage ? "scores-page-content" : "space-y-6"}>
+    <div ref={isScoresPage ? scoresSurfaceRef : undefined} className={isScoresPage ? `scores-page-content${["nba", "nfl"].includes(sport ?? selectedSport) ? " scores-pull-surface" : ""}` : "space-y-6"}>
       {viewMode === "draft"
         ? lineupControls
         : null}

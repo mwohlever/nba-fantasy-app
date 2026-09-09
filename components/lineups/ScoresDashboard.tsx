@@ -187,6 +187,7 @@ function TraditionalScoresDashboard({
         return <article key={row.team.id}
           className={`scores-standing${index === 0 ? " scores-standing--leader" : ""}${expanded ? " scores-standing--expanded" : ""}`}>
           <button type="button" id={headingId} className="scores-standing-toggle"
+            data-scores-pull-start="true"
             aria-expanded={expanded} aria-controls={rosterId}
             onClick={() => setExpansion({ scope: expansionScope,
               teamId: expanded ? null : row.team.id })}>

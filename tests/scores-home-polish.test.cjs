@@ -6,6 +6,7 @@ const { renderToStaticMarkup } = require('react-dom/server');
 const { formatFantasySlateLabel, formatSlateDateLabel } = require('../lib/formatSlateLabel.ts');
 const Home = require('../components/home/SportHomePage.tsx').default;
 const Standings = require('../components/home/FantasyHomeStandings.tsx').default;
+const Profile = require('../components/TeamProfileModal.tsx').default;
 const Controls = require('../components/lineups/LineupControls.tsx').default;
 const read = p => fs.readFileSync(p, 'utf8');
 const slate = { id: 1, sport: 'nfl', date: '2026-09-09', start_date: '2026-09-09', end_date: '2026-09-14', display_name: '2026 Week 1', is_locked: true };
@@ -55,7 +56,32 @@ test('NBA/NFL Home uses static current ranks/scores/counts, Scores navigation an
       const html = renderToStaticMarkup(Standings(summary.props));
       assert.match(html, /Mark/); assert.match(html, /42.5/); assert.match(html, /Rank 1/);
       assert.match(html, /2 final · 1 live · 3 left/);
-      assert.doesNotMatch(html, /button|projection|Win|dialog/i);
+      assert.doesNotMatch(html, /projection|Win|dialog/i);
+      const standingTree = Standings(summary.props);
+      const buttons = nodes(standingTree).filter(n => n.type === 'button');
+      assert.equal(buttons.length, 2);
+      for (const button of buttons) {
+        assert.equal(button.props.type, 'button');
+        assert.equal(button.props['aria-label'], 'View Mark profile');
+        button.props.onClick();
+        assert.deepEqual(nodes(h.render({})).find(n => n.type === Profile).props.team, { id: 2, name: 'Mark' });
+      }
+      for (const n of nodes(standingTree).filter(n => /fantasy-home-(row|rank|games|score)\b/.test(n.props?.className ?? ''))) {
+        assert.equal(n.props.onClick, undefined);
+        assert.notEqual(n.type, 'button');
+        assert.equal(nodes(n).slice(1).some(child => child.type === 'button'), n.type === 'li');
+      }
+      nodes(h.render({})).find(n => n.type === Profile).props.setTeam(null);
+      assert.equal(nodes(h.render({})).find(n => n.type === Profile).props.team, null);
+      for (const changed of ['group', 'sport', 'switching']) {
+        buttons[0].props.onClick();
+        if (changed === 'group') context.group = 'group-b';
+        if (changed === 'sport') context.sport = sport === 'nba' ? 'nfl' : 'nba';
+        if (changed === 'switching') context.switching = true;
+        assert.equal(nodes(h.render({}, true)).find(n => n.type === Profile).props.team, null);
+        context.group = 'group-a'; context.sport = sport; context.switching = false;
+        assert.equal(nodes(h.render({}, true)).find(n => n.type === Profile).props.team, null);
+      }
       assert.ok(nodes(tree).some(n => n.props?.href === `/lineups/scores?sport=${sport}`));
       const slateText = nodes(tree).find(n => typeof n.props?.children === 'string' && n.props.children === (sport === 'nfl' ? 'Week 1' : formatSlateDateLabel(slate)));
       assert.ok(slateText);
@@ -87,9 +113,31 @@ test('Home row has four explicit grid regions with shrinkable details and a sepa
   assert.match(regions[1].props.className, /h-8 w-8/);
   assert.match(regions[2].props.className, /min-w-0/);
   const [name, games] = regions[2].props.children;
-  assert.match(name.props.className, /block truncate/);
+  assert.match(name.props.className, /block .*truncate/);
   assert.equal(name.props.title, 'A very long participant name');
   assert.match(games.props.className, /block/);
   assert.match(regions[3].props.className, /justify-self-end gap-1 whitespace-nowrap/);
   assert.equal(regions[3].props.children[1].type, 'small');
+});
+
+test('participant modal uses the supplied Group team ID and selected sport; API checks active Group ownership', async () => {
+  const previousFetch = global.fetch, previousWindow = global.window, previousDocument = global.document;
+  global.window = { addEventListener() {}, removeEventListener() {} };
+  global.document = { body: { style: { overflow: '' } } };
+  try {
+    for (const sport of ['nba', 'nfl']) {
+      context.sport = sport;
+      let request;
+      global.fetch = async url => { request = url; return { ok: false, json: async () => ({ error: 'fixture' }) }; };
+      const h = host(Profile);
+      h.render({ team: { id: 82, name: 'Mark' }, setTeam() {} }, true);
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(request, `/api/team-profile?teamId=82&season=all&sport=${sport}`);
+      h.unmount();
+    }
+    const route = read('app/api/team-profile/route.ts');
+    assert.match(route, /teamBelongsToGroup\(\s*teamId,\s*activeLeague.context.group.id/);
+    assert.match(route, /groupId:\s*activeLeague.context.group.id/);
+    assert.match(route, /leagueId:\s*activeLeague.league.id/);
+  } finally { global.fetch = previousFetch; global.window = previousWindow; global.document = previousDocument; context.sport = 'nba'; }
 });

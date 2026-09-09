@@ -12,13 +12,14 @@ type Options = {
   threshold?: number;
 };
 
-// Explicit opt-out regions cover custom interactions; native controls are always excluded.
-const EXCLUDED = "[data-pull-refresh-exclude], button, a, input, select, textarea, summary, [contenteditable], [role='dialog'], [aria-modal='true']";
+// Explicit exclusions always win, even inside an opted-in standings control.
+const EXCLUDED = "[data-pull-refresh-exclude], a, input, select, textarea, summary, [contenteditable], [role='dialog'], [aria-modal='true']";
+const SCORES_PULL_START = 'button[data-scores-pull-start="true"]';
 
 /** A document-scrolling gesture, attached only to its opted-in page surface. */
 export function attachPullToRefresh(options: Options) {
   const { target, document: doc, getContext, onChange, onRefresh, threshold = 70 } = options;
-  let gesture: { x: number; y: number; id: number; scope: string; distance: number; peak: number } | null = null;
+  let gesture: { x: number; y: number; id: number; scope: string; distance: number; peak: number; fromScoresRow: boolean } | null = null;
   let pending = false;
   let disposed = false;
   const rootStyle = doc.documentElement.style;
@@ -38,9 +39,11 @@ export function attachPullToRefresh(options: Options) {
     const element = event.target as Element | null;
     if (event.touches.length !== 1 || !allowed() || !atTop() ||
       !element || !target.contains(element) || element.closest(EXCLUDED)) return;
+    const button = element.closest("button");
+    if (button && (!button.matches(SCORES_PULL_START) || !target.contains(button))) return;
     const touch = event.touches[0];
     gesture = { x: touch.clientX, y: touch.clientY, id: touch.identifier,
-      scope: getContext().scopeKey, distance: 0, peak: 0 };
+      scope: getContext().scopeKey, distance: 0, peak: 0, fromScoresRow: Boolean(button) };
   };
   const move = (event: TouchEvent) => {
     if (!gesture) return;
@@ -64,9 +67,14 @@ export function attachPullToRefresh(options: Options) {
   };
   const end = (event: TouchEvent) => {
     const shouldRefresh = gesture && event.touches.length === 0 && allowed() && atTop() &&
-      gesture.scope === getContext().scopeKey && gesture.distance >= threshold;
+      gesture.scope === getContext().scopeKey && gesture.distance >= threshold &&
+      (!gesture.fromScoresRow || event.cancelable);
+    const suppressClick = shouldRefresh && gesture?.fromScoresRow;
     reset();
     if (!shouldRefresh) return;
+    // Cancel the compatibility click before refresh can detach these listeners.
+    // Taps and sub-threshold releases retain their native button behavior.
+    if (suppressClick) event.preventDefault();
     const scope = getContext().scopeKey;
     pending = true;
     // The page owns outcome feedback; this layer never infers successful data updates.
@@ -77,7 +85,7 @@ export function attachPullToRefresh(options: Options) {
   };
   target.addEventListener("touchstart", start, { passive: true });
   target.addEventListener("touchmove", move, { passive: false });
-  target.addEventListener("touchend", end, { passive: true });
+  target.addEventListener("touchend", end, { passive: false });
   target.addEventListener("touchcancel", reset, { passive: true });
   return () => {
     disposed = true;

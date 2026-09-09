@@ -96,3 +96,38 @@ test('polling becoming busy cancels the active pull without showing gesture feed
   assert.equal(h.render({ ...props, isRefreshing: true }).distance, 0);
   assert.equal(f.listeners.size, 0); h.unmount(); delete global.document;
 });
+
+const { element, pullHarness } = require('./helpers/pull-harness.cjs');
+for (const [name, node, parent] of [
+  ['ordinary button', { type: 'button' }],
+  ['player action', { type: 'button' }, { type: 'div', props: { 'data-pull-refresh-exclude': true } }],
+  ['explicit opt-out wins over opt-in', { type: 'button', props: { 'data-scores-pull-start': 'true', 'data-pull-refresh-exclude': true } }],
+  ['settings summary', { type: 'summary' }],
+  ['modal control', { type: 'button', props: { 'data-scores-pull-start': 'true' } }, { type: 'div', props: { role: 'dialog' } }],
+  ['link inside opt-in', { type: 'a' }, { type: 'button', props: { 'data-scores-pull-start': 'true' } }],
+]) test(`${name} remains excluded with Scores opt-in support`, async () => {
+  let calls = 0;
+  const f = pullHarness(async () => { calls++; return { status: 'success' }; });
+  const target = element(node, parent ? element(parent) : null);
+  f.emit('touchstart', target); f.emit('touchmove', target, 0, 100); f.emit('touchend', target);
+  await tick(); assert.equal(calls, 0); f.dispose();
+});
+test('completed opted-in pull cancels native touch-end click before hook cleanup; tap does not', async () => {
+  let calls = 0;
+  const f = pullHarness(async () => { calls++; return { status: 'success' }; });
+  const target = element({ type: 'span' }, element({ type: 'button', props: { 'data-scores-pull-start': 'true' } }));
+  f.emit('touchstart', target);
+  assert.equal(f.emit('touchend', target).defaultPrevented, false);
+  f.emit('touchstart', target); f.emit('touchmove', target, 0, 90);
+  assert.equal(f.emit('touchend', target).defaultPrevented, true);
+  await tick(); assert.equal(calls, 1);
+  f.dispose();
+});
+test('browser-owned noncancelable row release never refreshes alongside a possible native click', async () => {
+  let calls = 0;
+  const f = pullHarness(async () => { calls++; return { status: 'success' }; });
+  const target = element({ type: 'button', props: { 'data-scores-pull-start': 'true' } });
+  f.emit('touchstart', target); f.emit('touchmove', target, 0, 90);
+  assert.equal(f.emit('touchend', target, 0, 90, false).defaultPrevented, false);
+  await tick(); assert.equal(calls, 0); f.dispose();
+});
