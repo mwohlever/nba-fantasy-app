@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
+import ScoresRefreshButton from "@/components/ui/ScoresRefreshButton";
+import type { RefreshOutcome } from "@/lib/client/refreshOutcome";
 import { usePathname } from "next/navigation";
 import { Slate } from "@/components/lineups/types";
 import { formatLastUpdated } from "@/components/lineups/utils";
 
 type LineupControlsProps = {
+  refreshUnavailable?: boolean;
+  scoresStatus?: "Live" | "Final" | "Upcoming";
+  refreshFeedback?: ReactNode;
   selectedSlateId: string;
   setSelectedSlateId: (value: string) => void;
   slates: Slate[];
@@ -15,7 +21,7 @@ type LineupControlsProps = {
   isRefreshingStats: boolean;
   refreshStatsForSelectedSlate: (
     isSilent?: boolean
-  ) => Promise<void>;
+  ) => Promise<RefreshOutcome>;
   autoRefreshEnabled: boolean;
   setAutoRefreshEnabled: React.Dispatch<
     React.SetStateAction<boolean>
@@ -33,6 +39,9 @@ type LineupControlsProps = {
 };
 
 export default function LineupControls({
+  refreshUnavailable = false,
+  scoresStatus,
+  refreshFeedback,
   selectedSlateId,
   setSelectedSlateId,
   slates,
@@ -143,6 +152,39 @@ export default function LineupControls({
     !selectedSlateIdNumber ||
     isRefreshingStats ||
     Boolean(selectedSlate?.is_locked);
+
+  if (pathname === "/lineups/scores") {
+    return <section className="scores-compact-controls" aria-label="Slate controls">
+      <div className="scores-compact-metadata">
+        <strong className="scores-slate-label">{selectedSlateDisplay}</strong>
+        <span className={`scores-compact-status scores-compact-status--${(scoresStatus ?? slateStatus).toLowerCase()}`}>
+          {isSlateLoading ? "Loading" : scoresStatus ?? slateStatus}
+        </span>
+        <ScoresRefreshButton onRefresh={() => { void refreshStatsForSelectedSlate(false); }}
+          disabled={refreshDisabled || refreshUnavailable || isSlateLoading} isRefreshing={isRefreshingStats} />
+        <details className="scores-settings" data-pull-refresh-exclude>
+          <summary className="scores-icon-button" aria-label="Slate and score settings" title="Slate and score settings">
+            <span aria-hidden="true">⚙</span>
+          </summary>
+          <div className="scores-settings-panel">
+            <label>Season<select value={selectedSeason} onChange={event => setSelectedSeason(event.target.value)}>
+              {seasons.map(season => <option key={season} value={season}>{season}</option>)}
+            </select></label>
+            <label>Slate<select value={selectedSlateId} onChange={event => setSelectedSlateId(event.target.value)}>
+              {slates.map(slate => <option key={slate.id} value={slate.id}>{slate.label ?? slate.date}{slate.is_locked ? " (Locked)" : ""}</option>)}
+            </select></label>
+            <label className="scores-auto-refresh"><input type="checkbox" checked={autoRefreshEnabled}
+              disabled={!selectedSlateIdNumber} onChange={event => setAutoRefreshEnabled(event.target.checked)} />
+              Auto-refresh every 30 seconds
+            </label>
+            <Link href="/standings">View standings →</Link>
+          </div>
+        </details>
+      </div>
+      <div className="scores-updated">Last updated: {formatLastUpdated(lastUpdatedAt)}{autoRefreshEnabled ? " · Auto every 30s" : ""}</div>
+      {refreshFeedback}
+    </section>;
+  }
 
   return (
     <>

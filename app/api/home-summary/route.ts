@@ -11,6 +11,7 @@ type Team = {
 };
 
 type Slate = {
+  display_name?: string | null;
   id: number;
   date: string;
   start_date: string | null;
@@ -257,7 +258,7 @@ export async function GET(request: Request) {
       supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, first_game_start_time, tournament_analysis, show_tournament_analysis, league_id"
+          "id, date, start_date, end_date, is_locked, display_name, first_game_start_time, tournament_analysis, show_tournament_analysis, league_id"
         )
         .eq(
           "league_id",
@@ -1551,6 +1552,7 @@ export async function GET(request: Request) {
       latestSlate: latestSlate
         ? {
             id: latestSlate.id,
+            display_name: latestSlate.display_name ?? null,
             date: latestSlate.date,
             start_date: latestSlate.start_date,
             end_date: latestSlate.end_date,
@@ -1566,6 +1568,7 @@ export async function GET(request: Request) {
       nextSlate: nextSlate
         ? {
             id: nextSlate.id,
+            display_name: nextSlate.display_name ?? null,
             date: nextSlate.date,
             start_date: nextSlate.start_date,
             end_date: nextSlate.end_date,

@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
 import RefreshPlayersButton from "@/components/lineups/RefreshPlayersButton";
-import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+import { formatFantasySlateLabel } from "@/lib/formatSlateLabel";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveLeagueForSport,
@@ -277,13 +277,7 @@ export default async function DraftLineupsPage({
       date: slate.date,
       start_date: startDate,
       end_date: endDate,
-      label:
-        (sport === "golf" || sport === "nfl") && slate.display_name
-          ? String(slate.display_name)
-          : formatSlateDateLabel({
-              start_date: startDate,
-              end_date: endDate,
-            }),
+      label: formatFantasySlateLabel({ ...slate, sport, start_date: startDate, end_date: endDate }),
       is_locked: Boolean(slate.is_locked),
       sport: slate.sport ?? sport,
       display_name: slate.display_name ?? null,

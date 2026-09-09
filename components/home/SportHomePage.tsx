@@ -2,7 +2,13 @@
 
 import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
-import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+import { usePullToRefresh } from "@/lib/client/usePullToRefresh";
+import { createRefreshScope } from "@/lib/client/refreshScope";
+import type { RefreshOutcome } from "@/lib/client/refreshOutcome";
+import ScoresRefreshButton from "@/components/ui/ScoresRefreshButton";
+import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
+import FantasyHomeStandings from "./FantasyHomeStandings";
+import { formatSlateDateLabel, formatFantasySlateLabel } from "@/lib/formatSlateLabel";
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -18,7 +24,6 @@ import type {
   Player,
   PlayerStat,
 } from "@/components/lineups/types";
-import { getStatColumns, type StatColumn } from "@/lib/statColumns";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import type { GolfCutLine } from "@/lib/golf/cutLine";
@@ -391,7 +396,7 @@ function HomePageContent() {
   const { selectedSport, setSelectedSport } = useSelectedSport();
 
   const {
-    groupContext,
+    groupContext, isLoading: isGroupLoading, isSwitchingGroup,
   } =
     useGroupContext();
 
@@ -426,6 +431,7 @@ function HomePageContent() {
    *
    *   new sport + previous sport's slate
    */
+  const [dataGroupId, setDataGroupId] = useState<string | null>(null);
   const [dataSport, setDataSport] = useState<string | null>(null);
 
   /*
@@ -453,8 +459,7 @@ function HomePageContent() {
     useState<SlateRosterModalState>(null);
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
-  const [slateRosterStatColumns, setSlateRosterStatColumns] =
-    useState<StatColumn[]>(getStatColumns("nba"));
+
   const [selectedRosterPlayer, setSelectedRosterPlayer] =
     useState<Player | null>(null);
 
@@ -470,51 +475,6 @@ function HomePageContent() {
       "fantasy",
     );
 
-  function parseStatusTextMinutesRemaining(statusText?: string | null) {
-    if (!statusText) return null;
-
-    const trimmed = statusText.trim();
-
-    if (/final/i.test(trimmed)) return 0;
-
-    const match = trimmed.match(/^Q(\d+)\s+(?:(\d*)?:)?(\d+(?:\.\d+)?)$/i);
-
-    if (!match) return null;
-
-    const period = Number(match[1]);
-    const minutes = Number(match[2] || 0);
-    const seconds = Number(match[3] ?? 0);
-
-    const clockMinutes = minutes + seconds / 60;
-    const periodsRemainingAfterCurrent = Math.max(4 - period, 0);
-
-    return periodsRemainingAfterCurrent * 12 + clockMinutes;
-  }
-
-  function getProjectedFantasyPoints(row: any) {
-    const current = Number(row.fantasyPoints ?? 0);
-    const baseline = Number(row.projection ?? row.averageProjection ?? 30);
-
-    const remainingMinutes = parseStatusTextMinutesRemaining(
-      row.gameStatusText,
-    );
-
-    if (remainingMinutes === 0) return current;
-
-    if (remainingMinutes === null) return baseline;
-
-    return current + baseline * (remainingMinutes / 48);
-  }
-
-  function getPlayerStatusLabel(row: any) {
-    const text = row.gameStatusText;
-
-    if (!text) return "Pregame";
-
-    if (/final/i.test(text)) return "Final";
-
-    return text;
-  }
   const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
   const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -523,8 +483,35 @@ function HomePageContent() {
   const homeGolfRefreshInFlightRef = useRef(false);
   const lastHomeGolfAutoRefreshRef = useRef(0);
 
-  async function refreshSlateStatsById(slateId: number) {
-    if (homeGolfRefreshInFlightRef.current) return;
+  const homeSurfaceRef = useRef<HTMLElement>(null);
+  const homeMountedRef = useRef(true);
+  const homeDataScope = useRef(createRefreshScope(""));
+  homeDataScope.current.update(JSON.stringify([activeGroupId, sport, isGroupLoading, isSwitchingGroup]));
+  const renderDataCurrent = homeDataScope.current.capture();
+  const homeRefreshScope = useRef(createRefreshScope(""));
+  const homeScopeKey = JSON.stringify([activeGroupId, sport, data?.latestSlate?.id, isGroupLoading, isSwitchingGroup]);
+  homeRefreshScope.current.update(homeScopeKey);
+  const renderRefreshCurrent = homeRefreshScope.current.capture();
+  const [homeFeedback, setHomeFeedback] = useState<{ scope: string; text: string } | null>(null);
+  useEffect(() => {
+    homeMountedRef.current = true;
+    return () => {
+      homeMountedRef.current = false;
+      homeDataScope.current.invalidate();
+      homeRefreshScope.current.invalidate();
+    };
+  }, []);
+  useEffect(() => { setHomeFeedback(null); }, [homeScopeKey]);
+  useEffect(() => {
+    if (homeFeedback?.text !== "Updated just now") return;
+    const timer = setTimeout(() => setHomeFeedback(null), 4000);
+    return () => clearTimeout(timer);
+  }, [homeFeedback]);
+
+  async function refreshSlateStatsById(slateId: number): Promise<RefreshOutcome> {
+    const isCurrent = isGolf ? () => true : renderRefreshCurrent;
+    if (!isCurrent() || (!isGolf && !homeMountedRef.current)) return { status: "skipped" };
+    if (homeGolfRefreshInFlightRef.current) return { status: "skipped" };
 
     homeGolfRefreshInFlightRef.current = true;
 
@@ -560,35 +547,38 @@ function HomePageContent() {
         const result =
           await response.json();
 
+        if (!isCurrent()) return { status: "skipped" };
         if (!response.ok) {
-          setMessage(
-            result.error ||
-              "Failed to refresh stats.",
-          );
-          return;
+          const message = result.error || "Failed to refresh stats.";
+          setMessage(message);
+          return { status: "error", message };
         }
       }
 
-      await loadHomeSummary();
+      if (!isCurrent()) return { status: "skipped" };
+      return await loadHomeSummary(isCurrent);
     } catch (err) {
+      if (!isCurrent()) return { status: "skipped" };
       console.error("Failed to refresh stats", err);
       setMessage("Failed to refresh stats.");
+      return { status: "error", message: "Failed to refresh stats." };
     } finally {
       homeGolfRefreshInFlightRef.current = false;
-      setIsRefreshingHomeStats(false);
+      if (homeMountedRef.current) setIsRefreshingHomeStats(false);
     }
   }
 
-  async function handleRefreshStats() {
+  async function handleRefreshStats(): Promise<RefreshOutcome> {
     if (!latestSlate?.id) {
       setMessage("No active slate found to refresh.");
-      return;
+      return { status: "skipped" };
     }
 
-    await refreshSlateStatsById(latestSlate.id);
+    return refreshSlateStatsById(latestSlate.id);
   }
 
-  async function loadHomeSummary() {
+  async function loadHomeSummary(isCurrent = isGolf ? () => true : renderDataCurrent): Promise<RefreshOutcome> {
+    if (!isCurrent()) return { status: "skipped" };
     /*
      * Capture the sport this request belongs to.
      *
@@ -609,7 +599,7 @@ function HomePageContent() {
       setData(null);
       setSeasonAwards(null);
       setGolfPlayerStats([]);
-      return;
+      return { status: "skipped" };
     }
 
     try {
@@ -623,9 +613,11 @@ function HomePageContent() {
 
       const result = await response.json();
 
+      if (!isCurrent()) return { status: "skipped" };
       if (!response.ok) {
-        setMessage(result.error || "Failed to load home summary.");
-        return;
+        const message = result.error || "Failed to load home summary.";
+        setMessage(message);
+        return { status: "error", message };
       }
 
       /*
@@ -638,11 +630,12 @@ function HomePageContent() {
         activeHomeGroupIdRef.current !==
           requestedGroupId
       ) {
-        return;
+        return { status: "skipped" };
       }
 
       setData(result);
       setDataSport(requestedSport);
+      setDataGroupId(requestedGroupId);
 
       if (
         requestedSport === "golf" &&
@@ -686,6 +679,7 @@ function HomePageContent() {
           cache: "no-store",
         });
         const awardsResult = await awardsResponse.json();
+        if (!isCurrent()) return { status: "skipped" };
 
         if (awardsResponse.ok) {
           setSeasonAwards(awardsResult);
@@ -696,11 +690,14 @@ function HomePageContent() {
       } else {
         setSeasonAwards(null);
       }
+      return { status: "success" };
     } catch (error) {
+      if (!isCurrent()) return { status: "skipped" };
       console.error(error);
       setMessage("Something went wrong while loading the home page.");
+      return { status: "error", message: "Could not reload Home." };
     } finally {
-      setIsLoading(false);
+      if (isCurrent()) setIsLoading(false);
     }
   }
 
@@ -727,7 +724,7 @@ function HomePageContent() {
   ]);
 
   useEffect(() => {
-    if (!slateRosterModal) {
+    if (!isGolf || !slateRosterModal) {
       setSlateRosterRows([]);
       setSlateRosterTotal(0);
       return;
@@ -758,9 +755,6 @@ function HomePageContent() {
 
         setSlateRosterRows(result.roster ?? []);
         setSlateRosterTotal(Number(result.total ?? 0));
-        setSlateRosterStatColumns(
-          result.statColumns ?? getStatColumns(result.sport ?? "nba"),
-        );
       } catch (error) {
         console.error(error);
         if (!isActive) return;
@@ -776,7 +770,7 @@ function HomePageContent() {
     return () => {
       isActive = false;
     };
-  }, [slateRosterModal]);
+  }, [slateRosterModal, isGolf, sport]);
 
   const latestSlate = data?.latestSlate ?? null;
   const latestSlateRows = data?.latestSlateRows ?? [];
@@ -843,19 +837,6 @@ function HomePageContent() {
             !hasRemainingGames
           )
         );
-
-  const scoreColumnLabel =
-    isGolf
-      ? "Score"
-      : isFinalSlate
-        ? "Final"
-        : "Current";
-
-  const projectionColumnLabel = isFinalSlate
-    ? "vs Proj."
-    : hasSlateStarted
-      ? "Proj. Final"
-      : "Pregame Proj.";
 
   const slateBadge =
     isGolf
@@ -1019,15 +1000,41 @@ function HomePageContent() {
             : "Open";
 
   const slateDateLabel = latestSlate
-    ? formatSlateDateLabel({
+    ? (sport === "nfl" ? formatFantasySlateLabel({ ...latestSlate, sport }) : formatSlateDateLabel({
         date: latestSlate.date,
         start_date: latestSlate.start_date,
         end_date: latestSlate.end_date,
-      })
+      }))
     : "No slate";
 
+  const homePullEnabled = (sport === "nba" || sport === "nfl") && Boolean(activeGroupId && latestSlate?.id) &&
+    dataSport === sport && dataGroupId === activeGroupId && !isLoading && !isGroupLoading && !isSwitchingGroup && !profileTeam;
+  async function refreshHomeManually(): Promise<RefreshOutcome> {
+    if (!homePullEnabled || !homeMountedRef.current || !renderRefreshCurrent() || homeGolfRefreshInFlightRef.current) return { status: "skipped" };
+    const isCurrent = homeRefreshScope.current.capture();
+    setHomeFeedback({ scope: homeScopeKey, text: "Refreshing…" });
+    let outcome: RefreshOutcome;
+    if (shouldShowRefreshStats) {
+      outcome = await handleRefreshStats();
+    } else {
+      homeGolfRefreshInFlightRef.current = true;
+      setIsRefreshingHomeStats(true);
+      try { outcome = await loadHomeSummary(isCurrent); }
+      finally {
+        homeGolfRefreshInFlightRef.current = false;
+        if (homeMountedRef.current) setIsRefreshingHomeStats(false);
+      }
+    }
+    if (!isCurrent()) return { status: "skipped" };
+    setHomeFeedback({ scope: homeScopeKey, text: outcome.status === "success" ? "Updated just now" :
+      outcome.status === "error" ? "Unable to refresh" : "" });
+    return outcome;
+  }
+  const homePull = usePullToRefresh({ targetRef: homeSurfaceRef, onRefresh: refreshHomeManually,
+    enabled: homePullEnabled, isRefreshing: isRefreshingHomeStats, scopeKey: homeScopeKey });
+
   return (
-    <main
+    <main ref={sport === "nba" || sport === "nfl" ? homeSurfaceRef : undefined}
       className={`min-h-screen px-3 py-5 pb-24 sm:px-4 sm:py-6 sm:pb-6 ${
         isGolf
           ? "bg-slate-950 text-slate-100"
@@ -1088,14 +1095,19 @@ function HomePageContent() {
               </div>
             </div>
 
+            <div className={isGolf ? "flex shrink-0 flex-col items-end gap-1" : "flex shrink-0 items-center gap-1"}>
+            {!isGolf && <ScoresRefreshButton label="Refresh" onRefresh={() => { void refreshHomeManually(); }}
+              disabled={!homePullEnabled || isRefreshingHomeStats} isRefreshing={isRefreshingHomeStats} />}
             <Link
               href={`/lineups/scores?sport=${sport}`}
               className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
             >
               View Scores
             </Link>
+            </div>
           </div>
 
+          {!isGolf && <PullToRefreshIndicator pull={homePull} feedback={homeFeedback?.scope === homeScopeKey ? homeFeedback.text : ""} />}
           {latestSlate?.show_tournament_analysis === true &&
           latestSlate.tournament_analysis?.trim() ? (
             <details
@@ -1161,7 +1173,7 @@ function HomePageContent() {
             </div>
           ) : (
             <>
-              <div
+              {isGolf && <div
                 className={`mb-3 overflow-hidden rounded-2xl border ${
                   isGolf
                     ? "border-emerald-700/60 bg-slate-950/70"
@@ -1317,7 +1329,7 @@ function HomePageContent() {
                     </>
                   ) : null}
                 </div>
-              </div>
+              </div>}
 
               {isGolf ? (
                 <div>
@@ -1861,164 +1873,7 @@ function HomePageContent() {
                   )}
                 </div>
               ) : (
-              <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <div className="-mx-4 overflow-x-auto px-4">
-                  <table className="w-full table-fixed border-collapse text-sm">
-                    <thead className="bg-slate-100 text-slate-700">
-                      <tr className="text-left">
-                        <th className="px-3 py-3 font-semibold">Team</th>
-                        <th className="px-2 py-3 font-semibold">
-                          {scoreColumnLabel}
-                        </th>
-                        <th className="px-2 py-3 font-semibold">
-                          {projectionColumnLabel}
-                        </th>
-                        <th className="px-2 py-3 font-semibold">Win %</th>
-                        <th className="px-2 py-3 font-semibold">Games</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white text-slate-800">
-                      {latestSlateRows.map((row, index) => (
-                        <tr
-                          key={`${row.slate_id}-${row.team_id}`}
-                          className={`border-t border-slate-100 ${
-                            index === 0 ? "home-winner-row bg-orange-50/50" : ""
-                          }`}
-                        >
-                          <td className="px-3 py-2.5">
-                            <TeamProfileButton
-                              teamName={row.teamName}
-                              avatarUrl={row.avatarUrl}
-                              onClick={() =>
-                                setProfileTeam({
-                                  id: row.team_id,
-                                  name: row.teamName,
-                                })
-                              }
-                            />
-                          </td>
-                          <td className="px-2 py-3">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSlateRosterModal({
-                                  slateId: row.slate_id,
-                                  teamId: row.team_id,
-                                  teamName: row.teamName,
-                                  slateLabel: latestSlate
-                                    ? slateDateLabel
-                                    : String(row.slate_id),
-                                })
-                              }
-                              className="home-score-pill-v2"
-                              aria-label={`View ${row.teamName}'s box score`}
-                              title={`View ${row.teamName}'s box score`}
-                            >
-                              <span>
-                                {roundTo(Number(row.fantasy_points ?? 0))}
-                              </span>
-
-                              <span
-                                className="home-score-pill-v2-chevron"
-                                aria-hidden="true"
-                              >
-                                ›
-                              </span>
-                            </button>
-                          </td>
-                          <td className="home-projection-value-v2 px-2 py-3">
-                            {isFinalSlate ? (
-                              row.pregame_projected_points !== null &&
-                              row.pregame_projected_points !== undefined ? (
-                                (() => {
-                                  const difference = roundTo(
-                                    Number(row.fantasy_points ?? 0) -
-                                      Number(row.pregame_projected_points),
-                                    1
-                                  );
-
-                                  const isNeutral = Math.abs(difference) <= 1;
-                                  const isPositive = difference > 1;
-
-                                  const displayDifference =
-                                    difference > 0
-                                      ? `+${difference.toFixed(1)}`
-                                      : difference.toFixed(1);
-
-                                  return (
-                                    <span
-                                      className={`home-projection-delta ${
-                                        isNeutral
-                                          ? "home-projection-delta--neutral"
-                                          : isPositive
-                                            ? "home-projection-delta--positive"
-                                            : "home-projection-delta--negative"
-                                      }`}
-                                      title={`Pregame projection: ${roundTo(
-                                        Number(row.pregame_projected_points),
-                                        1
-                                      )}`}
-                                      aria-label={`${
-                                        isNeutral
-                                          ? "Matched projection"
-                                          : isPositive
-                                            ? "Exceeded projection"
-                                            : "Finished below projection"
-                                      } by ${Math.abs(difference).toFixed(
-                                        1
-                                      )} fantasy points. Pregame projection ${roundTo(
-                                        Number(row.pregame_projected_points),
-                                        1
-                                      )}.`}
-                                    >
-                                      <span
-                                        className="home-projection-delta-icon"
-                                        aria-hidden="true"
-                                      >
-                                        {isNeutral
-                                          ? "—"
-                                          : isPositive
-                                            ? "▲"
-                                            : "▼"}
-                                      </span>
-
-                                      <span>{displayDifference}</span>
-                                    </span>
-                                  );
-                                })()
-                              ) : (
-                                "—"
-                              )
-                            ) : row.projected_points !== null &&
-                              row.projected_points !== undefined ? (
-                              roundTo(Number(row.projected_points))
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-2 py-3">
-                            {row.win_probability !== null &&
-                            row.win_probability !== undefined ? (
-                              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                                {roundTo(Number(row.win_probability), 0)}%
-                              </span>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-2 py-3">
-                            <GamesStatus
-                              completed={row.games_completed}
-                              inProgress={row.games_in_progress}
-                              remaining={row.games_remaining}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+                <FantasyHomeStandings rows={latestSlateRows} />
               )}
             </>
           )}
@@ -2225,212 +2080,7 @@ function HomePageContent() {
         </div>
       ) : null}
 
-      {slateRosterModal && !isGolf ? (
-        <div
-          className="mobile-modal-safe fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 px-3 py-4 sm:items-center"
-          onClick={() => setSlateRosterModal(null)}
-        >
-          <div
-            className="mobile-modal-panel-safe flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="shrink-0 border-b border-slate-200 px-5 py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">
-                    Box Score
-                  </div>
-                  <h3 className="mt-1 text-2xl font-bold text-slate-900">
-                    {slateRosterModal.teamName}&apos;s Lineup
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {slateRosterModal.slateLabel}
-                    <span className="mx-2 text-slate-300">•</span>
-                    <span className="font-semibold text-slate-700">
-                      {slateRosterTotal.toFixed(1)} Fantasy Points
-                    </span>
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setSlateRosterModal(null)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto p-5">
-              {isSlateRosterLoading ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                  Loading roster...
-                </div>
-              ) : slateRosterRows.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
-                  No roster found for this slate.
-                </div>
-              ) : (
-                <div>
-                  <div className="home-lineup-breakdown-heading">
-                    <h4>Player Breakdown</h4>
-
-                    <div className="home-lineup-breakdown-total">
-                      <span>Total</span>
-                      <strong>{slateRosterTotal.toFixed(1)}</strong>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 sm:hidden">
-                    {slateRosterRows.map((row) => (
-                      <div
-                        key={row.playerId}
-                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <button
-                            type="button"
-                            className="home-lineup-player-link"
-                            onClick={() => {
-                              const player = rosterRowToPlayer(row);
-                              if (player) setSelectedRosterPlayer(player);
-                            }}
-                            aria-label={`View ${row.name}'s player profile`}
-                          >
-                            <PlayerHeadshot
-                              nbaPlayerId={row.nbaPlayerId}
-                              nflPlayerId={row.nflPlayerId}
-                              playerName={row.name}
-                              size="sm"
-                            />
-
-                            <span>
-                              <span className="block text-xs font-semibold text-slate-500">
-                                {row.positionGroup ?? "—"}
-                              </span>
-                              <span className="block text-base font-semibold text-slate-900">
-                                {row.name}
-                              </span>
-                            </span>
-                          </button>
-                          <div className="text-right text-base font-bold text-slate-900">
-                            {Number(row.fantasyPoints ?? 0).toFixed(1)}
-                          </div>
-                        </div>
-
-                        <div className="mt-2 text-xs leading-relaxed text-slate-600">
-                          {slateRosterStatColumns
-                            .map(
-                              (column) =>
-                                `${row[column.key] ?? 0} ${column.label}`,
-                            )
-                            .join(" • ")}
-                        </div>
-
-                        <div className="mt-2 flex items-center justify-between text-xs">
-                          <div className="font-semibold text-sky-700">
-                            Proj: {getProjectedFantasyPoints(row).toFixed(1)}
-                          </div>
-
-                          <div className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">
-                            {getPlayerStatusLabel(row)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 sm:block">
-                    <table className="min-w-[720px] w-full text-sm">
-                      <thead className="bg-slate-100 text-slate-700">
-                        <tr className="text-left">
-                          <th className="px-3 py-2">Pos</th>
-                          <th className="px-3 py-2">Player</th>
-                          {slateRosterStatColumns.map((column) => (
-                            <th
-                              key={column.key}
-                              className="px-3 py-2 text-right"
-                            >
-                              {column.label}
-                            </th>
-                          ))}
-                          <th className="px-3 py-2 text-right">Total</th>
-                          <th className="px-3 py-2 text-right">Proj</th>
-                          <th className="px-3 py-2 text-right">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {slateRosterRows.map((row) => (
-                          <tr
-                            key={row.playerId}
-                            className="border-t border-slate-100"
-                          >
-                            <td className="px-3 py-2 font-medium">
-                              {row.positionGroup ?? "—"}
-                            </td>
-                            <td className="px-3 py-2">
-                              <button
-                                type="button"
-                                className="home-lineup-player-link home-lineup-player-link--table"
-                                onClick={() => {
-                                  const player = rosterRowToPlayer(row);
-                                  if (player) setSelectedRosterPlayer(player);
-                                }}
-                                aria-label={`View ${row.name}'s player profile`}
-                              >
-                                <PlayerHeadshot
-                                  nbaPlayerId={row.nbaPlayerId}
-                                  nflPlayerId={row.nflPlayerId}
-                                  playerName={row.name}
-                                  size="xs"
-                                />
-                                <span>{row.name}</span>
-                              </button>
-                            </td>
-                            {slateRosterStatColumns.map((column) => (
-                              <td
-                                key={column.key}
-                                className="px-3 py-2 text-right"
-                              >
-                                {row[column.key] ?? 0}
-                              </td>
-                            ))}
-                            <td className="px-3 py-2 text-right font-semibold">
-                              {Number(row.fantasyPoints ?? 0).toFixed(1)}
-                            </td>
-
-                            <td className="px-3 py-2 text-right font-semibold text-sky-700">
-                              {getProjectedFantasyPoints(row).toFixed(1)}
-                            </td>
-
-                            <td className="px-3 py-2 text-right text-xs font-medium text-slate-500">
-                              {getPlayerStatusLabel(row)}
-                            </td>
-                          </tr>
-                        ))}
-                        <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
-                          <td className="px-3 py-2" />
-                          <td className="px-3 py-2">Total</td>
-                          <td
-                            className="px-3 py-2 text-right"
-                            colSpan={slateRosterStatColumns.length}
-                          />
-                          <td className="px-3 py-2 text-right">
-                            {slateRosterTotal.toFixed(1)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <ReadOnlyPlayerModal
+      {isGolf && <ReadOnlyPlayerModal
         player={selectedRosterPlayer}
         setPlayer={setSelectedRosterPlayer}
         playerAverageMap={EMPTY_PLAYER_AVERAGE_MAP}
@@ -2443,7 +2093,7 @@ function HomePageContent() {
               null
             : null
         }
-      />
+      />}
 
       <TeamProfileModal team={profileTeam} setTeam={setProfileTeam} />
     </main>

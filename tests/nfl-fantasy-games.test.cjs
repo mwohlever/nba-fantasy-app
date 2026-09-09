@@ -144,8 +144,8 @@ test('roster and Scores retain profile handlers and distinct sibling actions', (
   const scores = fs.readFileSync(path.join(root, 'components/lineups/ScoresDashboard.tsx'), 'utf8');
   assert.match(draft, /onPlayerClick\(player\)/);
   assert.match(league, /setResearchPlayer\(player\)/);
-  assert.match(scores, /setProfilePlayer\(row.player\)/);
-  assert.match(scores, /<\/button>\s*<NflFantasyGameAction player=\{row.player\}/);
+  assert.match(scores, /setProfilePlayer\(player\)/);
+  assert.match(scores, /<\/button>\s*\{sport === "nfl" && <div className="scores-roster-game"><NflFantasyGameAction player=\{player\}/);
 });
 
 test('NFL games API authorizes before reads and uses only the requested slate window', async () => {

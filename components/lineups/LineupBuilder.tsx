@@ -1,5 +1,12 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { useGroupContext } from "@/components/providers/GroupProvider";
+import { usePullToRefresh } from "@/lib/client/usePullToRefresh";
+import { createRefreshScope } from "@/lib/client/refreshScope";
+import type { RefreshOutcome } from "@/lib/client/refreshOutcome";
+import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
+import ScoresRefreshButton from "@/components/ui/ScoresRefreshButton";
 import { nflSeasonForSlate } from "@/lib/lineups/nflDraftStats";
 
 import { NflFantasyGameCenter } from "@/components/lineups/NflFantasyGameCenter";
@@ -55,6 +62,14 @@ export default function LineupBuilder({
   sport,
 }: Props) {
   const { selectedSport, setSelectedSport } = useSelectedSport();
+  const pathname = usePathname();
+  const isScoresPage = pathname === "/lineups/scores";
+  const { groupContext, isLoading: isGroupLoading, isSwitchingGroup } = useGroupContext();
+  const scoresSurfaceRef = useRef<HTMLDivElement>(null);
+  const refreshScopeRef = useRef(createRefreshScope(""));
+  const refreshMountedRef = useRef(true);
+  const refreshHandlerRef = useRef<(silent?: boolean) => Promise<RefreshOutcome>>(async () => ({ status: "skipped" }));
+  const [refreshFeedback, setRefreshFeedback] = useState<{ scope: string; text: string } | null>(null);
 
   useEffect(() => {
     if (sport && sport !== selectedSport) {
@@ -95,7 +110,7 @@ export default function LineupBuilder({
   const [onSlateOnly, setOnSlateOnly] = useState(false);
   const [viewMode] = useState<ViewMode>(defaultViewMode ?? "scoring");
   const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(false);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [refreshTimestamp, setRefreshTimestamp] = useState<{ scope: string; value: string } | null>(null);
   const refreshInFlightRef = useRef(false);
   const lastGolfAutoRefreshRef = useRef(0);
   const [isGolfSlateMenuOpen, setIsGolfSlateMenuOpen] =
@@ -192,6 +207,49 @@ export default function LineupBuilder({
   activeGolfSlateRef.current = selectedSlateIdNumber;
   const selectedSlate =
     slates.find((slate) => slate.id === selectedSlateIdNumber) ?? null;
+  const scopeReady = Boolean(groupContext?.group.id && selectedSlate) && !isGroupLoading && !isSwitchingGroup &&
+    (!sport || sport === selectedSport);
+  const refreshScopeKey = JSON.stringify([groupContext?.group.id, selectedSport, sport,
+    selectedSlateIdNumber, selectedSlate?.sport, pathname, scopeReady]);
+  refreshScopeRef.current.update(refreshScopeKey);
+  const isRenderScopeCurrent = refreshScopeRef.current.capture();
+  const lastUpdatedAt = refreshTimestamp?.scope === refreshScopeKey ? refreshTimestamp.value : null;
+  useEffect(() => {
+    setRefreshFeedback(null);
+    setLastRefreshSummary(null);
+    setRefreshTimestamp(null);
+  }, [refreshScopeKey]);
+  useEffect(() => {
+    if (refreshFeedback?.text !== "Updated just now") return;
+    const timer = window.setTimeout(() => setRefreshFeedback(null), 4000);
+    return () => window.clearTimeout(timer);
+  }, [refreshFeedback]);
+  useEffect(() => {
+    refreshMountedRef.current = true;
+    return () => {
+      refreshMountedRef.current = false;
+      refreshScopeRef.current.invalidate();
+    };
+  }, []);
+
+  // Golf completion belongs to its accepted tournament lifecycle, not game counts.
+  const scoresStatus = selectedSlate?.is_locked ? "Final" : selectedSlate?.sport === "golf" ? "Upcoming" :
+    teamResultsState.some(row => Number(row.games_in_progress) > 0) ? "Live" :
+    teamResultsState.some(row => Number(row.games_completed) > 0) &&
+      teamResultsState.every(row => Number(row.games_remaining) === 0) ? "Final" :
+    teamResultsState.some(row => Number(row.games_completed) > 0) ? "Live" : "Upcoming";
+  const refreshUnavailable = !scopeReady || !selectedSlateIdNumber || isSlateLoading ||
+    Boolean(selectedSlate?.is_locked) || (selectedSlate?.sport !== "golf" && scoresStatus === "Final");
+  const pull = usePullToRefresh({
+    targetRef: scoresSurfaceRef,
+    onRefresh: () => refreshStatsForSelectedSlate(false),
+    enabled: isScoresPage && !refreshUnavailable && !profilePlayer && !isGolfSlateMenuOpen,
+    isRefreshing: isRefreshingStats,
+    scopeKey: refreshScopeKey,
+  });
+  const refreshIndicator = <PullToRefreshIndicator pull={pull}
+    feedback={refreshFeedback?.scope === refreshScopeKey ? refreshFeedback.text : ""} />;
+
 
 
   const effectiveRosterSlots =
@@ -417,6 +475,7 @@ export default function LineupBuilder({
   useEffect(() => {
     if (!selectedSlateIdNumber) return;
 
+    if (!scopeReady) return;
     const isGolf = selectedSlate?.sport === "golf";
     const shouldAutoRefresh = isGolf || autoRefreshEnabled;
 
@@ -437,7 +496,7 @@ export default function LineupBuilder({
       }
 
       lastGolfAutoRefreshRef.current = now;
-      void refreshStatsForSelectedSlate(true);
+      void refreshHandlerRef.current(true);
     };
 
     // An open Golf page becomes a live-score updater immediately.
@@ -466,12 +525,13 @@ export default function LineupBuilder({
     selectedSlateIdNumber,
     selectedSlate?.sport,
     selectedSlate?.is_locked,
+    refreshScopeKey,
   ]);
 
   useEffect(() => {
     if (!selectedSlateIdNumber) return;
     void loadSlateLineups(selectedSlateIdNumber);
-  }, [selectedSlateIdNumber]);
+  }, [selectedSlateIdNumber, refreshScopeKey]);
 
   const playerStatsMap = useMemo(() => {
     const map = new Map<number, PlayerStat>();
@@ -1175,6 +1235,7 @@ export default function LineupBuilder({
 
   async function loadSlateLineups(nextSlateId: number) {
     const loadId = ++latestSlateLoadRef.current;
+    const isCurrent = refreshScopeRef.current.capture();
 
     setLineupsState([]);
     setPlayerStatsState([]);
@@ -1195,7 +1256,7 @@ export default function LineupBuilder({
       const statsResult = await statsResponse.json();
       const resultsResult = await resultsResponse.json();
 
-      if (loadId !== latestSlateLoadRef.current) return;
+      if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
 
       if (!lineupsResponse.ok) {
         setSaveMessage(lineupsResult.error || "Failed to load slate lineups.");
@@ -1221,11 +1282,11 @@ export default function LineupBuilder({
       }
       setSaveMessage("");
     } catch (error) {
-      if (loadId !== latestSlateLoadRef.current) return;
+      if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
       console.error(error);
       setSaveMessage("Something went wrong while loading the slate.");
     } finally {
-      if (loadId === latestSlateLoadRef.current) {
+      if (isCurrent() && loadId === latestSlateLoadRef.current) {
         setIsSlateLoading(false);
       }
     }
@@ -1240,7 +1301,7 @@ export default function LineupBuilder({
 
       const availabilityResult = await availabilityResponse.json();
 
-      if (loadId !== latestSlateLoadRef.current) return;
+      if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
 
       if (!availabilityResponse.ok) {
         console.error(
@@ -1252,11 +1313,11 @@ export default function LineupBuilder({
 
       setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
     } catch (error) {
-      if (loadId !== latestSlateLoadRef.current) return;
+      if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
       console.error(error);
       setAvailablePlayerIdsForSlate([]);
     } finally {
-      if (loadId === latestSlateLoadRef.current) {
+      if (isCurrent() && loadId === latestSlateLoadRef.current) {
         setIsAvailabilityLoading(false);
       }
     }
@@ -1266,6 +1327,7 @@ export default function LineupBuilder({
     if (selectedSlate?.sport !== "golf" || !selectedSlateIdNumber) return;
     let cancelled = false;
     let requestNumber = 0;
+    const isCurrent = refreshScopeRef.current.capture();
     const reloadAcceptedGolf = async (event: Event) => {
       if ((event as CustomEvent).detail?.slateId !== selectedSlateIdNumber) return;
       const request = ++requestNumber;
@@ -1273,178 +1335,102 @@ export default function LineupBuilder({
         const stats = await fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, { cache: "no-store" });
         if (!stats.ok) throw new Error("Could not reload accepted Golf results.");
         const statsBody = await stats.json();
-        if (cancelled || request !== requestNumber) return;
+        if (!isCurrent() || cancelled || request !== requestNumber) return;
         applyAcceptedGolfSnapshot(selectedSlateIdNumber, statsBody);
       } catch (error) { console.error(error); }
     };
     window.addEventListener("golf-accepted-change", reloadAcceptedGolf);
     return () => { cancelled = true; window.removeEventListener("golf-accepted-change", reloadAcceptedGolf); };
-  }, [selectedSlateIdNumber, selectedSlate?.sport]);
+  }, [selectedSlateIdNumber, selectedSlate?.sport, refreshScopeKey]);
 
-  async function refreshStatsForSelectedSlate(isSilent = false) {
-    if (!selectedSlateIdNumber) {
-      if (!isSilent) alert("No slate selected.");
-      return;
+  async function refreshStatsForSelectedSlate(isSilent = false): Promise<RefreshOutcome> {
+    if (!refreshMountedRef.current || !isRenderScopeCurrent() || !selectedSlate || !selectedSlateIdNumber || !scopeReady || selectedSlate.is_locked ||
+      (isScoresPage && selectedSlate.sport !== "golf" && scoresStatus === "Final") ||
+      (!isSilent && isScoresPage && isSlateLoading) || refreshInFlightRef.current) {
+      return { status: "skipped" };
     }
-
-    if (refreshInFlightRef.current) return;
-
+    const isCurrent = refreshScopeRef.current.capture();
+    const slateId = selectedSlateIdNumber;
+    const refreshSport = selectedSlate?.sport ?? selectedSport;
     refreshInFlightRef.current = true;
-
+    setIsRefreshingStats(true);
+    if (!isSilent) {
+      setMessage("");
+      setSaveMessage("");
+      setRefreshFeedback({ scope: refreshScopeKey, text: "Refreshing…" });
+    }
     try {
-      setIsRefreshingStats(true);
-      if (!isSilent) {
-        setMessage("");
-        setSaveMessage("");
-      }
-
-      let refreshResult:
-        Record<string, unknown>;
-
-      if (
-        selectedSlate?.sport ===
-        "golf"
-      ) {
-        refreshResult =
-          await refreshGolfFromBrowser(
-            selectedSlateIdNumber,
-          );
+      let refreshResult: Record<string, unknown>;
+      if (refreshSport === "golf") {
+        refreshResult = await refreshGolfFromBrowser(slateId);
       } else {
-        const refreshEndpoint =
-          selectedSlate?.sport ===
-          "nfl"
-            ? "/api/refresh-stats-nfl"
-            : "/api/refresh-stats";
-
-        const refreshResponse =
-          await fetch(
-            refreshEndpoint,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-              body: JSON.stringify({
-                slateId:
-                  selectedSlateIdNumber,
-              }),
-              cache: "no-store",
-            },
-          );
-
-        refreshResult =
-          await refreshResponse.json();
-
-        if (!refreshResponse.ok) {
-          const errorMessage =
-            String(
-              refreshResult.error ??
-                "Failed to refresh stats.",
-            );
-
-          if (!isSilent) {
-            alert(errorMessage);
-          } else {
-            console.error(
-              errorMessage,
-            );
-          }
-
-          return;
-        }
+        const response = await fetch(refreshSport === "nfl" ? "/api/refresh-stats-nfl" : "/api/refresh-stats", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slateId }), cache: "no-store",
+        });
+        refreshResult = await response.json();
+        if (!response.ok) throw new Error(String(refreshResult.error ?? "Failed to refresh stats."));
       }
-
-      setLastRefreshSummary({
-        gamesFound:
-          typeof refreshResult.gamesFound ===
-          "number"
-            ? refreshResult.gamesFound
-            : undefined,
-        playerStatsUpserted:
-          typeof refreshResult.playerStatsUpserted ===
-          "number"
-            ? refreshResult.playerStatsUpserted
-            : undefined,
-        teamResultsUpserted:
-          typeof refreshResult.teamResultsUpserted ===
-          "number"
-            ? refreshResult.teamResultsUpserted
-            : undefined,
-      });
-
+      if (!isCurrent()) return { status: "skipped" };
+      // Golf's player-stats response is the atomic accepted player/team snapshot.
       const [statsResponse, resultsResponse] = await Promise.all([
-        fetch(`/api/player-stats?slateId=${selectedSlateIdNumber}`, {
-          cache: "no-store",
-        }),
-        fetch(`/api/team-results?slateId=${selectedSlateIdNumber}`, {
-          cache: "no-store",
-        }),
+        fetch(`/api/player-stats?slateId=${slateId}`, { cache: "no-store" }),
+        refreshSport === "golf" ? Promise.resolve(null) :
+          fetch(`/api/team-results?slateId=${slateId}`, { cache: "no-store" }),
       ]);
-
       const statsResult = await statsResponse.json();
-      const resultsResult = await resultsResponse.json();
-
-      if (!statsResponse.ok || !resultsResponse.ok) throw new Error("Could not reload refreshed results.");
-      if (statsResult.sport === "golf") {
-        applyAcceptedGolfSnapshot(selectedSlateIdNumber, statsResult);
+      const resultsResult = resultsResponse ? await resultsResponse.json() : null;
+      if (!isCurrent()) return { status: "skipped" };
+      if (!statsResponse.ok || (resultsResponse && !resultsResponse.ok)) {
+        throw new Error("Could not reload refreshed results.");
+      }
+      if (refreshSport === "golf") {
+        if (!Number.isSafeInteger(statsResult.acceptedRevision) || statsResult.acceptedRevision < 0 ||
+          statsResult.acceptedRevision < Number(refreshResult.acceptedRevision ?? 0)) {
+          throw new Error("Could not reload accepted Golf results.");
+        }
+        applyAcceptedGolfSnapshot(slateId, statsResult);
       } else {
         setPlayerStatsState(statsResult.playerStats ?? []);
-        setTeamResultsState(resultsResult.teamResults ?? []);
+        setTeamResultsState(resultsResult?.teamResults ?? []);
       }
-      setLastUpdatedAt(new Date().toISOString());
-
+      setLastRefreshSummary({
+        gamesFound: typeof refreshResult.gamesFound === "number" ? refreshResult.gamesFound : undefined,
+        playerStatsUpserted: typeof refreshResult.playerStatsUpserted === "number" ? refreshResult.playerStatsUpserted : undefined,
+        teamResultsUpserted: typeof refreshResult.teamResultsUpserted === "number" ? refreshResult.teamResultsUpserted : undefined,
+      });
+      setRefreshTimestamp({ scope: refreshScopeKey, value: new Date().toISOString() });
       if (!isSilent) {
-        setSaveMessage("Stats refreshed successfully.");
+        setRefreshFeedback({ scope: refreshScopeKey, text: "Updated just now" });
+        if (!isScoresPage) setSaveMessage("Stats refreshed successfully.");
       }
-
-      fetch(`/api/slate-availability?slateId=${selectedSlateIdNumber}`, {
-        cache: "no-store",
-      })
-        .then((res) => res.json())
-        .then((availabilityResult) => {
-          setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
-        })
-        .catch((error) => {
-          console.error(error);
-        });
+      void fetch(`/api/slate-availability?slateId=${slateId}`, { cache: "no-store" })
+        .then(async response => {
+          if (!response.ok) return;
+          const result = await response.json();
+          if (isCurrent()) setAvailablePlayerIdsForSlate(result.availablePlayerIds ?? []);
+        }).catch(error => { if (isCurrent()) console.error(error); });
+      return { status: "success" };
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : String(error);
-
-      const golfFieldIsWaiting =
-        selectedSlate?.sport === "golf" &&
-        errorMessage
-          .toLowerCase()
-          .includes(
-            "tournament field is not available yet",
-          );
-
-      /*
-       * ESPN often publishes the tournament shell before
-       * the player field. For silent Golf auto-refreshes,
-       * this is an expected waiting state rather than an
-       * application error, so do not trigger the Next dev
-       * error overlay.
-       */
-      if (!golfFieldIsWaiting) {
-        console.error(error);
-      }
-
+      if (!isCurrent()) return { status: "skipped" };
+      const message = error instanceof Error ? error.message : "Something went wrong while refreshing stats.";
+      const waiting = refreshSport === "golf" && message.toLowerCase().includes("tournament field is not available yet");
+      if (!waiting) console.error(error);
       if (!isSilent) {
-        alert(
-          golfFieldIsWaiting
-            ? "The tournament is available, but ESPN has not published the field yet."
-            : "Something went wrong while refreshing stats.",
-        );
+        setRefreshFeedback({ scope: refreshScopeKey, text: waiting
+          ? "Unable to refresh: ESPN has not published the field yet."
+          : `Unable to refresh: ${message}` });
+        if (!isScoresPage) alert(message);
       }
+      return { status: "error", message };
     } finally {
+      // This lock spans scope changes as well: never start a second provider refresh.
       refreshInFlightRef.current = false;
-      setIsRefreshingStats(false);
+      if (refreshMountedRef.current) setIsRefreshingStats(false);
     }
   }
+  // Timers keep their existing cadence but execute against the latest loaded state.
+  refreshHandlerRef.current = refreshStatsForSelectedSlate;
 
   function getCompatibleOpenSlotsForPlayer(
     teamId: number,
@@ -2132,34 +2118,8 @@ export default function LineupBuilder({
     <>
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              void refreshStatsForSelectedSlate(false)
-            }
-            disabled={
-              !selectedSlateIdNumber ||
-              isRefreshingStats
-            }
-            className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-sky-500 bg-sky-950 px-3 py-2 text-sm font-black text-sky-200 transition hover:bg-sky-900 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:px-4"
-          >
-            <span
-              aria-hidden="true"
-              className={
-                isRefreshingStats
-                  ? "animate-spin"
-                  : ""
-              }
-            >
-              ↻
-            </span>
-
-            <span>
-              {isRefreshingStats
-                ? "Refreshing..."
-                : "Refresh Scores"}
-            </span>
-          </button>
+          <ScoresRefreshButton onRefresh={() => refreshStatsForSelectedSlate(false)}
+            disabled={refreshUnavailable || isRefreshingStats} isRefreshing={isRefreshingStats} />
 
           <button
             type="button"
@@ -2195,6 +2155,8 @@ export default function LineupBuilder({
           </span>
         </div>
       </div>
+
+      {isScoresPage ? refreshIndicator : null}
 
       {hasMounted &&
       isGolfSlateMenuOpen
@@ -2362,6 +2324,9 @@ export default function LineupBuilder({
 
   const lineupControls = (
     <LineupControls
+      refreshUnavailable={refreshUnavailable}
+      scoresStatus={scoresStatus}
+      refreshFeedback={isScoresPage ? refreshIndicator : null}
       selectedSlateId={selectedSlateId}
       setSelectedSlateId={setSelectedSlateId}
       slates={filteredSlates}
@@ -2392,7 +2357,7 @@ export default function LineupBuilder({
       slateId={(selectedSlate?.sport ?? selectedSport) === "nfl" ? selectedSlateIdNumber : null}
       refreshKey={lastUpdatedAt}
     >
-    <div className="space-y-6">
+    <div ref={isScoresPage ? scoresSurfaceRef : undefined} className={isScoresPage ? "scores-page-content" : "space-y-6"}>
       {viewMode === "draft"
         ? lineupControls
         : null}
@@ -2574,6 +2539,8 @@ export default function LineupBuilder({
         </>
       ) : (
         <ScoresDashboard
+          currentTeamId={groupContext?.team?.id ?? null}
+          scopeKey={refreshScopeKey}
           players={players}
           teams={orderedTeamsForSlate}
           selectedSlate={selectedSlate}

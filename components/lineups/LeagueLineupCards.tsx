@@ -79,6 +79,7 @@ function MiniSlot({
       {player ? (
         <PlayerHeadshot
           nbaPlayerId={player.nba_player_id}
+          nflPlayerId={player.nfl_player_id}
           playerName={player.name}
           imageUrl={player.headshot_url}
           size="sm"

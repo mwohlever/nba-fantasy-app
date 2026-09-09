@@ -73,3 +73,18 @@ export function formatSlateDateLabel(
     end.date
   )} ${end.day}, ${end.year}`;
 }
+
+/** Display only: persisted NFL week identity is independent of its provider date window. */
+export function formatFantasySlateLabel(slate: SlateDateFields & {
+  sport?: string | null; display_name?: string | null; label?: string | null;
+}) {
+  if (slate.sport === "nfl") {
+    const identity = slate.display_name?.trim() || slate.label?.trim();
+    const week = identity?.match(/^(?:\d{4}\s+)?Week\s+(\d+)$/i);
+    if (week) return `Week ${Number(week[1])}`;
+    // Legacy date-based slates have no authoritative week identity to invent.
+    return identity || formatSlateDateLabel(slate);
+  }
+  if (slate.sport === "golf" && slate.display_name) return slate.display_name;
+  return formatSlateDateLabel(slate);
+}

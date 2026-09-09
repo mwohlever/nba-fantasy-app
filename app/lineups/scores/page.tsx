@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
-import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
+import { formatFantasySlateLabel } from "@/lib/formatSlateLabel";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveLeagueForSport,
@@ -355,13 +355,7 @@ export default async function ScoresLineupsPage({
         date: slate.date,
         start_date: startDate,
         end_date: endDate,
-        label:
-          sport === "golf" && (slate as any).display_name
-            ? String((slate as any).display_name)
-            : formatSlateDateLabel({
-                start_date: startDate,
-                end_date: endDate,
-              }),
+        label: formatFantasySlateLabel({ ...slate, sport, start_date: startDate, end_date: endDate }),
         is_locked: slate.is_locked,
         sport: slate.sport ?? "nba",
         has_cut:
