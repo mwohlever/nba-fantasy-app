@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import GameCenterModal from "@/components/live-scores/GameCenterModal";
+import GameCenterModal from "@/components/live-scores/NflGameCenterModal";
 import type { LiveScoreGame } from "@/components/live-scores/LiveScoreCard";
 import { nflGameActionLabel, nflTeamCode } from "@/lib/live-scores/nflFantasyGames";
 
@@ -54,7 +54,6 @@ export function NflFantasyGameCenter({ slateId, refreshKey, children, draftGames
       {children}
       {selectedGame && selectedGame.slateId === slateId ? <GameCenterModal
         key={selectedGame.game.espnEventId}
-        apiBase="/api/live-scores/nfl"
         game={selectedGame.game}
         onClose={() => setSelectedGame(null)}
       /> : null}

@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import FantasyOwnerLabel from "./FantasyOwnerLabel";
+import NflLiveField from "./NflLiveField";
+import { nflAthleteId, type NflOwnership } from "@/lib/live-scores/nflOwnership";
 import { footballPlaysByQuarter } from "@/lib/live-scores/football-plays";
 import type { LiveScoreGame } from "./LiveScoreCard";
 
@@ -211,6 +214,8 @@ type PlayerDetailResponse = {
 };
 
 type GameDetailResponse = {
+  ownership?: NflOwnership | null;
+  field?: import("@/lib/live-scores/nflField").NflFieldState | null;
   success?: boolean;
   error?: string;
   eventId?: string;
@@ -722,9 +727,11 @@ function PlayerDetailModal({
 export default function GameCenterModal({
   game,
   apiBase,
+  fantasyScope,
   onClose,
 }: {
   game: LiveScoreGame;
+  fantasyScope?: { groupId: string; leagueId: string } | null;
   apiBase: string;
   onClose: () => void;
 }) {
@@ -763,7 +770,7 @@ export default function GameCenterModal({
         const response = await fetch(
           `${apiBase}/game-detail?eventId=${encodeURIComponent(
             game.espnEventId,
-          )}`,
+          )}${fantasyScope ? `&groupId=${encodeURIComponent(fantasyScope.groupId)}` : ""}`,
           { cache: "no-store", signal: controller.signal },
         );
 
@@ -792,13 +799,18 @@ export default function GameCenterModal({
         }
       }
     },
-    [game.espnEventId, apiBase],
+    [game.espnEventId, apiBase, fantasyScope?.groupId, fantasyScope?.leagueId],
   );
 
   useEffect(() => {
     void loadGameDetail({ initial: true });
     return () => { requestRef.current?.abort(); requestRef.current = null; };
   }, [loadGameDetail]);
+
+  const ownership = apiBase === "/api/live-scores/nfl" && detail?.eventId === game.espnEventId &&
+    fantasyScope && detail?.ownership?.groupId === fantasyScope.groupId && detail.ownership.leagueId === fantasyScope.leagueId
+    ? detail.ownership.players : {};
+  const ownerFor = (id?: string) => ownership[nflAthleteId(id) ?? ""];
 
   const competition = detail?.header?.competitions?.[0];
   const isLive = competition?.status?.type?.state === "in";
@@ -1171,7 +1183,9 @@ export default function GameCenterModal({
               </div>
             </div>
           ) : tab === "pbp" ? (
-            <div className="p-4">                  <section>
+            <div className="p-4">
+              {apiBase === "/api/live-scores/nfl" ? <NflLiveField field={error ? null : detail?.field} /> : null}
+              <section>
                     <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
                       Play-by-Play
                     </div>
@@ -1565,13 +1579,13 @@ export default function GameCenterModal({
                                       tabIndex={
                                         row.athlete?.id ? 0 : undefined
                                       }
-                                      className={`border-t border-slate-100 ${
+                                      className={`border-t border-slate-100 ${ownerFor(row.athlete?.id)?.isYou ? "bg-sky-50 dark:bg-sky-950/40" : ownerFor(row.athlete?.id) ? "bg-slate-50 dark:bg-slate-800/40" : ""} ${
                                         row.athlete?.id
                                           ? "cursor-pointer hover:bg-slate-50"
                                           : ""
                                       }`}
                                     >
-                                      <td className="sticky left-0 bg-white px-3 py-2">
+                                      <td className={`sticky left-0 px-3 py-2 ${ownerFor(row.athlete?.id)?.isYou ? "bg-sky-50 dark:bg-sky-950" : ownerFor(row.athlete?.id) ? "bg-slate-50 dark:bg-slate-800" : "bg-white"}`}>
                                         <div className="flex min-w-[135px] items-center gap-2">
                                           {row.athlete?.headshot?.href ? (
                                             <img
@@ -1584,11 +1598,11 @@ export default function GameCenterModal({
                                           ) : (
                                             <div className="h-7 w-7 rounded-full bg-slate-100" />
                                           )}
-                                          <span className="font-bold text-slate-900 underline decoration-slate-300 underline-offset-2">
+                                          <div><span className="font-bold text-slate-900 underline decoration-slate-300 underline-offset-2">
                                             {row.athlete?.shortName ||
                                               row.athlete?.displayName ||
                                               "Player"}
-                                          </span>
+                                          </span><FantasyOwnerLabel owner={ownerFor(row.athlete?.id)} /></div>
                                         </div>
                                       </td>
 

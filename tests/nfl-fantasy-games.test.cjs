@@ -111,7 +111,7 @@ test('one slate fetch serves players; opening and closing preserve fantasy child
   assert.equal(tree.props.children[0], child);
   const modal = tree.props.children[1];
   assert.equal(modal.props.game.espnEventId, '101');
-  assert.equal(modal.props.apiBase, '/api/live-scores/nfl');
+  assert.equal(modal.type.name, 'NflGameCenterModal');
   modal.props.onClose();
   tree = render();
   assert.equal(tree.props.children[0], child);

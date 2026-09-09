@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import AppNav from "@/components/AppNav";
 import LiveScoreCard from "@/components/live-scores/LiveScoreCard";
-import GameCenterModal from "@/components/live-scores/GameCenterModal";
+import GameCenterModal from "@/components/live-scores/NflGameCenterModal";
 
 type Game = import("./LiveScoreCard").LiveScoreGame;
 
@@ -371,7 +371,6 @@ export default function NflLiveScores() {
       {selectedGame ? (
         <GameCenterModal
           key={selectedGame.espnEventId}
-          apiBase="/api/live-scores/nfl"
           game={selectedGame}
           onClose={() => setSelectedGame(null)}
         />

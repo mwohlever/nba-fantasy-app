@@ -1,0 +1,142 @@
+{
+  "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772936",
+  "header": {
+    "competitions": [
+      {
+        "status": {
+          "type": {
+            "id": "3",
+            "name": "STATUS_FINAL",
+            "state": "post",
+            "completed": true,
+            "description": "Final",
+            "detail": "Final",
+            "shortDetail": "Final"
+          },
+          "isTBDFlex": false
+        },
+        "competitors": [
+          {
+            "id": "9",
+            "homeAway": "home",
+            "possession": false,
+            "team": {
+              "id": "9",
+              "abbreviation": "GB",
+              "color": "204e32"
+            }
+          },
+          {
+            "id": "28",
+            "homeAway": "away",
+            "possession": false,
+            "team": {
+              "id": "28",
+              "abbreviation": "WSH",
+              "color": "5a1414"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "drives": {
+    "previous": [
+      {
+        "team": {
+          "id": "9"
+        },
+        "plays": [
+          {
+            "id": "40177293663",
+            "type": {
+              "id": "5",
+              "text": "Rush",
+              "abbreviation": "RUSH"
+            },
+            "text": "J.Jacobs right guard to GB 32 for 4 yards (W.Harris).",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "14:55"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "start": {
+              "down": 1,
+              "distance": 10,
+              "yardLine": 28,
+              "yardsToEndzone": 72,
+              "downDistanceText": "1st & 10 at GB 28",
+              "shortDownDistanceText": "1st & 10",
+              "possessionText": "GB 28",
+              "team": {
+                "id": "9"
+              }
+            },
+            "end": {
+              "down": 2,
+              "distance": 6,
+              "yardLine": 32,
+              "yardsToEndzone": 68,
+              "downDistanceText": "2nd & 6 at GB 32",
+              "shortDownDistanceText": "2nd & 6",
+              "possessionText": "GB 32",
+              "team": {
+                "id": "9"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "28"
+        },
+        "plays": [
+          {
+            "id": "401772936427",
+            "type": {
+              "id": "7",
+              "text": "Sack"
+            },
+            "text": "(No Huddle, Shotgun) J.Daniels sacked at WAS 35 for -1 yards (D.Wyatt).",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "9:48"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "start": {
+              "down": 2,
+              "distance": 7,
+              "yardLine": 64,
+              "yardsToEndzone": 64,
+              "downDistanceText": "2nd & 7 at WSH 36",
+              "shortDownDistanceText": "2nd & 7",
+              "possessionText": "WSH 36",
+              "team": {
+                "id": "28"
+              }
+            },
+            "end": {
+              "down": 3,
+              "distance": 8,
+              "yardLine": 65,
+              "yardsToEndzone": 65,
+              "downDistanceText": "3rd & 8 at WSH 35",
+              "shortDownDistanceText": "3rd & 8",
+              "possessionText": "WSH 35",
+              "team": {
+                "id": "28"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

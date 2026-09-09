@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import type { AppUser } from "@/lib/auth";
 import { possessionTeamId } from "./possession";
 
-export function createFootballGameDetailHandler(league: "college-football" | "nfl", getAccess: (user: AppUser) => Promise<unknown>) {
+export function createFootballGameDetailHandler<Access>(league: "college-football" | "nfl", getAccess: (user: AppUser) => Promise<Access>, enrich?: (summary: any, access: NonNullable<Access>, request: NextRequest) => Promise<Record<string, unknown>>) {
 
 const ESPN_FOOTBALL_BASE =
   `https://site.api.espn.com/apis/site/v2/sports/football/${league}`;
@@ -522,7 +522,11 @@ return async function GET(request: NextRequest) {
       };
     }
 
+    // Optional NFL annotations never prevent the provider Game Center from rendering.
+    const annotations = enrich ? await enrich(summary, access, request).catch(() => ({})) : {};
+
     return NextResponse.json({
+      ...annotations,
       success: true,
       eventId: id,
       seasonYear,
@@ -545,7 +549,7 @@ return async function GET(request: NextRequest) {
       lastFiveGames: Array.isArray(summary?.lastFiveGames)
         ? summary.lastFiveGames
         : [],
-    });
+    }, league === "nfl" ? { headers: { "Cache-Control": "private, no-store" } } : undefined);
   } catch (error) {
     console.error("Failed to load football game detail", error);
 
