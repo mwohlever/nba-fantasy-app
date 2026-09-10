@@ -4,6 +4,7 @@ import ThemeProvider from "@/components/theme/ThemeProvider";
 import SportProvider from "@/components/providers/SportProvider";
 import GroupProvider from "@/components/providers/GroupProvider";
 import "./globals.css";
+import NotificationReminder from "@/components/NotificationReminder";
 import AppHeartbeat from "@/components/AppHeartbeat";
 import AppResumeTracker from "@/components/platform/AppResumeTracker";
 
@@ -77,6 +78,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AppHeartbeat />
         <ThemeProvider>
+          <NotificationReminder />
           <GroupProvider>
             <SportProvider>
               <AppResumeTracker />

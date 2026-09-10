@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { enableCurrentDevicePush, getDeviceName } from "@/lib/pushDevice";
 
 type RegisteredDevice = {
   id: string;
@@ -10,54 +11,6 @@ type RegisteredDevice = {
   created_at: string | null;
   last_used_at: string | null;
 };
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = "=".repeat(
-    (4 - (base64String.length % 4)) % 4,
-  );
-
-  const base64 = (base64String + padding)
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
-
-  const rawData = window.atob(base64);
-
-  return Uint8Array.from(
-    [...rawData].map((character) =>
-      character.charCodeAt(0),
-    ),
-  );
-}
-
-function getDeviceName() {
-  const userAgent = navigator.userAgent;
-
-  if (/iPhone/i.test(userAgent)) {
-    return "iPhone";
-  }
-
-  if (/iPad/i.test(userAgent)) {
-    return "iPad";
-  }
-
-  if (/Android/i.test(userAgent)) {
-    return "Android device";
-  }
-
-  if (/CrOS/i.test(userAgent)) {
-    return "Chromebook";
-  }
-
-  if (/Macintosh/i.test(userAgent)) {
-    return "Mac";
-  }
-
-  if (/Windows/i.test(userAgent)) {
-    return "Windows computer";
-  }
-
-  return "Web browser";
-}
 
 function formatDeviceDate(value: string | null) {
   if (!value) {
@@ -311,8 +264,11 @@ export default function PushDeviceControls() {
     }
 
     void checkPushStatus();
+    const enabled = () => { void checkPushStatus(); };
+    window.addEventListener("111-push-device-enabled", enabled);
 
     return () => {
+      window.removeEventListener("111-push-device-enabled", enabled);
       active = false;
     };
   }, []);
@@ -322,92 +278,9 @@ export default function PushDeviceControls() {
       setIsWorking(true);
       setMessage("");
 
-      const publicKey =
-        process.env
-          .NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-      if (!publicKey) {
-        setMessage(
-          "The public notification key is not configured.",
-        );
-        return;
-      }
-
-      const nextPermission =
-        await Notification.requestPermission();
-
-      setPermission(nextPermission);
-
-      if (nextPermission !== "granted") {
-        setMessage(
-          nextPermission === "denied"
-            ? "Notifications are blocked in this browser's settings."
-            : "Notification permission was not granted.",
-        );
-
-        return;
-      }
-
-      const registration =
-        await navigator.serviceWorker.register(
-          "/sw.js",
-        );
-
-      await navigator.serviceWorker.ready;
-
-      let subscription =
-        await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        subscription =
-          await registration.pushManager.subscribe(
-            {
-              userVisibleOnly: true,
-              applicationServerKey:
-                urlBase64ToUint8Array(
-                  publicKey,
-                ),
-            },
-          );
-      }
-
-      const subscriptionJson =
-        subscription.toJSON();
-
-      const response = await fetch(
-        "/api/push-subscriptions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body: JSON.stringify({
-            endpoint:
-              subscriptionJson.endpoint,
-            keys:
-              subscriptionJson.keys,
-            deviceName:
-              getDeviceName(),
-          }),
-        },
-      );
-
-      const result =
-        await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          result.error ||
-            "Unable to register this device.",
-        );
-
-        return;
-      }
-
-      setCurrentEndpoint(
-        subscription.endpoint,
-      );
+      const endpoint = await enableCurrentDevicePush();
+      setPermission(Notification.permission);
+      setCurrentEndpoint(endpoint);
 
       await refreshDeviceState();
 
@@ -420,9 +293,8 @@ export default function PushDeviceControls() {
         error,
       );
 
-      setMessage(
-        "Unable to enable push notifications.",
-      );
+      setPermission(Notification.permission);
+      setMessage(error instanceof Error ? error.message : "Unable to enable push notifications.");
     } finally {
       setIsWorking(false);
     }

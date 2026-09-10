@@ -345,6 +345,9 @@ function ProfilePageContent() {
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
+    if (requestedTab === "settings" && searchParams.get("section") === "notifications") {
+      setActiveSettingsTab("notifications");
+    }
 
     if (
       requestedTab === "overview" ||
@@ -881,7 +884,7 @@ function ProfilePageContent() {
                           </p>
                         </div>
 
-                        <div className="mt-5">
+                        <div id="push-device" className="mt-5">
                           <PushDeviceControls />
                         </div>
 
