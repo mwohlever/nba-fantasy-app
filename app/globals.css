@@ -311,6 +311,20 @@ body {
   --tw-shadow-color: rgb(0 0 0 / 0.45);
 }
 
+/* Keep the reminder actions above navigation; only long copy scrolls. */
+.notification-reminder {
+  --notification-reminder-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  bottom: var(--notification-reminder-bottom);
+  max-height: calc(100dvh - var(--notification-reminder-bottom) - max(1rem, env(safe-area-inset-top, 0px)));
+}
+
+@media (max-width: 639px) {
+  .notification-reminder {
+    /* Match the profile's pb-24 clearance, including a gap above the nav shield. */
+    --notification-reminder-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Mobile fixed bottom nav safety */
 @media (max-width: 639px) {
   main {

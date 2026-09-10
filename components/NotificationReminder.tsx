@@ -82,17 +82,19 @@ export default function NotificationReminder() {
   if (!visible || pathname === "/login" || pathname.startsWith("/auth")) return null;
   const denied = permission === "denied";
   return (
-    <aside aria-labelledby="notification-reminder-title" className="fixed inset-x-3 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 mx-auto max-w-sm rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-      <h2 id="notification-reminder-title" className="text-sm font-semibold">
-        {denied ? "Notifications are blocked on this device" : "Turn on notifications?"}
-      </h2>
-      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-        {denied
-          ? "Allow notifications in your browser or device settings, then enable this device in Notification Settings."
-          : "Get draft alerts, game updates, and other 111 Sports notifications on this device."}
-      </p>
-      {message && <p role="status" className="mt-2 text-sm">{message}</p>}
-      <div className="mt-3 flex flex-wrap gap-2">
+    <aside aria-labelledby="notification-reminder-title" className="notification-reminder fixed inset-x-3 z-50 flex flex-col mx-auto max-w-sm rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+      <div className="min-h-0 overflow-y-auto overscroll-contain break-words">
+        <h2 id="notification-reminder-title" className="text-sm font-semibold">
+          {denied ? "Notifications are blocked on this device" : "Turn on notifications?"}
+        </h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          {denied
+            ? "Allow notifications in your browser or device settings, then enable this device in Notification Settings."
+            : "Get draft alerts, game updates, and other 111 Sports notifications on this device."}
+        </p>
+        {message && <p role="status" className="mt-2 text-sm">{message}</p>}
+      </div>
+      <div className="mt-3 flex shrink-0 flex-wrap gap-2">
         {denied ? (
           <Link href={NOTIFICATION_DEVICE_URL} onClick={dismiss} className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-semibold text-white">Notification Settings</Link>
         ) : (
