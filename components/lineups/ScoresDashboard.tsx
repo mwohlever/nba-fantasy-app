@@ -1,7 +1,7 @@
 "use client";
 
 import { NflFantasyGameAction, NflFantasyGamesContext } from "./NflFantasyGameCenter";
-import { nflRosterStatusCounts } from "@/lib/lineups/nflRosterStatus";
+import { nflRosterPlayerStatus, nflRosterStatusCounts } from "@/lib/lineups/nflRosterStatus";
 
 import { useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
@@ -156,7 +156,7 @@ function TraditionalScoresDashboard({
       return { team, stats, score: Number(stats.total ?? 0),
         projected: getLiveProjectedTeamTotal(team.id), winPct: liveWinPctMap.get(team.id) ?? 0 };
     }).sort((a, b) => b.score - a.score),
-    [teams, getTeamStats, getLiveProjectedTeamTotal, liveWinPctMap, sport, nflGames, getPlayersForTeam, getRawPlayerStat]);
+    [teams, getTeamStats, getLiveProjectedTeamTotal, liveWinPctMap, sport, nflGames, selectedSlate?.id, getPlayersForTeam, getRawPlayerStat]);
 
   const expansionScope = JSON.stringify([scopeKey, sport, selectedSlate?.id]);
   const [expansion, setExpansion] = useState<{ scope: string; teamId: number | null }>(
@@ -215,7 +215,9 @@ function TraditionalScoresDashboard({
                 </div>;
                 const stat = getPlayerStat(player.id);
                 const raw = getRawPlayerStat(player.id);
-                const status = getPlayerGameStatus(raw);
+                const status = sport === "nfl"
+                  ? nflRosterPlayerStatus(player, nflGames?.slateId === selectedSlate?.id ? nflGames?.gamesByTeam ?? {} : {}, raw)
+                  : getPlayerGameStatus(raw);
                 return <div key={player.id} className="scores-roster-row" data-pull-refresh-exclude>
                   <button type="button" className="scores-roster-player"
                     aria-label={`${player.name}, ${slot.position}, ${formatScore(stat.fantasy_points)} fantasy points. View player details`}

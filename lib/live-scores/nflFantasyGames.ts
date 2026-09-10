@@ -45,7 +45,8 @@ export function resolveNflFantasyGames(games: LiveScoreGame[], slate: Window) {
   for (const [code, events] of candidates) {
     if (events.size !== 1) continue;
     const game = [...events.values()][0];
-    if (nflGameActionLabel(game.status)) resolved.set(code, game);
+    // Keep interrupted games mapped so stale player stats cannot imply a final.
+    if (nflGameActionLabel(game.status) || ["postponed", "canceled", "suspended"].includes(game.status)) resolved.set(code, game);
   }
   return resolved;
 }

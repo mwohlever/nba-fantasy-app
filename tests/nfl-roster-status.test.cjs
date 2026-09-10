@@ -1,9 +1,12 @@
 const assert=require('node:assert/strict');
 const test=require('node:test');
 const fs=require('node:fs');
-const {host,context}=require('./helpers/scores-harness.cjs');
-const {nflRosterStatusCounts:counts}=require('../lib/lineups/nflRosterStatus.ts');
-const {NflFantasyGameCenter}=require('../components/lineups/NflFantasyGameCenter.tsx');
+const {host,nodes,context}=require('./helpers/scores-harness.cjs');
+const {nflRosterStatusCounts:counts,nflRosterPlayerStatus}=require('../lib/lineups/nflRosterStatus.ts');
+const {NflFantasyGameCenter,NflFantasyGameAction,NflFantasyGamesContext}=require('../components/lineups/NflFantasyGameCenter.tsx');
+const ScoresDashboard=require('../components/lineups/ScoresDashboard.tsx').default;
+const {normalizeNflGame}=require('../lib/providers/nflLiveScores.ts');
+const {resolveNflFantasyGames}=require('../lib/live-scores/nflFantasyGames.ts');
 const players=Array.from({length:6},(_,i)=>({id:i+1,name:'Never used',team_abbreviation:['SEA','BUF','KC','SF','DEN','NE'][i]}));
 const result=(final,live,left)=>({games_completed:final,games_in_progress:live,games_remaining:left});
 test('six upcoming; one live + five upcoming; mixed partition preserves all six entries',()=>{
@@ -49,4 +52,55 @@ test('scoring pipeline classifies scheduled/missing-boxscore rows and sums remai
   assert.equal(exports.statusTest.blankRow().games_remaining,1);
   assert.match(source,/games_remaining: playerRows.reduce/);
   assert.match(source,/matchingEvents.length === 1/);
+});
+
+test('expanded NFL rows, aggregate and action agree despite stale or missing player stats',()=>{
+  const previous=NflFantasyGamesContext._currentValue;
+  try {
+    for(const position of ['WR','D/ST']) for(const raw of [null,{game_status:2,game_status_text:'Live'},{game_status:3,game_status_text:'Final'}]) {
+      const player={id:1,name:'Rostered player',team_abbreviation:'SEA',position_group:position};
+      const props={selectedSlate:{id:1,sport:'nfl'},teams:[{id:1,name:'Josh'}],rosterSlots:[{position,slot_count:1}],
+        getPlayersForTeam:()=>[player],getTeamStats:()=>({total:20.6}),getPlayerStat:()=>({fantasy_points:20.6}),
+        getRawPlayerStat:()=>raw,getLiveProjectedTeamTotal:()=>20.6,getPregameProjectedTeamTotal:()=>null,liveWinPctMap:new Map(),setProfilePlayer(){}};
+      const h=host(ScoresDashboard(props).type);
+      for(const [state,label,action,expected] of [['pre','Upcoming','View Game',[0,0,1]],['in','Live','View Live Game',[0,1,0]],['post','Final','View Final',[1,0,0]]]) {
+        NflFantasyGamesContext._currentValue={slateId:1,gamesByTeam:{SEA:{status:state,espnEventId:'123'}},openGameCenter(){}};
+        let tree=h.render(props);
+        const find=cls=>nodes(tree).find(n=>n.props?.className===cls);
+        if(!find('scores-standing-toggle').props['aria-expanded']) {find('scores-standing-toggle').props.onClick();tree=h.render(props);}
+        const row=nodes(tree).find(n=>n.props?.className?.startsWith('scores-roster-status '));
+        assert.equal(row.props.children[0],label);
+        assert.equal(find('scores-standing-games').props.children.join(''),`${expected[0]} final · ${expected[1]} live · ${expected[2]} left`);
+        assert.equal(host(NflFantasyGameAction).render({player}).props.children,action);
+        assert.equal(find('scores-roster-points').props.children[0],'20.6');
+      }
+      h.unmount();
+    }
+  } finally {NflFantasyGamesContext._currentValue=previous;}
+});
+
+test('unknown mapping/text cannot invent a final; numeric fallback retains the existing partition',()=>{
+  const player={id:1,team_abbreviation:'SEA'};
+  assert.equal(nflRosterPlayerStatus(player,{},null).label,'Upcoming');
+  assert.equal(nflRosterPlayerStatus(player,{}, {game_status_text:'Final'}).label,'Upcoming');
+  assert.equal(nflRosterPlayerStatus(player,{SEA:{status:'unknown'}},{game_status:3}).label,'Upcoming');
+  assert.equal(nflRosterPlayerStatus(player,{}, {game_status:3,game_status_text:'Live'}).label,'Final');
+});
+
+test('interrupted provider games stay mapped and override stale finals without a misleading final action',()=>{
+  for(const [name,label] of [['STATUS_POSTPONED','Postponed'],['STATUS_CANCELED','Canceled'],['STATUS_CANCELLED','Canceled'],['STATUS_SUSPENDED','Suspended']]) {
+    const game=normalizeNflGame({id:'1',date:'2026-09-10T20:00:00Z',competitions:[{
+      status:{type:{state:'post',completed:true,name}},competitors:[
+        {homeAway:'away',team:{id:'1',abbreviation:'SEA'}},{homeAway:'home',team:{id:'2',abbreviation:'NE'}},
+      ],
+    }]});
+    const games=Object.fromEntries(resolveNflFantasyGames([game],{date:'2026-09-10'}));
+    assert.equal(game.completed,false);
+    assert.equal(nflRosterPlayerStatus(players[0],games,{game_status:3}).label,label);
+    assert.deepEqual(counts([players[0]],games,()=>({game_status:3})),result(0,0,1));
+    const previous=NflFantasyGamesContext._currentValue;
+    NflFantasyGamesContext._currentValue={slateId:1,gamesByTeam:games};
+    try {assert.equal(host(NflFantasyGameAction).render({player:players[0]}),null);}
+    finally {NflFantasyGamesContext._currentValue=previous;}
+  }
 });

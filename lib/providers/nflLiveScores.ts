@@ -14,6 +14,9 @@ export function normalizeNflGame(event: Raw): LiveScoreGame | null {
   const home = competitors.find((team) => team.homeAway === "home");
   if (!event.id || !event.date || !away?.team?.id || !home?.team?.id) return null;
   const status = competition.status?.type ?? event.status?.type ?? {};
+  const interrupted = /CANCELED|CANCELLED/.test(status.name ?? "") ? "canceled"
+    : /POSTPONED/.test(status.name ?? "") ? "postponed"
+    : /SUSPENDED/.test(status.name ?? "") ? "suspended" : null;
   const team = (raw: Raw): LiveScoreGame["awayTeam"] => ({
     id: String(raw.team.id),
     displayName: raw.team.displayName || raw.team.name,
@@ -29,8 +32,8 @@ export function normalizeNflGame(event: Raw): LiveScoreGame | null {
     espnEventId: String(event.id), name: event.name || `${away.team.displayName} at ${home.team.displayName}`,
     shortName: event.shortName ?? null, kickoffAt: event.date,
     awayTeam: team(away), homeTeam: team(home),
-    status: status.state ?? "pre", statusDetail: status.detail ?? status.shortDetail ?? null,
-    completed: status.completed === true,
+    status: interrupted ?? status.state ?? "pre", statusDetail: status.detail ?? status.shortDetail ?? null,
+    completed: !interrupted && status.completed === true,
     winnerTeamId: away.winner ? String(away.team.id) : home.winner ? String(home.team.id) : null,
     broadcast: normalizeBroadcast(competition),
     possessionTeamId: possessionTeamId(competition),
