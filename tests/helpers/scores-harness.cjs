@@ -8,6 +8,7 @@ const root = path.resolve(__dirname, '../..');
 let current = null;
 const context = { pathname: '/lineups/scores', sport: 'nba', group: 'group-a', loading: false, switching: false };
 const mockedReact = { ...React,
+  useContext(value) { return current ? value._currentValue : React.useContext(value); },
   useState(initial) {
     if (!current) return React.useState(initial);
     const host = current, i = host.cursor++;

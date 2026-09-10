@@ -1172,6 +1172,9 @@ export default function GameCenterModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto pb-24 sm:pb-6">
           {error && detail ? <p role="status" className="px-4 pt-3 text-xs text-rose-700">Refresh failed. Showing the last available update. {error}</p> : null}
+          {tab === "pbp" && apiBase === "/api/live-scores/nfl" ? <div className="px-4 pt-4">
+            <NflLiveField field={error ? null : detail?.field} />
+          </div> : null}
           {loading ? (
             <div className="p-6 text-center text-sm text-slate-500">
               Loading game details…
@@ -1183,8 +1186,7 @@ export default function GameCenterModal({
               </div>
             </div>
           ) : tab === "pbp" ? (
-            <div className="p-4">
-              {apiBase === "/api/live-scores/nfl" ? <NflLiveField field={error ? null : detail?.field} /> : null}
+            <div className={apiBase === "/api/live-scores/nfl" ? "px-4 pb-4" : "p-4"}>
               <section>
                     <div className="mb-2 text-xs font-black uppercase tracking-wider text-slate-500">
                       Play-by-Play

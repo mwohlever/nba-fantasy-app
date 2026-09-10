@@ -1,4 +1,5 @@
 import { canProxyDraftForGroup } from "@/lib/lineups/draftPermissions";
+import { isMissingDraftInfrastructure, mutateFantasyDraft, readDraftHistory } from "@/lib/lineups/draftHistory.server";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
@@ -21,6 +22,7 @@ type SaveLineupBody = {
   slateId?: number;
   teamId?: number;
   playerIds?: number[];
+  expectedPlayerIds?: number[];
   notifyNextDrafter?: boolean;
   rosterSlot?: {
     playerId: number;
@@ -244,13 +246,16 @@ export async function GET(request: NextRequest) {
         supabaseAdmin.from("teams").select("id, name, user_id").eq("group_id", slateAccess.context.group.id),
         supabaseAdmin.from("group_memberships").select("user_id").eq("group_id", slateAccess.context.group.id).eq("is_active", true),
         supabaseAdmin.from("slate_teams").select("team_id, draft_order").eq("slate_id", slateId).eq("is_participating", true).order("draft_order"),
-        supabaseAdmin.from("slates").select("id, is_locked, rules_snapshot").eq("id", slateId).single(),
+        supabaseAdmin.from("slates").select("id, sport, is_locked, rules_snapshot").eq("id", slateId).single(),
       ]);
       const error = teamsResult.error || membershipsResult.error || participantsResult.error || slateResult.error;
       if (error) return NextResponse.json({ error: "Failed to load Draft participants." }, { status: 500 });
       const activeUsers = new Set((membershipsResult.data ?? []).map(row => String(row.user_id)));
       const groupTeams = new Map((teamsResult.data ?? []).filter(row => activeUsers.has(String(row.user_id))).map(row => [Number(row.id), row]));
       draftContext = {
+        history: slateResult.data?.sport === "nba" || slateResult.data?.sport === "nfl"
+          ? await readDraftHistory(slateId, slateAccess.context.group.id, slateAccess.league.id, slateResult.data.sport)
+          : null,
         canProxyDraft: canProxyDraftForGroup(slateAccess.context, currentUser),
         groupId: slateAccess.context.group.id,
         slateId,
@@ -863,6 +868,37 @@ export async function POST(request: Request) {
       uniquePlayerIds.length ===
         previousPlayerIds.length + 1;
 
+    if (sport === "nba" || sport === "nfl") {
+      if (!Array.isArray(body.expectedPlayerIds) || body.expectedPlayerIds.some(id => !Number.isSafeInteger(id) || id <= 0)) {
+        return NextResponse.json({ error: "Refresh the app before drafting; the current roster version is required." }, { status: 409 });
+      }
+      const projectionResult = sport === "nba" && isSingleNewDraftPick
+        ? await getPlayerProjectionsForSeason(getSlateSeason(slate.start_date ?? slate.date)) : null;
+      const projection = projectionResult?.projections[addedPlayerIds[0]];
+      let mutation;
+      try {
+        mutation = await mutateFantasyDraft({
+          slateId, groupId: slateAccess.context.group.id, leagueId: slateAccess.league.id, sport,
+          teamId, actorId: currentUser.id, desiredIds: uniquePlayerIds, expectedIds: body.expectedPlayerIds,
+          requestedSlot: requestedRosterSlot,
+          projection: projection ? { projected_fantasy_points: projection.projection, projection_confidence: projection.confidence,
+            projection_source: projection.source, projected_at: projection.projection == null ? null : new Date().toISOString() } : null,
+        });
+      } catch (error) {
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Draft could not be saved." }, { status: 409 });
+      }
+      if (mutation.error) return NextResponse.json({ error: isMissingDraftInfrastructure(mutation.error)
+        ? "Draft history setup is pending. Drafting is paused until the reviewed migration is applied."
+        : mutation.error.message }, { status: isMissingDraftInfrastructure(mutation.error) ? 503 : 409 });
+      let draftNotification = null;
+      // Preserve the existing legacy-admin proxy notification toggle and recipients.
+      if (mutation.data.isPick && (currentUser.role !== "admin" || body.notifyNextDrafter === true)) {
+        try { draftNotification = await notifyNextDrafter(slateId, mutation.data.overallPick); }
+        catch { draftNotification = { sent: 0, failed: 1, skipped: true, reason: "Notification failed after the lineup was saved." }; }
+      }
+      return NextResponse.json({ success: true, ...mutation.data, slateId, sport, teamName: team.name, draftNotification });
+    }
+
     let lineupId: number;
 
     if (existingLineup) {
@@ -914,27 +950,7 @@ export async function POST(request: Request) {
     }
 
     if (addedPlayerIds.length > 0) {
-      const season = getSlateSeason(
-        slate.start_date ?? slate.date,
-      );
-
-      const projectionResult =
-        sport === "nba"
-          ? await getPlayerProjectionsForSeason(season)
-          : null;
-
-      const projectedAt = new Date().toISOString();
-
       const addedRows = addedPlayerIds.map((playerId) => {
-        const projection =
-          projectionResult?.projections[playerId];
-
-        const projectedFantasyPoints =
-          projection?.projection === null ||
-          projection?.projection === undefined
-            ? null
-            : Number(projection.projection);
-
         return {
           lineup_id: lineupId,
           player_id:
@@ -955,16 +971,13 @@ export async function POST(request: Request) {
               : null,
 
           projected_fantasy_points:
-            projectedFantasyPoints,
+            null,
           projection_confidence:
-            projection?.confidence ?? null,
+            null,
           projection_source:
-            projection?.source ??
-            (sport === "nba" ? "none" : sport),
+            sport,
           projected_at:
-            projectedFantasyPoints !== null
-              ? projectedAt
-              : null,
+            null,
         };
       });
 

@@ -97,7 +97,7 @@ test("manual corrections use immutable slate scoring for NBA and NFL", () => {
   );
 
   const route = source("app/api/admin/manual-stat-correction/route.ts");
-  assert.match(route, /resolveLeagueRules\(\{ sport, settings: slate\.rules_snapshot \}\)/);
+  assert.match(route, /resolveLeagueRules\(\{\s*sport,\s*settings:\s*slate\.rules_snapshot,?\s*\}\)/);
   assert.doesNotMatch(route, /rebounds \* 1\.2/);
 });
 

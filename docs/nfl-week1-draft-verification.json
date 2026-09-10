@@ -1,0 +1,552 @@
+{
+  "verified_at": "2026-09-10T03:54:19.485Z",
+  "group_id": "2ac845fb-93c8-4781-aa38-e206a76f46cb",
+  "slate": {
+    "id": 179,
+    "date": "2026-09-09",
+    "is_locked": false,
+    "start_date": "2026-09-09",
+    "end_date": "2026-09-14",
+    "nba_team_abbreviations": [],
+    "first_game_start_time": null,
+    "sms_enabled": false,
+    "sport": "nfl",
+    "display_name": "2026 Week 1",
+    "external_event_id": null,
+    "cut_penalty_per_round": null,
+    "has_cut": true,
+    "tournament_analysis": null,
+    "show_tournament_analysis": false,
+    "league_id": "dc82641b-6a31-4044-aa90-e02dcb305c54",
+    "rules_version": 5,
+    "rules_snapshot": {
+      "draft": {
+        "type": "snake"
+      },
+      "sport": "nfl",
+      "roster": {
+        "slots": [
+          {
+            "position": "QB",
+            "slotCount": 1
+          },
+          {
+            "position": "RB",
+            "slotCount": 2
+          },
+          {
+            "position": "WR",
+            "slotCount": 2
+          },
+          {
+            "position": "TE",
+            "slotCount": 1
+          },
+          {
+            "position": "K",
+            "slotCount": 0
+          },
+          {
+            "position": "FLEX",
+            "slotCount": 0
+          },
+          {
+            "position": "SF",
+            "slotCount": 0
+          },
+          {
+            "position": "D/ST",
+            "slotCount": 0
+          }
+        ]
+      },
+      "scoring": {
+        "dstSacks": 5,
+        "receptions": 0.5,
+        "dstSafeties": 2,
+        "fumblesLost": -2,
+        "passingYards": 0.04,
+        "rushingYards": 0.1,
+        "dstTouchdowns": 6,
+        "receivingYards": 0.1,
+        "dstInterceptions": 2,
+        "dstPointsAllowed0": 10,
+        "passingTouchdowns": 5,
+        "rushingTouchdowns": 6,
+        "dstFumbleRecoveries": 2,
+        "receivingTouchdowns": 6,
+        "dstPointsAllowed1To6": 7,
+        "passingInterceptions": -2,
+        "dstPointsAllowed7To13": 4,
+        "dstPointsAllowed14To20": 1,
+        "dstPointsAllowed21To27": 0,
+        "dstPointsAllowed28To34": -1,
+        "dstPointsAllowed35Plus": -4,
+        "dstYardsAllowed450Plus": -5,
+        "dstYardsAllowed100To199": 3,
+        "dstYardsAllowed200To299": 2,
+        "dstYardsAllowed300To349": 0,
+        "dstYardsAllowed350To399": -1,
+        "dstYardsAllowed400To449": -3,
+        "dstYardsAllowedUnder100": 5
+      },
+      "schemaVersion": 1
+    }
+  },
+  "participants": [
+    {
+      "team_id": 2,
+      "name": "Josh",
+      "draft_order": 1
+    },
+    {
+      "team_id": 1,
+      "name": "Andy",
+      "draft_order": 2
+    },
+    {
+      "team_id": 4,
+      "name": "Mark",
+      "draft_order": 3
+    },
+    {
+      "team_id": 3,
+      "name": "Jon",
+      "draft_order": 4
+    }
+  ],
+  "picks": [
+    {
+      "overall_pick": 1,
+      "round_number": 1,
+      "pick_in_round": 1,
+      "team_id": 2,
+      "team_name": "Josh",
+      "id": 283,
+      "name": "Jahmyr Gibbs",
+      "position": "RB",
+      "nfl_player_id": 4429795,
+      "assignment": {
+        "id": 3912,
+        "player_id": 283,
+        "roster_slot_index": 0,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1062
+    },
+    {
+      "overall_pick": 2,
+      "round_number": 1,
+      "pick_in_round": 2,
+      "team_id": 1,
+      "team_name": "Andy",
+      "id": 80,
+      "name": "Josh Allen",
+      "position": "QB",
+      "nfl_player_id": 3918298,
+      "assignment": {
+        "id": 3913,
+        "player_id": 80,
+        "roster_slot_index": 0,
+        "roster_slot_position": "QB"
+      },
+      "lineup_id": 1063
+    },
+    {
+      "overall_pick": 3,
+      "round_number": 1,
+      "pick_in_round": 3,
+      "team_id": 4,
+      "team_name": "Mark",
+      "id": 774,
+      "name": "Christian McCaffrey",
+      "position": "RB",
+      "nfl_player_id": 3117251,
+      "assignment": {
+        "id": 3914,
+        "player_id": 774,
+        "roster_slot_index": 0,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1064
+    },
+    {
+      "overall_pick": 4,
+      "round_number": 1,
+      "pick_in_round": 4,
+      "team_id": 3,
+      "team_name": "Jon",
+      "id": 44,
+      "name": "Bijan Robinson",
+      "position": "RB",
+      "nfl_player_id": 4430807,
+      "assignment": {
+        "id": 3917,
+        "player_id": 44,
+        "roster_slot_index": 1,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1065
+    },
+    {
+      "overall_pick": 5,
+      "round_number": 2,
+      "pick_in_round": 1,
+      "team_id": 3,
+      "team_name": "Jon",
+      "id": 518,
+      "name": "Puka Nacua",
+      "position": "WR",
+      "nfl_player_id": 4426515,
+      "assignment": {
+        "id": 3916,
+        "player_id": 518,
+        "roster_slot_index": 1,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1065
+    },
+    {
+      "overall_pick": 6,
+      "round_number": 2,
+      "pick_in_round": 2,
+      "team_id": 4,
+      "team_name": "Mark",
+      "id": 43,
+      "name": "Kyle Pitts Sr.",
+      "position": "TE",
+      "nfl_player_id": 4360248,
+      "assignment": {
+        "id": 3936,
+        "player_id": 43,
+        "roster_slot_index": 0,
+        "roster_slot_position": "TE"
+      },
+      "lineup_id": 1064
+    },
+    {
+      "overall_pick": 7,
+      "round_number": 2,
+      "pick_in_round": 3,
+      "team_id": 1,
+      "team_name": "Andy",
+      "id": 169,
+      "name": "Ja'Marr Chase",
+      "position": "WR",
+      "nfl_player_id": 4362628,
+      "assignment": {
+        "id": 3919,
+        "player_id": 169,
+        "roster_slot_index": 0,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1063
+    },
+    {
+      "overall_pick": 8,
+      "round_number": 2,
+      "pick_in_round": 4,
+      "team_id": 2,
+      "team_name": "Josh",
+      "id": 385,
+      "name": "Jonathan Taylor",
+      "position": "RB",
+      "nfl_player_id": 4242335,
+      "assignment": {
+        "id": 3918,
+        "player_id": 385,
+        "roster_slot_index": 1,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1062
+    },
+    {
+      "overall_pick": 9,
+      "round_number": 3,
+      "pick_in_round": 1,
+      "team_id": 2,
+      "team_name": "Josh",
+      "id": 809,
+      "name": "Jaxon Smith-Njigba",
+      "position": "WR",
+      "nfl_player_id": 4430878,
+      "assignment": {
+        "id": 3915,
+        "player_id": 809,
+        "roster_slot_index": 1,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1062
+    },
+    {
+      "overall_pick": 10,
+      "round_number": 3,
+      "pick_in_round": 2,
+      "team_id": 1,
+      "team_name": "Andy",
+      "id": 300,
+      "name": "Amon-Ra St. Brown",
+      "position": "WR",
+      "nfl_player_id": 4374302,
+      "assignment": {
+        "id": 3922,
+        "player_id": 300,
+        "roster_slot_index": 1,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1063
+    },
+    {
+      "overall_pick": 11,
+      "round_number": 3,
+      "pick_in_round": 3,
+      "team_id": 4,
+      "team_name": "Mark",
+      "id": 701,
+      "name": "Saquon Barkley",
+      "position": "RB",
+      "nfl_player_id": 3929630,
+      "assignment": {
+        "id": 3923,
+        "player_id": 701,
+        "roster_slot_index": 1,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1064
+    },
+    {
+      "overall_pick": 12,
+      "round_number": 3,
+      "pick_in_round": 4,
+      "team_id": 3,
+      "team_name": "Jon",
+      "id": 85,
+      "name": "James Cook III",
+      "position": "RB",
+      "nfl_player_id": 4379399,
+      "assignment": {
+        "id": 3920,
+        "player_id": 85,
+        "roster_slot_index": 0,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1065
+    },
+    {
+      "overall_pick": 13,
+      "round_number": 4,
+      "pick_in_round": 1,
+      "team_id": 3,
+      "team_name": "Jon",
+      "id": 232,
+      "name": "CeeDee Lamb",
+      "position": "WR",
+      "nfl_player_id": 4241389,
+      "assignment": {
+        "id": 3921,
+        "player_id": 232,
+        "roster_slot_index": 0,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1065
+    },
+    {
+      "overall_pick": 14,
+      "round_number": 4,
+      "pick_in_round": 2,
+      "team_id": 4,
+      "team_name": "Mark",
+      "id": 569,
+      "name": "Justin Jefferson",
+      "position": "WR",
+      "nfl_player_id": 4262921,
+      "assignment": {
+        "id": 3925,
+        "player_id": 569,
+        "roster_slot_index": 0,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1064
+    },
+    {
+      "overall_pick": 15,
+      "round_number": 4,
+      "pick_in_round": 3,
+      "team_id": 1,
+      "team_name": "Andy",
+      "id": 532,
+      "name": "De'Von Achane",
+      "position": "RB",
+      "nfl_player_id": 4429160,
+      "assignment": {
+        "id": 3926,
+        "player_id": 532,
+        "roster_slot_index": 0,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1063
+    },
+    {
+      "overall_pick": 16,
+      "round_number": 4,
+      "pick_in_round": 4,
+      "team_id": 2,
+      "team_name": "Josh",
+      "id": 335,
+      "name": "Nico Collins",
+      "position": "WR",
+      "nfl_player_id": 4258173,
+      "assignment": {
+        "id": 3928,
+        "player_id": 335,
+        "roster_slot_index": 0,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1062
+    },
+    {
+      "overall_pick": 17,
+      "round_number": 5,
+      "pick_in_round": 1,
+      "team_id": 2,
+      "team_name": "Josh",
+      "id": 18,
+      "name": "Trey McBride",
+      "position": "TE",
+      "nfl_player_id": 4361307,
+      "assignment": {
+        "id": 3927,
+        "player_id": 18,
+        "roster_slot_index": 0,
+        "roster_slot_position": "TE"
+      },
+      "lineup_id": 1062
+    },
+    {
+      "overall_pick": 18,
+      "round_number": 5,
+      "pick_in_round": 2,
+      "team_id": 1,
+      "team_name": "Andy",
+      "id": 166,
+      "name": "Chase Brown",
+      "position": "RB",
+      "nfl_player_id": 4362238,
+      "assignment": {
+        "id": 3930,
+        "player_id": 166,
+        "roster_slot_index": 1,
+        "roster_slot_position": "RB"
+      },
+      "lineup_id": 1063
+    },
+    {
+      "overall_pick": 19,
+      "round_number": 5,
+      "pick_in_round": 3,
+      "team_id": 4,
+      "team_name": "Mark",
+      "id": 66,
+      "name": "Lamar Jackson",
+      "position": "QB",
+      "nfl_player_id": 3916387,
+      "assignment": {
+        "id": 3929,
+        "player_id": 66,
+        "roster_slot_index": 0,
+        "roster_slot_position": "QB"
+      },
+      "lineup_id": 1064
+    },
+    {
+      "overall_pick": 20,
+      "round_number": 5,
+      "pick_in_round": 4,
+      "team_id": 3,
+      "team_name": "Jon",
+      "id": 711,
+      "name": "Jalen Hurts",
+      "position": "QB",
+      "nfl_player_id": 4040715,
+      "assignment": {
+        "id": 3931,
+        "player_id": 711,
+        "roster_slot_index": 0,
+        "roster_slot_position": "QB"
+      },
+      "lineup_id": 1065
+    },
+    {
+      "overall_pick": 21,
+      "round_number": 6,
+      "pick_in_round": 1,
+      "team_id": 3,
+      "team_name": "Jon",
+      "id": 151,
+      "name": "Colston Loveland",
+      "position": "TE",
+      "nfl_player_id": 4723086,
+      "assignment": {
+        "id": 3932,
+        "player_id": 151,
+        "roster_slot_index": 0,
+        "roster_slot_position": "TE"
+      },
+      "lineup_id": 1065
+    },
+    {
+      "overall_pick": 22,
+      "round_number": 6,
+      "pick_in_round": 2,
+      "team_id": 4,
+      "team_name": "Mark",
+      "id": 635,
+      "name": "Chris Olave",
+      "position": "WR",
+      "nfl_player_id": 4361370,
+      "assignment": {
+        "id": 3933,
+        "player_id": 635,
+        "roster_slot_index": 1,
+        "roster_slot_position": "WR"
+      },
+      "lineup_id": 1064
+    },
+    {
+      "overall_pick": 23,
+      "round_number": 6,
+      "pick_in_round": 3,
+      "team_id": 1,
+      "team_name": "Andy",
+      "id": 388,
+      "name": "Tyler Warren",
+      "position": "TE",
+      "nfl_player_id": 4431459,
+      "assignment": {
+        "id": 3935,
+        "player_id": 388,
+        "roster_slot_index": 0,
+        "roster_slot_position": "TE"
+      },
+      "lineup_id": 1063
+    },
+    {
+      "overall_pick": 24,
+      "round_number": 6,
+      "pick_in_round": 4,
+      "team_id": 2,
+      "team_name": "Josh",
+      "id": 270,
+      "name": "Bo Nix",
+      "position": "QB",
+      "nfl_player_id": 4426338,
+      "assignment": {
+        "id": 3934,
+        "player_id": 270,
+        "roster_slot_index": 0,
+        "roster_slot_position": "QB"
+      },
+      "lineup_id": 1062
+    }
+  ]
+}

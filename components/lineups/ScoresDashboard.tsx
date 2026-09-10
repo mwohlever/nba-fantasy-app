@@ -1,8 +1,9 @@
 "use client";
 
-import { NflFantasyGameAction } from "./NflFantasyGameCenter";
+import { NflFantasyGameAction, NflFantasyGamesContext } from "./NflFantasyGameCenter";
+import { nflRosterStatusCounts } from "@/lib/lineups/nflRosterStatus";
 
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import GolfScoresDashboard from "@/components/lineups/GolfScoresDashboard";
@@ -141,17 +142,21 @@ function TraditionalScoresDashboard({
   controls, setProfilePlayer,
 }: Props) {
   const sport = selectedSlate?.sport ?? "nba";
+  const nflGames = useContext(NflFantasyGamesContext);
   const statColumns = getStatColumns(sport);
   const effectiveRosterSlots = rosterSlots?.length ? rosterSlots :
     getDefaultRosterSlotsForSport(sport as "nba" | "nfl" | "golf");
   const leaderboard = useMemo(() => teams
     .filter(team => team.is_participating !== false)
     .map(team => {
-      const stats = getTeamStats(team.id);
+      const storedStats = getTeamStats(team.id);
+      const stats = sport === "nfl" ? { ...storedStats,
+        ...nflRosterStatusCounts(getPlayersForTeam(team.id), nflGames?.slateId === selectedSlate?.id ? nflGames?.gamesByTeam ?? {} : {}, getRawPlayerStat),
+      } : storedStats;
       return { team, stats, score: Number(stats.total ?? 0),
         projected: getLiveProjectedTeamTotal(team.id), winPct: liveWinPctMap.get(team.id) ?? 0 };
     }).sort((a, b) => b.score - a.score),
-    [teams, getTeamStats, getLiveProjectedTeamTotal, liveWinPctMap]);
+    [teams, getTeamStats, getLiveProjectedTeamTotal, liveWinPctMap, sport, nflGames, getPlayersForTeam, getRawPlayerStat]);
 
   const expansionScope = JSON.stringify([scopeKey, sport, selectedSlate?.id]);
   const [expansion, setExpansion] = useState<{ scope: string; teamId: number | null }>(

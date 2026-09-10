@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { recomputeCorrectedSlateResults } from "@/lib/corrections/recomputeSlateResults";
+import { isMissingDraftInfrastructure, mutateFantasyDraft } from "@/lib/lineups/draftHistory.server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
     const oldPlayerId = body.oldPlayerId ? Number(body.oldPlayerId) : null;
     const newPlayerId = body.newPlayerId ? Number(body.newPlayerId) : null;
 
-    if (!Number.isFinite(slateId) || !Number.isFinite(teamId)) {
+    if (!Number.isSafeInteger(slateId) || slateId <= 0 || !Number.isSafeInteger(teamId) || teamId <= 0) {
       return NextResponse.json(
         { error: "Valid slateId and teamId are required." },
         { status: 400 }
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const { data: lineup, error: lineupError } = await supabaseAdmin
       .from("lineups")
-      .select("id")
+      .select("id,lineup_players(player_id)")
       .eq("slate_id", slateId)
       .eq("team_id", teamId)
       .maybeSingle();
@@ -70,66 +71,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (action === "replace") {
-      if (!oldPlayerId || !newPlayerId) {
-        return NextResponse.json(
-          { error: "oldPlayerId and newPlayerId are required for replace." },
-          { status: 400 }
-        );
-      }
-
-      const { error } = await supabaseAdmin
-        .from("lineup_players")
-        .update({ player_id: newPlayerId })
-        .eq("lineup_id", lineup.id)
-        .eq("player_id", oldPlayerId);
-
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    } else if (action === "add") {
-      if (!newPlayerId) {
-        return NextResponse.json(
-          { error: "newPlayerId is required for add." },
-          { status: 400 }
-        );
-      }
-
-      const { error } = await supabaseAdmin
-        .from("lineup_players")
-        .insert({ lineup_id: lineup.id, player_id: newPlayerId });
-
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    } else if (action === "remove") {
-      if (!oldPlayerId) {
-        return NextResponse.json(
-          { error: "oldPlayerId is required for remove." },
-          { status: 400 }
-        );
-      }
-
-      const { error } = await supabaseAdmin
-        .from("lineup_players")
-        .delete()
-        .eq("lineup_id", lineup.id)
-        .eq("player_id", oldPlayerId);
-
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    } else {
-      return NextResponse.json(
-        { error: "Invalid action. Use add, replace, or remove." },
-        { status: 400 }
-      );
+    if (!["add", "remove", "replace"].includes(action) ||
+      ((action === "remove" || action === "replace") && (!oldPlayerId || !Number.isSafeInteger(oldPlayerId))) ||
+      ((action === "add" || action === "replace") && (!newPlayerId || !Number.isSafeInteger(newPlayerId)))) {
+      return NextResponse.json({ error: "Valid action and player IDs are required." }, { status: 400 });
     }
+    const expectedIds = (lineup.lineup_players ?? []).map(row => Number(row.player_id));
+    if ((action !== "add" && !expectedIds.includes(oldPlayerId!)) || (action !== "remove" && expectedIds.includes(newPlayerId!))) {
+      return NextResponse.json({ error: "Roster changed or player is already assigned. Refresh corrections." }, { status: 409 });
+    }
+    const desiredIds = expectedIds.filter(id => action === "add" || id !== oldPlayerId);
+    if (action !== "remove") desiredIds.push(newPlayerId!);
+    let result;
+    try {
+      result = await mutateFantasyDraft({ slateId, teamId, sport, groupId: authorization.target.groupId,
+        leagueId: authorization.target.leagueId, actorId: authorization.user!.id, expectedIds, desiredIds, correction: true });
+    } catch (error) {
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Correction could not be saved." }, { status: 409 });
+    }
+    if (result.error) return NextResponse.json({ error: isMissingDraftInfrastructure(result.error)
+      ? "Draft history setup is pending. Apply the reviewed migration before correcting rosters."
+      : result.error.message }, { status: isMissingDraftInfrastructure(result.error) ? 503 : 409 });
 
+    /* All roster changes and the audit record have committed atomically. */
     await recomputeCorrectedSlateResults(slateId, sport);
-
-    return NextResponse.json({
-      success: true,
-      slateId,
-      teamId,
-      action,
-      oldPlayerId,
-      newPlayerId,
-    });
+    return NextResponse.json({ success: true, slateId, teamId, action, oldPlayerId, newPlayerId });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

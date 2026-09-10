@@ -7,6 +7,7 @@ import { nflGameActionLabel, nflTeamCode } from "@/lib/live-scores/nflFantasyGam
 
 type GameRequest = { sport: "nfl"; eventId: string };
 type Context = {
+  slateId: number;
   gamesByTeam: Record<string, LiveScoreGame>;
   openGameCenter: (request: GameRequest) => void;
 };
@@ -19,9 +20,14 @@ export function NflFantasyGameCenter({ slateId, refreshKey, children, draftGames
   children: ReactNode;
 }) {
   const [loaded, setLoaded] = useState<{ slateId: number; games: Record<string, LiveScoreGame> } | null>(null);
+  const [renderedSlate, setRenderedSlate] = useState(slateId);
+  if (renderedSlate !== slateId) {
+    setRenderedSlate(slateId);
+    setLoaded(null);
+  }
   const gamesByTeam = draftGames !== undefined
     ? draftGames?.slateId === slateId ? draftGames.gamesByTeam : {}
-    : loaded?.slateId === slateId ? loaded.games : {};
+    : renderedSlate === slateId && loaded?.slateId === slateId ? loaded.games : {};
   const [selectedGame, setSelectedGame] = useState<{ slateId: number; game: LiveScoreGame } | null>(null);
 
   useEffect(() => setSelectedGame(null), [slateId]);
@@ -50,7 +56,7 @@ export function NflFantasyGameCenter({ slateId, refreshKey, children, draftGames
   }
 
   return (
-    <NflFantasyGamesContext.Provider value={slateId ? { gamesByTeam, openGameCenter } : null}>
+    <NflFantasyGamesContext.Provider value={slateId ? { slateId, gamesByTeam, openGameCenter } : null}>
       {children}
       {selectedGame && selectedGame.slateId === slateId ? <GameCenterModal
         key={selectedGame.game.espnEventId}

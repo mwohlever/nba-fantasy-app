@@ -74,6 +74,7 @@ export type EspnScoreboardEvent = {
     type?: EspnGameStatusType;
   };
   competitions?: Array<{
+    status?: { type?: EspnGameStatusType };
     competitors?: EspnCompetitor[];
   }>;
 };
@@ -113,6 +114,7 @@ export type EspnTeamBoxscore = {
 };
 
 export type EspnGameStatusType = {
+  name?: string;
   state?: string;
   completed?: boolean;
   description?: string;

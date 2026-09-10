@@ -1,4 +1,6 @@
 "use client";
+import DraftOrder from "./DraftOrder";
+import type { DraftHistory } from "@/lib/lineups/draftHistory";
 
 import { usePathname } from "next/navigation";
 import { useGroupContext } from "@/components/providers/GroupProvider";
@@ -95,6 +97,7 @@ export default function LineupBuilder({
   });
   const [draftSettingsOpen, setDraftSettingsOpen] = useState(false);
   const [draftContext, setDraftContext] = useState<{
+    history?: DraftHistory | null;
     scope: string;
     participants: Team[];
     canProxyDraft: boolean;
@@ -189,7 +192,7 @@ export default function LineupBuilder({
 
 
   const [draftPageTab, setDraftPageTab] = useState<
-    "lineup" | "players"
+    "lineup" | "players" | "order"
   >("lineup");
 
   const [lastRefreshSummary, setLastRefreshSummary] = useState<{
@@ -1305,7 +1308,7 @@ export default function LineupBuilder({
         setTeamResultsState(results.teamResults);
       }
       setAvailablePlayerIdsForSlate(availability.availablePlayerIds);
-      setDraftContext({ scope: refreshScopeKey, participants: lineups.draftContext.participants, canProxyDraft: lineups.draftContext.canProxyDraft === true, slate: lineups.draftContext.slate, gamesByTeam: games?.gamesByTeam ?? {} });
+      setDraftContext({ scope: refreshScopeKey, history: lineups.draftContext.history, participants: lineups.draftContext.participants, canProxyDraft: lineups.draftContext.canProxyDraft === true, slate: lineups.draftContext.slate, gamesByTeam: games?.gamesByTeam ?? {} });
       setRefreshTimestamp({ scope: refreshScopeKey, value: new Date().toISOString() });
       setRefreshFeedback({ scope: refreshScopeKey, text: routine ? "Updated just now" : "" });
       setSaveMessage("");
@@ -1860,6 +1863,7 @@ export default function LineupBuilder({
         body: JSON.stringify({
           slateId: selectedSlateIdNumber,
           teamId,
+          expectedPlayerIds: lineupsState.find(lineup => lineup.team_id === teamId)?.player_ids ?? [],
           playerIds:
             playerList.map(
               (player) =>
@@ -2052,6 +2056,10 @@ export default function LineupBuilder({
       setIsAssigningPlayer(true);
 
       if (currentOwnerTeamId && currentOwnerTeamId !== targetTeamId) {
+        if ((selectedSlate?.sport ?? sport ?? selectedSport) !== "golf") {
+          setSaveMessage("That player is already rostered. Use commissioner corrections to change ownership.");
+          return false;
+        }
         const ownerPlayers = getPlayersForTeam(currentOwnerTeamId).filter(
           (item) => item.id !== player.id
         );
@@ -2534,7 +2542,7 @@ export default function LineupBuilder({
 
       {viewMode === "draft" ? (
         <>
-          <section className="draft-page-tabs" aria-label="Draft view">
+          <section className="draft-page-tabs" aria-label="Draft view" style={(sport ?? selectedSport) !== "golf" ? { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" } : undefined}>
             <button
               type="button"
               data-draft-pull-start="true"
@@ -2565,7 +2573,15 @@ export default function LineupBuilder({
               <span aria-hidden="true">🔎</span>
               <span>Players</span>
             </button>
+            {(sport ?? selectedSport) !== "golf" && <button type="button" data-draft-pull-start="true"
+              aria-pressed={draftPageTab === "order"} onClick={() => setDraftPageTab("order")}
+              className={`draft-page-tab ${draftPageTab === "order" ? "draft-page-tab--active" : ""}`}>
+              <span>Draft Order</span>
+            </button>}
           </section>
+
+          {draftPageTab === "order" && (sport ?? selectedSport) !== "golf" &&
+            <DraftOrder history={draftContext?.scope === refreshScopeKey ? draftContext.history ?? null : null} teams={orderedTeamsForSlate} />}
 
           <div hidden={draftPageTab !== "lineup"}>
             <div className="draft-participants" aria-label="View participant roster">

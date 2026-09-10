@@ -66,7 +66,7 @@ test('goal-to-go, down distance, clock and compact accessible LOS/first-down SVG
   assert.match(markup, /h-20/); assert.match(markup, /AAA possession/);
   assert.match(markup, /Solid: scrimmage/); assert.match(markup, /stroke-dasharray/);
   assert.match(markup, /Latest:/); assert.match(markup, /After latest play/);
-  assert.equal(render(React.createElement(Field, { field: null })), '');
+  assert.match(render(React.createElement(Field, { field: null })), /Football field; current ball position unavailable/);
 });
 for (const [label, change] of [
   ['no explicit possession', s => s.header.competitions[0].competitors[0].possession = false],
@@ -77,22 +77,51 @@ for (const [label, change] of [
   ['PAT', s => s.drives.current.plays[0].type.text = 'Extra Point Good'],
   ['kickoff', s => s.drives.current.plays[0].type.text = 'Kickoff'],
   ['punt', s => s.drives.current.plays[0].type.text = 'Punt'],
-  ['missing down', s => delete s.drives.current.plays[0].end.down],
-  ['missing distance', s => delete s.drives.current.plays[0].end.distance],
-  ['missing yards', s => delete s.drives.current.plays[0].end.yardsToEndzone],
-  ['zero yards', s => s.drives.current.plays[0].end.yardsToEndzone = 0],
   ['quarter ended', s => s.drives.current.plays[0].type.text = 'End Period'],
   ['halftime', s => s.header.competitions[0].status.type.name = 'STATUS_HALFTIME'],
   ['pregame', s => s.header.competitions[0].status.type.state = 'pre'],
   ['final', s => s.header.competitions[0].status.type.completed = true],
   ['no current drive', s => { s.drives.previous = [s.drives.current]; delete s.drives.current; }],
-]) test(`field hides safely: ${label}`, () => { const s = summary(); change(s); assert.equal(normalizeNflField(s), null); });
+]) test(`uncertain markers clear safely: ${label}`, () => { const s = summary(); change(s); assert.equal(normalizeNflField(s), null); });
 test('possession change with new drive normalizes both teams in same direction', () => {
   const s = summary(63); const c = s.header.competitions[0];
   c.competitors[0].possession = false; c.competitors[1].possession = true;
   s.drives.current.team.id = '2'; s.drives.current.plays[0].end.team.id = '2';
   const field = normalizeNflField(s);
   assert.equal(field.offense, 'BBB'); assert.equal(field.position, 'BBB 37'); assert.equal(field.ball, 37);
+});
+
+test('field shell persists through punt, unknown event, penalty/no-play, score and final without invented markers', () => {
+  for (const type of ['Punt','Unknown','Penalty','Extra Point Good']) {
+    const raw=summary(); raw.drives.current.plays.push({type:{text:type},text:'NE at SEA 20 (not structured state)'});
+    const field=normalizeNflField(raw);
+    const markup=render(React.createElement(Field,{field}));
+    assert.match(markup,/<svg/); assert.match(markup,/h-20/);
+    assert.doesNotMatch(markup,/<ellipse|stroke-dasharray|AAA possession/);
+  }
+  const raw=summary(); raw.header.competitions[0].status.type.completed=true;
+  assert.match(render(React.createElement(Field,{field:normalizeNflField(raw)})),/<svg/);
+});
+test('structured same-period timeout retains last trustworthy spot; missing fields are independent', () => {
+  const raw=summary();raw.drives.current.plays.push({type:{text:'Timeout'},period:{number:3},clock:{displayValue:'8:40'}});
+  const retained=normalizeNflField(raw);assert.equal(retained.ball,37);assert.equal(retained.clock,'8:42 Q3');assert.equal(retained.stateLabel,'Last structured spot');
+  delete raw.drives.current.plays[1].period;
+  assert.equal(normalizeNflField(raw).ball,37,'an administrative event without period metadata does not erase a known spot');
+  raw.drives.current.plays.splice(1,0,{type:{text:'Punt'},period:{number:3}});
+  assert.equal(normalizeNflField(raw),null,'do not cross a punt when searching past a timeout');
+  for(const key of ['down','distance','yardsToEndzone']){
+    const incomplete=summary();delete incomplete.drives.current.plays[0].end[key];
+    const field=normalizeNflField(incomplete);assert.ok(field);assert.equal(field.firstDown,null);
+    assert.equal(field.ball,key==='yardsToEndzone'?null:37);
+  }
+  const penalty=summary();penalty.drives.current.plays[0].type.text='Penalty';
+  assert.equal(normalizeNflField(penalty).ball,37);
+});
+test('known new possession never reuses old drive or old timeout state', () => {
+  const raw=summary();raw.drives.current.plays.push({type:{text:'Timeout'},period:{number:3}});
+  raw.header.competitions[0].competitors[0].possession=false;raw.header.competitions[0].competitors[1].possession=true;
+  assert.equal(normalizeNflField(raw),null);
+  assert.doesNotMatch(render(React.createElement(Field,{field:normalizeNflField(raw)})),/AAA possession|<ellipse/);
 });
 
 test('batched roster loader scopes league, week, Group teams and provider table; excludes synthetic D/ST', async () => {

@@ -72,6 +72,7 @@ function notificationModule(file, db, sends) {
   return load(file, {
     '@/lib/supabaseAdmin': { supabaseAdmin: db },
     '@/lib/fantasyTeamIdentity': identity,
+    '@/lib/lineups/draftHistory.server': { readDraftHistory: async () => ({ available: true, initialized: false, picks: [], corrections: [], turn: { state: 'empty', overallPick: 1, round: 1, pickInRound: 1, teamId: 11 } }) },
     '@/lib/notifications': { sendLoggedNotification: async (input) => { sends.push(input); return { sent: input.skipReason ? 0 : 1, failed: 0, devices: [] }; } },
     '@/lib/notificationTemplates': { renderNotificationTemplate: () => 'Rendered' },
     '@/lib/leagueNotificationSettings': { getLeagueNotificationTemplate: async () => ({ enabled: true, template: {} }) },

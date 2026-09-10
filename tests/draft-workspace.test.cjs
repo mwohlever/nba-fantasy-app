@@ -14,6 +14,7 @@ const Refresh = require('../components/ui/ScoresRefreshButton.tsx').default;
 const Sync = require('../components/lineups/RefreshPlayersButton.tsx').default;
 const GameCenter = require('../components/lineups/NflFantasyGameCenter.tsx').NflFantasyGameCenter;
 const Indicator = require('../components/ui/PullToRefreshIndicator.tsx').default;
+const DraftOrder = require('../components/lineups/DraftOrder.tsx').default;
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const reply = (body, ok = true) => ({ ok, json: async () => body });
 const find = (tree, type) => nodes(tree).find(n => n.type === type);
@@ -28,11 +29,12 @@ async function setup(sport = 'nfl', user = { role: 'player', systemRole: 'user' 
     slateTeamConfigs: participants.map(team => ({ slate_id: 1, team_id: team.id, is_participating: true, draft_order: team.id })),
     playerAverages: [], initialSelectedSlateId: 1, savedLineupsForInitialSlate: [], playerStats: [], teamResults: [], defaultViewMode: 'draft', sport };
   let roster = [{ team_id: 2, player_ids: [10], player_slots: [{ player_id: 10, roster_slot_position: players[0].position_group, roster_slot_index: 0 }] }];
+  let history = {available:true,initialized:true,picks:[],corrections:[],turn:{state:'empty',overallPick:1,round:1,pickInRound:1,teamId:1}};
   const calls = [];
   const respond = url => {
     if (url === '/api/me') return { user, groupContext: { team: { id: 1, name: 'Mark' } } };
     const id = Number(new URL(url, 'http://local').searchParams.get('slateId') ?? 1);
-    if (url.startsWith('/api/lineups?')) return { lineups: roster, draftContext: { canProxyDraft: user.role === "admin" || user.systemRole === "super_admin" || user.groupCommissioner === true, groupId: context.group, slateId: id, participants: id === 1 ? participants : [participants[2]], slate: { id, is_locked: false } } };
+    if (url.startsWith('/api/lineups?')) return { lineups: roster, draftContext: { history, canProxyDraft: user.role === "admin" || user.systemRole === "super_admin" || user.groupCommissioner === true, groupId: context.group, slateId: id, participants: id === 1 ? participants : [participants[2]], slate: { id, is_locked: false } } };
     if (url.startsWith('/api/player-stats')) return { sport, playerStats: [], teamResults: [], acceptedRevision: 1 };
     if (url.startsWith('/api/team-results')) return { teamResults: [] };
     if (url.startsWith('/api/slate-availability')) return { availablePlayerIds: [10] };
@@ -43,7 +45,7 @@ async function setup(sport = 'nfl', user = { role: 'player', systemRole: 'user' 
   const h = host(Builder);
   h.render(props, true); await tick(); h.render(props, true); await tick();
   const tree = h.render(props); calls.length = 0;
-  return { h, props, tree, calls, respond, setRoster: next => { roster = next; } };
+  return { h, props, tree, calls, respond, setRoster: next => { roster = next; }, setHistory: next => { history = next; } };
 }
 test('compact header/settings retain Week, status, controls and exact role gates', async () => {
   for (const [role, systemRole] of [['player','user'], ['admin','user'], ['player','super_admin']]) {
@@ -64,6 +66,39 @@ test('compact header/settings retain Week, status, controls and exact role gates
     h.unmount();
   }
   assert.doesNotMatch(read('app/lineups/draft/page.tsx'), /draft-page-intro|RefreshPlayersButton/);
+});
+
+test('Draft Order remains selected on refresh and successful pick; PlayerPool stays mounted', async () => {
+  for(const sport of ['nba','nfl']){
+    const {h,props,tree,respond,setHistory,calls}=await setup(sport,{role:'admin'});
+    const orderButton=nodes(tree).find(n=>n.type==='button' && n.props.children?.props?.children==='Draft Order');
+    orderButton.props.onClick();let next=h.render(props);
+    assert.ok(find(next,DraftOrder));assert.ok(find(next,Pool));
+    find(next,Pool).props.setSearchTerm('research');
+    const pick={id:1,overall_pick:1,round_number:1,pick_in_round:1,team_id:1,team_name:'Mark',player_id:11,player_name:'New pick',player_position:sport==='nfl'?'RB':'G',status:'active',actor_user_id:'mark',occurred_at:'2026-09-09',is_proxy:false};
+    global.fetch=async(url,options)=>{
+      calls.push([url,options]);
+      if(options?.method==='POST'){setHistory({available:true,initialized:true,picks:[pick],corrections:[],turn:{state:'active',overallPick:2,round:1,pickInRound:2,teamId:2}});return reply({success:true});}
+      return reply(respond(url));
+    };
+    assert.equal(await find(next,Modal).props.handleAssignPlayerToTeam({id:11,name:'New pick',position_group:pick.player_position,is_active:true},1,{position:pick.player_position,slotIndex:0}),true);
+    await tick(); next=h.render(props);
+    assert.equal(find(next,DraftOrder).props.history.picks[0].overall_pick,1);
+    await context.pullOptions.onRefresh(); next=h.render(props);
+    assert.ok(find(next,DraftOrder));assert.ok(find(next,Pool));
+    assert.ok(calls.every(([url])=>!/sync-players/.test(url)));
+    context.group='b';const switched=h.render(props);assert.equal(find(switched,DraftOrder).props.history,null);
+    h.unmount();
+  }
+});
+
+test('completed/reversed Draft Order renders exact Week 1 rows without pick 25',()=>{
+  const data=require('../docs/nfl-week1-draft-verification.json');
+  const picks=data.picks.map(p=>({...p,id:p.overall_pick,player_id:p.id,player_name:p.name,player_position:p.position,actor_user_id:null,occurred_at:null,is_proxy:null,status:p.overall_pick===8?'reversed':'active'}));
+  const tree=DraftOrder({history:{available:true,initialized:true,picks,corrections:[],turn:{state:'complete'}},teams:[]});
+  assert.equal(nodes(tree).filter(n=>n.type==='tr').length,25,'one header plus 24 real picks');
+  const text=JSON.stringify(tree);assert.match(text,/Draft complete/);assert.match(text,/Corrected \/ reversed/);
+  assert.match(text,/Original pick times and actors are unknown/);assert.doesNotMatch(text,/Pick 25/);
 });
 test('one current Group participant by default; opponents are read-only, inspectable, and retain saved slots', async () => {
   const {h, props, tree} = await setup();

@@ -1,4 +1,5 @@
 import { loadFantasyNotificationRecipients } from "@/lib/fantasyTeamIdentity";
+import { readDraftHistory } from "@/lib/lineups/draftHistory.server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { PushResult } from "@/lib/push";
 import { sendLoggedNotification } from "@/lib/notifications";
@@ -122,7 +123,8 @@ function getFinalPositionNeed(
 }
 
 export async function notifyNextDrafter(
-  slateId: number
+  slateId: number,
+  afterOverallPick?: number,
 ): Promise<DraftNotificationResult> {
   const { data: slate, error: slateError } = await supabaseAdmin
     .from("slates")
@@ -228,14 +230,28 @@ export async function notifyNextDrafter(
   }
 
   const roundIndex = Math.floor(totalDrafted / totalTeams);
-  const roundNumber = roundIndex + 1;
-  const overallPickNumber = totalDrafted + 1;
+  let roundNumber = roundIndex + 1;
+  let overallPickNumber = totalDrafted + 1;
   const pickInRound = totalDrafted % totalTeams;
 
-  const nextTeam =
+  let nextTeam =
     roundIndex % 2 === 0
       ? orderedTeams[pickInRound]
       : orderedTeams[totalTeams - 1 - pickInRound];
+
+  if (sport === "nba" || sport === "nfl") {
+    const league = await supabaseAdmin.from("leagues").select("group_id").eq("id", slate.league_id).single();
+    if (league.error) throw new Error(league.error.message);
+    const history = await readDraftHistory(slateId, league.data.group_id, slate.league_id, sport);
+    const turn = history.turn;
+    if (!history.available || turn.state === "complete" || turn.state === "closed" || turn.state === "needs_review" ||
+      (afterOverallPick !== undefined && turn.overallPick !== afterOverallPick + 1)) {
+      return { sent: 0, failed: 0, skipped: true, reason: "No current authoritative draft turn to notify.", devices: [] };
+    }
+    roundNumber = turn.round!;
+    overallPickNumber = turn.overallPick!;
+    nextTeam = orderedTeams.find(team => team.team_id === turn.teamId)!;
+  }
 
   if (!nextTeam) {
     return {

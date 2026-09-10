@@ -74,7 +74,7 @@ function blankRow() {
     game_status_text: null as string | null,
     games_completed: 0,
     games_in_progress: 0,
-    games_remaining: 0,
+    games_remaining: 1,
   };
 }
 
@@ -92,6 +92,10 @@ function applyGameStatus(
   status: EspnGameStatusType | undefined,
 ) {
   row.game_status_text = status?.description ?? null;
+  if (/CANCELED|CANCELLED|POSTPONED|SUSPENDED/.test(status?.name ?? "")) {
+    row.game_status = null; row.games_completed = 0; row.games_in_progress = 0; row.games_remaining = 1;
+    return;
+  }
 
   if (status?.completed === true || status?.state === "post") {
     row.game_status = 3;
@@ -285,10 +289,12 @@ export async function POST(request: Request) {
       statByPlayerId.set(player.id, blankRow());
     }
 
+    const eventStatuses = new Map<string, EspnGameStatusType | undefined>();
     let allRelevantGamesFinal = relevantEvents.length > 0;
 
     for (const event of relevantEvents) {
-      const eventStatus = event.status?.type;
+      const eventStatus = event.competitions?.[0]?.status?.type ?? event.status?.type;
+      eventStatuses.set(String(event.id), eventStatus);
       const eventCompetitors = event.competitions?.[0]?.competitors ?? [];
       const summary = await fetchGameSummary(String(event.id));
       if (!summary) {
@@ -309,8 +315,8 @@ export async function POST(request: Request) {
       }
 
       const statusInfo = summary.header?.competitions?.[0]?.status?.type;
+      eventStatuses.set(String(event.id), statusInfo ?? eventStatus);
       const isCompleted = statusInfo?.completed === true;
-      const statusText = statusInfo?.description ?? null;
 
       if (!isCompleted) {
         allRelevantGamesFinal = false;
@@ -340,12 +346,7 @@ export async function POST(request: Request) {
               nflScoringRules,
             ) * 10,
           ) / 10;
-        row.game_status_text = statusText;
-        // Matches NBA's convention: 3 = final, 2 = in progress
-        row.game_status = isCompleted ? 3 : 2;
-        row.games_completed = isCompleted ? 1 : 0;
-        row.games_in_progress = isCompleted ? 0 : 1;
-        row.games_remaining = 0;
+        applyGameStatus(row, statusInfo ?? eventStatus);
 
         statByPlayerId.set(player.id, row);
       }
@@ -375,6 +376,17 @@ export async function POST(request: Request) {
         applyGameStatus(row, statusInfo ?? eventStatus);
         statByPlayerId.set(dstPlayer.id, row);
       }
+    }
+
+    // Lifecycle belongs to the team's slate game, independent of box-score presence.
+    // Missing/ambiguous schedules stay unresolved (left), never implicitly final.
+    for (const player of players) {
+      const dstTeamId = getDstEspnTeamId(player);
+      const matchingEvents = events.filter(event => (event.competitions?.[0]?.competitors ?? []).some(c =>
+        dstTeamId ? String(c.team?.id ?? "") === dstTeamId :
+          Boolean(player.team_abbreviation) && String(c.team?.abbreviation ?? "").toUpperCase() === player.team_abbreviation!.toUpperCase()));
+      const event = matchingEvents.length === 1 ? matchingEvents[0] : null;
+      applyGameStatus(statByPlayerId.get(player.id)!, event ? eventStatuses.get(String(event.id)) ?? event.competitions?.[0]?.status?.type ?? event.status?.type : undefined);
     }
 
     const playerStatRows = Array.from(statByPlayerId.entries()).map(
@@ -463,7 +475,7 @@ export async function POST(request: Request) {
         finish_position: null as number | null,
         games_completed: gamesCompleted,
         games_in_progress: gamesInProgress,
-        games_remaining: 0,
+        games_remaining: playerRows.reduce((sum, playerRow) => sum + Number(statsByPlayerId.get(playerRow.player_id)?.games_remaining ?? 1), 0),
       };
     });
 
