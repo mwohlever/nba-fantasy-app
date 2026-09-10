@@ -46,6 +46,9 @@ type PlayerPoolProps = {
   rosterSlots?: RosterSlotConfig[];
   selectedSeason: string;
   nflSeason?: string;
+  // Only Draft Order supplies this fixed-target interaction.
+  speedEntry?: { onSelect: (player: Player) => Promise<boolean>; onResearch: (player: Player) => void };
+
 
   /*
    * Optional context used by the roster-slot workflow.
@@ -320,6 +323,7 @@ export default function PlayerPool({
   selectedSeason,
   nflSeason,
   slotDraftContext,
+  speedEntry,
   hidePositionFilter = false,
 }: PlayerPoolProps) {
   const { selectedSport } = useSelectedSport();
@@ -2333,7 +2337,7 @@ export default function PlayerPool({
             const badges =
               projectionMeta?.badges ?? [];
 
-            return (
+            const card = (
               <button
                 key={player.id}
                 type="button"
@@ -2346,6 +2350,11 @@ export default function PlayerPool({
                       player.id,
                     );
 
+                    return;
+                  }
+
+                  if (speedEntry) {
+                    void speedEntry.onSelect(player);
                     return;
                   }
 
@@ -2364,7 +2373,8 @@ export default function PlayerPool({
                     player,
                   );
                 }}
-                className={`draft-player-card ${
+                style={speedEntry ? { paddingRight: "3rem" } : undefined}
+                className={`draft-player-card ${speedEntry ? "w-full h-full" : ""} ${
                   hasSeasonResearch
                     ? "draft-player-card--season draft-player-card--research"
                     : ""
@@ -3256,6 +3266,12 @@ export default function PlayerPool({
                 </div>
               </button>
             );
+            return speedEntry ? <div key={player.id} className="relative">
+              {card}
+              <button type="button" aria-label={`Info about ${player.name}`}
+                disabled={isAssigningPlayer} onClick={() => speedEntry.onResearch(player)}
+                className="absolute right-1 top-1 rounded-lg px-2 py-2 text-xs font-semibold text-sky-600">Info</button>
+            </div> : card;
           })}
         </div>
       )}

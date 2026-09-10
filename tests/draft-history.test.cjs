@@ -19,7 +19,7 @@ const backfill = fs.readFileSync('supabase/manual/20260912_nfl_week1_draft_backf
 const verified = require('../docs/nfl-week1-draft-verification.json');
 
 test('generic snake walks every configured round for 2, 3, 4, 5 and 7 participants', () => {
-  for (const n of [2,3,4,5,7]) for (const size of [1,3,6,9]) {
+  for (const n of [1,2,3,4,5,7]) for (const size of [1,3,6,9]) {
     const ids = Array.from({length:n}, (_,i) => 100+i), counts = {};
     const expected = Array.from({length:size}, (_,round) => round % 2 ? [...ids].reverse() : ids).flat();
     for (let i=0;i<expected.length;i++) {
@@ -153,6 +153,7 @@ test('commissioner add/remove/replace uses audited RPC; unauthorized corrections
     const writes=[],recomputes=[];let reads=0;
     const db={from(table){reads++;const q={select(){return q},eq(){return q},maybeSingle(){return q},then(resolve){resolve({data:table==='lineups'?{id:20,lineup_players:[{player_id:10}]}:{id:11},error:null})}};return q}};
     const route=load('app/api/admin/lineup-correction/route.ts',{
+      '@/lib/lineups/draftHistory':model,
       'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status??200})}},
       '@/lib/supabaseAdmin':{supabaseAdmin:db},
       '@/lib/security/resourceAuthorization':{authorizeSlateResource:async(_r,_id,options)=>{
@@ -168,5 +169,45 @@ test('commissioner add/remove/replace uses audited RPC; unauthorized corrections
     assert.equal(writes[0].actorId,'commissioner');assert.equal(writes[0].teamId,2);assert.deepEqual(writes[0].expectedIds,[10]);
     assert.deepEqual(writes[0].desiredIds,action==='add'?[10,11]:action==='remove'?[]:[11]);
     assert.deepEqual(recomputes,[[1,'nfl']]);
+  }
+});
+
+test('linked corrections resolve latest player while original chronology stays unchanged', () => {
+  const pick={id:6,overall_pick:6,round_number:2,pick_in_round:2,team_id:4,player_id:10,player_name:'Original',status:'reversed'};
+  const original=JSON.stringify(pick);
+  const corrections=[{id:2,pick_id:6,team_id:4,new_player_id:12,new_player_name:'Latest'}, {id:1,pick_id:6,team_id:4,new_player_id:11,new_player_name:'First'}, {id:3,pick_id:6,team_id:99,new_player_id:13}];
+  const effective=model.effectiveDraftPick(pick,corrections);
+  assert.equal(effective.playerId,12); assert.equal(effective.playerName,'Latest'); assert.equal(effective.corrected,true);
+  assert.deepEqual(effective.trail.map(c=>c.id),[1,2]); assert.equal(JSON.stringify(pick),original);
+  assert.equal(model.effectiveDraftPick(pick,[{id:4,pick_id:6,team_id:4,new_player_id:null}]).playerId,null);
+});
+test('draft state wording is explicit, authoritative, and completion takes precedence over locking',()=>{
+  for(const [state,label] of [['active','Draft Open'],['empty','Draft Open'],['complete','Draft Complete'],['closed','Draft Locked'],['needs_review','Draft Needs Review']])
+    assert.equal(model.draftStateLabel({available:true,turn:{state}},false),label);
+  assert.equal(model.draftStateLabel({available:true,turn:{state:'complete'}},true),'Draft Complete');
+  assert.equal(model.draftStateLabel({available:true,turn:{state:'active'}},true),'Draft Locked');
+  assert.equal(model.draftStateLabel({available:false,turn:{state:'needs_review'}},false),'Draft Setup Pending');
+});
+
+test('board correction validates reviewed roster, historical team and effective player before audited mutation',async()=>{
+  for(const mode of ['valid','stale','wrong-team','wrong-player','duplicate','ineligible']) {
+    const writes=[];
+    const db={from(table){const q={select(){return q},eq(){return q},maybeSingle(){return q},then(resolve){resolve({data:table==='lineups'?{id:20,lineup_players:[{player_id:10}]}:{id:11},error:null})}};return q}};
+    const route=load('app/api/admin/lineup-correction/route.ts',{
+      '@/lib/lineups/draftHistory':model,
+      'next/server':{NextResponse:{json:(body,options)=>({body,status:options?.status??200})}},
+      '@/lib/supabaseAdmin':{supabaseAdmin:db},
+      '@/lib/security/resourceAuthorization':{authorizeSlateResource:async()=>({ok:true,user:{id:'commissioner'},target:{groupId:'a',leagueId:'nfl-a',sportKey:'nfl'}})},
+      '@/lib/corrections/recomputeSlateResults':{recomputeCorrectedSlateResults:async()=>{}},
+      '@/lib/lineups/draftHistory.server':{
+        isMissingDraftInfrastructure:server.isMissingDraftInfrastructure,
+        readDraftHistory:async(...args)=>{assert.deepEqual(args,[1,'a','nfl-a','nfl']);return {picks:[{id:6,team_id:mode==='wrong-team'?3:2,player_id:mode==='wrong-player'?12:10,status:'active'}],corrections:[]};},
+        mutateFantasyDraft:async input=>{writes.push(input);return {error:['duplicate','ineligible'].includes(mode)?{message:mode}:null};},
+      },
+    });
+    const result=await route.POST({json:async()=>({slateId:1,teamId:2,action:'replace',pickId:6,oldPlayerId:10,newPlayerId:11,expectedPlayerIds:mode==='stale'?[12]:[10]})});
+    assert.equal(result.status,mode==='valid'?200:409);
+    if(['stale','wrong-team','wrong-player'].includes(mode)) assert.equal(writes.length,0);
+    if(mode==='valid'){assert.equal(writes[0].correction,true);assert.deepEqual(writes[0].desiredIds,[11]);assert.equal(writes[0].overallPick,undefined);}
   }
 });

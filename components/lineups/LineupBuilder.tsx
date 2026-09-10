@@ -1,6 +1,6 @@
 "use client";
 import DraftOrder from "./DraftOrder";
-import type { DraftHistory } from "@/lib/lineups/draftHistory";
+import { effectiveDraftPick, draftStateLabel, type DraftPick, type DraftHistory } from "@/lib/lineups/draftHistory";
 
 import { usePathname } from "next/navigation";
 import { useGroupContext } from "@/components/providers/GroupProvider";
@@ -104,6 +104,10 @@ export default function LineupBuilder({
     gamesByTeam: Record<string, LiveScoreGame>;
     slate: { id: number; is_locked: boolean; rules_snapshot?: Record<string, unknown> | null };
   } | null>(null);
+  // Display-only intent; the server still determines every pick's chronology.
+  const [editPicksScope, setEditPicksScope] = useState<string | null>(null);
+  const [correctionTarget, setCorrectionTarget] = useState<{ scope: string; pick: DraftPick; playerId: number; playerName: string; expectedIds: number[] } | null>(null);
+  const [orderPickTarget, setOrderPickTarget] = useState<{ scope: string; teamId: number; overallPick: number } | null>(null);
   const [viewedParticipant, setViewedParticipant] = useState<{ scope: string; id: number } | null>(null);
   const draftMutationRef = useRef(false);
   const [message, setMessage] = useState("");
@@ -556,8 +560,8 @@ export default function LineupBuilder({
   useEffect(() => {
     if (!selectedSlateIdNumber) return;
     if (isDraftPage) {
-      setDraftingPlayer(null); setTargetDraftSlot(null); setPendingRosterSlotChoice(null);
-      setLeagueResearchPlayer(null); setProfilePlayer(null);
+      setDraftingPlayer(null); setTargetDraftSlot(null); setPendingRosterSlotChoice(null); setOrderPickTarget(null);
+      setLeagueResearchPlayer(null); setProfilePlayer(null); setEditPicksScope(null); setCorrectionTarget(null);
     }
     void loadSlateLineups(selectedSlateIdNumber);
   }, [selectedSlateIdNumber, refreshScopeKey]);
@@ -684,6 +688,68 @@ export default function LineupBuilder({
     ? orderedTeamsForSlate.find(team => team.id === groupContext?.team?.id)?.id ?? null
     : currentUser?.activeGroupTeamId ?? currentUser?.teamId ?? null;
   const canProxyDraft = scopeReady && draftContext?.scope === refreshScopeKey && draftContext.canProxyDraft === true;
+  const orderHistory = draftContext?.scope === refreshScopeKey ? draftContext.history : null;
+  const orderTurn = orderHistory?.available ? orderHistory.turn : null;
+  const orderTeam = orderedTeamsForSlate.find(team => team.id === orderTurn?.teamId);
+  const canEnterOrderPick = Boolean(scopeReady && orderTeam && orderTurn?.overallPick &&
+    (orderTurn.state === "active" || orderTurn.state === "empty") && !selectedSlate?.is_locked &&
+    (orderTeam.id === currentTeamId || canProxyDraft));
+  const activeOrderTarget = orderPickTarget?.scope === refreshScopeKey ? orderPickTarget : null;
+
+  useEffect(() => {
+    if (orderPickTarget && (!activeOrderTarget || !canEnterOrderPick ||
+      orderTurn?.teamId !== orderPickTarget.teamId || orderTurn?.overallPick !== orderPickTarget.overallPick)) {
+      setOrderPickTarget(null); setDraftingPlayer(null); setPendingRosterSlotChoice(null);
+    }
+  }, [orderPickTarget, activeOrderTarget, canEnterOrderPick, orderTurn?.teamId, orderTurn?.overallPick]);
+
+  const canEditPicks = Boolean(isDraftPage && scopeReady && orderHistory?.available &&
+    (groupContext?.canAdministerGroup || currentUser?.systemRole === "super_admin"));
+  const editingPicks = canEditPicks && editPicksScope === refreshScopeKey;
+  const activeCorrection = editingPicks && correctionTarget?.scope === refreshScopeKey ? correctionTarget : null;
+  function canEditPick(pick: DraftPick) {
+    const effective = orderHistory && effectiveDraftPick(pick, orderHistory.corrections);
+    return Boolean(canEditPicks && effective?.playerId && getPlayersForTeam(pick.team_id).some(p => p.id === effective.playerId));
+  }
+  function cancelCorrection() { setCorrectionTarget(null); setDraftingPlayer(null); setPendingRosterSlotChoice(null); }
+  function beginCorrection(pick: DraftPick) {
+    if (!canEditPick(pick) || isSaving || isAssigningPlayer || isSlateLoading || !orderHistory) return;
+    const effective = effectiveDraftPick(pick, orderHistory.corrections);
+    setOrderPickTarget(null); setTargetDraftSlot(null); setDraftingPlayer(null);
+    setCorrectionTarget({ scope: refreshScopeKey, pick, playerId: effective.playerId!, playerName: effective.playerName,
+      expectedIds: getPlayersForTeam(pick.team_id).map(p => p.id) });
+  }
+  async function replaceOrderPick(player: Player, teamId: number) {
+    if (!activeCorrection || !canEditPicks || !isRenderScopeCurrent() || teamId !== activeCorrection.pick.team_id ||
+      draftMutationRef.current || isSaving || isSlateLoading) return false;
+    if (getOwnerTeamIdForPlayer(player.id)) { setSaveMessage("That player is already rostered."); return false; }
+    if (!window.confirm(`Replace ${activeCorrection.playerName} with ${player.name} for ${activeCorrection.pick.team_name} at pick #${activeCorrection.pick.overall_pick}?`)) return false;
+    const current = refreshScopeRef.current.capture();
+    draftMutationRef.current = true; ++latestSlateLoadRef.current; setIsAssigningPlayer(true);
+    try {
+      const response = await fetch("/api/admin/lineup-correction", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slateId: selectedSlateIdNumber, teamId, action: "replace", pickId: activeCorrection.pick.id,
+          oldPlayerId: activeCorrection.playerId, newPlayerId: player.id, expectedPlayerIds: activeCorrection.expectedIds }) });
+      const result = await response.json();
+      if (!current()) return false;
+      setSaveMessage(response.ok ? "Pick corrected successfully." : result.error || "Correction failed. Review the refreshed roster.");
+      return response.ok;
+    } catch {
+      if (current()) setSaveMessage("Could not confirm correction. Review the refreshed roster before retrying.");
+      return false;
+    } finally {
+      draftMutationRef.current = false; setIsAssigningPlayer(false);
+      if (current()) { cancelCorrection(); if (selectedSlateIdNumber) void loadSlateLineups(selectedSlateIdNumber); }
+    }
+  }
+
+  function beginOrderPick() {
+    if (!canEnterOrderPick || !orderTeam || !orderTurn?.overallPick || isSlateLoading || isSaving || isAssigningPlayer) return;
+    setCorrectionTarget(null); setEditPicksScope(null);
+    setTargetDraftSlot(null); setPendingRosterSlotChoice(null); setDraftingPlayer(null);
+    setOrderPickTarget({ scope: refreshScopeKey, teamId: orderTeam.id, overallPick: orderTurn.overallPick });
+  }
+
   const viewedTeam = orderedTeamsForSlate.find(team => viewedParticipant?.scope === refreshScopeKey && team.id === viewedParticipant.id)
     ?? orderedTeamsForSlate.find(team => team.id === currentTeamId) ?? orderedTeamsForSlate[0] ?? null;
 
@@ -1925,6 +1991,13 @@ export default function LineupBuilder({
     },
   ) {
     if (isDraftPage && (!scopeReady || !isRenderScopeCurrent() || isSlateLoading || draftMutationRef.current || (targetTeamId !== currentTeamId && !canProxyDraft))) return false;
+    if (activeOrderTarget && (!canEnterOrderPick || targetTeamId !== activeOrderTarget.teamId ||
+      orderTurn?.teamId !== activeOrderTarget.teamId || orderTurn?.overallPick !== activeOrderTarget.overallPick)) {
+      setSaveMessage("The draft has advanced. Review the current pick.");
+      setOrderPickTarget(null); setDraftingPlayer(null); setPendingRosterSlotChoice(null);
+      if (selectedSlateIdNumber) void loadSlateLineups(selectedSlateIdNumber);
+      return false;
+    }
     const targetTeam = orderedTeamsForSlate.find((team) => team.id === targetTeamId);
     if (!targetTeam) return false;
 
@@ -2051,6 +2124,9 @@ export default function LineupBuilder({
       return false;
     }
 
+    const isOrderAssignmentCurrent = refreshScopeRef.current.capture();
+    if (activeOrderTarget && !window.confirm(`Draft ${player.name} for ${targetTeam.name} at pick #${activeOrderTarget.overallPick}?`)) return false;
+
     try {
       if (isDraftPage) { draftMutationRef.current = true; ++latestSlateLoadRef.current; setRefreshFeedback(null); }
       setIsAssigningPlayer(true);
@@ -2103,10 +2179,18 @@ export default function LineupBuilder({
         }
       );
 
-      if (!added) return false;
+      if (activeOrderTarget && !isOrderAssignmentCurrent()) return false;
+      if (!added) {
+        if (activeOrderTarget) {
+          setOrderPickTarget(null); setDraftingPlayer(null); setPendingRosterSlotChoice(null);
+          if (selectedSlateIdNumber) void loadSlateLineups(selectedSlateIdNumber);
+        }
+        return false;
+      }
+      if (activeOrderTarget) setOrderPickTarget(null);
 
       setDraftingPlayer(null);
-      setSearchTerm("");
+      if (!activeOrderTarget) setSearchTerm("");
 
       if (selectedSlateIdNumber) {
         void loadSlateLineups(selectedSlateIdNumber);
@@ -2466,7 +2550,7 @@ export default function LineupBuilder({
     <div ref={isScoresPage || isDraftPage ? scoresSurfaceRef : undefined} className={isScoresPage ? `scores-page-content${["nba", "nfl"].includes(sport ?? selectedSport) ? " scores-pull-surface" : ""}` : "draft-workspace"}>
       {viewMode === "draft" && <>
         <header className="draft-header">
-          <div><h1>Draft</h1><p>{selectedSlateDisplay} · {selectedSlate?.is_locked ? "Locked" : "Open"}</p>
+          <div><h1>Draft</h1><p>{selectedSlateDisplay} · {(sport ?? selectedSport) === "golf" ? selectedSlate?.is_locked ? "Locked" : "Open" : draftStateLabel(orderHistory, Boolean(selectedSlate?.is_locked))}</p>
             <p>{currentTeamId ? `${getPlayersForTeam(currentTeamId).length}/${getRosterTotalSlots()} rostered` : "Viewing participants"}</p></div>
           <div className="draft-header-actions">
             <ScoresRefreshButton label="Refresh Draft" onRefresh={() => { void refreshDraft(); }}
@@ -2547,7 +2631,7 @@ export default function LineupBuilder({
               type="button"
               data-draft-pull-start="true"
               aria-pressed={draftPageTab === "lineup"}
-              onClick={() => setDraftPageTab("lineup")}
+              onClick={() => { setOrderPickTarget(null); cancelCorrection(); setEditPicksScope(null); setDraftPageTab("lineup"); }}
               className={`draft-page-tab ${
                 draftPageTab === "lineup"
                   ? "draft-page-tab--active"
@@ -2563,7 +2647,7 @@ export default function LineupBuilder({
               type="button"
               data-draft-pull-start="true"
               aria-pressed={draftPageTab === "players"}
-              onClick={() => setDraftPageTab("players")}
+              onClick={() => { setOrderPickTarget(null); cancelCorrection(); setEditPicksScope(null); setDraftPageTab("players"); }}
               className={`draft-page-tab ${
                 draftPageTab === "players"
                   ? "draft-page-tab--active"
@@ -2581,7 +2665,12 @@ export default function LineupBuilder({
           </section>
 
           {draftPageTab === "order" && (sport ?? selectedSport) !== "golf" &&
-            <DraftOrder history={draftContext?.scope === refreshScopeKey ? draftContext.history ?? null : null} teams={orderedTeamsForSlate} />}
+            <DraftOrder history={draftContext?.scope === refreshScopeKey ? draftContext.history ?? null : null} teams={orderedTeamsForSlate}
+              actionLabel={canEnterOrderPick ? orderTeam?.id === currentTeamId ? "Make My Pick" : `Make Pick for ${orderTeam?.name}` : undefined}
+              canEdit={canEditPicks} editing={editingPicks} canEditPick={canEditPick} onEdit={beginCorrection}
+              playerPosition={id => players.find(p => p.id === id)?.position_group}
+              onToggleEdit={() => { cancelCorrection(); setOrderPickTarget(null); setEditPicksScope(editingPicks ? null : refreshScopeKey); }}
+              onMakePick={beginOrderPick} busy={isSlateLoading || isSaving || isAssigningPlayer || Boolean(activeOrderTarget)} />}
 
           <div hidden={draftPageTab !== "lineup"}>
             <div className="draft-participants" aria-label="View participant roster">
@@ -2637,7 +2726,15 @@ export default function LineupBuilder({
               setTargetDraftSlot={setTargetDraftSlot}
             />}
           </div>
-          <div hidden={draftPageTab !== "players"}>
+          <div hidden={draftPageTab !== "players" && !(draftPageTab === "order" && (activeOrderTarget || activeCorrection))}>
+            {activeCorrection && <div className="flex items-center justify-between py-2 text-sm">
+              <div>Edit Pick #{activeCorrection.pick.overall_pick} · {activeCorrection.pick.team_name}<p>Current: {activeCorrection.playerName}</p></div>
+              <button type="button" disabled={isSaving || isAssigningPlayer} onClick={cancelCorrection}>Cancel</button>
+            </div>}
+            {activeOrderTarget && <div className="flex items-center justify-between py-2 text-sm">
+              <span>Pick #{activeOrderTarget.overallPick} · Draft for {orderedTeamsForSlate.find(t => t.id === activeOrderTarget.teamId)?.name}</span>
+              <button type="button" disabled={isSaving || isAssigningPlayer} onClick={() => { setOrderPickTarget(null); setDraftingPlayer(null); setPendingRosterSlotChoice(null); }}>Cancel</button>
+            </div>}
             <PlayerPool
               players={players}
               filteredPlayers={filteredPlayers}
@@ -2654,6 +2751,12 @@ export default function LineupBuilder({
               playerProjections={playerProjections}
               getOwnerTeamForPlayer={getOwnerTeamForPlayer}
               setDraftingPlayer={setDraftingPlayer}
+              speedEntry={draftPageTab === "order" && (activeCorrection || activeOrderTarget) ? {
+                onSelect: player => activeCorrection
+                  ? replaceOrderPick(player, activeCorrection.pick.team_id)
+                  : handleAssignPlayerToTeam(player, activeOrderTarget!.teamId),
+                onResearch: setLeagueResearchPlayer,
+              } : undefined}
               isAssigningPlayer={isAssigningPlayer || isSaving || isSlateLoading}
               pillBase={pillBase}
               activePill={activePill}
@@ -2867,17 +2970,17 @@ export default function LineupBuilder({
         playerAverageMap={playerAverageMap}
         playerProjections={playerProjections}
         availablePlayerIdSet={availablePlayerIdSet}
-        ownerTeamForDraftingPlayer={ownerTeamForDraftingPlayer}
+        ownerTeamForDraftingPlayer={activeCorrection ? null : ownerTeamForDraftingPlayer}
         isAssigningPlayer={isAssigningPlayer}
         isSaving={isSaving}
-        handleRemovePlayerFromTeam={handleRemovePlayerFromTeam}
+        handleRemovePlayerFromTeam={activeCorrection ? async () => {} : handleRemovePlayerFromTeam}
         draftingPlayerHistory={draftingPlayerHistory}
         isDraftingPlayerHistoryLoading={isDraftingPlayerHistoryLoading}
-        orderedTeamsForSlate={orderedTeamsForSlate}
+        orderedTeamsForSlate={activeCorrection ? orderedTeamsForSlate.filter(t => t.id === activeCorrection.pick.team_id) : activeOrderTarget ? orderedTeamsForSlate.filter(t => t.id === activeOrderTarget.teamId) : orderedTeamsForSlate}
         getTeamStats={getTeamStats}
-        getTeamAssignmentStatus={getTeamAssignmentStatus}
+        getTeamAssignmentStatus={activeCorrection ? (teamId, player) => ({ canAssign: teamId === activeCorrection.pick.team_id && !getOwnerTeamIdForPlayer(player.id), reason: "Replacement must be available; roster eligibility is validated on save." }) : getTeamAssignmentStatus}
         getOwnerTeamIdForPlayer={getOwnerTeamIdForPlayer}
-        handleAssignPlayerToTeam={handleAssignPlayerToTeam}
+        handleAssignPlayerToTeam={activeCorrection ? replaceOrderPick : handleAssignPlayerToTeam}
         targetDraftSlot={targetDraftSlot}
         handleDraftToTargetSlot={
           handleDraftToTargetSlot

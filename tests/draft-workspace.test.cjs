@@ -351,3 +351,151 @@ test('commissioner empty-slot picks target the viewed team, preserve inspection/
     h.unmount();
   }
 });
+
+test('Draft Order entry reuses the pool, targets only the authoritative team, confirms, and refreshes success or conflict', async () => {
+  for (const sport of ['nba','nfl']) for (const succeeds of [true, false]) {
+    const {h,props,tree,setHistory,respond,calls} = await setup(sport, {role:'admin'});
+    const history = {available:true,initialized:true,picks:[],corrections:[],turn:{state:'active',overallPick:7,round:2,pickInRound:3,teamId:3}};
+    setHistory(history);
+    await context.pullOptions.onRefresh();
+    nodes(tree).find(n=>n.type==='button' && n.props.children?.props?.children==='Draft Order').props.onClick();
+    let next=h.render(props);
+    assert.equal(find(next,DraftOrder).props.actionLabel,'Make Pick for Andy');
+    const rendered=DraftOrder(find(next,DraftOrder).props);
+    assert.match(JSON.stringify(rendered),/Pick 7 · Round 2.3 · Andy on the clock/);
+    nodes(rendered).find(n=>n.type==='button').props.onClick();
+    next=h.render(props);
+    assert.deepEqual(find(next,Modal).props.orderedTeamsForSlate.map(t=>t.id),[3]);
+    assert.equal(nodes(next).filter(n=>n.type===Pool).length,1);
+    find(next,Pool).props.setSearchTerm('retained research');
+    next=h.render(props);
+    let confirmation, post;
+    window.confirm = text => { confirmation=text; return true; };
+    global.fetch=async(url,options)=>{
+      calls.push([url,options]);
+      if(options?.method==='POST') {
+        post=JSON.parse(options.body);
+        setHistory({...history,turn:{state:'active',overallPick:8,round:2,pickInRound:4,teamId:4}});
+        return reply(succeeds ? {success:true} : {error:'Draft has advanced'},succeeds);
+      }
+      return reply(respond(url));
+    };
+    const player={id:11,name:'New pick',position_group:sport==='nba'?'G':'RB',is_active:true};
+    window.confirm=()=>false;
+    assert.equal(await find(next,Pool).props.speedEntry.onSelect(player),false);
+    assert.ok(!calls.some(([,o])=>o?.method==='POST'));
+    window.confirm=text=>{confirmation=text;return true;};
+    assert.equal(await find(next,Pool).props.speedEntry.onSelect(player),succeeds);
+    assert.equal(find(h.render(props),Modal).props.draftingPlayer,null);
+    await tick(); next=h.render(props);
+    assert.equal(confirmation,'Draft New pick for Andy at pick #7?');
+    assert.equal(post.teamId,3);
+    for(const key of ['overallPick','round','actor','is_proxy']) assert.equal(post[key],undefined);
+    assert.equal(find(next,DraftOrder).props.history.turn.overallPick,8);
+    assert.equal(find(next,DraftOrder).props.actionLabel,'Make Pick for Jon');
+    assert.equal(find(next,Pool).props.searchTerm,'retained research');
+    assert.ok(calls.some(([url])=>url.startsWith('/api/lineups?')));
+    assert.ok(calls.every(([url])=>!/sync-players/.test(url)));
+    h.unmount();
+  }
+});
+
+test('Draft Order action permissions, completion, unavailable history and scope remain safe', async () => {
+  for(const user of [{role:'player'},{role:'player',groupCommissioner:true},{role:'player',systemRole:'super_admin'}]) {
+    const {h,props,tree,setHistory}=await setup('nba',user);
+    nodes(tree).find(n=>n.type==='button' && n.props.children?.props?.children==='Draft Order').props.onClick();
+    let next=h.render(props);
+    assert.equal(find(next,DraftOrder).props.actionLabel,'Make My Pick');
+    const base={available:true,initialized:true,picks:[],corrections:[],turn:{state:'active',overallPick:2,round:1,pickInRound:2,teamId:2}};
+    setHistory(base); await context.pullOptions.onRefresh(); next=h.render(props);
+    assert.equal(find(next,DraftOrder).props.actionLabel,user.groupCommissioner || user.systemRole==='super_admin' ? 'Make Pick for Josh' : undefined);
+    for(const state of ['complete','closed','needs_review']) {
+      setHistory({...base,turn:{state}}); await context.pullOptions.onRefresh(); next=h.render(props);
+      assert.equal(find(next,DraftOrder).props.actionLabel,undefined);
+      assert.equal(nodes(DraftOrder(find(next,DraftOrder).props)).filter(n=>n.type==='button' && /Make/.test(n.props.children)).length,0);
+    }
+    setHistory({...base,available:false}); await context.pullOptions.onRefresh(); next=h.render(props);
+    assert.equal(find(next,DraftOrder).props.actionLabel,undefined);
+    context.group='b'; next=h.render(props,true);
+    assert.equal(find(next,DraftOrder).props.actionLabel,undefined);
+    h.unmount();
+  }
+});
+
+test('Edit Picks replaces through corrections, confirms context, preserves pool and refreshes on success/rejection',async()=>{
+  for(const sport of ['nba','nfl']) for(const succeeds of [true,false]) {
+    const {h,props,tree,setHistory,respond,calls}=await setup(sport,{role:'player',systemRole:'super_admin'});
+    const pick={id:6,overall_pick:6,round_number:2,pick_in_round:2,team_id:2,team_name:'Josh',player_id:10,player_name:'Player Ten',player_position:'QB',status:'active'};
+    const history={available:true,initialized:true,picks:[pick],corrections:[],turn:{state:'complete'}};
+    setHistory(history); await context.pullOptions.onRefresh();
+    nodes(tree).find(n=>n.type==='button' && n.props.children?.props?.children==='Draft Order').props.onClick();
+    let next=h.render(props); assert.match(JSON.stringify(nodes(next).find(n=>n.type==='h1')?.props),/Draft/);
+    let board=find(next,DraftOrder);
+    assert.equal(board.props.canEdit,true); assert.equal(board.props.editing,false);
+    board.props.onToggleEdit(); next=h.render(props); board=find(next,DraftOrder);
+    assert.equal(board.props.editing,true);
+    const edit=nodes(DraftOrder(board.props)).find(n=>n.props?.['aria-label']==='Edit pick 6');
+    assert.ok(edit); edit.props.onClick(); next=h.render(props);
+    assert.deepEqual(find(next,Modal).props.orderedTeamsForSlate.map(t=>t.id),[2]);
+    assert.equal(nodes(next).filter(n=>n.type===Pool).length,1);
+    assert.ok(nodes(next).some(n=>n.type==='div' && Array.isArray(n.props.children) && n.props.children[0]==='Edit Pick #'));
+    window.confirm=()=>false;
+    assert.equal(await find(next,Pool).props.speedEntry.onSelect({id:11,name:'Replacement',position_group:sport==='nba'?'G':'QB'}),false);
+    assert.equal(calls.filter(([,options])=>options?.method==='POST').length,0);
+    let confirmation,post;
+    window.confirm=text=>{confirmation=text;return true;};
+    global.fetch=async(url,options)=>{
+      calls.push([url,options]);
+      if(options?.method==='POST') {
+        assert.equal(url,'/api/admin/lineup-correction'); post=JSON.parse(options.body);
+        if(succeeds) setHistory({...history,picks:[{...pick,status:'reversed'}],corrections:[{id:1,pick_id:6,team_id:2,old_player_id:10,old_player_name:'Player Ten',new_player_id:11,new_player_name:'Replacement'}]});
+        return reply(succeeds?{success:true}:{error:'Roster changed'},succeeds);
+      }
+      return reply(respond(url));
+    };
+    assert.equal(await find(next,Pool).props.speedEntry.onSelect({id:11,name:'Replacement',position_group:sport==='nba'?'G':'QB'}),succeeds);
+    await tick(); next=h.render(props);
+    assert.equal(confirmation,'Replace Player Ten with Replacement for Josh at pick #6?');
+    assert.deepEqual(post,{slateId:1,teamId:2,action:'replace',pickId:6,oldPlayerId:10,newPlayerId:11,expectedPlayerIds:[10]});
+    const rendered=DraftOrder(find(next,DraftOrder).props);
+    assert.doesNotMatch(JSON.stringify(rendered),/Pick 25/);
+    if(succeeds) {assert.match(JSON.stringify(rendered),/Replacement/);assert.match(JSON.stringify(rendered),/Originally/);assert.match(JSON.stringify(rendered),/Corrected/);}
+    find(next,DraftOrder).props.onToggleEdit();next=h.render(props);
+    assert.equal(find(next,DraftOrder).props.editing,false);
+    assert.ok(!nodes(DraftOrder(find(next,DraftOrder).props)).some(n=>n.props?.['aria-label']==='Edit pick 6'));
+    context.group='b';next=h.render(props,true); assert.equal(find(next,DraftOrder).props.canEdit,false);
+    h.unmount();
+  }
+});
+
+test('ordinary member has no Edit Picks even on their own completed history',async()=>{
+  const {h,props,tree}=await setup();
+  nodes(tree).find(n=>n.type==='button' && n.props.children?.props?.children==='Draft Order').props.onClick();
+  const board=find(h.render(props),DraftOrder);
+  assert.equal(board.props.canEdit,false);
+  assert.ok(!nodes(DraftOrder(board.props)).some(n=>n.props?.children==='Edit Picks'));
+  h.unmount();
+});
+
+test('NBA/NFL card primary selects fixed target; Info researches; normal pool retains profile flow',async()=>{
+  for(const sport of ['nba','nfl']) {
+    const {h,props,tree}=await setup(sport,{role:'admin'});
+    const poolProps=find(tree,Pool).props;
+    let selected=null,researched=null;
+    const p=host(Pool);
+    const speedProps={...poolProps,speedEntry:{onSelect:async player=>{selected=player;return true;},onResearch:player=>{researched=player;}}};
+    let pool=p.render(speedProps);
+    const card=nodes(pool).find(n=>n.type==='button' && n.props.className?.startsWith('draft-player-card '));
+    assert.ok(card); card.props.onClick();
+    assert.equal(selected.id,10);
+    assert.equal(find(p.render(speedProps),Research).props.player,null);
+    nodes(pool).find(n=>n.props?.['aria-label']==='Info about Player Ten').props.onClick();
+    assert.equal(researched.id,10);
+    pool=p.render(poolProps);
+    assert.ok(!nodes(pool).some(n=>n.props?.['aria-label']==='Info about Player Ten'));
+    nodes(pool).find(n=>n.type==='button' && n.props.className?.startsWith('draft-player-card ')).props.onClick();
+    assert.equal(find(p.render(poolProps),Research).props.player.id,10);
+    assert.equal(find(h.render(props),Modal).props.draftingPlayer,null);
+    p.unmount();h.unmount();
+  }
+});

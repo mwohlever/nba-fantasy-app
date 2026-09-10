@@ -1,8 +1,9 @@
+import { effectiveDraftPick } from "@/lib/lineups/draftHistory";
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { recomputeCorrectedSlateResults } from "@/lib/corrections/recomputeSlateResults";
-import { isMissingDraftInfrastructure, mutateFantasyDraft } from "@/lib/lineups/draftHistory.server";
+import { isMissingDraftInfrastructure, mutateFantasyDraft, readDraftHistory } from "@/lib/lineups/draftHistory.server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,6 +80,19 @@ export async function POST(request: NextRequest) {
     const expectedIds = (lineup.lineup_players ?? []).map(row => Number(row.player_id));
     if ((action !== "add" && !expectedIds.includes(oldPlayerId!)) || (action !== "remove" && expectedIds.includes(newPlayerId!))) {
       return NextResponse.json({ error: "Roster changed or player is already assigned. Refresh corrections." }, { status: 409 });
+    }
+    // Draft Order replacements carry the roster snapshot the commissioner reviewed.
+    if (body.expectedPlayerIds !== undefined && (!Array.isArray(body.expectedPlayerIds) ||
+      body.expectedPlayerIds.length !== expectedIds.length || new Set(body.expectedPlayerIds).size !== expectedIds.length ||
+      !body.expectedPlayerIds.every((id: unknown) => typeof id === "number" && expectedIds.includes(id)))) {
+      return NextResponse.json({ error: "Roster changed. Refresh before correcting this pick." }, { status: 409 });
+    }
+    if (body.pickId !== undefined) {
+      const history = await readDraftHistory(slateId, authorization.target.groupId, authorization.target.leagueId, sport);
+      const pick = history.picks.find(p => p.id === body.pickId && p.team_id === teamId);
+      if (action !== "replace" || !pick || effectiveDraftPick(pick, history.corrections).playerId !== oldPlayerId) {
+        return NextResponse.json({ error: "Pick assignment changed. Refresh before correcting this pick." }, { status: 409 });
+      }
     }
     const desiredIds = expectedIds.filter(id => action === "add" || id !== oldPlayerId);
     if (action !== "remove") desiredIds.push(newPlayerId!);

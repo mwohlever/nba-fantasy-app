@@ -36,3 +36,24 @@ export function getDraftTurn(participantIds: number[], rosterSize: number, lastP
   if ((rosterCounts[teamId] ?? 0) !== roundIndex) return { state: "needs_review" };
   return { state: lastPick ? "active" : "empty", overallPick: lastPick + 1, round: roundIndex + 1, pickInRound: offset + 1, teamId };
 }
+
+/** Resolve linked corrections without changing any historical pick fields. */
+export function effectiveDraftPick(pick: DraftPick, corrections: DraftHistory["corrections"]) {
+  const trail = corrections.filter(c => c.pick_id === pick.id && c.team_id === pick.team_id).sort((a, b) => a.id - b.id);
+  const latest = trail.at(-1);
+  return {
+    playerId: latest ? latest.new_player_id : pick.status === "active" ? pick.player_id : null,
+    playerName: latest ? latest.new_player_name ?? (latest.new_player_id ? "Replacement player" : "Removed") : pick.player_name,
+    corrected: trail.length > 0 || pick.status === "reversed",
+    trail,
+  };
+}
+
+export function draftStateLabel(history: DraftHistory | null | undefined, locked: boolean) {
+  if (history?.turn.state === "complete") return "Draft Complete";
+  if (locked || history?.turn.state === "closed") return "Draft Locked";
+  if (!history) return "Draft Loading";
+  if (!history.available) return "Draft Setup Pending";
+  if (history.turn.state === "needs_review") return "Draft Needs Review";
+  return "Draft Open";
+}
