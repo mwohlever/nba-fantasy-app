@@ -81,6 +81,7 @@ const CONFERENCES = [
 export default function NcaaScoresPage() {
   const [season, setSeason] = useState(2026);
   const [week, setWeek] = useState(1);
+  const [initialized, setInitialized] = useState(false);
   const [filter, setFilter] = useState("top25");
   const [games, setGames] = useState<Game[]>([]);
   const [favoriteTeamIds, setFavoriteTeamIds] = useState<Set<string>>(
@@ -171,7 +172,9 @@ export default function NcaaScoresPage() {
 
       try {
         const response = await fetch(
-          `/api/ncaa-pickem/scores?season=${season}&week=${week}`,
+          initialized
+            ? `/api/ncaa-pickem/scores?season=${season}&week=${week}`
+            : "/api/ncaa-pickem/scores",
           { cache: "no-store" },
         );
 
@@ -183,6 +186,11 @@ export default function NcaaScoresPage() {
 
         if (!cancelled) {
           setGames(data.games ?? []);
+          if (!initialized) {
+            setSeason(data.season ?? season);
+            setWeek(data.week ?? week);
+            setInitialized(true);
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -204,7 +212,7 @@ export default function NcaaScoresPage() {
     return () => {
       cancelled = true;
     };
-  }, [season, week]);
+  }, [season, week, initialized]);
 
   const filteredGames = useMemo(() => {
     if (filter === "top25") {

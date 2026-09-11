@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
 import { getNcaaPickEmAccess } from "@/lib/ncaaPickEm/access";
+import { fetchNcaaSetupScoreboard } from "@/lib/ncaaPickEm/weekSetup";
 import { fetchNcaaPickEmWeek } from "@/lib/providers/ncaa";
+import { currentFootballCompetitionPeriod } from "@/lib/live-scores/competitionPeriod";
 
 function positive(value: string | null) {
   const parsed = Number(value);
@@ -32,17 +34,30 @@ export async function GET(request: NextRequest) {
     const params = new URL(request.url).searchParams;
     const season = positive(params.get("season"));
     const week = positive(params.get("week"));
+    const hasSeason = params.has("season");
+    const hasWeek = params.has("week");
 
-    if (!season || !week) {
+    if (hasSeason !== hasWeek || (hasSeason && (!season || !week))) {
       return NextResponse.json(
-        { error: "Season and week are required." },
+        { error: "Season and week must be provided together." },
         { status: 400 },
       );
     }
 
+    const current = !hasSeason
+      ? currentFootballCompetitionPeriod(await fetchNcaaSetupScoreboard())
+      : null;
+
+    if (!hasSeason && !current) {
+      return NextResponse.json(
+        { error: "Unable to determine the current NCAA week." },
+        { status: 502 },
+      );
+    }
+
     const result = await fetchNcaaPickEmWeek({
-      season,
-      week,
+      season: season ?? current!.season,
+      week: week ?? current!.week,
     });
 
     return NextResponse.json({

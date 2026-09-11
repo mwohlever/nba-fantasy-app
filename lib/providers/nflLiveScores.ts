@@ -2,6 +2,7 @@ import { possessionTeamId } from "@/lib/live-scores/possession";
 import { normalizeBroadcast } from "@/lib/live-scores/metadata";
 import { ESPN_BASE_URL } from "./nfl";
 import { selectFootballOdds } from "@/lib/live-scores/odds";
+import { currentFootballCompetitionPeriod } from "@/lib/live-scores/competitionPeriod";
 import type { LiveScoreGame } from "@/components/live-scores/LiveScoreCard";
 
 type Raw = Record<string, any>;
@@ -54,10 +55,11 @@ export async function fetchNflLiveScores(context?: { season: number; seasonType:
   const calendar: NflCalendar = (payload.leagues?.[0]?.calendar ?? [])
     .filter((part: Raw) => ["1", "2", "3"].includes(String(part.value)) && Array.isArray(part.entries))
     .map((part: Raw) => ({ value: String(part.value), label: String(part.label), entries: part.entries.map((week: Raw) => ({ value: String(week.value), label: String(week.label) })) }));
+  const current = currentFootballCompetitionPeriod(payload);
   const providerType = Number(payload.season?.type);
   const defaultPart = calendar.find((part) => Number(part.value) === providerType) ?? calendar.at(-1);
-  const defaultType = Number(defaultPart?.value ?? 2);
-  const defaultWeek = defaultType === providerType ? Number(payload.week?.number ?? 1) : Number(defaultPart?.entries.at(-1)?.value ?? 1);
+  const defaultType = current?.seasonType ?? Number(defaultPart?.value ?? 2);
+  const defaultWeek = current?.week ?? Number(defaultPart?.entries.at(-1)?.value ?? 1);
   return {
     season: context?.season ?? Number(payload.season?.year),
     seasonType: context?.seasonType ?? defaultType,
