@@ -95,6 +95,53 @@ export type LeagueSettingsInput =
     unknown
   >;
 
+export type GolfGameType = "standard" | "best_ball";
+export type GolfDraftType = "snake" | "salary_cap";
+export type GolfRosterPeriodType = "full_tournament" | "split_after_round_2";
+
+/** Candidate Golf snapshot contract; runtime activation is a separate rollout. */
+export type GolfRules = Omit<LeagueRules, "sport" | "draft"> & {
+  sport: "golf";
+  gameType: GolfGameType;
+  rosterPeriods: { type: GolfRosterPeriodType };
+  draft:
+    | { type: "snake" }
+    | { type: "salary_cap"; salaryCap: number };
+};
+
+const GOLF_DEFAULT_SALARY_CAP = 100;
+
+/**
+ * Resolve Group settings OR a frozen slate snapshot, never merge the two.
+ * Missing historical fields mean Standard + legacy snake conventions + Full
+ * Tournament, not evidence of authoritative sequential historical picks.
+ *
+ * This opt-in foundation deliberately does not change resolveLeagueRules or
+ * enable unfinished acquisition/scoring strategies in production routes.
+ */
+export function resolveGolfRules(settings: LeagueSettingsInput | null | undefined): GolfRules {
+  const safeSettings = isRecord(settings) &&
+    (settings.sport === undefined || settings.sport === "golf") ? settings : {};
+  const base = resolveLeagueRules({ sport: "golf", settings: safeSettings });
+  const draft = isRecord(safeSettings.draft) ? safeSettings.draft : {};
+  const rosterPeriods = isRecord(safeSettings.rosterPeriods) ? safeSettings.rosterPeriods : {};
+  const rawCap = draft.salaryCap;
+  const salaryCap = typeof rawCap === "number" && Number.isFinite(rawCap) && rawCap > 0
+    ? rawCap : GOLF_DEFAULT_SALARY_CAP;
+
+  return {
+    ...base,
+    sport: "golf",
+    gameType: safeSettings.gameType === "best_ball" ? "best_ball" : "standard",
+    rosterPeriods: {
+      type: rosterPeriods.type === "split_after_round_2" ? "split_after_round_2" : "full_tournament",
+    },
+    draft: draft.type === "salary_cap"
+      ? { type: "salary_cap", salaryCap }
+      : { type: "snake" },
+  };
+}
+
 export type NbaSkinsRules = {
   participantCount: number;
   nbaTeamsPerParticipant: number;
