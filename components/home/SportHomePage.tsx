@@ -725,12 +725,14 @@ function HomePageContent() {
     setGolfPlayerStats([]);
     setMessage("");
 
-    if (activeGroupId) {
+    if (activeGroupId && !isGroupLoading && !isSwitchingGroup) {
       void loadHomeSummary();
     }
   }, [
     sport,
     activeGroupId,
+    isGroupLoading,
+    isSwitchingGroup,
   ]);
 
   useEffect(() => {
@@ -830,8 +832,12 @@ function HomePageContent() {
     : null;
 
   const hasSlateStarted =
-    activeSlateStartTime !== null &&
-    activeSlateStartTime.getTime() <= Date.now();
+    activeSlateStartTime !== null
+      ? activeSlateStartTime.getTime() <= Date.now()
+      : sport === "nfl" && Boolean(
+          latestSlate &&
+          new Date(`${latestSlate.start_date ?? latestSlate.date}T00:00:00`).getTime() <= Date.now(),
+        );
 
   const isFinalSlate =
     isGolf

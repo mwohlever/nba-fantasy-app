@@ -79,3 +79,49 @@ test('Home options use shared top-only gesture: short, mid-page and disabled can
   options.enabled = true; await pull(90); assert.ok(calls.includes('/api/refresh-stats-nfl'));
   cleanup(); h.unmount();
 });
+
+test('NFL Home resumes loading when Group readiness changes without changing Group id', async () => {
+  for (const flag of ['loading', 'switching']) {
+    context.sport = 'nfl'; context.group = 'a'; context.loading = false; context.switching = false;
+    context[flag] = true;
+    const pending = [];
+    global.fetch = url => new Promise(resolve => pending.push({url, resolve}));
+    const h = host(Home().props.children.type);
+    h.render({}, true);
+    context[flag] = false;
+    h.render({}, true);
+    for (const request of pending) request.resolve(reply(summary));
+    await tick();
+    const tree = h.render({}, true);
+    assert.equal(nodes(tree).some(n => n.props?.children === 'Loading current slate...'), false);
+    assert.equal(context.pullOptions.enabled, true);
+    h.unmount();
+  }
+});
+
+test('NFL Home refreshes Week 1 with a missing first-game timestamp', async () => {
+  const original = summary.latestSlate.first_game_start_time;
+  summary.latestSlate.first_game_start_time = null;
+  summary.latestSlate.start_date = '2020-09-09';
+  summary.latestSlate.end_date = '2020-09-14';
+  try {
+    const {h, calls} = await setup('nfl');
+    assert.equal((await context.pullOptions.onRefresh()).status, 'success');
+    assert.ok(calls.includes('/api/refresh-stats-nfl'));
+    h.unmount();
+  } finally { summary.latestSlate.first_game_start_time = original; }
+});
+
+test('missing kickoff fallback leaves NBA and future NFL slates on summary-only refresh', async () => {
+  const original = {...summary.latestSlate};
+  try {
+    for (const sport of ['nba', 'nfl']) {
+      summary.latestSlate.first_game_start_time = null;
+      summary.latestSlate.start_date = sport === 'nfl' ? '2999-09-09' : '2020-09-09';
+      const {h, calls} = await setup(sport);
+      assert.equal((await context.pullOptions.onRefresh()).status, 'success');
+      assert.ok(!calls.some(url => url.startsWith('/api/refresh-stats')));
+      h.unmount();
+    }
+  } finally { summary.latestSlate = original; }
+});

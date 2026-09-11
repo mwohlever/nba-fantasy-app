@@ -4,6 +4,13 @@ import { getPlayerProjectionMapForSeason } from "@/lib/playerProjections";
 import { getGolfHomeSummary } from "@/lib/home/golfHomeSummary";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
+import { fetchScoreboardForRange } from "@/lib/providers/nfl";
+import { normalizeNflGame } from "@/lib/providers/nflLiveScores";
+import {
+  nflSlateWindow,
+  resolveNflFantasyGames,
+} from "@/lib/live-scores/nflFantasyGames";
+import { nflRosterStatusCounts } from "@/lib/lineups/nflRosterStatus";
 
 type Team = {
   id: number;
@@ -58,7 +65,9 @@ type LineupPlayer = {
 type Player = {
   id: number;
   name: string;
-  external_id: number | null;
+  external_id?: number | null;
+  nfl_player_id?: number | null;
+  team_abbreviation?: string | null;
 };
 
 type PlayerSlateStat = {
@@ -203,11 +212,6 @@ export async function GET(request: Request) {
       league,
     } = activeLeague;
 
-    const playersTable = sport === "nfl" ? "players_nfl" : "players";
-    const playersSelect =
-      sport === "nfl"
-        ? "id, name, external_id:nfl_player_id"
-        : "id, name, external_id:nba_player_id";
     const statsTable = sport === "nfl" ? "player_nfl_slate_stats" : "player_slate_stats";
     const statsSelect =
       sport === "nfl"
@@ -289,7 +293,15 @@ export async function GET(request: Request) {
         .from("lineup_players")
         .select("lineup_id, player_id, projected_fantasy_points")
         .range(0, 20000),
-      supabaseAdmin.from(playersTable).select(playersSelect).order("name", { ascending: true }),
+      sport === "nfl"
+        ? supabaseAdmin
+            .from("players_nfl")
+            .select("id, name, nfl_player_id, team_abbreviation")
+            .order("name", { ascending: true })
+        : supabaseAdmin
+            .from("players")
+            .select("id, name, external_id:nba_player_id")
+            .order("name", { ascending: true }),
       supabaseAdmin
         .from(statsTable)
         .select(statsSelect)
@@ -490,8 +502,7 @@ export async function GET(request: Request) {
           ),
       ) as LineupPlayer[];
 
-    const safePlayers =
-      (players ?? []) as Player[];
+    const safePlayers: Player[] = players ?? [];
 
     const safePlayerSlateStats =
       (
@@ -891,6 +902,113 @@ export async function GET(request: Request) {
       );
     }
 
+    const playerById = new Map<number, Player>();
+    safePlayers.forEach((player) => {
+      playerById.set(player.id, player);
+    });
+
+    let nflGamesByTeam: Record<string, { status: string }> = {};
+
+    if (sport === "nfl" && latestSlate) {
+      const window = nflSlateWindow(latestSlate);
+
+      if (window) {
+        try {
+          const events = await fetchScoreboardForRange(
+            window.start.replaceAll("-", ""),
+            window.end.replaceAll("-", ""),
+          );
+
+          const games = events.flatMap((event) => {
+            /*
+             * Match /api/lineups/nfl-games so Home and Scores use the
+             * same authoritative NFL game-state interpretation.
+             */
+            const raw = event as Parameters<typeof normalizeNflGame>[0];
+            const providerStatus =
+              raw.competitions?.[0]?.status?.type ??
+              raw.status?.type;
+
+            const game = normalizeNflGame(raw);
+
+            const unavailable =
+              /CANCELED|CANCELLED|POSTPONED|SUSPENDED/.test(
+                providerStatus?.name ?? "",
+              );
+
+            return game
+              ? [
+                  {
+                    ...game,
+                    status: unavailable
+                      ? "unknown"
+                      : providerStatus?.state ?? "unknown",
+                  },
+                ]
+              : [];
+          });
+
+          nflGamesByTeam = Object.fromEntries(
+            resolveNflFantasyGames(
+              games,
+              latestSlate,
+            ),
+          );
+        } catch {
+          /*
+           * If ESPN is temporarily unavailable, preserve the existing
+           * stored player-status fallback rather than failing Home.
+           */
+          nflGamesByTeam = {};
+        }
+      }
+    }
+
+    function getNflTeamStatusCounts(teamId: number) {
+      if (
+        sport !== "nfl" ||
+        !latestSlate
+      ) {
+        return null;
+      }
+
+      const lineup =
+        latestLineupsByTeamId.get(teamId);
+
+      if (!lineup) {
+        return {
+          games_completed: 0,
+          games_in_progress: 0,
+          games_remaining: 0,
+        };
+      }
+
+      const rosterPlayers =
+        (
+          latestLineupPlayersByLineupId.get(
+            lineup.id,
+          ) ?? []
+        )
+          .map((lineupPlayer) =>
+            playerById.get(
+              lineupPlayer.player_id,
+            ),
+          )
+          .filter(
+            (player): player is Player =>
+              Boolean(player),
+          );
+
+      return nflRosterStatusCounts(
+        rosterPlayers,
+        nflGamesByTeam,
+        (playerId) =>
+          statBySlateAndPlayer.get(
+            `${latestSlate.id}:${playerId}`,
+          ) ?? null,
+      );
+    }
+
     const latestSlateRowsBase = latestSlate
       ? safeResults
           .filter(
@@ -901,17 +1019,24 @@ export async function GET(request: Request) {
                 Number(row.team_id),
               ),
           )
-          .map((row) => ({
-            ...row,
-            teamName:
-              safeTeams.find((team) => team.id === row.team_id)?.name ??
-              "Unknown Team",
-            avatarUrl: avatarUrlByTeamId.get(row.team_id) ?? null,
-            projected_points: round1(getProjectedTeamTotal(row.team_id)),
-            pregame_projected_points: getPregameTeamTotal(row.team_id),
-            win_probability: 0,
+          .map((row) => {
+            const nflStatusCounts =
+              getNflTeamStatusCounts(
+                row.team_id,
+              );
 
-          }))
+            return {
+              ...row,
+              ...(nflStatusCounts ?? {}),
+              teamName:
+                safeTeams.find((team) => team.id === row.team_id)?.name ??
+                "Unknown Team",
+              avatarUrl: avatarUrlByTeamId.get(row.team_id) ?? null,
+              projected_points: round1(getProjectedTeamTotal(row.team_id)),
+              pregame_projected_points: getPregameTeamTotal(row.team_id),
+              win_probability: 0,
+            };
+          })
           .sort((a, b) => {
             const aFinish = a.finish_position ?? 999;
             const bFinish = b.finish_position ?? 999;
