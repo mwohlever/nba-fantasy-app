@@ -1,0 +1,118 @@
+{
+  "source": "https://site.api.espn.com/apis/site/v2/sports/football/college-football/summary?event=401858432",
+  "header": {
+    "competitions": [
+      {
+        "status": {
+          "type": {
+            "id": "3",
+            "name": "STATUS_FINAL",
+            "state": "post",
+            "completed": true,
+            "description": "Final",
+            "detail": "Final",
+            "shortDetail": "Final"
+          }
+        },
+        "competitors": [
+          {
+            "id": "194",
+            "homeAway": "home",
+            "possession": false,
+            "team": {
+              "id": "194",
+              "abbreviation": "OSU",
+              "color": "ba0c2f"
+            }
+          },
+          {
+            "id": "2050",
+            "homeAway": "away",
+            "possession": false,
+            "team": {
+              "id": "2050",
+              "abbreviation": "BALL",
+              "color": "ba0c2f"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "drives": {
+    "previous": [
+      {
+        "team": {
+          "id": "194"
+        },
+        "plays": [
+          {
+            "id": "40185843214",
+            "text": "#25 B.Jackson rush middle for 4 yards gain to the OhioSt20 (#2 Q.Scandrett; #27 G.Forsha)",
+            "type": {
+              "id": "5",
+              "text": "Rush",
+              "abbreviation": "RUSH"
+            },
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "15:00"
+            },
+            "end": {
+              "down": 2,
+              "distance": 6,
+              "yardLine": 20,
+              "yardsToEndzone": 80,
+              "downDistanceText": "2nd & 6 at OSU 20",
+              "shortDownDistanceText": "2nd & 6",
+              "possessionText": "OSU 20",
+              "team": {
+                "id": "194"
+              }
+            },
+            "scoringPlay": false,
+            "isTurnover": false
+          }
+        ]
+      },
+      {
+        "team": {
+          "id": "2050"
+        },
+        "plays": [
+          {
+            "id": "40185843287",
+            "text": "Shotgun #4 T.Horton rush right for 5 yards gain to the BallSt30 (#2 K.Jackson Jr.; #5 R.Pettijohn)",
+            "type": {
+              "id": "5",
+              "text": "Rush",
+              "abbreviation": "RUSH"
+            },
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "8:47"
+            },
+            "end": {
+              "down": 2,
+              "distance": 5,
+              "yardLine": 70,
+              "yardsToEndzone": 70,
+              "downDistanceText": "2nd & 5 at BALL 30",
+              "shortDownDistanceText": "2nd & 5",
+              "possessionText": "BALL 30",
+              "team": {
+                "id": "2050"
+              }
+            },
+            "scoringPlay": false,
+            "isTurnover": false
+          }
+        ]
+      }
+    ]
+  }
+}

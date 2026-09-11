@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import type { AppUser } from "@/lib/auth";
 import { possessionTeamId } from "./possession";
+import { normalizeNflField } from "./nflField";
 
 export function createFootballGameDetailHandler<Access>(league: "college-football" | "nfl", getAccess: (user: AppUser) => Promise<Access>, enrich?: (summary: any, access: NonNullable<Access>, request: NextRequest) => Promise<Record<string, unknown>>) {
 
@@ -531,6 +532,7 @@ return async function GET(request: NextRequest) {
       eventId: id,
       seasonYear,
       possessionTeamId: possessionTeamId(competition),
+      field: normalizeNflField(summary),
       broadcast: normalizeBroadcast(competition),
       gameStory: normalizeGameStory(summary?.article, id, competition?.status?.type?.state),
       header: summary?.header ?? null,

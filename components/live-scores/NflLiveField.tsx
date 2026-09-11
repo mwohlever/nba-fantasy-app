@@ -1,6 +1,7 @@
 import type { NflFieldState } from "@/lib/live-scores/nflField";
 
-export default function NflLiveField({ field }: { field: NflFieldState | null | undefined }) {
+// Shared NFL/college field; keep the module path stable for existing consumers.
+export default function FootballLiveField({ field }: { field: NflFieldState | null | undefined }) {
   const state = field;
   field = field ?? { offense: "", defense: "", color: null, ball: null, firstDown: null,
     downDistance: "", position: "", clock: "", latestPlay: "" };

@@ -14,7 +14,7 @@ export type NflFieldState = {
   downDistance: string; position: string; clock: string; latestPlay: string; stateLabel?: string;
 };
 
-/** Structured end spot in the current possession, never a previous drive.
+/** Shared ESPN NFL/college structured end spot, never a previous drive.
  * yardsToEndzone is offense-relative; yardLine is NOT (and is intentionally unused).
  * This is a normalized offense-left-to-right field, not stadium/broadcast direction.
  */

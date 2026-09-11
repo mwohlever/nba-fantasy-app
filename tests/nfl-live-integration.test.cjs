@@ -242,3 +242,76 @@ test('NFL endpoint keeps one provider request, gates ownership by authorized cli
     allowed = false; response = await GET(request('A')); assert.equal(response.status,404); assert.equal(providerCalls,3);
   } finally { global.fetch = oldFetch; paths.forEach((p,i) => { if (saved[i]) require.cache[p] = saved[i]; else delete require.cache[p]; }); }
 });
+
+for (const apiBase of ['/api/live-scores/nfl', '/api/ncaa-pickem']) {
+  test(`${apiBase}: shared field, possession, quarter/OT selection and unavailable-state fallback`, () => modalHarness(({ states, draw }) => {
+    draw(); states[0] = 'pbp'; states[1] = { ...detail(), field: normalizeNflField(summary()), possessionTeamId: '1',
+      drives: { previous: Array.from({ length: 6 }, (_, i) => ({ plays: [{ id: String(i), period: { number: i + 1 }, text: `Period ${i + 1} play` }] })) } };
+    states[2] = false; states[6] = 6;
+    const html = render(draw({ apiBase }));
+    assert.match(html, /AAA possession/); assert.match(html, /aria-label="Possession"/);
+    assert.match(html, /AAA 37/); assert.match(html, /1st &amp; 10/);
+    for (const label of ['Q1', 'Q2', 'Q3', 'Q4', 'OT1', 'OT2']) assert.ok(html.includes(`>${label}<`));
+    assert.match(html, /Overtime 2/); assert.match(html, /Period 6 play/); assert.doesNotMatch(html, /Period 5 play/);
+    states[6] = 1;
+    assert.match(render(draw({ apiBase })), /Period 1 play/);
+    states[1].field = null;
+    const fallback = render(draw({ apiBase }));
+    assert.match(fallback, /current ball position unavailable/); assert.match(fallback, /Period 1 play/);
+    assert.doesNotMatch(fallback, /<ellipse/);
+    states[1].field = normalizeNflField(summary()); states[4] = 'Provider unavailable';
+    assert.doesNotMatch(render(draw({ apiBase })), /<ellipse/);
+  }));
+}
+
+test('NCAA Player Stats excludes ownership decoration even if an ownership payload and fantasy scope are supplied', () => modalHarness(({ states, draw }) => {
+  draw(); states[0] = 'stats'; states[1] = detail(); states[2] = false; states[5] = '1';
+  const html = render(draw({ apiBase: '/api/ncaa-pickem' }));
+  assert.match(html, /Player One/); assert.match(html, /role="button"/);
+  assert.doesNotMatch(html, /Owner A|Owner B|bg-sky-50 dark:bg-sky-950|bg-slate-50 dark:bg-slate-800\/40/);
+}));
+
+test('NCAA live refresh uses the shared 15-second interval and college endpoint without Group scope', () => modalHarness(async ({ states, draw, effects }) => {
+  const oldFetch = global.fetch, oldWindow = global.window; const requests = []; let tick, cleared = false;
+  global.window = { setInterval(fn, delay) { assert.equal(delay, 15000); tick = fn; return 7; }, clearInterval(id) { assert.equal(id, 7); cleared = true; } };
+  global.fetch = async url => { requests.push(url); return Response.json(detail()); };
+  try {
+    draw(); states[1] = detail(); draw({ apiBase: '/api/ncaa-pickem', fantasyScope: null });
+    const cleanup = effects()[1](); tick(); await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(requests, ['/api/ncaa-pickem/game-detail?eventId=99']);
+    cleanup(); assert.equal(cleared, true);
+  } finally { global.fetch = oldFetch; global.window = oldWindow; }
+}));
+
+test('NCAA endpoint shares field normalization for captured college spots without ownership enrichment', async () => {
+  const files = ['../lib/auth.ts', '../lib/ncaaPickEm/access.ts', '../lib/live-scores/game-detail.ts', '../app/api/ncaa-pickem/game-detail/route.ts'];
+  const paths = files.map(file => require.resolve(file)), saved = paths.map(p => require.cache[p]);
+  const oldFetch = global.fetch;
+  require.cache[paths[0]] = { exports: { getCurrentUser: async () => ({ id: 'user' }) } };
+  require.cache[paths[1]] = { exports: { getNcaaPickEmAccess: async () => ({}) } };
+  delete require.cache[paths[2]]; delete require.cache[paths[3]];
+  let raw = require('./fixtures/ncaa-field-401858432.json');
+  global.fetch = async url => { assert.match(String(url), /\/college-football\/summary\?event=401858432$/); return Response.json(raw); };
+  try {
+    const { GET } = require('../app/api/ncaa-pickem/game-detail/route.ts');
+    const url = new URL('http://localhost/api/ncaa-pickem/game-detail?eventId=401858432');
+    const load = async () => { const response = await GET({ url: String(url), nextUrl: url }); assert.equal(response.status, 200); return response.json(); };
+    assert.equal((await load()).field, null, 'a captured final must not fabricate live state');
+    for (const drive of raw.drives.previous) {
+      const replay = structuredClone(require('./fixtures/ncaa-field-401858432.json'));
+      const competition = replay.header.competitions[0];
+      // Synthetic live envelope; the captured provider end spot is unchanged.
+      competition.status = { type: { state: 'in', name: 'STATUS_IN_PROGRESS' } };
+      competition.competitors.forEach(team => team.possession = team.id === drive.team.id);
+      replay.drives = { current: drive }; raw = replay;
+      const body = await load();
+      assert.equal(body.possessionTeamId, drive.team.id);
+      assert.equal(body.field.position, drive.plays[0].end.possessionText);
+      assert.equal(body.field.ball, 100 - drive.plays[0].end.yardsToEndzone);
+      assert.equal(body.field.downDistance, drive.plays[0].end.shortDownDistanceText);
+      assert.deepEqual(body.drives, replay.drives); assert.equal(body.ownership, undefined);
+      delete raw.drives;
+      const missing = await load(); assert.equal(missing.field, null); assert.ok(missing.header);
+    }
+  } finally { global.fetch = oldFetch; paths.forEach((p, i) => { if (saved[i]) require.cache[p] = saved[i]; else delete require.cache[p]; }); }
+});
