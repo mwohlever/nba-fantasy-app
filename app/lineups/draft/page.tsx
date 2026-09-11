@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import AppNav from "@/components/AppNav";
 import LineupBuilder from "@/components/lineups/LineupBuilder";
+import GolfSalaryCapBuilder from "@/components/lineups/GolfSalaryCapBuilder";
 import { formatFantasySlateLabel } from "@/lib/formatSlateLabel";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -55,7 +56,7 @@ function resolveSport(value: string | undefined): Sport {
 export default async function DraftLineupsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sport?: string | string[] }>;
+  searchParams: Promise<{ sport?: string | string[]; slateId?: string | string[] }>;
 }) {
   const resolvedSearchParams = await searchParams;
 
@@ -64,6 +65,10 @@ export default async function DraftLineupsPage({
     : resolvedSearchParams?.sport;
 
   const sport = resolveSport(sportParam);
+
+  const slateParam = Array.isArray(resolvedSearchParams?.slateId)
+    ? resolvedSearchParams.slateId[0]
+    : resolvedSearchParams?.slateId;
 
   const currentUser =
     await getCurrentUser();
@@ -332,7 +337,9 @@ export default async function DraftLineupsPage({
         : 0,
   }));
 
+  const requestedSlateId = Number(slateParam);
   let selectedSlateId =
+    safeSlates.find((slate) => Number.isSafeInteger(requestedSlateId) && slate.id === requestedSlateId)?.id ??
     safeSlates.find((slate) => {
       const startDate = slate.start_date ?? slate.date;
       const endDate = slate.end_date ?? slate.date;
@@ -433,6 +440,18 @@ export default async function DraftLineupsPage({
         null,
       sport,
     );
+
+  const salaryCapSlates =
+    sport === "golf"
+      ? safeSlates.filter((slate) => {
+          const draft = slate.rules_snapshot?.draft;
+          return draft && typeof draft === "object" && !Array.isArray(draft) &&
+            (draft as Record<string, unknown>).type === "salary_cap";
+        })
+      : [];
+
+  const initialUsesSalaryCap =
+    salaryCapSlates.some((slate) => slate.id === selectedSlateId);
 
 
   if (selectedSlateId) {
@@ -558,6 +577,23 @@ export default async function DraftLineupsPage({
     }
 
     teamResults = teamResultsData ?? [];
+  }
+
+  if (initialUsesSalaryCap && selectedSlateId) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-3 py-4 text-slate-900 sm:px-4 sm:py-6">
+        <div className="mx-auto max-w-[1600px] space-y-5">
+          <AppNav />
+          <GolfSalaryCapBuilder
+            slates={salaryCapSlates.map((slate) => ({
+              id: slate.id,
+              label: slate.label ?? slate.display_name ?? slate.date,
+            }))}
+            initialSlateId={selectedSlateId}
+          />
+        </div>
+      </main>
+    );
   }
 
   return (

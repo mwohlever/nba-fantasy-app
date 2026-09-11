@@ -56,7 +56,7 @@ begin
       raise exception 'Retained Golf lifecycle facts cannot regress';
     end if;
   end if;
-  split := coalesce((new.rules_snapshot #>> '{rosterPeriods,type')='split_after_round_2'
+  split := coalesce((new.rules_snapshot #>> '{rosterPeriods,type}')='split_after_round_2'
     and (not (new.rules_snapshot ? 'sport') or new.rules_snapshot->>'sport'='golf'),false);
   if (split and new.period_key='full_tournament') or (not split and new.period_key<>'full_tournament') then raise exception 'Period does not match frozen rules'; end if;
   return new;

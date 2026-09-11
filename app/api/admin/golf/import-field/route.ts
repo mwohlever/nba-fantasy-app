@@ -509,6 +509,8 @@ export async function POST(
           status: "scheduled",
           tee_time: null,
           tee_time_raw: null,
+          is_amateur:
+            Boolean(player.isAmateur),
           updated_at:
             refreshedAt,
         }),

@@ -73,12 +73,12 @@ begin
    select coalesce(array_agg(distinct n order by n),'{}'::integer[]) into starts from unnest(starts||p.started_rounds) n;
  end loop;
  for p in select * from golf_roster_periods where slate_id=p_slate order by id loop
-   should_lock:=p_lock_reason is not null or (select is_locked from slates where id=p_slate) or
+   should_lock:=p_lock_reason is not null or
      (p.period_key='weekend' and starts && array[3,4]) or
-     (p.period_key='opening' and cardinality(starts)>0) or
-     (p.period_key='full_tournament' and (select is_locked from slates where id=p_slate));
+     (p.period_key in ('opening','full_tournament') and cardinality(starts)>0) or
+     (p.period_key in ('opening','full_tournament') and (select is_locked from slates where id=p_slate));
    why:=case when p.period_key='weekend' and starts && array[3,4] then 'round_3_started'
-     when p.period_key='opening' and cardinality(starts)>0 then 'opening_play_started'
+     when p.period_key in ('opening','full_tournament') and cardinality(starts)>0 then 'opening_play_started'
      else coalesce(p_lock_reason,'acquisition_locked') end;
    -- No-op writes do not churn revisions or audit records.
    if p.started_rounds is distinct from starts or p.accepted_revision<>v or (should_lock and p.locked_at is null) then
@@ -86,7 +86,9 @@ begin
        locked_at=case when should_lock then coalesce(locked_at,clock_timestamp()) else locked_at end,
        lock_reason=case when should_lock then coalesce(lock_reason,why) else lock_reason end,
        evidence_reference='accepted_state:'||v::text,
-       evidence_snapshot=jsonb_build_object('acceptedRevision',v,'explicitLockReason',p_lock_reason)
+       -- Retain reviewed weekend classification/deadline evidence. Accepted
+       -- scoring refreshes may add facts but may never erase acquisition facts.
+       evidence_snapshot=p.evidence_snapshot||jsonb_build_object('acceptedRevision',v,'explicitLockReason',p_lock_reason)
      where id=p.id;
    end if;
  end loop;
@@ -137,7 +139,12 @@ begin
    not isfinite((p_evidence->>'observedAt')::timestamptz) or
    (p_evidence->>'observedAt')::timestamptz>t then raise exception 'Reviewed evidence required'; end if;
  if p_action='opened' then
-   if p.locked_at is not null or p.completed_at is not null or (select is_locked from slates where id=p_slate) then raise exception 'Acquisition closed'; end if;
+   -- The legacy slate lock represents the opening acquisition boundary. It
+   -- must not make the independent post-cut weekend period impossible to open.
+   if p.locked_at is not null or p.completed_at is not null or
+      (p.period_key<>'weekend' and (select is_locked from slates where id=p_slate)) then
+     raise exception 'Acquisition closed';
+   end if;
    -- Positive accepted play dominates a stale reviewed pre-start assertion.
    if exists(select 1 from golf_rounds r join golf_event_players e on e.id=r.event_player_id
      where e.slate_id=p_slate and r.round_number between 1 and 4
