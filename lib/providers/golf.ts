@@ -984,6 +984,33 @@ async function fetchGolfPayload(
   return payload as EspnGolfScoreboardPayload;
 }
 
+/** Server-side analytics only: consume the full season inside the Node caller.
+ * Never relay this large response through our Edge proxy or a client response. */
+export async function fetchGolfSeasonScoreboardPayload(
+  year: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) throw new Error('Valid Golf season required');
+  const url = new URL(ESPN_GOLF_SCOREBOARD_URL);
+  url.searchParams.set('dates', String(year));
+  let response: Response;
+  try {
+    response = await fetchImpl(url, {
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'User-Agent': '111-sports-golf-provider/1.0' },
+      signal: AbortSignal.timeout(45_000),
+    });
+  } catch (error) {
+    throw new Error(`ESPN Golf season ${year} direct fetch failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  if (!response.ok) throw new Error(`ESPN Golf season ${year} direct fetch returned HTTP ${response.status}`);
+  try {
+    return await response.json();
+  } catch {
+    throw new Error(`ESPN Golf season ${year} returned invalid JSON`);
+  }
+}
+
 export function parseGolfTournamentsFromPayload(
   payload: unknown,
 ): GolfTournament[] {

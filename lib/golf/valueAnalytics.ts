@@ -1,0 +1,124 @@
+import { createHash } from 'node:crypto';
+import { GOLF_ESPN_HISTORY_VERSION, normalizeEspnGolfValueEvent, type GolfValueScoreboard, type GolfEspnEventDiagnostic } from './valueEspn';
+import { GOLF_VALUE_VERSION, type GolfValueHistory } from './valueModel';
+
+export const GOLF_VALUE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+export const golfAnalyticsHash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+
+export type GolfAnalyticsIdentity = { id: number; espn_player_id: string; display_name: string };
+export type GolfEventPlan = {
+  eventId: string; name: string; startsAt: string; endsAt: string; sourceHash: string; normalizedHash: string;
+  rawEvent: unknown; diagnostic: GolfEspnEventDiagnostic;
+  observations: Array<{ providerPlayerId: string; playerId: number | null; name: string; history: GolfValueHistory; diagnostics: string[] }>;
+};
+
+/** Deterministic plan: identical provider data and identity mapping produce one version. */
+export function planGolfSeasonIngestion(payload: GolfValueScoreboard & { season?: { year?: number }; leagues?: Array<{ calendar?: Array<{ id?: string }> }> }, season: number, identities: readonly GolfAnalyticsIdentity[]) {
+  if (payload.season?.year !== season || !Array.isArray(payload.events)) throw new Error('ESPN Golf season payload mismatch');
+  const calendarIds = payload.leagues?.[0]?.calendar?.map(event => event.id).filter((id): id is string => Boolean(id)) ?? [];
+  const responseIds = payload.events.map(event => event.id).filter((id): id is string => Boolean(id));
+  if (!calendarIds.length || calendarIds.length !== responseIds.length ||
+      calendarIds.some(id => !responseIds.includes(id))) throw new Error('ESPN Golf season calendar/event coverage mismatch');
+  if (new Set(identities.map(player => player.espn_player_id)).size !== identities.length ||
+      new Set(identities.map(player => player.id)).size !== identities.length)
+    throw new Error('Ambiguous canonical ESPN Golf identity mapping');
+  const byEspnId = new Map(identities.map(player => [player.espn_player_id, player.id]));
+  const seen = new Set<string>();
+  const diagnostics: GolfEspnEventDiagnostic[] = [];
+  const unresolved = new Map<string, string>();
+  const events: GolfEventPlan[] = [];
+  for (const event of payload.events) {
+    if (!event.id || seen.has(event.id)) throw new Error('Missing or duplicate ESPN Golf event ID');
+    seen.add(event.id);
+    const normalized = normalizeEspnGolfValueEvent(event);
+    diagnostics.push(normalized.diagnostic);
+    // Retain versioned raw evidence for completed events only. Future/canceled
+    // schedule entries remain in the lightweight season refresh manifest.
+    if (!(event.status?.type?.completed || event.competitions?.[0]?.status?.type?.completed)) continue;
+    if (!event.date || !event.endDate || !Number.isFinite(Date.parse(event.date)) || !Number.isFinite(Date.parse(event.endDate))) throw new Error(`Completed Golf event ${event.id} lacks dates`);
+    const observations = normalized.players.map(player => {
+      const playerId = byEspnId.get(player.espnPlayerId) ?? null;
+      if (playerId === null) unresolved.set(player.espnPlayerId, player.name);
+      return { providerPlayerId: player.espnPlayerId, playerId, name: player.name, history: player.history,
+        diagnostics: player.diagnostics.map(diagnostic => diagnostic.reason) };
+    });
+    const sourceHash = golfAnalyticsHash(event);
+    const normalizedHash = golfAnalyticsHash({ version: GOLF_ESPN_HISTORY_VERSION, diagnostic: normalized.diagnostic, observations });
+    events.push({ eventId: event.id, name: event.name ?? event.id, startsAt: event.date, endsAt: event.endDate,
+      sourceHash, normalizedHash, rawEvent: event, diagnostic: normalized.diagnostic, observations });
+  }
+  if (!events.length) throw new Error('ESPN Golf season has no completed event evidence');
+  return { season, sourceHash: golfAnalyticsHash(payload), sourceBytes: Buffer.byteLength(JSON.stringify(payload)),
+    normalizedHash: golfAnalyticsHash(events.map(event => [event.eventId, event.sourceHash, event.normalizedHash])),
+    normalizationVersion: GOLF_ESPN_HISTORY_VERSION, eventIds: [...seen], diagnostics, events,
+    unresolved: [...unresolved].map(([espnPlayerId, name]) => ({ espnPlayerId, name })) };
+}
+
+/** Small operator response; the raw provider payload and player cards stay server-side. */
+export function summarizeGolfAnalyticsRefresh(plan: ReturnType<typeof planGolfSeasonIngestion>, refreshId: number, alreadyReady: boolean) {
+  const diagnosticCounts: Record<string, number> = {};
+  for (const diagnostic of plan.diagnostics) diagnosticCounts[diagnostic.reason] = (diagnosticCounts[diagnostic.reason] ?? 0) + 1;
+  const acceptedEventCount = plan.events.filter(event => event.diagnostic.reason === 'accepted').length;
+  return { provider: 'espn_pga', season: plan.season, refreshId, status: 'ready', alreadyReady,
+    sourceHash: plan.sourceHash, normalizedHash: plan.normalizedHash, normalizationVersion: plan.normalizationVersion,
+    eventCount: plan.eventIds.length, completedEventCount: plan.events.length, acceptedEventCount,
+    skippedCompletedEventCount: plan.events.length - acceptedEventCount,
+    observationCount: plan.events.reduce((count, event) => count + event.observations.length, 0),
+    unresolvedIdentityCount: plan.unresolved.length, diagnosticCounts };
+}
+
+export type CachedGolfEventVersion = { id: number; provider_event_id: string; season: number; ends_at: string; observed_at: string; ready_at: string; source_hash: string; normalized_hash: string; eligibility: string; status: string };
+export type CachedGolfObservation = { id: number; event_version_id: number; player_id: number | null; provider_player_id: string; history: GolfValueHistory };
+export type GolfHistorySelection = { histories: Map<string, GolfValueHistory[]>; observations: Array<{ id: number; eventVersionId: number; playerId: number; providerEventId: string }>;
+  eventVersions: Array<{ id: number; providerEventId: string; sourceHash: string; normalizedHash: string }> };
+
+export function selectGolfAnalyticsHistories(input: {
+  playerIds: readonly number[]; targetEventId: string; season: number; targetCutoffAt: string; asOfAt: string;
+  eventVersions: readonly CachedGolfEventVersion[]; observations: readonly CachedGolfObservation[];
+}): GolfHistorySelection {
+  const cutoff = Date.parse(input.targetCutoffAt), asOf = Date.parse(input.asOfAt);
+  if (!Number.isFinite(cutoff) || !Number.isFinite(asOf) || asOf >= cutoff) throw new Error('Valid pre-tournament Golf value cutoff required');
+  const wanted = new Set(input.playerIds);
+  const histories = new Map(input.playerIds.map(id => [String(id), [] as GolfValueHistory[]]));
+  const priorVersions = input.eventVersions.filter(event => event.status === 'ready' &&
+    event.provider_event_id !== input.targetEventId && event.season === input.season &&
+    Date.parse(event.ends_at) < cutoff && Date.parse(event.observed_at) <= asOf && Date.parse(event.ready_at) <= asOf &&
+    new Date(event.ends_at).getUTCFullYear() === input.season);
+  const malformed = priorVersions.find(event => !['accepted', 'unsupported_team_format'].includes(event.eligibility));
+  if (malformed) throw new Error(`Incomplete Golf analytics event ${malformed.provider_event_id}: ${malformed.eligibility}`);
+  const eventVersions = priorVersions.filter(event => event.eligibility === 'accepted');
+  if (new Set(eventVersions.map(event => event.provider_event_id)).size !== eventVersions.length) throw new Error('Ambiguous Golf event version selection');
+  const byVersion = new Map(eventVersions.map(event => [event.id, event]));
+  const selected: GolfHistorySelection['observations'] = [];
+  for (const observation of input.observations) {
+    const event = byVersion.get(observation.event_version_id);
+    if (!event || observation.player_id === null || !wanted.has(observation.player_id)) continue;
+    if (observation.history.eventId !== event.provider_event_id || Date.parse(observation.history.endedAt) !== Date.parse(event.ends_at)) throw new Error('Golf analytics observation provenance mismatch');
+    histories.get(String(observation.player_id))!.push(observation.history);
+    selected.push({ id: observation.id, eventVersionId: event.id, playerId: observation.player_id, providerEventId: event.provider_event_id });
+  }
+  selected.sort((a, b) => a.playerId - b.playerId || a.providerEventId.localeCompare(b.providerEventId));
+  return { histories, observations: selected, eventVersions: eventVersions.map(event => ({ id: event.id, providerEventId: event.provider_event_id,
+    sourceHash: event.source_hash, normalizedHash: event.normalized_hash })).sort((a, b) => a.providerEventId.localeCompare(b.providerEventId)) };
+}
+
+export type GolfBoardFieldInput = { playerId: number; espnPlayerId: string; name: string; isAmateur: boolean; owgrRank: number | null; owgrUpdatedAt: string | null };
+export function preserveGolfOwgrInput(field: GolfBoardFieldInput, asOfAt: string, targetCutoffAt: string) {
+  const observed = field.owgrUpdatedAt ? Date.parse(field.owgrUpdatedAt) : NaN;
+  const eligible = Number.isInteger(field.owgrRank) && field.owgrRank! > 0 && Number.isFinite(observed) &&
+    observed <= Date.parse(asOfAt) && observed < Date.parse(targetCutoffAt);
+  return { ...field, owgrRank: eligible ? field.owgrRank : null,
+    owgrReason: eligible ? 'observed_before_cutoff' : field.owgrRank === null ? 'rank_unavailable' : 'rank_time_unverified_or_after_cutoff' };
+}
+
+export function buildGolfBoardInputManifest(input: { targetEventId: string; targetCutoffAt: string; asOfAt: string;
+  refresh: { id: number; source_hash: string; normalized_hash: string; observed_at: string; last_checked_at: string };
+  field: readonly GolfBoardFieldInput[]; selection: GolfHistorySelection }) {
+  const manifest = { provider: 'espn_pga', modelVersion: GOLF_VALUE_VERSION, normalizationVersion: GOLF_ESPN_HISTORY_VERSION,
+    targetEventId: input.targetEventId, targetCutoffAt: input.targetCutoffAt, asOfAt: input.asOfAt,
+    refresh: { id: input.refresh.id, sourceHash: input.refresh.source_hash, normalizedHash: input.refresh.normalized_hash,
+      observedAt: input.refresh.observed_at, lastCheckedAt: input.refresh.last_checked_at },
+    field: input.field.map(player => preserveGolfOwgrInput(player, input.asOfAt, input.targetCutoffAt)).sort((a, b) => a.playerId - b.playerId),
+    eventVersions: input.selection.eventVersions, observations: input.selection.observations };
+  return { ...manifest, inputHash: golfAnalyticsHash(manifest) };
+}
