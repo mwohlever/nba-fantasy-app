@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { requireAdminApi } from "@/lib/requireAdminApi";
 import {
   authorizeSlateResource,
   loadActiveGroupTeamIds,
 } from "@/lib/security/resourceAuthorization";
 import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
-import { getCurrentUser } from "@/lib/auth";
-import {
-  getActiveSlateAccessForUser,
-} from "@/lib/groups/context";
 
 function normalizeNbaTeamCode(value: string | null | undefined) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -41,10 +36,7 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_: NextRequest, context: RouteContext) {
-  const authError = await requireAdminApi();
-  if (authError) return authError;
-
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { slateId: slateIdParam } = await context.params;
     const slateId = Number(slateIdParam);
@@ -56,30 +48,13 @@ export async function GET(_: NextRequest, context: RouteContext) {
       );
     }
 
-    const user = await getCurrentUser();
+    const authorization = await authorizeSlateResource(
+      request,
+      slateId,
+      { requireCommissioner: true },
+    );
 
-    if (!user) {
-      return NextResponse.json(
-        { error: "Login required." },
-        { status: 401 },
-      );
-    }
-
-    const slateAccess =
-      await getActiveSlateAccessForUser(
-        user,
-        slateId,
-      );
-
-    if (!slateAccess) {
-      return NextResponse.json(
-        {
-          error:
-            "Slate not found in the active Group.",
-        },
-        { status: 404 },
-      );
-    }
+    if (!authorization.ok) return authorization.response;
 
     const [
       { data: slate, error: slateError },
@@ -103,7 +78,7 @@ export async function GET(_: NextRequest, context: RouteContext) {
         .select("id, name")
         .eq(
           "group_id",
-          slateAccess.context.group.id,
+          authorization.target.groupId,
         )
         .order("name", { ascending: true }),
       supabaseAdmin

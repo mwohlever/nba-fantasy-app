@@ -2,7 +2,7 @@
 
 import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
@@ -196,6 +196,8 @@ export default function AdminSlatesPage() {
   const [teams, setTeams] = useState<SlateTeamRow[]>([]);
   const [golfField, setGolfField] =
     useState<GolfFieldSummary | null>(null);
+  const detailRequestRef = useRef(0);
+  const shotCastRequestRef = useRef(0);
 
   const [
     shotCast,
@@ -257,8 +259,16 @@ export default function AdminSlatesPage() {
   }, [selectedSport, router]);
 
   useEffect(() => {
-    if (!selectedSlateId) return;
-    void loadSlateDetail(Number(selectedSlateId));
+    const slateId = Number(selectedSlateId);
+    const requestId = ++detailRequestRef.current;
+    ++shotCastRequestRef.current;
+    setSelectedSlate(null);
+    setTeams([]);
+    setGolfField(null);
+    setShotCast(null);
+    setShotCastTournamentId("");
+    if (!Number.isSafeInteger(slateId) || slateId <= 0) return;
+    void loadSlateDetail(slateId, requestId);
   }, [selectedSlateId]);
 
   async function loadSlates() {
@@ -306,7 +316,10 @@ export default function AdminSlatesPage() {
     }
   }
 
-  async function loadSlateDetail(slateId: number) {
+  async function loadSlateDetail(
+    slateId: number,
+    requestId = ++detailRequestRef.current,
+  ) {
     try {
       setMessage("");
 
@@ -318,6 +331,8 @@ export default function AdminSlatesPage() {
       const result = (await response.json()) as
         | SlateDetailResponse
         | { error?: string };
+
+      if (requestId !== detailRequestRef.current) return;
 
       if (!response.ok) {
         setMessage(
@@ -343,13 +358,16 @@ export default function AdminSlatesPage() {
       if (safeResult.slate.sport === "golf") {
         void loadShotCastStatus(
           slateId,
+          requestId,
         );
       } else {
+        ++shotCastRequestRef.current;
         setShotCast(null);
         setShotCastTournamentId("");
       }
     } catch (error) {
       console.error(error);
+      if (requestId !== detailRequestRef.current) return;
       setMessage(
         "Something went wrong while loading slate details.",
       );
@@ -358,7 +376,9 @@ export default function AdminSlatesPage() {
 
   async function loadShotCastStatus(
     slateId: number,
+    detailRequestId = detailRequestRef.current,
   ) {
+    const requestId = ++shotCastRequestRef.current;
     try {
       const response = await fetch(
         `/api/admin/golf/shotcast?slateId=${slateId}`,
@@ -369,6 +389,11 @@ export default function AdminSlatesPage() {
 
       const result =
         await response.json();
+
+      if (
+        detailRequestId !== detailRequestRef.current ||
+        requestId !== shotCastRequestRef.current
+      ) return;
 
       if (!response.ok) {
         setShotCast(null);
@@ -392,6 +417,10 @@ export default function AdminSlatesPage() {
       setShotCastTournamentId("");
     } catch (error) {
       console.error(error);
+      if (
+        detailRequestId !== detailRequestRef.current ||
+        requestId !== shotCastRequestRef.current
+      ) return;
       setShotCast(null);
     }
   }

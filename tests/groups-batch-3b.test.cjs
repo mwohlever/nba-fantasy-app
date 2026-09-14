@@ -211,6 +211,7 @@ for (const sport of ['nba', 'nfl']) test(`${sport}: creation preview and creatio
       league: { id: 'l1', settings: {} }, context: { group: { id: 'g1' } },
     }) },
     '@/lib/rules/leagueRules': { resolveLeagueRules: () => ({ roster: { slots: [] } }) },
+    '@/lib/slates/golfSlateRules': { buildGolfSlateRulesSnapshot: () => ({ roster: { slots: [] } }) },
     '@/lib/security/resourcePolicy': {},
   }, '\nexports.previousSetup = getMostRecentCompletedSlateSetup;');
   const get = (date) => route.GET(new Request(`http://localhost/api/slates?sport=${sport}${date ? `&beforeDate=${date}` : ''}`));
