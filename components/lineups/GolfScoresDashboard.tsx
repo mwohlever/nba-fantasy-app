@@ -10,7 +10,7 @@ import type { Player, PlayerStat, OrderedTeam, RosterSlotConfig, Slate } from ".
 
 export type GolfFantasyBoard = {
   rules: GolfRules;
-  teams: Array<GolfFantasyTeam & { name: string }>;
+  teams: Array<GolfFantasyTeam & { name: string; hiddenRosterPeriods?: Array<"full_tournament" | "opening" | "weekend"> }>;
   events: Array<Record<string, any>>;
 };
 
@@ -25,7 +25,8 @@ function currentRound(event: Record<string, any> | undefined) {
 
 function StandardRoster({ board, team, onPlayer }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void }) {
   return <div className="divide-y divide-slate-800 px-3">
-    {team.contributions.length === 0 ? <p className="py-3 text-xs text-slate-400">No saved roster.</p> : null}
+    {(team.hiddenRosterPeriods ?? []).map(period => <p key={period} className="py-3 text-xs text-amber-300">{period === "weekend" ? "Weekend lineup hidden until lock." : period === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock."}</p>)}
+    {team.contributions.length === 0 && (team.hiddenRosterPeriods ?? []).length === 0 ? <p className="py-3 text-xs text-slate-400">No saved roster.</p> : null}
     {team.contributions.map(contribution => {
       const event = board.events.find(e => Number(e.player_id) === contribution.playerId);
       const player = event?.golf_players;
@@ -55,6 +56,7 @@ function BestBallRoster({ board, team, onPlayer }: { board: GolfFantasyBoard; te
   const rounds = team.bestBallRounds ?? [];
   const eventByPlayer = new Map(board.events.map(event => [Number(event.player_id), event]));
   return <div className="space-y-4 px-3 py-3">
+    {(team.hiddenRosterPeriods ?? []).map(period => <p key={period} className="text-xs text-amber-300">{period === "weekend" ? "Weekend lineup hidden until lock." : period === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock."}</p>)}
     {rounds.map(round => {
       const roster = team.contributions.filter(c => c.period === round.period);
       const holes = round.holes.filter(hole => hole.holeNumber >= 1 && hole.holeNumber <= 18);
@@ -99,7 +101,7 @@ export function GolfFantasyRows({ board, onPlayer, scope }: {
               <span className="scores-standing-name"><strong>{team.name}</strong></span>
               <span className="scores-standing-score">{golfFantasyScore(team.fantasy_points)}</span>
               <span className="scores-standing-chevron" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
-              <span className="scores-standing-games">{team.provisional ? "Provisional · " : ""}{team.contributions.length} golfer selections</span>
+              <span className="scores-standing-games">{team.provisional ? "Provisional · " : ""}{(team.hiddenRosterPeriods?.length ?? 0) > 0 ? "Lineup hidden until lock" : `${team.contributions.length} golfer selections`}</span>
             </button>
             {expanded ? (
               <div id={rosterId} className="border-t border-slate-800 bg-slate-950/60">

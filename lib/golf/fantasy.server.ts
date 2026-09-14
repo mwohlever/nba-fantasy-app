@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { resolveGolfRules } from '../rules/leagueRules';
 import { resolveGolfScoringRosters, type GolfStoredRoster } from './rosterResolution';
 import { calculateGolfCompetition } from './competition';
+import { canViewerSeeGolfRosterPeriod, type GolfRosterVisibilityPeriod } from './rosterVisibility';
 
 function checked(result: { data: any; error: { message: string } | null }) {
   if (result.error) throw new Error(`Golf fantasy: ${result.error.message}`);
@@ -28,7 +29,7 @@ export async function loadGolfRosters(slateId: number, snapshot: Record<string, 
   return resolveGolfScoringRosters({ snapshot, teamIds, snake, salaryCap, snakePeriods });
 }
 
-export async function loadGolfFantasy(slateId: number, scope?: { groupId: string }) {
+export async function loadGolfFantasy(slateId: number, scope?: { groupId: string; viewerTeamId?: number | null }) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const before = checked(await supabaseAdmin.from('golf_accepted_versions').select('revision').eq('slate_id', slateId).maybeSingle());
     const results = await Promise.all([
@@ -43,13 +44,28 @@ export async function loadGolfFantasy(slateId: number, scope?: { groupId: string
     const slateTeams = (slateTeamRows ?? []).filter((row: any) => !scope || (
       row.teams?.group_id === scope.groupId && activeUsers.has(String(row.teams?.user_id))
     ));
-    const rosters = await loadGolfRosters(slateId, slate.rules_snapshot, slateTeams.map((t: any) => Number(t.team_id)));
+    const [rosters, periodResult] = await Promise.all([
+      loadGolfRosters(slateId, slate.rules_snapshot, slateTeams.map((t: any) => Number(t.team_id))),
+      supabaseAdmin.from('golf_roster_periods').select('period_key, locked_at, completed_at, started_rounds, evidence_snapshot').eq('slate_id', slateId),
+    ]);
+    const periods = checked(periodResult) as GolfRosterVisibilityPeriod[];
+    const periodByKey = new Map(periods.map(period => [period.period_key, period]));
     const after = checked(await supabaseAdmin.from('golf_accepted_versions').select('revision').eq('slate_id', slateId).maybeSingle());
     if (Number(before?.revision ?? 0) !== Number(after?.revision ?? 0)) continue;
     const teams = calculateGolfCompetition({ slateId, snapshot: slate.rules_snapshot, events, rosters, slateTeams,
       penaltyPerRound: slate.has_cut ? Number(slate.cut_penalty_per_round ?? 0) : 0 });
-    return { rules: resolveGolfRules(slate.rules_snapshot), rosters, events,
-      teams: teams.map(t => ({ ...t, name: slateTeams.find((s: any) => Number(s.team_id) === t.team_id)?.teams?.name ?? 'Team' })) };
+    const visibleRosters = rosters.map(roster => ({ ...roster, periods: roster.periods.map(period =>
+      canViewerSeeGolfRosterPeriod({ snapshot: slate.rules_snapshot, period: periodByKey.get(period.period), viewerTeamId: scope?.viewerTeamId, rosterTeamId: roster.teamId })
+        ? period : { ...period, playerIds: [] }) }));
+    return { rules: resolveGolfRules(slate.rules_snapshot), rosters: visibleRosters, events,
+      teams: teams.map(t => {
+        const hiddenRosterPeriods = t.contributions.map(contribution => contribution.period).filter((period, index, all) =>
+          all.indexOf(period) === index && !canViewerSeeGolfRosterPeriod({ snapshot: slate.rules_snapshot, period: periodByKey.get(period), viewerTeamId: scope?.viewerTeamId, rosterTeamId: t.team_id }));
+        return { ...t, name: slateTeams.find((s: any) => Number(s.team_id) === t.team_id)?.teams?.name ?? 'Team',
+          contributions: t.contributions.filter(contribution => !hiddenRosterPeriods.includes(contribution.period)),
+          bestBallRounds: t.bestBallRounds?.filter(round => !hiddenRosterPeriods.includes(round.period)),
+          hiddenRosterPeriods };
+      }) };
   }
   throw new Error('Golf results changed while loading; refresh and try again.');
 }

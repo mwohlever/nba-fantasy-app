@@ -33,6 +33,19 @@ test('independent team expansion survives score updates; collapse affects only o
   assert.deepEqual(rows(h.render({ ...props, scope: 'group-b:2' })).map(n => n.props['aria-expanded']), [false, false]);
 });
 
+test('Golf Scores shows a compact hidden-period state without roster identities', () => {
+  const h = host(GolfFantasyRows);
+  const board = { rules: { gameType: 'standard' }, events: [], teams: [{ team_id: 2, name: 'Other Team', fantasy_points: null, contributions: [], hiddenRosterPeriods: ['weekend'] }] };
+  const props = { scope: 'group-a:1', board, onPlayer() {} };
+  let tree = h.render(props);
+  nodes(tree).find(n => n.props?.className?.includes('golf-scores-standing-toggle')).props.onClick();
+  tree = h.render(props);
+  assert.match(text(tree), /Lineup hidden until lock/);
+  assert.doesNotMatch(text(tree), /Golfer \d+/);
+  assert.match(require('node:fs').readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8'), /Weekend lineup hidden until lock/);
+  h.unmount();
+});
+
 test('pull refresh preserves unsaved period selections, flags invalidity and retains revision conflict', async () => {
   const oldFetch = global.fetch;
   let revision = 1, eligible = true, requests = 0;

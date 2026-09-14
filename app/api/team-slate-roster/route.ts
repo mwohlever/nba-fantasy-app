@@ -10,6 +10,7 @@ import {
   resolveGolfRules,
 } from "@/lib/rules/leagueRules";
 import { relevantGolfRosterPeriodKey } from "@/lib/golf/relevantRosterPeriod";
+import { canViewerSeeGolfRosterPeriod } from "@/lib/golf/rosterVisibility";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveSlateAccessForUser,
@@ -223,7 +224,7 @@ export async function GET(
     if (golfRules?.draft.type === "salary_cap") {
       const { data: periods, error: periodsError } = await supabaseAdmin
         .from("golf_roster_periods")
-        .select("id, period_key, opened_at, completed_at, started_rounds")
+        .select("id, period_key, opened_at, locked_at, completed_at, started_rounds, evidence_snapshot")
         .eq("slate_id", slateId)
         .order("id", { ascending: true });
       if (periodsError) {
@@ -235,6 +236,10 @@ export async function GET(
         periods ?? [],
       );
       const period = (periods ?? []).find((row) => row.period_key === periodKey);
+      if (!canViewerSeeGolfRosterPeriod({ snapshot: slate?.rules_snapshot, period, viewerTeamId: slateAccess.context.team?.id ?? null, rosterTeamId: teamId })) {
+        return NextResponse.json({ success: true, team: team ?? null, slateId, sport, statColumns, roster: [], total: 0,
+          rosterHidden: true, rosterHiddenMessage: periodKey === "weekend" ? "Weekend lineup hidden until lock." : periodKey === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock." });
+      }
       const { data: salaryLineup, error: salaryLineupError } = period
         ? await supabaseAdmin
             .from("golf_salary_cap_lineups")

@@ -469,6 +469,7 @@ function HomePageContent() {
     useState<SlateRosterModalState>(null);
   const [slateRosterRows, setSlateRosterRows] = useState<SlateRosterRow[]>([]);
   const [slateRosterTotal, setSlateRosterTotal] = useState(0);
+  const [slateRosterHiddenMessage, setSlateRosterHiddenMessage] = useState<string | null>(null);
 
   const [selectedRosterPlayer, setSelectedRosterPlayer] =
     useState<Player | null>(null);
@@ -729,6 +730,7 @@ function HomePageContent() {
     if (!isGolf || !slateRosterModal) {
       setSlateRosterRows([]);
       setSlateRosterTotal(0);
+      setSlateRosterHiddenMessage(null);
       return;
     }
 
@@ -752,16 +754,23 @@ function HomePageContent() {
           console.error(result.error || "Failed to load slate roster.");
           setSlateRosterRows([]);
           setSlateRosterTotal(0);
+          setSlateRosterHiddenMessage(null);
           return;
         }
 
         setSlateRosterRows(result.roster ?? []);
         setSlateRosterTotal(Number(result.total ?? 0));
+        setSlateRosterHiddenMessage(
+          typeof result.rosterHiddenMessage === "string"
+            ? result.rosterHiddenMessage
+            : null,
+        );
       } catch (error) {
         console.error(error);
         if (!isActive) return;
         setSlateRosterRows([]);
         setSlateRosterTotal(0);
+        setSlateRosterHiddenMessage(null);
       } finally {
         if (isActive) setIsSlateRosterLoading(false);
       }
@@ -1373,6 +1382,10 @@ function HomePageContent() {
               {isSlateRosterLoading ? (
                 <div className="rounded-2xl border border-dashed border-slate-700 px-4 py-8 text-center text-sm text-slate-400">
                   Loading golfers...
+                </div>
+              ) : slateRosterHiddenMessage ? (
+                <div className="rounded-2xl border border-dashed border-amber-700/70 bg-amber-950/20 px-4 py-8 text-center text-sm text-amber-200">
+                  {slateRosterHiddenMessage}
                 </div>
               ) : slateRosterRows.length ===
                 0 ? (

@@ -145,7 +145,7 @@ test('Golf Scores scope canonical participants to the active Group', () => {
   assert.match(fantasy, /teams!inner\(name, group_id, user_id\)/);
   assert.match(fantasy, /row\.teams\?\.group_id === scope\.groupId/);
   assert.match(fantasy, /activeUsers\.has\(String\(row\.teams\?\.user_id\)\)/);
-  assert.match(route, /loadGolfFantasy\(slateId, \{ groupId: access\.context\.group\.id \}\)/);
+  assert.match(route, /loadGolfFantasy\(slateId, \{ groupId: access\.context\.group\.id, viewerTeamId: access\.context\.team\?\.id \?\? null \}\)/);
 });
 
 test('Golf Lineup selects an upcoming slate and does not block roster loading on score reads', () => {

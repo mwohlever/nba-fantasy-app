@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const access = await getActiveSlateAccessForUser(user, slateId);
   if (!access || access.slate.sport !== 'golf') return NextResponse.json({ error: 'Golf slate not found in this Group.' }, { status: 404 });
   try {
-    return NextResponse.json(await loadGolfFantasy(slateId, { groupId: access.context.group.id }), { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json(await loadGolfFantasy(slateId, { groupId: access.context.group.id, viewerTeamId: access.context.team?.id ?? null }), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Golf Scores unavailable.' }, { status: 500 });
   }

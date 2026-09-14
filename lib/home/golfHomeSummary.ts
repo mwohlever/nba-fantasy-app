@@ -7,6 +7,7 @@ import { getActiveLeagueForSport } from "@/lib/groups/context";
 import { resolveGolfRules } from "@/lib/rules/leagueRules";
 import { relevantGolfRosterPeriodKey } from "@/lib/golf/relevantRosterPeriod";
 import { loadGolfFantasy, loadGolfRosters } from '@/lib/golf/fantasy.server';
+import { canViewerSeeGolfRosterPeriod } from '@/lib/golf/rosterVisibility';
 
 type GolfSlateRow = {
   id: number;
@@ -84,8 +85,10 @@ type GolfRosterPeriodRow = {
   id: number;
   period_key: "full_tournament" | "opening" | "weekend";
   opened_at: string | null;
+  locked_at: string | null;
   completed_at: string | null;
   started_rounds: number[] | null;
+  evidence_snapshot: { acquisitionDeadline?: unknown } | null;
 };
 
 type GolfSalaryCapLineupRow = {
@@ -590,7 +593,7 @@ export async function getGolfHomeSummary() {
     if (latestRules.draft.type === "salary_cap") {
       const { data: periodData, error: periodError } = await supabaseAdmin
         .from("golf_roster_periods")
-        .select("id, period_key, opened_at, completed_at, started_rounds")
+        .select("id, period_key, opened_at, locked_at, completed_at, started_rounds, evidence_snapshot")
         .eq("slate_id", latestSlate.id)
         .order("id", { ascending: true });
 
@@ -629,7 +632,8 @@ export async function getGolfHomeSummary() {
         }
 
         latestSalaryCapLineups =
-          (salaryLineupData ?? []) as GolfSalaryCapLineupRow[];
+          (salaryLineupData ?? []).filter((lineup: any) => canViewerSeeGolfRosterPeriod({ snapshot: latestSlate.rules_snapshot,
+            period: relevantPeriod, viewerTeamId: context.team?.id ?? null, rosterTeamId: Number(lineup.team_id) })) as GolfSalaryCapLineupRow[];
       }
     } else if (lineupIds.length > 0) {
       const {
@@ -726,11 +730,13 @@ export async function getGolfHomeSummary() {
 
   if (latestSlate && resolveGolfRules(latestSlate.rules_snapshot).rosterPeriods.type === 'split_after_round_2') {
     const { data: periods, error } = await supabaseAdmin.from('golf_roster_periods')
-      .select('period_key, opened_at, completed_at, started_rounds').eq('slate_id', latestSlate.id);
+      .select('period_key, opened_at, locked_at, completed_at, started_rounds, evidence_snapshot').eq('slate_id', latestSlate.id);
     if (error) throw new Error(error.message);
     const period = relevantGolfRosterPeriodKey(latestSlate.rules_snapshot, periods ?? []);
     const rosters = await loadGolfRosters(latestSlate.id, latestSlate.rules_snapshot, [...teamNameById.keys()]);
-    for (const roster of rosters) for (const id of roster.periods.find(p => p.period === period)?.playerIds ?? []) addOwnership(roster.teamId, id);
+    for (const roster of rosters) if (canViewerSeeGolfRosterPeriod({ snapshot: latestSlate.rules_snapshot,
+      period: (periods ?? []).find(row => row.period_key === period), viewerTeamId: context.team?.id ?? null, rosterTeamId: roster.teamId }))
+      for (const id of roster.periods.find(p => p.period === period)?.playerIds ?? []) addOwnership(roster.teamId, id);
   } else {
   latestLineupPlayers.forEach((row) => {
     const lineup = lineupById.get(row.lineup_id);
@@ -1413,7 +1419,7 @@ export async function getGolfHomeSummary() {
     };
   }
 
-  const canonicalFantasy = latestSlate ? await loadGolfFantasy(latestSlate.id, { groupId: context.group.id }) : null;
+  const canonicalFantasy = latestSlate ? await loadGolfFantasy(latestSlate.id, { groupId: context.group.id, viewerTeamId: context.team?.id ?? null }) : null;
   const canonicalLatestRows = canonicalFantasy ? canonicalFantasy.teams.map(scored => ({
     ...scored, teamName: teamNameById.get(scored.team_id) ?? scored.name,
     avatarUrl: avatarByTeamId.get(scored.team_id) ?? null,
