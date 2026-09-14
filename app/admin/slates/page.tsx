@@ -215,7 +215,6 @@ export default function AdminSlatesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isReseeding, setIsReseeding] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [isRefreshingGolfField, setIsRefreshingGolfField] =
@@ -239,7 +238,6 @@ export default function AdminSlatesPage() {
   const isBusy =
     isSaving ||
     isReseeding ||
-    isDeleting ||
     isArchiving ||
     isRefreshingGolfField ||
     isImportingGolfField ||
@@ -861,49 +859,6 @@ export default function AdminSlatesPage() {
       );
     } finally {
       setIsReseeding(false);
-    }
-  }
-
-  async function handleDelete() {
-    if (!selectedSlateId) return;
-
-    const confirmed = window.confirm(
-      "Delete this slate? This removes its lineups, stats, results, and settings.",
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setIsDeleting(true);
-      setMessage("");
-
-      const response = await fetch(
-        `/api/admin/slates/${selectedSlateId}`,
-        { method: "DELETE" },
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          result.error || "Failed to delete the slate.",
-        );
-        return;
-      }
-
-      setSelectedSlate(null);
-      setTeams([]);
-      setGolfField(null);
-      setSelectedSlateId("");
-      await loadSlates();
-      setMessage("Slate deleted successfully.");
-    } catch (error) {
-      console.error(error);
-      setMessage(
-        "Something went wrong while deleting the slate.",
-      );
-    } finally {
-      setIsDeleting(false);
     }
   }
 
@@ -1691,17 +1646,6 @@ export default function AdminSlatesPage() {
                     : selectedSlate.archived_at
                       ? "Restore Slate"
                       : "Archive Slate"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => void handleDelete()}
-                  disabled={isBusy}
-                  className="rounded-xl border border-red-600 bg-red-900 px-4 py-2.5 text-sm font-semibold text-red-100 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {isDeleting
-                    ? "Deleting..."
-                    : "Delete Slate"}
                 </button>
 
                 {selectedSlate.sport === "golf" &&
