@@ -7,6 +7,7 @@ import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 
 import { canAddGolfSalaryCapPlayer } from "@/lib/golf/salaryCap";
+import { formatGolfMoney, golfCentsToMoney, golfMoneyToCents } from "@/lib/golf/money";
 
 type PeriodKey = "full_tournament" | "opening" | "weekend";
 type Golfer = {
@@ -17,7 +18,7 @@ type Golfer = {
   fieldStatus: string | null;
   teeTime: string | null;
   isAmateur: boolean;
-  effectiveSalary: number | null;
+  effectiveSalary: string | null;
   priced: boolean;
   eligible: boolean;
 };
@@ -26,18 +27,18 @@ type Board = {
   period: { key: PeriodKey; state: "open" | "locked" | "unavailable"; lockReason: string | null };
   periods: Array<{ key: PeriodKey; state: "open" | "locked" | "unavailable" }>;
   priceSet: { status: "generated" | "frozen" } | null;
-  budget: number;
+  budget: string;
   rosterSize: number;
   golfers: Golfer[];
-  lineup: { revision: number; totalSalary: number; playerIds: number[] } | null;
+  lineup: { revision: number; totalSalary: string; playerIds: number[] } | null;
 };
 
 function periodLabel(period: PeriodKey) {
   return period === "full_tournament" ? "Full Tournament" : period === "opening" ? "Opening" : "Weekend";
 }
 
-function dollars(value: number) {
-  return `$${value}`;
+function dollars(value: string | number) {
+  return `$${formatGolfMoney(value)}`;
 }
 
 export default function GolfSalaryCapBuilder({
@@ -113,7 +114,9 @@ export default function GolfSalaryCapBuilder({
     scopeKey: `${groupContext?.group.id}:${slateId}:${period}` });
 
   const golferById = useMemo(() => new Map((board?.golfers ?? []).map(golfer => [golfer.playerId, golfer])), [board]);
-  const used = selected.reduce((total, id) => total + (golferById.get(id)?.effectiveSalary ?? 0), 0);
+  const usedCents = selected.reduce((total, id) => total + (golfMoneyToCents(golferById.get(id)?.effectiveSalary) ?? 0), 0);
+  const budgetCents = board ? golfMoneyToCents(board.budget)! : 0;
+  const used = golfCentsToMoney(usedCents);
   const unsaved = selected.length !== saved.length || selected.some((id, index) => saved[index] !== id);
   const invalid = selected.filter(id => !golferById.get(id)?.eligible || !golferById.get(id)?.priced);
   const prices = (board?.golfers ?? []).map(golfer => ({
@@ -131,13 +134,13 @@ export default function GolfSalaryCapBuilder({
     if (!golfer.priced || golfer.effectiveSalary === null) return "Unpriced";
     if (selected.length >= board.rosterSize) return "Roster full";
     if (!canAddGolfSalaryCapPlayer({ selectedPlayerIds: selected, candidatePlayerId: golfer.playerId, prices, rosterSize: board.rosterSize, salaryCap: board.budget })) {
-      return used + golfer.effectiveSalary > board.budget ? "Over cap" : "Cannot complete roster under cap";
+      return usedCents + golfMoneyToCents(golfer.effectiveSalary)! > budgetCents ? "Over cap" : "Cannot complete roster under cap";
     }
     return null;
   }
 
   async function saveLineup() {
-    if (!board || !period || saving || pendingRef.current || revisionConflict || invalid.length || used > board.budget) return;
+    if (!board || !period || saving || pendingRef.current || revisionConflict || invalid.length || usedCents > budgetCents) return;
     pendingRef.current = true;
     setSaving(true);
     setError(null);
@@ -220,11 +223,11 @@ export default function GolfSalaryCapBuilder({
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-200">
                 <span>Cap: <strong>{dollars(board.budget)}</strong></span>
                 <span>Used: <strong>{dollars(used)}</strong></span>
-                <span>Remaining: <strong>{dollars(board.budget - used)}</strong></span>
+                <span>Remaining: <strong>{dollars(golfCentsToMoney(budgetCents - usedCents))}</strong></span>
                 <span className={unsaved ? "text-amber-700" : "text-emerald-700"}>{unsaved ? "Unsaved" : board.lineup ? "Saved" : "Not saved"}</span>
               </div>
               <button type="button" onClick={saveLineup}
-                disabled={saving || revisionConflict || invalid.length > 0 || used > board.budget || board.period.state !== "open" || selected.length !== board.rosterSize || !unsaved || board.priceSet?.status !== "frozen"}
+                disabled={saving || revisionConflict || invalid.length > 0 || usedCents > budgetCents || board.period.state !== "open" || selected.length !== board.rosterSize || !unsaved || board.priceSet?.status !== "frozen"}
                 className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400">
                 {saving ? "Saving…" : "Save Lineup"}
               </button>

@@ -1,8 +1,9 @@
 "use client";
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { formatGolfMoney, golfMoneyToCents } from '@/lib/golf/money';
 
-type Price = { player_id: number; suggested_salary: number | null; override_salary: number | null; effective_salary: number | null;
+type Price = { player_id: number; suggested_salary: string | null; override_salary: string | null; effective_salary: string | null;
   is_amateur: boolean; value_basis: string; golf_players: { display_name: string } };
 type Board = { priceSet: { status: 'generated' | 'frozen'; revision: number } | null; prices: Price[] };
 
@@ -29,7 +30,10 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
       const response = await fetch('/api/admin/golf/salary-cap', { method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slateId, action, expectedRevision: board?.priceSet?.revision,
           acknowledgeUnpriced: acknowledged,
-          overrides: Object.entries(edits).map(([playerId, salary]) => ({ playerId: Number(playerId), salary: salary === '' ? null : Number(salary) })),
+          overrides: Object.entries(edits).map(([playerId, salary]) => {
+            if (salary !== '' && golfMoneyToCents(salary) === null) throw new Error('Salary must have no more than two decimal places.');
+            return { playerId: Number(playerId), salary: salary === '' ? null : Number(salary) };
+          }),
         }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
@@ -52,9 +56,9 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
       <div className="max-h-96 overflow-auto"><table className="w-full text-left text-xs">
         <thead className="sticky top-0 bg-slate-950 text-slate-400"><tr><th className="py-2">Golfer</th><th>Suggested</th><th>Effective</th><th>Status</th></tr></thead>
         <tbody>{board.prices.map(p => <tr key={p.player_id} className="border-t border-slate-800">
-          <td className="py-2 pr-2">{p.golf_players.display_name}</td><td>${p.suggested_salary ?? '—'}</td>
-          <td>{frozen ? `$${p.effective_salary ?? '—'}` : p.value_basis === 'unsupported' ? 'Unpriced' :
-            <input aria-label={`Effective salary for ${p.golf_players.display_name}`} type="number" min={10} max={42} step={1}
+          <td className="py-2 pr-2">{p.golf_players.display_name}</td><td>{p.suggested_salary === null ? '—' : `$${formatGolfMoney(p.suggested_salary)}`}</td>
+          <td>{frozen ? (p.effective_salary === null ? '—' : `$${formatGolfMoney(p.effective_salary)}`) : p.value_basis === 'unsupported' ? 'Unpriced' :
+            <input aria-label={`Effective salary for ${p.golf_players.display_name}`} type="number" min={10} max={42} step={0.01}
               disabled={busy || p.is_amateur} value={edits[p.player_id] ?? p.override_salary ?? p.suggested_salary ?? ''}
               onChange={e => setEdits(previous => ({ ...previous, [p.player_id]: e.target.value }))}
               className="my-1 w-16 rounded border border-slate-600 bg-slate-900 px-2 py-2 disabled:opacity-60" />}</td>

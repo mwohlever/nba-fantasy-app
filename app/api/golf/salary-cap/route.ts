@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getActiveSlateAccessForUser } from "@/lib/groups/context";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getGolfSalaryCapRules } from "@/lib/golf/salaryCap";
+import { formatGolfMoney, golfMoneyToCents } from "@/lib/golf/money";
 
 type PeriodKey = "full_tournament" | "opening" | "weekend";
 
@@ -134,11 +135,11 @@ export async function GET(request: NextRequest) {
         teeTime: row.tee_time ?? null,
         isAmateur: Boolean(row.is_amateur ?? price?.is_amateur),
         effectiveSalary: priceSet?.status === "frozen" && price?.effective_salary !== null && price?.effective_salary !== undefined
-          ? Number(price.effective_salary) : null,
+          ? formatGolfMoney(price.effective_salary) : null,
         priced: priceSet?.status === "frozen" && price?.effective_salary !== null && price?.effective_salary !== undefined,
         eligible: periodKey === "weekend" ? eligibleWeekendIds.has(playerId) : true,
       };
-    }).sort((a, b) => (b.effectiveSalary ?? -1) - (a.effectiveSalary ?? -1) || a.name.localeCompare(b.name));
+    }).sort((a, b) => (golfMoneyToCents(b.effectiveSalary) ?? -1) - (golfMoneyToCents(a.effectiveSalary) ?? -1) || a.name.localeCompare(b.name));
 
     return NextResponse.json({
       success: true,
@@ -149,13 +150,13 @@ export async function GET(request: NextRequest) {
         return { key, state: !row?.opened_at ? "unavailable" : row.locked_at || row.completed_at ? "locked" : "open" };
       }),
       priceSet: priceSet ? { id: Number(priceSet.id), status: priceSet.status, revision: Number(priceSet.revision), frozenAt: priceSet.frozen_at } : null,
-      budget: authorized.rules.budget,
+      budget: formatGolfMoney(authorized.rules.budget),
       rosterSize: authorized.rules.rosterSize,
       teamId: authorized.teamId,
       golfers: board,
       lineup: lineup ? {
         revision: Number(lineup.revision),
-        totalSalary: Number(lineup.total_salary),
+        totalSalary: formatGolfMoney(lineup.total_salary),
         playerIds: (lineup.golf_salary_cap_lineup_players ?? []).map((row: any) => Number(row.player_id)),
       } : null,
     }, { headers: { "Cache-Control": "no-store" } });

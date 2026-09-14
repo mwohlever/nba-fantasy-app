@@ -5,6 +5,7 @@ import { buildGolfBoardInputManifest } from "@/lib/golf/valueAnalytics";
 import { loadGolfAnalyticsHistory } from "@/lib/golf/valueAnalytics.server";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { formatGolfMoney } from "@/lib/golf/money";
 
 type SetupAction = "generate" | "override" | "freeze" | "open_weekend";
 
@@ -29,7 +30,11 @@ export async function GET(request: Request) {
       .select('player_id, suggested_salary, override_salary, effective_salary, is_amateur, value_basis, golf_players!inner(display_name)')
       .eq('price_set_id', result.data.id).order('suggested_salary', { ascending: false, nullsFirst: false }) : { data: [], error: null };
     rpcFailure('Salary prices unavailable', rows.error);
-    return NextResponse.json({ priceSet: result.data, prices: rows.data }, { headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ priceSet: result.data, prices: (rows.data ?? []).map((row: any) => ({ ...row,
+      suggested_salary: row.suggested_salary === null ? null : formatGolfMoney(row.suggested_salary),
+      override_salary: row.override_salary === null ? null : formatGolfMoney(row.override_salary),
+      effective_salary: row.effective_salary === null ? null : formatGolfMoney(row.effective_salary),
+    })) }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Salary setup unavailable.' }, { status: 500 });
   }

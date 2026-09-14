@@ -25,7 +25,7 @@ for (const count of [3, 4, 5, 6]) {
         const playerIds = prices.slice(0, count).map(p => p.playerId);
         for (const period of golfPeriodKeys(frozen)) {
           const input = { playerIds, prices, rosterSize: limits.rosterSize, salaryCap: limits.budget, period };
-          assert.deepEqual(validateGolfSalaryCapLineup(input), { ok: true, totalSalary: count * 25 });
+          assert.deepEqual(validateGolfSalaryCapLineup(input), { ok: true, totalSalary: `${count * 25}.00` });
           assert.match(validateGolfSalaryCapLineup({ ...input, playerIds: playerIds.slice(1) }).error, /exactly/);
           assert.match(validateGolfSalaryCapLineup({ ...input, playerIds: [...playerIds, count + 1] }).error, /exactly/);
           assert.match(validateGolfSalaryCapLineup({ ...input, playerIds: [playerIds[1], ...playerIds.slice(1)] }).error, /only once/);

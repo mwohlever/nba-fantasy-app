@@ -26,11 +26,15 @@ export function golfValuePercentiles(scores: readonly number[]) {
     (scores.filter(n=>n<score).length + (scores.filter(n=>n===score).length-1)/2)/(scores.length-1));
 }
 /** Suggested price only; never an effective/frozen acquisition price. */
+export function roundGolfSalary(value: number) {
+  if (!Number.isFinite(value)) throw new Error('Salary must be finite');
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 export function golfValueSalary(finalValue: number) {
   if (!Number.isFinite(finalValue) || finalValue < 0 || finalValue > 100) throw new Error('Final value must be 0–100');
   const ordinary = Math.min(39, 15 + 27 * (finalValue / 100) ** 2);
   const dominance = 3 * clamp((finalValue - 98) / 2, 0, 1) ** 2;
-  return Math.round(ordinary + dominance);
+  return roundGolfSalary(ordinary + dominance);
 }
 export function blendGolfValue(v1: number | null, owgr: number | null, confidence: GolfValueConfidence) {
   for (const n of [v1, owgr]) if (n !== null && (!Number.isFinite(n) || n < 0 || n > 100)) throw new Error('Invalid percentile');

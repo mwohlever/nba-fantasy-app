@@ -31,7 +31,7 @@ require.extensions[".ts"] = function compileTypeScript(module, filename) {
   module._compile(compiled.outputText, filename);
 };
 
-const {buildGolfValues,golfValuePercentiles,golfValueSalary,golfValueConfidence,blendGolfValue}=require('../lib/golf/valueModel.ts');
+const {buildGolfValues,golfValuePercentiles,golfValueSalary,roundGolfSalary,golfValueConfidence,blendGolfValue}=require('../lib/golf/valueModel.ts');
 const {golfValueInputsFromEspn}=require('../lib/golf/valueEspn.ts');
 const history=(i,score=80,diff=1,status='finished')=>({eventId:String(i),endedAt:`2026-07-${String(i+1).padStart(2,'0')}T12:00:00Z`,status,finishPercentile:status==='finished'?score:null,roundDifferentials:Array(4).fill(diff)});
 const player=(id,score=80,diff=1)=>({playerId:id,name:id,history:Array.from({length:8},(_,i)=>history(i,score,diff))});
@@ -74,7 +74,8 @@ test('field relativity and ties are deterministic, without price cliffs for equa
 });
 test('salary curve bounds, monotonicity and top-end separation',()=>{
  assert.equal(golfValueSalary(0),15);assert.equal(golfValueSalary(100),42);
- assert.deepEqual([100,99,97,95,90,85,80,75,70,60,50].map(golfValueSalary),[42,40,39,39,37,35,32,30,28,25,22]);
+ assert.deepEqual([100,99,97,95,90,85,80,75,70,60,50].map(golfValueSalary),[42,39.75,39,39,36.87,34.51,32.28,30.19,28.23,24.72,21.75]);
+ assert.equal(golfValueSalary(77.80128205128204),31.34);assert.equal(roundGolfSalary(31.34320661982248),31.34);assert.equal(roundGolfSalary(39.125),39.13);assert.equal(roundGolfSalary(25),25);
  let prior=0;for(let p=0;p<=100;p+=.1){const salary=golfValueSalary(p);assert.ok(salary>=prior&&salary<=42);prior=salary;}
  assert.throws(()=>golfValueSalary(NaN));assert.throws(()=>golfValueSalary(101));
 });

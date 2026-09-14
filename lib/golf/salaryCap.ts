@@ -1,4 +1,5 @@
 import { resolveGolfRules } from "../rules/leagueRules";
+import { golfCentsToMoney, golfMoneyToCents, type GolfMoney } from "./money";
 
 /** Read acquisition limits from this slate only; never recalculate a frozen cap. */
 export function getGolfSalaryCapRules(snapshot: unknown) {
@@ -27,13 +28,13 @@ export function getGolfSalaryCapRules(snapshot: unknown) {
  */
 export type GolfSalaryCapPrice = {
   playerId: number;
-  effectiveSalary: number | null;
+  effectiveSalary: GolfMoney | null;
   eligible: boolean;
   isAmateur?: boolean;
 };
 
 export type GolfSalaryCapValidation =
-  | { ok: true; totalSalary: number }
+  | { ok: true; totalSalary: string }
   | { ok: false; error: string };
 
 function validPlayerId(value: number) {
@@ -46,8 +47,8 @@ function priceMap(prices: readonly GolfSalaryCapPrice[]) {
     if (!validPlayerId(price.playerId) || result.has(price.playerId)) {
       throw new Error("Invalid or duplicate Salary Cap price entry");
     }
-    if (price.effectiveSalary !== null &&
-      (!Number.isInteger(price.effectiveSalary) || price.effectiveSalary < 10 || price.effectiveSalary > 42)) {
+    const cents = price.effectiveSalary === null ? null : golfMoneyToCents(price.effectiveSalary);
+    if (price.effectiveSalary !== null && (cents === null || cents < 1000 || cents > 4200)) {
       throw new Error("Invalid frozen golfer salary");
     }
     result.set(price.playerId, price);
@@ -59,10 +60,10 @@ export function validateGolfSalaryCapLineup(input: {
   playerIds: readonly number[];
   prices: readonly GolfSalaryCapPrice[];
   rosterSize: number;
-  salaryCap: number;
+  salaryCap: GolfMoney;
 }): GolfSalaryCapValidation {
-  if (!Number.isInteger(input.rosterSize) || input.rosterSize < 1 ||
-    !Number.isInteger(input.salaryCap) || input.salaryCap < 1) {
+  const capCents = golfMoneyToCents(input.salaryCap);
+  if (!Number.isInteger(input.rosterSize) || input.rosterSize < 1 || capCents === null || capCents < 1) {
     throw new Error("Invalid Salary Cap configuration");
   }
   if (input.playerIds.length !== input.rosterSize) {
@@ -72,15 +73,15 @@ export function validateGolfSalaryCapLineup(input: {
     return { ok: false, error: "Each golfer may be selected only once." };
   }
   const byId = priceMap(input.prices);
-  let totalSalary = 0;
+  let totalCents = 0;
   for (const playerId of input.playerIds) {
     const price = byId.get(playerId);
     if (!price?.eligible) return { ok: false, error: "A selected golfer is not eligible for this roster period." };
     if (price.effectiveSalary === null) return { ok: false, error: "A selected golfer does not have a frozen salary." };
-    totalSalary += price.effectiveSalary;
+    totalCents += golfMoneyToCents(price.effectiveSalary)!;
   }
-  if (totalSalary > input.salaryCap) return { ok: false, error: `Lineup exceeds the $${input.salaryCap} salary cap.` };
-  return { ok: true, totalSalary };
+  if (totalCents > capCents) return { ok: false, error: `Lineup exceeds the $${golfCentsToMoney(capCents)} salary cap.` };
+  return { ok: true, totalSalary: golfCentsToMoney(totalCents) };
 }
 
 /**
@@ -93,7 +94,7 @@ export function canAddGolfSalaryCapPlayer(input: {
   candidatePlayerId: number;
   prices: readonly GolfSalaryCapPrice[];
   rosterSize: number;
-  salaryCap: number;
+  salaryCap: GolfMoney;
 }) {
   if (input.selectedPlayerIds.length >= input.rosterSize || input.selectedPlayerIds.includes(input.candidatePlayerId)) return false;
   const byId = priceMap(input.prices);
@@ -101,13 +102,15 @@ export function canAddGolfSalaryCapPlayer(input: {
   if (new Set(selected).size !== selected.length || selected.some(id => !validPlayerId(id))) return false;
   const selectedPrices = selected.map(id => byId.get(id));
   if (selectedPrices.some(price => !price?.eligible || price.effectiveSalary === null)) return false;
-  const used = selectedPrices.reduce((sum, price) => sum + price!.effectiveSalary!, 0);
-  if (used > input.salaryCap) return false;
+  const capCents = golfMoneyToCents(input.salaryCap);
+  if (capCents === null) return false;
+  const used = selectedPrices.reduce((sum, price) => sum + golfMoneyToCents(price!.effectiveSalary!)!, 0);
+  if (used > capCents) return false;
   const slotsLeft = input.rosterSize - selected.length;
   const cheapestRemaining = input.prices
     .filter(price => price.eligible && price.effectiveSalary !== null && !selected.includes(price.playerId))
-    .map(price => price.effectiveSalary!)
+    .map(price => golfMoneyToCents(price.effectiveSalary!)!)
     .sort((a, b) => a - b)
     .slice(0, slotsLeft);
-  return cheapestRemaining.length === slotsLeft && used + cheapestRemaining.reduce((sum, salary) => sum + salary, 0) <= input.salaryCap;
+  return cheapestRemaining.length === slotsLeft && used + cheapestRemaining.reduce((sum, salary) => sum + salary, 0) <= capCents;
 }

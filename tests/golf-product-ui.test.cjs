@@ -83,9 +83,9 @@ test('builder uses frozen board limits, saves and reloads independent period ros
         const golfer = nodes(tree).find(n => n.type === 'button' && n.key === String(i + 1) && n.props.className?.includes('grid w-full'));
         assert.equal(Boolean(golfer.props.disabled), false); golfer.props.onClick(); tree = h.render(props);
       }
-      assert.match(renderToStaticMarkup(tree), /Remaining: <strong>\$0<\/strong>/);
+      assert.match(renderToStaticMarkup(tree), /Remaining: <strong>\$0\.00<\/strong>/);
       rosterSlots()[0].props.onClick(); tree = h.render(props);
-      assert.match(renderToStaticMarkup(tree), /Remaining: <strong>\$25<\/strong>/);
+      assert.match(renderToStaticMarkup(tree), /Remaining: <strong>\$25\.00<\/strong>/);
       nodes(tree).find(n => n.type === 'button' && n.key === '1' && n.props.className?.includes('grid w-full')).props.onClick();
       tree = h.render(props);
       let save = nodes(tree).find(n => n.type === 'button' && n.props.children === 'Save Lineup');
@@ -99,7 +99,7 @@ test('builder uses frozen board limits, saves and reloads independent period ros
       weekend.props.onClick(); await flush(); tree = h.render(props);
       assert.equal(rosterSlots().length, count);
       assert.equal(rosterSlots().filter(n => !n.props.disabled).length, 0);
-      assert.match(renderToStaticMarkup(tree), new RegExp('Remaining: <strong>\\$' + count * 25));
+      assert.match(renderToStaticMarkup(tree), new RegExp('Remaining: <strong>\\$' + count * 25 + '\\.00'));
       assert.equal(saved.get('opening').playerIds.length, count);
       const openingIds = [...saved.get('opening').playerIds];
       for (let i = 1; i <= count; i++) {
