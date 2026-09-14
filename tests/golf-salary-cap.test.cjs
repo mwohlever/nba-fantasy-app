@@ -51,6 +51,15 @@ test('server contract never accepts client salaries and routes Salary Cap separa
  assert.match(page,/<LineupBuilder/);
 });
 
+test('salary generation partitions PGA-only field identities instead of rejecting the board',()=>{
+ const route=fs.readFileSync(path.join(__dirname,'../app/api/admin/golf/salary-cap/route.ts'),'utf8');
+ assert.match(route,/identityStatus:.*espn_resolved.*pga_unresolved/s);
+ assert.match(route,/const resolvedField = fieldInputs\.filter/);
+ assert.match(route,/playerIds: resolvedField\.map/);
+ assert.match(route,/value_basis: value\?\.pricing\.basis \?\? 'unsupported'/);
+ assert.doesNotMatch(route,/Resolve PGA field golfers to canonical ESPN IDs before generating salaries/);
+});
+
 test('lifecycle SQL locks opening and weekend independently',()=>{
  const sql=fs.readFileSync(path.join(__dirname,'../supabase/migrations/20260915000100_golf_lifecycle_writer.sql'),'utf8');
  assert.match(sql,/p\.period_key in \('opening','full_tournament'\) and cardinality\(starts\)>0/);

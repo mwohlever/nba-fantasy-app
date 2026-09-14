@@ -108,16 +108,20 @@ export function summarizeGolfAnalyticsRefresh(plan: ReturnType<typeof planGolfSe
 
 export type CachedGolfEventVersion = { id: number; provider_event_id: string; season: number; ends_at: string; observed_at: string; ready_at: string; source_hash: string; normalized_hash: string; eligibility: string; status: string };
 export type CachedGolfObservation = { id: number; event_version_id: number; player_id: number | null; provider_player_id: string; history: GolfValueHistory };
-export type GolfHistorySelection = { histories: Map<string, GolfValueHistory[]>; observations: Array<{ id: number; eventVersionId: number; playerId: number; providerEventId: string }>;
+export type GolfHistorySelection = { histories: Map<string, GolfValueHistory[]>; observations: Array<{ id: number; eventVersionId: number; playerId: number; providerEventId: string; providerPlayerId: string; storedPlayerId: number | null; attribution: 'stored_canonical' | 'read_time_provider_reconciliation' }>;
+  conflicts: Array<{ playerId: number; providerPlayerId: string; storedPlayerId: number }>;
   eventVersions: Array<{ id: number; providerEventId: string; sourceHash: string; normalizedHash: string }> };
 
 export function selectGolfAnalyticsHistories(input: {
   playerIds: readonly number[]; targetEventId: string; season: number; targetCutoffAt: string; asOfAt: string;
   eventVersions: readonly CachedGolfEventVersion[]; observations: readonly CachedGolfObservation[];
+  espnPlayerIdsByPlayerId?: ReadonlyMap<number, string>;
 }): GolfHistorySelection {
   const cutoff = Date.parse(input.targetCutoffAt), asOf = Date.parse(input.asOfAt);
   if (!Number.isFinite(cutoff) || !Number.isFinite(asOf) || asOf >= cutoff) throw new Error('Valid pre-tournament Golf value cutoff required');
   const wanted = new Set(input.playerIds);
+  const playerIdByEspnId = new Map<number | string, number>();
+  for (const [playerId, espnPlayerId] of input.espnPlayerIdsByPlayerId ?? []) playerIdByEspnId.set(espnPlayerId, playerId);
   const histories = new Map(input.playerIds.map(id => [String(id), [] as GolfValueHistory[]]));
   const priorVersions = input.eventVersions.filter(event => event.status === 'ready' &&
     event.provider_event_id !== input.targetEventId && event.season === input.season &&
@@ -129,19 +133,31 @@ export function selectGolfAnalyticsHistories(input: {
   if (new Set(eventVersions.map(event => event.provider_event_id)).size !== eventVersions.length) throw new Error('Ambiguous Golf event version selection');
   const byVersion = new Map(eventVersions.map(event => [event.id, event]));
   const selected: GolfHistorySelection['observations'] = [];
+  const conflicts: GolfHistorySelection['conflicts'] = [];
   for (const observation of input.observations) {
     const event = byVersion.get(observation.event_version_id);
-    if (!event || observation.player_id === null || !wanted.has(observation.player_id)) continue;
+    if (!event) continue;
+    const providerMappedPlayerId = playerIdByEspnId.get(observation.provider_player_id);
+    if (providerMappedPlayerId !== undefined && observation.player_id !== null && observation.player_id !== providerMappedPlayerId) {
+      conflicts.push({ playerId: providerMappedPlayerId, providerPlayerId: observation.provider_player_id, storedPlayerId: observation.player_id });
+      continue;
+    }
+    const resolvedPlayerId = providerMappedPlayerId ?? observation.player_id;
+    if (resolvedPlayerId === undefined || resolvedPlayerId === null || !wanted.has(resolvedPlayerId)) continue;
+    const expectedProviderId = input.espnPlayerIdsByPlayerId?.get(resolvedPlayerId);
+    if (expectedProviderId && expectedProviderId !== observation.provider_player_id) continue;
     if (observation.history.eventId !== event.provider_event_id || Date.parse(observation.history.endedAt) !== Date.parse(event.ends_at)) throw new Error('Golf analytics observation provenance mismatch');
-    histories.get(String(observation.player_id))!.push(observation.history);
-    selected.push({ id: observation.id, eventVersionId: event.id, playerId: observation.player_id, providerEventId: event.provider_event_id });
+    histories.get(String(resolvedPlayerId))!.push(observation.history);
+    selected.push({ id: observation.id, eventVersionId: event.id, playerId: resolvedPlayerId, providerEventId: event.provider_event_id,
+      providerPlayerId: observation.provider_player_id, storedPlayerId: observation.player_id,
+      attribution: observation.player_id === null ? 'read_time_provider_reconciliation' : 'stored_canonical' });
   }
   selected.sort((a, b) => a.playerId - b.playerId || a.providerEventId.localeCompare(b.providerEventId));
-  return { histories, observations: selected, eventVersions: eventVersions.map(event => ({ id: event.id, providerEventId: event.provider_event_id,
+  return { histories, observations: selected, conflicts: [...new Map(conflicts.map(conflict => [`${conflict.playerId}:${conflict.providerPlayerId}:${conflict.storedPlayerId}`, conflict])).values()], eventVersions: eventVersions.map(event => ({ id: event.id, providerEventId: event.provider_event_id,
     sourceHash: event.source_hash, normalizedHash: event.normalized_hash })).sort((a, b) => a.providerEventId.localeCompare(b.providerEventId)) };
 }
 
-export type GolfBoardFieldInput = { playerId: number; espnPlayerId: string; name: string; isAmateur: boolean; owgrRank: number | null; owgrUpdatedAt: string | null };
+export type GolfBoardFieldInput = { playerId: number; espnPlayerId: string; identityStatus: 'espn_resolved' | 'pga_unresolved'; name: string; isAmateur: boolean; owgrRank: number | null; owgrUpdatedAt: string | null };
 export function preserveGolfOwgrInput(field: GolfBoardFieldInput, asOfAt: string, targetCutoffAt: string) {
   const observed = field.owgrUpdatedAt ? Date.parse(field.owgrUpdatedAt) : NaN;
   const eligible = Number.isInteger(field.owgrRank) && field.owgrRank! > 0 && Number.isFinite(observed) &&
@@ -153,11 +169,19 @@ export function preserveGolfOwgrInput(field: GolfBoardFieldInput, asOfAt: string
 export function buildGolfBoardInputManifest(input: { targetEventId: string; targetCutoffAt: string; asOfAt: string;
   refresh: { id: number; source_hash: string; normalized_hash: string; observed_at: string; last_checked_at: string };
   field: readonly GolfBoardFieldInput[]; selection: GolfHistorySelection }) {
+  const attributionByPlayerId = new Map<number, Set<'stored_canonical' | 'read_time_provider_reconciliation'>>();
+  for (const observation of input.selection.observations) {
+    const modes = attributionByPlayerId.get(observation.playerId) ?? new Set();
+    modes.add(observation.attribution);
+    attributionByPlayerId.set(observation.playerId, modes);
+  }
   const manifest = { provider: 'espn_pga', modelVersion: GOLF_VALUE_VERSION, normalizationVersion: GOLF_ESPN_HISTORY_VERSION,
     targetEventId: input.targetEventId, targetCutoffAt: input.targetCutoffAt, asOfAt: input.asOfAt,
     refresh: { id: input.refresh.id, sourceHash: input.refresh.source_hash, normalizedHash: input.refresh.normalized_hash,
       observedAt: input.refresh.observed_at, lastCheckedAt: input.refresh.last_checked_at },
-    field: input.field.map(player => preserveGolfOwgrInput(player, input.asOfAt, input.targetCutoffAt)).sort((a, b) => a.playerId - b.playerId),
-    eventVersions: input.selection.eventVersions, observations: input.selection.observations };
+    field: input.field.map(player => ({ ...preserveGolfOwgrInput(player, input.asOfAt, input.targetCutoffAt),
+      analyticsAttribution: [...(attributionByPlayerId.get(player.playerId) ?? new Set())].sort() })).sort((a, b) => a.playerId - b.playerId),
+    eventVersions: input.selection.eventVersions, observations: input.selection.observations,
+    identityConflicts: input.selection.conflicts };
   return { ...manifest, inputHash: golfAnalyticsHash(manifest) };
 }

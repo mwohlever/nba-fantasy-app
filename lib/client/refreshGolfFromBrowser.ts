@@ -497,9 +497,9 @@ function createCompactScoreboard(
   };
 }
 
-export async function refreshGolfFromBrowser(
+export async function fetchGolfScoreboardFromBrowser(
   slateId: number,
-): Promise<GolfRefreshResult> {
+): Promise<{ scoreboardPayload: unknown; observedAt: string }> {
   if (
     !Number.isInteger(slateId) ||
     slateId <= 0
@@ -584,12 +584,26 @@ export async function refreshGolfFromBrowser(
       config.eventId,
     );
 
-  const requestBody =
-    JSON.stringify({
-      slateId,
-      scoreboardPayload,
-      observedAt,
-    });
+  return { scoreboardPayload, observedAt };
+}
+
+export async function reconcileGolfFieldIdentitiesFromBrowser(slateId: number) {
+  const { scoreboardPayload, observedAt } = await fetchGolfScoreboardFromBrowser(slateId);
+  const response = await fetch("/api/admin/golf/field-identities", {
+    method: "POST", credentials: "same-origin", cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slateId, scoreboardPayload, observedAt }),
+  });
+  const result = await readJsonSafely(response);
+  if (!response.ok) throw new Error(String(result.error ?? `Golf identity reconciliation failed with HTTP ${response.status}.`));
+  return result as { competitorsFound: number; counts: { retained: number; resolved: number; created: number; ambiguous: number; unresolved: number } };
+}
+
+export async function refreshGolfFromBrowser(
+  slateId: number,
+): Promise<GolfRefreshResult> {
+  const { scoreboardPayload, observedAt } = await fetchGolfScoreboardFromBrowser(slateId);
+  const requestBody = JSON.stringify({ slateId, scoreboardPayload, observedAt });
 
   console.log(
     "Compact Golf payload:",

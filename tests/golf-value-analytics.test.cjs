@@ -189,21 +189,35 @@ test('cache selection uses canonical golfer ID, refresh-pinned versions, target/
 });
 
 test('board manifest pins observation versions and exact eligible OWGR inputs', () => {
-  const field = [{ playerId: 1001, espnPlayerId: '1', name: 'Player 1', isAmateur: false,
+  const field = [{ playerId: 1001, espnPlayerId: '1', identityStatus: 'espn_resolved', name: 'Player 1', isAmateur: false,
     owgrRank: 10, owgrUpdatedAt: '2026-09-12T00:00Z' },
-    { playerId: 1002, espnPlayerId: '2', name: 'Player 2', isAmateur: false,
+    { playerId: 1002, espnPlayerId: 'pga:2', identityStatus: 'pga_unresolved', name: 'Player 2', isAmateur: false,
       owgrRank: 20, owgrUpdatedAt: '2026-09-18T00:00Z' }];
   const asOfAt = '2026-09-13T00:00Z', targetCutoffAt = '2026-09-17T04:00Z';
   assert.equal(preserveGolfOwgrInput(field[1], asOfAt, targetCutoffAt).owgrRank, null);
-  const selection = { histories: new Map(), observations: [{ id: 11, eventVersionId: 1, playerId: 1001, providerEventId: 'prior' }],
+  const selection = { histories: new Map(), observations: [{ id: 11, eventVersionId: 1, playerId: 1001, providerEventId: 'prior', providerPlayerId: '1', storedPlayerId: 1001, attribution: 'stored_canonical' }], conflicts: [],
     eventVersions: [{ id: 1, providerEventId: 'prior', sourceHash: 'a', normalizedHash: 'b' }] };
   const args = { targetEventId: 'target', targetCutoffAt, asOfAt,
     refresh: { id: 5, source_hash: 's', normalized_hash: 'n', observed_at: '2026-09-12T00:00Z', last_checked_at: asOfAt },
     field, selection };
   const manifest = buildGolfBoardInputManifest(args);
   assert.equal(manifest.field[0].owgrRank, 10);
+  assert.deepEqual(manifest.field[0].analyticsAttribution, ['stored_canonical']);
   assert.equal(manifest.field[1].owgrRank, null);
   assert.deepEqual(manifest.observations, selection.observations);
   assert.equal(buildGolfBoardInputManifest(args).inputHash, manifest.inputHash);
   assert.notEqual(buildGolfBoardInputManifest({ ...args, selection: { ...selection, observations: [] } }).inputHash, manifest.inputHash);
+  assert.notEqual(buildGolfBoardInputManifest({ ...args, field: [{ ...field[0], identityStatus: 'pga_unresolved' }, field[1]] }).inputHash, manifest.inputHash);
+});
+
+test('read-time provider attribution is pinned and conflicting canonical evidence is not reused', () => {
+  const history = { eventId: 'prior', endedAt: '2026-05-04T04:00Z', status: 'finished', finishPercentile: 80, roundDifferentials: [1, 2] };
+  const version = { id: 1, provider_event_id: 'prior', season: 2026, ends_at: history.endedAt, observed_at: '2026-05-05T00:00Z', ready_at: '2026-05-05T00:00Z', source_hash: 'a', normalized_hash: 'b', eligibility: 'accepted', status: 'ready' };
+  const args = { playerIds: [7], targetEventId: 'target', season: 2026, targetCutoffAt: '2026-09-17T04:00Z', asOfAt: '2026-09-13T00:00Z', eventVersions: [version], espnPlayerIdsByPlayerId: new Map([[7, '101']]) };
+  const readTime = selectGolfAnalyticsHistories({ ...args, observations: [{ id: 1, event_version_id: 1, player_id: null, provider_player_id: '101', history }] });
+  assert.equal(readTime.observations[0].attribution, 'read_time_provider_reconciliation');
+  assert.equal(readTime.observations[0].providerPlayerId, '101');
+  const conflict = selectGolfAnalyticsHistories({ ...args, observations: [{ id: 2, event_version_id: 1, player_id: 99, provider_player_id: '101', history }] });
+  assert.deepEqual(conflict.histories.get('7'), []);
+  assert.deepEqual(conflict.conflicts, [{ playerId: 7, providerPlayerId: '101', storedPlayerId: 99 }]);
 });

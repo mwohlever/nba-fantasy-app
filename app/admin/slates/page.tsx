@@ -1,6 +1,6 @@
 "use client";
 
-import { refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
+import { reconcileGolfFieldIdentitiesFromBrowser, refreshGolfFromBrowser } from "@/lib/client/refreshGolfFromBrowser";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -740,9 +740,21 @@ export default function AdminSlatesPage() {
         return;
       }
 
-      await loadSlateDetail(
-        Number(selectedSlateId),
-      );
+      let identityMessage = "";
+      try {
+        const identity = await reconcileGolfFieldIdentitiesFromBrowser(Number(selectedSlateId));
+        if (identity.competitorsFound > 0) {
+          identityMessage = identity.counts.resolved > 0
+            ? ` ${identity.counts.resolved} PGA identities reconciled to ESPN.`
+            : " ESPN identities checked.";
+        }
+      } catch (identityError) {
+        // The PGA field is authoritative for this operation. ESPN may not yet
+        // publish competitors, so an identity-sync failure must not undo it.
+        console.warn("Golf field identity reconciliation deferred:", identityError);
+      }
+
+      await loadSlateDetail(Number(selectedSlateId));
 
       const playerCount =
         Number(
@@ -752,7 +764,7 @@ export default function AdminSlatesPage() {
         );
 
       setMessage(
-        `PGA Tour field imported successfully: ${playerCount} golfers loaded.`,
+        `PGA Tour field imported successfully: ${playerCount} golfers loaded.${identityMessage}`,
       );
     } catch (error) {
       console.error(error);

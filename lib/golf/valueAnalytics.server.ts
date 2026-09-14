@@ -168,26 +168,19 @@ export async function loadGolfAnalyticsHistory(input: {
   const observations: CachedGolfObservation[] = [];
   const eligibleVersionIds = eventVersions.filter(event => event.eligibility === 'accepted' && event.provider_event_id !== input.targetEventId &&
     Date.parse(event.ends_at) < cutoff && Date.parse(event.observed_at) <= asOf && Date.parse(event.ready_at) <= asOf).map(event => event.id);
-  const unresolvedIds = new Set<string>();
   for (const versionGroup of batches(eligibleVersionIds, 50)) {
     for (const espnGroup of batches(input.espnPlayerIds, 100)) {
-      const unresolved = await db.from('golf_analytics_observations').select('provider_player_id')
-        .in('event_version_id', versionGroup).in('provider_player_id', espnGroup).is('player_id', null);
-      fail('Golf analytics identity audit unavailable', unresolved.error);
-      for (const row of unresolved.data ?? []) unresolvedIds.add(row.provider_player_id);
-    }
-  }
-  if (unresolvedIds.size) throw new Error(`Golf analytics has unresolved target golfer ESPN IDs: ${[...unresolvedIds].join(', ')}`);
-  for (const versionGroup of batches(eligibleVersionIds, 50)) {
-    for (const playerGroup of batches(input.playerIds, 100)) {
       for (let start = 0; ; start += 1000) {
         const result = await db.from('golf_analytics_observations').select('id,event_version_id,player_id,provider_player_id,history')
-          .in('event_version_id', versionGroup).in('player_id', playerGroup).order('id').range(start, start + 999);
+          .in('event_version_id', versionGroup).in('provider_player_id', espnGroup).order('id').range(start, start + 999);
         fail('Golf analytics observations unavailable', result.error);
         observations.push(...(result.data ?? []) as CachedGolfObservation[]);
         if ((result.data ?? []).length < 1000) break;
       }
     }
   }
-  return { refresh: refresh.data, selection: selectGolfAnalyticsHistories({ ...input, eventVersions, observations }) };
+  const espnPlayerIdsByPlayerId = new Map(input.playerIds.map((playerId, index) => [playerId, input.espnPlayerIds[index]! ]));
+  if (espnPlayerIdsByPlayerId.size !== input.playerIds.length || new Set(input.espnPlayerIds).size !== input.espnPlayerIds.length)
+    throw new Error('Ambiguous Golf field ESPN identity mapping');
+  return { refresh: refresh.data, selection: selectGolfAnalyticsHistories({ ...input, eventVersions, observations, espnPlayerIdsByPlayerId }) };
 }

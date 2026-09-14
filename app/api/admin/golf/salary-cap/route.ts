@@ -94,15 +94,16 @@ export async function POST(request: Request) {
         const fieldInputs = field.data.map((row: any) => {
           const player = Array.isArray(row.golf_players) ? row.golf_players[0] : row.golf_players;
           return { playerId: Number(row.player_id), espnPlayerId: String(player.espn_player_id),
+            identityStatus: /^\d+$/.test(String(player.espn_player_id)) ? 'espn_resolved' as const : 'pga_unresolved' as const,
             name: String(player.display_name), isAmateur: Boolean(row.is_amateur),
             owgrRank: player.owgr_rank === null ? null : Number(player.owgr_rank),
             owgrUpdatedAt: player.owgr_updated_at ?? null };
         });
-        if (fieldInputs.some(player => !/^\d+$/.test(player.espnPlayerId)))
-          return NextResponse.json({ error: "Resolve PGA field golfers to canonical ESPN IDs before generating salaries." }, { status: 409 });
+        const resolvedField = fieldInputs.filter(player => player.identityStatus === 'espn_resolved');
+        if (!resolvedField.length) return NextResponse.json({ error: "No field golfers currently have a safe numeric ESPN identity for salary generation." }, { status: 409 });
         const analytics = await loadGolfAnalyticsHistory({
-          playerIds: fieldInputs.map(player => player.playerId),
-          espnPlayerIds: fieldInputs.map(player => player.espnPlayerId),
+          playerIds: resolvedField.map(player => player.playerId),
+          espnPlayerIds: resolvedField.map(player => player.espnPlayerId),
           targetEventId: String(slate.external_event_id),
           targetCutoffAt: startsAt,
           asOfAt,
@@ -111,24 +112,24 @@ export async function POST(request: Request) {
         const manifest = buildGolfBoardInputManifest({ targetEventId: String(slate.external_event_id),
           targetCutoffAt: startsAt, asOfAt, refresh: analytics.refresh,
           field: fieldInputs, selection: analytics.selection });
+        const conflictedPlayerIds = new Set(analytics.selection.conflicts.map(conflict => conflict.playerId));
         const values = buildGolfValues({
           eventId: String(slate.external_event_id),
           startsAt,
           season,
-          players: manifest.field.map(player => ({ playerId: String(player.playerId), name: player.name,
+          players: manifest.field.filter(player => player.identityStatus === 'espn_resolved' && !conflictedPlayerIds.has(player.playerId)).map(player => ({ playerId: String(player.playerId), name: player.name,
             history: analytics.selection.histories.get(String(player.playerId)) ?? [],
             owgrRank: player.owgrRank, owgrUpdatedAt: player.owgrUpdatedAt, isAmateur: player.isAmateur })),
         });
+        const pricesByPlayerId = new Map(values.players.map(player => [Number(player.playerId), player]));
         const created = await supabaseAdmin.rpc("create_golf_salary_price_set_with_manifest", {
           ...scope,
           p_manifest: manifest,
-          p_prices: values.players.map(player => ({
-            player_id: Number(player.playerId),
-            suggested_salary: player.pricing.suggestedSalary,
-            is_amateur: player.isAmateur,
-            value_basis: player.pricing.basis,
-            value_version: GOLF_VALUE_VERSION,
-          })),
+          p_prices: manifest.field.map(player => {
+            const value = pricesByPlayerId.get(player.playerId);
+            return { player_id: player.playerId, suggested_salary: value?.pricing.suggestedSalary ?? null,
+              is_amateur: player.isAmateur, value_basis: value?.pricing.basis ?? 'unsupported', value_version: GOLF_VALUE_VERSION };
+          }),
         });
         rpcFailure("Golf salary generation failed", created.error);
         priceSet = created.data;
