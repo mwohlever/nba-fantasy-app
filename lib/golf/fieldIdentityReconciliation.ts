@@ -1,4 +1,8 @@
-import type { GolfCompetitor } from "@/lib/providers/golf";
+import {
+  searchEspnPgaAthletesByName,
+  type EspnGolfAthleteIdentity,
+  type GolfCompetitor,
+} from "@/lib/providers/golf";
 
 type GolfDatabase = { from(table: string): any };
 
@@ -13,6 +17,8 @@ export type GolfIdentityDiagnostic = {
   displayName: string;
   status: "retained" | "resolved" | "created" | "ambiguous" | "unresolved";
   playerId?: number;
+  source?: "event_competitor" | "analytics_history" | "athlete_search";
+  reason?: string;
 };
 
 export function normalizeGolfIdentityName(value: string) {
@@ -118,4 +124,103 @@ export async function reconcileGolfFieldIdentities(input: {
   const counts = { retained: 0, resolved: 0, created: 0, ambiguous: 0, unresolved: 0 };
   for (const row of diagnostics) counts[row.status]++;
   return { playerIdByEspnId, diagnostics, counts };
+}
+
+function uniqueCandidates(
+  candidates: readonly EspnGolfAthleteIdentity[],
+  normalizedName: string,
+) {
+  return [...new Map(
+    candidates
+      .filter((candidate) =>
+        /^\d+$/.test(candidate.espnPlayerId) &&
+        normalizeGolfIdentityName(candidate.displayName) === normalizedName,
+      )
+      .map((candidate) => [candidate.espnPlayerId, candidate]),
+  ).values()];
+}
+
+/**
+ * Resolves only already-canonical PGA placeholders.  A source must provide one
+ * exact normalized name and one numeric ESPN athlete ID; otherwise it is left
+ * untouched for commissioner review.
+ */
+export async function reconcileGolfPgaPlaceholderIdentities(input: {
+  db: GolfDatabase;
+  playerIds: readonly number[];
+  refreshedAt: string;
+  athleteSearch?: (names: readonly string[]) => Promise<Map<string, EspnGolfAthleteIdentity[]>>;
+}) {
+  const targetIds = new Set(input.playerIds.map(Number).filter(Number.isSafeInteger));
+  if (!targetIds.size) {
+    return { counts: { resolved: 0, ambiguous: 0, unresolved: 0 }, diagnostics: [] as GolfIdentityDiagnostic[] };
+  }
+
+  const existingResult = await input.db.from("golf_players").select("id, display_name, espn_player_id");
+  if (existingResult.error) throw new Error(`Existing Golf players could not be loaded: ${existingResult.error.message}`);
+  const existing = (existingResult.data ?? []) as CanonicalGolfer[];
+  const byName = new Map<string, CanonicalGolfer[]>();
+  const byEspn = new Map(existing.map((player) => [String(player.espn_player_id), player]));
+  for (const player of existing) {
+    const name = normalizeGolfIdentityName(String(player.display_name ?? ""));
+    if (name) byName.set(name, [...(byName.get(name) ?? []), player]);
+  }
+  const targets = existing.filter((player) => targetIds.has(Number(player.id)) && String(player.espn_player_id).startsWith("pga:"));
+  if (!targets.length) {
+    return { counts: { resolved: 0, ambiguous: 0, unresolved: 0 }, diagnostics: [] as GolfIdentityDiagnostic[] };
+  }
+
+  const targetNames = [...new Set(targets.map((player) => String(player.display_name ?? "").trim()).filter(Boolean))];
+  const historyResult = await input.db.from("golf_analytics_observations")
+    .select("provider_player_id, provider_name")
+    .in("provider_name", targetNames);
+  if (historyResult.error) throw new Error(`Golf analytics identities could not be loaded: ${historyResult.error.message}`);
+  const historyByName = new Map<string, EspnGolfAthleteIdentity[]>();
+  for (const row of historyResult.data ?? []) {
+    const name = typeof row.provider_name === "string" ? row.provider_name : "";
+    const id = String(row.provider_player_id ?? "");
+    if (!name || !/^\d+$/.test(id)) continue;
+    historyByName.set(name, [...(historyByName.get(name) ?? []), { espnPlayerId: id, displayName: name }]);
+  }
+  let searched = new Map<string, EspnGolfAthleteIdentity[]>();
+  try {
+    searched = await (input.athleteSearch ?? searchEspnPgaAthletesByName)(targetNames);
+  } catch (error) {
+    // ESPN search is supplemental. PGA's field remains authoritative even
+    // when its broader identity directory is temporarily unavailable.
+    console.warn("Supplemental ESPN Golf athlete search unavailable:", error);
+  }
+  const diagnostics: GolfIdentityDiagnostic[] = [];
+
+  for (const target of targets) {
+    const displayName = String(target.display_name ?? "");
+    const normalizedName = normalizeGolfIdentityName(displayName);
+    const canonicalMatches = byName.get(normalizedName) ?? [];
+    const history = uniqueCandidates(historyByName.get(displayName) ?? [], normalizedName);
+    const search = uniqueCandidates(searched.get(displayName) ?? [], normalizedName);
+    const candidateIds = new Set([...history, ...search].map((candidate) => candidate.espnPlayerId));
+
+    if (canonicalMatches.length !== 1 || candidateIds.size > 1) {
+      diagnostics.push({ espnPlayerId: String(target.espn_player_id), displayName, status: "ambiguous", playerId: Number(target.id), reason: canonicalMatches.length !== 1 ? "ambiguous_canonical_name" : "conflicting_provider_evidence" });
+      continue;
+    }
+    const candidate = history[0] ?? search[0];
+    if (!candidate) {
+      diagnostics.push({ espnPlayerId: String(target.espn_player_id), displayName, status: "unresolved", playerId: Number(target.id), reason: "no_unique_espn_identity" });
+      continue;
+    }
+    if (byEspn.has(candidate.espnPlayerId)) {
+      diagnostics.push({ espnPlayerId: String(target.espn_player_id), displayName, status: "ambiguous", playerId: Number(target.id), reason: "espn_identity_already_canonical" });
+      continue;
+    }
+    const updated = await input.db.from("golf_players")
+      .update({ espn_player_id: candidate.espnPlayerId, updated_at: input.refreshedAt })
+      .eq("id", target.id);
+    if (updated.error) throw new Error(`Could not reconcile ${displayName} to ESPN: ${updated.error.message}`);
+    byEspn.set(candidate.espnPlayerId, { ...target, espn_player_id: candidate.espnPlayerId });
+    diagnostics.push({ espnPlayerId: candidate.espnPlayerId, displayName, status: "resolved", playerId: Number(target.id), source: history.length ? "analytics_history" : "athlete_search" });
+  }
+  const counts = { resolved: 0, ambiguous: 0, unresolved: 0 };
+  for (const row of diagnostics) counts[row.status as keyof typeof counts]++;
+  return { counts, diagnostics };
 }

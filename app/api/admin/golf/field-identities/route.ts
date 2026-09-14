@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { reconcileGolfFieldIdentities } from "@/lib/golf/fieldIdentityReconciliation";
+import {
+  reconcileGolfFieldIdentities,
+  reconcileGolfPgaPlaceholderIdentities,
+} from "@/lib/golf/fieldIdentityReconciliation";
 import { parseGolfTournamentByEventIdFromPayload } from "@/lib/providers/golf";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -28,8 +31,17 @@ export async function POST(request: NextRequest) {
       competitors: tournament.competitors,
       refreshedAt: typeof body.observedAt === "string" && Number.isFinite(Date.parse(body.observedAt)) ? body.observedAt : new Date().toISOString(),
     });
+    const field = await supabaseAdmin.from("golf_event_players")
+      .select("player_id")
+      .eq("slate_id", slateId);
+    if (field.error) throw new Error(`Golf field could not be loaded: ${field.error.message}`);
+    const placeholders = await reconcileGolfPgaPlaceholderIdentities({
+      db: supabaseAdmin,
+      playerIds: (field.data ?? []).map((row) => Number(row.player_id)),
+      refreshedAt: typeof body.observedAt === "string" && Number.isFinite(Date.parse(body.observedAt)) ? body.observedAt : new Date().toISOString(),
+    });
     return NextResponse.json({ success: true, slateId, competitorsFound: tournament.competitors.length, counts: reconciled.counts,
-      diagnostics: reconciled.diagnostics });
+      diagnostics: reconciled.diagnostics, placeholderReconciliation: placeholders });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Golf identity reconciliation failed." }, { status: 500 });
   }

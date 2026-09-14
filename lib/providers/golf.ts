@@ -12,6 +12,10 @@ type EspnGolfRequest =
   | {
       kind: "course";
       eventId: string;
+    }
+  | {
+      kind: "athlete_search";
+      query: string;
     };
 
 function getEspnGolfProxyBaseUrl():
@@ -117,6 +121,13 @@ async function fetchEspnGolfJson<T>(
       );
     }
 
+    if (request.kind === "athlete_search") {
+      requestUrl.searchParams.set(
+        "query",
+        request.query,
+      );
+    }
+
     requestLabel =
       "ESPN Golf Edge proxy";
 
@@ -172,7 +183,7 @@ async function fetchEspnGolfJson<T>(
 
     requestLabel =
       "ESPN golf request";
-  } else {
+  } else if (request.kind === "course") {
     requestUrl = new URL(
       ESPN_GOLF_COURSE_URL,
     );
@@ -184,6 +195,14 @@ async function fetchEspnGolfJson<T>(
 
     requestLabel =
       "ESPN Golf course request";
+  } else {
+    requestUrl = new URL(
+      "https://site.web.api.espn.com/apis/search/v2",
+    );
+    requestUrl.searchParams.set("region", "us");
+    requestUrl.searchParams.set("lang", "en");
+    requestUrl.searchParams.set("query", request.query);
+    requestLabel = "ESPN Golf athlete search";
   }
 
   const response = await fetch(
@@ -197,7 +216,9 @@ async function fetchEspnGolfJson<T>(
           request.kind ===
           "scoreboard"
             ? "111-sports-golf-provider/1.0"
-            : "111-sports-golf-course-provider/1.0",
+            : request.kind === "course"
+              ? "111-sports-golf-course-provider/1.0"
+              : "111-sports-golf-identity/1.0",
       },
     },
   );
@@ -217,6 +238,11 @@ async function fetchEspnGolfJson<T>(
 
 export type GolfTournamentStatus =
   "scheduled" | "in_progress" | "final" | "unknown";
+
+export type EspnGolfAthleteIdentity = {
+  espnPlayerId: string;
+  displayName: string;
+};
 
 export type GolfCompetitorStatus =
   | "scheduled"
@@ -1009,6 +1035,85 @@ export async function fetchGolfSeasonScoreboardPayload(
   } catch {
     throw new Error(`ESPN Golf season ${year} returned invalid JSON`);
   }
+}
+
+type EspnSearchContent = {
+  uid?: unknown;
+  displayName?: unknown;
+  sport?: unknown;
+  defaultLeagueSlug?: unknown;
+};
+
+type EspnSearchResult = {
+  type?: unknown;
+  contents?: unknown;
+};
+
+type EspnAthleteSearchPayload = {
+  results?: unknown;
+};
+
+export function parseEspnGolfAthleteSearchPayload(
+  payload: unknown,
+): EspnGolfAthleteIdentity[] {
+  if (!isRecord(payload) || !Array.isArray(payload.results)) {
+    return [];
+  }
+
+  const ids = new Map<string, EspnGolfAthleteIdentity>();
+
+  for (const result of payload.results as EspnSearchResult[]) {
+    if (result?.type !== "player" || !Array.isArray(result.contents)) {
+      continue;
+    }
+
+    for (const content of result.contents as EspnSearchContent[]) {
+      const uid = typeof content?.uid === "string" ? content.uid : "";
+      const displayName = typeof content?.displayName === "string"
+        ? content.displayName.trim()
+        : "";
+      const sport = typeof content?.sport === "string"
+        ? content.sport.toLowerCase()
+        : "";
+      const league = typeof content?.defaultLeagueSlug === "string"
+        ? content.defaultLeagueSlug.toLowerCase()
+        : "";
+      const match = uid.match(/~a:(\d+)$/);
+
+      if (!match || !displayName || sport !== "golf" || league !== "pga") {
+        continue;
+      }
+
+      ids.set(match[1], {
+        espnPlayerId: match[1],
+        displayName,
+      });
+    }
+  }
+
+  return [...ids.values()];
+}
+
+/** Public ESPN player search is a directory fallback when an event has no competitors. */
+export async function searchEspnPgaAthletesByName(
+  names: readonly string[],
+): Promise<Map<string, EspnGolfAthleteIdentity[]>> {
+  const uniqueNames = [...new Set(names.map((name) => name.trim()).filter(Boolean))];
+  const results = new Map<string, EspnGolfAthleteIdentity[]>();
+
+  for (let index = 0; index < uniqueNames.length; index += 4) {
+    const group = uniqueNames.slice(index, index + 4);
+    const fetched = await Promise.all(group.map(async (name) => {
+      const payload = await fetchEspnGolfJson<EspnAthleteSearchPayload>({
+        kind: "athlete_search",
+        query: name,
+      });
+      return [name, parseEspnGolfAthleteSearchPayload(payload)] as const;
+    }));
+    for (const [name, athletes] of fetched) results.set(name, athletes);
+  }
+
+  return results;
 }
 
 export function parseGolfTournamentsFromPayload(

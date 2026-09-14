@@ -9,6 +9,9 @@ const ESPN_GOLF_SCOREBOARD_URL =
 const ESPN_GOLF_COURSE_URL =
   "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard";
 
+const ESPN_SEARCH_URL =
+  "https://site.web.api.espn.com/apis/search/v2";
+
 function isAuthorized(request: Request) {
   const expectedSecret =
     process.env.GOLF_CRON_SECRET?.trim();
@@ -105,11 +108,25 @@ export async function GET(request: Request) {
         "event",
         eventId,
       );
+    } else if (kind === "athlete_search") {
+      const query = requestUrl.searchParams.get("query")?.trim();
+
+      if (!query) {
+        return NextResponse.json(
+          { error: "query is required for Golf athlete searches." },
+          { status: 400, headers: { "Cache-Control": "no-store, max-age=0" } },
+        );
+      }
+
+      espnUrl = new URL(ESPN_SEARCH_URL);
+      espnUrl.searchParams.set("region", "us");
+      espnUrl.searchParams.set("lang", "en");
+      espnUrl.searchParams.set("query", query);
     } else {
       return NextResponse.json(
         {
           error:
-            'kind must be either "scoreboard" or "course".',
+            'kind must be "scoreboard", "course", or "athlete_search".',
         },
         {
           status: 400,
@@ -132,7 +149,9 @@ export async function GET(request: Request) {
             "User-Agent":
               kind === "scoreboard"
                 ? "111-sports-golf-provider/1.0"
-                : "111-sports-golf-course-provider/1.0",
+                : kind === "course"
+                  ? "111-sports-golf-course-provider/1.0"
+                  : "111-sports-golf-identity/1.0",
           },
         },
       );

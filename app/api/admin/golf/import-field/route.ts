@@ -20,6 +20,7 @@ import {
 import {
   buildGolfFieldRankingUpdates,
 } from "@/lib/golf/fieldRankingUpdates";
+import { reconcileGolfPgaPlaceholderIdentities } from "@/lib/golf/fieldIdentityReconciliation";
 
 type RequestBody = {
   slateId?: number | string;
@@ -598,6 +599,13 @@ export async function POST(
       );
     }
 
+    const placeholderReconciliation =
+      await reconcileGolfPgaPlaceholderIdentities({
+        db: supabaseAdmin,
+        playerIds: [...resolvedPlayerIds.values()],
+        refreshedAt,
+      });
+
     return NextResponse.json({
       success: true,
       slateId,
@@ -620,6 +628,8 @@ export async function POST(
       eventPlayersUpserted:
         eventData?.length ??
         eventRows.length,
+      identityReconciliation:
+        placeholderReconciliation,
       course:
         courseSync
           ? {
