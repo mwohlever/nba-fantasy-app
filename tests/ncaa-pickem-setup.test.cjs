@@ -41,7 +41,7 @@ function pageHarness() {
     useEffect(fn, deps) { const i = cursor++; if (!slots[i] || deps.some((v, j) => v !== slots[i].deps[j])) effects.push(() => { slots[i]?.cleanup?.(); slots[i] = { deps, cleanup: fn() }; }); },
   };
   const jsx = (type, props) => ({ type, props });
-  const Page = load('app/admin/ncaa-pickem/page.tsx', { react, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/AppNav': { default: () => null } }, {
+  const Page = load('app/admin/ncaa-pickem/page.tsx', { react, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/components/AppNav': { default: () => null }, '@/components/admin/NcaaPickEmCorrections': { default: () => null } }, {
     window: { confirm: () => confirm },
     fetch: (url, options) => new Promise(resolve => requests.push({ url, options, resolve })),
   }).default;

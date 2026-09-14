@@ -1,6 +1,7 @@
 "use client";
 
 import AppNav from "@/components/AppNav";
+import NcaaPickEmCorrections from "@/components/admin/NcaaPickEmCorrections";
 
 import {
   useEffect,
@@ -835,6 +836,11 @@ export default function NcaaPickEmAdminPage() {
                 </button>
               </div>
             </section>
+
+            <NcaaPickEmCorrections
+              weekId={result.weekId!}
+              weekStatus={result.status ?? "open"}
+            />
 
             <section className="rounded-3xl border border-slate-700 bg-slate-900 p-5">
               <div className="flex items-end justify-between gap-3">
