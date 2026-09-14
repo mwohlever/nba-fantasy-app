@@ -30,6 +30,7 @@ type SlateListRow = {
   start_date: string | null;
   end_date: string | null;
   is_locked: boolean;
+  archived_at?: string | null;
   label: string;
   sport?: SportKey;
   rules_version?: number | null;
@@ -215,6 +216,8 @@ export default function AdminSlatesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isReseeding, setIsReseeding] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [isRefreshingGolfField, setIsRefreshingGolfField] =
     useState(false);
   const [isImportingGolfField, setIsImportingGolfField] =
@@ -237,6 +240,7 @@ export default function AdminSlatesPage() {
     isSaving ||
     isReseeding ||
     isDeleting ||
+    isArchiving ||
     isRefreshingGolfField ||
     isImportingGolfField ||
     isSyncingGolfRankings ||
@@ -271,13 +275,15 @@ export default function AdminSlatesPage() {
     void loadSlateDetail(slateId, requestId);
   }, [selectedSlateId]);
 
-  async function loadSlates() {
+  async function loadSlates(includeArchived = showArchived) {
     try {
       setIsLoading(true);
       setMessage("");
 
       const response = await fetch(
-        `/api/admin/slates?sport=${encodeURIComponent(selectedSport)}`,
+        `/api/admin/slates?sport=${encodeURIComponent(selectedSport)}${
+          includeArchived ? "&includeArchived=1" : ""
+        }`,
         { cache: "no-store" },
       );
 
@@ -290,6 +296,9 @@ export default function AdminSlatesPage() {
 
       const nextSlates = (result.slates ?? []) as SlateListRow[];
       setSlates(nextSlates);
+      const defaultSlate =
+        nextSlates.find((slate) => !slate.archived_at) ??
+        nextSlates[0];
 
       if (nextSlates.length > 0) {
         setSelectedSlateId((current) => {
@@ -300,7 +309,7 @@ export default function AdminSlatesPage() {
             return current;
           }
 
-          return nextSlates[0].id;
+          return defaultSlate.id;
         });
       } else {
         setSelectedSlateId("");
@@ -898,6 +907,54 @@ export default function AdminSlatesPage() {
     }
   }
 
+  async function handleArchive() {
+    if (!selectedSlateId || !selectedSlate) return;
+
+    const archived = !selectedSlate.archived_at;
+    const confirmed = window.confirm(
+      archived
+        ? "Archive this slate? It will be hidden from normal slate selection, but its history and records will remain intact."
+        : "Restore this slate to normal slate selection?",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsArchiving(true);
+      setMessage("");
+
+      const response = await fetch(
+        `/api/admin/slates/${selectedSlateId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ archiveOnly: true, archived }),
+        },
+      );
+      const result = await response.json();
+
+      if (!response.ok) {
+        setMessage(result.error || "Failed to update slate archive state.");
+        return;
+      }
+
+      if (archived && !showArchived) {
+        setSelectedSlateId("");
+        setSelectedSlate(null);
+        setTeams([]);
+        setGolfField(null);
+      }
+
+      await loadSlates();
+      setMessage(result.message || "Slate archive state updated.");
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong while updating slate archive state.");
+    } finally {
+      setIsArchiving(false);
+    }
+  }
+
   const orderedTeams = useMemo(
     () => normalizeTeamOrder(teams),
     [teams],
@@ -1040,11 +1097,27 @@ export default function AdminSlatesPage() {
                       value={slate.id}
                     >
                       {slate.label}
+                      {slate.archived_at ? " (Archived)" : ""}
                       {slate.is_locked ? " (Locked)" : ""}
                     </option>
                   ))}
                 </select>
               </div>
+
+              <label className="flex items-center gap-2 pb-3 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(event) => {
+                    const nextShowArchived = event.target.checked;
+                    setShowArchived(nextShowArchived);
+                    void loadSlates(nextShowArchived);
+                  }}
+                  disabled={isBusy}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-sky-500"
+                />
+                Show archived
+              </label>
             </div>
           </div>
         </section>
@@ -1603,6 +1676,21 @@ export default function AdminSlatesPage() {
                   className="rounded-xl border border-emerald-500 bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? "Saving..." : "Save Slate"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => void handleArchive()}
+                  disabled={isBusy}
+                  className="rounded-xl border border-amber-500 bg-amber-950 px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-900 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isArchiving
+                    ? selectedSlate.archived_at
+                      ? "Restoring..."
+                      : "Archiving..."
+                    : selectedSlate.archived_at
+                      ? "Restore Slate"
+                      : "Archive Slate"}
                 </button>
 
                 <button

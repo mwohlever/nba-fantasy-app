@@ -81,7 +81,7 @@ test('salary setup generates, reviews overrides, acknowledges unsupported, freez
     const h = host(SalarySetup), props = { slateId: 1 };
     h.render(props, true); await flush(); let tree = h.render(props);
     const button = label => nodes(tree).find(n => n.type === 'button' && n.props.children === label);
-    await button('Generate Suggested Salaries').props.onClick(); tree = h.render(props);
+    await button('Generate Salaries').props.onClick(); tree = h.render(props);
     assert.match(text(tree), /REVIEW NEEDED/);
     nodes(tree).find(n => n.type === 'input' && n.props.type === 'number').props.onChange({ target: { value: '40' } }); tree = h.render(props);
     assert.equal(button('Freeze Salaries').props.disabled, true);
@@ -95,4 +95,32 @@ test('salary setup generates, reviews overrides, acknowledges unsupported, freez
     assert.deepEqual(actions.map(a => a.action), ['generate', 'override', 'freeze']);
     h.unmount();
   } finally { global.fetch = oldFetch; }
+});
+
+test('salary setup exposes regeneration only for a generated board', async () => {
+  const oldFetch = global.fetch;
+  let priceSet = { status: 'generated', revision: 3 };
+  const actions = [];
+  global.fetch = async (_url, options) => {
+    if (options?.method === 'POST') {
+      const body = JSON.parse(options.body);
+      actions.push(body.action);
+      if (body.action === 'regenerate') priceSet = { status: 'generated', revision: 0 };
+    }
+    return { ok: true, json: async () => ({ priceSet, prices: [] }) };
+  };
+  const oldWindow = global.window;
+  global.window = { ...(oldWindow ?? {}), confirm: () => true };
+  try {
+    const h = host(SalarySetup);
+    h.render({ slateId: 1 }, true); await flush(); let tree = h.render({ slateId: 1 });
+    const button = nodes(tree).find(n => n.type === 'button' && n.props.children === 'Regenerate Salaries');
+    await button.props.onClick(); tree = h.render({ slateId: 1 });
+    assert.deepEqual(actions, ['regenerate']);
+    assert.match(text(tree), /GENERATED/);
+    h.unmount();
+  } finally {
+    global.fetch = oldFetch;
+    global.window = oldWindow;
+  }
 });

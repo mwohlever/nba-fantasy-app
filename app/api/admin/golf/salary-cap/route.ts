@@ -7,7 +7,7 @@ import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatGolfMoney } from "@/lib/golf/money";
 
-type SetupAction = "generate" | "override" | "freeze" | "open_weekend";
+type SetupAction = "generate" | "regenerate" | "override" | "freeze" | "open_weekend";
 
 function validSlateId(value: unknown) {
   const parsed = Number(value);
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const body = await request.json() as { slateId?: unknown; action?: SetupAction; expectedRevision?: number; overrides?: unknown; acknowledgeUnpriced?: boolean };
     const slateId = validSlateId(body.slateId);
     const action = body.action;
-    if (!slateId || !action || !["generate", "override", "freeze", "open_weekend"].includes(action)) {
+    if (!slateId || !action || !["generate", "regenerate", "override", "freeze", "open_weekend"].includes(action)) {
       return NextResponse.json({ error: "A valid slateId and setup action are required." }, { status: 400 });
     }
     const authorization = await authorizeSlateResource(request, slateId, { requireCommissioner: true });
@@ -82,11 +82,14 @@ export async function POST(request: Request) {
       if (action === "override") return NextResponse.json({ success: true, priceSet: reviewed.data });
     }
 
-    if (action === "generate") {
+    if (action === "generate" || action === "regenerate") {
       const existing = await supabaseAdmin.from("golf_salary_price_sets").select("id, status, revision").eq("slate_id", slateId).maybeSingle();
       rpcFailure("Existing Golf prices could not be checked", existing.error);
       let priceSet = existing.data;
-      if (!priceSet) {
+      if (action === "generate" && priceSet) return NextResponse.json({ error: "Generated price set already exists; use Regenerate Salaries before freezing." }, { status: 409 });
+      if (action === "regenerate" && !priceSet) return NextResponse.json({ error: "Generate salaries before attempting regeneration." }, { status: 409 });
+      if (action === "regenerate" && priceSet?.status === "frozen") return NextResponse.json({ error: "Frozen Golf salaries are immutable." }, { status: 400 });
+      if (!priceSet || action === "regenerate") {
         const field = await supabaseAdmin.from("golf_event_players")
           .select("player_id, is_amateur, golf_players!inner(display_name, espn_player_id, owgr_rank, owgr_updated_at)")
           .eq("slate_id", slateId);
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
             owgrRank: player.owgrRank, owgrUpdatedAt: player.owgrUpdatedAt, isAmateur: player.isAmateur })),
         });
         const pricesByPlayerId = new Map(values.players.map(player => [Number(player.playerId), player]));
-        const created = await supabaseAdmin.rpc("create_golf_salary_price_set_with_manifest", {
+        const created = await supabaseAdmin.rpc(action === "regenerate" ? "regenerate_golf_salary_price_set_with_manifest" : "create_golf_salary_price_set_with_manifest", {
           ...scope,
           p_manifest: manifest,
           p_prices: manifest.field.map(player => {

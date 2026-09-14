@@ -181,6 +181,7 @@ export async function getGolfHomeSummary() {
         "league_id",
         league.id,
       )
+      .is("archived_at", null)
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
 

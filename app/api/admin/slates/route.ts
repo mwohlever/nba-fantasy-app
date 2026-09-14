@@ -16,6 +16,7 @@ type AdminSlateRow = {
   cut_penalty_per_round: number | null;
   has_cut: boolean;
   nba_team_abbreviations: string[] | null;
+  archived_at: string | null;
 };
 
 export async function GET(request: Request) {
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sportParam = searchParams.get("sport");
+    const includeArchived = searchParams.get("includeArchived") === "1";
 
     const sport =
       sportParam === "nfl"
@@ -58,7 +60,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("slates")
       .select(
         [
@@ -72,14 +74,16 @@ export async function GET(request: Request) {
           "external_event_id",
           "cut_penalty_per_round",
           "has_cut",
-          "nba_team_abbreviations",
+          "nba_team_abbreviations", "archived_at",
         ].join(",")
       )
       .eq("sport", sport)
       .eq(
         "league_id",
         activeLeague.league.id,
-      )
+      );
+    if (!includeArchived) query = query.is("archived_at", null);
+    const { data, error } = await query
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false });
 

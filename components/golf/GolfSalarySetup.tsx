@@ -24,7 +24,8 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
     load(controller.signal).catch(e => { if (!controller.signal.aborted) setError(e.message); });
     return () => controller.abort();
   }, [slateId]);
-  async function action(action: 'generate' | 'override' | 'freeze') {
+  async function action(action: 'generate' | 'regenerate' | 'override' | 'freeze') {
+    if (action === 'regenerate' && !window.confirm('Regenerating replaces this generated board, including its reviewed overrides. Frozen salaries cannot be regenerated.')) return;
     setBusy(true); setError('');
     try {
       const response = await fetch('/api/admin/golf/salary-cap', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -49,7 +50,7 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
       <span className="text-[11px] font-semibold text-emerald-300">{!board ? 'LOADING' : frozen ? 'FROZEN' : board.priceSet ? 'GENERATED / REVIEW NEEDED' : 'NOT GENERATED'}</span></div>
     {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
     {board && !board.priceSet ? <button type="button" disabled={busy} onClick={() => action('generate')}
-      className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold disabled:opacity-50">Generate Suggested Salaries</button> : null}
+      className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold disabled:opacity-50">Generate Salaries</button> : null}
     {board?.priceSet ? <>
       <p className="text-xs text-slate-400">{frozen ? 'Tournament prices are immutable. Roster availability follows the period deadline.' : 'Review suggested salaries. Overrides affect acquisition prices only; amateurs remain $10.'}</p>
       {unpriced.length ? <p className="text-xs text-amber-300">{unpriced.length} unsupported golfers remain unpriced and unavailable: {unpriced.map(p => p.golf_players.display_name).join(', ')}.</p> : null}
@@ -69,6 +70,7 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
         : <div className="space-y-2">
           {unpriced.length ? <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={acknowledged} onChange={e => setAcknowledged(e.target.checked)} />I acknowledge these golfers will be unavailable.</label> : null}
           <div className="flex gap-2"><button type="button" disabled={busy || !dirty} onClick={() => action('override')} className="rounded-lg border border-slate-600 px-3 py-2 text-xs disabled:opacity-40">Save Overrides</button>
+            <button type="button" disabled={busy} onClick={() => action('regenerate')} className="rounded-lg border border-amber-600 px-3 py-2 text-xs disabled:opacity-40">Regenerate Salaries</button>
             <button type="button" disabled={busy || dirty || (unpriced.length > 0 && !acknowledged)} onClick={() => action('freeze')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold disabled:opacity-40">Freeze Salaries</button></div>
           {dirty ? <p className="text-xs text-amber-300">Save overrides before freezing.</p> : null}
         </div>}

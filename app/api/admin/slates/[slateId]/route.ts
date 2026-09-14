@@ -28,6 +28,8 @@ type UpdateSlateBody = {
   has_cut?: boolean;
   tournament_analysis?: string;
   show_tournament_analysis?: boolean;
+  archived?: boolean;
+  archiveOnly?: boolean;
 };
 
 type RouteContext = {
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       supabaseAdmin
         .from("slates")
         .select(
-          "id, date, start_date, end_date, is_locked, sport, rules_version, rules_snapshot, display_name, external_event_id, cut_penalty_per_round, has_cut, tournament_analysis, show_tournament_analysis, nba_team_abbreviations"
+          "id, date, start_date, end_date, is_locked, sport, rules_version, rules_snapshot, display_name, external_event_id, cut_penalty_per_round, has_cut, tournament_analysis, show_tournament_analysis, nba_team_abbreviations, archived_at"
         )
         .eq("id", slateId)
         .single(),
@@ -205,6 +207,38 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     if (!authorization.ok) return authorization.response;
 
+    if (body.archiveOnly === true) {
+      if (typeof body.archived !== "boolean") {
+        return NextResponse.json(
+          { error: "Archive state is required." },
+          { status: 400 },
+        );
+      }
+
+      const { error } = await supabaseAdmin
+        .from("slates")
+        .update({
+          archived_at: body.archived
+            ? new Date().toISOString()
+            : null,
+        })
+        .eq("id", slateId);
+
+      if (error) {
+        return NextResponse.json(
+          { error: `Failed to update slate archive state: ${error.message}` },
+          { status: 500 },
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: body.archived
+          ? "Slate archived successfully."
+          : "Slate restored successfully.",
+      });
+    }
+
     const teams = body.teams ?? [];
     const isLocked = body.is_locked;
     const rawCutPenalty = Number(body.cut_penalty_per_round);
@@ -308,6 +342,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       has_cut?: boolean;
       tournament_analysis?: string | null;
       show_tournament_analysis?: boolean;
+      archived_at?: string | null;
     } = {
       nba_team_abbreviations: nbaTeamAbbreviations,
     };
@@ -334,6 +369,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     if (typeof isLocked === "boolean") {
       slateUpdatePayload.is_locked = isLocked;
+    }
+    if (typeof body.archived === "boolean") {
+      slateUpdatePayload.archived_at = body.archived
+        ? new Date().toISOString()
+        : null;
     }
 
     const { error: slateUpdateError } = await supabaseAdmin

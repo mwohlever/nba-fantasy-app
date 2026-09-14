@@ -159,6 +159,7 @@ export default async function ScoresLineupsPage({
         "league_id",
         activeLeagueId,
       )
+      .is("archived_at", null)
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
     supabaseAdmin

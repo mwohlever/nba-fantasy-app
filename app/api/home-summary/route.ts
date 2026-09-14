@@ -268,6 +268,7 @@ export async function GET(request: Request) {
           "league_id",
           league.id,
         )
+        .is("archived_at", null)
         .order(
           "start_date",
           {

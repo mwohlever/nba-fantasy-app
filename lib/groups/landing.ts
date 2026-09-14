@@ -54,6 +54,7 @@ export async function getGroupLandingData(
           .from("slates")
           .select("id, league_id, sport, display_name, date, start_date, end_date, is_locked")
           .in("league_id", fantasyLeagues.map((league) => league.id))
+          .is("archived_at", null)
           .order("start_date", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
     ncaaLeagueIds.length

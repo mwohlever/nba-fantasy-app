@@ -56,6 +56,7 @@ export default async function LineupsPage() {
     supabaseAdmin
       .from("slates")
       .select("id, date, start_date, end_date, is_locked")
+      .is("archived_at", null)
       .order("start_date", { ascending: false })
       .order("end_date", { ascending: false }),
     supabaseAdmin
