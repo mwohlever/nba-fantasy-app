@@ -56,14 +56,14 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
       {fallback.length ? <p className="text-xs text-amber-300">{fallback.length} golfers could not be fully priced and received the $15.00 fallback salary. Review these salaries before freezing: {fallback.map(p => p.golf_players.display_name).join(', ')}.</p> : null}
       <div className="max-h-96 overflow-auto"><table className="w-full text-left text-xs">
         <thead className="sticky top-0 bg-slate-950 text-slate-400"><tr><th className="py-2">Golfer</th><th>Suggested</th><th>Effective</th><th>Status</th></tr></thead>
-        <tbody>{board.prices.map(p => <tr key={p.player_id} className="border-t border-slate-800">
+        <tbody>{board.prices.map(p => <tr key={p.player_id} className={p.value_basis === 'fallback' ? 'border-t border-amber-500/30 bg-amber-950/20' : 'border-t border-slate-800'}>
           <td className="py-2 pr-2">{p.golf_players.display_name}</td><td>{p.suggested_salary === null ? '—' : `$${formatGolfMoney(p.suggested_salary)}`}</td>
           <td>{frozen ? (p.effective_salary === null ? '—' : `$${formatGolfMoney(p.effective_salary)}`) : p.value_basis === 'unsupported' ? 'Unpriced' :
             <input aria-label={`Effective salary for ${p.golf_players.display_name}`} type="number" min={10} max={42} step={0.01}
               disabled={busy || p.is_amateur} value={edits[p.player_id] ?? p.override_salary ?? p.suggested_salary ?? ''}
               onChange={e => setEdits(previous => ({ ...previous, [p.player_id]: e.target.value }))}
               className="my-1 w-16 rounded border border-slate-600 bg-slate-900 px-2 py-2 disabled:opacity-60" />}</td>
-          <td className="text-slate-400">{p.value_basis.replaceAll('_', ' ')}</td>
+          <td className={p.value_basis === 'fallback' ? 'font-medium text-amber-200' : 'text-slate-400'}>{p.value_basis === 'fallback' ? 'Fallback — review' : p.value_basis.replaceAll('_', ' ')}</td>
         </tr>)}</tbody>
       </table></div>
       {frozen ? <Link href={`/lineups/draft?sport=golf&slateId=${slateId}`} className="inline-block rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold">Go to Lineup</Link>

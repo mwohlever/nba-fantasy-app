@@ -67,7 +67,8 @@ test('salary setup reviews editable fallback salaries and requires acknowledgeme
   let priceSet = null;
   const actions = [];
   const prices = [{ player_id: 1, suggested_salary: 42, override_salary: null, effective_salary: null, value_basis: 'owgr', golf_players: { display_name: 'Supported' } },
-    { player_id: 2, suggested_salary: '15.00', override_salary: null, effective_salary: '15.00', value_basis: 'fallback', golf_players: { display_name: 'Fallback' } }];
+    { player_id: 2, suggested_salary: '15.00', override_salary: null, effective_salary: '15.00', value_basis: 'fallback', golf_players: { display_name: 'Fallback' } },
+    { player_id: 3, suggested_salary: '15.00', override_salary: null, effective_salary: null, value_basis: 'v1_only', golf_players: { display_name: 'Model Fifteen' } }];
   global.fetch = async (_url, options) => {
     if (options?.method === 'POST') {
       const body = JSON.parse(options.body); actions.push(body);
@@ -89,8 +90,12 @@ test('salary setup reviews editable fallback salaries and requires acknowledgeme
     assert.equal(prices[0].suggested_salary, 42);
     assert.match(text(tree), /received the \$15\.00 fallback salary/);
     assert.match(text(tree), /I reviewed the fallback salaries/);
+    assert.match(text(tree), /Fallback — review/);
+    const rows = nodes(tree).filter(n => n.type === 'tr');
+    assert.match(rows.find(row => text(row).includes('Fallback')).props.className, /bg-amber-950\/20/);
+    assert.doesNotMatch(rows.find(row => text(row).includes('Model Fifteen')).props.className, /amber/);
     const salaryInputs = nodes(tree).filter(n => n.type === 'input' && n.props.type === 'number');
-    assert.equal(salaryInputs.length, 2);
+    assert.equal(salaryInputs.length, 3);
     nodes(tree).find(n => n.type === 'input' && n.props.type === 'checkbox').props.onChange({ target: { checked: true } }); tree = h.render(props);
     assert.equal(button('Freeze Salaries').props.disabled, false);
     await button('Freeze Salaries').props.onClick(); tree = h.render(props);
