@@ -141,6 +141,59 @@ export default function GroupInvitePage() {
     );
 
 
+  const [
+    confirmationPending,
+    setConfirmationPending,
+  ] =
+    useState(
+      false,
+    );
+
+
+  const [
+    resendCooldownSeconds,
+    setResendCooldownSeconds,
+  ] =
+    useState(
+      0,
+    );
+
+
+  useEffect(
+    () => {
+      if (
+        resendCooldownSeconds <=
+        0
+      ) {
+        return;
+      }
+
+
+      const interval =
+        window.setInterval(
+          () =>
+            setResendCooldownSeconds(
+              (current) =>
+                Math.max(
+                  0,
+                  current - 1,
+                ),
+            ),
+          1_000,
+        );
+
+
+      return () =>
+        window.clearInterval(
+          interval,
+        );
+    },
+    [
+      resendCooldownSeconds,
+    ],
+  );
+
+
   useEffect(
     () => {
       let cancelled =
@@ -416,6 +469,95 @@ export default function GroupInvitePage() {
   }
 
 
+  function confirmationRedirectUrl() {
+    return `${window.location.origin}/auth/callback?invite=${encodeURIComponent(
+      token,
+    )}`;
+  }
+
+
+  async function handleResendConfirmation() {
+    const inviteEmail =
+      inviteData?.invite
+        ?.email ??
+      "";
+
+
+    if (
+      !inviteEmail ||
+      resendCooldownSeconds >
+        0
+    ) {
+      return;
+    }
+
+
+    try {
+      setSubmitting(
+        true,
+      );
+
+      setMessage(
+        "",
+      );
+
+
+      const supabase =
+        getSupabaseBrowserClient();
+
+      const {
+        error,
+      } =
+        await supabase
+          .auth
+          .resend({
+            type:
+              "signup",
+
+            email:
+              inviteEmail,
+
+            options: {
+              emailRedirectTo:
+                confirmationRedirectUrl(),
+            },
+          });
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      setResendCooldownSeconds(
+        60,
+      );
+
+      setMessage(
+        `A confirmation email was requested for ${inviteEmail}. Check your inbox and spam folder.`,
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        error,
+      );
+
+
+      setMessage(
+        error instanceof
+        Error
+          ? error.message
+          : "Unable to request another confirmation email.",
+      );
+    } finally {
+      setSubmitting(
+        false,
+      );
+    }
+  }
+
+
   async function handleEmail(
     event:
       FormEvent<HTMLFormElement>,
@@ -513,9 +655,7 @@ export default function GroupInvitePage() {
                 },
 
                 emailRedirectTo:
-                  `${window.location.origin}/auth/callback?invite=${encodeURIComponent(
-                    token,
-                  )}`,
+                  confirmationRedirectUrl(),
               },
             });
 
@@ -539,13 +679,32 @@ export default function GroupInvitePage() {
         }
 
 
+        if (!data.user) {
+          throw new Error(
+            "Supabase did not return an account to confirm.",
+          );
+        }
+
+
+        setConfirmationPending(
+          true,
+        );
+
+        setResendCooldownSeconds(
+          60,
+        );
+
+
         /*
          * Supabase email-confirmation is enabled.
          * The confirmation link returns through auth/callback,
          * which will finish this same invitation.
          */
         setMessage(
-          `Check ${inviteEmail} for the confirmation email. After you confirm it, 111 Sports will finish joining ${inviteData?.group?.name ?? "the Group"}.`,
+          data.user.identities?.length ===
+            0
+            ? `If this email has an unconfirmed account, request a confirmation email below. After confirmation, 111 Sports will finish joining ${inviteData?.group?.name ?? "the Group"}.`
+            : `Your account requires email confirmation. Check ${inviteEmail}, including spam, then confirm to finish joining ${inviteData?.group?.name ?? "the Group"}.`,
         );
 
         return;
@@ -920,6 +1079,29 @@ export default function GroupInvitePage() {
                 : "Sign in & join"}
           </button>
         </form>
+
+
+        {confirmationPending ? (
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() =>
+                void handleResendConfirmation()
+              }
+              disabled={
+                submitting ||
+                resendCooldownSeconds >
+                  0
+              }
+              className="text-sm font-semibold text-sky-300 underline underline-offset-4 disabled:no-underline disabled:opacity-50"
+            >
+              {resendCooldownSeconds >
+                0
+                ? `Resend available in ${resendCooldownSeconds}s`
+                : "Resend confirmation email"}
+            </button>
+          </div>
+        ) : null}
 
 
         <p className="mt-5 text-center text-xs leading-5 text-slate-500">

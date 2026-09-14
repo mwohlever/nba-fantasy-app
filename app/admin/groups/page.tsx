@@ -1630,8 +1630,20 @@ export default function GroupsAdminPage() {
       "",
     );
 
+    const emailDelivery =
+      String(
+        result.emailDelivery?.status ??
+          "not_configured",
+      );
+
     setMessage(
-      `Invitation created for ${normalized}.`,
+      emailDelivery ===
+        "sent"
+        ? `Invitation sent to ${normalized}.`
+        : emailDelivery ===
+            "not_configured"
+          ? `Invitation created, but email delivery is not configured. Copy the invite link to share it with ${normalized}.`
+          : `Invitation created, but the email could not be sent. Copy the invite link to share it with ${normalized}.`,
     );
 
     await loadGroups(

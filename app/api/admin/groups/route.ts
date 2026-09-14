@@ -16,6 +16,9 @@ import {
   supabaseAdmin,
 } from "@/lib/supabaseAdmin";
 import { hasGroupCompetitiveHistory } from "@/lib/security/resourcePolicy";
+import {
+  sendGroupInvitationEmail,
+} from "@/lib/email/groupInvitation";
 
 
 export const dynamic =
@@ -1605,6 +1608,33 @@ export async function POST(
       }
 
 
+      const {
+        data: inviteGroup,
+        error: inviteGroupError,
+      } =
+        await supabaseAdmin
+          .from(
+            "groups",
+          )
+          .select(
+            "name",
+          )
+          .eq(
+            "id",
+            groupId,
+          )
+          .single();
+
+      if (
+        inviteGroupError ||
+        !inviteGroup
+      ) {
+        throw new Error(
+          `Unable to load invitation Group${inviteGroupError?.message ? `: ${inviteGroupError.message}` : "."}`,
+        );
+      }
+
+
       /*
        * Do not invite somebody who is already an active member
        * of the Group.
@@ -1820,6 +1850,24 @@ export async function POST(
           request.url,
         ).origin;
 
+      const inviteUrl =
+        `${origin}/invite/${rawToken}`;
+
+      const emailDelivery =
+        await sendGroupInvitationEmail({
+          to: email,
+
+          groupName:
+            String(
+              inviteGroup.name,
+            ),
+
+          inviteUrl,
+
+          expiresAt:
+            invite.expires_at,
+        });
+
 
       return NextResponse.json({
         success:
@@ -1827,8 +1875,9 @@ export async function POST(
 
         invite,
 
-        inviteUrl:
-          `${origin}/invite/${rawToken}`,
+        inviteUrl,
+
+        emailDelivery,
       });
     }
 
