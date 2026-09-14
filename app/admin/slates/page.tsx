@@ -6,11 +6,13 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
+import GolfSalarySetup from '@/components/golf/GolfSalarySetup';
 import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type SportKey = "nba" | "nfl" | "golf";
 
 type SlateRulesSnapshot = {
+  draft?: { type?: string };
   roster?: {
     slots?: Array<{
       position?: string;
@@ -1104,6 +1106,10 @@ export default function AdminSlatesPage() {
                     })}
                   </div>
                 </div>
+              ) : null}
+
+              {selectedSlate.sport === 'golf' && selectedSlate.rules_snapshot?.draft?.type === 'salary_cap' ? (
+                <GolfSalarySetup key={selectedSlate.id} slateId={selectedSlate.id} />
               ) : null}
 
               {selectedSlate.sport === "golf" &&
