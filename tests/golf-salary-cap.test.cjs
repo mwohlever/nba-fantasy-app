@@ -22,6 +22,17 @@ test('cents are exact for client validation and remaining-cap arithmetic',()=>{
  assert.match(validateGolfSalaryCapLineup({playerIds:[1,2,3,5],prices:decimal,rosterSize:4,salaryCap:'100.00'}).error,/\$100\.00/);
  assert.throws(()=>validateGolfSalaryCapLineup({playerIds:[1,2,3,4],prices:[...decimal.slice(0,3),{playerId:4,effectiveSalary:'18.666',eligible:true}],rosterSize:4,salaryCap:'100.00'}),/Invalid frozen/);
 });
+test('a valid $98.91 lineup reaches the server persistence boundary without the trigger alias ambiguity',()=>{
+ const decimal=[{playerId:1,effectiveSalary:'39.00',eligible:true},{playerId:2,effectiveSalary:'29.84',eligible:true},{playerId:3,effectiveSalary:'15.00',eligible:true},{playerId:4,effectiveSalary:'15.07',eligible:true},{playerId:5,effectiveSalary:'16.17',eligible:true}];
+ assert.deepEqual(validateGolfSalaryCapLineup({playerIds:[1,2,3,4],prices:decimal,rosterSize:4,salaryCap:'100.00'}),{ok:true,totalSalary:'98.91'});
+ assert.match(validateGolfSalaryCapLineup({playerIds:[1,2,3,5],prices:decimal,rosterSize:4,salaryCap:'100.00'}).error,/\$100\.00/);
+ assert.match(validateGolfSalaryCapLineup({playerIds:[1,1,3,4],prices:decimal,rosterSize:4,salaryCap:'100.00'}).error,/only once/);
+ const sql=fs.readFileSync(path.join(__dirname,'../supabase/migrations/20260924000100_fix_golf_salary_lineup_trigger_alias.sql'),'utf8');
+ assert.match(sql,/declare sid bigint; slate_row slates%rowtype; lid bigint/);
+ assert.match(sql,/join slates slate on slate\.id=l\.slate_id/);
+ assert.doesNotMatch(sql,/join slates s on s\.id/);
+ assert.doesNotMatch(sql,/\bs\.id\b/);
+});
 test('money serialization fixes whole dollars and rejects more than two decimals',()=>{
  const { golfMoneyToCents, formatGolfMoney, golfCentsToMoney }=require('../lib/golf/money.ts');
  assert.equal(formatGolfMoney(25),'25.00');assert.equal(formatGolfMoney('31.34'),'31.34');assert.equal(golfCentsToMoney(6866),'68.66');
