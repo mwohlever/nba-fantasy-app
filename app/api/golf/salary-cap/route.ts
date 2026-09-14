@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveSlateAccessForUser } from "@/lib/groups/context";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getGolfSalaryCapRules } from "@/lib/golf/salaryCap";
 
 type PeriodKey = "full_tournament" | "opening" | "weekend";
 
@@ -21,29 +22,6 @@ function objectValue(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function salaryCapRules(snapshot: unknown) {
-  const rules = objectValue(snapshot);
-  const draft = objectValue(rules?.draft);
-  const roster = objectValue(rules?.roster);
-  const periods = objectValue(rules?.rosterPeriods);
-  const slots = Array.isArray(roster?.slots) ? roster.slots : [];
-  const rosterSize = slots.reduce((total, rawSlot) => {
-    const slot = objectValue(rawSlot);
-    const count = Number(slot?.slotCount);
-    return total + (Number.isSafeInteger(count) && count > 0 ? count : 0);
-  }, 0);
-  const budget = Number(draft?.salaryCap);
-
-  if (draft?.type !== "salary_cap" || rosterSize !== 4 || budget !== 100) return null;
-  return {
-    budget,
-    rosterSize,
-    periodType: periods?.type === "split_after_round_2"
-      ? "split_after_round_2" as const
-      : "full_tournament" as const,
-  };
-}
-
 async function loadAccess(slateId: number) {
   const user = await getCurrentUser();
   if (!user) return { response: NextResponse.json({ error: "Login required." }, { status: 401 }) };
@@ -51,9 +29,9 @@ async function loadAccess(slateId: number) {
   if (!access || access.slate.sport !== "golf") {
     return { response: NextResponse.json({ error: "Golf slate not found in the active Group." }, { status: 404 }) };
   }
-  const rules = salaryCapRules(access.slate.rulesSnapshot);
+  const rules = getGolfSalaryCapRules(access.slate.rulesSnapshot);
   if (!rules) {
-    return { response: NextResponse.json({ error: "This slate does not use Golf Salary Cap V1." }, { status: 400 }) };
+    return { response: NextResponse.json({ error: "This slate does not have valid frozen Golf Salary Cap rules." }, { status: 400 }) };
   }
   const teamId = access.context.team?.id ?? null;
   if (!teamId) {

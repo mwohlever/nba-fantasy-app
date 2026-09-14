@@ -4,6 +4,9 @@ import { getGolfStatusMeta } from "@/lib/golf/status";
 import { calculateGolfCutLine } from "@/lib/golf/cutLine";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
+import { resolveGolfRules } from "@/lib/rules/leagueRules";
+import { relevantGolfRosterPeriodKey } from "@/lib/golf/relevantRosterPeriod";
+import { loadGolfFantasy, loadGolfRosters } from '@/lib/golf/fantasy.server';
 
 type GolfSlateRow = {
   id: number;
@@ -16,6 +19,7 @@ type GolfSlateRow = {
   has_cut: boolean;
   tournament_analysis: string | null;
   show_tournament_analysis: boolean;
+  rules_snapshot: Record<string, unknown> | null;
 };
 
 type TeamResultRow = {
@@ -50,6 +54,9 @@ type GolfCutRoundRow = {
   event_player_id: number;
   round_number: number;
   score_to_par: number | null;
+  score_display: string | null;
+  holes_completed: number | null;
+  status: string | null;
 };
 
 type GolfPlayerRow = {
@@ -71,6 +78,21 @@ type LineupRow = {
 type LineupPlayerRow = {
   lineup_id: number;
   player_id: number;
+};
+
+type GolfRosterPeriodRow = {
+  id: number;
+  period_key: "full_tournament" | "opening" | "weekend";
+  opened_at: string | null;
+  completed_at: string | null;
+  started_rounds: number[] | null;
+};
+
+type GolfSalaryCapLineupRow = {
+  id: number;
+  team_id: number;
+  period_id: number;
+  golf_salary_cap_lineup_players: Array<{ player_id: number }> | null;
 };
 
 function formatSlateLabel(
@@ -152,7 +174,7 @@ export async function getGolfHomeSummary() {
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut, tournament_analysis, show_tournament_analysis",
+        "id, date, start_date, end_date, is_locked, first_game_start_time, display_name, has_cut, tournament_analysis, show_tournament_analysis, rules_snapshot",
       )
       .eq("sport", "golf")
       .eq(
@@ -441,8 +463,8 @@ export async function getGolfHomeSummary() {
   const latestSlate =
     liveSlate ??
     startedOpenSlate ??
-    latestCompletedSlate ??
     nextSlate ??
+    latestCompletedSlate ??
     normalizedSlates[0] ??
     null;
 
@@ -456,6 +478,7 @@ export async function getGolfHomeSummary() {
   let latestLineups: LineupRow[] = [];
   let latestLineupPlayers: LineupPlayerRow[] =
     [];
+  let latestSalaryCapLineups: GolfSalaryCapLineupRow[] = [];
 
   if (latestSlate) {
     const [
@@ -527,16 +550,13 @@ export async function getGolfHomeSummary() {
       } = await supabaseAdmin
         .from("golf_rounds")
         .select(
-          "event_player_id, round_number, score_to_par",
+          "event_player_id, round_number, score_to_par, score_display, holes_completed, status",
         )
         .in(
           "event_player_id",
           latestEventPlayerIds,
         )
-        .in(
-          "round_number",
-          [1, 2],
-        );
+        .order("round_number", { ascending: true });
 
       if (cutRoundError) {
         return NextResponse.json(
@@ -564,7 +584,53 @@ export async function getGolfHomeSummary() {
       (lineup) => lineup.id,
     );
 
-    if (lineupIds.length > 0) {
+    const latestRules = resolveGolfRules(latestSlate.rules_snapshot);
+
+    if (latestRules.draft.type === "salary_cap") {
+      const { data: periodData, error: periodError } = await supabaseAdmin
+        .from("golf_roster_periods")
+        .select("id, period_key, opened_at, completed_at, started_rounds")
+        .eq("slate_id", latestSlate.id)
+        .order("id", { ascending: true });
+
+      if (periodError) {
+        return NextResponse.json(
+          { error: `Failed to load Golf roster periods: ${periodError.message}` },
+          { status: 500 },
+        );
+      }
+
+      const periods = (periodData ?? []) as GolfRosterPeriodRow[];
+      const relevantPeriodKey = relevantGolfRosterPeriodKey(
+        latestSlate.rules_snapshot,
+        periods,
+      );
+      const relevantPeriod =
+        periods.find((period) => period.period_key === relevantPeriodKey) ?? null;
+
+      if (relevantPeriod) {
+        const { data: salaryLineupData, error: salaryLineupError } =
+          await supabaseAdmin
+            .from("golf_salary_cap_lineups")
+            .select(
+              "id, team_id, period_id, golf_salary_cap_lineup_players(player_id)",
+            )
+            .eq("slate_id", latestSlate.id)
+            .eq("period_id", relevantPeriod.id);
+
+        if (salaryLineupError) {
+          return NextResponse.json(
+            {
+              error: `Failed to load Golf Salary Cap ownership: ${salaryLineupError.message}`,
+            },
+            { status: 500 },
+          );
+        }
+
+        latestSalaryCapLineups =
+          (salaryLineupData ?? []) as GolfSalaryCapLineupRow[];
+      }
+    } else if (lineupIds.length > 0) {
       const {
         data: lineupPlayerData,
         error: lineupPlayerError,
@@ -618,32 +684,29 @@ export async function getGolfHomeSummary() {
   const ownerNamesByPlayerId =
     new Map<number, string[]>();
 
-  latestLineupPlayers.forEach((row) => {
-    const lineup = lineupById.get(
-      row.lineup_id,
-    );
+  const ownerTeamIdsByPlayerId =
+    new Map<number, Set<number>>();
 
-    if (!lineup) return;
-
+  function addOwnership(teamId: number, playerId: number) {
     const existing =
-      playerIdsByTeamId.get(lineup.team_id) ??
+      playerIdsByTeamId.get(teamId) ??
       [];
 
-    existing.push(row.player_id);
+    existing.push(playerId);
 
     playerIdsByTeamId.set(
-      lineup.team_id,
+      teamId,
       existing,
     );
 
-    allDraftedPlayerIds.add(row.player_id);
+    allDraftedPlayerIds.add(playerId);
 
     const teamName =
-      teamNameById.get(lineup.team_id) ??
+      teamNameById.get(teamId) ??
       "Unknown Team";
 
     const ownerNames =
-      ownerNamesByPlayerId.get(row.player_id) ??
+      ownerNamesByPlayerId.get(playerId) ??
       [];
 
     if (!ownerNames.includes(teamName)) {
@@ -651,137 +714,42 @@ export async function getGolfHomeSummary() {
     }
 
     ownerNamesByPlayerId.set(
-      row.player_id,
+      playerId,
       ownerNames,
     );
+
+    const ownerTeamIds = ownerTeamIdsByPlayerId.get(playerId) ?? new Set<number>();
+    ownerTeamIds.add(teamId);
+    ownerTeamIdsByPlayerId.set(playerId, ownerTeamIds);
+  }
+
+  if (latestSlate && resolveGolfRules(latestSlate.rules_snapshot).rosterPeriods.type === 'split_after_round_2') {
+    const { data: periods, error } = await supabaseAdmin.from('golf_roster_periods')
+      .select('period_key, opened_at, completed_at, started_rounds').eq('slate_id', latestSlate.id);
+    if (error) throw new Error(error.message);
+    const period = relevantGolfRosterPeriodKey(latestSlate.rules_snapshot, periods ?? []);
+    const rosters = await loadGolfRosters(latestSlate.id, latestSlate.rules_snapshot, [...teamNameById.keys()]);
+    for (const roster of rosters) for (const id of roster.periods.find(p => p.period === period)?.playerIds ?? []) addOwnership(roster.teamId, id);
+  } else {
+  latestLineupPlayers.forEach((row) => {
+    const lineup = lineupById.get(row.lineup_id);
+    if (!lineup) return;
+    addOwnership(lineup.team_id, row.player_id);
   });
+
+  latestSalaryCapLineups.forEach((lineup) => {
+    (lineup.golf_salary_cap_lineup_players ?? []).forEach((row) => {
+      addOwnership(Number(lineup.team_id), Number(row.player_id));
+    });
+  });
+  }
 
   let latestGolfRosterSize =
     4;
 
   if (latestSlate) {
-    const {
-      data: latestRulesData,
-      error: latestRulesError,
-    } =
-      await supabaseAdmin
-        .from("slates")
-        .select("rules_snapshot")
-        .eq(
-          "id",
-          latestSlate.id,
-        )
-        .maybeSingle();
-
-    if (latestRulesError) {
-      console.warn(
-        "Failed to load Golf roster size from rules snapshot:",
-        latestRulesError.message,
-      );
-    } else {
-      const snapshot =
-        latestRulesData?.rules_snapshot;
-
-      if (
-        snapshot &&
-        typeof snapshot ===
-          "object" &&
-        !Array.isArray(
-          snapshot,
-        )
-      ) {
-        const roster =
-          (
-            snapshot as Record<
-              string,
-              unknown
-            >
-          ).roster;
-
-        if (
-          roster &&
-          typeof roster ===
-            "object" &&
-          !Array.isArray(
-            roster,
-          )
-        ) {
-          const slots =
-            (
-              roster as Record<
-                string,
-                unknown
-              >
-            ).slots;
-
-          if (
-            Array.isArray(
-              slots,
-            )
-          ) {
-            const golferSlot =
-              slots.find(
-                (slot) =>
-                  Boolean(
-                    slot &&
-                    typeof slot ===
-                      "object" &&
-                    !Array.isArray(
-                      slot,
-                    ) &&
-                    String(
-                      (
-                        slot as Record<
-                          string,
-                          unknown
-                        >
-                      ).position ??
-                        "",
-                    )
-                      .trim()
-                      .toUpperCase() ===
-                      "GOLFER",
-                  ),
-              );
-
-            if (
-              golferSlot &&
-              typeof golferSlot ===
-                "object" &&
-              !Array.isArray(
-                golferSlot,
-              )
-            ) {
-              const count =
-                Number(
-                  (
-                    golferSlot as Record<
-                      string,
-                      unknown
-                    >
-                  ).slotCount ??
-                    (
-                      golferSlot as Record<
-                        string,
-                        unknown
-                      >
-                    ).slot_count,
-                );
-
-              if (
-                Number.isInteger(
-                  count,
-                ) &&
-                count > 0
-              ) {
-                latestGolfRosterSize =
-                  count;
-              }
-            }
-          }
-        }
-      }
-    }
+    latestGolfRosterSize = resolveGolfRules(latestSlate.rules_snapshot)
+      .roster.slots.reduce((total, slot) => total + slot.slotCount, 0);
   }
 
   function getTeamGolfStatus(teamId: number) {
@@ -1237,6 +1205,19 @@ export async function getGolfHomeSummary() {
             player.player_id,
           ) ?? [];
 
+        const playerRounds = latestGolfCutRounds.filter(
+          (round) => round.event_player_id === player.id,
+        );
+        const statusMeta = getGolfStatusMeta({
+          ...player,
+          rounds: playerRounds,
+        });
+        const currentRound = playerRounds.find(
+          (round) =>
+            round.round_number === player.current_round,
+        );
+        const currentTeamId = context.team?.id ?? null;
+
         return {
           playerId: player.player_id,
           name:
@@ -1268,19 +1249,31 @@ export async function getGolfHomeSummary() {
           status:
             player.status,
           statusLabel:
-            getGolfStatusMeta(
-              player,
-            ).compactLabel,
+            statusMeta.compactLabel,
+          statusState: statusMeta.state,
+          teeTime: statusMeta.teeTime,
           currentRound:
             player.current_round,
           lastHole:
             player.last_hole,
           holesCompleted:
             player.holes_completed,
+          progressHoles: statusMeta.holes,
+          currentRoundScore:
+            currentRound?.score_to_par ?? null,
+          currentRoundScoreDisplay:
+            currentRound?.score_display?.trim() ||
+            (currentRound?.score_to_par === null ||
+            currentRound?.score_to_par === undefined
+              ? null
+              : golfScore(currentRound.score_to_par)),
           roundsCompleted:
             player.rounds_completed,
           isDrafted:
             draftedBy.length > 0,
+          isCurrentUser:
+            currentTeamId !== null &&
+            (ownerTeamIdsByPlayerId.get(player.player_id)?.has(currentTeamId) ?? false),
           draftedBy,
         };
       });
@@ -1419,13 +1412,21 @@ export async function getGolfHomeSummary() {
     };
   }
 
+  const canonicalFantasy = latestSlate ? await loadGolfFantasy(latestSlate.id, { groupId: context.group.id }) : null;
+  const canonicalLatestRows = canonicalFantasy ? canonicalFantasy.teams.map(scored => ({
+    ...scored, teamName: teamNameById.get(scored.team_id) ?? scored.name,
+    avatarUrl: avatarByTeamId.get(scored.team_id) ?? null,
+    projected_points: null, pregame_projected_points: null, win_probability: null,
+    golf_status_label: getTeamGolfStatus(scored.team_id),
+  })) : latestRows;
+
   return NextResponse.json({
     success: true,
     latestSlate:
       serializeSlate(latestSlate),
     latestGolfTournamentIsFinal,
     nextSlate: serializeSlate(nextSlate),
-    latestSlateRows: latestRows,
+    latestSlateRows: canonicalLatestRows,
     tournamentLeaderboard,
     projectedCut,
     seasonSnapshot,

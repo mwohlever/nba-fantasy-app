@@ -192,6 +192,10 @@ export function getGroupSwitchDestination({
     return sport === "nfl" && isEnabled("nfl", targetEnabledSports) ? currentDestination : fallback;
   }
 
+  if (normalizedPathname === "/golf/live") {
+    return isEnabled("golf", targetEnabledSports) ? currentDestination : fallback;
+  }
+
   if (
     SHARED_FANTASY_PATHS.has(
       normalizedPathname,
@@ -320,4 +324,13 @@ export function getGroupSwitchDestination({
   }
 
   return fallback;
+}
+export function shouldFallbackSportSelection(input: {
+  selectedSport: string;
+  routeSport: string | null;
+  enabledSports: readonly string[];
+}) {
+  if (!input.enabledSports.length) return false;
+  if (input.routeSport && input.enabledSports.includes(input.routeSport)) return false;
+  return !input.enabledSports.includes(input.selectedSport);
 }

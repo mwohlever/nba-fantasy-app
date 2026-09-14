@@ -17,6 +17,9 @@ import {
 import {
   upsertGolfCourseHoles,
 } from "@/lib/golf/upsertGolfCourseHoles";
+import {
+  buildGolfFieldRankingUpdates,
+} from "@/lib/golf/fieldRankingUpdates";
 
 type RequestBody = {
   slateId?: number | string;
@@ -35,6 +38,9 @@ type ExistingGolfPlayer = {
   id: number;
   display_name: string;
   espn_player_id: string;
+  owgr_player_id: string | null;
+  owgr_rank: number | null;
+  owgr_points: number | null;
 };
 
 function normalizeName(value: string) {
@@ -255,7 +261,7 @@ export async function POST(
     } = await supabaseAdmin
       .from("golf_players")
       .select(
-        "id, display_name, espn_player_id",
+        "id, display_name, espn_player_id, owgr_player_id, owgr_rank, owgr_points",
       );
 
     if (existingError) {
@@ -278,6 +284,12 @@ export async function POST(
         ExistingGolfPlayer[]
       >();
 
+    const existingById =
+      new Map<
+        number,
+        ExistingGolfPlayer
+      >();
+
     for (
       const player of existingPlayers
     ) {
@@ -293,6 +305,10 @@ export async function POST(
       existingByName.set(
         key,
         matches,
+      );
+      existingById.set(
+        Number(player.id),
+        player,
       );
     }
 
@@ -486,6 +502,50 @@ export async function POST(
       );
     }
 
+    const rankingUpdates =
+      buildGolfFieldRankingUpdates(
+        field.players,
+        resolvedPlayerIds,
+        existingById,
+        refreshedAt,
+      );
+
+    const rankingUpdateResults =
+      await Promise.all(
+        rankingUpdates.map(
+          async (update) =>
+            supabaseAdmin
+              .from("golf_players")
+              .update({
+                owgr_player_id:
+                  update.owgr_player_id,
+                owgr_rank:
+                  update.owgr_rank,
+                owgr_points:
+                  update.owgr_points,
+                owgr_updated_at:
+                  update.owgr_updated_at,
+              })
+              .eq("id", update.id),
+        ),
+      );
+
+    const rankingUpdateError =
+      rankingUpdateResults.find(
+        (result) => result.error,
+      )?.error;
+
+    if (rankingUpdateError) {
+      return NextResponse.json(
+        {
+          error:
+            "Existing golfer OWGR data could not be refreshed: " +
+            rankingUpdateError.message,
+        },
+        { status: 500 },
+      );
+    }
+
     const eventRows =
       field.players.map(
         (player, index) => ({
@@ -555,6 +615,8 @@ export async function POST(
         field.players.length -
         missingPlayers.length,
       createdGolfers,
+      existingGolferRankingsRefreshed:
+        rankingUpdates.length,
       eventPlayersUpserted:
         eventData?.length ??
         eventRows.length,

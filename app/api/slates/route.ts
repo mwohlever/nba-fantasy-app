@@ -4,7 +4,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireAdminApi } from "@/lib/requireAdminApi";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
-import { resolveLeagueRules } from "@/lib/rules/leagueRules";
+import { resolveGolfRules, resolveLeagueRules } from "@/lib/rules/leagueRules";
+import { buildGolfSlateRulesSnapshot } from "@/lib/slates/golfSlateRules";
 import { validateSlateTeamConfigurations } from "@/lib/security/resourcePolicy";
 
 function isoDateFromGameCode(gameCode: string | null | undefined) {
@@ -550,12 +551,12 @@ export async function GET(request: NextRequest) {
         searchParams.get("beforeDate") ?? undefined,
       );
 
-    const suggestedRules =
-      resolveLeagueRules({
-        sport,
-        settings:
-          league.settings,
-      });
+    const suggestedRules = sport === "golf"
+      ? resolveGolfRules(league.settings)
+      : resolveLeagueRules({
+          sport,
+          settings: league.settings,
+        });
 
     const suggestedRosterSlots =
       suggestedRules.roster.slots.map((slot) => ({
@@ -600,6 +601,8 @@ export async function GET(request: NextRequest) {
       previousCompletedSlate: previousCompleted.slate,
       suggestedTeamConfigs,
       suggestedRosterSlots,
+      suggestedGolfRules:
+        sport === "golf" ? suggestedRules : undefined,
     });
   } catch (error) {
     console.error(error);
@@ -687,13 +690,12 @@ export async function POST(request: NextRequest) {
       nflWeekName = selectedWeek.name;
     }
 
-    const baseResolvedRules =
-      resolveLeagueRules({
-        sport,
-
-        settings:
-          league.settings,
-      });
+    const baseResolvedRules = sport === "golf"
+      ? resolveGolfRules(league.settings)
+      : resolveLeagueRules({
+          sport,
+          settings: league.settings,
+        });
 
     const requestedRosterSlots =
       Array.isArray(body?.rosterSlots)
@@ -751,19 +753,45 @@ export async function POST(request: NextRequest) {
             )
         : [];
 
-    const resolvedRules =
-      requestedRosterSlots.length > 0
-        ? resolveLeagueRules({
-            sport,
-            settings: {
-              ...baseResolvedRules,
-              roster: {
-                slots:
-                  requestedRosterSlots,
-              },
-            },
+    let resolvedRules;
+
+    try {
+      if (sport === "golf" && body?.rosterSlots !== undefined &&
+        (!Array.isArray(body.rosterSlots) || body.rosterSlots.length !== 1 || requestedRosterSlots.length !== 1)) {
+        throw new Error("Golf rosters must use one valid GOLFER slot configuration.");
+      }
+      resolvedRules = sport === "golf"
+        ? buildGolfSlateRulesSnapshot({
+            groupSettings: league.settings,
+            selection:
+              body?.golfRules && typeof body.golfRules === "object"
+                ? body.golfRules
+                : undefined,
+            rosterSlots:
+              requestedRosterSlots.length > 0
+                ? requestedRosterSlots
+                : undefined,
           })
-        : baseResolvedRules;
+        : requestedRosterSlots.length > 0
+          ? resolveLeagueRules({
+              sport,
+              settings: {
+                ...baseResolvedRules,
+                roster: { slots: requestedRosterSlots },
+              },
+            })
+          : baseResolvedRules;
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Invalid Golf rule configuration.",
+        },
+        { status: 400 },
+      );
+    }
 
 
     const rulesVersion =

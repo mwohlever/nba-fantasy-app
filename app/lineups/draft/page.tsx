@@ -338,8 +338,18 @@ export default async function DraftLineupsPage({
   }));
 
   const requestedSlateId = Number(slateParam);
+  const golfStartedOpenSlate = sport === "golf"
+    ? safeSlates.find((slate) => !slate.is_locked && new Date(`${slate.start_date ?? slate.date}T00:00:00`).getTime() <= Date.now())
+    : null;
+  const golfUpcomingSlate = sport === "golf"
+    ? safeSlates
+        .filter((slate) => !slate.is_locked && new Date(`${slate.start_date ?? slate.date}T00:00:00`).getTime() > Date.now())
+        .sort((a, b) => new Date(`${a.start_date ?? a.date}T00:00:00`).getTime() - new Date(`${b.start_date ?? b.date}T00:00:00`).getTime())[0]
+    : null;
   let selectedSlateId =
     safeSlates.find((slate) => Number.isSafeInteger(requestedSlateId) && slate.id === requestedSlateId)?.id ??
+    golfStartedOpenSlate?.id ??
+    golfUpcomingSlate?.id ??
     safeSlates.find((slate) => {
       const startDate = slate.start_date ?? slate.date;
       const endDate = slate.end_date ?? slate.date;

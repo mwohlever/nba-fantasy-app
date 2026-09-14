@@ -89,7 +89,9 @@ export function calculateGolfTeamResults(
     const teamRoundScores: number[] = [];
 
     for (const roundNumber of [1, 2, 3, 4]) {
-      const roundScores = golferCompetitors
+      const roundCompetitors = golferCompetitors.filter((competitor: any) =>
+        !competitor.scoringRounds || competitor.scoringRounds.includes(roundNumber));
+      const roundScores = roundCompetitors
         .map((competitor: any) =>
           (competitor.rounds ?? []).find(
             (round: any) =>
@@ -107,8 +109,8 @@ export function calculateGolfTeamResults(
       // A team round counts only after every drafted golfer has
       // completed that round.
       if (
-        golferCompetitors.length > 0 &&
-        roundScores.length === golferCompetitors.length
+        roundCompetitors.length > 0 &&
+        roundScores.length === roundCompetitors.length
       ) {
         teamRoundScores.push(
           roundScores.reduce(

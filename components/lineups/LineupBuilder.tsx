@@ -5,6 +5,8 @@ import { effectiveDraftPick, draftStateLabel, type DraftPick, type DraftHistory 
 import { usePathname } from "next/navigation";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import { usePullToRefresh } from "@/lib/client/usePullToRefresh";
+import GolfSnakeWeekendLineups from "@/components/golf/GolfSnakeWeekendLineups";
+import { resolveGolfRules } from "@/lib/rules/leagueRules";
 import { createRefreshScope } from "@/lib/client/refreshScope";
 import type { RefreshOutcome } from "@/lib/client/refreshOutcome";
 import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
@@ -1351,25 +1353,27 @@ export default function LineupBuilder({
     const valid = () => refreshMountedRef.current && isCurrent() && loadId === latestSlateLoadRef.current;
     if (!routine) setIsSlateLoading(true);
     try {
+      const isGolfDraft = (sport ?? selectedSport) === "golf";
       const responses = await Promise.all([
         fetch(`/api/lineups?slateId=${slateId}&draft=true`, { cache: "no-store" }),
         fetch(`/api/slate-availability?slateId=${slateId}`, { cache: "no-store" }),
-        fetch(`/api/player-stats?slateId=${slateId}`, { cache: "no-store" }),
-        fetch(`/api/team-results?slateId=${slateId}`, { cache: "no-store" }),
+        ...(isGolfDraft ? [] : [
+          fetch(`/api/player-stats?slateId=${slateId}`, { cache: "no-store" }),
+          fetch(`/api/team-results?slateId=${slateId}`, { cache: "no-store" }),
+        ]),
         ...((sport ?? selectedSport) === "nfl" ? [fetch(`/api/lineups/nfl-games?slateId=${slateId}`, { cache: "no-store" })] : []),
       ]);
-      const [lineups, availability, stats, results, games] = await Promise.all(responses.map(response => response.json()));
+      const payloads = await Promise.all(responses.map(response => response.json()));
+      const [lineups, availability, stats, results, games] = payloads;
       if (!valid()) return { status: "skipped" };
       if (responses.some(response => !response.ok) || !Array.isArray(lineups.lineups) ||
         !Array.isArray(lineups.draftContext?.participants) || !Array.isArray(availability.availablePlayerIds) ||
-        !Array.isArray(stats.playerStats) || !Array.isArray(results.teamResults) ||
+        (!isGolfDraft && (!Array.isArray(stats.playerStats) || !Array.isArray(results.teamResults))) ||
         lineups.draftContext.groupId !== groupContext?.group.id || lineups.draftContext.slateId !== slateId ||
         lineups.draftContext.slate?.id !== slateId ||
         ((sport ?? selectedSport) === "nfl" && (games?.slateId !== slateId || !games?.gamesByTeam))) throw new Error("Could not refresh Draft. Try again.");
       setLineupsState(lineups.lineups);
-      // These GETs read stored data only; Draft never initiates scoring reconciliation.
-      if (stats.sport === "golf") applyAcceptedGolfSnapshot(slateId, stats);
-      else {
+      if (!isGolfDraft) {
         setPlayerStatsState(stats.playerStats);
         setTeamResultsState(results.teamResults);
       }
@@ -1378,6 +1382,19 @@ export default function LineupBuilder({
       setRefreshTimestamp({ scope: refreshScopeKey, value: new Date().toISOString() });
       setRefreshFeedback({ scope: refreshScopeKey, text: routine ? "Updated just now" : "" });
       setSaveMessage("");
+      if (isGolfDraft) {
+        // Score reads are display-only. An unavailable or slow upcoming-score endpoint
+        // must never hold the Golf acquisition roster in its loading state.
+        void Promise.all([
+          fetch(`/api/player-stats?slateId=${slateId}`, { cache: "no-store" }),
+          fetch(`/api/team-results?slateId=${slateId}`, { cache: "no-store" }),
+        ]).then(async ([statsResponse, resultsResponse]) => {
+          const [statsBody, resultsBody] = await Promise.all([statsResponse.json(), resultsResponse.json()]);
+          if (!valid()) return;
+          if (statsResponse.ok && statsBody.sport === "golf") applyAcceptedGolfSnapshot(slateId, statsBody);
+          if (resultsResponse.ok) setTeamResultsState(resultsBody.teamResults ?? []);
+        }).catch(error => console.error("Failed to load optional Golf score state", error));
+      }
       return { status: "success" };
     } catch (error) {
       if (!valid()) return { status: "skipped" };
@@ -2549,6 +2566,8 @@ export default function LineupBuilder({
     >
     <div ref={isScoresPage || isDraftPage ? scoresSurfaceRef : undefined} className={isScoresPage ? `scores-page-content${["nba", "nfl"].includes(sport ?? selectedSport) ? " scores-pull-surface" : ""}` : "draft-workspace"}>
       {viewMode === "draft" && <>
+        {selectedSlate?.sport === 'golf' && resolveGolfRules(selectedSlate.rules_snapshot).rosterPeriods.type === 'split_after_round_2' && selectedSlateIdNumber ?
+          <GolfSnakeWeekendLineups key={refreshScopeKey} slateId={selectedSlateIdNumber} refreshKey={lastUpdatedAt} /> : null}
         <header className="draft-header">
           <div><h1>Draft</h1><p>{selectedSlateDisplay} · {(sport ?? selectedSport) === "golf" ? selectedSlate?.is_locked ? "Locked" : "Open" : draftStateLabel(orderHistory, Boolean(selectedSlate?.is_locked))}</p>
             <p>{currentTeamId ? `${getPlayersForTeam(currentTeamId).length}/${getRosterTotalSlots()} rostered` : "Viewing participants"}</p></div>

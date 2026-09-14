@@ -480,21 +480,16 @@ function HomePageContent() {
     null,
   );
 
-  const [golfHomeTab, setGolfHomeTab] =
-    useState<"fantasy" | "tournament">(
-      "fantasy",
-    );
-
   const [isSlateRosterLoading, setIsSlateRosterLoading] = useState(false);
   const [isRefreshingHomeStats, setIsRefreshingHomeStats] = useState(false);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const homeGolfRefreshInFlightRef = useRef(false);
-  const lastHomeGolfAutoRefreshRef = useRef(0);
 
   const homeSurfaceRef = useRef<HTMLElement>(null);
   const homeMountedRef = useRef(true);
+  const homeLoadRef = useRef(0);
   const homeDataScope = useRef(createRefreshScope(""));
   homeDataScope.current.update(JSON.stringify([activeGroupId, sport, isGroupLoading, isSwitchingGroup]));
   const renderDataCurrent = homeDataScope.current.capture();
@@ -519,8 +514,8 @@ function HomePageContent() {
   }, [homeFeedback]);
 
   async function refreshSlateStatsById(slateId: number): Promise<RefreshOutcome> {
-    const isCurrent = isGolf ? () => true : renderRefreshCurrent;
-    if (!isCurrent() || (!isGolf && !homeMountedRef.current)) return { status: "skipped" };
+    const isCurrent = renderRefreshCurrent;
+    if (!isCurrent() || !homeMountedRef.current) return { status: "skipped" };
     if (homeGolfRefreshInFlightRef.current) return { status: "skipped" };
 
     homeGolfRefreshInFlightRef.current = true;
@@ -587,8 +582,7 @@ function HomePageContent() {
     return refreshSlateStatsById(latestSlate.id);
   }
 
-  async function loadHomeSummary(isCurrent = isGolf ? () => true : renderDataCurrent): Promise<RefreshOutcome> {
-    if (!isCurrent()) return { status: "skipped" };
+  async function loadHomeSummary(isCurrent = renderDataCurrent): Promise<RefreshOutcome> {
     /*
      * Capture the sport this request belongs to.
      *
@@ -606,11 +600,11 @@ function HomePageContent() {
      * that context is still loading.
      */
     if (!requestedGroupId) {
-      setData(null);
-      setSeasonAwards(null);
-      setGolfPlayerStats([]);
       return { status: "skipped" };
     }
+    const requestId = ++homeLoadRef.current;
+    const requestIsCurrent = () => homeMountedRef.current && requestId === homeLoadRef.current && isCurrent() &&
+      activeHomeSportRef.current === requestedSport && activeHomeGroupIdRef.current === requestedGroupId;
 
     try {
       setIsLoading(true);
@@ -623,7 +617,7 @@ function HomePageContent() {
 
       const result = await response.json();
 
-      if (!isCurrent()) return { status: "skipped" };
+      if (!requestIsCurrent()) return { status: "skipped" };
       if (!response.ok) {
         const message = result.error || "Failed to load home summary.";
         setMessage(message);
@@ -634,15 +628,6 @@ function HomePageContent() {
        * A different sport may have been selected while this
        * request was in flight.
        */
-      if (
-        activeHomeSportRef.current !==
-          requestedSport ||
-        activeHomeGroupIdRef.current !==
-          requestedGroupId
-      ) {
-        return { status: "skipped" };
-      }
-
       setData(result);
       setDataSport(requestedSport);
       setDataGroupId(requestedGroupId);
@@ -651,7 +636,8 @@ function HomePageContent() {
         requestedSport === "golf" &&
         result.latestSlate?.id
       ) {
-        try {
+        void (async () => {
+          try {
           const statsResponse = await fetch(
             `/api/player-stats?slateId=${result.latestSlate.id}`,
             { cache: "no-store" },
@@ -660,6 +646,7 @@ function HomePageContent() {
           const statsResult =
             await statsResponse.json();
 
+          if (!requestIsCurrent()) return;
           if (statsResponse.ok) {
             setGolfPlayerStats(
               statsResult.playerStats ?? [],
@@ -671,13 +658,14 @@ function HomePageContent() {
             );
             setGolfPlayerStats([]);
           }
-        } catch (statsError) {
-          console.error(
-            "Failed to load Golf player stats",
-            statsError,
-          );
-          setGolfPlayerStats([]);
-        }
+          } catch (statsError) {
+            console.error(
+              "Failed to load Golf player stats",
+              statsError,
+            );
+            if (requestIsCurrent()) setGolfPlayerStats([]);
+          }
+        })();
       } else {
         setGolfPlayerStats([]);
       }
@@ -689,7 +677,7 @@ function HomePageContent() {
           cache: "no-store",
         });
         const awardsResult = await awardsResponse.json();
-        if (!isCurrent()) return { status: "skipped" };
+        if (!requestIsCurrent()) return { status: "skipped" };
 
         if (awardsResponse.ok) {
           setSeasonAwards(awardsResult);
@@ -702,12 +690,12 @@ function HomePageContent() {
       }
       return { status: "success" };
     } catch (error) {
-      if (!isCurrent()) return { status: "skipped" };
+      if (!requestIsCurrent()) return { status: "skipped" };
       console.error(error);
       setMessage("Something went wrong while loading the home page.");
       return { status: "error", message: "Could not reload Home." };
     } finally {
-      if (isCurrent()) setIsLoading(false);
+      if (homeMountedRef.current && requestId === homeLoadRef.current) setIsLoading(false);
     }
   }
 
@@ -724,6 +712,8 @@ function HomePageContent() {
     setSeasonAwards(null);
     setGolfPlayerStats([]);
     setMessage("");
+    ++homeLoadRef.current;
+    setIsLoading(true);
 
     if (activeGroupId && !isGroupLoading && !isSwitchingGroup) {
       void loadHomeSummary();
@@ -796,6 +786,7 @@ function HomePageContent() {
   const seasonSnapshot = data?.seasonSnapshot ?? [];
   const funFacts = data?.funFacts ?? [];
   const latestSeason = data?.latestSeason ?? new Date().getFullYear();
+  const isHomeScopeLoading = isLoading || isGroupLoading || isSwitchingGroup || dataSport !== sport || dataGroupId !== activeGroupId;
 
   const leader = latestSlateRows[0] ?? null;
 
@@ -873,76 +864,11 @@ function HomePageContent() {
   const nextSlate = data?.nextSlate ?? null;
 
   useEffect(() => {
-    if (sport !== "golf") return;
-
-    /*
-     * Critical sport-switch guard:
-     *
-     * Do not let the new Golf sport state consume a latestSlate
-     * that came from the previous NBA/NFL Home response.
-     */
-    if (dataSport !== sport) return;
-
-    if (!latestSlate?.id) return;
-    if (latestSlate.is_locked) return;
-
-    const refreshIfVisible = () => {
-      if (document.visibilityState !== "visible") return;
-
-      const now = Date.now();
-      const minimumGapMs = 4.5 * 60 * 1000;
-
-      if (
-        lastHomeGolfAutoRefreshRef.current &&
-        now - lastHomeGolfAutoRefreshRef.current < minimumGapMs
-      ) {
-        return;
-      }
-
-      lastHomeGolfAutoRefreshRef.current = now;
-      void refreshSlateStatsById(latestSlate.id);
-    };
-
-    // Opening Home during an active Golf slate immediately
-    // makes this browser/device an updater.
-    refreshIfVisible();
-
-    const interval = window.setInterval(
-      refreshIfVisible,
-      5 * 60 * 1000,
-    );
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        refreshIfVisible();
-      }
-    };
-
-    document.addEventListener(
-      "visibilitychange",
-      handleVisibilityChange,
-    );
-
-    return () => {
-      window.clearInterval(interval);
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange,
-      );
-    };
-  }, [
-    sport,
-    dataSport,
-    latestSlate?.id,
-    latestSlate?.is_locked,
-  ]);
-
-  useEffect(() => {
     /*
      * nextSlate must belong to the currently rendered sport.
      * This also forces cleanup/recreation when sport changes.
      */
-    if (dataSport !== sport) return;
+    if (sport === "golf" || dataSport !== sport) return;
 
     if (!nextSlate?.id || !nextSlate.first_game_start_time) return;
 
@@ -1023,7 +949,7 @@ function HomePageContent() {
       }))
     : "No slate";
 
-  const homePullEnabled = (sport === "nba" || sport === "nfl") && Boolean(activeGroupId && latestSlate?.id) &&
+  const homePullEnabled = (sport === "nba" || sport === "nfl" || sport === "golf") && Boolean(activeGroupId && latestSlate?.id) &&
     dataSport === sport && dataGroupId === activeGroupId && !isLoading && !isGroupLoading && !isSwitchingGroup && !profileTeam && !activeFantasyProfile;
   async function refreshHomeManually(): Promise<RefreshOutcome> {
     if (!homePullEnabled || !homeMountedRef.current || !renderRefreshCurrent() || homeGolfRefreshInFlightRef.current) return { status: "skipped" };
@@ -1050,7 +976,7 @@ function HomePageContent() {
     enabled: homePullEnabled, isRefreshing: isRefreshingHomeStats, scopeKey: homeScopeKey });
 
   return (
-    <main ref={sport === "nba" || sport === "nfl" ? homeSurfaceRef : undefined}
+    <main ref={homeSurfaceRef}
       className={`min-h-screen px-3 py-5 pb-24 sm:px-4 sm:py-6 sm:pb-6 ${
         isGolf
           ? "bg-slate-950 text-slate-100"
@@ -1107,23 +1033,23 @@ function HomePageContent() {
                     : "text-slate-500"
                 }`}
               >
-                {latestSlate ? slateDateLabel : "No slate available"}
+                {isHomeScopeLoading ? "Loading tournament…" : latestSlate ? slateDateLabel : "No slate available"}
               </div>
             </div>
 
             <div className={isGolf ? "flex shrink-0 flex-col items-end gap-1" : "flex shrink-0 items-center gap-1"}>
-            {!isGolf && <ScoresRefreshButton label="Refresh" onRefresh={() => { void refreshHomeManually(); }}
-              disabled={!homePullEnabled || isRefreshingHomeStats} isRefreshing={isRefreshingHomeStats} />}
+            <ScoresRefreshButton label="Refresh" onRefresh={() => { void refreshHomeManually(); }}
+              disabled={!homePullEnabled || isRefreshingHomeStats} isRefreshing={isRefreshingHomeStats} />
             <Link
               href={`/lineups/scores?sport=${sport}`}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-sky-200 hover:bg-sky-50"
+              className={`rounded-xl border px-4 py-2.5 text-sm font-medium transition ${isGolf ? "border-emerald-800 bg-slate-950 text-emerald-200 hover:bg-emerald-950" : "border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50"}`}
             >
               View Scores
             </Link>
             </div>
           </div>
 
-          {!isGolf && <PullToRefreshIndicator pull={homePull} feedback={homeFeedback?.scope === homeScopeKey ? homeFeedback.text : ""} />}
+          <PullToRefreshIndicator pull={homePull} feedback={homeFeedback?.scope === homeScopeKey ? homeFeedback.text : ""} />
           {latestSlate?.show_tournament_analysis === true &&
           latestSlate.tournament_analysis?.trim() ? (
             <details
@@ -1179,9 +1105,23 @@ function HomePageContent() {
             </details>
           ) : null}
 
-          {isLoading ? (
+          {isHomeScopeLoading ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               Loading current slate...
+            </div>
+          ) : latestSlateRows.length === 0 && isGolf && latestSlate ? (
+            <div className="rounded-2xl border border-emerald-800/70 bg-slate-950/60 px-4 py-4 text-sm text-slate-300">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-white">Upcoming</p>
+                  <p className="mt-1 text-xs text-slate-400">Fantasy scoring will appear when tournament results are available.</p>
+                </div>
+                <Link href="/lineups/draft?sport=golf" className="shrink-0 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-bold text-slate-950">View Lineup</Link>
+              </div>
+              <div className="mt-3 flex gap-4 text-xs font-semibold text-emerald-300">
+                <Link href="/lineups/scores?sport=golf">View Scores</Link>
+                <Link href="/golf/live">Tournament Live</Link>
+              </div>
             </div>
           ) : latestSlateRows.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
@@ -1348,545 +1288,25 @@ function HomePageContent() {
               </div>}
 
               {isGolf ? (
-                <div>
-                  <div className="mb-3 flex rounded-xl border border-emerald-800/60 bg-slate-950/80 p-1">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setGolfHomeTab("fantasy")
-                      }
-                      className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${
-                        golfHomeTab === "fantasy"
-                          ? "bg-emerald-700 text-white shadow-sm"
-                          : "text-slate-400 hover:text-emerald-200"
-                      }`}
-                    >
-                      Fantasy
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setGolfHomeTab("tournament")
-                      }
-                      className={`flex-1 rounded-lg px-3 py-2 text-sm font-bold transition ${
-                        golfHomeTab === "tournament"
-                          ? "bg-emerald-700 text-white shadow-sm"
-                          : "text-slate-400 hover:text-emerald-200"
-                      }`}
-                    >
-                      Tournament
-                    </button>
-                  </div>
-
-                  {golfHomeTab === "fantasy" ? (
-                <div className="overflow-hidden rounded-2xl border border-emerald-800/50 bg-slate-950">
-                  <div className="sm:hidden">
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center bg-emerald-950/80 px-4 py-3 text-xs font-bold uppercase tracking-wide text-emerald-100">
-                      <span>Team</span>
-                      <span className="pr-1 text-right">
-                        Score
-                      </span>
-                    </div>
-
-                    <div>
-                      {latestSlateRows.map(
-                        (row, index) => (
-                          <div
-                            key={`mobile-${row.slate_id}-${row.team_id}`}
-                            className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-slate-800 px-4 py-2.5 ${
-                              index === 0
-                                ? "bg-emerald-950/50"
-                                : "bg-slate-900"
-                            }`}
-                          >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setProfileTeam({
-                                  id: row.team_id,
-                                  name: row.teamName,
-                                })
-                              }
-                              className="flex min-w-0 items-center gap-2.5 text-left"
-                              aria-label={`View ${row.teamName}'s profile`}
-                            >
-                              <TeamAvatar
-                                teamName={row.teamName}
-                                avatarUrl={row.avatarUrl}
-                                size="sm"
-                              />
-
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-bold text-white">
-                                  {row.teamName}
-                                </span>
-
-                                <span className="mt-0.5 block truncate text-[11px] font-semibold text-emerald-300">
-                                  {row.golf_status_label ?? "—"}
-                                </span>
-                              </span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setSlateRosterModal({
-                                  slateId:
-                                    row.slate_id,
-                                  teamId:
-                                    row.team_id,
-                                  teamName:
-                                    row.teamName,
-                                  slateLabel:
-                                    latestSlate
-                                      ? slateDateLabel
-                                      : String(
-                                          row.slate_id,
-                                        ),
-                                })
-                              }
-                              className="inline-flex min-w-14 shrink-0 items-center justify-end gap-1 rounded-full border border-emerald-600/50 bg-emerald-950/70 px-2.5 py-1 text-base font-black text-white transition hover:bg-emerald-900"
-                              aria-label={`View ${row.teamName}'s Golf lineup`}
-                            >
-                              {formatGolfScore(
-                                row.fantasy_points,
-                              )}
-
-                              <span
-                                className="text-emerald-300"
-                                aria-hidden="true"
-                              >
-                                ›
-                              </span>
-                            </button>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </div>
-
-                  <table className="hidden w-full table-fixed border-collapse text-sm sm:table">
-                    <colgroup>
-                      <col className="w-[48%]" />
-                      <col className="w-[22%]" />
-                      <col className="w-[30%]" />
-                    </colgroup>
-
-                    <thead className="bg-emerald-950/80 text-emerald-100">
-                      <tr className="text-left">
-                        <th className="px-4 py-3 font-semibold">
-                          Team
-                        </th>
-
-                        <th className="px-3 py-3 text-right font-semibold">
-                          Score
-                        </th>
-
-                        <th className="px-4 py-3 text-right font-semibold">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody className="text-slate-100">
-                      {latestSlateRows.map(
-                        (row, index) => (
-                          <tr
-                            key={`${row.slate_id}-${row.team_id}`}
-                            className={`border-t border-slate-800 ${
-                              index === 0
-                                ? "bg-emerald-950/50"
-                                : "bg-slate-900"
-                            }`}
-                          >
-                            <td className="px-4 py-3">
-                              <TeamProfileButton
-                                teamName={row.teamName}
-                                avatarUrl={row.avatarUrl}
-                                onClick={() =>
-                                  setProfileTeam({
-                                    id: row.team_id,
-                                    name: row.teamName,
-                                  })
-                                }
-                              />
-                            </td>
-
-                            <td className="px-3 py-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSlateRosterModal({
-                                    slateId:
-                                      row.slate_id,
-                                    teamId:
-                                      row.team_id,
-                                    teamName:
-                                      row.teamName,
-                                    slateLabel:
-                                      latestSlate
-                                        ? slateDateLabel
-                                        : String(
-                                            row.slate_id,
-                                          ),
-                                  })
-                                }
-                                className="inline-flex min-w-14 items-center justify-end gap-1 rounded-full border border-emerald-600/50 bg-emerald-950/70 px-2.5 py-1 text-base font-black text-white transition hover:bg-emerald-900 sm:min-w-16 sm:px-3 sm:py-1.5 sm:text-lg"
-                              >
-                                {formatGolfScore(
-                                  row.fantasy_points,
-                                )}
-                                <span
-                                  className="text-emerald-300"
-                                  aria-hidden="true"
-                                >
-                                  ›
-                                </span>
-                              </button>
-                            </td>
-
-                            <td className="px-4 py-3 text-right">
-                              <span
-                                className={`inline-flex max-w-full items-center justify-end rounded-full px-2.5 py-1 text-xs font-bold ${
-                                  row.golf_status_label?.includes(
-                                    "complete",
-                                  ) ||
-                                  row.golf_status_label ===
-                                    "Finished"
-                                    ? "bg-slate-800 text-slate-300"
-                                    : row.golf_status_label?.includes(
-                                          "live",
-                                        )
-                                      ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30"
-                                      : "bg-slate-800 text-slate-300"
-                                }`}
-                              >
-                                {row.golf_status_label ?? "—"}
-                              </span>
-                            </td>
-                          </tr>
-                        ),
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                  ) : (
-                    <div className="overflow-hidden rounded-2xl border border-emerald-800/50 bg-slate-950">
-                      <div className="flex items-center justify-between border-b border-emerald-900/70 bg-emerald-950/70 px-4 py-3">
-                        <div>
-                          <h3 className="font-bold text-emerald-50">
-                            Tournament Leaderboard
-                          </h3>
-
-                          <p className="mt-0.5 text-xs text-emerald-300/70">
-                            Drafted golfers are highlighted
-                          </p>
-                        </div>
-
-                        <span className="text-xs font-semibold text-slate-400">
-                          Top {Math.min(
-                            tournamentLeaderboard.length,
-                            50,
-                          )}
-                        </span>
+                <div className="space-y-3">
+                  <p className="px-3 text-sm text-slate-300">
+                    {(() => {
+                      const own = latestSlateRows.find(row => row.team_id === groupContext?.team?.id);
+                      return own ? `Your score: ${formatGolfScore(own.fantasy_points)} · Place ${own.finish_position ?? "—"}` : "Your Group's fantasy tournament";
+                    })()}
+                  </p>
+                  <div className="divide-y divide-slate-800">
+                    {latestSlateRows.slice(0, 6).map(row => (
+                      <div key={row.team_id} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <span>{row.finish_position ?? "—"}. {row.teamName}</span>
+                        <strong>{formatGolfScore(row.fantasy_points)}</strong>
                       </div>
-
-                      {projectedCut ? (
-                        <div className="border-b border-amber-500/30 bg-amber-950/30 px-4 py-3">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-amber-300">
-                                {projectedCut.official
-                                  ? "Cut line"
-                                  : "Projected cut"}
-                              </span>
-
-                              <div className="mt-1 flex items-baseline gap-2">
-                                <strong className="text-2xl font-black text-white">
-                                  {projectedCut.display}
-                                </strong>
-
-                                <span className="text-xs font-semibold text-amber-200/80">
-                                  {projectedCut.ruleLabel}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="text-right text-[11px] leading-5 text-slate-300">
-                              <div>
-                                <strong className="text-white">
-                                  {projectedCut.inside}
-                                </strong>{" "}
-                                currently inside
-                              </div>
-                              <div>
-                                {projectedCut.tiedAtCut} tied at{" "}
-                                {projectedCut.display}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {tournamentLeaderboard.length ===
-                      0 ? (
-                        <div className="px-4 py-8 text-center text-sm text-slate-400">
-                          Tournament standings will
-                          appear after stats are refreshed.
-                        </div>
-                      ) : (
-                        <div className="max-h-[56dvh] overflow-y-auto">
-                          <div className="sm:hidden">
-                            <div className="sticky top-0 z-10 grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 bg-slate-900 px-3 py-2.5 text-xs font-bold uppercase tracking-wide text-slate-400">
-                              <span className="text-center">
-                                Pos
-                              </span>
-
-                              <span>Golfer</span>
-
-                              <span className="text-right">
-                                Score
-                              </span>
-                            </div>
-
-                            <div>
-                              {tournamentLeaderboard
-                                .slice(0, 50)
-                                .map((golfer) => (
-                                  <div
-                                    key={`mobile-tournament-${golfer.playerId}`}
-                                    className={`grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 border-t border-slate-800 px-3 py-2.5 ${
-                                      golfer.isDrafted
-                                        ? "bg-emerald-950/55"
-                                        : "bg-slate-900/70"
-                                    }`}
-                                  >
-                                    <div className="text-center text-sm font-bold text-slate-300">
-                                      {golfer.position ??
-                                        "—"}
-                                    </div>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setSelectedRosterPlayer(
-                                          {
-                                            id:
-                                              golfer.playerId,
-                                            name:
-                                              golfer.name,
-                                            position_group:
-                                              "GOLFER",
-                                            is_active:
-                                              true,
-                                            espn_player_id:
-                                              golfer.espnGolfPlayerId,
-                                            headshot_url:
-                                              golfer.headshotUrl,
-                                            country:
-                                              golfer.country,
-                                            owgr_rank:
-                                              golfer.owgrRank,
-                                          },
-                                        )
-                                      }
-                                      className="flex min-w-0 items-center gap-2 text-left"
-                                    >
-                                      <PlayerHeadshot
-                                        espnGolfPlayerId={
-                                          golfer.espnGolfPlayerId
-                                        }
-                                        imageUrl={
-                                          golfer.headshotUrl
-                                        }
-                                        playerName={
-                                          golfer.name
-                                        }
-                                        size="sm"
-                                      />
-
-                                      <span className="min-w-0 flex-1">
-                                        <span className="flex min-w-0 items-center gap-1">
-                                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">
-                                            {golfer.name}
-                                          </span>
-
-                                          {golfer.isDrafted ? (
-                                            <span
-                                              className="shrink-0 text-base text-emerald-300"
-                                              aria-label="Drafted golfer"
-                                              title="Drafted golfer"
-                                            >
-                                              ★
-                                            </span>
-                                          ) : null}
-                                        </span>
-
-                                        <span className="mt-0.5 block truncate text-[11px] text-slate-400">
-                                          {golfer.statusLabel}
-
-                                          {golfer.draftedBy
-                                            .length > 0
-                                            ? ` · ${golfer.draftedBy.join(
-                                                ", ",
-                                              )}`
-                                            : ""}
-                                        </span>
-                                      </span>
-                                    </button>
-
-                                    <div
-                                      className={`shrink-0 text-right text-lg font-black ${
-                                        golfer.isDrafted
-                                          ? "text-emerald-300"
-                                          : "text-white"
-                                      }`}
-                                    >
-                                      {formatGolfScore(
-                                        golfer.score,
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-
-                          <table className="hidden w-full table-fixed border-collapse text-sm sm:table">
-                            <colgroup>
-                              <col className="w-11" />
-                              <col />
-                              <col className="w-[5.25rem]" />
-                            </colgroup>
-
-                            <thead className="sticky top-0 z-10 bg-slate-900 text-xs uppercase tracking-wide text-slate-400">
-                              <tr>
-                                <th className="px-2 py-2.5 text-center">
-                                  Pos
-                                </th>
-
-                                <th className="px-2 py-2.5 text-left">
-                                  Golfer
-                                </th>
-
-                                <th className="px-3 py-2.5 text-right">
-                                  Score
-                                </th>
-                              </tr>
-                            </thead>
-
-                            <tbody>
-                              {tournamentLeaderboard
-                                .slice(0, 50)
-                                .map((golfer) => (
-                                  <tr
-                                    key={
-                                      golfer.playerId
-                                    }
-                                    className={`border-t border-slate-800 ${
-                                      golfer.isDrafted
-                                        ? "bg-emerald-950/55"
-                                        : "bg-slate-900/70"
-                                    }`}
-                                  >
-                                    <td className="px-2 py-2.5 text-center font-bold text-slate-300">
-                                      {golfer.position ??
-                                        "—"}
-                                    </td>
-
-                                    <td className="min-w-0 px-2 py-2.5">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setSelectedRosterPlayer(
-                                            {
-                                              id:
-                                                golfer.playerId,
-                                              name:
-                                                golfer.name,
-                                              position_group:
-                                                "GOLFER",
-                                              is_active:
-                                                true,
-                                              espn_player_id:
-                                                golfer.espnGolfPlayerId,
-                                              headshot_url:
-                                                golfer.headshotUrl,
-                                              country:
-                                                golfer.country,
-                                              owgr_rank:
-                                                golfer.owgrRank,
-                                            },
-                                          )
-                                        }
-                                        className="flex w-full min-w-0 items-center gap-2 text-left"
-                                      >
-                                        <PlayerHeadshot
-                                          espnGolfPlayerId={
-                                            golfer.espnGolfPlayerId
-                                          }
-                                          imageUrl={
-                                            golfer.headshotUrl
-                                          }
-                                          playerName={
-                                            golfer.name
-                                          }
-                                          size="sm"
-                                        />
-
-                                        <span className="min-w-0 flex-1">
-                                          <span className="flex min-w-0 items-center gap-1">
-                                            <span className="min-w-0 flex-1 truncate font-semibold text-white">
-                                              {golfer.name}
-                                            </span>
-
-                                            {golfer.isDrafted ? (
-                                              <span
-                                                className="shrink-0 text-emerald-300"
-                                                aria-label="Drafted golfer"
-                                                title="Drafted golfer"
-                                              >
-                                                ★
-                                              </span>
-                                            ) : null}
-                                          </span>
-
-                                          <span className="mt-0.5 block truncate text-[11px] text-slate-400">
-                                            {golfer.statusLabel}
-
-                                            {golfer.draftedBy
-                                              .length > 0
-                                              ? ` · ${golfer.draftedBy.join(
-                                                  ", ",
-                                                )}`
-                                              : ""}
-                                          </span>
-                                        </span>
-                                      </button>
-                                    </td>
-
-                                    <td className="px-3 py-2.5 text-right">
-                                      <span
-                                        className={`text-lg font-black ${
-                                          golfer.isDrafted
-                                            ? "text-emerald-300"
-                                            : "text-white"
-                                        }`}
-                                      >
-                                        {formatGolfScore(
-                                          golfer.score,
-                                        )}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    ))}
+                  </div>
+                  <div className="flex gap-4 px-3 pb-3 text-xs font-semibold text-emerald-300">
+                    <Link href="/lineups/scores?sport=golf">View Scores</Link>
+                    <Link href="/lineups/draft?sport=golf">Lineup</Link>
+                  </div>
                 </div>
               ) : (
                 <FantasyHomeStandings rows={latestSlateRows} onProfile={team => {

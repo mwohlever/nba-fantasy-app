@@ -1,6 +1,8 @@
 import { acceptGolfHole, golfScoreDisplay, summarizeGolfHoles, type HoleObservation } from "./holeAcceptance";
 import { calculateGolfPenaltyStrokes } from "../scoring/golf";
 import { calculateGolfTeamResults } from "./teamResults";
+import { calculateGolfCompetition } from './competition';
+import type { EligibleGolfRoster } from './eligibleRoster';
 
 // Database-shaped records keep this boundary independent of either provider's payload shape.
 export type GolfRecord = Record<string, any>;
@@ -17,6 +19,8 @@ export type GolfAcceptedState = {
   slateTeams: GolfRecord[];
   teams: GolfRecord[];
   penaltyPerRound: number;
+  rulesSnapshot?: Record<string, unknown> | null;
+  rosters?: EligibleGolfRoster[];
 };
 const terminal = new Set(["finished", "cut", "withdrawn", "disqualified", "did_not_start"]);
 const equal = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -195,8 +199,11 @@ export function reconcileGolfState(state: GolfAcceptedState, batch: GolfObservat
     roundNumber: r.round_number, holesCompleted: r.holes_completed, scoreToPar: r.score_to_par,
     holes: (r.golf_holes ?? []).map((h: GolfRecord) => ({ relativeToPar: h.relative_to_par })),
   })) }));
-  const teamRows = scoringChanged || !state.teams.length ? calculateGolfTeamResults(state.slateId, events, competitors, state.lineups, state.slateTeams) : state.teams;
-  const teamWrites = scoringChanged || !state.teams.length ? teamRows.filter(row => {
+  const teamRows = state.rosters ? calculateGolfCompetition({ slateId: state.slateId, snapshot: state.rulesSnapshot ?? null,
+    events: events as any, rosters: state.rosters, slateTeams: state.slateTeams, penaltyPerRound: state.penaltyPerRound,
+  }).map(({ contributions, provisional, ...row }) => row)
+    : scoringChanged || !state.teams.length ? calculateGolfTeamResults(state.slateId, events, competitors, state.lineups, state.slateTeams) : state.teams;
+  const teamWrites = state.rosters || scoringChanged || !state.teams.length ? teamRows.filter(row => {
     const existing = state.teams.find(t => Number(t.team_id) === row.team_id);
     return !existing || differs(existing, row);
   }) : [];

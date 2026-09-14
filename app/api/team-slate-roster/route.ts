@@ -7,7 +7,9 @@ import { getStatColumns } from "@/lib/statColumns";
 import {
   assignPlayersToRosterSlots,
   getRosterSlotsFromRulesSnapshot,
+  resolveGolfRules,
 } from "@/lib/rules/leagueRules";
+import { relevantGolfRosterPeriodKey } from "@/lib/golf/relevantRosterPeriod";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getActiveSlateAccessForUser,
@@ -170,7 +172,7 @@ export async function GET(
     } = await supabaseAdmin
       .from("slates")
       .select(
-        "sport, league_id",
+        "sport, league_id, rules_snapshot",
       )
       .eq(
         "id",
@@ -213,56 +215,66 @@ export async function GET(
         )
         .maybeSingle();
 
-    const {
-      data: lineup,
-      error: lineupError,
-    } = await supabaseAdmin
-      .from("lineups")
-      .select("id, slate_id, team_id")
-      .eq("slate_id", slateId)
-      .eq("team_id", teamId)
-      .maybeSingle();
+    let playerIds: number[] = [];
+    const golfRules = sport === "golf"
+      ? resolveGolfRules(slate?.rules_snapshot)
+      : null;
 
-    if (lineupError) {
-      return NextResponse.json(
-        { error: lineupError.message },
-        { status: 500 },
+    if (golfRules?.draft.type === "salary_cap") {
+      const { data: periods, error: periodsError } = await supabaseAdmin
+        .from("golf_roster_periods")
+        .select("id, period_key, opened_at, completed_at, started_rounds")
+        .eq("slate_id", slateId)
+        .order("id", { ascending: true });
+      if (periodsError) {
+        return NextResponse.json({ error: periodsError.message }, { status: 500 });
+      }
+
+      const periodKey = relevantGolfRosterPeriodKey(
+        slate?.rules_snapshot,
+        periods ?? [],
       );
+      const period = (periods ?? []).find((row) => row.period_key === periodKey);
+      const { data: salaryLineup, error: salaryLineupError } = period
+        ? await supabaseAdmin
+            .from("golf_salary_cap_lineups")
+            .select("golf_salary_cap_lineup_players(player_id)")
+            .eq("slate_id", slateId)
+            .eq("period_id", period.id)
+            .eq("team_id", teamId)
+            .maybeSingle()
+        : { data: null, error: null };
+      if (salaryLineupError) {
+        return NextResponse.json({ error: salaryLineupError.message }, { status: 500 });
+      }
+      playerIds = (salaryLineup?.golf_salary_cap_lineup_players ?? [])
+        .map((row: { player_id: number }) => Number(row.player_id));
+    } else {
+      const { data: lineup, error: lineupError } = await supabaseAdmin
+        .from("lineups")
+        .select("id, slate_id, team_id")
+        .eq("slate_id", slateId)
+        .eq("team_id", teamId)
+        .maybeSingle();
+      if (lineupError) {
+        return NextResponse.json({ error: lineupError.message }, { status: 500 });
+      }
+
+      if (lineup) {
+        const { data: lineupPlayers, error: lineupPlayersError } =
+          await supabaseAdmin
+            .from("lineup_players")
+            .select("player_id")
+            .eq("lineup_id", lineup.id);
+        if (lineupPlayersError) {
+          return NextResponse.json(
+            { error: lineupPlayersError.message },
+            { status: 500 },
+          );
+        }
+        playerIds = (lineupPlayers ?? []).map((row) => Number(row.player_id));
+      }
     }
-
-    if (!lineup) {
-      return NextResponse.json({
-        success: true,
-        team: team ?? null,
-        slateId,
-        sport,
-        statColumns,
-        roster: [],
-        total: 0,
-      });
-    }
-
-    const {
-      data: lineupPlayers,
-      error: lineupPlayersError,
-    } = await supabaseAdmin
-      .from("lineup_players")
-      .select("player_id")
-      .eq("lineup_id", lineup.id);
-
-    if (lineupPlayersError) {
-      return NextResponse.json(
-        {
-          error:
-            lineupPlayersError.message,
-        },
-        { status: 500 },
-      );
-    }
-
-    const playerIds = (
-      lineupPlayers ?? []
-    ).map((row) => Number(row.player_id));
 
     if (playerIds.length === 0) {
       return NextResponse.json({

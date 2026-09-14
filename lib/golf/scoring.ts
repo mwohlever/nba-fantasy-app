@@ -4,6 +4,7 @@ import { calculateGolfTeamResults } from './teamResults';
 import { scoreBestBall } from './bestBall';
 import { eligibleGolfPlayerIds } from './eligibleRoster';
 import type { EligibleGolfRoster, RegulationRound } from './eligibleRoster';
+import { standardGolfContributions } from './standardPeriods';
 
 /** Accepted reconciliation output ONLY. Provider observations must first reconcile. */
 export type AcceptedGolfEvent = {
@@ -21,9 +22,10 @@ export type GolfScoringInput = {
   acceptedEvents: readonly AcceptedGolfEvent[];
   rosters: readonly EligibleGolfRoster[];
   rosterPeriodType: GolfRosterPeriodType;
+  penaltyPerRound?: number;
 };
 
-/** Opt-in pure boundary. No production caller or persistence is introduced here. */
+/** Shared production boundary over accepted state and acquisition-independent rosters. */
 export function scoreGolfCompetition(input: GolfScoringInput & (
   | { gameType: 'standard'; slateTeams: Array<Record<string, unknown>> }
   | { gameType: 'best_ball'; rounds: readonly RegulationRound[] }
@@ -34,7 +36,22 @@ export function scoreGolfCompetition(input: GolfScoringInput & (
   }
   if (input.gameType !== 'standard') throw new Error('Unknown Golf game type');
   if (input.rosterPeriodType !== 'full_tournament') {
-    throw new Error('Standard split-period accounting is not implemented');
+    // Each period/player becomes a distinct scoring entry, with only its own
+    // regulation rounds. The existing aggregate ranking engine remains in use.
+    const events: Array<Record<string, any>> = [];
+    const competitors: Array<Record<string, any>> = [];
+    const lineups = input.rosters.map(roster => ({ team_id: roster.teamId,
+      lineup_players: standardGolfContributions(input.acceptedEvents, roster, input.rosterPeriodType, input.penaltyPerRound ?? 0).map(c => {
+        const id = events.length + 1;
+        const event = input.acceptedEvents.find(e => e.player_id === c.playerId);
+        events.push({ ...event, player_id: id, fantasy_score: c.score });
+        competitors.push({ playerId: id, scoringRounds: c.rounds.map(r => r.roundNumber), rounds: (event?.golf_rounds ?? []).filter(r => c.rounds.some(x => x.roundNumber === r.round_number))
+          .map(r => ({ roundNumber: r.round_number, holesCompleted: r.holes_completed, scoreToPar: r.score_to_par,
+            holes: (r.golf_holes ?? []).map(h => ({ relativeToPar: h.relative_to_par })) })) });
+        return { player_id: id };
+      }),
+    }));
+    return { gameType: 'standard' as const, teams: calculateGolfTeamResults(input.slateId, events, competitors, lineups, input.slateTeams) };
   }
   // Keep the accepted aggregate/penalties and complete ranking pipeline unchanged.
   const competitors = input.acceptedEvents.map(event => ({

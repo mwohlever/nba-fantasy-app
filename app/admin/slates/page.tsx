@@ -7,12 +7,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import GolfSalarySetup from '@/components/golf/GolfSalarySetup';
+import GolfPeriodSetup from '@/components/golf/GolfPeriodSetup';
 import { useSelectedSport } from "@/components/providers/SportProvider";
 
 type SportKey = "nba" | "nfl" | "golf";
 
 type SlateRulesSnapshot = {
   draft?: { type?: string };
+  rosterPeriods?: { type?: string };
   roster?: {
     slots?: Array<{
       position?: string;
@@ -184,7 +186,11 @@ export default function AdminSlatesPage() {
 
   const [slates, setSlates] = useState<SlateListRow[]>([]);
   const [selectedSlateId, setSelectedSlateId] =
-    useState<number | "">("");
+    useState<number | "">(() => {
+      if (typeof window === 'undefined') return '';
+      const id = Number(new URLSearchParams(window.location.search).get('slateId'));
+      return Number.isSafeInteger(id) && id > 0 ? id : '';
+    });
   const [selectedSlate, setSelectedSlate] =
     useState<SelectedSlateState | null>(null);
   const [teams, setTeams] = useState<SlateTeamRow[]>([]);
@@ -1106,6 +1112,12 @@ export default function AdminSlatesPage() {
                     })}
                   </div>
                 </div>
+              ) : null}
+
+              {selectedSlate.sport === 'golf' && selectedSlate.rules_snapshot?.rosterPeriods?.type === 'split_after_round_2' ? (
+                <GolfPeriodSetup key={`period-${selectedSlate.id}`} slateId={selectedSlate.id}
+                  salaryCap={selectedSlate.rules_snapshot?.draft?.type === 'salary_cap'} teams={teams}
+                  rosterSize={getSlateRosterSlots(selectedSlate).reduce((sum, slot) => sum + slot.slotCount, 0)} />
               ) : null}
 
               {selectedSlate.sport === 'golf' && selectedSlate.rules_snapshot?.draft?.type === 'salary_cap' ? (

@@ -50,15 +50,80 @@ test('error does not report success; stale Group A-B-A and unmount reject comple
     h.unmount();
   }
 });
-test('upcoming/locked Home preserves summary-only refresh; Golf never enables Home pull', async () => {
+test('upcoming/locked Home preserves summary-only refresh, including Golf', async () => {
   summary.latestSlate.is_locked = true;
   const {h,calls} = await setup('nfl');
   assert.equal((await context.pullOptions.onRefresh()).status,'success');
   assert.ok(!calls.some(url => url.startsWith('/api/refresh-stats')));
   h.unmount();
   const golf = await setup('golf');
-  assert.equal(context.pullOptions.enabled, false);
-  assert.ok(!nodes(golf.tree).some(n => n.type === Refresh)); golf.h.unmount(); summary.latestSlate.is_locked = false;
+  assert.equal(context.pullOptions.enabled, true);
+  assert.ok(nodes(golf.tree).some(n => n.type === Refresh));
+  assert.equal((await context.pullOptions.onRefresh()).status, 'success');
+  assert.ok(golf.calls.includes('/api/home-summary?sport=golf'));
+  assert.ok(!golf.calls.some(url => url.startsWith('/api/refresh-stats')));
+  golf.h.unmount(); summary.latestSlate.is_locked = false;
+});
+
+test('Golf Home keeps an upcoming slate visible before fantasy scoring rows exist', () => {
+  const source = require('node:fs').readFileSync('components/home/SportHomePage.tsx', 'utf8');
+  assert.match(source, /latestSlateRows\.length === 0 && isGolf && latestSlate/);
+  assert.match(source, /Fantasy scoring will appear when tournament results are available/);
+  assert.match(source, /View Lineup/);
+});
+
+test('Golf Home does not wait for optional player stats before resolving its slate', () => {
+  const source = require('node:fs').readFileSync('components/home/SportHomePage.tsx', 'utf8');
+  assert.match(source, /void \(async \(\) => \{/);
+  assert.match(source, /Failed to load Golf player stats/);
+});
+
+test('Golf Home renders an upcoming slate when optional scoring reads are unavailable', async () => {
+  const prior = { ...summary.latestSlate };
+  const priorDocument = global.document;
+  try {
+    global.document = { visibilityState: 'hidden', addEventListener() {}, removeEventListener() {} };
+    global.window = { ...global.window, setInterval, clearInterval };
+    summary.latestSlate = { id: 1, display_name: 'Biltmore Championship Asheville', date: '2026-09-17', start_date: '2026-09-17', end_date: '2026-09-20', first_game_start_time: null, is_locked: false };
+    const { h } = await setup('golf');
+    await tick();
+    const tree = h.render({});
+    assert.equal(nodes(tree).some(n => n.props?.children === 'Loading current slate...'), false);
+    assert.ok(nodes(tree).some(n => n.props?.children === 'Upcoming'));
+    h.unmount();
+  } finally {
+    summary.latestSlate = prior;
+    global.document = priorDocument;
+  }
+});
+
+test('Golf Home navigation render never starts a Golf stats refresh', async () => {
+  const prior = { ...summary.latestSlate };
+  const priorDocument = global.document;
+  const priorWindow = global.window;
+  try {
+    summary.latestSlate = { id: 1, display_name: 'Biltmore', date: '2026-09-17', first_game_start_time: '2020-01-01', is_locked: false };
+    global.document = { visibilityState: 'visible', addEventListener() {}, removeEventListener() {} };
+    global.window = { ...priorWindow, setInterval, clearInterval };
+    const { h, calls } = await setup('golf');
+    await tick();
+    h.render({}, true);
+    await tick();
+    assert.ok(!calls.some(url => String(url).includes('/api/golf/refresh-config')));
+    assert.ok(!calls.some(url => String(url).includes('/api/refresh-stats-golf')));
+    h.unmount();
+  } finally {
+    summary.latestSlate = prior;
+    global.document = priorDocument;
+    global.window = priorWindow;
+  }
+});
+
+test('a valid route sport prevents stale selectedSport from remounting Home through fallback navigation', () => {
+  const { shouldFallbackSportSelection } = require('../lib/groups/navigation.ts');
+  assert.equal(shouldFallbackSportSelection({ selectedSport: 'nba', routeSport: 'golf', enabledSports: ['golf'] }), false);
+  assert.equal(shouldFallbackSportSelection({ selectedSport: 'nba', routeSport: null, enabledSports: ['golf'] }), true);
+  assert.equal(shouldFallbackSportSelection({ selectedSport: 'golf', routeSport: 'golf', enabledSports: ['golf'] }), false);
 });
 
 test('Home options use shared top-only gesture: short, mid-page and disabled cancel; valid pull refreshes', async () => {

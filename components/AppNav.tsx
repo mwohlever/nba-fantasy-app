@@ -16,6 +16,7 @@ import {
   getSportConfig,
   sportKeyFromLeagueSportKey,
 } from "@/lib/sports";
+import { shouldFallbackSportSelection } from "@/lib/groups/navigation";
 import { getAdminMenuGroups } from "@/lib/adminMenu";
 
 type CurrentUser = {
@@ -161,7 +162,9 @@ function AppNavContent() {
       : null;
 
   const routeSport =
-    pathname.startsWith(
+    pathname.startsWith("/golf/")
+      ? "golf"
+      : pathname.startsWith(
       "/nba-skins",
     )
       ? "nba-skins"
@@ -272,15 +275,16 @@ function AppNavContent() {
    * the current URL contains ?sport=<old-group-sport>.
    */
   useEffect(() => {
+    // The URL is authoritative on shared routes. A persisted selectedSport
+    // may belong to another Group while ?sport=golf already names an enabled
+    // league; navigating to that same URL would remount the client tree.
     if (
       !groupContext ||
-      displayedSports.length ===
-        0 ||
-      displayedSports.some(
-        (sport) =>
-          sport.key ===
-          selectedSport,
-      )
+      !shouldFallbackSportSelection({
+        selectedSport,
+        routeSport,
+        enabledSports: displayedSports.map((sport) => sport.key),
+      })
     ) {
       return;
     }
@@ -333,6 +337,7 @@ function AppNavContent() {
     router,
     pathname,
     searchParams,
+    routeSport,
     isGroupHomeRoute,
   ]);
 
@@ -437,7 +442,15 @@ function AppNavContent() {
         ]
       : activeSport === "nfl"
         ? [...mainLinks, { href: "/live-scores", label: "Live", icon: "◫" }]
-        : mainLinks;
+        : activeSport === "golf"
+          ? [
+              { href: "/home", label: "Home", icon: "⌂" },
+              { href: "/lineups/draft", label: "Lineup", icon: "✎" },
+              { href: "/lineups/scores", label: "Scores", icon: "▦" },
+              { href: "/golf/live", label: "Live", icon: "◫" },
+              { href: "/standings", label: "Standings", icon: "▦" },
+            ]
+          : mainLinks;
 
   const sportScopedPaths = [
     "/live-scores",
@@ -474,6 +487,7 @@ function AppNavContent() {
     | "standings"
     | "draft"
     | "scores"
+    | "live"
     | "player-history"
     | "other";
 
@@ -509,6 +523,12 @@ function AppNavContent() {
       )
     ) {
       return "standings";
+    }
+
+    if (
+      pathname === "/golf/live"
+    ) {
+      return "live";
     }
 
     if (
@@ -618,6 +638,14 @@ function AppNavContent() {
       return "/ncaa-pickem";
     }
 
+
+    if (
+      section === "live"
+    ) {
+      if (sportKey === "golf") return "/golf/live";
+      if (sportKey === "nfl") return appendSportParam("/live-scores", "nfl");
+      return appendSportParam("/lineups/scores", sportKey);
+    }
 
     if (
       section ===
@@ -753,7 +781,7 @@ function AppNavContent() {
   }
 
   const moreIsActive =
-    pathname.startsWith("/standings") ||
+    (activeSport !== "golf" && pathname.startsWith("/standings")) ||
     pathname.startsWith("/player-history");
 
   const userMenuIsActive =
@@ -984,10 +1012,12 @@ function AppNavContent() {
     }`;
   }
 
-  const mobileMoreLinks = [
-    { href: "/standings", label: "Standings" },
-    { href: "/player-history", label: "Player History" },
-  ];
+  const mobileMoreLinks = activeSport === "golf"
+    ? [{ href: "/player-history", label: "Player History" }]
+    : [
+        { href: "/standings", label: "Standings" },
+        { href: "/player-history", label: "Player History" },
+      ];
 
   const mobileGroupControl = groupContext ? (
     displayedGroups.length > 1 ? (
@@ -1108,23 +1138,23 @@ function AppNavContent() {
 
             {!isGroupHomeRoute && !isNcaaPickEm && !isNbaSkins ? (
               <>
-                <Link
+                {activeSport !== "golf" ? <Link
                   href={getLinkHref(
                     "/standings",
                   )}
                   className={desktopLinkClass("/standings")}
                 >
                   Standings
-                </Link>
+                </Link> : null}
 
-                <Link
+                {activeSport !== "golf" ? <Link
                   href={getLinkHref(
                     "/player-history",
                   )}
                   className={desktopLinkClass("/player-history")}
                 >
                   Player History
-                </Link>
+                </Link> : null}
               </>
             ) : null}
           </div>
@@ -1299,6 +1329,16 @@ function AppNavContent() {
                     <div className="px-3 pb-1 pt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
                       Profile
                     </div>
+
+                    {activeSport === "golf" ? (
+                      <Link
+                        href={getLinkHref("/player-history")}
+                        onClick={() => setDesktopUserOpen(false)}
+                        className="block rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                      >
+                        Player History
+                      </Link>
+                    ) : null}
 
                     {displayedProfileLinks.map((link) => {
                       const isActive =
@@ -1526,7 +1566,7 @@ function AppNavContent() {
               ? "grid-cols-3"
               : isNbaSkins
                 ? "grid-cols-3"
-                : activeSport === "nfl" ? "grid-cols-5" : "grid-cols-4"
+                : activeSport === "nfl" || activeSport === "golf" ? "grid-cols-5" : "grid-cols-4"
           }`}
         >
           {displayedMainLinks.map((link) => (
@@ -1544,7 +1584,7 @@ function AppNavContent() {
             </Link>
           ))}
 
-          {!isNcaaPickEm && !isNbaSkins ? (
+          {!isNcaaPickEm && !isNbaSkins && activeSport !== "golf" ? (
             <button
               type="button"
               onClick={() => setMobileMoreOpen((open) => !open)}

@@ -3,10 +3,15 @@
 import AppNav from "@/components/AppNav";
 import TeamProfileModal from "@/components/TeamProfileModal";
 import TeamAvatar from "@/components/ui/TeamAvatar";
+import { useGroupContext } from "@/components/providers/GroupProvider";
+import { usePullToRefresh } from "@/lib/client/usePullToRefresh";
+import type { RefreshOutcome } from "@/lib/client/refreshOutcome";
+import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -319,11 +324,21 @@ export default function GolfStandingsPage() {
     direction: "best" | "worst";
   } | null>(null);
 
+  const { groupContext, isSwitchingGroup } = useGroupContext();
+  const surfaceRef = useRef<HTMLElement | null>(null);
+  const pendingRef = useRef(false);
+  const requestRef = useRef(0);
+  const groupRef = useRef(groupContext?.group.id);
+  groupRef.current = groupContext?.group.id;
   async function loadStandings(
     season?:
       | number
       | "all",
-  ) {
+  ): Promise<RefreshOutcome> {
+    if (pendingRef.current || isSwitchingGroup) return { status: "skipped" };
+    pendingRef.current = true;
+    const request = ++requestRef.current;
+    const group = groupRef.current;
     try {
       setIsLoading(true);
       setMessage("");
@@ -345,6 +360,7 @@ export default function GolfStandingsPage() {
 
       const result =
         (await response.json()) as GolfStandingsResponse;
+      if (request !== requestRef.current || group !== groupRef.current) return { status: "skipped" };
 
       if (
         !response.ok
@@ -354,7 +370,7 @@ export default function GolfStandingsPage() {
             "Unable to load Golf standings.",
         );
 
-        return;
+        return { status: "error", message: result.error || "Unable to load Golf standings." };
       }
 
       setStandings(
@@ -393,7 +409,9 @@ export default function GolfStandingsPage() {
             0,
         ),
       );
+      return { status: "success" };
     } catch (error) {
+      if (request !== requestRef.current) return { status: "skipped" };
       console.error(
         "Unable to load Golf standings",
         error,
@@ -402,14 +420,22 @@ export default function GolfStandingsPage() {
       setMessage(
         "Unable to load Golf standings.",
       );
+      return { status: "error", message: "Unable to load Golf standings." };
     } finally {
-      setIsLoading(false);
+      if (request === requestRef.current) { pendingRef.current = false; setIsLoading(false); }
     }
   }
 
   useEffect(() => {
+    setStandings([]);
+    setProfileTeam(null);
+    pendingRef.current = false;
     void loadStandings();
-  }, []);
+    return () => { requestRef.current += 1; };
+  }, [groupContext?.group.id, isSwitchingGroup]);
+  const pull = usePullToRefresh({ targetRef: surfaceRef, onRefresh: () => loadStandings(selectedSeason),
+    enabled: !isLoading && !isSwitchingGroup && !profileTeam, isRefreshing: isLoading,
+    scopeKey: `${groupContext?.group.id}:${selectedSeason}` });
 
   const seasonLeader =
     standings[0] ??
@@ -592,9 +618,10 @@ export default function GolfStandingsPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
+    <main ref={surfaceRef} className="min-h-screen bg-slate-950 px-3 py-5 pb-24 text-slate-100 sm:px-4 sm:py-6 sm:pb-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <AppNav />
+        <PullToRefreshIndicator pull={pull} feedback={isLoading ? "Refreshing…" : ""} />
 
         <section className="overflow-hidden rounded-3xl border border-emerald-800/60 bg-gradient-to-br from-emerald-950 via-slate-950 to-slate-950 shadow-sm">
           <div className="px-5 py-6 sm:px-6">

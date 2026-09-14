@@ -136,7 +136,9 @@ test('Standard adapter exactly delegates aggregate penalties/progress and rankin
  const expected=calculateGolfTeamResults(7,events,competitors,rosters.map(r=>({team_id:r.teamId,lineup_players:[{player_id:r.teamId}]})),slateTeams);
  const result=scoreGolfCompetition({slateId:7,gameType:'standard',acceptedEvents:events,rosters,rosterPeriodType:'full_tournament',slateTeams});
  assert.deepEqual(result.teams,expected);assert.equal(result.teams[0].team_id,2);assert.equal(result.teams[0].fantasy_points,19);
- assert.throws(()=>scoreGolfCompetition({slateId:7,gameType:'standard',acceptedEvents:events,rosters,rosterPeriodType:'split_after_round_2',slateTeams}),/not implemented/);
+ const splitRosters=rosters.map(r=>({teamId:r.teamId,periods:[{period:'opening',playerIds:[r.teamId]},{period:'weekend',playerIds:[]}]}));
+ const split=scoreGolfCompetition({slateId:7,gameType:'standard',acceptedEvents:events,rosters:splitRosters,rosterPeriodType:'split_after_round_2',slateTeams,penaltyPerRound:10});
+ assert.equal(split.gameType,'standard');assert.equal(split.teams.length,2);
 });
 
 test('reconciled event graph, not a rejected batch, supplies the reducer',()=>{

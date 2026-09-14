@@ -1,3 +1,26 @@
+import { resolveGolfRules } from "../rules/leagueRules";
+
+/** Read acquisition limits from this slate only; never recalculate a frozen cap. */
+export function getGolfSalaryCapRules(snapshot: unknown) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+  const raw = snapshot as Record<string, unknown>;
+  const draft = raw.draft as Record<string, unknown> | null;
+  const roster = raw.roster as { slots?: Array<{ position?: unknown; slotCount?: unknown }> } | null;
+  const slots = roster?.slots;
+  if (draft?.type !== "salary_cap" || !Array.isArray(slots) || slots.length !== 1 ||
+    slots[0]?.position !== "GOLFER" || typeof slots[0].slotCount !== "number" ||
+    !Number.isSafeInteger(slots[0].slotCount) || slots[0].slotCount < 1 || slots[0].slotCount > 50 ||
+    typeof draft.salaryCap !== "number" || !Number.isSafeInteger(draft.salaryCap) || draft.salaryCap < 1) return null;
+
+  const rules = resolveGolfRules(raw);
+  if (rules.draft.type !== "salary_cap") return null;
+  return {
+    rosterSize: rules.roster.slots[0].slotCount,
+    budget: rules.draft.salaryCap,
+    periodType: rules.rosterPeriods.type,
+  };
+}
+
 /**
  * Salary Cap acquisition only. These helpers deliberately know nothing about
  * Golf scoring, draft order, or how a period became available.

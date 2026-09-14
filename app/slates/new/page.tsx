@@ -8,8 +8,15 @@ import {
   resolveCreateSlateSport,
 } from "@/lib/slates/createSlateSport";
 import { getSportConfig } from "@/lib/sports";
+import type {
+  GolfDraftType,
+  GolfGameType,
+  GolfRosterPeriodType,
+  GolfRules,
+} from "@/lib/rules/leagueRules";
 
 import AppNav from "@/components/AppNav";
+import GolfGameSetup from "@/components/golf/GolfGameSetup";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -52,6 +59,7 @@ type SetupResponse = {
     is_participating: boolean;
   }>;
   suggestedRosterSlots?: RosterSlotConfig[];
+  suggestedGolfRules?: GolfRules;
 };
 
 type GolfTournament = {
@@ -134,8 +142,14 @@ export default function NewSlatePage() {
   );
   const [golfTournaments, setGolfTournaments] = useState<GolfTournament[]>([]);
   const [selectedGolfEventId, setSelectedGolfEventId] = useState("");
-  const [cutPenaltyPerRound, setCutPenaltyPerRound] = useState(5);
+  const [cutPenaltyPerRound, setCutPenaltyPerRound] = useState(1);
   const [hasCut, setHasCut] = useState(true);
+  const [golfGameType, setGolfGameType] =
+    useState<GolfGameType>("standard");
+  const [golfDraftType, setGolfDraftType] =
+    useState<GolfDraftType>("snake");
+  const [golfRosterPeriodType, setGolfRosterPeriodType] =
+    useState<GolfRosterPeriodType>("full_tournament");
   const [isLoadingGolfSchedule, setIsLoadingGolfSchedule] = useState(false);
 
   useEffect(() => {
@@ -211,6 +225,14 @@ setTeams(
       setRosterSlots(
         safeResult.suggestedRosterSlots ?? [],
       );
+
+      if (targetSport === "golf" && safeResult.suggestedGolfRules) {
+        const suggestedGolfRules = safeResult.suggestedGolfRules;
+        setGolfGameType(suggestedGolfRules.gameType);
+        setGolfDraftType(suggestedGolfRules.draft.type);
+        setGolfRosterPeriodType(suggestedGolfRules.rosterPeriods.type);
+
+      }
 
       const previousSlate =
         safeResult.previousCompletedSlate ??
@@ -684,6 +706,17 @@ setTeams(
             sport === "golf"
               ? hasCut
               : undefined,
+          golfRules:
+            sport === "golf"
+              ? {
+                  gameType: golfGameType,
+                  draft:
+                    golfDraftType === "salary_cap"
+                      ? { type: "salary_cap" }
+                      : { type: "snake" },
+                  rosterPeriods: { type: golfRosterPeriodType },
+                }
+              : undefined,
           rosterSlots:
             sport === "nba"
               ? ["G", "F/C", "UTIL"].map(
@@ -749,6 +782,16 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
             "The Golf slate was created, but its slate ID was not returned. Open Manage Slates to refresh the tournament field."
           );
           return;
+        }
+
+        if (golfRosterPeriodType === 'split_after_round_2' && golfDraftType === 'snake') {
+          const initialized = await fetch('/api/admin/golf/period-rosters', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slateId, action: 'initialize' }) });
+          if (!initialized.ok) {
+            const failure = await initialized.json();
+            setMessage(`Slate created. Period setup needs attention in Manage Slates: ${failure.error}`);
+            return;
+          }
         }
 
         setMessage(
@@ -865,7 +908,9 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
         }
 
         router.push(
-          `/lineups/draft?sport=golf&slateId=${slateId}`,
+          (result.slate?.rules_snapshot?.draft?.type ?? golfDraftType) === 'salary_cap'
+            ? `/admin/slates?sport=golf&slateId=${slateId}`
+            : `/lineups/draft?sport=golf&slateId=${slateId}`,
         );
         router.refresh();
       } else {
@@ -881,11 +926,20 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900">
+    <main className={sport === 'golf' ? 'golf-create-form min-h-screen bg-slate-50 px-3 py-4 text-slate-900' : 'min-h-screen bg-slate-50 px-4 py-6 text-slate-900'}>
+      {sport === 'golf' ? <style>{`
+        .golf-create-form form { gap: .75rem; }
+        .golf-create-form form > * + * { margin-top: .75rem; }
+        .golf-create-form input:not([type=checkbox]):not([type=radio]), .golf-create-form select { min-height: 36px; padding: .375rem .5rem; font-size: .8125rem; border-radius: .5rem; }
+        .golf-create-form h1 { font-size: 1.25rem; }
+        .golf-create-form h2 { font-size: .875rem; }
+        .golf-create-form label { font-size: .75rem; }
+        .golf-create-form form td { padding-top: .375rem; padding-bottom: .375rem; }
+      `}</style> : null}
       <div className="mx-auto max-w-4xl space-y-6">
         <AppNav />
 
-        <section className="rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm">
+        <section className={sport === 'golf' ? 'border-b border-slate-200 pb-3' : 'rounded-3xl border border-slate-200 bg-white px-5 py-6 shadow-sm'}>
           <h1 className="text-3xl font-bold tracking-tight">
             Create New {getSportConfig(sport).label} Slate
           </h1>
@@ -900,11 +954,11 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
           ) : null}
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className={sport === 'golf' ? 'bg-white p-3' : 'rounded-3xl border border-slate-200 bg-white p-5 shadow-sm'}>
           <form onSubmit={handleSubmit} className="space-y-6">
             {sport === "golf" ? (
-              <div className="space-y-5">
-                <div className="grid gap-5 md:grid-cols-[180px_1fr]">
+              <div className="space-y-3">
+                <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-2">
                   <div>
                     <label
                       htmlFor="golf-year"
@@ -959,7 +1013,7 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                   </div>
                 </div>
 
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2">
                   <div>
                     <label
                       htmlFor="golf-cut-penalty"
@@ -986,7 +1040,7 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                       twice this amount.
                     </p>
 
-                    <label className="mt-4 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-medium text-slate-800">
+                    <label className="mt-2 flex min-h-9 items-center gap-2 text-xs font-medium text-slate-800">
                       <input
                         type="checkbox"
                         checked={hasCut}
@@ -1002,7 +1056,7 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="py-2 text-sm">
                     <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Tournament Dates
                     </div>
@@ -1017,6 +1071,16 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                     </div>
                   </div>
                 </div>
+
+                <GolfGameSetup
+                  gameType={golfGameType}
+                  draftType={golfDraftType}
+                  rosterPeriodType={golfRosterPeriodType}
+                  rosterSize={getRosterSlotCount("GOLFER")}
+                  onGameType={setGolfGameType}
+                  onDraftType={setGolfDraftType}
+                  onRosterPeriodType={setGolfRosterPeriodType}
+                />
               </div>
             ) : sport === "nfl" ? (
               <div className="space-y-3">
@@ -1111,9 +1175,15 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
               </>
             )}
 
-            {sport === "nba" ||
-            sport === "nfl" ||
-            sport === "golf" ? (
+            {Boolean(sport === 'golf') ? (
+              <div className="flex flex-wrap items-center gap-3 border-y border-slate-200 py-2">
+                <label className="flex items-center gap-2 font-semibold">Roster Size
+                  <input type="number" min={1} max={50} step={1} value={getRosterSlotCount('GOLFER')}
+                    onChange={event => setRosterSlotCount('GOLFER', Number(event.target.value))} className="w-16 rounded border border-slate-300" />
+                </label>
+                {golfDraftType === 'salary_cap' ? <span className="text-xs font-semibold text-emerald-700">Salary Cap ${getRosterSlotCount('GOLFER') * 25}</span> : null}
+              </div>
+            ) : Boolean(sport === "nba" || sport === "nfl") ? (
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
                 <div>
                   <h2 className="text-lg font-semibold text-slate-900">
@@ -1185,7 +1255,7 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                               ),
                             )
                           }
-                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-300"
+                          className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-sky-300 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         />
                       </label>
                     ),
@@ -1217,16 +1287,35 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                     0,
                   )}
                 </div>
+
+                {sport === "golf" && golfDraftType === "salary_cap" ? (
+                  <p className="mt-2 text-xs text-emerald-700">
+                    Salary Cap: ${getRosterSlotCount("GOLFER") * 25} · $25 per roster spot
+                  </p>
+                ) : null}
               </div>
             ) : null}
 
-            <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4">
+            <div className={sport === 'golf' ? 'border-b border-slate-200 py-2' : 'rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4'}>
               <div className="text-xs uppercase tracking-wide text-orange-700">
                 Slate Name Preview
               </div>
               <div className="mt-1 text-lg font-semibold text-slate-900">
                 {previewLabel}
               </div>
+              {sport === "golf" ? (
+                <div className="mt-2 text-xs font-medium text-slate-600">
+                  {golfGameType === "best_ball" ? "Best Ball" : "Standard"}
+                  {" · "}
+                  {golfDraftType === "salary_cap" ? `Salary Cap · $${getRosterSlotCount("GOLFER") * 25}` : "Snake Draft"}
+                  {" · "}
+                  {golfRosterPeriodType === "split_after_round_2"
+                    ? "Split After Round 2"
+                    : "Full Tournament"}
+                  {" · "}
+                  {getRosterSlotCount("GOLFER")} golfers
+                </div>
+              ) : null}
             </div>
 
             <div>
@@ -1243,7 +1332,7 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                   Loading teams...
                 </div>
               ) : (
-                <div className="grid gap-3">
+                <div className={sport === 'golf' ? 'grid gap-1' : 'grid gap-3'}>
                   {orderedTeams.map((team, index) => {
                     const sameSectionTeams = team.is_participating
                       ? orderedTeams.filter((item) => item.is_participating)
@@ -1256,7 +1345,7 @@ teamSelections: normalizeDraftOrder(teams).map((team) => ({
                     return (
                       <div
                         key={team.id}
-                        className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+                        className={`flex items-center justify-between ${sport === 'golf' ? 'gap-2 border-b px-1 py-1.5' : 'rounded-2xl border px-4 py-3'} ${
                           team.is_participating
                             ? "border-slate-200 bg-white"
                             : "border-slate-200 bg-slate-50"

@@ -2,6 +2,8 @@ import { shotcastObservation } from "@/lib/golf/holeAcceptance";
 import type { GolfObservationBatch } from "@/lib/golf/reconcileState";
 import { fetchGolfRoundScorecard } from "@/lib/providers/pgaTourShots";
 import { reconcileGolf } from "@/lib/golf/reconcileGolf";
+import { loadGolfRosters } from '@/lib/golf/fantasy.server';
+import { relevantGolfRosterPeriodKey } from '@/lib/golf/relevantRosterPeriod';
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
@@ -690,6 +692,7 @@ export async function POST(request: Request) {
           "is_locked",
           "cut_penalty_per_round",
           "has_cut",
+          "rules_snapshot",
         ].join(","),
       )
       .eq("id", slateId)
@@ -2257,30 +2260,19 @@ export async function POST(request: Request) {
       });
     });
 
-    const { data: lineupsData, error: lineupsError } =
-      await supabaseAdmin
-        .from("lineups")
-        .select(
-          `
-          id,
-          team_id,
-          lineup_players (
-            player_id
-          )
-        `,
-        )
-        .eq("slate_id", slateId);
-
-    if (lineupsError) {
-      return NextResponse.json(
-        {
-          error:
-            "Golf data was refreshed, but fantasy lineups could not be loaded: " +
-            lineupsError.message,
-        },
-        { status: 500 },
-      );
-    }
+    const { data: rosterTeams, error: rosterTeamError } = await supabaseAdmin.from('slate_teams')
+      .select('team_id').eq('slate_id', slateId).eq('is_participating', true);
+    if (rosterTeamError) throw new Error(rosterTeamError.message);
+    const snapshot = (slateData as any).rules_snapshot ?? null;
+    const rosters = await loadGolfRosters(slateId, snapshot, (rosterTeams ?? []).map(t => Number(t.team_id)));
+    const { data: periods, error: periodError } = await supabaseAdmin.from('golf_roster_periods')
+      .select('period_key, opened_at, completed_at, started_rounds').eq('slate_id', slateId);
+    if (periodError) throw new Error(periodError.message);
+    const activePeriod = relevantGolfRosterPeriodKey(snapshot, periods ?? []);
+    const lineupsData = rosters.map(roster => ({
+      team_id: roster.teamId,
+      lineup_players: (roster.periods.find(p => p.period === activePeriod)?.playerIds ?? []).map(player_id => ({ player_id })),
+    }));
 
     // Supplement only drafted golfers' live round during the existing Refresh.
     // No timer, field-wide scan, historical backfill, or per-hole replay requests.
