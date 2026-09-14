@@ -7,7 +7,7 @@ export type EspnPlayer = { id?: string; type?: string; order?: number; score?: s
 export type EspnEvent = { id?: string; name?: string; date?: string; endDate?: string; status?: { type?: { completed?: boolean; name?: string } }; competitions?: { status?: { period?: number; type?: { completed?: boolean } }; competitors?: EspnPlayer[] }[] };
 export type GolfValueScoreboard = { events?: EspnEvent[] };
 export type GolfEspnDiagnosticReason = 'accepted' | 'target_excluded' | 'future_excluded' | 'other_season' | 'canceled_or_incomplete' | 'unsupported_team_format' | 'missing_competitors' | 'unsupported_round_structure' | 'insufficient_valid_round_cards' | 'invalid_event_identity';
-export type GolfEspnEventDiagnostic = { eventId: string | null; name: string | null; reason: GolfEspnDiagnosticReason; detail?: string };
+export type GolfEspnEventDiagnostic = { eventId: string | null; name: string | null; reason: GolfEspnDiagnosticReason; detail?: string; completed?: boolean };
 export type GolfEspnPlayerDiagnostic = { espnPlayerId: string | null; name: string | null; reason: 'unresolved_player_status' | 'malformed_or_incomplete_player_card' };
 
 const toPar = (s?: string) => s === 'E' ? 0 : s && /^[+-]?\d+$/.test(s) ? Number(s) : null;

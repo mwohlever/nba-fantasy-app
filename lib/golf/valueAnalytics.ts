@@ -6,52 +6,91 @@ export const GOLF_VALUE_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export const golfAnalyticsHash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 export type GolfAnalyticsIdentity = { id: number; espn_player_id: string; display_name: string };
+export const GOLF_ANALYTICS_PROVIDER = 'espn_pga' as const;
+export type GolfAnalyticsProviderEvent = {
+  eventId: string; name: string; startsAt: string; endsAt: string; sourceHash: string;
+  rawEvent?: unknown; diagnostic: GolfEspnEventDiagnostic;
+  observations: Array<{ providerPlayerId: string; name: string; history: GolfValueHistory; diagnostics: string[] }>;
+};
+export type GolfAnalyticsProviderPlan = {
+  provider: typeof GOLF_ANALYTICS_PROVIDER; season: number; sourceHash: string; sourceBytes: number;
+  normalizationVersion: string; eventIds: string[]; diagnostics: GolfEspnEventDiagnostic[];
+  events: GolfAnalyticsProviderEvent[];
+};
 export type GolfEventPlan = {
   eventId: string; name: string; startsAt: string; endsAt: string; sourceHash: string; normalizedHash: string;
-  rawEvent: unknown; diagnostic: GolfEspnEventDiagnostic;
+  rawEvent?: unknown; diagnostic: GolfEspnEventDiagnostic;
   observations: Array<{ providerPlayerId: string; playerId: number | null; name: string; history: GolfValueHistory; diagnostics: string[] }>;
 };
 
-/** Deterministic plan: identical provider data and identity mapping produce one version. */
-export function planGolfSeasonIngestion(payload: GolfValueScoreboard & { season?: { year?: number }; leagues?: Array<{ calendar?: Array<{ id?: string }> }> }, season: number, identities: readonly GolfAnalyticsIdentity[]) {
+/** Shared, canonical-provider normalization. It is safe for the GitHub worker: no database or environment access. */
+export function buildGolfAnalyticsProviderPlan(payload: GolfValueScoreboard & { season?: { year?: number }; leagues?: Array<{ calendar?: Array<{ id?: string }> }> }, season: number): GolfAnalyticsProviderPlan {
   if (payload.season?.year !== season || !Array.isArray(payload.events)) throw new Error('ESPN Golf season payload mismatch');
   const calendarIds = payload.leagues?.[0]?.calendar?.map(event => event.id).filter((id): id is string => Boolean(id)) ?? [];
   const responseIds = payload.events.map(event => event.id).filter((id): id is string => Boolean(id));
   if (!calendarIds.length || calendarIds.length !== responseIds.length ||
       calendarIds.some(id => !responseIds.includes(id))) throw new Error('ESPN Golf season calendar/event coverage mismatch');
-  if (new Set(identities.map(player => player.espn_player_id)).size !== identities.length ||
-      new Set(identities.map(player => player.id)).size !== identities.length)
-    throw new Error('Ambiguous canonical ESPN Golf identity mapping');
-  const byEspnId = new Map(identities.map(player => [player.espn_player_id, player.id]));
   const seen = new Set<string>();
   const diagnostics: GolfEspnEventDiagnostic[] = [];
-  const unresolved = new Map<string, string>();
-  const events: GolfEventPlan[] = [];
+  const events: GolfAnalyticsProviderEvent[] = [];
   for (const event of payload.events) {
     if (!event.id || seen.has(event.id)) throw new Error('Missing or duplicate ESPN Golf event ID');
     seen.add(event.id);
     const normalized = normalizeEspnGolfValueEvent(event);
-    diagnostics.push(normalized.diagnostic);
+    const completed = Boolean(event.status?.type?.completed || event.competitions?.[0]?.status?.type?.completed);
+    const diagnostic = { ...normalized.diagnostic, completed };
+    diagnostics.push(diagnostic);
     // Retain versioned raw evidence for completed events only. Future/canceled
     // schedule entries remain in the lightweight season refresh manifest.
-    if (!(event.status?.type?.completed || event.competitions?.[0]?.status?.type?.completed)) continue;
+    if (!completed) continue;
     if (!event.date || !event.endDate || !Number.isFinite(Date.parse(event.date)) || !Number.isFinite(Date.parse(event.endDate))) throw new Error(`Completed Golf event ${event.id} lacks dates`);
-    const observations = normalized.players.map(player => {
-      const playerId = byEspnId.get(player.espnPlayerId) ?? null;
-      if (playerId === null) unresolved.set(player.espnPlayerId, player.name);
-      return { providerPlayerId: player.espnPlayerId, playerId, name: player.name, history: player.history,
-        diagnostics: player.diagnostics.map(diagnostic => diagnostic.reason) };
-    });
+    const observations = normalized.players.map(player => ({ providerPlayerId: player.espnPlayerId, name: player.name,
+      history: player.history, diagnostics: player.diagnostics.map(diagnostic => diagnostic.reason) }));
     const sourceHash = golfAnalyticsHash(event);
-    const normalizedHash = golfAnalyticsHash({ version: GOLF_ESPN_HISTORY_VERSION, diagnostic: normalized.diagnostic, observations });
     events.push({ eventId: event.id, name: event.name ?? event.id, startsAt: event.date, endsAt: event.endDate,
-      sourceHash, normalizedHash, rawEvent: event, diagnostic: normalized.diagnostic, observations });
+      sourceHash, rawEvent: event, diagnostic, observations });
   }
   if (!events.length) throw new Error('ESPN Golf season has no completed event evidence');
-  return { season, sourceHash: golfAnalyticsHash(payload), sourceBytes: Buffer.byteLength(JSON.stringify(payload)),
-    normalizedHash: golfAnalyticsHash(events.map(event => [event.eventId, event.sourceHash, event.normalizedHash])),
-    normalizationVersion: GOLF_ESPN_HISTORY_VERSION, eventIds: [...seen], diagnostics, events,
+  return { provider: GOLF_ANALYTICS_PROVIDER, season, sourceHash: golfAnalyticsHash(payload), sourceBytes: Buffer.byteLength(JSON.stringify(payload)),
+    normalizationVersion: GOLF_ESPN_HISTORY_VERSION, eventIds: [...seen], diagnostics, events };
+}
+
+/** Server-side canonical identity binding. A changed resolution deliberately changes the normalized version. */
+export function bindGolfAnalyticsProviderPlan(providerPlan: GolfAnalyticsProviderPlan, identities: readonly GolfAnalyticsIdentity[]) {
+  if (providerPlan.provider !== GOLF_ANALYTICS_PROVIDER || !Number.isInteger(providerPlan.season) || !providerPlan.events.length) {
+    throw new Error('Invalid Golf analytics provider plan');
+  }
+  if (new Set(identities.map(player => player.espn_player_id)).size !== identities.length ||
+      new Set(identities.map(player => player.id)).size !== identities.length)
+    throw new Error('Ambiguous canonical ESPN Golf identity mapping');
+  const byEspnId = new Map(identities.map(player => [player.espn_player_id, player.id]));
+  const unresolved = new Map<string, string>();
+  const events: GolfEventPlan[] = providerPlan.events.map(event => {
+    const observations = event.observations.map(player => {
+      const playerId = byEspnId.get(player.providerPlayerId) ?? null;
+      if (playerId === null) unresolved.set(player.providerPlayerId, player.name);
+      return { ...player, playerId };
+    });
+    return { ...event, observations, normalizedHash: golfAnalyticsHash({ version: providerPlan.normalizationVersion,
+      diagnostic: event.diagnostic, observations }) };
+  });
+  const normalizedHash = golfAnalyticsHash(events.map(event => [event.eventId, event.sourceHash, event.normalizedHash])
+    .sort((left, right) => left[0].localeCompare(right[0])));
+  return { ...providerPlan, normalizedHash, events,
     unresolved: [...unresolved].map(([espnPlayerId, name]) => ({ espnPlayerId, name })) };
+}
+
+/** Deterministic convenience wrapper for local/server paths that already own the full provider payload. */
+export function planGolfSeasonIngestion(payload: GolfValueScoreboard & { season?: { year?: number }; leagues?: Array<{ calendar?: Array<{ id?: string }> }> }, season: number, identities: readonly GolfAnalyticsIdentity[]) {
+  return bindGolfAnalyticsProviderPlan(buildGolfAnalyticsProviderPlan(payload, season), identities);
+}
+
+/** Bounded begin payload. Raw event snapshots are sent one event at a time afterwards. */
+export function golfAnalyticsBeginPayload(plan: GolfAnalyticsProviderPlan) {
+  return { provider: plan.provider, season: plan.season, sourceHash: plan.sourceHash, sourceBytes: plan.sourceBytes,
+    normalizationVersion: plan.normalizationVersion, eventIds: plan.eventIds, diagnostics: plan.diagnostics,
+    events: plan.events.map(event => ({ eventId: event.eventId, name: event.name, startsAt: event.startsAt, endsAt: event.endsAt,
+      sourceHash: event.sourceHash, diagnostic: event.diagnostic, observations: event.observations })) };
 }
 
 /** Small operator response; the raw provider payload and player cards stay server-side. */

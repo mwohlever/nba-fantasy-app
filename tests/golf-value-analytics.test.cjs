@@ -16,7 +16,7 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 const { golfValueInputsFromEspn, normalizeEspnGolfValueEvent } = require('../lib/golf/valueEspn.ts');
 const { buildGolfValues } = require('../lib/golf/valueModel.ts');
 const { planGolfSeasonIngestion, selectGolfAnalyticsHistories, buildGolfBoardInputManifest, preserveGolfOwgrInput,
-  summarizeGolfAnalyticsRefresh } = require('../lib/golf/valueAnalytics.ts');
+  summarizeGolfAnalyticsRefresh, buildGolfAnalyticsProviderPlan, bindGolfAnalyticsProviderPlan, golfAnalyticsBeginPayload } = require('../lib/golf/valueAnalytics.ts');
 const { fetchGolfSeasonScoreboardPayload } = require('../lib/providers/golf.ts');
 
 const round = period => ({ period, value: 72, displayValue: 'E', linescores: Array.from({ length: 18 }, (_, i) => ({ period: i + 1, value: 4 })) });
@@ -52,15 +52,25 @@ test('analytics season transport fetches ESPN directly and consumes JSON inside 
   }
 });
 
-test('provider failure is actionable before refresh can write ready evidence', async () => {
+test('legacy direct provider helper remains local-only and reports provider failures', async () => {
   await assert.rejects(fetchGolfSeasonScoreboardPayload(2026, async () => new Response('Denied', { status: 403 })), /direct fetch returned HTTP 403/);
   await assert.rejects(fetchGolfSeasonScoreboardPayload(2026, async () => { throw new Error('network unavailable'); }), /direct fetch failed: network unavailable/);
-  const server = fs.readFileSync(path.join(root, 'lib/golf/valueAnalytics.server.ts'), 'utf8');
-  const fetchAt = server.indexOf('const payload = await fetchGolfSeasonScoreboardPayload');
-  assert.ok(fetchAt >= 0 && fetchAt < server.indexOf("db.from('golf_players')"));
 });
 
-test('analytics refresh returns a compact summary, never the raw season payload', () => {
+test('GitHub begin payload shares provider normalization but excludes all raw ESPN events', () => {
+  const providerPlan = buildGolfAnalyticsProviderPlan(payload([prior()]), 2026);
+  const begin = golfAnalyticsBeginPayload(providerPlan);
+  assert.equal(begin.provider, 'espn_pga');
+  assert.equal(begin.events.length, 1);
+  assert.ok(!('rawEvent' in begin.events[0]));
+  assert.ok(Buffer.byteLength(JSON.stringify(begin)) < Buffer.byteLength(JSON.stringify(providerPlan.events[0].rawEvent)));
+  const bound = bindGolfAnalyticsProviderPlan(providerPlan, [{ id: 1001, espn_player_id: '1', display_name: 'Player 1' }]);
+  assert.equal(bound.events[0].observations[0].playerId, 1001);
+  assert.equal(bound.events[0].observations[1].playerId, null);
+  assert.ok(bound.unresolved.some(player => player.espnPlayerId === '2'));
+});
+
+test('analytics summaries and protected ingest boundary remain compact and never fetch ESPN from Vercel', () => {
   const plan = planGolfSeasonIngestion(payload([prior()]), 2026, [{ id: 1001, espn_player_id: '1', display_name: 'Player 1' }]);
   const summary = summarizeGolfAnalyticsRefresh(plan, 42, false);
   assert.equal(summary.status, 'ready');
@@ -71,12 +81,14 @@ test('analytics refresh returns a compact summary, never the raw season payload'
   assert.equal(summary.sourceHash, plan.sourceHash);
   assert.ok(Buffer.byteLength(JSON.stringify(summary)) < 1500);
   assert.ok(!('events' in summary) && !('rawEvent' in summary) && !('diagnostics' in summary));
-  const route = fs.readFileSync(path.join(root, 'app/api/admin/golf/analytics-refresh/route.ts'), 'utf8');
-  assert.match(route, /export const runtime = 'nodejs'/);
-  const probe = route.split('export async function GET')[1].split('export async function POST')[0];
-  assert.match(probe, /fetchGolfSeasonScoreboardPayload\(season\)/);
-  assert.doesNotMatch(probe, /supabase|\.from\(|\.rpc\(|refreshGolfAnalyticsSeason/);
-  assert.doesNotMatch(probe, /NextResponse\.json\(payload/);
+  const retired = fs.readFileSync(path.join(root, 'app/api/admin/golf/analytics-refresh/route.ts'), 'utf8');
+  assert.match(retired, /status: 410/);
+  assert.doesNotMatch(retired, /fetchGolfSeasonScoreboardPayload|refreshGolfAnalyticsSeason/);
+  const ingestRoute = fs.readFileSync(path.join(root, 'app/api/internal/golf/analytics-ingest/route.ts'), 'utf8');
+  assert.match(ingestRoute, /GOLF_ANALYTICS_INGEST_SECRET/);
+  assert.match(ingestRoute, /MAX_REQUEST_BYTES = 2_000_000/);
+  assert.match(ingestRoute, /timingSafeEqual/);
+  assert.doesNotMatch(ingestRoute, /fetchGolfSeasonScoreboardPayload/);
 });
 
 test('ordinary four-round and sudden-death period-5 events retain regulation history only', () => {

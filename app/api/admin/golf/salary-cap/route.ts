@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { buildGolfValues, GOLF_VALUE_VERSION } from "@/lib/golf/valueModel";
+import { buildGolfBoardInputManifest } from "@/lib/golf/valueAnalytics";
+import { loadGolfAnalyticsHistory } from "@/lib/golf/valueAnalytics.server";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-type SetupAction = "prepare" | "open_weekend";
+type SetupAction = "generate" | "override" | "freeze" | "open_weekend";
 
 function validSlateId(value: unknown) {
   const parsed = Number(value);
@@ -15,12 +17,30 @@ function rpcFailure(label: string, error: { message: string } | null) {
   if (error) throw new Error(`${label}: ${error.message}`);
 }
 
+export async function GET(request: Request) {
+  const slateId = validSlateId(new URL(request.url).searchParams.get('slateId'));
+  if (!slateId) return NextResponse.json({ error: 'Valid slate required.' }, { status: 400 });
+  const authorization = await authorizeSlateResource(request, slateId, { requireCommissioner: true });
+  if (!authorization.ok) return authorization.response;
+  try {
+    const result = await supabaseAdmin.from('golf_salary_price_sets').select('id, status, revision').eq('slate_id', slateId).maybeSingle();
+    rpcFailure('Salary board unavailable', result.error);
+    const rows = result.data ? await supabaseAdmin.from('golf_salary_prices')
+      .select('player_id, suggested_salary, override_salary, effective_salary, is_amateur, value_basis, golf_players!inner(display_name)')
+      .eq('price_set_id', result.data.id).order('suggested_salary', { ascending: false, nullsFirst: false }) : { data: [], error: null };
+    rpcFailure('Salary prices unavailable', rows.error);
+    return NextResponse.json({ priceSet: result.data, prices: rows.data }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Salary setup unavailable.' }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as { slateId?: unknown; action?: SetupAction };
+    const body = await request.json() as { slateId?: unknown; action?: SetupAction; expectedRevision?: number; overrides?: unknown; acknowledgeUnpriced?: boolean };
     const slateId = validSlateId(body.slateId);
-    const action = body.action ?? "prepare";
-    if (!slateId || !["prepare", "open_weekend"].includes(action)) {
+    const action = body.action;
+    if (!slateId || !action || !["generate", "override", "freeze", "open_weekend"].includes(action)) {
       return NextResponse.json({ error: "A valid slateId and setup action are required." }, { status: 400 });
     }
     const authorization = await authorizeSlateResource(request, slateId, { requireCommissioner: true });
@@ -32,7 +52,7 @@ export async function POST(request: Request) {
       .eq("id", slateId).single();
     if (slateError || !slate) return NextResponse.json({ error: "Golf slate not found." }, { status: 404 });
     const rules = slate.rules_snapshot as Record<string, any> | null;
-    if (slate.sport !== "golf" || rules?.draft?.type !== "salary_cap") {
+    if (slate.sport !== "golf" || (rules?.draft?.type !== "salary_cap" && action !== 'open_weekend')) {
       return NextResponse.json({ error: "A frozen Golf Salary Cap slate is required." }, { status: 400 });
     }
 
@@ -45,35 +65,63 @@ export async function POST(request: Request) {
     const initialized = await supabaseAdmin.rpc("initialize_golf_lifecycle", scope);
     rpcFailure("Golf lifecycle initialization failed", initialized.error);
 
-    if (action === "prepare") {
+    if (action === "override" || action === "freeze") {
+      if (!Number.isSafeInteger(body.expectedRevision) || Number(body.expectedRevision) < 0) {
+        return NextResponse.json({ error: "Reload the salary review before saving." }, { status: 400 });
+      }
+      const reviewed = await supabaseAdmin.rpc("review_golf_salary_prices", {
+        ...scope, p_action: action, p_expected_revision: body.expectedRevision,
+        p_overrides: body.overrides ?? [], p_acknowledge_unpriced: body.acknowledgeUnpriced === true,
+      });
+      if (reviewed.error) return NextResponse.json({ error: reviewed.error.message }, { status: /changed/.test(reviewed.error.message) ? 409 : 400 });
+      if (action === "override") return NextResponse.json({ success: true, priceSet: reviewed.data });
+    }
+
+    if (action === "generate") {
       const existing = await supabaseAdmin.from("golf_salary_price_sets").select("id, status, revision").eq("slate_id", slateId).maybeSingle();
       rpcFailure("Existing Golf prices could not be checked", existing.error);
       let priceSet = existing.data;
       if (!priceSet) {
         const field = await supabaseAdmin.from("golf_event_players")
-          .select("player_id, is_amateur, golf_players!inner(display_name, owgr_rank, owgr_updated_at)")
+          .select("player_id, is_amateur, golf_players!inner(display_name, espn_player_id, owgr_rank, owgr_updated_at)")
           .eq("slate_id", slateId);
         rpcFailure("Golf field could not be loaded", field.error);
         if (!field.data?.length) return NextResponse.json({ error: "Import the tournament field before generating salaries." }, { status: 409 });
+        if (!slate.external_event_id) return NextResponse.json({ error: "ESPN tournament identity required before generating salaries." }, { status: 409 });
+        const asOfAt = new Date().toISOString();
         const startsAt = `${slate.start_date}T00:00:00.000Z`;
-        const values = buildGolfValues({
-          eventId: String(slate.external_event_id ?? slateId),
-          startsAt,
-          season: Number(String(slate.start_date).slice(0, 4)),
-          players: field.data.map((row: any) => {
-            const player = Array.isArray(row.golf_players) ? row.golf_players[0] : row.golf_players;
-            return {
-              playerId: String(row.player_id),
-              name: String(player.display_name),
-              history: [],
-              owgrRank: player.owgr_rank === null ? null : Number(player.owgr_rank),
-              owgrUpdatedAt: player.owgr_updated_at ?? null,
-              isAmateur: Boolean(row.is_amateur),
-            };
-          }),
+        const season = Number(String(slate.start_date).slice(0, 4));
+        const fieldInputs = field.data.map((row: any) => {
+          const player = Array.isArray(row.golf_players) ? row.golf_players[0] : row.golf_players;
+          return { playerId: Number(row.player_id), espnPlayerId: String(player.espn_player_id),
+            name: String(player.display_name), isAmateur: Boolean(row.is_amateur),
+            owgrRank: player.owgr_rank === null ? null : Number(player.owgr_rank),
+            owgrUpdatedAt: player.owgr_updated_at ?? null };
         });
-        const created = await supabaseAdmin.rpc("create_golf_salary_price_set", {
+        if (fieldInputs.some(player => !/^\d+$/.test(player.espnPlayerId)))
+          return NextResponse.json({ error: "Resolve PGA field golfers to canonical ESPN IDs before generating salaries." }, { status: 409 });
+        const analytics = await loadGolfAnalyticsHistory({
+          playerIds: fieldInputs.map(player => player.playerId),
+          espnPlayerIds: fieldInputs.map(player => player.espnPlayerId),
+          targetEventId: String(slate.external_event_id),
+          targetCutoffAt: startsAt,
+          asOfAt,
+          season,
+        });
+        const manifest = buildGolfBoardInputManifest({ targetEventId: String(slate.external_event_id),
+          targetCutoffAt: startsAt, asOfAt, refresh: analytics.refresh,
+          field: fieldInputs, selection: analytics.selection });
+        const values = buildGolfValues({
+          eventId: String(slate.external_event_id),
+          startsAt,
+          season,
+          players: manifest.field.map(player => ({ playerId: String(player.playerId), name: player.name,
+            history: analytics.selection.histories.get(String(player.playerId)) ?? [],
+            owgrRank: player.owgrRank, owgrUpdatedAt: player.owgrUpdatedAt, isAmateur: player.isAmateur })),
+        });
+        const created = await supabaseAdmin.rpc("create_golf_salary_price_set_with_manifest", {
           ...scope,
+          p_manifest: manifest,
           p_prices: values.players.map(player => ({
             player_id: Number(player.playerId),
             suggested_salary: player.pricing.suggestedSalary,
@@ -85,12 +133,10 @@ export async function POST(request: Request) {
         rpcFailure("Golf salary generation failed", created.error);
         priceSet = created.data;
       }
-      if ((priceSet as any)?.status !== "frozen") {
-        const frozen = await supabaseAdmin.rpc("freeze_golf_salary_price_set", scope);
-        rpcFailure("Golf salary freeze failed", frozen.error);
-        priceSet = frozen.data;
-      }
+      return NextResponse.json({ success: true, action, priceSet });
+    }
 
+    if (action === "freeze") {
       const periodKey = rules?.rosterPeriods?.type === "split_after_round_2" ? "opening" : "full_tournament";
       const period = await supabaseAdmin.from("golf_roster_periods").select("id, revision, opened_at, locked_at").eq("slate_id", slateId).eq("period_key", periodKey).single();
       rpcFailure("Opening Golf lifecycle could not be loaded", period.error);
@@ -117,7 +163,7 @@ export async function POST(request: Request) {
           rpcFailure("Opening Golf acquisition failed", opened.error);
         }
       }
-      return NextResponse.json({ success: true, action, priceSet, lifecycle: initialized.data });
+      return NextResponse.json({ success: true, action, lifecycle: initialized.data });
     }
 
     if (rules?.rosterPeriods?.type !== "split_after_round_2") {
