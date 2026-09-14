@@ -62,6 +62,36 @@ test('pull refresh preserves unsaved period selections, flags invalidity and ret
   } finally { global.fetch = oldFetch; }
 });
 
+test('Salary Cap golfer search filters names without changing selections or feasibility state', async () => {
+  const oldFetch = global.fetch;
+  const golfers = [
+    { playerId: 1, name: 'Jackson Koivun', eligible: true, priced: true, effectiveSalary: '39.00', isAmateur: false },
+    { playerId: 2, name: 'Michael Thompson', eligible: true, priced: true, effectiveSalary: '15.00', isAmateur: false },
+    { playerId: 3, name: 'Blocked Golfer', eligible: false, priced: true, effectiveSalary: '15.00', isAmateur: false },
+  ];
+  global.fetch = async () => ({ ok: true, json: async () => ({ slate: { id: 1 }, period: { key: 'full_tournament', state: 'open' },
+    periods: [{ key: 'full_tournament', state: 'open' }], priceSet: { status: 'frozen' }, budget: '100.00', rosterSize: 2,
+    golfers, lineup: null }) });
+  try {
+    const h = host(Builder), props = { initialSlateId: 1, slates: [{ id: 1, label: 'Test' }] };
+    h.render(props, true); await flush(); let tree = h.render(props);
+    const golferButton = id => nodes(tree).find(node => node.key === String(id) && node.type === 'button' && node.props.className?.includes('grid w-full'));
+    golferButton(1).props.onClick(); tree = h.render(props);
+    const search = nodes(tree).find(node => node.props?.['aria-label'] === 'Search golfers');
+    assert.equal(search.props.placeholder, 'Search golfers...');
+    search.props.onChange({ target: { value: 'THOMP' } }); tree = h.render(props);
+    assert.match(text(tree), /Michael Thompson/);
+    assert.match(text(tree), /Jackson Koivun/); // Selected card remains visible outside the filtered list.
+    assert.equal(golferButton(1), undefined);
+    const blocked = golferButton(3);
+    assert.equal(blocked, undefined);
+    search.props.onChange({ target: { value: '' } }); tree = h.render(props);
+    assert.match(text(tree), /Blocked Golfer/);
+    assert.equal(golferButton(3).props.disabled, true);
+    h.unmount();
+  } finally { global.fetch = oldFetch; }
+});
+
 test('salary setup reviews editable fallback salaries and requires acknowledgement before freeze', async () => {
   const oldFetch = global.fetch;
   let priceSet = null;

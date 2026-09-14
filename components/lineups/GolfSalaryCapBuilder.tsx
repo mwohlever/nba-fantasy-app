@@ -54,6 +54,7 @@ export default function GolfSalaryCapBuilder({
   const [board, setBoard] = useState<Board | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
   const [saved, setSaved] = useState<number[]>([]);
+  const [golferSearch, setGolferSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -125,6 +126,10 @@ export default function GolfSalaryCapBuilder({
     eligible: golfer.eligible,
     isAmateur: golfer.isAmateur,
   }));
+  const visibleGolfers = useMemo(() => {
+    const query = golferSearch.trim().toLocaleLowerCase();
+    return query ? (board?.golfers ?? []).filter(golfer => golfer.name.toLocaleLowerCase().includes(query)) : board?.golfers ?? [];
+  }, [board?.golfers, golferSearch]);
 
   function disabledReason(golfer: Golfer) {
     if (!board || loading || saving) return "Loading lineup";
@@ -238,11 +243,15 @@ export default function GolfSalaryCapBuilder({
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-900">
+            <div className="border-b border-slate-800 bg-slate-950 px-3 py-2">
+              <input aria-label="Search golfers" type="search" value={golferSearch} onChange={event => setGolferSearch(event.target.value)}
+                placeholder="Search golfers..." className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500" />
+            </div>
             <div className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-slate-700 bg-slate-950 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
               <span>Golfer</span><span>Status</span><span>Salary</span>
             </div>
             <div className="divide-y divide-slate-800">
-              {board.golfers.map(golfer => {
+              {visibleGolfers.map(golfer => {
                 const chosen = selected.includes(golfer.playerId);
                 const reason = disabledReason(golfer);
                 return (
