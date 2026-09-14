@@ -138,8 +138,13 @@ export async function POST(request: Request) {
             // A missing model price is never fabricated into V1/OWGR evidence.
             // Professionals remain draftable with an explicit commissioner-review
             // floor; amateurs retain their separate fixed amateur treatment.
-            const fallback = !player.isAmateur && value?.pricing.suggestedSalary === null;
-            return { player_id: player.playerId, suggested_salary: fallback ? 15 : value?.pricing.suggestedSalary,
+            // `undefined` means this PGA-field player was deliberately left
+            // out of analytics/model populations because no safe ESPN identity
+            // exists. Normalize it to the same no-price state as a resolved
+            // player with insufficient evidence.
+            const suggestedSalary = value?.pricing.suggestedSalary ?? null;
+            const fallback = !player.isAmateur && suggestedSalary === null;
+            return { player_id: player.playerId, suggested_salary: fallback ? 15 : suggestedSalary,
               is_amateur: player.isAmateur, value_basis: fallback ? 'fallback' : value?.pricing.basis ?? 'unsupported', value_version: GOLF_VALUE_VERSION };
           }),
         });

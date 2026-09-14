@@ -79,9 +79,20 @@ test('salary generation partitions PGA-only field identities instead of rejectin
  assert.match(route,/identityStatus:.*espn_resolved.*pga_unresolved/s);
  assert.match(route,/const resolvedField = fieldInputs\.filter/);
  assert.match(route,/playerIds: resolvedField\.map/);
+ assert.match(route,/const suggestedSalary = value\?\.pricing\.suggestedSalary \?\? null/);
+ assert.match(route,/const fallback = !player\.isAmateur && suggestedSalary === null/);
  assert.match(route,/value_basis: fallback \? 'fallback' : value\?\.pricing\.basis \?\? 'unsupported'/);
  assert.match(route,/suggested_salary: fallback \? 15/);
  assert.doesNotMatch(route,/Resolve PGA field golfers to canonical ESPN IDs before generating salaries/);
+});
+
+test('unresolved authoritative professionals receive fallback without entering model populations',()=>{
+ const route=fs.readFileSync(path.join(__dirname,'../app/api/admin/golf/salary-cap/route.ts'),'utf8');
+ assert.match(route,/const resolvedField = fieldInputs\.filter\(player => player\.identityStatus === 'espn_resolved'\)/);
+ assert.match(route,/manifest\.field\.filter\(player => player\.identityStatus === 'espn_resolved'/);
+ assert.match(route,/const suggestedSalary = value\?\.pricing\.suggestedSalary \?\? null/);
+ assert.match(route,/const fallback = !player\.isAmateur && suggestedSalary === null/);
+ assert.match(route,/suggested_salary: fallback \? 15 : suggestedSalary/);
 });
 
 test('fallback migration preserves model bases while making only unpriceable professionals reviewable',()=>{
