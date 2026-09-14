@@ -135,8 +135,12 @@ export async function POST(request: Request) {
           p_manifest: manifest,
           p_prices: manifest.field.map(player => {
             const value = pricesByPlayerId.get(player.playerId);
-            return { player_id: player.playerId, suggested_salary: value?.pricing.suggestedSalary ?? null,
-              is_amateur: player.isAmateur, value_basis: value?.pricing.basis ?? 'unsupported', value_version: GOLF_VALUE_VERSION };
+            // A missing model price is never fabricated into V1/OWGR evidence.
+            // Professionals remain draftable with an explicit commissioner-review
+            // floor; amateurs retain their separate fixed amateur treatment.
+            const fallback = !player.isAmateur && value?.pricing.suggestedSalary === null;
+            return { player_id: player.playerId, suggested_salary: fallback ? 15 : value?.pricing.suggestedSalary,
+              is_amateur: player.isAmateur, value_basis: fallback ? 'fallback' : value?.pricing.basis ?? 'unsupported', value_version: GOLF_VALUE_VERSION };
           }),
         });
         rpcFailure("Golf salary generation failed", created.error);

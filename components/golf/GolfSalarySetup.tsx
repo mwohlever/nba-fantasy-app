@@ -43,7 +43,7 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
     finally { setBusy(false); }
   }
   const frozen = board?.priceSet?.status === 'frozen';
-  const unpriced = board?.prices.filter(p => p.value_basis === 'unsupported') ?? [];
+  const fallback = board?.prices.filter(p => p.value_basis === 'fallback') ?? [];
   const dirty = Object.keys(edits).length > 0;
   return <section className="space-y-3 rounded-xl border border-slate-700 bg-slate-950/40 p-3" aria-label="Salary Setup">
     <div className="flex items-center justify-between gap-2"><h3 className="text-sm font-bold">Salary Setup</h3>
@@ -53,7 +53,7 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
       className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold disabled:opacity-50">Generate Salaries</button> : null}
     {board?.priceSet ? <>
       <p className="text-xs text-slate-400">{frozen ? 'Tournament prices are immutable. Roster availability follows the period deadline.' : 'Review suggested salaries. Overrides affect acquisition prices only; amateurs remain $10.'}</p>
-      {unpriced.length ? <p className="text-xs text-amber-300">{unpriced.length} unsupported golfers remain unpriced and unavailable: {unpriced.map(p => p.golf_players.display_name).join(', ')}.</p> : null}
+      {fallback.length ? <p className="text-xs text-amber-300">{fallback.length} golfers could not be fully priced and received the $15.00 fallback salary. Review these salaries before freezing: {fallback.map(p => p.golf_players.display_name).join(', ')}.</p> : null}
       <div className="max-h-96 overflow-auto"><table className="w-full text-left text-xs">
         <thead className="sticky top-0 bg-slate-950 text-slate-400"><tr><th className="py-2">Golfer</th><th>Suggested</th><th>Effective</th><th>Status</th></tr></thead>
         <tbody>{board.prices.map(p => <tr key={p.player_id} className="border-t border-slate-800">
@@ -68,10 +68,10 @@ export default function GolfSalarySetup({ slateId }: { slateId: number }) {
       </table></div>
       {frozen ? <Link href={`/lineups/draft?sport=golf&slateId=${slateId}`} className="inline-block rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold">Go to Lineup</Link>
         : <div className="space-y-2">
-          {unpriced.length ? <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={acknowledged} onChange={e => setAcknowledged(e.target.checked)} />I acknowledge these golfers will be unavailable.</label> : null}
+          {fallback.length ? <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={acknowledged} onChange={e => setAcknowledged(e.target.checked)} />I reviewed the fallback salaries.</label> : null}
           <div className="flex gap-2"><button type="button" disabled={busy || !dirty} onClick={() => action('override')} className="rounded-lg border border-slate-600 px-3 py-2 text-xs disabled:opacity-40">Save Overrides</button>
             <button type="button" disabled={busy} onClick={() => action('regenerate')} className="rounded-lg border border-amber-600 px-3 py-2 text-xs disabled:opacity-40">Regenerate Salaries</button>
-            <button type="button" disabled={busy || dirty || (unpriced.length > 0 && !acknowledged)} onClick={() => action('freeze')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold disabled:opacity-40">Freeze Salaries</button></div>
+            <button type="button" disabled={busy || dirty || (fallback.length > 0 && !acknowledged)} onClick={() => action('freeze')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold disabled:opacity-40">Freeze Salaries</button></div>
           {dirty ? <p className="text-xs text-amber-300">Save overrides before freezing.</p> : null}
         </div>}
     </> : null}

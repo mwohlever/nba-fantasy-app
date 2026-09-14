@@ -79,8 +79,19 @@ test('salary generation partitions PGA-only field identities instead of rejectin
  assert.match(route,/identityStatus:.*espn_resolved.*pga_unresolved/s);
  assert.match(route,/const resolvedField = fieldInputs\.filter/);
  assert.match(route,/playerIds: resolvedField\.map/);
- assert.match(route,/value_basis: value\?\.pricing\.basis \?\? 'unsupported'/);
+ assert.match(route,/value_basis: fallback \? 'fallback' : value\?\.pricing\.basis \?\? 'unsupported'/);
+ assert.match(route,/suggested_salary: fallback \? 15/);
  assert.doesNotMatch(route,/Resolve PGA field golfers to canonical ESPN IDs before generating salaries/);
+});
+
+test('fallback migration preserves model bases while making only unpriceable professionals reviewable',()=>{
+ const sql=fs.readFileSync(path.join(__dirname,'../supabase/migrations/20260923000100_golf_salary_fallback.sql'),'utf8');
+ assert.match(sql,/value_basis in \('blended','v1_only','owgr_only','unsupported','amateur','fallback'\)/);
+ assert.match(sql,/x\.value_basis='fallback'.*x\.suggested_salary<>15/s);
+ assert.match(sql,/case when x\.value_basis='fallback' then x\.suggested_salary/s);
+ assert.match(sql,/value_basis='fallback'\) and not coalesce\(p_acknowledge_unpriced,false\)/);
+ assert.match(sql,/value_basis='fallback' then coalesce\(salary,suggested_salary\)/);
+ assert.match(sql,/coalesce\(x\.is_amateur,false\).*value_basis<>'amateur'/s);
 });
 
 test('lifecycle SQL locks opening and weekend independently',()=>{

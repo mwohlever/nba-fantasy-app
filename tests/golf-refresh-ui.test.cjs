@@ -62,12 +62,12 @@ test('pull refresh preserves unsaved period selections, flags invalidity and ret
   } finally { global.fetch = oldFetch; }
 });
 
-test('salary setup generates, reviews overrides, acknowledges unsupported, freezes then links to Lineup', async () => {
+test('salary setup reviews editable fallback salaries and requires acknowledgement before freeze', async () => {
   const oldFetch = global.fetch;
   let priceSet = null;
   const actions = [];
   const prices = [{ player_id: 1, suggested_salary: 42, override_salary: null, effective_salary: null, value_basis: 'owgr', golf_players: { display_name: 'Supported' } },
-    { player_id: 2, suggested_salary: null, effective_salary: null, value_basis: 'unsupported', golf_players: { display_name: 'Unsupported' } }];
+    { player_id: 2, suggested_salary: '15.00', override_salary: null, effective_salary: '15.00', value_basis: 'fallback', golf_players: { display_name: 'Fallback' } }];
   global.fetch = async (_url, options) => {
     if (options?.method === 'POST') {
       const body = JSON.parse(options.body); actions.push(body);
@@ -87,6 +87,10 @@ test('salary setup generates, reviews overrides, acknowledges unsupported, freez
     assert.equal(button('Freeze Salaries').props.disabled, true);
     await button('Save Overrides').props.onClick(); tree = h.render(props);
     assert.equal(prices[0].suggested_salary, 42);
+    assert.match(text(tree), /received the \$15\.00 fallback salary/);
+    assert.match(text(tree), /I reviewed the fallback salaries/);
+    const salaryInputs = nodes(tree).filter(n => n.type === 'input' && n.props.type === 'number');
+    assert.equal(salaryInputs.length, 2);
     nodes(tree).find(n => n.type === 'input' && n.props.type === 'checkbox').props.onChange({ target: { checked: true } }); tree = h.render(props);
     assert.equal(button('Freeze Salaries').props.disabled, false);
     await button('Freeze Salaries').props.onClick(); tree = h.render(props);

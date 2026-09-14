@@ -577,6 +577,30 @@ export async function POST(
         }),
       );
 
+    // PGA is authoritative for the current pre-tournament field.  We only
+    // remove departed memberships before any salary board or scoring evidence
+    // exists: later removal could invalidate an immutable board/history.
+    const importedPlayerIds = new Set(eventRows.map((row) => row.player_id));
+    const [existingField, priceSet] = await Promise.all([
+      supabaseAdmin.from("golf_event_players").select("id, player_id, golf_rounds(id, holes_completed)").eq("slate_id", slateId),
+      supabaseAdmin.from("golf_salary_price_sets").select("id, status").eq("slate_id", slateId).maybeSingle(),
+    ]);
+    if (existingField.error || priceSet.error) {
+      return NextResponse.json({ error: "Existing Golf field membership could not be checked." }, { status: 500 });
+    }
+    const hasScoringEvidence = (existingField.data ?? []).some((row: any) =>
+      (row.golf_rounds ?? []).some((round: any) => Number(round.holes_completed) > 0),
+    );
+    const stalePlayerIds = (existingField.data ?? []).filter((row: any) =>
+      !importedPlayerIds.has(Number(row.player_id)),
+    ).map((row: any) => Number(row.player_id));
+    let staleMembershipsRemoved = 0;
+    if (stalePlayerIds.length && !priceSet.data && !hasScoringEvidence) {
+      const removed = await supabaseAdmin.from("golf_event_players").delete().eq("slate_id", slateId).in("player_id", stalePlayerIds).select("id");
+      if (removed.error) return NextResponse.json({ error: `Stale Golf field memberships could not be synchronized: ${removed.error.message}` }, { status: 500 });
+      staleMembershipsRemoved = removed.data?.length ?? stalePlayerIds.length;
+    }
+
     const {
       data: eventData,
       error: eventError,
@@ -628,6 +652,8 @@ export async function POST(
       eventPlayersUpserted:
         eventData?.length ??
         eventRows.length,
+      staleMembershipsRemoved,
+      staleMembershipsDeferred: stalePlayerIds.length - staleMembershipsRemoved,
       identityReconciliation:
         placeholderReconciliation,
       course:

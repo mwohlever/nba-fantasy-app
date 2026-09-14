@@ -96,6 +96,17 @@ test('Salary Setup partitions only nonnumeric identities after broader reconcili
   assert.match(route, /^\s*identityStatus: \/\^\\d\+\$\//m);
 });
 
+test('authoritative pre-start import synchronizes departed memberships without touching canonical golfers or history', () => {
+  const importer = fs.readFileSync(path.join(root, 'app/api/admin/golf/import-field/route.ts'), 'utf8');
+  assert.match(importer, /const importedPlayerIds = new Set/);
+  assert.match(importer, /golf_salary_price_sets/);
+  assert.match(importer, /golf_rounds\(id, holes_completed\)/);
+  assert.match(importer, /const hasScoringEvidence/);
+  assert.match(importer, /stalePlayerIds\.length && !priceSet\.data && !hasScoringEvidence/);
+  assert.match(importer, /\.delete\(\)\.eq\("slate_id", slateId\)\.in\("player_id", stalePlayerIds\)/);
+  assert.match(importer, /staleMembershipsDeferred/);
+});
+
 test('an unavailable broader directory leaves an empty competitor feed safely unresolved', async () => {
   const players = [{ id: 1, display_name: 'Unlisted Player', espn_player_id: 'pga:1' }];
   const result = await reconcileGolfPgaPlaceholderIdentities({
