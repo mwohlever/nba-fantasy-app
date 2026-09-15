@@ -448,7 +448,6 @@ function AppNavContent() {
               { href: "/lineups/draft", label: "Lineup", icon: "✎" },
               { href: "/lineups/scores", label: "Scores", icon: "▦" },
               { href: "/golf/live", label: "Live", icon: "◫" },
-              { href: "/standings", label: "Standings", icon: "▦" },
             ]
           : mainLinks;
 
@@ -780,9 +779,7 @@ function AppNavContent() {
     );
   }
 
-  const moreIsActive =
-    (activeSport !== "golf" && pathname.startsWith("/standings")) ||
-    pathname.startsWith("/player-history");
+  const moreIsActive = pathname.startsWith("/standings") || pathname.startsWith("/player-history");
 
   const userMenuIsActive =
     pathname.startsWith("/profile") ||
@@ -1013,7 +1010,7 @@ function AppNavContent() {
   }
 
   const mobileMoreLinks = activeSport === "golf"
-    ? [{ href: "/player-history", label: "Player History" }]
+    ? [{ href: "/standings", label: "Standings" }, { href: "/player-history", label: "Player History" }]
     : [
         { href: "/standings", label: "Standings" },
         { href: "/player-history", label: "Player History" },
@@ -1330,15 +1327,6 @@ function AppNavContent() {
                       Profile
                     </div>
 
-                    {activeSport === "golf" ? (
-                      <Link
-                        href={getLinkHref("/player-history")}
-                        onClick={() => setDesktopUserOpen(false)}
-                        className="block rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                      >
-                        Player History
-                      </Link>
-                    ) : null}
 
                     {displayedProfileLinks.map((link) => {
                       const isActive =
@@ -1584,7 +1572,7 @@ function AppNavContent() {
             </Link>
           ))}
 
-          {!isNcaaPickEm && !isNbaSkins && activeSport !== "golf" ? (
+          {!isNcaaPickEm && !isNbaSkins ? (
             <button
               type="button"
               onClick={() => setMobileMoreOpen((open) => !open)}

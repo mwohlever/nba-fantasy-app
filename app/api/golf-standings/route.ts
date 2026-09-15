@@ -7,6 +7,10 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
 import { decomposeGolfFantasyScoreByRound } from "@/lib/scoring/golf";
+import {
+  getGolfHistoricalFormatAvailability,
+  matchesGolfHistoricalFormat,
+} from "@/lib/golf/historicalFormat";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +25,7 @@ type SlateRow = {
   end_date: string | null;
   display_name: string | null;
   cut_penalty_per_round: number | null;
+  rules_snapshot: unknown;
 };
 
 type TeamResultRow = {
@@ -333,13 +338,14 @@ export async function GET(
       supabaseAdmin
         .from("slates")
         .select(
-          "id, start_date, end_date, display_name, cut_penalty_per_round",
+          "id, start_date, end_date, display_name, cut_penalty_per_round, rules_snapshot",
         )
         .eq("sport", "golf")
         .eq(
           "league_id",
           league.id,
         )
+        .is("archived_at", null)
         .order("start_date", {
           ascending: true,
         }),
@@ -424,7 +430,23 @@ export async function GET(
           : availableSeasons[0] ??
             "all";
 
-    const selectedSlates =
+    const gameType =
+      request.nextUrl.searchParams.get("gameType");
+    const draftType =
+      request.nextUrl.searchParams.get("draftType");
+    const historicalFilters = {
+      gameType:
+        gameType === "standard" ||
+        gameType === "best_ball"
+          ? gameType
+          : "all",
+      draftType:
+        draftType === "snake" ||
+        draftType === "salary_cap"
+          ? draftType
+          : "all",
+    } as const;
+    const contextSlates =
       selectedSeason === "all"
         ? allSlates
         : allSlates.filter(
@@ -433,10 +455,185 @@ export async function GET(
                 slate.start_date,
               ) === selectedSeason,
           );
+    const selectedSlates =
+      contextSlates.filter(
+        (slate) =>
+          matchesGolfHistoricalFormat(
+            slate.rules_snapshot,
+            historicalFilters,
+          ),
+      );
 
     const slateIds =
       selectedSlates.map(
         (slate) => slate.id,
+      );
+    const selectedQuerySlateIds =
+      slateIds.length > 0
+        ? slateIds
+        : [-1];
+    const contextQuerySlateIds =
+      contextSlates.length > 0
+        ? contextSlates.map(
+            (slate) => slate.id,
+          )
+        : [-1];
+
+    const [
+      {
+        data: resultData,
+        error: resultError,
+      },
+      {
+        data: lineupData,
+        error: lineupError,
+      },
+      {
+        data: eventPlayerData,
+        error: eventPlayerError,
+      },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from(
+          "team_slate_results",
+        )
+        .select(
+          [
+            "slate_id",
+            "team_id",
+            "fantasy_points",
+            "finish_position",
+          ].join(","),
+        )
+        .in(
+          "slate_id",
+          selectedQuerySlateIds,
+        ),
+
+      supabaseAdmin
+        .from("lineups")
+        .select(
+          `
+          id,
+          slate_id,
+          team_id,
+          lineup_players (
+            player_id
+          )
+        `,
+        )
+        .in(
+          "slate_id",
+          selectedQuerySlateIds,
+        ),
+
+      supabaseAdmin
+        .from(
+          "golf_event_players",
+        )
+        .select(
+          `
+          id,
+          slate_id,
+          player_id,
+          status,
+          rounds_completed,
+          holes_completed,
+          penalty_strokes,
+          fantasy_score,
+          golf_rounds (
+            round_number,
+            score_to_par,
+            holes_completed,
+            golf_holes (
+              relative_to_par
+            )
+          )
+        `,
+        )
+        .in(
+          "slate_id",
+          contextQuerySlateIds,
+        ),
+    ]);
+
+    if (
+      resultError ||
+      lineupError ||
+      eventPlayerError
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            resultError?.message ||
+            lineupError?.message ||
+            eventPlayerError?.message ||
+            "Unable to load Golf standings data.",
+        },
+        {
+          status: 500,
+          headers:
+            noStoreHeaders(),
+        },
+      );
+    }
+
+    const results =
+      (resultData ??
+        []) as unknown as TeamResultRow[];
+
+    const lineups =
+      (lineupData ??
+        []) as unknown as LineupRow[];
+
+    const contextEventPlayers =
+      (eventPlayerData ??
+        []) as unknown as GolfEventPlayerRow[];
+
+    const eventPlayersBySlate =
+      new Map<
+        number,
+        GolfEventPlayerRow[]
+      >();
+
+    for (
+      const eventPlayer of
+      contextEventPlayers
+    ) {
+      const slateId =
+        Number(
+          eventPlayer.slate_id,
+        );
+
+      const existing =
+        eventPlayersBySlate.get(
+          slateId,
+        ) ?? [];
+
+      existing.push(
+        eventPlayer,
+      );
+
+      eventPlayersBySlate.set(
+        slateId,
+        existing,
+      );
+    }
+
+    const historicalFormatAvailability =
+      getGolfHistoricalFormatAvailability(
+        contextSlates
+          .filter(
+            (slate) =>
+              tournamentState(
+                eventPlayersBySlate.get(
+                  slate.id,
+                ) ?? [],
+              ) === "final",
+          )
+          .map(
+            (slate) => slate.rules_snapshot,
+          ),
       );
 
     if (
@@ -447,6 +644,7 @@ export async function GET(
           success: true,
           selectedSeason,
           availableSeasons,
+          historicalFormatAvailability,
           finalizedTournaments: 0,
           liveTournaments: 0,
           upcomingTournaments: 0,
@@ -497,146 +695,13 @@ export async function GET(
       );
     }
 
-    const [
-      {
-        data: resultData,
-        error: resultError,
-      },
-      {
-        data: lineupData,
-        error: lineupError,
-      },
-      {
-        data: eventPlayerData,
-        error: eventPlayerError,
-      },
-    ] = await Promise.all([
-      supabaseAdmin
-        .from(
-          "team_slate_results",
-        )
-        .select(
-          [
-            "slate_id",
-            "team_id",
-            "fantasy_points",
-            "finish_position",
-          ].join(","),
-        )
-        .in(
-          "slate_id",
-          slateIds,
-        ),
-
-      supabaseAdmin
-        .from("lineups")
-        .select(
-          `
-          id,
-          slate_id,
-          team_id,
-          lineup_players (
-            player_id
-          )
-        `,
-        )
-        .in(
-          "slate_id",
-          slateIds,
-        ),
-
-      supabaseAdmin
-        .from(
-          "golf_event_players",
-        )
-        .select(
-          `
-          id,
-          slate_id,
-          player_id,
-          status,
-          rounds_completed,
-          holes_completed,
-          penalty_strokes,
-          fantasy_score,
-          golf_rounds (
-            round_number,
-            score_to_par,
-            holes_completed,
-            golf_holes (
-              relative_to_par
-            )
-          )
-        `,
-        )
-        .in(
-          "slate_id",
-          slateIds,
-        ),
-    ]);
-
-    if (
-      resultError ||
-      lineupError ||
-      eventPlayerError
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            resultError?.message ||
-            lineupError?.message ||
-            eventPlayerError?.message ||
-            "Unable to load Golf standings data.",
-        },
-        {
-          status: 500,
-          headers:
-            noStoreHeaders(),
-        },
-      );
-    }
-
-    const results =
-      (resultData ??
-        []) as unknown as TeamResultRow[];
-
-    const lineups =
-      (lineupData ??
-        []) as unknown as LineupRow[];
-
     const eventPlayers =
-      (eventPlayerData ??
-        []) as unknown as GolfEventPlayerRow[];
-
-    const eventPlayersBySlate =
-      new Map<
-        number,
-        GolfEventPlayerRow[]
-      >();
-
-    for (
-      const eventPlayer of
-      eventPlayers
-    ) {
-      const slateId =
-        Number(
-          eventPlayer.slate_id,
-        );
-
-      const existing =
-        eventPlayersBySlate.get(
-          slateId,
-        ) ?? [];
-
-      existing.push(
-        eventPlayer,
+      contextEventPlayers.filter(
+        (eventPlayer) =>
+          slateIds.includes(
+            Number(eventPlayer.slate_id),
+          ),
       );
-
-      eventPlayersBySlate.set(
-        slateId,
-        existing,
-      );
-    }
 
     const tournamentBySlateId =
       new Map<
@@ -1269,6 +1334,7 @@ export async function GET(
         success: true,
         selectedSeason,
         availableSeasons,
+        historicalFormatAvailability,
 
         finalizedTournaments:
           finalizedSlateIds.size,

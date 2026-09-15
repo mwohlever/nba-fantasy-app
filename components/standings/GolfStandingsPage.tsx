@@ -85,6 +85,17 @@ type GolfStandingsResponse = {
   availableSeasons:
     number[];
 
+  historicalFormatAvailability?: {
+    gameTypes: {
+      standard: boolean;
+      best_ball: boolean;
+    };
+    draftTypes: {
+      snake: boolean;
+      salary_cap: boolean;
+    };
+  };
+
   finalizedTournaments:
     number;
 
@@ -268,6 +279,14 @@ export default function GolfStandingsPage() {
     useState<
       number | "all"
     >("all");
+  const [gameType, setGameType] =
+    useState<"all" | "standard" | "best_ball">("all");
+  const [draftType, setDraftType] =
+    useState<"all" | "snake" | "salary_cap">("all");
+  const [formatAvailability, setFormatAvailability] =
+    useState<NonNullable<
+      GolfStandingsResponse["historicalFormatAvailability"]
+    > | null>(null);
 
   const [
     finalizedTournaments,
@@ -333,7 +352,7 @@ export default function GolfStandingsPage() {
   async function loadStandings(
     season?:
       | number
-      | "all",
+      | "all", nextGameType = gameType, nextDraftType = draftType,
   ): Promise<RefreshOutcome> {
     if (pendingRef.current || isSwitchingGroup) return { status: "skipped" };
     pendingRef.current = true;
@@ -343,11 +362,11 @@ export default function GolfStandingsPage() {
       setIsLoading(true);
       setMessage("");
 
-      const query =
-        season ===
-          undefined
-          ? ""
-          : `?season=${season}`;
+      const params = new URLSearchParams();
+      if (season !== undefined) params.set("season", String(season));
+      if (nextGameType !== "all") params.set("gameType", nextGameType);
+      if (nextDraftType !== "all") params.set("draftType", nextDraftType);
+      const query = params.size ? `?${params}` : "";
 
       const response =
         await fetch(
@@ -381,6 +400,10 @@ export default function GolfStandingsPage() {
       setAvailableSeasons(
         result.availableSeasons ??
           [],
+      );
+
+      setFormatAvailability(
+        result.historicalFormatAvailability ?? null,
       );
 
       setSelectedSeason(
@@ -429,10 +452,47 @@ export default function GolfStandingsPage() {
   useEffect(() => {
     setStandings([]);
     setProfileTeam(null);
+    setFormatAvailability(null);
     pendingRef.current = false;
     void loadStandings();
     return () => { requestRef.current += 1; };
   }, [groupContext?.group.id, isSwitchingGroup]);
+
+  useEffect(() => {
+    if (!formatAvailability) return;
+
+    const nextGameType =
+      gameType !== "all" &&
+      !formatAvailability.gameTypes[gameType]
+        ? "all"
+        : gameType;
+    const nextDraftType =
+      draftType !== "all" &&
+      !formatAvailability.draftTypes[draftType]
+        ? "all"
+        : draftType;
+
+    if (
+      nextGameType === gameType &&
+      nextDraftType === draftType
+    ) {
+      return;
+    }
+
+    setGameType(nextGameType);
+    setDraftType(nextDraftType);
+    setExpandedTeamId(null);
+    void loadStandings(
+      selectedSeason,
+      nextGameType,
+      nextDraftType,
+    );
+  }, [
+    draftType,
+    formatAvailability,
+    gameType,
+    selectedSeason,
+  ]);
   const pull = usePullToRefresh({ targetRef: surfaceRef, onRefresh: () => loadStandings(selectedSeason),
     enabled: !isLoading && !isSwitchingGroup && !profileTeam, isRefreshing: isLoading,
     scopeKey: `${groupContext?.group.id}:${selectedSeason}` });
@@ -643,6 +703,7 @@ export default function GolfStandingsPage() {
                 </p>
               </div>
 
+              <div className="flex flex-wrap gap-2">
               <label className="block">
                 <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
                   Season
@@ -705,6 +766,84 @@ export default function GolfStandingsPage() {
                   )}
                 </select>
               </label>
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Scoring
+                </span>
+                <select
+                  value={gameType}
+                  onChange={(event) => {
+                    const next =
+                      event.target.value as typeof gameType;
+                    setGameType(next);
+                    setExpandedTeamId(null);
+                    void loadStandings(
+                      selectedSeason,
+                      next,
+                      draftType,
+                    );
+                  }}
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white"
+                >
+                  <option value="all">All</option>
+                  <option
+                    value="standard"
+                    disabled={
+                      formatAvailability?.gameTypes.standard === false
+                    }
+                  >
+                    Standard
+                  </option>
+                  <option
+                    value="best_ball"
+                    disabled={
+                      formatAvailability?.gameTypes.best_ball === false
+                    }
+                  >
+                    Best Ball
+                  </option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Draft
+                </span>
+                <select
+                  value={draftType}
+                  onChange={(event) => {
+                    const next =
+                      event.target.value as typeof draftType;
+                    setDraftType(next);
+                    setExpandedTeamId(null);
+                    void loadStandings(
+                      selectedSeason,
+                      gameType,
+                      next,
+                    );
+                  }}
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm font-semibold text-white"
+                >
+                  <option value="all">All</option>
+                  <option
+                    value="snake"
+                    disabled={
+                      formatAvailability?.draftTypes.snake === false
+                    }
+                  >
+                    Snake
+                  </option>
+                  <option
+                    value="salary_cap"
+                    disabled={
+                      formatAvailability?.draftTypes.salary_cap === false
+                    }
+                  >
+                    Salary Cap
+                  </option>
+                </select>
+              </label>
+              </div>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wider">

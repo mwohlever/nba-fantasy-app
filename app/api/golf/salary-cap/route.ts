@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       supabaseAdmin.from("slates").select("id, display_name, is_locked").eq("id", slateId).single(),
       supabaseAdmin.from("golf_roster_periods").select("id, period_key, revision, opened_at, locked_at, completed_at, lock_reason, evidence_snapshot").eq("slate_id", slateId).order("id"),
       supabaseAdmin.from("golf_salary_price_sets").select("id, status, revision, frozen_at").eq("slate_id", slateId).maybeSingle(),
-      supabaseAdmin.from("golf_event_players").select("player_id, status, tee_time, is_amateur, golf_players!inner(display_name, country, country_flag_url, owgr_rank), golf_rounds(round_number, holes_completed)").eq("slate_id", slateId),
+      supabaseAdmin.from("golf_event_players").select("player_id, status, tee_time, is_amateur, golf_players!inner(display_name, espn_player_id, headshot_url, country, country_flag_url, owgr_rank), golf_rounds(round_number, holes_completed)").eq("slate_id", slateId),
     ]);
     const loadError = slateResult.error || periodsResult.error || priceSetResult.error || fieldResult.error;
     if (loadError) throw new Error(`Failed to load Golf Salary Cap board: ${loadError.message}`);
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     let prices: Array<Record<string, any>> = [];
     if (priceSet) {
       const result = await supabaseAdmin.from("golf_salary_prices")
-        .select("player_id, effective_salary, is_amateur, value_basis")
+        .select("player_id, suggested_salary, override_salary, effective_salary, is_amateur, value_basis")
         .eq("price_set_id", priceSet.id);
       if (result.error) throw new Error(`Failed to load frozen Golf prices: ${result.error.message}`);
       prices = result.data ?? [];
@@ -128,12 +128,19 @@ export async function GET(request: NextRequest) {
       return {
         playerId,
         name: player?.display_name ?? `Golfer ${playerId}`,
+        espnPlayerId: player?.espn_player_id ?? null,
+        headshotUrl: player?.headshot_url ?? null,
         country: player?.country ?? null,
         countryFlagUrl: player?.country_flag_url ?? null,
         owgrRank: player?.owgr_rank === null || player?.owgr_rank === undefined ? null : Number(player.owgr_rank),
         fieldStatus: row.status ?? null,
         teeTime: row.tee_time ?? null,
         isAmateur: Boolean(row.is_amateur ?? price?.is_amateur),
+        suggestedSalary: price?.suggested_salary === null || price?.suggested_salary === undefined
+          ? null : formatGolfMoney(price.suggested_salary),
+        overrideSalary: price?.override_salary === null || price?.override_salary === undefined
+          ? null : formatGolfMoney(price.override_salary),
+        valueBasis: price?.value_basis ?? null,
         effectiveSalary: priceSet?.status === "frozen" && price?.effective_salary !== null && price?.effective_salary !== undefined
           ? formatGolfMoney(price.effective_salary) : null,
         priced: priceSet?.status === "frozen" && price?.effective_salary !== null && price?.effective_salary !== undefined,

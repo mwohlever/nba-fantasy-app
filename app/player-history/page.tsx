@@ -182,6 +182,16 @@ type ApiResponse = {
   success: boolean;
   season: number | "all";
   sport?: string;
+  historicalFormatAvailability?: {
+    gameTypes: {
+      standard: boolean;
+      best_ball: boolean;
+    };
+    draftTypes: {
+      snake: boolean;
+      salary_cap: boolean;
+    };
+  };
   playerHistory:
     PlayerHistoryRow[];
 };
@@ -2426,6 +2436,17 @@ export default function PlayerHistoryPage() {
       "season",
     );
 
+  const [golfGameType, setGolfGameType] =
+    useState<"all" | "standard" | "best_ball">("all");
+
+  const [golfDraftType, setGolfDraftType] =
+    useState<"all" | "snake" | "salary_cap">("all");
+
+  const [golfFormatAvailability, setGolfFormatAvailability] =
+    useState<NonNullable<
+      ApiResponse["historicalFormatAvailability"]
+    > | null>(null);
+
   const [
     searchTerm,
     setSearchTerm,
@@ -2517,6 +2538,42 @@ export default function PlayerHistoryPage() {
     selectedSport,
     season,
     historyMode,
+    golfGameType,
+    golfDraftType,
+  ]);
+
+  useEffect(() => {
+    if (
+      selectedSport !== "golf" ||
+      historyMode !== "league" ||
+      !golfFormatAvailability
+    ) {
+      return;
+    }
+
+    if (
+      golfGameType !== "all" &&
+      !golfFormatAvailability.gameTypes[
+        golfGameType
+      ]
+    ) {
+      setGolfGameType("all");
+    }
+
+    if (
+      golfDraftType !== "all" &&
+      !golfFormatAvailability.draftTypes[
+        golfDraftType
+      ]
+    ) {
+      setGolfDraftType("all");
+    }
+  }, [
+    golfDraftType,
+    golfFormatAvailability,
+    golfGameType,
+    historyMode,
+    selectedSport,
   ]);
 
   useEffect(() => {
@@ -2662,11 +2719,25 @@ export default function PlayerHistoryPage() {
 
       setMessage("");
 
+      const golfFormatQuery =
+        historyMode === "league" &&
+        selectedSport === "golf"
+          ? `${
+              golfGameType !== "all"
+                ? `&gameType=${golfGameType}`
+                : ""
+            }${
+              golfDraftType !== "all"
+                ? `&draftType=${golfDraftType}`
+                : ""
+            }`
+          : "";
+
       const endpoint =
         historyMode ===
         "season"
           ? `/api/player-season-stats?season=${season}&sport=${selectedSport}`
-          : `/api/player-history?season=${season}&sport=${selectedSport}`;
+          : `/api/player-history?season=${season}&sport=${selectedSport}${golfFormatQuery}`;
 
       const response =
         await fetch(
@@ -2697,6 +2768,13 @@ export default function PlayerHistoryPage() {
 
         return;
       }
+
+      setGolfFormatAvailability(
+        historyMode === "league" &&
+        selectedSport === "golf"
+          ? result.historicalFormatAvailability ?? null
+          : null,
+      );
 
       const rawRows =
         historyMode ===
@@ -4439,9 +4517,13 @@ export default function PlayerHistoryPage() {
 
             <div
               className={`grid gap-3 ${
+                isGolf &&
                 historyMode ===
                 "league"
-                  ? "grid-cols-2"
+                  ? "grid-cols-2 sm:grid-cols-4"
+                  : historyMode ===
+                    "league"
+                    ? "grid-cols-2"
                   : "grid-cols-1"
               }`}
             >
@@ -4554,6 +4636,98 @@ export default function PlayerHistoryPage() {
                   )}
                 </select>
               </div>
+
+              {isGolf &&
+              historyMode ===
+              "league" ? (
+                <>
+                  <div>
+                    <label
+                      htmlFor="golf-history-scoring"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      Scoring
+                    </label>
+
+                    <select
+                      id="golf-history-scoring"
+                      value={golfGameType}
+                      onChange={(event) =>
+                        setGolfGameType(
+                          event.target.value as
+                            | "all"
+                            | "standard"
+                            | "best_ball",
+                        )
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300"
+                    >
+                      <option value="all">All</option>
+                      <option
+                        value="standard"
+                        disabled={
+                          golfFormatAvailability?.gameTypes.standard ===
+                          false
+                        }
+                      >
+                        Standard
+                      </option>
+                      <option
+                        value="best_ball"
+                        disabled={
+                          golfFormatAvailability?.gameTypes.best_ball ===
+                          false
+                        }
+                      >
+                        Best Ball
+                      </option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="golf-history-draft"
+                      className="mb-2 block text-sm font-medium text-slate-700"
+                    >
+                      Draft
+                    </label>
+
+                    <select
+                      id="golf-history-draft"
+                      value={golfDraftType}
+                      onChange={(event) =>
+                        setGolfDraftType(
+                          event.target.value as
+                            | "all"
+                            | "snake"
+                            | "salary_cap",
+                        )
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-300"
+                    >
+                      <option value="all">All</option>
+                      <option
+                        value="snake"
+                        disabled={
+                          golfFormatAvailability?.draftTypes.snake ===
+                          false
+                        }
+                      >
+                        Snake
+                      </option>
+                      <option
+                        value="salary_cap"
+                        disabled={
+                          golfFormatAvailability?.draftTypes.salary_cap ===
+                          false
+                        }
+                      >
+                        Salary Cap
+                      </option>
+                    </select>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
 

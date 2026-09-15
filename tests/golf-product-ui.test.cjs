@@ -12,7 +12,7 @@ const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').defaul
 const Leaderboard = require('../components/golf/GolfLiveLeaderboard.tsx').default;
 const { getGroupSwitchDestination } = require('../lib/groups/navigation.ts');
 
-test('Golf primary links are distinct, while other sports retain their destinations', () => {
+test('Golf derives the canonical mobile nav for both Golf and shared profile routes', () => {
   const source = fs.readFileSync('components/AppNav.tsx', 'utf8');
   const ast = ts.createSourceFile('AppNav.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const declarations = new Map();
@@ -20,15 +20,28 @@ test('Golf primary links are distinct, while other sports retain their destinati
   visit(ast);
   const main = Function(`return (${declarations.get('mainLinks').getText(ast)})`)();
   const getLinks = Function('isNbaSkins', 'isNcaaPickEm', 'activeSport', 'mainLinks', `return (${declarations.get('displayedMainLinks').getText(ast)})`);
+  const getSharedRouteSport = Function('sportParam', `return (${declarations.get('sharedRouteSport').getText(ast)})`);
+  const getRouteSport = Function('pathname', 'sharedRouteSport', `return (${declarations.get('routeSport').getText(ast)})`);
+  const getActiveSport = Function('routeSport', 'selectedSport', `return (${declarations.get('activeSport').getText(ast)})`);
+  const getMoreLinks = Function('activeSport', `return (${declarations.get('mobileMoreLinks').getText(ast)})`);
+  const getMoreIsActive = Function('pathname', `return (${declarations.get('moreIsActive').getText(ast)})`);
   const golf = getLinks(false, false, 'golf', main);
-  assert.deepEqual(golf.map(x => x.label), ['Home', 'Lineup', 'Scores', 'Live', 'Standings']);
+  const profileRouteSport = getRouteSport('/profile', getSharedRouteSport('golf'));
+  const profileActiveSport = getActiveSport(profileRouteSport, 'nba');
+  assert.equal(profileActiveSport, 'golf');
+  assert.deepEqual(golf.map(x => x.label), ['Home', 'Lineup', 'Scores', 'Live']);
+  assert.deepEqual(getLinks(false, false, profileActiveSport, main).map(x => x.label), ['Home', 'Lineup', 'Scores', 'Live']);
   assert.equal(golf[2].href, '/lineups/scores');
   assert.equal(golf[3].href, '/golf/live');
+  assert.deepEqual(getMoreLinks('golf').map(x => x.label), ['Standings', 'Player History']);
+  assert.equal(getMoreIsActive('/standings'), true);
+  assert.equal(getMoreIsActive('/player-history'), true);
+  assert.equal(getMoreIsActive('/profile'), false);
   assert.deepEqual(getLinks(false, false, 'nba', main).map(x => x.label), ['Home', 'Draft', 'Scores']);
   assert.deepEqual(getLinks(false, false, 'nfl', main).map(x => x.label), ['Home', 'Draft', 'Scores', 'Live']);
   assert.deepEqual(getLinks(false, true, 'ncaa', main).map(x => x.href), ['/ncaa-pickem', '/ncaa-pickem/scores', '/ncaa-pickem/standings']);
-  assert.match(source, /!isNcaaPickEm && !isNbaSkins && activeSport !== "golf"/);
-  assert.match(fs.readFileSync('components/MobileAccountMenu.tsx', 'utf8'), /\/player-history\?sport=golf/);
+  assert.match(source, /!isNcaaPickEm && !isNbaSkins \? \(/);
+  assert.doesNotMatch(fs.readFileSync('components/MobileAccountMenu.tsx', 'utf8'), /player-history|Player History/);
   assert.match(fs.readFileSync('app/lineups/scores/page.tsx', 'utf8'), /defaultViewMode="scoring"/);
   assert.match(fs.readFileSync('components/lineups/ScoresDashboard.tsx', 'utf8'), /<GolfScoresDashboard/);
   assert.match(fs.readFileSync('app/golf/live/page.tsx', 'utf8'), /GolfLivePage/);
@@ -78,15 +91,16 @@ test('builder uses frozen board limits, saves and reloads independent period ros
       let h = host(Builder); h.render(props, true); await flush();
       let tree = h.render(props);
       const rosterSlots = () => nodes(tree).filter(n => n.type === 'button' && n.props.className?.includes('min-h-16'));
+      const golferAction = id => nodes(tree).find(n => n.type === 'button' && n.props['aria-label'] === `Add Player ${id}`);
       assert.equal(rosterSlots().length, count);
       for (let i = 0; i < count; i++) {
-        const golfer = nodes(tree).find(n => n.type === 'button' && n.key === String(i + 1) && n.props.className?.includes('grid w-full'));
+        const golfer = golferAction(i + 1);
         assert.equal(Boolean(golfer.props.disabled), false); golfer.props.onClick(); tree = h.render(props);
       }
       assert.match(renderToStaticMarkup(tree), /Remaining: <strong>\$0\.00<\/strong>/);
       rosterSlots()[0].props.onClick(); tree = h.render(props);
       assert.match(renderToStaticMarkup(tree), /Remaining: <strong>\$25\.00<\/strong>/);
-      nodes(tree).find(n => n.type === 'button' && n.key === '1' && n.props.className?.includes('grid w-full')).props.onClick();
+      golferAction(1).props.onClick();
       tree = h.render(props);
       let save = nodes(tree).find(n => n.type === 'button' && n.props.children === 'Save Lineup');
       assert.equal(Boolean(save.props.disabled), false); await save.props.onClick(); tree = h.render(props);
@@ -103,7 +117,7 @@ test('builder uses frozen board limits, saves and reloads independent period ros
       assert.equal(saved.get('opening').playerIds.length, count);
       const openingIds = [...saved.get('opening').playerIds];
       for (let i = 1; i <= count; i++) {
-        nodes(tree).find(n => n.type === 'button' && n.key === String(i + 1) && n.props.className?.includes('grid w-full')).props.onClick();
+        golferAction(i + 1).props.onClick();
         tree = h.render(props);
       }
       await nodes(tree).find(n => n.type === 'button' && n.props.children === 'Save Lineup').props.onClick();

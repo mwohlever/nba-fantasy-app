@@ -55,6 +55,16 @@ type TeamProfile = {
   };
   latestSeason: number;
   selectedSeason: number | "all";
+  historicalFormatAvailability?: {
+    gameTypes: {
+      standard: boolean;
+      best_ball: boolean;
+    };
+    draftTypes: {
+      snake: boolean;
+      salary_cap: boolean;
+    };
+  };
   seasonSummary: {
     slatesPlayed: number;
     wins: number;
@@ -331,6 +341,10 @@ function ProfilePageContent() {
   const [groupTeamId, setGroupTeamId] = useState<number | null>(null);
   const [profile, setProfile] = useState<TeamProfile | null>(null);
   const [season, setSeason] = useState<number | "all">("all");
+  const [golfGameType, setGolfGameType] =
+    useState<"all" | "standard" | "best_ball">("all");
+  const [golfDraftType, setGolfDraftType] =
+    useState<"all" | "snake" | "salary_cap">("all");
   const [activeTab, setActiveTab] = useState<ProfileTab>("overview");
   const [activeSettingsTab, setActiveSettingsTab] =
     useState<SettingsTab>("profile");
@@ -418,8 +432,21 @@ function ProfilePageContent() {
         setIsLoadingProfile(true);
         setMessage("");
 
+        const golfFormatQuery =
+          selectedSport === "golf"
+            ? `${
+                golfGameType !== "all"
+                  ? `&gameType=${golfGameType}`
+                  : ""
+              }${
+                golfDraftType !== "all"
+                  ? `&draftType=${golfDraftType}`
+                  : ""
+              }`
+            : "";
+
         const response = await fetch(
-          `/api/team-profile?teamId=${profileTeamId}&season=${season}&sport=${selectedSport}`,
+          `/api/team-profile?teamId=${profileTeamId}&season=${season}&sport=${selectedSport}${golfFormatQuery}`,
           {
             cache: "no-store",
           }
@@ -457,7 +484,46 @@ function ProfilePageContent() {
     return () => {
       active = false;
     };
-  }, [user, groupTeamId, season, selectedSport]);
+  }, [
+    user,
+    groupTeamId,
+    season,
+    selectedSport,
+    golfGameType,
+    golfDraftType,
+  ]);
+
+  useEffect(() => {
+    if (
+      selectedSport !== "golf" ||
+      !profile?.historicalFormatAvailability
+    ) {
+      return;
+    }
+
+    if (
+      golfGameType !== "all" &&
+      !profile.historicalFormatAvailability.gameTypes[
+        golfGameType
+      ]
+    ) {
+      setGolfGameType("all");
+    }
+
+    if (
+      golfDraftType !== "all" &&
+      !profile.historicalFormatAvailability.draftTypes[
+        golfDraftType
+      ]
+    ) {
+      setGolfDraftType("all");
+    }
+  }, [
+    golfDraftType,
+    golfGameType,
+    profile?.historicalFormatAvailability,
+    selectedSport,
+  ]);
 
 
   useEffect(() => {
@@ -733,6 +799,13 @@ function ProfilePageContent() {
                       season={season}
                       availableSeasons={availableSeasons}
                       onSeasonChange={setSeason}
+                      gameType={golfGameType}
+                      draftType={golfDraftType}
+                      formatAvailability={
+                        profile.historicalFormatAvailability
+                      }
+                      onGameTypeChange={setGolfGameType}
+                      onDraftTypeChange={setGolfDraftType}
                     />
                   ) : selectedSport === "nfl" ? (
                     <NflProfileOverview

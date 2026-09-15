@@ -196,10 +196,24 @@ export async function GET(
     if (
       sport === "golf"
     ) {
+      const gameType = searchParams.get("gameType");
+      const draftType = searchParams.get("draftType");
       return getGolfTeamProfile(
         teamId,
         seasonParam,
         scope,
+        {
+          gameType:
+            gameType === "standard" ||
+            gameType === "best_ball"
+              ? gameType
+              : "all",
+          draftType:
+            draftType === "snake" ||
+            draftType === "salary_cap"
+              ? draftType
+              : "all",
+        },
       );
     }
 

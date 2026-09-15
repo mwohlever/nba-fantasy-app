@@ -14,6 +14,11 @@ import {
 import {
   getActiveLeagueForSport,
 } from "@/lib/groups/context";
+import {
+  getGolfHistoricalFormatAvailability,
+  matchesGolfHistoricalFormat,
+  type GolfHistoricalFilters,
+} from "@/lib/golf/historicalFormat";
 
 type SlateRow = {
   id: number;
@@ -90,6 +95,7 @@ function numberOrNull(
 async function getGolfPlayerHistory(
   seasonParam: string | null,
   leagueId: string,
+  historicalFilters: GolfHistoricalFilters,
 ) {
   const db =
     supabaseAdmin as any;
@@ -114,12 +120,13 @@ async function getGolfPlayerHistory(
     db
       .from("slates")
       .select(
-        "id, date, start_date, end_date, display_name, is_locked, league_id",
+        "id, date, start_date, end_date, display_name, is_locked, league_id, rules_snapshot",
       )
       .eq(
         "league_id",
         leagueId,
-      ),
+      )
+      .is("archived_at", null),
 
     db
       .from("golf_players")
@@ -157,7 +164,7 @@ async function getGolfPlayerHistory(
     (golferResponse.data ??
       []) as any[];
 
-  const selectedSlates =
+  const contextSlates =
     slates.filter(
       (slate) => {
         if (isAllTime) {
@@ -181,6 +188,23 @@ async function getGolfPlayerHistory(
       },
     );
 
+  const historicalFormatAvailability =
+    getGolfHistoricalFormatAvailability(
+      contextSlates
+        .filter((slate) =>
+          Boolean(slate.is_locked),
+        )
+        .map((slate) => slate.rules_snapshot),
+    );
+
+  const selectedSlates =
+    contextSlates.filter((slate) =>
+      matchesGolfHistoricalFormat(
+        slate.rules_snapshot,
+        historicalFilters,
+      ),
+    );
+
   const slateIds =
     selectedSlates.map(
       (slate) =>
@@ -195,6 +219,7 @@ async function getGolfPlayerHistory(
       season:
         selectedSeason,
       sport: "golf",
+      historicalFormatAvailability,
       playerHistory: [],
     });
   }
@@ -884,6 +909,7 @@ async function getGolfPlayerHistory(
     season:
       selectedSeason,
     sport: "golf",
+    historicalFormatAvailability,
     playerHistory,
   });
 }
@@ -948,9 +974,30 @@ export async function GET(
     if (
       sport === "golf"
     ) {
+      const gameType =
+        request.nextUrl.searchParams.get(
+          "gameType",
+        );
+      const draftType =
+        request.nextUrl.searchParams.get(
+          "draftType",
+        );
+
       return getGolfPlayerHistory(
         seasonParam,
         activeLeague.league.id,
+        {
+          gameType:
+            gameType === "standard" ||
+            gameType === "best_ball"
+              ? gameType
+              : "all",
+          draftType:
+            draftType === "snake" ||
+            draftType === "salary_cap"
+              ? draftType
+              : "all",
+        },
       );
     }
 

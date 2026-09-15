@@ -5,6 +5,9 @@ import { usePullToRefresh } from "@/lib/client/usePullToRefresh";
 import type { RefreshOutcome } from "@/lib/client/refreshOutcome";
 import PullToRefreshIndicator from "@/components/ui/PullToRefreshIndicator";
 import { useGroupContext } from "@/components/providers/GroupProvider";
+import PlayerResearchModal, { type GolfSalaryCapProfileContext, type ResearchPlayer } from "@/components/lineups/PlayerResearchModal";
+import GolfCompareModal from "@/components/lineups/GolfCompareModal";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 
 import { canAddGolfSalaryCapPlayer } from "@/lib/golf/salaryCap";
 import { formatGolfMoney, golfCentsToMoney, golfMoneyToCents } from "@/lib/golf/money";
@@ -13,11 +16,16 @@ type PeriodKey = "full_tournament" | "opening" | "weekend";
 type Golfer = {
   playerId: number;
   name: string;
+  espnPlayerId: string | null;
+  headshotUrl: string | null;
   country: string | null;
   owgrRank: number | null;
   fieldStatus: string | null;
   teeTime: string | null;
   isAmateur: boolean;
+  suggestedSalary: string | null;
+  overrideSalary: string | null;
+  valueBasis: string | null;
   effectiveSalary: string | null;
   priced: boolean;
   eligible: boolean;
@@ -59,6 +67,10 @@ export default function GolfSalaryCapBuilder({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [detailGolfer, setDetailGolfer] = useState<Golfer | null>(null);
+  const [compareMode, setCompareMode] = useState(false);
+  const [comparePlayerIds, setComparePlayerIds] = useState<number[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [revisionConflict, setRevisionConflict] = useState(false);
   const surfaceRef = useRef<HTMLElement | null>(null);
   const pendingRef = useRef(false);
@@ -130,6 +142,22 @@ export default function GolfSalaryCapBuilder({
     const query = golferSearch.trim().toLocaleLowerCase();
     return query ? (board?.golfers ?? []).filter(golfer => golfer.name.toLocaleLowerCase().includes(query)) : board?.golfers ?? [];
   }, [board?.golfers, golferSearch]);
+  const compareGolfers = comparePlayerIds.map(id => golferById.get(id)).filter((golfer): golfer is Golfer => Boolean(golfer));
+  function toggleComparePlayer(playerId: number) {
+    setComparePlayerIds(current => current.includes(playerId) ? current.filter(id => id !== playerId) : current.length >= 3 ? current : [...current, playerId]);
+  }
+
+  const detailPlayer: ResearchPlayer | null = detailGolfer ? {
+    id: detailGolfer.playerId, name: detailGolfer.name,
+    espnGolfPlayerId: detailGolfer.espnPlayerId, headshotUrl: detailGolfer.headshotUrl,
+    country: detailGolfer.country, owgrRank: detailGolfer.owgrRank,
+  } : null;
+  const detailSalaryCapContext: GolfSalaryCapProfileContext | null = detailGolfer ? {
+    effectiveSalary: detailGolfer.effectiveSalary, suggestedSalary: detailGolfer.suggestedSalary,
+    overrideSalary: detailGolfer.overrideSalary, valueBasis: detailGolfer.valueBasis,
+    selected: selected.includes(detailGolfer.playerId),
+    remainingBudget: golfCentsToMoney(budgetCents - usedCents),
+  } : null;
 
   function disabledReason(golfer: Golfer) {
     if (!board || loading || saving) return "Loading lineup";
@@ -247,31 +275,42 @@ export default function GolfSalaryCapBuilder({
               <input aria-label="Search golfers" type="search" value={golferSearch} onChange={event => setGolferSearch(event.target.value)}
                 placeholder="Search golfers..." className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder:text-slate-500" />
             </div>
-            <div className="grid grid-cols-[1fr_auto_auto] gap-3 border-b border-slate-700 bg-slate-950 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-              <span>Golfer</span><span>Status</span><span>Salary</span>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-2 border-b border-slate-700 bg-slate-950 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              <span>Golfer</span><span>Status</span><span>Salary</span><span className="sr-only">Roster action</span>
             </div>
             <div className="divide-y divide-slate-800">
               {visibleGolfers.map(golfer => {
                 const chosen = selected.includes(golfer.playerId);
                 const reason = disabledReason(golfer);
                 return (
-                  <button key={golfer.playerId} type="button" disabled={!chosen && Boolean(reason)}
-                    onClick={() => setSelected(current => chosen ? current.filter(id => id !== golfer.playerId) : [...current, golfer.playerId])}
-                    title={reason ?? undefined}
-                    className={`grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 px-3 py-3 text-left ${chosen ? "bg-emerald-950/60" : reason ? "cursor-not-allowed opacity-45" : "hover:bg-slate-800"}`}>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-white">{golfer.name}{golfer.isAmateur ? " (a)" : ""}</span>
-                      <span className="block truncate text-xs text-slate-400">{golfer.owgrRank ? `OWGR ${golfer.owgrRank}` : golfer.country ?? "Tournament field"}{reason && !chosen ? ` · ${reason}` : ""}</span>
+                  <div key={golfer.playerId} onClick={compareMode ? () => toggleComparePlayer(golfer.playerId) : undefined} className={`grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 px-3 py-2 ${compareMode && comparePlayerIds.includes(golfer.playerId) ? "bg-emerald-800 ring-1 ring-emerald-300" : chosen ? "bg-emerald-950/60" : "hover:bg-slate-800"}`}>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <button type="button" aria-label={`View ${golfer.name}`} onClick={() => !compareMode && setDetailGolfer(golfer)} className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                        <PlayerHeadshot espnGolfPlayerId={golfer.espnPlayerId} imageUrl={golfer.headshotUrl} playerName={golfer.name} size="sm" className="border-slate-600 bg-slate-800" />
+                      </button>
+                      <button type="button" onClick={() => !compareMode && setDetailGolfer(golfer)} className="min-w-0 text-left focus:outline-none focus:ring-2 focus:ring-emerald-400">
+                        <span className="block truncate text-sm font-semibold text-white">{golfer.name}{golfer.isAmateur ? " (a)" : ""}</span>
+                        <span className="block truncate text-xs text-slate-400">{golfer.owgrRank ? `OWGR ${golfer.owgrRank}` : golfer.country ?? "Tournament field"}{reason && !chosen ? ` · ${reason}` : ""}</span>
+                      </button>
                     </span>
                     <span className="text-xs capitalize text-slate-400">{golfer.fieldStatus?.replaceAll("_", " ") ?? "field"}</span>
                     <span className="text-sm font-bold tabular-nums text-white">{golfer.effectiveSalary === null ? "—" : dollars(golfer.effectiveSalary)}</span>
-                  </button>
+                    <button type="button" disabled={compareMode || (!chosen && Boolean(reason))} onClick={() => setSelected(current => chosen ? current.filter(id => id !== golfer.playerId) : [...current, golfer.playerId])}
+                      title={reason ?? undefined} aria-label={`${chosen ? "Remove" : "Add"} ${golfer.name}`}
+                      className="rounded-lg border border-slate-600 px-2 py-1.5 text-xs font-bold text-slate-100 disabled:cursor-not-allowed disabled:opacity-45">
+                      {chosen ? "Remove" : "Add"}
+                    </button>
+                  </div>
                 );
               })}
             </div>
           </div>
         </>
       )}
+      {!compareMode && !compareOpen && board ? <button type="button" data-floating-compare="true" onClick={() => { setCompareMode(true); setComparePlayerIds([]); }} className="fixed bottom-[5.75rem] right-3 z-[10990] rounded-2xl border border-emerald-400/80 bg-emerald-900/95 px-4 py-3 text-sm font-black text-emerald-50 shadow-2xl">⇄ Compare Golfers</button> : null}
+      {compareMode && !compareOpen ? <div data-floating-compare-selection="true" className="fixed bottom-[5.75rem] left-3 right-3 z-[11000] sm:hidden"><div className="mx-auto flex max-w-md items-center gap-2 rounded-2xl border border-emerald-700/70 bg-slate-950/95 p-2.5 text-white shadow-2xl"><div className="min-w-0 flex-1 px-1"><div className="text-xs font-black">Compare Golfers</div><div className="text-[11px] text-emerald-300">{comparePlayerIds.length}/3 selected</div></div><button type="button" onClick={() => { setCompareMode(false); setComparePlayerIds([]); }} className="shrink-0 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold">Cancel</button><button type="button" disabled={comparePlayerIds.length < 2} onClick={() => setCompareOpen(true)} className="shrink-0 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-black disabled:opacity-40">Compare ({comparePlayerIds.length})</button></div></div> : null}
+      {detailPlayer ? <PlayerResearchModal player={detailPlayer} sport="golf" season={2026} defaultMode="season" salaryCapContext={detailSalaryCapContext} onClose={() => setDetailGolfer(null)} /> : null}
+      {compareOpen ? <GolfCompareModal players={compareGolfers.map(golfer => ({ id: golfer.playerId, name: golfer.name, espnPlayerId: golfer.espnPlayerId, headshotUrl: golfer.headshotUrl, effectiveSalary: golfer.effectiveSalary }))} season={2026} showSalary onClose={() => { setCompareOpen(false); setCompareMode(false); setComparePlayerIds([]); }} /> : null}
     </section>
   );
 }

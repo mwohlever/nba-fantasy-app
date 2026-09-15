@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { formatSlateDateLabel } from "@/lib/formatSlateLabel";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { ProfileScope } from "@/lib/profile/profileScope";
+import {
+  getGolfHistoricalFormatAvailability,
+  matchesGolfHistoricalFormat,
+  type GolfHistoricalFilters,
+} from "@/lib/golf/historicalFormat";
 
 function round(value: number, digits = 1) {
   return Number(value.toFixed(digits));
@@ -143,6 +148,7 @@ export async function getGolfTeamProfile(
   teamId: number,
   seasonParam: string | null,
   scope: ProfileScope,
+  historicalFilters: GolfHistoricalFilters = {},
 ) {
   const isAllTime =
     !seasonParam ||
@@ -173,12 +179,12 @@ export async function getGolfTeamProfile(
     supabaseAdmin
       .from("slates")
       .select(
-        "id, date, start_date, end_date, display_name, is_locked, league_id",
+        "id, date, start_date, end_date, display_name, is_locked, league_id, rules_snapshot, archived_at",
       )
       .eq(
         "league_id",
         scope.leagueId,
-      ),
+      ).is("archived_at", null),
 
     supabaseAdmin
       .from("team_slate_results")
@@ -270,6 +276,17 @@ export async function getGolfTeamProfile(
     (slate) => Number(slate.id),
   );
 
+  const historicalSlateIds = new Set(
+    safeSlates
+      .filter((slate) =>
+        matchesGolfHistoricalFormat(
+          slate.rules_snapshot,
+          historicalFilters,
+        ),
+      )
+      .map((slate) => Number(slate.id)),
+  );
+
   /*
    * Load every team's result for Golf slates so Golf-specific
    * winning-margin milestones can compare the winner to the runner-up.
@@ -307,7 +324,7 @@ export async function getGolfTeamProfile(
 
   const golfLineups = safeLineups.filter(
     (lineup) =>
-      slateById.has(
+      historicalSlateIds.has(
         Number(lineup.slate_id),
       ),
   );
@@ -645,10 +662,45 @@ export async function getGolfTeamProfile(
       ),
     );
 
-  const completedRows =
-    allTeamRows.filter(
-      isCompletedResult,
+  const selectedSeason =
+    !isAllTime &&
+    Number.isFinite(
+      Number(seasonParam),
+    )
+      ? Number(seasonParam)
+      : latestSeason;
+
+  const qualifyingRows =
+    allTeamRows.filter(isCompletedResult);
+
+  const availabilityRows =
+    isAllTime
+      ? qualifyingRows
+      : qualifyingRows.filter(
+          (row) =>
+            row.season === selectedSeason,
+        );
+
+  const historicalFormatAvailability =
+    getGolfHistoricalFormatAvailability(
+      availabilityRows.map(
+        (row) =>
+          slateById.get(row.slateId)
+            ?.rules_snapshot,
+      ),
     );
+
+  const completedRows =
+    qualifyingRows.filter(
+      (row) =>
+        historicalSlateIds.has(
+          Number(row.slateId),
+        ),
+    );
+
+  const completedSlateIds = new Set(
+    completedRows.map((row) => row.slateId),
+  );
 
   const tournamentWins =
     completedRows
@@ -668,14 +720,6 @@ export async function getGolfTeamProfile(
           String(a.date),
         ),
       );
-
-  const selectedSeason =
-    !isAllTime &&
-    Number.isFinite(
-      Number(seasonParam),
-    )
-      ? Number(seasonParam)
-      : latestSeason;
 
   const selectedRows = isAllTime
     ? completedRows
@@ -708,18 +752,25 @@ export async function getGolfTeamProfile(
     new Map<number, number[]>();
 
   lineupPlayers.forEach((row) => {
+    const lineup = lineupById.get(
+      row.lineup_id,
+    );
+
+    if (
+      !lineup ||
+      !completedSlateIds.has(
+        Number(lineup.slate_id),
+      )
+    ) {
+      return;
+    }
+
     playerDraftCounts.set(
       row.player_id,
       (playerDraftCounts.get(
         row.player_id,
       ) ?? 0) + 1,
     );
-
-    const lineup = lineupById.get(
-      row.lineup_id,
-    );
-
-    if (!lineup) return;
 
     const eventPlayer =
       eventPlayerBySlatePlayer.get(
@@ -773,6 +824,14 @@ export async function getGolfTeamProfile(
   const bestPickEver =
     eventPlayers
       .filter((eventPlayer) => {
+        if (
+          !completedSlateIds.has(
+            Number(eventPlayer.slate_id),
+          )
+        ) {
+          return false;
+        }
+
         const draftedIds =
           playerIdsBySlateId.get(
             Number(
@@ -870,6 +929,14 @@ export async function getGolfTeamProfile(
 
     if (!eventPlayer) return;
 
+    if (
+      !completedSlateIds.has(
+        Number(eventPlayer.slate_id),
+      )
+    ) {
+      return;
+    }
+
     const draftedIds =
       playerIdsBySlateId.get(
         Number(
@@ -925,6 +992,14 @@ export async function getGolfTeamProfile(
 
       if (!eventPlayer) return false;
 
+      if (
+        !completedSlateIds.has(
+          Number(eventPlayer.slate_id),
+        )
+      ) {
+        return false;
+      }
+
       const draftedIds =
         playerIdsBySlateId.get(
           Number(
@@ -958,6 +1033,14 @@ export async function getGolfTeamProfile(
   const draftedEventPlayers =
     eventPlayers.filter(
       (eventPlayer) => {
+        if (
+          !completedSlateIds.has(
+            Number(eventPlayer.slate_id),
+          )
+        ) {
+          return false;
+        }
+
         const draftedIds =
           playerIdsBySlateId.get(
             Number(
@@ -1207,6 +1290,7 @@ export async function getGolfTeamProfile(
       isAllTime
         ? "all"
         : selectedSeason,
+    historicalFormatAvailability,
     seasonSummary: {
       ...seasonSummary,
       currentWinStreak:

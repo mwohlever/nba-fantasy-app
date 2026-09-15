@@ -17,6 +17,15 @@ type Mode =
   | "season"
   | "league";
 
+export type GolfSalaryCapProfileContext = {
+  effectiveSalary?: string | null;
+  suggestedSalary?: string | null;
+  overrideSalary?: string | null;
+  valueBasis?: string | null;
+  selected?: boolean;
+  remainingBudget?: string | null;
+};
+
 export type ResearchPlayer = {
   id: number;
   name: string;
@@ -56,9 +65,12 @@ type Props = {
       void |
       Promise<void>;
 
+  salaryCapContext?: GolfSalaryCapProfileContext | null;
+
   onClose:
     () => void;
 };
+
 
 type LeagueProfile = {
   summary?: {
@@ -449,6 +461,7 @@ export default function PlayerResearchModal({
   nflStatsSeason,
   actionLabel,
   onAction,
+  salaryCapContext = null,
   onClose,
 }: Props) {
   const [
@@ -1248,6 +1261,7 @@ export default function PlayerResearchModal({
     );
   }
 
+
   function renderSeasonProfile() {
     if (
       seasonLoading
@@ -1675,6 +1689,7 @@ export default function PlayerResearchModal({
                       : identitySecondary ||
                         sport.toUpperCase()}
                   </div>
+                  {salaryCapContext?.effectiveSalary ? <div className="mt-1 text-sm font-bold text-emerald-200">Salary ${salaryCapContext.effectiveSalary}</div> : null}
                 </div>
               </div>
             </section>

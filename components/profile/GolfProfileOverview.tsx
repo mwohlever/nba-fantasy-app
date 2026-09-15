@@ -126,6 +126,11 @@ export default function GolfProfileOverview({
   season,
   availableSeasons,
   onSeasonChange,
+  gameType = "all",
+  draftType = "all",
+  formatAvailability,
+  onGameTypeChange,
+  onDraftTypeChange,
 }: {
   profile: GolfProfile;
   teamId: number;
@@ -134,9 +139,29 @@ export default function GolfProfileOverview({
   onSeasonChange: (
     season: SeasonValue,
   ) => void;
+  gameType?: "all" | "standard" | "best_ball";
+  draftType?: "all" | "snake" | "salary_cap";
+  formatAvailability?: {
+    gameTypes: {
+      standard: boolean;
+      best_ball: boolean;
+    };
+    draftTypes: {
+      snake: boolean;
+      salary_cap: boolean;
+    };
+  };
+  onGameTypeChange?: (
+    value: "all" | "standard" | "best_ball",
+  ) => void;
+  onDraftTypeChange?: (
+    value: "all" | "snake" | "salary_cap",
+  ) => void;
 }) {
   const golf =
     profile.golfSummary;
+  const showHistoricalFilters =
+    Boolean(onGameTypeChange && onDraftTypeChange);
 
   return (
     <div className="space-y-5 text-slate-100">
@@ -181,6 +206,75 @@ export default function GolfProfileOverview({
               ),
             )}
           </select>
+          {showHistoricalFilters ? (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-emerald-300/75">
+                  Scoring
+                </span>
+                <select
+                  value={gameType}
+                  onChange={(event) =>
+                    onGameTypeChange?.(
+                      event.target.value as "all" | "standard" | "best_ball",
+                    )
+                  }
+                  className="rounded-xl border border-emerald-700/70 bg-slate-950 px-3 py-2 text-sm font-semibold text-emerald-100"
+                >
+                  <option value="all">All</option>
+                  <option
+                    value="standard"
+                    disabled={
+                      formatAvailability?.gameTypes.standard === false
+                    }
+                  >
+                    Standard
+                  </option>
+                  <option
+                    value="best_ball"
+                    disabled={
+                      formatAvailability?.gameTypes.best_ball === false
+                    }
+                  >
+                    Best Ball
+                  </option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-emerald-300/75">
+                  Draft
+                </span>
+                <select
+                  value={draftType}
+                  onChange={(event) =>
+                    onDraftTypeChange?.(
+                      event.target.value as "all" | "snake" | "salary_cap",
+                    )
+                  }
+                  className="rounded-xl border border-emerald-700/70 bg-slate-950 px-3 py-2 text-sm font-semibold text-emerald-100"
+                >
+                  <option value="all">All</option>
+                  <option
+                    value="snake"
+                    disabled={
+                      formatAvailability?.draftTypes.snake === false
+                    }
+                  >
+                    Snake
+                  </option>
+                  <option
+                    value="salary_cap"
+                    disabled={
+                      formatAvailability?.draftTypes.salary_cap === false
+                    }
+                  >
+                    Salary Cap
+                  </option>
+                </select>
+              </label>
+            </div>
+          ) : null}
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -4,6 +4,7 @@ import { compareNflStats, nflPositionStats, nflStatFields, nflStatValue, type Nf
 import { useEffect, useMemo, useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
+import GolfCompareModal from "@/components/lineups/GolfCompareModal";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import type {
   Player,
@@ -3462,7 +3463,9 @@ export default function PlayerPool({
         </div>
       ) : null}
 
-      {compareOpen &&
+      {compareOpen && isGolf && comparePlayers.length >= 2 ? <GolfCompareModal players={comparePlayers.map(player => ({ id: player.id, name: player.name, espnPlayerId: player.espn_player_id, headshotUrl: player.headshot_url }))} season={Number(selectedSeason)} onClose={() => setCompareOpen(false)} /> : null}
+
+      {compareOpen && !isGolf &&
       comparePlayers.length >=
         2 ? (
         <div

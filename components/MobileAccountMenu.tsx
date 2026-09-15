@@ -308,15 +308,6 @@ function MobileAccountMenuContent() {
             Profile
           </div>
 
-          {selectedSport === "golf" ? (
-            <Link
-              href="/player-history?sport=golf"
-              onClick={() => setIsOpen(false)}
-              className="block rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-            >
-              Player History
-            </Link>
-          ) : null}
 
           {displayedProfileLinks.map((link) => {
             const isActive =

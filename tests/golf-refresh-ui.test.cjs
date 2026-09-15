@@ -7,8 +7,18 @@ context.capturePull = true;
 const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').default;
 const { GolfFantasyRows } = require('../components/lineups/GolfScoresDashboard.tsx');
 const SalarySetup = require('../components/golf/GolfSalarySetup.tsx').default;
+const { golfCompareWinners } = require('../components/lineups/GolfCompareModal.tsx');
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const text = tree => Array.isArray(tree) ? tree.map(text).join(' ') : typeof tree === 'string' || typeof tree === 'number' ? String(tree) : tree?.props ? text(tree.props.children) : '';
+test('Golf comparison winner selection preserves directions, ties, missing values, and zero', () => {
+  assert.deepEqual([...golfCompareWinners([70.1, 69.5], true)], [1]);
+  assert.deepEqual([...golfCompareWinners([75, 75, 60], false)], [0, 1]);
+  assert.deepEqual([...golfCompareWinners([null, 0, null], false)], [1]);
+  assert.deepEqual([...golfCompareWinners([null, null], false)], []);
+  const source = require('node:fs').readFileSync('components/lineups/GolfCompareModal.tsx', 'utf8');
+  assert.match(source, /showSalary \? <div/);
+  assert.match(source, /golfCompareMetrics\.map/);
+});
 test('Golf Home and Scores omit the removed tabs and duplicate real-world leaderboard', () => {
   const fs = require('node:fs');
   const scores = fs.readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8');
@@ -56,7 +66,7 @@ test('pull refresh preserves unsaved period selections, flags invalidity and ret
   try {
     const h = host(Builder), props = { initialSlateId: 1, slates: [{ id: 1, label: 'Test' }] };
     h.render(props, true); await flush(); let tree = h.render(props);
-    nodes(tree).find(n => n.key === '2' && n.props?.className?.includes('grid w-full')).props.onClick(); tree = h.render(props);
+    nodes(tree).find(n => n.props?.['aria-label'] === 'Add Golfer 2').props.onClick(); tree = h.render(props);
     const refresh = context.pullOptions.onRefresh;
     const first = refresh(), second = refresh();
     assert.equal((await second).status, 'skipped'); await first;
@@ -88,7 +98,7 @@ test('Salary Cap golfer search filters names without changing selections or feas
   try {
     const h = host(Builder), props = { initialSlateId: 1, slates: [{ id: 1, label: 'Test' }] };
     h.render(props, true); await flush(); let tree = h.render(props);
-    const golferButton = id => nodes(tree).find(node => node.key === String(id) && node.type === 'button' && node.props.className?.includes('grid w-full'));
+    const golferButton = id => nodes(tree).find(node => node.type === 'button' && node.props['aria-label'] === `Add ${golfers.find(golfer => golfer.playerId === id)?.name}`);
     golferButton(1).props.onClick(); tree = h.render(props);
     const search = nodes(tree).find(node => node.props?.['aria-label'] === 'Search golfers');
     assert.equal(search.props.placeholder, 'Search golfers...');
@@ -101,6 +111,42 @@ test('Salary Cap golfer search filters names without changing selections or feas
     search.props.onChange({ target: { value: '' } }); tree = h.render(props);
     assert.match(text(tree), /Blocked Golfer/);
     assert.equal(golferButton(3).props.disabled, true);
+    h.unmount();
+  } finally { global.fetch = oldFetch; }
+});
+
+test('Salary Cap uses the shared Golf detail modal without selecting a golfer', async () => {
+  const oldFetch = global.fetch;
+  global.fetch = async () => ({ ok: true, json: async () => ({ slate: { id: 1, name: 'Test' }, period: { key: 'full_tournament', state: 'open' },
+    periods: [{ key: 'full_tournament', state: 'open' }], priceSet: { status: 'frozen' }, budget: '100.00', rosterSize: 1, lineup: null,
+    golfers: [
+      { playerId: 1, name: 'Headshot Golfer', espnPlayerId: '123', headshotUrl: 'https://example.test/headshot.png', eligible: true, priced: true, effectiveSalary: '20.00', suggestedSalary: '18.00', valueBasis: 'blended' },
+      { playerId: 2, name: 'Fallback Golfer', espnPlayerId: null, headshotUrl: null, eligible: false, priced: false, effectiveSalary: null, suggestedSalary: null, valueBasis: 'unsupported' },
+    ],
+  }) });
+  try {
+    const h = host(Builder), props = { initialSlateId: 1, slates: [{ id: 1, label: 'Test' }] };
+    h.render(props, true); await flush(); let tree = h.render(props);
+    const markup = require('react-dom/server').renderToStaticMarkup(tree);
+    assert.match(markup, /headshot\.png/);
+    assert.match(markup, />FG</); // PlayerHeadshot initials are the no-image fallback.
+    nodes(tree).find(node => node.type === 'button' && node.props.className?.includes('min-w-0 text-left')).props.onClick(); tree = h.render(props);
+    let detailMarkup = require('react-dom/server').renderToStaticMarkup(tree);
+    assert.match(detailMarkup, /role="dialog"/);
+    assert.match(detailMarkup, /Player Profile/);
+    assert.match(detailMarkup, /Season Stats/);
+    assert.doesNotMatch(detailMarkup, /Tournament scorecard/);
+    assert.match(detailMarkup, /Salary \$20\.00/);
+    const profileSource = require('node:fs').readFileSync('components/lineups/PlayerResearchModal.tsx', 'utf8');
+    assert.doesNotMatch(profileSource, /Salary Cap Value|onCompareGolfers/);
+    nodes(tree).find(node => node.props?.['aria-label'] === 'View Headshot Golfer').props.onClick(); tree = h.render(props);
+    assert.match(require('react-dom/server').renderToStaticMarkup(tree), /Headshot Golfer profile/);
+    nodes(tree).find(node => node.props?.['aria-label'] === 'Add Headshot Golfer').props.onClick(); tree = h.render(props);
+    assert.match(text(tree), /Remaining:\s+\$80\.00/);
+    nodes(tree).find(node => node.props?.['aria-label'] === 'View Fallback Golfer').props.onClick(); tree = h.render(props);
+    detailMarkup = require('react-dom/server').renderToStaticMarkup(tree);
+    assert.doesNotMatch(detailMarkup, /Salary Cap Value/);
+    assert.doesNotMatch(detailMarkup, /\$null|\$undefined/);
     h.unmount();
   } finally { global.fetch = oldFetch; }
 });
