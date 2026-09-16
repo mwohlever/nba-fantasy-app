@@ -1,0 +1,11 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+// Explicit ESPN GET cache only. No database, app route, or scheduler access.
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const plan=require('../data/analytics/nfl-research-cohort.json'),seasons=[2023,2024,2025];
+function url(id,season){return `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${id}/gamelog?season=${season}`}
+async function main(){if(process.argv.length!==3)throw new Error('Usage: node scripts/fetch-nfl-research-game-logs.cjs /tmp/cache-directory');const dir=path.resolve(process.argv[2]);fs.mkdirSync(dir,{recursive:true});
+ async function get(player,season){const file=path.join(dir,`log-${player.espnPlayerId}-${season}.json`),source=url(player.espnPlayerId,season);if(fs.existsSync(file)){const cached=JSON.parse(fs.readFileSync(file,'utf8'));if(cached.url!==source)throw new Error(`Cache source mismatch: ${file}`);return;}
+  let response,raw,payload;for(let attempt=0;attempt<3;attempt++){response=await fetch(source,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(25000)});raw=await response.text();try{payload=JSON.parse(raw)}catch{payload=null}if(response.ok&&Array.isArray(payload?.names)&&Array.isArray(payload?.seasonTypes)&&payload?.events)break;if(attempt===2||response.status<500)break;await new Promise(r=>setTimeout(r,1000*(attempt+1)))}
+  const emptyHistory=payload&&Object.keys(payload).every(key=>key==='filters')&&Array.isArray(payload.filters);if(!response?.ok||!payload||(!emptyHistory&&(!Array.isArray(payload.names)||!Array.isArray(payload.seasonTypes)||!payload.events)))throw new Error(`Invalid ESPN response ${response?.status}: ${source}`);fs.writeFileSync(file,JSON.stringify({url:source,fetchedAt:new Date().toISOString(),sha256:crypto.createHash('sha256').update(raw).digest('hex'),payload}));console.log(`${player.position} ${player.espnPlayerId} ${season}${emptyHistory?' no-history':''}`);await new Promise(r=>setTimeout(r,150));}
+ for(let i=0;i<plan.players.length;i+=4)await Promise.all(plan.players.slice(i,i+4).flatMap(player=>seasons.map(season=>get(player,season))));
+}main().catch(error=>{console.error(error.stack);process.exitCode=1});

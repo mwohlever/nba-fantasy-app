@@ -1,0 +1,255 @@
+{
+  "version": "nfl-research-cohort-v1",
+  "generatedAt": "2026-09-16T13:35:04.049Z",
+  "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams + /teams/{id}/roster",
+  "positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+  ],
+  "playersPerPosition": 12,
+  "selectionRule": "For each QB/RB/WR/TE, deduplicate current ESPN NFL roster athletes by provider ID, sort ascending numeric ESPN athlete ID, divide that position list into 12 equal index bands, and select the first athlete in each band. The resulting frozen manifest—not a live roster query—is the research cohort.",
+  "players": [
+    {
+      "espnPlayerId": "8439",
+      "expectedName": "Aaron Rodgers",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "15864",
+      "expectedName": "Geno Smith",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "3046779",
+      "expectedName": "Jared Goff",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "3912547",
+      "expectedName": "Sam Darnold",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4036419",
+      "expectedName": "Skylar Thompson",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4241479",
+      "expectedName": "Tua Tagovailoa",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4360423",
+      "expectedName": "Michael Penix Jr.",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4426335",
+      "expectedName": "Graham Mertz",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4429084",
+      "expectedName": "Anthony Richardson Sr.",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4431580",
+      "expectedName": "Miller Moss",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4573398",
+      "expectedName": "Max Brosmer",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "4689114",
+      "expectedName": "Jaxson Dart",
+      "position": "QB"
+    },
+    {
+      "espnPlayerId": "2576336",
+      "expectedName": "Ameer Abdullah",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4035537",
+      "expectedName": "Kene Nwangwu",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4241401",
+      "expectedName": "Trey Sermon",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4360516",
+      "expectedName": "Tyrone Tracy Jr.",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4379399",
+      "expectedName": "James Cook III",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4429013",
+      "expectedName": "Tank Bigsby",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4430104",
+      "expectedName": "Sincere McCormick",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4567048",
+      "expectedName": "Kenneth Walker III",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4601080",
+      "expectedName": "Raheim Sanders",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4685512",
+      "expectedName": "Jadarian Price",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4698191",
+      "expectedName": "Chris Collier",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "4876378",
+      "expectedName": "Damon Bankston",
+      "position": "RB"
+    },
+    {
+      "espnPlayerId": "15847",
+      "expectedName": "Travis Kelce",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "3052096",
+      "expectedName": "Johnny Mundt",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "3921690",
+      "expectedName": "Josh Oliver",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4240472",
+      "expectedName": "Noah Gray",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4259147",
+      "expectedName": "Jake Tonges",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4361411",
+      "expectedName": "Pat Freiermuth",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4372780",
+      "expectedName": "Tommy Tremble",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4429811",
+      "expectedName": "Patrick Herbert",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4433959",
+      "expectedName": "Ben Yurosek",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4678006",
+      "expectedName": "Elijah Arroyo",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4700712",
+      "expectedName": "Cam Grandy",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "4876006",
+      "expectedName": "Zaire Mitchell-Paden",
+      "position": "TE"
+    },
+    {
+      "espnPlayerId": "15818",
+      "expectedName": "Keenan Allen",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "3871102",
+      "expectedName": "David Sills V",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4040655",
+      "expectedName": "Darnell Mooney",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4258173",
+      "expectedName": "Nico Collins",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4369863",
+      "expectedName": "Cedric Tillman",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4427278",
+      "expectedName": "Xavier Gipson",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4431142",
+      "expectedName": "Jimmy Holiday",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4569587",
+      "expectedName": "Wan'Dale Robinson",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4612826",
+      "expectedName": "Ladd McConkey",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4686104",
+      "expectedName": "Johnny Wilson",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4718457",
+      "expectedName": "Noah Thomas",
+      "position": "WR"
+    },
+    {
+      "espnPlayerId": "4885466",
+      "expectedName": "Jeff Caldwell",
+      "position": "WR"
+    }
+  ]
+}

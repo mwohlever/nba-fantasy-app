@@ -1,0 +1,889 @@
+{
+  "version": "nfl-research-validation-v1",
+  "datasetSha256": "6bd305fb245925eef9073fc8e2d20a3d521c5723877b8c3762ba762abb408953",
+  "cohort": {
+    "total": 48,
+    "byPosition": {
+      "QB": 12,
+      "RB": 12,
+      "TE": 12,
+      "WR": 12
+    },
+    "selectionRule": "For each QB/RB/WR/TE, deduplicate current ESPN NFL roster athletes by provider ID, sort ascending numeric ESPN athlete ID, divide that position list into 12 equal index bands, and select the first athlete in each band. The resulting frozen manifest—not a live roster query—is the research cohort."
+  },
+  "observations": {
+    "total": 1266,
+    "bySeason": {
+      "2023": 340,
+      "2024": 445,
+      "2025": 481
+    },
+    "byPosition": {
+      "QB": 275,
+      "RB": 297,
+      "TE": 365,
+      "WR": 329
+    },
+    "dateRanges": {
+      "2023": {
+        "from": "2023-09-08T00:20:00.000Z",
+        "to": "2024-01-08T01:20:00.000Z"
+      },
+      "2024": {
+        "from": "2024-09-06T00:40:00.000Z",
+        "to": "2025-01-06T01:20:00.000Z"
+      },
+      "2025": {
+        "from": "2025-09-06T00:00:00.000Z",
+        "to": "2026-01-05T01:20:00.000Z"
+      }
+    }
+  },
+  "completeness": {
+    "completions": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 0
+      },
+      "WR": {
+        "observations": 329,
+        "available": 0
+      },
+      "TE": {
+        "observations": 365,
+        "available": 0
+      }
+    },
+    "passingAttempts": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 0
+      },
+      "WR": {
+        "observations": 329,
+        "available": 0
+      },
+      "TE": {
+        "observations": 365,
+        "available": 0
+      }
+    },
+    "passingYards": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 0
+      },
+      "WR": {
+        "observations": 329,
+        "available": 0
+      },
+      "TE": {
+        "observations": 365,
+        "available": 0
+      }
+    },
+    "passingTouchdowns": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 0
+      },
+      "WR": {
+        "observations": 329,
+        "available": 0
+      },
+      "TE": {
+        "observations": 365,
+        "available": 0
+      }
+    },
+    "interceptions": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 0
+      },
+      "WR": {
+        "observations": 329,
+        "available": 0
+      },
+      "TE": {
+        "observations": 365,
+        "available": 0
+      }
+    },
+    "rushingAttempts": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 297
+      },
+      "WR": {
+        "observations": 329,
+        "available": 329
+      },
+      "TE": {
+        "observations": 365,
+        "available": 365
+      }
+    },
+    "rushingYards": {
+      "QB": {
+        "observations": 275,
+        "available": 227
+      },
+      "RB": {
+        "observations": 297,
+        "available": 295
+      },
+      "WR": {
+        "observations": 329,
+        "available": 328
+      },
+      "TE": {
+        "observations": 365,
+        "available": 364
+      }
+    },
+    "rushingTouchdowns": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 297
+      },
+      "WR": {
+        "observations": 329,
+        "available": 329
+      },
+      "TE": {
+        "observations": 365,
+        "available": 365
+      }
+    },
+    "receivingTargets": {
+      "QB": {
+        "observations": 275,
+        "available": 0
+      },
+      "RB": {
+        "observations": 297,
+        "available": 297
+      },
+      "WR": {
+        "observations": 329,
+        "available": 329
+      },
+      "TE": {
+        "observations": 365,
+        "available": 365
+      }
+    },
+    "receptions": {
+      "QB": {
+        "observations": 275,
+        "available": 0
+      },
+      "RB": {
+        "observations": 297,
+        "available": 297
+      },
+      "WR": {
+        "observations": 329,
+        "available": 329
+      },
+      "TE": {
+        "observations": 365,
+        "available": 365
+      }
+    },
+    "receivingYards": {
+      "QB": {
+        "observations": 275,
+        "available": 0
+      },
+      "RB": {
+        "observations": 297,
+        "available": 288
+      },
+      "WR": {
+        "observations": 329,
+        "available": 328
+      },
+      "TE": {
+        "observations": 365,
+        "available": 364
+      }
+    },
+    "receivingTouchdowns": {
+      "QB": {
+        "observations": 275,
+        "available": 0
+      },
+      "RB": {
+        "observations": 297,
+        "available": 297
+      },
+      "WR": {
+        "observations": 329,
+        "available": 329
+      },
+      "TE": {
+        "observations": 365,
+        "available": 365
+      }
+    },
+    "fumblesLost": {
+      "QB": {
+        "observations": 275,
+        "available": 275
+      },
+      "RB": {
+        "observations": 297,
+        "available": 297
+      },
+      "WR": {
+        "observations": 329,
+        "available": 329
+      },
+      "TE": {
+        "observations": 365,
+        "available": 365
+      }
+    }
+  },
+  "qbFumbles": {
+    "observations": 275,
+    "numeric": 275,
+    "unresolved": 0,
+    "zero": 236,
+    "positive": 39,
+    "total": 44,
+    "bySeason": {
+      "2023": {
+        "observations": 65,
+        "numeric": 65,
+        "zero": 53,
+        "positive": 12,
+        "total": 14
+      },
+      "2024": {
+        "observations": 98,
+        "numeric": 98,
+        "zero": 87,
+        "positive": 11,
+        "total": 11
+      },
+      "2025": {
+        "observations": 112,
+        "numeric": 112,
+        "zero": 96,
+        "positive": 16,
+        "total": 19
+      }
+    },
+    "eventSummaries": {
+      "requested": 253,
+      "unique": 253,
+      "cache": {
+        "hits": 0,
+        "misses": 253
+      },
+      "fetchFailures": 0,
+      "invalidProviderShapes": 0
+    }
+  },
+  "qbFumbleSpotChecks": {
+    "absentPlayerRowZero": {
+      "providerPlayerId": "15864",
+      "playerName": "Geno Smith",
+      "season": 2023,
+      "week": 1,
+      "eventId": "401547408",
+      "totalFumbles": 0,
+      "fumblesLost": 0,
+      "playerRowPresent": false
+    },
+    "presentFumbleZeroLost": {
+      "providerPlayerId": "15864",
+      "playerName": "Geno Smith",
+      "season": 2023,
+      "week": 8,
+      "eventId": "401547509",
+      "totalFumbles": 1,
+      "fumblesLost": 0,
+      "playerRowPresent": true
+    },
+    "jaredGoff2024": {
+      "providerPlayerId": "3046779",
+      "playerName": "Jared Goff",
+      "season": 2024,
+      "week": 7,
+      "eventId": "401671724",
+      "totalFumbles": 2,
+      "fumblesLost": 0,
+      "playerRowPresent": true
+    },
+    "positiveLost": [
+      {
+        "providerPlayerId": "15864",
+        "playerName": "Geno Smith",
+        "season": 2023,
+        "week": 7,
+        "eventId": "401547493",
+        "totalFumbles": 1,
+        "fumblesLost": 1,
+        "playerRowPresent": true
+      },
+      {
+        "providerPlayerId": "3046779",
+        "playerName": "Jared Goff",
+        "season": 2023,
+        "week": 12,
+        "eventId": "401547552",
+        "totalFumbles": 3,
+        "fumblesLost": 3,
+        "playerRowPresent": true
+      }
+    ],
+    "positiveLost2025": {
+      "providerPlayerId": "15864",
+      "playerName": "Geno Smith",
+      "season": 2025,
+      "week": 12,
+      "eventId": "401772784",
+      "totalFumbles": 2,
+      "fumblesLost": 1,
+      "playerRowPresent": true
+    }
+  },
+  "identityIntegrity": {
+    "duplicatePlayerEventObservations": 0,
+    "duplicateProviderConflicts": 0,
+    "missingProviderEventIds": 0,
+    "unresolvedPlayerIdentities": 0,
+    "sameTeamAndOpponent": 0,
+    "missingHomeAway": 0,
+    "unexpectedNonRegularRows": 0
+  },
+  "sparseHistory": {
+    "noHistoryBySeason": {
+      "2023": [
+        "4036419",
+        "4360423",
+        "4426335",
+        "4431580",
+        "4573398",
+        "4689114",
+        "4360516",
+        "4430104",
+        "4601080",
+        "4685512",
+        "4698191",
+        "4876378",
+        "4259147",
+        "4429811",
+        "4433959",
+        "4678006",
+        "4700712",
+        "4876006",
+        "4431142",
+        "4612826",
+        "4686104",
+        "4718457",
+        "4885466"
+      ],
+      "2024": [
+        "4426335",
+        "4431580",
+        "4573398",
+        "4689114",
+        "4601080",
+        "4685512",
+        "4876378",
+        "4429811",
+        "4433959",
+        "4678006",
+        "4876006",
+        "3871102",
+        "4431142",
+        "4718457",
+        "4885466"
+      ],
+      "2025": [
+        "4036419",
+        "4426335",
+        "4431580",
+        "4430104",
+        "4685512",
+        "4698191",
+        "4876378",
+        "4429811",
+        "4686104",
+        "4718457",
+        "4885466"
+      ]
+    },
+    "verySmallTotalSamples": [
+      {
+        "providerPlayerId": "4036419",
+        "position": "QB",
+        "expectedName": "Skylar Thompson",
+        "total": 3
+      },
+      {
+        "providerPlayerId": "4426335",
+        "position": "QB",
+        "expectedName": "Graham Mertz",
+        "total": 0
+      },
+      {
+        "providerPlayerId": "4431580",
+        "position": "QB",
+        "expectedName": "Miller Moss",
+        "total": 0
+      },
+      {
+        "providerPlayerId": "4685512",
+        "position": "RB",
+        "expectedName": "Jadarian Price",
+        "total": 0
+      },
+      {
+        "providerPlayerId": "4876378",
+        "position": "RB",
+        "expectedName": "Damon Bankston",
+        "total": 0
+      },
+      {
+        "providerPlayerId": "4429811",
+        "position": "TE",
+        "expectedName": "Patrick Herbert",
+        "total": 0
+      },
+      {
+        "providerPlayerId": "4431142",
+        "position": "WR",
+        "expectedName": "Jimmy Holiday",
+        "total": 1
+      },
+      {
+        "providerPlayerId": "4718457",
+        "position": "WR",
+        "expectedName": "Noah Thomas",
+        "total": 0
+      },
+      {
+        "providerPlayerId": "4885466",
+        "position": "WR",
+        "expectedName": "Jeff Caldwell",
+        "total": 0
+      }
+    ]
+  },
+  "spotChecks": [
+    {
+      "position": "QB",
+      "player": {
+        "espnPlayerId": "8439",
+        "expectedName": "Aaron Rodgers",
+        "position": "QB"
+      },
+      "observations": [
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "8439",
+          "playerName": "Aaron Rodgers",
+          "position": "QB",
+          "season": 2023,
+          "phase": "regular",
+          "week": 1,
+          "eventId": "401547352",
+          "gameAt": "2023-09-12T00:15:00.000Z",
+          "team": {
+            "providerId": "20",
+            "abbreviation": "NYJ"
+          },
+          "opponent": {
+            "providerId": "2",
+            "abbreviation": "BUF"
+          },
+          "homeAway": "home",
+          "stats": {
+            "completions": 0,
+            "passingAttempts": 1,
+            "passingYards": 0,
+            "passingTouchdowns": 0,
+            "interceptions": 0,
+            "rushingAttempts": 0,
+            "rushingYards": 0,
+            "rushingTouchdowns": 0,
+            "receivingTargets": null,
+            "receptions": null,
+            "receivingYards": null,
+            "receivingTouchdowns": null,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/8439/gamelog?season=2023",
+            "fetchedAt": "2026-09-16T13:47:00.925Z",
+            "knownAt": null
+          },
+          "fumblesLostProvenance": {
+            "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547352",
+            "fetchedAt": "2026-09-16T14:11:37.953Z",
+            "totalFumbles": 0,
+            "playerRowPresent": false
+          }
+        },
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "8439",
+          "playerName": "Aaron Rodgers",
+          "position": "QB",
+          "season": 2024,
+          "phase": "regular",
+          "week": 1,
+          "eventId": "401671696",
+          "gameAt": "2024-09-10T00:15:00.000Z",
+          "team": {
+            "providerId": "20",
+            "abbreviation": "NYJ"
+          },
+          "opponent": {
+            "providerId": "25",
+            "abbreviation": "SF"
+          },
+          "homeAway": "away",
+          "stats": {
+            "completions": 13,
+            "passingAttempts": 21,
+            "passingYards": 167,
+            "passingTouchdowns": 1,
+            "interceptions": 1,
+            "rushingAttempts": 1,
+            "rushingYards": null,
+            "rushingTouchdowns": 0,
+            "receivingTargets": null,
+            "receptions": null,
+            "receivingYards": null,
+            "receivingTouchdowns": null,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/8439/gamelog?season=2024",
+            "fetchedAt": "2026-09-16T13:47:00.916Z",
+            "knownAt": null
+          },
+          "fumblesLostProvenance": {
+            "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671696",
+            "fetchedAt": "2026-09-16T14:11:43.391Z",
+            "totalFumbles": 0,
+            "playerRowPresent": false
+          }
+        }
+      ]
+    },
+    {
+      "position": "RB",
+      "player": {
+        "espnPlayerId": "2576336",
+        "expectedName": "Ameer Abdullah",
+        "position": "RB"
+      },
+      "observations": [
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "2576336",
+          "playerName": "Ameer Abdullah",
+          "position": "RB",
+          "season": 2023,
+          "phase": "regular",
+          "week": 1,
+          "eventId": "401547400",
+          "gameAt": "2023-09-10T20:25:00.000Z",
+          "team": {
+            "providerId": "13",
+            "abbreviation": "LV"
+          },
+          "opponent": {
+            "providerId": "7",
+            "abbreviation": "DEN"
+          },
+          "homeAway": "away",
+          "stats": {
+            "completions": null,
+            "passingAttempts": null,
+            "passingYards": null,
+            "passingTouchdowns": null,
+            "interceptions": null,
+            "rushingAttempts": 0,
+            "rushingYards": 0,
+            "rushingTouchdowns": 0,
+            "receivingTargets": 1,
+            "receptions": 0,
+            "receivingYards": 0,
+            "receivingTouchdowns": 0,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/2576336/gamelog?season=2023",
+            "fetchedAt": "2026-09-16T13:56:49.327Z",
+            "knownAt": null
+          }
+        },
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "2576336",
+          "playerName": "Ameer Abdullah",
+          "position": "RB",
+          "season": 2023,
+          "phase": "regular",
+          "week": 2,
+          "eventId": "401547411",
+          "gameAt": "2023-09-17T17:00:00.000Z",
+          "team": {
+            "providerId": "13",
+            "abbreviation": "LV"
+          },
+          "opponent": {
+            "providerId": "2",
+            "abbreviation": "BUF"
+          },
+          "homeAway": "away",
+          "stats": {
+            "completions": null,
+            "passingAttempts": null,
+            "passingYards": null,
+            "passingTouchdowns": null,
+            "interceptions": null,
+            "rushingAttempts": 0,
+            "rushingYards": 0,
+            "rushingTouchdowns": 0,
+            "receivingTargets": 3,
+            "receptions": 1,
+            "receivingYards": 5,
+            "receivingTouchdowns": 0,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/2576336/gamelog?season=2023",
+            "fetchedAt": "2026-09-16T13:56:49.327Z",
+            "knownAt": null
+          }
+        }
+      ]
+    },
+    {
+      "position": "WR",
+      "player": {
+        "espnPlayerId": "15818",
+        "expectedName": "Keenan Allen",
+        "position": "WR"
+      },
+      "observations": [
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "15818",
+          "playerName": "Keenan Allen",
+          "position": "WR",
+          "season": 2023,
+          "phase": "regular",
+          "week": 1,
+          "eventId": "401547401",
+          "gameAt": "2023-09-10T20:25:00.000Z",
+          "team": {
+            "providerId": "24",
+            "abbreviation": "LAC"
+          },
+          "opponent": {
+            "providerId": "15",
+            "abbreviation": "MIA"
+          },
+          "homeAway": "home",
+          "stats": {
+            "completions": null,
+            "passingAttempts": null,
+            "passingYards": null,
+            "passingTouchdowns": null,
+            "interceptions": null,
+            "rushingAttempts": 2,
+            "rushingYards": 6,
+            "rushingTouchdowns": 0,
+            "receivingTargets": 9,
+            "receptions": 6,
+            "receivingYards": 76,
+            "receivingTouchdowns": 0,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15818/gamelog?season=2023",
+            "fetchedAt": "2026-09-16T13:56:50.896Z",
+            "knownAt": null
+          }
+        },
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "15818",
+          "playerName": "Keenan Allen",
+          "position": "WR",
+          "season": 2023,
+          "phase": "regular",
+          "week": 2,
+          "eventId": "401547414",
+          "gameAt": "2023-09-17T17:00:00.000Z",
+          "team": {
+            "providerId": "24",
+            "abbreviation": "LAC"
+          },
+          "opponent": {
+            "providerId": "10",
+            "abbreviation": "TEN"
+          },
+          "homeAway": "away",
+          "stats": {
+            "completions": null,
+            "passingAttempts": null,
+            "passingYards": null,
+            "passingTouchdowns": null,
+            "interceptions": null,
+            "rushingAttempts": 0,
+            "rushingYards": 0,
+            "rushingTouchdowns": 0,
+            "receivingTargets": 10,
+            "receptions": 8,
+            "receivingYards": 111,
+            "receivingTouchdowns": 2,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15818/gamelog?season=2023",
+            "fetchedAt": "2026-09-16T13:56:50.896Z",
+            "knownAt": null
+          }
+        }
+      ]
+    },
+    {
+      "position": "TE",
+      "player": {
+        "espnPlayerId": "15847",
+        "expectedName": "Travis Kelce",
+        "position": "TE"
+      },
+      "observations": [
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "15847",
+          "playerName": "Travis Kelce",
+          "position": "TE",
+          "season": 2023,
+          "phase": "regular",
+          "week": 2,
+          "eventId": "401547413",
+          "gameAt": "2023-09-17T17:00:00.000Z",
+          "team": {
+            "providerId": "12",
+            "abbreviation": "KC"
+          },
+          "opponent": {
+            "providerId": "30",
+            "abbreviation": "JAX"
+          },
+          "homeAway": "away",
+          "stats": {
+            "completions": null,
+            "passingAttempts": null,
+            "passingYards": null,
+            "passingTouchdowns": null,
+            "interceptions": null,
+            "rushingAttempts": 0,
+            "rushingYards": 0,
+            "rushingTouchdowns": 0,
+            "receivingTargets": 9,
+            "receptions": 4,
+            "receivingYards": 26,
+            "receivingTouchdowns": 1,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15847/gamelog?season=2023",
+            "fetchedAt": "2026-09-16T13:56:50.133Z",
+            "knownAt": null
+          }
+        },
+        {
+          "sport": "nfl",
+          "provider": "espn",
+          "providerPlayerId": "15847",
+          "playerName": "Travis Kelce",
+          "position": "TE",
+          "season": 2023,
+          "phase": "regular",
+          "week": 3,
+          "eventId": "401547438",
+          "gameAt": "2023-09-24T20:25:00.000Z",
+          "team": {
+            "providerId": "12",
+            "abbreviation": "KC"
+          },
+          "opponent": {
+            "providerId": "3",
+            "abbreviation": "CHI"
+          },
+          "homeAway": "home",
+          "stats": {
+            "completions": null,
+            "passingAttempts": null,
+            "passingYards": null,
+            "passingTouchdowns": null,
+            "interceptions": null,
+            "rushingAttempts": 0,
+            "rushingYards": 0,
+            "rushingTouchdowns": 0,
+            "receivingTargets": 8,
+            "receptions": 7,
+            "receivingYards": 69,
+            "receivingTouchdowns": 1,
+            "fumblesLost": 0
+          },
+          "provenance": {
+            "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15847/gamelog?season=2023",
+            "fetchedAt": "2026-09-16T13:56:50.133Z",
+            "knownAt": null
+          }
+        }
+      ]
+    }
+  ]
+}

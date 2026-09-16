@@ -1,0 +1,1604 @@
+{
+  "version": "nfl-research-dataset-v1",
+  "generatedAt": "2026-09-16T14:13:46.346Z",
+  "provider": "espn",
+  "sourceTemplate": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/{id}/gamelog?season={year}",
+  "seasons": [
+    2023,
+    2024,
+    2025
+  ],
+  "regularSeasonOnly": true,
+  "normalizationVersion": "espn_nfl_gamelog_v1",
+  "cohort": {
+    "version": "nfl-research-cohort-v1",
+    "generatedAt": "2026-09-16T13:35:04.049Z",
+    "source": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams + /teams/{id}/roster",
+    "positions": [
+      "QB",
+      "RB",
+      "WR",
+      "TE"
+    ],
+    "playersPerPosition": 12,
+    "selectionRule": "For each QB/RB/WR/TE, deduplicate current ESPN NFL roster athletes by provider ID, sort ascending numeric ESPN athlete ID, divide that position list into 12 equal index bands, and select the first athlete in each band. The resulting frozen manifest—not a live roster query—is the research cohort.",
+    "players": [
+      {
+        "espnPlayerId": "8439",
+        "expectedName": "Aaron Rodgers",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "15864",
+        "expectedName": "Geno Smith",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "3046779",
+        "expectedName": "Jared Goff",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "3912547",
+        "expectedName": "Sam Darnold",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4036419",
+        "expectedName": "Skylar Thompson",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4241479",
+        "expectedName": "Tua Tagovailoa",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4360423",
+        "expectedName": "Michael Penix Jr.",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4426335",
+        "expectedName": "Graham Mertz",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4429084",
+        "expectedName": "Anthony Richardson Sr.",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4431580",
+        "expectedName": "Miller Moss",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4573398",
+        "expectedName": "Max Brosmer",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "4689114",
+        "expectedName": "Jaxson Dart",
+        "position": "QB"
+      },
+      {
+        "espnPlayerId": "2576336",
+        "expectedName": "Ameer Abdullah",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4035537",
+        "expectedName": "Kene Nwangwu",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4241401",
+        "expectedName": "Trey Sermon",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4360516",
+        "expectedName": "Tyrone Tracy Jr.",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4379399",
+        "expectedName": "James Cook III",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4429013",
+        "expectedName": "Tank Bigsby",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4430104",
+        "expectedName": "Sincere McCormick",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4567048",
+        "expectedName": "Kenneth Walker III",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4601080",
+        "expectedName": "Raheim Sanders",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4685512",
+        "expectedName": "Jadarian Price",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4698191",
+        "expectedName": "Chris Collier",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "4876378",
+        "expectedName": "Damon Bankston",
+        "position": "RB"
+      },
+      {
+        "espnPlayerId": "15847",
+        "expectedName": "Travis Kelce",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "3052096",
+        "expectedName": "Johnny Mundt",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "3921690",
+        "expectedName": "Josh Oliver",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4240472",
+        "expectedName": "Noah Gray",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4259147",
+        "expectedName": "Jake Tonges",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4361411",
+        "expectedName": "Pat Freiermuth",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4372780",
+        "expectedName": "Tommy Tremble",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4429811",
+        "expectedName": "Patrick Herbert",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4433959",
+        "expectedName": "Ben Yurosek",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4678006",
+        "expectedName": "Elijah Arroyo",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4700712",
+        "expectedName": "Cam Grandy",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "4876006",
+        "expectedName": "Zaire Mitchell-Paden",
+        "position": "TE"
+      },
+      {
+        "espnPlayerId": "15818",
+        "expectedName": "Keenan Allen",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "3871102",
+        "expectedName": "David Sills V",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4040655",
+        "expectedName": "Darnell Mooney",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4258173",
+        "expectedName": "Nico Collins",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4369863",
+        "expectedName": "Cedric Tillman",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4427278",
+        "expectedName": "Xavier Gipson",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4431142",
+        "expectedName": "Jimmy Holiday",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4569587",
+        "expectedName": "Wan'Dale Robinson",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4612826",
+        "expectedName": "Ladd McConkey",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4686104",
+        "expectedName": "Johnny Wilson",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4718457",
+        "expectedName": "Noah Thomas",
+        "position": "WR"
+      },
+      {
+        "espnPlayerId": "4885466",
+        "expectedName": "Jeff Caldwell",
+        "position": "WR"
+      }
+    ]
+  },
+  "cohortPlayerCount": 48,
+  "observationCount": 1266,
+  "observationsBySeason": {
+    "2023": 340,
+    "2024": 445,
+    "2025": 481
+  },
+  "observationsByPosition": {
+    "QB": 275,
+    "RB": 297,
+    "TE": 365,
+    "WR": 329
+  },
+  "dateRanges": {
+    "2023": {
+      "from": "2023-09-08T00:20:00.000Z",
+      "to": "2024-01-08T01:20:00.000Z"
+    },
+    "2024": {
+      "from": "2024-09-06T00:40:00.000Z",
+      "to": "2025-01-06T01:20:00.000Z"
+    },
+    "2025": {
+      "from": "2025-09-06T00:00:00.000Z",
+      "to": "2026-01-05T01:20:00.000Z"
+    }
+  },
+  "datasetSha256": "6bd305fb245925eef9073fc8e2d20a3d521c5723877b8c3762ba762abb408953",
+  "sources": [
+    {
+      "providerPlayerId": "8439",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/8439/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:47:00.925Z",
+      "rawSha256": "6ef03309df43933a7c93cd6704aa67498fea2415bde9c92153751f43bb60587d",
+      "observations": 1
+    },
+    {
+      "providerPlayerId": "8439",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/8439/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:47:00.916Z",
+      "rawSha256": "dd25b62788a8df228205319597492570acee3f6e7ffe3e270b80e99c95a11410",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "8439",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/8439/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:47:00.985Z",
+      "rawSha256": "bfb464d50b8b1773ab1e294d9266ad5b5021e63df79034224bf3ab5bba3778ba",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "15864",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15864/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:47:00.963Z",
+      "rawSha256": "686a6e4aa66d847053f125950fd311d6785f8181caa3102a6fc08c38160fdeb8",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "15864",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15864/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:47:00.949Z",
+      "rawSha256": "7078d5fc3ba6344a784318135470d7485b7e0a384a826128d16b56c668a1307a",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "15864",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15864/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:47:00.959Z",
+      "rawSha256": "70b4879e9b2af9f76ae53852be6906869e3177c1da0fb9807e4cc5f1489894e6",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "3046779",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3046779/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:47:00.969Z",
+      "rawSha256": "09965ddd7121cc26515a090da8b97cac7f55719957a05128ddc2ceec7dd7e06e",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3046779",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3046779/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:47:00.923Z",
+      "rawSha256": "b7615985afeedb871a79415867b58f5a6ec99cd9fad1e7b0b87c1d3318cfac04",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3046779",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3046779/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:47:00.929Z",
+      "rawSha256": "ee143b7408d767b06373af1bf24825ff7e5b07a3f80931a4ee51026564fc6422",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3912547",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3912547/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:47:00.954Z",
+      "rawSha256": "ee5aa3414a22d498ab0184712bd66305d07f04acfa40d4b707c1e618ee668a28",
+      "observations": 11
+    },
+    {
+      "providerPlayerId": "3912547",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3912547/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:47:00.976Z",
+      "rawSha256": "c935295d764e3e20f8a2a30ff81c29caf0f8509afafbd3c3186fd7bc87c98404",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3912547",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3912547/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:47:00.935Z",
+      "rawSha256": "dfbd1f432d56f1934014c140f486e46315160916e7d25fd4afab3d307945fe3e",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4036419",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4036419/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:48.759Z",
+      "rawSha256": "d60f61c4dcbf64d92aa6c75ff6410a1cc4010bfb2fb593e2f0a328cb149df43f",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4036419",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4036419/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:47:01.194Z",
+      "rawSha256": "54a8ebc30cd969aaa288faccca3bbc92d5e03f2dee48ec744b19c4fb98da1b0a",
+      "observations": 3
+    },
+    {
+      "providerPlayerId": "4036419",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4036419/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:48.755Z",
+      "rawSha256": "d9e758745627e53d8d5f94bd2d94d2792e75ab98dd69d044d3d6a1c8fb10b79d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4241479",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4241479/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:47:01.230Z",
+      "rawSha256": "78a22f3a785792973f07d91deba704d561cff2f0a29a22a3fa817fcb3a6f9eb9",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4241479",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4241479/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:47:01.221Z",
+      "rawSha256": "1dd699361413ae66217249cdb2652e582aa6f44fef794c9641fbd2b81bd28a11",
+      "observations": 11
+    },
+    {
+      "providerPlayerId": "4241479",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4241479/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:47:01.226Z",
+      "rawSha256": "7d655070b1c91fb480ad8e0a845b1e7afba33e2d7b1ed6a618239b3a2e33e529",
+      "observations": 14
+    },
+    {
+      "providerPlayerId": "4360423",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4360423/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:48.758Z",
+      "rawSha256": "ab09c90ef3897a62072ed363d7c3eb384a365feddf74398019566a890ed18421",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4360423",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4360423/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:47:01.218Z",
+      "rawSha256": "2ae341afb5ce466582640d36a04f751274b25e67d4b47e3a1411e9ab0a804b33",
+      "observations": 5
+    },
+    {
+      "providerPlayerId": "4360423",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4360423/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:47:01.224Z",
+      "rawSha256": "a78a1dce0421404fe73af069cf074895770bb9bf4fc87f3948a0589fe5f1fd9a",
+      "observations": 9
+    },
+    {
+      "providerPlayerId": "4426335",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4426335/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:48.759Z",
+      "rawSha256": "44601c0634c50bca0d5f60f4e5ccee75074e6ba9d7198009ef3e6d3a42923d9d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4426335",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4426335/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:48.767Z",
+      "rawSha256": "0c6dd0b2037eca7e2522ebefa95d3e55244474e0eef23d57904e45186f53e258",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4426335",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4426335/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:48.762Z",
+      "rawSha256": "b91088ce64a8b180fb92db069e05d64b1337cff307a73dae31bebcbe75e698fb",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4429084",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429084/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:48.959Z",
+      "rawSha256": "5f19105438a80e4c64b85ba0032b11b135f1573901cf97f2cc2ce0f7b57eafcd",
+      "observations": 4
+    },
+    {
+      "providerPlayerId": "4429084",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429084/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:48.976Z",
+      "rawSha256": "541fc28bbc1cdbd5adb1a0bc23565ef24e9cd7aad3174664f037043f7b01a336",
+      "observations": 11
+    },
+    {
+      "providerPlayerId": "4429084",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429084/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:48.972Z",
+      "rawSha256": "3b8dc5b21f37a4cb36509f1a6910af52fa8676456697b3dbef0b0c6d96529d63",
+      "observations": 2
+    },
+    {
+      "providerPlayerId": "4431580",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4431580/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:48.969Z",
+      "rawSha256": "85d761a54bf8d23f2384361449432ff6a2189b176dbd1e2416aa27efba7d6f2e",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4431580",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4431580/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:48.973Z",
+      "rawSha256": "374db9a6a03ba6f68f7333ad6b7d47142499531267f86fc5de43e449f6837960",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4431580",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4431580/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:48.970Z",
+      "rawSha256": "bd36bcc206df76e328c98afdf9564d2727f83d0776693b137d8a232a07a0d683",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4573398",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4573398/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.108Z",
+      "rawSha256": "44601c0634c50bca0d5f60f4e5ccee75074e6ba9d7198009ef3e6d3a42923d9d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4573398",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4573398/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.090Z",
+      "rawSha256": "0c6dd0b2037eca7e2522ebefa95d3e55244474e0eef23d57904e45186f53e258",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4573398",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4573398/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.117Z",
+      "rawSha256": "dff725f2ed8a50278a5974e1a6e2b65d337f59cbc21304f4965d969b275f7a92",
+      "observations": 8
+    },
+    {
+      "providerPlayerId": "4689114",
+      "position": "QB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4689114/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.110Z",
+      "rawSha256": "44601c0634c50bca0d5f60f4e5ccee75074e6ba9d7198009ef3e6d3a42923d9d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4689114",
+      "position": "QB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4689114/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.101Z",
+      "rawSha256": "0c6dd0b2037eca7e2522ebefa95d3e55244474e0eef23d57904e45186f53e258",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4689114",
+      "position": "QB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4689114/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.124Z",
+      "rawSha256": "8251e208b6aa19e03faf2853be4a84c3e7cd4538515bc2104dc9ee0ffa2ad2a6",
+      "observations": 14
+    },
+    {
+      "providerPlayerId": "2576336",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/2576336/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.327Z",
+      "rawSha256": "6e86264ac5988bba8fdb155de6b9ee83ecf5d3dca8d2439feb15f6cca5bd65d8",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "2576336",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/2576336/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.365Z",
+      "rawSha256": "350a416c9057fad4377d5231e7af68b4710c942cff439c62cd020e01bd2ea7f1",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "2576336",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/2576336/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.360Z",
+      "rawSha256": "315423f9c91778cf593c475a32a82550affaf31af08b7ddd4fbcc63e61d3a34d",
+      "observations": 13
+    },
+    {
+      "providerPlayerId": "4035537",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4035537/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.353Z",
+      "rawSha256": "6c9e1c9d326f5f790c1f95598266d1e44650104f897275afb63ae4ffb780e18b",
+      "observations": 9
+    },
+    {
+      "providerPlayerId": "4035537",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4035537/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.348Z",
+      "rawSha256": "d8f7e1c95fe9989c4aa953348f0aae5941e0d89a4580f08e0a4e09da9d74cc28",
+      "observations": 2
+    },
+    {
+      "providerPlayerId": "4035537",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4035537/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.369Z",
+      "rawSha256": "66d35a75305900fc1e11d0baecebe6307a82a06df25ffc8957bfe29828cdf1f0",
+      "observations": 12
+    },
+    {
+      "providerPlayerId": "4241401",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4241401/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.373Z",
+      "rawSha256": "e8d86117791ab9575b76a23812a2c0f0c086bc7dc23db8a2bb20f63b9028f3ab",
+      "observations": 14
+    },
+    {
+      "providerPlayerId": "4241401",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4241401/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.378Z",
+      "rawSha256": "202db36725165176ad43a8b5db8eaee0a35036fe5461d39d8982b170cd68b631",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4241401",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4241401/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.363Z",
+      "rawSha256": "e9ee80dab23d294417c3e5fbe7023639bc949a762f4c25a4a84be7db4ae76c72",
+      "observations": 4
+    },
+    {
+      "providerPlayerId": "4360516",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4360516/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.349Z",
+      "rawSha256": "cc2895b1b91d9c44f9bd276482b01cbf8176fba2490e38ff847418fa0872ec39",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4360516",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4360516/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.384Z",
+      "rawSha256": "ce96b1c078dfa58cc350b1762fb981d9ff444747315bb5a075b9f317f30c4ffd",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4360516",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4360516/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.387Z",
+      "rawSha256": "589bb074341b5c9af05e9e1cc1b6b27de92d6e33f489a1fd13244688131f23f0",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4379399",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4379399/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.626Z",
+      "rawSha256": "b832f517ea3d9b140c4b1db16db7011e737a7e053ef6bb450cfd8a6e2958b739",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4379399",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4379399/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.652Z",
+      "rawSha256": "ec7a9e8d2c09d14c19e9e138e7d48b4ab01ca32e0269c243b973096b2866ede2",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4379399",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4379399/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.648Z",
+      "rawSha256": "0ca718a29fcc18e3eaf65d225a06bebefa485f4e8efb60b2897632005463af2f",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4429013",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429013/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.634Z",
+      "rawSha256": "d3815c4202a21d26714d5c99e2d7fc74c6bfb3a67b413144c1a29510cddbabfb",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4429013",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429013/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.641Z",
+      "rawSha256": "d991df82598b665e23246e3f96cc8353e933ec488a38bab35637b3acc9489ecb",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4429013",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429013/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.638Z",
+      "rawSha256": "313fc9801eb6c15501cd001fd967e816770c90613e61960d3cdb8e2920a1b8fd",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4430104",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4430104/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.615Z",
+      "rawSha256": "05fded879f21de300402517fa3173399f8a4e4e4e17f0e01b87fcf8c58e0bd66",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4430104",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4430104/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.620Z",
+      "rawSha256": "fa079d9a15eb394f23184bb6a76f9864d895a2f0e0c5082763f00bf5e446bf43",
+      "observations": 5
+    },
+    {
+      "providerPlayerId": "4430104",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4430104/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.616Z",
+      "rawSha256": "16b01a4852add70d90b2196c99ae48675c0e23cd74d2ed729c62ce4c2025be1b",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4567048",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4567048/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.644Z",
+      "rawSha256": "64f3400541186922a986f785d6b82ea055ce441c27ced9b3d5eaa268ca150192",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4567048",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4567048/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.631Z",
+      "rawSha256": "f8de201890f2f20aaaf681d4f5f6c2e4a9612d456ccd7916d65c2325d03e7cc5",
+      "observations": 12
+    },
+    {
+      "providerPlayerId": "4567048",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4567048/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.656Z",
+      "rawSha256": "69b1e551ebb179538680624938b627296f6b7c50f9d454b24120936914a78748",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4601080",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4601080/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.857Z",
+      "rawSha256": "44601c0634c50bca0d5f60f4e5ccee75074e6ba9d7198009ef3e6d3a42923d9d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4601080",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4601080/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.858Z",
+      "rawSha256": "0c6dd0b2037eca7e2522ebefa95d3e55244474e0eef23d57904e45186f53e258",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4601080",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4601080/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.884Z",
+      "rawSha256": "a854f1d7ad43b3986e2ec84b5ceb1d9be745fc9d16ebeb53ebdffea36dea8169",
+      "observations": 4
+    },
+    {
+      "providerPlayerId": "4685512",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4685512/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.872Z",
+      "rawSha256": "85d761a54bf8d23f2384361449432ff6a2189b176dbd1e2416aa27efba7d6f2e",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4685512",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4685512/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.874Z",
+      "rawSha256": "374db9a6a03ba6f68f7333ad6b7d47142499531267f86fc5de43e449f6837960",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4685512",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4685512/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.873Z",
+      "rawSha256": "bd36bcc206df76e328c98afdf9564d2727f83d0776693b137d8a232a07a0d683",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4698191",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4698191/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.886Z",
+      "rawSha256": "ab09c90ef3897a62072ed363d7c3eb384a365feddf74398019566a890ed18421",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4698191",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4698191/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.891Z",
+      "rawSha256": "f5dd680a7badbfba52047385d417f04326db2c3f2517126b2d2d482893328bd3",
+      "observations": 8
+    },
+    {
+      "providerPlayerId": "4698191",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4698191/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.887Z",
+      "rawSha256": "4fc058431ae9b227ae19bb11985416bbf863eb93ae17d6540d24e1c0d1558e82",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4876378",
+      "position": "RB",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4876378/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:49.887Z",
+      "rawSha256": "85d761a54bf8d23f2384361449432ff6a2189b176dbd1e2416aa27efba7d6f2e",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4876378",
+      "position": "RB",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4876378/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:49.888Z",
+      "rawSha256": "374db9a6a03ba6f68f7333ad6b7d47142499531267f86fc5de43e449f6837960",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4876378",
+      "position": "RB",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4876378/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:49.889Z",
+      "rawSha256": "bd36bcc206df76e328c98afdf9564d2727f83d0776693b137d8a232a07a0d683",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "15847",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15847/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.133Z",
+      "rawSha256": "f7d038b7bc8c93df2549e0a29c7ed02745b72f743aec43bff38cd1c8711e0671",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "15847",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15847/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.162Z",
+      "rawSha256": "3f8fe7a3ffb905ee9d5acc149e26e0a60ccbb1141a36f91a1700a6cb23152056",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "15847",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15847/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.151Z",
+      "rawSha256": "1ed72a8b3ccd7d8eb0aedd26d5e732141fe2d7d10802153ddf477aa0b4b5dd2c",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3052096",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3052096/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.154Z",
+      "rawSha256": "a6f532041d11557472a192d019b1d37c559beb648aa6fefcca338bca5f4ffcd5",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3052096",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3052096/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.177Z",
+      "rawSha256": "789b19670cd6f933ca1b3c5b384c2edb0c181e36e21be5e3267a8a22f680854a",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3052096",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3052096/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.158Z",
+      "rawSha256": "7fd6139b6be68eb5067ed30b5e96044785d6c1ecabb136473a4f6cb4b48cf878",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "3921690",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3921690/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.165Z",
+      "rawSha256": "58c33755b77a9b7ffcc0a3c75dfd6644cae29ffead274964027bbe40901cd7a3",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3921690",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3921690/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.144Z",
+      "rawSha256": "ce245fc4e34e51ba2cab8506229611fafc8f387877c5ce0a11635f9904927939",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "3921690",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3921690/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.148Z",
+      "rawSha256": "4073a22805bb017820d11106a51f83efaec6bb3e537cc2beefd4d969c0baa205",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4240472",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4240472/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.182Z",
+      "rawSha256": "18b6bebab7c9507fcc288319eb4c292b701cdc355dd3b6eebb714b4f5f470392",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4240472",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4240472/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.173Z",
+      "rawSha256": "1fc9403726a20681e0744a36d5afae9dfc2140542f8d7fd76d895c55319c6a27",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4240472",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4240472/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.169Z",
+      "rawSha256": "825099b41fe079fb5dd9806338ddddd3c4497d0117ea7494c02df13ce99dba5b",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4259147",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4259147/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.385Z",
+      "rawSha256": "82ef618dc6011df90c1c6a0196ec753851d28c3bc1e11a514b976d59b9a02dcd",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4259147",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4259147/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.405Z",
+      "rawSha256": "9b37f10c2236cdd43d5ba9e8e72643446f93ebd4dcd6dfe67fbcc93ceebc5d25",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4259147",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4259147/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.428Z",
+      "rawSha256": "f4a2f688f80a5f06facb0b2b36be5b65e93ad6eaca77db10663158fedf44fa14",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4361411",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4361411/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.410Z",
+      "rawSha256": "78d806407fd1bb9162706b9afaaf900cdf03365d508ea0c5fd3c65146106aa27",
+      "observations": 12
+    },
+    {
+      "providerPlayerId": "4361411",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4361411/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.432Z",
+      "rawSha256": "4a8b271785a28a7882bcdd288ef91eb025dd2d8120f3288998da67e599e475ef",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4361411",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4361411/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.437Z",
+      "rawSha256": "29db0895906e72d44a654a714b5891abd39ee84039bb9a953ce65bd6ca8b5897",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4372780",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4372780/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.445Z",
+      "rawSha256": "9e2f28d203c4b7d0987d2e58b374df28766d2a8e849e77f9beca7d83e07c8db8",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4372780",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4372780/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.441Z",
+      "rawSha256": "c85584fb622545f8f3101106a0de6b80fa3c78159814bee558dafa8fe6277e4e",
+      "observations": 12
+    },
+    {
+      "providerPlayerId": "4372780",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4372780/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.448Z",
+      "rawSha256": "09126e7cda9675f5fafddcc517520d59ef118e1be830eed178ad672edbc62249",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4429811",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429811/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.425Z",
+      "rawSha256": "44601c0634c50bca0d5f60f4e5ccee75074e6ba9d7198009ef3e6d3a42923d9d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4429811",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429811/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.424Z",
+      "rawSha256": "0c6dd0b2037eca7e2522ebefa95d3e55244474e0eef23d57904e45186f53e258",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4429811",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4429811/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.425Z",
+      "rawSha256": "b91088ce64a8b180fb92db069e05d64b1337cff307a73dae31bebcbe75e698fb",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4433959",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4433959/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.650Z",
+      "rawSha256": "44601c0634c50bca0d5f60f4e5ccee75074e6ba9d7198009ef3e6d3a42923d9d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4433959",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4433959/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.658Z",
+      "rawSha256": "0c6dd0b2037eca7e2522ebefa95d3e55244474e0eef23d57904e45186f53e258",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4433959",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4433959/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.690Z",
+      "rawSha256": "5ce735e0663523ca20a2d8a1223b34de7f1d5be3794812086cea56cc7ce170bc",
+      "observations": 12
+    },
+    {
+      "providerPlayerId": "4678006",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4678006/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.659Z",
+      "rawSha256": "44601c0634c50bca0d5f60f4e5ccee75074e6ba9d7198009ef3e6d3a42923d9d",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4678006",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4678006/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.679Z",
+      "rawSha256": "0c6dd0b2037eca7e2522ebefa95d3e55244474e0eef23d57904e45186f53e258",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4678006",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4678006/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.697Z",
+      "rawSha256": "7ca0f176c62edcfb91413afc4176eccdb9efe2646d5fced7a5ef41813bb839bf",
+      "observations": 13
+    },
+    {
+      "providerPlayerId": "4700712",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4700712/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.680Z",
+      "rawSha256": "cc2895b1b91d9c44f9bd276482b01cbf8176fba2490e38ff847418fa0872ec39",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4700712",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4700712/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.685Z",
+      "rawSha256": "1dccf410da3a9ec2a1fe20eb64724a9711ed4ebbd2ea4ba1e97196c7a815bec0",
+      "observations": 8
+    },
+    {
+      "providerPlayerId": "4700712",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4700712/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.688Z",
+      "rawSha256": "6a75a3272b02746e8951de9322b9a9e20a94fe94d51a410490fd002aec5345f2",
+      "observations": 5
+    },
+    {
+      "providerPlayerId": "4876006",
+      "position": "TE",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4876006/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.680Z",
+      "rawSha256": "1159d26aa9c91ff711a167ed6281bc167f1df211fa07805497471fd7a006dbad",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4876006",
+      "position": "TE",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4876006/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.681Z",
+      "rawSha256": "e1ee4316fcd8cb6bce24cfa5724ff7ea60c0f38dfa4b0551368e203c2adaff35",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4876006",
+      "position": "TE",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4876006/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.693Z",
+      "rawSha256": "ac46fad7d75633ad9eb3ebbf6e428f34f3d29bb6629d08844deb1ce02cd79749",
+      "observations": 8
+    },
+    {
+      "providerPlayerId": "15818",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15818/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.896Z",
+      "rawSha256": "7f7c28c58ba4f33cbe3105f2e11f11ef113c8e91aae5e215fda70a875b795e8f",
+      "observations": 13
+    },
+    {
+      "providerPlayerId": "15818",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15818/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.909Z",
+      "rawSha256": "59e93b7ccd96659c04245ef0817163d6292012a7e8197e09b398e29edeaca26e",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "15818",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/15818/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.916Z",
+      "rawSha256": "d3bf833f96527dda81c1029fdb4cbaf4d8b1b45931e2a6e4d715dcb4d708a522",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "3871102",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3871102/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.902Z",
+      "rawSha256": "8229549b74686d0709ffce056f15c84e6549be4e7c84673b5bc868ddda975fa5",
+      "observations": 3
+    },
+    {
+      "providerPlayerId": "3871102",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3871102/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.903Z",
+      "rawSha256": "71e94b94eecade86fc3b29d252f964645aeaef2b1528586f83f96a3d8e3dc83e",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "3871102",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/3871102/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.913Z",
+      "rawSha256": "08680b15efbdabae1c4924548ea94fdef0425b824f55112375cdaf0d282c5659",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4040655",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4040655/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.920Z",
+      "rawSha256": "ec048c9d906a272dbb41082b4474e1fc0aad03a4b3868bb963885bcafa07e23c",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4040655",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4040655/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.925Z",
+      "rawSha256": "b8fd00f7aca458f314de7bef804912ef8fac4de5e5da0ffb130c78893e70188b",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4040655",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4040655/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.934Z",
+      "rawSha256": "36204b570d0e369c3ad5ff442f0b8fe5483438231ee006f46d9c0f8895f0559d",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4258173",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4258173/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:50.928Z",
+      "rawSha256": "083d83c1e462a230c7a9d116674e8f9557e3b9205ade7065116841a07522381d",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4258173",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4258173/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:50.923Z",
+      "rawSha256": "64525e17ca3dafe095b146fb0e63eac958f093d7f7e7acf459255f51d770fbee",
+      "observations": 12
+    },
+    {
+      "providerPlayerId": "4258173",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4258173/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:50.931Z",
+      "rawSha256": "0fb00f690f4ce4cf3283427e5268c4ed05a13b920f47326f2fd4ec9d01a665c5",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4369863",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4369863/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.134Z",
+      "rawSha256": "2724835952eb055fe9c5baba4a9c074bb0e8c3800d4476a050b235494d799a76",
+      "observations": 14
+    },
+    {
+      "providerPlayerId": "4369863",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4369863/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.149Z",
+      "rawSha256": "8b3f61f6534919e9aa815ddf28bd4f021f8b2f87b21494a50a6692bfb0d57968",
+      "observations": 11
+    },
+    {
+      "providerPlayerId": "4369863",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4369863/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.189Z",
+      "rawSha256": "1a86184df538da262e4766608e9aba6a4f45faabd23694625b600fef02cf8b53",
+      "observations": 13
+    },
+    {
+      "providerPlayerId": "4427278",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4427278/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.160Z",
+      "rawSha256": "28bbff3fbed9e2711ba5156667e78e37d622b2e7e376d2ab2bec032dc9b9d6cd",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4427278",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4427278/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.165Z",
+      "rawSha256": "f080c2b1140b0be3dfa09b327938e0f22513d09732748de018b66871b5a5c493",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4427278",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4427278/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.145Z",
+      "rawSha256": "a01b80c49f9d00d97772364088bd75a7121ea29a3b87cd766981efe1fc4556e9",
+      "observations": 7
+    },
+    {
+      "providerPlayerId": "4431142",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4431142/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.156Z",
+      "rawSha256": "eb89bc773d35404445e7cfc6e76b74a358756e29f51a56471dc5161eae125f60",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4431142",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4431142/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.157Z",
+      "rawSha256": "3147f677e7b784b3711165a85a60f4f2518ce9407f4a327ee7f876873f76e6f8",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4431142",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4431142/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.157Z",
+      "rawSha256": "f6c0e7f15e8084734241f5db28b7210f9fd671454018e449547d9e6cacc2563b",
+      "observations": 1
+    },
+    {
+      "providerPlayerId": "4569587",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4569587/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.170Z",
+      "rawSha256": "655f5d01c0922acc6bb32ca4d11a2a5b3ed363a4313986b772d3191e882b7561",
+      "observations": 15
+    },
+    {
+      "providerPlayerId": "4569587",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4569587/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.176Z",
+      "rawSha256": "2b073fba19fb6cbed1b7ea7daf7b294eb954e85ad4ade522bd75d7e74d56b9ee",
+      "observations": 17
+    },
+    {
+      "providerPlayerId": "4569587",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4569587/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.173Z",
+      "rawSha256": "294550cf78c1a4e3f365d4d635d856569017c96b166c342eb94e19c87cab1a0c",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4612826",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4612826/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.385Z",
+      "rawSha256": "cc2895b1b91d9c44f9bd276482b01cbf8176fba2490e38ff847418fa0872ec39",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4612826",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4612826/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.415Z",
+      "rawSha256": "bc0887b3875531a5330f305f764d81561d3510935ef8f9dbdff88e4fcf7c8eae",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4612826",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4612826/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.412Z",
+      "rawSha256": "c380c0dccefd99ec4332850656af74fa687a9b294941fd232e89de64fc13b016",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4686104",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4686104/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.393Z",
+      "rawSha256": "ab09c90ef3897a62072ed363d7c3eb384a365feddf74398019566a890ed18421",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4686104",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4686104/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.419Z",
+      "rawSha256": "60b7bd7659dac9410460b3deef40d10f44650e83b8afeea89619e035f84ef291",
+      "observations": 16
+    },
+    {
+      "providerPlayerId": "4686104",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4686104/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.405Z",
+      "rawSha256": "4fc058431ae9b227ae19bb11985416bbf863eb93ae17d6540d24e1c0d1558e82",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4718457",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4718457/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.405Z",
+      "rawSha256": "85d761a54bf8d23f2384361449432ff6a2189b176dbd1e2416aa27efba7d6f2e",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4718457",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4718457/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.404Z",
+      "rawSha256": "374db9a6a03ba6f68f7333ad6b7d47142499531267f86fc5de43e449f6837960",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4718457",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4718457/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.408Z",
+      "rawSha256": "bd36bcc206df76e328c98afdf9564d2727f83d0776693b137d8a232a07a0d683",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4885466",
+      "position": "WR",
+      "season": 2023,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4885466/gamelog?season=2023",
+      "fetchedAt": "2026-09-16T13:56:51.408Z",
+      "rawSha256": "85d761a54bf8d23f2384361449432ff6a2189b176dbd1e2416aa27efba7d6f2e",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4885466",
+      "position": "WR",
+      "season": 2024,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4885466/gamelog?season=2024",
+      "fetchedAt": "2026-09-16T13:56:51.408Z",
+      "rawSha256": "374db9a6a03ba6f68f7333ad6b7d47142499531267f86fc5de43e449f6837960",
+      "observations": 0
+    },
+    {
+      "providerPlayerId": "4885466",
+      "position": "WR",
+      "season": 2025,
+      "source": "https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/4885466/gamelog?season=2025",
+      "fetchedAt": "2026-09-16T13:56:51.409Z",
+      "rawSha256": "bd36bcc206df76e328c98afdf9564d2727f83d0776693b137d8a232a07a0d683",
+      "observations": 0
+    }
+  ],
+  "duplicateConflicts": [],
+  "qbFumblesEnrichment": {
+    "artifact": "nfl-research-qb-fumble-summaries.json",
+    "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+    "uniqueEvents": 253,
+    "cache": {
+      "hits": 0,
+      "misses": 253
+    }
+  }
+}

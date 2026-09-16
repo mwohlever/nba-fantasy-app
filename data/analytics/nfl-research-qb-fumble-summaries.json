@@ -1,0 +1,4196 @@
+{
+  "version": "nfl-research-qb-fumbles-v1",
+  "generatedAt": "2026-09-16T14:11:53.552Z",
+  "provider": "espn",
+  "sourceTemplate": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event={eventId}",
+  "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+  "datasetSha256BeforeEnrichment": "c063aac88e3ca02520e1894d169432b27a24735dbb6d3a359b09f9afa2efccdd",
+  "qbObservations": 275,
+  "uniqueEvents": 253,
+  "cache": {
+    "hits": 0,
+    "misses": 253
+  },
+  "summaries": [
+    {
+      "providerEventId": "401547230",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547230",
+      "fetchedAt": "2026-09-16T14:11:37.917Z",
+      "rawSha256": "e0ca6431bb3b2318beedbaf3c136a36dcd16ea615ee87f588521600dd2a3e7c9",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547242",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547242",
+      "fetchedAt": "2026-09-16T14:11:37.936Z",
+      "rawSha256": "f825dc0468202f6dd8d5ccae1990e4c793e626d9bce231a8f3194497c1da3448",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547276",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547276",
+      "fetchedAt": "2026-09-16T14:11:37.967Z",
+      "rawSha256": "491cafd0d2fafea39c9f15756fb66fcd5cf50f08e35c46ea351d64f7406a6cde",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547352",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547352",
+      "fetchedAt": "2026-09-16T14:11:37.953Z",
+      "rawSha256": "10603ce335b8287afd5c381331e0f4e31a8c149832bfcfa74238fba97208d1f7",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547353",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547353",
+      "fetchedAt": "2026-09-16T14:11:38.188Z",
+      "rawSha256": "af4b29d9522010ffbc8e12b823e4f37f2c415c3611d07942101d192ff330e734",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547354",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547354",
+      "fetchedAt": "2026-09-16T14:11:38.216Z",
+      "rawSha256": "29668a71ae784dc81098be2e68d254659e8b1eb7df454a1e98c31bdd2c28daa5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547401",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547401",
+      "fetchedAt": "2026-09-16T14:11:38.203Z",
+      "rawSha256": "5ebef65306e6971209bdb915c1d45b9c4c8eeb388c207095daf4258bcc22b95f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547404",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547404",
+      "fetchedAt": "2026-09-16T14:11:38.229Z",
+      "rawSha256": "7cc1f8141459166345dc79e326b7a52bb9d3a88aa652aa489b455af6292739b0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547405",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547405",
+      "fetchedAt": "2026-09-16T14:11:38.468Z",
+      "rawSha256": "956c3e875accfc3187aab272eaa206c81744f0e52fc7767801034cd7d871d60b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547408",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547408",
+      "fetchedAt": "2026-09-16T14:11:38.456Z",
+      "rawSha256": "9edef59002ca4dd06774cf5d17346a8369ef73b1f66e044af52a06fb35f9c10b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547418",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547418",
+      "fetchedAt": "2026-09-16T14:11:38.486Z",
+      "rawSha256": "4b4c43298f492ec8d1d7c8f77d9f162c9c0ac15e490e62bdfd18dba79b425e38",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547419",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547419",
+      "fetchedAt": "2026-09-16T14:11:38.496Z",
+      "rawSha256": "6fa919be8034540041b517320b18775a88d9c0ce5bb583e0db5af0fe91cb8766",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547423",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547423",
+      "fetchedAt": "2026-09-16T14:11:38.717Z",
+      "rawSha256": "b15df29e573a79bdabfc994f29e69cd14dc97cd1ad7ccc48b655b96bb94f227a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547426",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547426",
+      "fetchedAt": "2026-09-16T14:11:38.731Z",
+      "rawSha256": "d30b6bc0a47bde3a718c0da35dd42043afb97c9d190fb02ee251346a278e0374",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547429",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547429",
+      "fetchedAt": "2026-09-16T14:11:38.743Z",
+      "rawSha256": "3994be83dad215771bb07c834483970a978d08ee89f8e3c1026be6e6263fb8a0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547432",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547432",
+      "fetchedAt": "2026-09-16T14:11:38.755Z",
+      "rawSha256": "cbdac128e0b9ffc261848bc6d36b6898e7774a8b8e27b1778293585f9a244a3f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547433",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547433",
+      "fetchedAt": "2026-09-16T14:11:39.002Z",
+      "rawSha256": "e4f404797dabd6eb32666606ebcee1e8f4cb8ba1504f0a1e011369e6dfdf162e",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547442",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547442",
+      "fetchedAt": "2026-09-16T14:11:39.013Z",
+      "rawSha256": "2a296c9568ef0b0ea8e40672d6f96822eb71a685ffb8da57ac1f0414202d7408",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547443",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547443",
+      "fetchedAt": "2026-09-16T14:11:38.988Z",
+      "rawSha256": "726b01b0ca580f9e67aaee4cc2e3902dfabed79adae65dc432245e30777fc064",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547449",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547449",
+      "fetchedAt": "2026-09-16T14:11:39.026Z",
+      "rawSha256": "c18b3b67de9a7ba78c7592db1ede0da3553b84bb1faecbb75a16d04a711e0388",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547454",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547454",
+      "fetchedAt": "2026-09-16T14:11:39.241Z",
+      "rawSha256": "5601b4f1a70deb97c043ac7132c7407deb5c8bb3c3fd7d2d89e7ffbdf05df7f4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547456",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547456",
+      "fetchedAt": "2026-09-16T14:11:39.252Z",
+      "rawSha256": "dd62a6778881a35b5f89151a6c04f8ead0a3b0fbf6d800e726d65e3dcc650b5d",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547458",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547458",
+      "fetchedAt": "2026-09-16T14:11:39.261Z",
+      "rawSha256": "9b8e63c80ca5ddb8c6dab988219276d3b3a77ec7a0804f512d7abf56f7c5a588",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547464",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547464",
+      "fetchedAt": "2026-09-16T14:11:39.269Z",
+      "rawSha256": "39179c7cfac6b06190f498ecf76e8acd81eb2eec2a11229aa7860f35d07432e3",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547465",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547465",
+      "fetchedAt": "2026-09-16T14:11:39.482Z",
+      "rawSha256": "d11ce0a1adb2337c1897f645e3fc2f3a4e7a8c6e3474961415e3f2a9f88d1c58",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547471",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547471",
+      "fetchedAt": "2026-09-16T14:11:39.494Z",
+      "rawSha256": "053a31e8338c585b7e3901f255d737d695329e6453d1d884bf2b3997a25f6385",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547473",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547473",
+      "fetchedAt": "2026-09-16T14:11:39.520Z",
+      "rawSha256": "c9e261ee3c7c77a59309ac54778374d7c1f15f7a06336cb930f447d919700875",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547478",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547478",
+      "fetchedAt": "2026-09-16T14:11:39.508Z",
+      "rawSha256": "e84b13edc2512526b3b64c74baf39ed9dcab72fcd97c82a4fc6877c91462b271",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547489",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547489",
+      "fetchedAt": "2026-09-16T14:11:39.731Z",
+      "rawSha256": "f921f4761d0c4bd394cac7bf01aae3466334ecc2535ed3678650929eb8bdb628",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547493",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547493",
+      "fetchedAt": "2026-09-16T14:11:39.742Z",
+      "rawSha256": "b983464e34ce8adaddbadc65e9d7008cfe3fd8106f05e8e13941ed20ae1ab940",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547494",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547494",
+      "fetchedAt": "2026-09-16T14:11:39.750Z",
+      "rawSha256": "bee1b258070a0bc612f63567629077cb078ad56fdc9dac2a8c37a8430d9a48a4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547497",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547497",
+      "fetchedAt": "2026-09-16T14:11:39.759Z",
+      "rawSha256": "7003839410c8981973b869208bbaffaad47b013675d3293b7c209276e6f6453c",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547509",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547509",
+      "fetchedAt": "2026-09-16T14:11:39.972Z",
+      "rawSha256": "962e04b44483c460a543508681b682535d8c91de913dfd986a26630539af8873",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547511",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547511",
+      "fetchedAt": "2026-09-16T14:11:39.985Z",
+      "rawSha256": "0694bd090c57d230d2ca9c5990bb9970aed885ff14bc5c95d8f5818260218b95",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547513",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547513",
+      "fetchedAt": "2026-09-16T14:11:39.995Z",
+      "rawSha256": "d28061ec81a26016ab3969e141dac77e8c111ce2ce5e5f4b09de30462a543a32",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547530",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547530",
+      "fetchedAt": "2026-09-16T14:11:40.005Z",
+      "rawSha256": "d23ddff0a34d62e118bc85adf0a0402899b27f52edd06fabff58aa1663bcbda4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547532",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547532",
+      "fetchedAt": "2026-09-16T14:11:40.226Z",
+      "rawSha256": "5ae9493dcc46f5427b47b5f3827dc3df8719a6ce0345fd28c8f8c94de9818597",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547535",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547535",
+      "fetchedAt": "2026-09-16T14:11:40.254Z",
+      "rawSha256": "4b364836ec160ba378f18e8b416c06b89f98b0a2cf60c12ad0908854d75d0879",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547542",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547542",
+      "fetchedAt": "2026-09-16T14:11:40.245Z",
+      "rawSha256": "7357578eb468163177bf4478ce7fc102c8be9d1d373e90f85ff855a4c33de6b1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547544",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547544",
+      "fetchedAt": "2026-09-16T14:11:40.237Z",
+      "rawSha256": "25e512915e7f9d233d958d0c741893abf3137e2600e1feacf09161f6d6d061a0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547546",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547546",
+      "fetchedAt": "2026-09-16T14:11:40.455Z",
+      "rawSha256": "098ec52307c872e4f1d7473b53b7104a0e2a6f6578d476ac86d43094bb698aa5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547552",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547552",
+      "fetchedAt": "2026-09-16T14:11:40.468Z",
+      "rawSha256": "78c034fc1e7eab708615546f0b968ec4b81b21c2e009550002bc5b0be396a738",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 3,
+          "fumblesLost": 3,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547553",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547553",
+      "fetchedAt": "2026-09-16T14:11:40.489Z",
+      "rawSha256": "5c0ec069b28d2c7619cf1e991b2e1a916f49f6804d17ba884b2765be4ab5fc25",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547566",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547566",
+      "fetchedAt": "2026-09-16T14:11:40.479Z",
+      "rawSha256": "d8fed2fadb3c42bfbc15952ed1985fb2f0f64bf9a2db847acc7577bbcc1d809f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547572",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547572",
+      "fetchedAt": "2026-09-16T14:11:40.707Z",
+      "rawSha256": "b4faa005ddcaf2f1c3e16bea803e40e9d10a856ba4b46844967e55aeeca84392",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547574",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547574",
+      "fetchedAt": "2026-09-16T14:11:40.719Z",
+      "rawSha256": "e5be974d130d44eac1a88481badc25f2ff2aa7a6685940d0f13654ca55a52c66",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547586",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547586",
+      "fetchedAt": "2026-09-16T14:11:40.736Z",
+      "rawSha256": "0040be894ef712597893bed80e092d3e5a1050bf5a2826936722bdd14c5bf8cf",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547589",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547589",
+      "fetchedAt": "2026-09-16T14:11:40.727Z",
+      "rawSha256": "32328470afb91a8b4502cacfef7203fa5a7b8accbc1a45c5b147e3b3d3cece10",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547592",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547592",
+      "fetchedAt": "2026-09-16T14:11:40.947Z",
+      "rawSha256": "38254818bd36ff67257d5495624b7147197aa45b59ee9327848a75ece1e855ff",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547594",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547594",
+      "fetchedAt": "2026-09-16T14:11:40.959Z",
+      "rawSha256": "9d0b9622fac89ada68ec7005a3b9da8b6ce1fcf2509d2bd92619d61d79a3d33b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547596",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547596",
+      "fetchedAt": "2026-09-16T14:11:40.969Z",
+      "rawSha256": "d5241a856074fbf462877f22a281c3b31771bec3cdebbf062a85d94858fb3fe1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547606",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547606",
+      "fetchedAt": "2026-09-16T14:11:40.980Z",
+      "rawSha256": "28955e993c0f9ade15a09aa817a93fc6d0e3b6698b8429a59b736c194e2ea66b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547614",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547614",
+      "fetchedAt": "2026-09-16T14:11:41.195Z",
+      "rawSha256": "5f6fe35bb0604c839298e1e97affe03f79a02ab574455b8bd01e77d98d44a057",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547618",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547618",
+      "fetchedAt": "2026-09-16T14:11:41.215Z",
+      "rawSha256": "ee539fc57a2cc414d87a01d984224df9b8f0dc5626be1189a3c8cfb4da5d39c6",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547620",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547620",
+      "fetchedAt": "2026-09-16T14:11:41.206Z",
+      "rawSha256": "876b4b9985184168954f55c2fa13677dbf866d739826b55f084c90657527c685",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547622",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547622",
+      "fetchedAt": "2026-09-16T14:11:41.225Z",
+      "rawSha256": "1a0573cbe06fdf70cdde26516952d2b3eac9b3c615b3eef676d85eba390e4de8",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547624",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547624",
+      "fetchedAt": "2026-09-16T14:11:41.457Z",
+      "rawSha256": "2c167e5a1637680bbf51d6816618dc21c640ef7bc20a49e6a8d6a8dfa2cdc506",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547625",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547625",
+      "fetchedAt": "2026-09-16T14:11:41.467Z",
+      "rawSha256": "365073668f7cae4dfec84836800e028ab18f44e87500f9e4450aba241aef3ff1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547635",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547635",
+      "fetchedAt": "2026-09-16T14:11:41.435Z",
+      "rawSha256": "3a5e3c82594b539c36c5da51fa59eb12b73d1288c8376f919eac9375be8a3b5f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547636",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547636",
+      "fetchedAt": "2026-09-16T14:11:41.446Z",
+      "rawSha256": "866393ffbd3997f1d567eff789b57784b39f1041eb8acd1ac77a12b8c017e6ed",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547638",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547638",
+      "fetchedAt": "2026-09-16T14:11:41.691Z",
+      "rawSha256": "342328502bc09a96512a826a716709d1a1532efd9f62a5801fde2fc49c3d563c",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547642",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547642",
+      "fetchedAt": "2026-09-16T14:11:41.718Z",
+      "rawSha256": "b43512d810e8cfe4dcb5a0440a0b78d0817dd87610c5386bccbd28cf1d49c99e",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547647",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547647",
+      "fetchedAt": "2026-09-16T14:11:41.701Z",
+      "rawSha256": "9190e51c8cf2030c1e15cdbbce0903b12b0de0501cf13851949241129c5672b8",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401547651",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401547651",
+      "fetchedAt": "2026-09-16T14:11:41.710Z",
+      "rawSha256": "8ead6a032c074e42526c10407b3d27604a88fd5a907b28328ab1e7b997561d86",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671489",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671489",
+      "fetchedAt": "2026-09-16T14:11:41.970Z",
+      "rawSha256": "c6f7c1ce932ddb83f547964723eaeca33eb4032b0f79ddb673d6b2341e148672",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671491",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671491",
+      "fetchedAt": "2026-09-16T14:11:41.952Z",
+      "rawSha256": "ab100f18e14ea5785624aba9a28ae84c9ca275e17bb80d69918d201a06630014",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671492",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671492",
+      "fetchedAt": "2026-09-16T14:11:41.939Z",
+      "rawSha256": "1bfb6f27215b9a900ebfec010c34e49e8b8ff43b2569412a895299b428ca7474",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671493",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671493",
+      "fetchedAt": "2026-09-16T14:11:41.961Z",
+      "rawSha256": "484e064f6d416571a9437412fd8c2d9e5d9400f9a8b9bef3cb5ad943d2968cf7",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671495",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671495",
+      "fetchedAt": "2026-09-16T14:11:42.171Z",
+      "rawSha256": "d81774bdd7381d0cfd4d05a931198f6e3584149863ce076b95e672ca9d2fabab",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671618",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671618",
+      "fetchedAt": "2026-09-16T14:11:42.199Z",
+      "rawSha256": "ae5bdc1e517e9f2e95b6c9788e05cca119ffb936a0954808af2d956f415c005e",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671620",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671620",
+      "fetchedAt": "2026-09-16T14:11:42.191Z",
+      "rawSha256": "bfcc5cb81758771bec27c1be070bd1287a1ece918bb6423846200f9e323c9583",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671621",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671621",
+      "fetchedAt": "2026-09-16T14:11:42.208Z",
+      "rawSha256": "bc3f7c779f156eb535d197237fa235b0df10d92475eb4952b0740aac539572b6",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671622",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671622",
+      "fetchedAt": "2026-09-16T14:11:42.436Z",
+      "rawSha256": "77198804add0001cb028c8f9911da00828820dc8b6c00aa3a8f2594479f71ee7",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671636",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671636",
+      "fetchedAt": "2026-09-16T14:11:42.416Z",
+      "rawSha256": "c02e7407ba173f14052d5e227773ef0c9537c9c4797093262040ffc834ded461",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671642",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671642",
+      "fetchedAt": "2026-09-16T14:11:42.427Z",
+      "rawSha256": "42b9e553f3c97eaa964f5512c1653e450b62cbb3461c9e5fe0322054aabb1eca",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671643",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671643",
+      "fetchedAt": "2026-09-16T14:11:42.445Z",
+      "rawSha256": "dfa33633e6b79ee78f843f6d32ca7d1a1d33365b21ccb044fb0bee0c2e5fef0a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671645",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671645",
+      "fetchedAt": "2026-09-16T14:11:42.650Z",
+      "rawSha256": "54eaf17ad081a3523385f35972f800537e8eab1047f114fbd637770275d82bea",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671646",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671646",
+      "fetchedAt": "2026-09-16T14:11:42.674Z",
+      "rawSha256": "db67323adcb8bf1d3debf9cee31a4c4b24c254b06f7cdac54bb1760b06e20e51",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671647",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671647",
+      "fetchedAt": "2026-09-16T14:11:42.688Z",
+      "rawSha256": "d9601b2b592db1219b227b6ca46522b8b54033bc5672dafc17b108aae146c6ed",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671648",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671648",
+      "fetchedAt": "2026-09-16T14:11:42.664Z",
+      "rawSha256": "e86153899d167d4eabdc77ee92e8807c2f94c1b0decc0182942248c76f3c25f7",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671660",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671660",
+      "fetchedAt": "2026-09-16T14:11:42.912Z",
+      "rawSha256": "967056607102f746cdb17374603d3cd2e1cef2fd20f309012945a1f254650e3d",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671662",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671662",
+      "fetchedAt": "2026-09-16T14:11:42.928Z",
+      "rawSha256": "654360a94a0a274f38a0b4984d7b8159576bca11b5862189a3dfd866ffc8eaab",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "4036419",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671664",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671664",
+      "fetchedAt": "2026-09-16T14:11:42.938Z",
+      "rawSha256": "b25f61a86c6778fd23663dbd2fd57eaa2dba0009e90d930a41cc5fc7fd1849e0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671669",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671669",
+      "fetchedAt": "2026-09-16T14:11:42.947Z",
+      "rawSha256": "c4a41387a2165a6f2413a1ae36a6f1e00555c1bd270d63fab0a0f1aa176e7b72",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671678",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671678",
+      "fetchedAt": "2026-09-16T14:11:43.141Z",
+      "rawSha256": "f0de7ea646bf5f2aa772b594da10ffee69276d3d762ed363e6278cb29d213fed",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671680",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671680",
+      "fetchedAt": "2026-09-16T14:11:43.155Z",
+      "rawSha256": "b5b189a2a1b2ab1c9475b34713e57f793132a1e9ccdf2876503d1532b4cb70bb",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671681",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671681",
+      "fetchedAt": "2026-09-16T14:11:43.178Z",
+      "rawSha256": "808b19169dee30a15b0592f42d63d8c5278bb272422c9c5cd0c870b545ed67ae",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671684",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671684",
+      "fetchedAt": "2026-09-16T14:11:43.166Z",
+      "rawSha256": "59fd9a8d30450c7fb0becaa437f378641679e6ea1eeeb645cac1f7650e3ee474",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671693",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671693",
+      "fetchedAt": "2026-09-16T14:11:43.404Z",
+      "rawSha256": "69faf266ee8362751e76c227975a589ede4cb1ddc116cdad5d01365204446d5f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671696",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671696",
+      "fetchedAt": "2026-09-16T14:11:43.391Z",
+      "rawSha256": "e0b7ae6a98aa5e68e10386787a388dee531eb4b422a34e479bbf23f296c92976",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671698",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671698",
+      "fetchedAt": "2026-09-16T14:11:43.421Z",
+      "rawSha256": "6a9df4234f2505d0dda31d5c09027046ee8f3f257008dde927679b5df829ef36",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671702",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671702",
+      "fetchedAt": "2026-09-16T14:11:43.413Z",
+      "rawSha256": "5ac7d4ef4cdea0235cad1705960a29850d89094bfb8f882b0c27f2d495b94860",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671703",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671703",
+      "fetchedAt": "2026-09-16T14:11:43.654Z",
+      "rawSha256": "dc7effe110002047a89e79eb73ac442fcdee6995007ae1bf6db21a3b629edad8",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671706",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671706",
+      "fetchedAt": "2026-09-16T14:11:43.664Z",
+      "rawSha256": "890f4d5f765512c0f453139006dc13e7a6770f08f0a64d5df37a64045164640f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671708",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671708",
+      "fetchedAt": "2026-09-16T14:11:43.641Z",
+      "rawSha256": "e16092b83d6ea445b5a6d8244a266fcd50167d351bb1d875f230e3ab437d8443",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671712",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671712",
+      "fetchedAt": "2026-09-16T14:11:43.674Z",
+      "rawSha256": "27e7a11837d1cee14ac88f9ea6b8f0af4b051281a39dc5933476488d0324290a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671720",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671720",
+      "fetchedAt": "2026-09-16T14:11:43.886Z",
+      "rawSha256": "05ae9dfcbd2767c4fc6346434c2f1629fb816ccb9edd263552bb8869d4097f47",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671721",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671721",
+      "fetchedAt": "2026-09-16T14:11:43.906Z",
+      "rawSha256": "071dad56143080354679f4bc445463817dee19769d05216e8f8bba22efcad675",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671723",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671723",
+      "fetchedAt": "2026-09-16T14:11:43.898Z",
+      "rawSha256": "d578291157796aa23ba9912bd20d4fce8c1a0060b9e6e16b89cfabf7841280e0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671724",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671724",
+      "fetchedAt": "2026-09-16T14:11:43.915Z",
+      "rawSha256": "975d6f725f937fd6027af51fc26084bac579056e49b8ec36c114c1fce06b1d5d",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671725",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671725",
+      "fetchedAt": "2026-09-16T14:11:44.125Z",
+      "rawSha256": "d78a8e557007f8f46e467a5fc1d18e94109f86e448afd8940e9d5d655de6fd00",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671726",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671726",
+      "fetchedAt": "2026-09-16T14:11:44.137Z",
+      "rawSha256": "9c86fa2c0883911f3b88500621edfa83133a1d509df2ce124cd76bc285a9e3e2",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671729",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671729",
+      "fetchedAt": "2026-09-16T14:11:44.146Z",
+      "rawSha256": "b533b3081a04df6f884deff2630c4bc46a0a9c98af70cacccd03b3acd921bde1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671730",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671730",
+      "fetchedAt": "2026-09-16T14:11:44.156Z",
+      "rawSha256": "784bfadaf623fd0bb88584399bb4b922b6b1d42dd2dd8733c173cabe623030b1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671748",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671748",
+      "fetchedAt": "2026-09-16T14:11:44.365Z",
+      "rawSha256": "8f3a61c22435fae1829f9ddcb2010655b65aba6d61a4162c552d9186f10eeb40",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671757",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671757",
+      "fetchedAt": "2026-09-16T14:11:44.378Z",
+      "rawSha256": "d2cfcdb11ee552080a9b60f98095ba809e8ae2fbeca8cf08a792df5e273d90e1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671759",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671759",
+      "fetchedAt": "2026-09-16T14:11:44.397Z",
+      "rawSha256": "a5a039170063b018d27b3335330944dd0b73783358a0eccd8b128d974a4a43b6",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671760",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671760",
+      "fetchedAt": "2026-09-16T14:11:44.387Z",
+      "rawSha256": "d0dda67e07a998ea6fc277ef26ff162390c52ccf6d89e49a9f48f5e3ba947c39",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671764",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671764",
+      "fetchedAt": "2026-09-16T14:11:44.641Z",
+      "rawSha256": "d49e33338fdde9d85c334a600e84b51134a01c82bdbe6829ded269b57dbaaccd",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671767",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671767",
+      "fetchedAt": "2026-09-16T14:11:44.610Z",
+      "rawSha256": "476d66112424f109b85a9ff4f23bdbc621e01e66007bd5438b9c09af199d1e57",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671771",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671771",
+      "fetchedAt": "2026-09-16T14:11:44.622Z",
+      "rawSha256": "6f7afcc36fd41aa7777e2356de7fa8b61b84c05c05641ad7e7d092ded971fd73",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671775",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671775",
+      "fetchedAt": "2026-09-16T14:11:44.632Z",
+      "rawSha256": "d71afa52c61eafbbca11bc8977cc7f860f0cee825196e2d0511d5db3b995e9fc",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671776",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671776",
+      "fetchedAt": "2026-09-16T14:11:44.836Z",
+      "rawSha256": "e80e56fc7ec78b49039bbba46a1328672f04272505f94594b87913aeda209bc4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671782",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671782",
+      "fetchedAt": "2026-09-16T14:11:44.849Z",
+      "rawSha256": "65faac942a9abec56ae0cbc25b3dd24f8abb1d0072cefdde9fd0b776a7e3a447",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671785",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671785",
+      "fetchedAt": "2026-09-16T14:11:44.858Z",
+      "rawSha256": "461d122e3332508f17c7553a2ab0b935d472b9d951c646efe952c4748b19a7aa",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671787",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671787",
+      "fetchedAt": "2026-09-16T14:11:44.866Z",
+      "rawSha256": "9970c0745fe87145d38763de73e5702a5353bc5c1383cfbbccaa620348110080",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671792",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671792",
+      "fetchedAt": "2026-09-16T14:11:45.075Z",
+      "rawSha256": "282eba6f262c997398e9aa5d884c6ce8817903b362d7fafcf1af0dd546a6b0a3",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671796",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671796",
+      "fetchedAt": "2026-09-16T14:11:45.091Z",
+      "rawSha256": "1f016c9f4dac185e03719c6775575dba91b05543ccc3cdc3cf0d3b4ef56db7bb",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671798",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671798",
+      "fetchedAt": "2026-09-16T14:11:45.100Z",
+      "rawSha256": "79928bc70aa7854aa55a4254784f7dd4d72ef1a7f803a47fe59711af13371e68",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671804",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671804",
+      "fetchedAt": "2026-09-16T14:11:45.109Z",
+      "rawSha256": "f188ba25a1620f1160f5a0a159b9ec67a35f8b30aaba6f177a35a732c86c03a3",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671807",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671807",
+      "fetchedAt": "2026-09-16T14:11:45.314Z",
+      "rawSha256": "4950576894d618d569223ba1eaeca9b0c53c3671ca8ef449f15c1259e44aedf5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4036419",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671808",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671808",
+      "fetchedAt": "2026-09-16T14:11:45.343Z",
+      "rawSha256": "c93e961d8e1d85d403952bd2dd9dccac0c6b7e91351eda4547de2ebde3fff818",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671809",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671809",
+      "fetchedAt": "2026-09-16T14:11:45.335Z",
+      "rawSha256": "4cd426dd5fd0b24b75ae76ed4265a200b3b5553164ec3a7bca1289957a93e179",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671814",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671814",
+      "fetchedAt": "2026-09-16T14:11:45.326Z",
+      "rawSha256": "a8fe785265f99b9c4a270c0f72f1a60a830bba931bec3788a6e16b6be2b55158",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671817",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671817",
+      "fetchedAt": "2026-09-16T14:11:45.549Z",
+      "rawSha256": "aef4360731fd739165bcbab1a9d5bb7057511eae9cad48fbf9dd506720b602c5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671819",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671819",
+      "fetchedAt": "2026-09-16T14:11:45.583Z",
+      "rawSha256": "366388c427039758109087a9133a3974e7146ba522c7ea214af70c28073edc88",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671824",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671824",
+      "fetchedAt": "2026-09-16T14:11:45.573Z",
+      "rawSha256": "aa40647abefe6ac11a6dccabb671c1488011b38e907aa0f64265347fcc856c75",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671827",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671827",
+      "fetchedAt": "2026-09-16T14:11:45.563Z",
+      "rawSha256": "1d99c7424f2c0d9a136e27fe4475c031ae1e6197da7c98485e40ea6c684272ec",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671830",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671830",
+      "fetchedAt": "2026-09-16T14:11:45.794Z",
+      "rawSha256": "34edc1b4bd587b61fde2db712f6ea333c4373d451cd1d7b596aec6a38216e39a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671833",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671833",
+      "fetchedAt": "2026-09-16T14:11:45.807Z",
+      "rawSha256": "9c675ce3f494c678daf34d4fceeda266848ce91865d2f84d584fc7b731ac480c",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671842",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671842",
+      "fetchedAt": "2026-09-16T14:11:45.825Z",
+      "rawSha256": "a5e8ed15d43636e7b738536ad0f6bd6a66892795723956b7113cb235e28f2af6",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671843",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671843",
+      "fetchedAt": "2026-09-16T14:11:45.816Z",
+      "rawSha256": "fa74a596e9d3e4401de49b7b22625a0a91e7b831e71f234cf3e0f40bbc76f0f3",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671847",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671847",
+      "fetchedAt": "2026-09-16T14:11:46.061Z",
+      "rawSha256": "07a9b793fc28dfb54942839453b147799d98d4140add85c3e3ecb342134b56b1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4036419",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671848",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671848",
+      "fetchedAt": "2026-09-16T14:11:46.073Z",
+      "rawSha256": "16bdcf2537f80b793afdd8b712106d021ed4ef5c1b795683f26dc58d371e6235",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671849",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671849",
+      "fetchedAt": "2026-09-16T14:11:46.051Z",
+      "rawSha256": "201554435aa4d459f7a4c6fefd0d263029c97e04188c31e080f1bd35a09501e0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671850",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671850",
+      "fetchedAt": "2026-09-16T14:11:46.037Z",
+      "rawSha256": "89474009a218e1d975f69c2f30769f975b81ed705785072754b8ab21568ddfc0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 3,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671851",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671851",
+      "fetchedAt": "2026-09-16T14:11:46.286Z",
+      "rawSha256": "f8b9995633168df2a65990b34fcc282353abd9fbc8f908966515d481ebacec8d",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671856",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671856",
+      "fetchedAt": "2026-09-16T14:11:46.315Z",
+      "rawSha256": "af67d37a060f7bdf10224dc4d488942fcb3ed3cdc41143c25cf1d39e85edb35a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671860",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671860",
+      "fetchedAt": "2026-09-16T14:11:46.306Z",
+      "rawSha256": "3e02abd151ca1abb033f3b930cbd2697efa588374d26e44e86ce2044ab32537e",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671861",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671861",
+      "fetchedAt": "2026-09-16T14:11:46.298Z",
+      "rawSha256": "df7509e46cf3f8f9271a6cdc6f4d86aed8fb97616d75467d573fd7987e244d0a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671862",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671862",
+      "fetchedAt": "2026-09-16T14:11:46.558Z",
+      "rawSha256": "b75702af0113ffcdbd3f1cd98fa831082b71bcb796d3b9bac790d84cf532faa5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671864",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671864",
+      "fetchedAt": "2026-09-16T14:11:46.534Z",
+      "rawSha256": "2d535845e2794366dfb46df5a75a30fc0d6a33a5a2cbc73003b6250e08bb7613",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671865",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671865",
+      "fetchedAt": "2026-09-16T14:11:46.546Z",
+      "rawSha256": "cfeed68324845d5fc64dccdd2bd2100c4b25ae311adc0928306d1ef6b9df80cb",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671866",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671866",
+      "fetchedAt": "2026-09-16T14:11:46.522Z",
+      "rawSha256": "2dff26b1eff8e23ac9db772cffe8c7c129fe7da186f98fb3c92e0ee6f76147c9",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671867",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671867",
+      "fetchedAt": "2026-09-16T14:11:46.774Z",
+      "rawSha256": "ff7e88b2459837afd389c7b3619fdb4ed77c2b11733e6c2b8faac1aef097cb2f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671868",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671868",
+      "fetchedAt": "2026-09-16T14:11:46.788Z",
+      "rawSha256": "013faf0f8dbd9cd0f6349510524887f670fc4466870b1b1954467da8674971a5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671870",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671870",
+      "fetchedAt": "2026-09-16T14:11:46.806Z",
+      "rawSha256": "c01ed48c1b4020b2580203fc1a505b7a4802764d2e2c28db144a06e1033fbff4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671874",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671874",
+      "fetchedAt": "2026-09-16T14:11:46.798Z",
+      "rawSha256": "86e136e9230f3c5cbdae910163836ce6f0b5d44d929c6adffae40a92a12de4e4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401671876",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401671876",
+      "fetchedAt": "2026-09-16T14:11:47.022Z",
+      "rawSha256": "a397f2ad06bb59c6f72afd4eade96c712bc0f518dfa0e1e3aa8336eb55d57232",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 2,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772631",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772631",
+      "fetchedAt": "2026-09-16T14:11:47.036Z",
+      "rawSha256": "7f652dcd3d064c9436b7885e2f060d6f8dac87700a4f134e2fc89f96962d7256",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772632",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772632",
+      "fetchedAt": "2026-09-16T14:11:47.058Z",
+      "rawSha256": "b0de0ca276526e2f37a0a315fb49764c7e18e9eca1f0c7d164f68f0b38064c17",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772633",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772633",
+      "fetchedAt": "2026-09-16T14:11:47.047Z",
+      "rawSha256": "23247425dc068690b3fd5e179a374122625dcf55af37ee08be7e35565bc5b00c",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772636",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772636",
+      "fetchedAt": "2026-09-16T14:11:47.298Z",
+      "rawSha256": "15be5edba00cb817f5a0f56105538c30fa5c6a74ba0aefc0d2568ceebeb24b52",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772711",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772711",
+      "fetchedAt": "2026-09-16T14:11:47.278Z",
+      "rawSha256": "5709ac11b02d32324e969d2d580dc2726965b937b09987a8d06cc0b07ad011c9",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 3,
+          "fumblesLost": 3,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772719",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772719",
+      "fetchedAt": "2026-09-16T14:11:47.264Z",
+      "rawSha256": "226d125dc6d40294842aae875e2441003c119ab6f94a5656b6691b7d399ffb03",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772720",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772720",
+      "fetchedAt": "2026-09-16T14:11:47.289Z",
+      "rawSha256": "a023f5acc87b7de09a9b8bfa0151a86451eb124c6fe5fd159f4df0083da898ab",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772721",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772721",
+      "fetchedAt": "2026-09-16T14:11:47.526Z",
+      "rawSha256": "5dc199b48522b5d4257199389fca982d5cc41f840d91095c3703e444751c095c",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772722",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772722",
+      "fetchedAt": "2026-09-16T14:11:47.514Z",
+      "rawSha256": "8b1fa4b55bd13a28537b08ad2fe2c1e862dc538adfb3c16da369935ce7a71b34",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772728",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772728",
+      "fetchedAt": "2026-09-16T14:11:47.537Z",
+      "rawSha256": "b10439708ed4a4155d119265ac53dad05a8680457f66cfeb0f66a1195ba84b88",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772731",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772731",
+      "fetchedAt": "2026-09-16T14:11:47.558Z",
+      "rawSha256": "f1493573d280037daa3397d208ded28fd3af7e9011e2b4835162d547aae749de",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772732",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772732",
+      "fetchedAt": "2026-09-16T14:11:47.783Z",
+      "rawSha256": "29c7a4d2fec31b8ef63ef3d0cffc20d5a28662964c95b60d53feb785bd672d0f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772733",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772733",
+      "fetchedAt": "2026-09-16T14:11:47.771Z",
+      "rawSha256": "9955a52ac4a0307eef8efaa3e2dca5e3b1388a442285fa121dd2f659dc492e86",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772736",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772736",
+      "fetchedAt": "2026-09-16T14:11:47.794Z",
+      "rawSha256": "b236fbe726c67c93ef86e858faa1f0d80ddb76e1d8e9530a4383484ea7dc5f47",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772737",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772737",
+      "fetchedAt": "2026-09-16T14:11:47.803Z",
+      "rawSha256": "3525b6d41513eb63850275e125a5514007ba0a00a8566c75e7e0dba16a24460a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772739",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772739",
+      "fetchedAt": "2026-09-16T14:11:48.032Z",
+      "rawSha256": "02315a2c174dead6c944da92e11fa4872fd712f6c0d9e14fababc82706622aac",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772742",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772742",
+      "fetchedAt": "2026-09-16T14:11:48.019Z",
+      "rawSha256": "8a74c9aa6566a73f5ac8f3f25304ca3725ce840c11f919db13f14eca18ac01d8",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772744",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772744",
+      "fetchedAt": "2026-09-16T14:11:48.058Z",
+      "rawSha256": "62b2a7d354e9a0dc35e64e0ed39dc230d348e55037825400c1da0caa615fcd23",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772746",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772746",
+      "fetchedAt": "2026-09-16T14:11:48.047Z",
+      "rawSha256": "be3772c236313af88033363057fffef4d4f1a82f1e15578298ea17b56f8d41f9",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772748",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772748",
+      "fetchedAt": "2026-09-16T14:11:48.272Z",
+      "rawSha256": "a7df393acc3c8c0bc6d0632aec68d9d0d07f2875045a61db7df4315debd9f1a6",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772750",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772750",
+      "fetchedAt": "2026-09-16T14:11:48.305Z",
+      "rawSha256": "487814113218fd5747624b10c5f859243b88c3695ed571f742acf8273f4d2db3",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772753",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772753",
+      "fetchedAt": "2026-09-16T14:11:48.284Z",
+      "rawSha256": "5bda839a702c6620ae4f89efeb0577ea7942d80e3f041bf9de8aaf58eb735e81",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772754",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772754",
+      "fetchedAt": "2026-09-16T14:11:48.296Z",
+      "rawSha256": "36661ffc5c143cedf7b0d35c42977b1e137c099dbf99df106d160c7d0754c99b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 3,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772757",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772757",
+      "fetchedAt": "2026-09-16T14:11:48.542Z",
+      "rawSha256": "8feb571447f414d208f0df8913ea43f20ecfd110e4896ab62514f870e38e2349",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772760",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772760",
+      "fetchedAt": "2026-09-16T14:11:48.519Z",
+      "rawSha256": "e1163566c5ac10f75bd1658377e2cafaf2cbb856775ac3cb0353479ab62c91d5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772763",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772763",
+      "fetchedAt": "2026-09-16T14:11:48.531Z",
+      "rawSha256": "e97f6ddf904b0d84301619021e4671cd90d6d5b4e8fc52c28acb09478669bb12",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772766",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772766",
+      "fetchedAt": "2026-09-16T14:11:48.552Z",
+      "rawSha256": "fefb74260549524709544177c0862bbe237927caf8b3a6486ad86caa763d67f9",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772767",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772767",
+      "fetchedAt": "2026-09-16T14:11:48.788Z",
+      "rawSha256": "734b8043237add10700f1b0a10ce9587e626f200ba764262e7e583c57eb9b452",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772771",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772771",
+      "fetchedAt": "2026-09-16T14:11:48.778Z",
+      "rawSha256": "7e5b770dbde8d8d5acf5731e18c850e6a90c22044cd7431f18c9c38419ff0a19",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772773",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772773",
+      "fetchedAt": "2026-09-16T14:11:48.797Z",
+      "rawSha256": "30a62198193d20a9ff5e17c54856ed8ef3f485b61ecfe093aaf2a40e85fe0a07",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 2,
+          "fumblesLost": 2,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772774",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772774",
+      "fetchedAt": "2026-09-16T14:11:48.765Z",
+      "rawSha256": "b465d3cfe0db9e66db221019ecb69d0e03561d9118242e9e697a6a988582d6eb",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772784",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772784",
+      "fetchedAt": "2026-09-16T14:11:49.044Z",
+      "rawSha256": "b11053a46cf1210df63e9625b9dea1e5611730a7114b7059798a0d9db3349fce",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772788",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772788",
+      "fetchedAt": "2026-09-16T14:11:49.014Z",
+      "rawSha256": "35cf05f03dc3e2cba4feacc1227faf1d71c5b65db934a8f1e736b4f2c652d8ed",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772789",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772789",
+      "fetchedAt": "2026-09-16T14:11:49.031Z",
+      "rawSha256": "8f78919eefa309f5a218d105c4914d6c9041a3df9fffcd177f1a2604d25ba4cf",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772790",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772790",
+      "fetchedAt": "2026-09-16T14:11:49.054Z",
+      "rawSha256": "35e583050fada2a9eeeb54218177b5715a4473f70202acac289429688216663f",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772791",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772791",
+      "fetchedAt": "2026-09-16T14:11:49.271Z",
+      "rawSha256": "a0f248b5518e022620e32ba27ad810a41ca2839c66330ed45a792da2fad23c57",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772794",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772794",
+      "fetchedAt": "2026-09-16T14:11:49.260Z",
+      "rawSha256": "c461e5c9f63527172c8468694f2fbc9bf711b37241c2853a9174ab46bfee5cbb",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772799",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772799",
+      "fetchedAt": "2026-09-16T14:11:49.282Z",
+      "rawSha256": "d818aaba1fd3de7a588643b329573ae2dd622f250222b4baae712e9c95761c07",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772805",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772805",
+      "fetchedAt": "2026-09-16T14:11:49.294Z",
+      "rawSha256": "38c88c01361c5d69777e531fa36318fa80d3da65c040e20804b01148f1f15f32",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772806",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772806",
+      "fetchedAt": "2026-09-16T14:11:49.518Z",
+      "rawSha256": "3888cc80a9e7cece081fae3a4667de2be9e0037b001b1c2b6643f5f7e1045923",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772807",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772807",
+      "fetchedAt": "2026-09-16T14:11:49.504Z",
+      "rawSha256": "2fb5e4b4ecd30f336be9d132b004c89ad92aea5bbeee366c69813a7d4628f952",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772811",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772811",
+      "fetchedAt": "2026-09-16T14:11:49.534Z",
+      "rawSha256": "4f41bb902bb7e57506cee3211cc60a31b79561e551472ed69d501f82d9441390",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772812",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772812",
+      "fetchedAt": "2026-09-16T14:11:49.547Z",
+      "rawSha256": "0b15eca7529c3c516c7261e8b2b5cbc3e27d0ab51b480a87098f5f2c4817aad9",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772813",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772813",
+      "fetchedAt": "2026-09-16T14:11:49.756Z",
+      "rawSha256": "009296103bddf3a26c48f83551e77ab0434993c1ef710a3949741d314ad6d3d0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772815",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772815",
+      "fetchedAt": "2026-09-16T14:11:49.769Z",
+      "rawSha256": "32275004e3063e7d06eecddeac1844f9c2f8a5b1965d02ef06fcd898c47d6690",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772816",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772816",
+      "fetchedAt": "2026-09-16T14:11:49.788Z",
+      "rawSha256": "f0f5f58de217a200b2213ccb8c9a12c277018a142c826b330db57b585f8c61c5",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772819",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772819",
+      "fetchedAt": "2026-09-16T14:11:49.779Z",
+      "rawSha256": "8edbccd7d778af06a1b562303113f65af97bc27092e5e4bbfc24a5b3f309c174",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772821",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772821",
+      "fetchedAt": "2026-09-16T14:11:50.000Z",
+      "rawSha256": "a8258425d76f317c4683d54a5a1223b3e7122252d3d746c78b506ec5d9764394",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772823",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772823",
+      "fetchedAt": "2026-09-16T14:11:50.021Z",
+      "rawSha256": "b2e61c105131a747c9a75167fd7a649146c2c3236e9f36a8a056e005f36c7d1b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772826",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772826",
+      "fetchedAt": "2026-09-16T14:11:50.034Z",
+      "rawSha256": "19bd1fb67bf8d6ef514aa61541ca71af40802a319cd02ac75e5e4caa71b16099",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772830",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772830",
+      "fetchedAt": "2026-09-16T14:11:50.012Z",
+      "rawSha256": "598ced9d3bef13d812f20da1fd2e377aeb044c1f1c6d6ca71652864d7f784f85",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772831",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772831",
+      "fetchedAt": "2026-09-16T14:11:50.237Z",
+      "rawSha256": "98f751527edf009bcdd00735e72a175d2f63413a520637b2e70ed25b08080f62",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772834",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772834",
+      "fetchedAt": "2026-09-16T14:11:50.261Z",
+      "rawSha256": "f21f79a52f945087136ba5a6952e2699929dc35d46a94a622283d3840c2dc919",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772835",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772835",
+      "fetchedAt": "2026-09-16T14:11:50.250Z",
+      "rawSha256": "566ba9887ae0fe874ebacf0e7cb181f38beaefd5c0f99f1c793923044ef3ca60",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772836",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772836",
+      "fetchedAt": "2026-09-16T14:11:50.271Z",
+      "rawSha256": "2bc4440674526871306f3b0fe6c589ce09b921b85c63ceed3a24ab7240426ae4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772838",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772838",
+      "fetchedAt": "2026-09-16T14:11:50.485Z",
+      "rawSha256": "be81764015249a705165b371a96bc5f1cddee0fac741e2a771319f19f43e09f4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772841",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772841",
+      "fetchedAt": "2026-09-16T14:11:50.500Z",
+      "rawSha256": "4129cb24b8cc3949c998fcf8f221b4d8074936177a38dd2b4b4599369e1a9835",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772846",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772846",
+      "fetchedAt": "2026-09-16T14:11:50.523Z",
+      "rawSha256": "91cf6d951441f891a5e7635a776de0c4fa9f8dba34b16282ba586a064682def4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772851",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772851",
+      "fetchedAt": "2026-09-16T14:11:50.513Z",
+      "rawSha256": "c2e0a26ee918a8e849b34b0ef691628469542c06266538569e4f8b970fe3daed",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "4429084",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772852",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772852",
+      "fetchedAt": "2026-09-16T14:11:50.743Z",
+      "rawSha256": "84cc0ed5639acbd3d26ce7c037d7da74ae360c9ef05bbea1f8c4e3fe3796fc85",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772854",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772854",
+      "fetchedAt": "2026-09-16T14:11:50.767Z",
+      "rawSha256": "89dcb42354df58a7a3e0e239c11f8fb7ed42bb5e639fabfec96634547e107b42",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772857",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772857",
+      "fetchedAt": "2026-09-16T14:11:50.777Z",
+      "rawSha256": "dcaf78f2420421f11f3b2b95666c01cfff3b06697eb9087d691a7390dc8d9aab",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772859",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772859",
+      "fetchedAt": "2026-09-16T14:11:50.757Z",
+      "rawSha256": "bff1ec765e73b1dd9d136287ff48dfd91d4b92fbe4ab5c7609fa14ee50f35ee4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772867",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772867",
+      "fetchedAt": "2026-09-16T14:11:50.991Z",
+      "rawSha256": "376d38cb94e96da086c4decaefd3f8cd97363912be14a673272977194175bb5a",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772871",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772871",
+      "fetchedAt": "2026-09-16T14:11:51.004Z",
+      "rawSha256": "e34693494b9b5e15b9dd94820f0a99c5b083b8e618b5a7b78899364eae07ed3b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772873",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772873",
+      "fetchedAt": "2026-09-16T14:11:51.013Z",
+      "rawSha256": "fc8ad83b61220417179922175cb913d18bce278a362c5b0e01928b0eab8e6f5b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772875",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772875",
+      "fetchedAt": "2026-09-16T14:11:51.025Z",
+      "rawSha256": "b6a887612a7485a154c8f76a776afe405cc213c5813ba6602e163fa36d6643be",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772878",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772878",
+      "fetchedAt": "2026-09-16T14:11:51.238Z",
+      "rawSha256": "d3680e6ca3f480c33362ac655aec57d9b7881a6e7bef4032de8418cc0d6d2ec2",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772882",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772882",
+      "fetchedAt": "2026-09-16T14:11:51.261Z",
+      "rawSha256": "672f855dcbc08a90493f00284e0786017fda8b70fef842a3f16b67adbd40a099",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772884",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772884",
+      "fetchedAt": "2026-09-16T14:11:51.250Z",
+      "rawSha256": "7f3c8b90c3b4e9f98acb640c4e3892759803081051c739fbbfea49613a1f83b4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772886",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772886",
+      "fetchedAt": "2026-09-16T14:11:51.271Z",
+      "rawSha256": "86a3de4a9ce625a3927bd5725f546ea9332e806b7d45adb95d22ab84698ac5b9",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772887",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772887",
+      "fetchedAt": "2026-09-16T14:11:51.455Z",
+      "rawSha256": "fb4212c9cbf9ffa9f3b12a7c79e38fc307138e676f8a6296692d3548c488d87e",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772888",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772888",
+      "fetchedAt": "2026-09-16T14:11:51.480Z",
+      "rawSha256": "6022c5f93b2144358d45626f954b0d8eba599d4b4fa4ca66ed24161aac0d34a2",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772891",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772891",
+      "fetchedAt": "2026-09-16T14:11:51.469Z",
+      "rawSha256": "555a44226f045bf0a43b0676feedd84102e7d0a5bd211d9486ed914e9e6993a0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772892",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772892",
+      "fetchedAt": "2026-09-16T14:11:51.490Z",
+      "rawSha256": "971d943c6eaae23114a41008cafd7a55518be78bc7c229106c3c0a2a8844213c",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772896",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772896",
+      "fetchedAt": "2026-09-16T14:11:51.703Z",
+      "rawSha256": "af127194b638a87c585d5895893d3f7e74be98e30a64ce891e3cbd4d9cf8ed91",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        },
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772900",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772900",
+      "fetchedAt": "2026-09-16T14:11:51.720Z",
+      "rawSha256": "4a9abcf4298f9ca452e7fecb9c192e67387f0f5cdce26aed10b84c286db1e1fc",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772905",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772905",
+      "fetchedAt": "2026-09-16T14:11:51.731Z",
+      "rawSha256": "b485ac9b0241d1643c625903beffde9f8d3448f0b58ab61378158772dfa1621b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772909",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772909",
+      "fetchedAt": "2026-09-16T14:11:51.741Z",
+      "rawSha256": "3c236a21d8970694eada41dcac42c362e0bce1d5c4c778d5de347be721d000f1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772911",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772911",
+      "fetchedAt": "2026-09-16T14:11:51.967Z",
+      "rawSha256": "6979269f5b851688376a650b1fa040e8c30a1e5bfd684be73f83a92ded8708bd",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772919",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772919",
+      "fetchedAt": "2026-09-16T14:11:51.948Z",
+      "rawSha256": "ceec96e58344262b1be2ba0a7766145b368367a17488d6793708263028f7d007",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772920",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772920",
+      "fetchedAt": "2026-09-16T14:11:51.958Z",
+      "rawSha256": "f7433e71bd1a9cc8bffd4f504d20b4b4220f7f4e9f1dfe33b736426f1517ce6b",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772923",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772923",
+      "fetchedAt": "2026-09-16T14:11:51.937Z",
+      "rawSha256": "5be9b125a1fcf0441c554e4795b6a82fe37e2b6dc6c88a2032c816179e0ab1e7",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772924",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772924",
+      "fetchedAt": "2026-09-16T14:11:52.181Z",
+      "rawSha256": "696995a49ac368a14be9706ed7114db692f6841976fc33e05555003ac2fdefa2",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4360423",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772925",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772925",
+      "fetchedAt": "2026-09-16T14:11:52.204Z",
+      "rawSha256": "d7563cb85c8804ebe9bdbcc5ca62255e1713c10c88a9ac443d58a6f241be7700",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772926",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772926",
+      "fetchedAt": "2026-09-16T14:11:52.194Z",
+      "rawSha256": "c881123e0dae03676253d44765e879ae2e566cf95852688c9843d11136b355a4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772927",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772927",
+      "fetchedAt": "2026-09-16T14:11:52.214Z",
+      "rawSha256": "f74a5e07e138d5b83466b2716337230b87a9d712478bba958d419b9bf7769822",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772928",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772928",
+      "fetchedAt": "2026-09-16T14:11:52.471Z",
+      "rawSha256": "e61edfa6b9b549b06e817a6d8a2c0058a17f150294f98bef3a3853d1f6360ea2",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772937",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772937",
+      "fetchedAt": "2026-09-16T14:11:52.427Z",
+      "rawSha256": "f3ef2aaaf5be64d1fef376efa5afcb6db5f06de2f199b62d4342e0ad62b0205c",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772938",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772938",
+      "fetchedAt": "2026-09-16T14:11:52.447Z",
+      "rawSha256": "d157140296e666a8ae10871e38edbd189b66ff51881a2eb1186a6ff7dffb5d97",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772940",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772940",
+      "fetchedAt": "2026-09-16T14:11:52.462Z",
+      "rawSha256": "a47df8ccc6258ae8cb1b99dbd00ff64d9b5afe7a0bd7542035d0a677f078bec2",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772941",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772941",
+      "fetchedAt": "2026-09-16T14:11:52.693Z",
+      "rawSha256": "dfafd4aaa9b1ac695e805429ac5ede5cff8b5137b1d467dceae9c4fe7b386a75",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772942",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772942",
+      "fetchedAt": "2026-09-16T14:11:52.680Z",
+      "rawSha256": "657828ac5e456a7926b522791777edf0a7d4d7011a142a1c15e7584ca4788851",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772943",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772943",
+      "fetchedAt": "2026-09-16T14:11:52.704Z",
+      "rawSha256": "672a67c32aa53e05ff638b2239e0991ff82acfdbb2cc49855ad3369b879868e1",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4241479",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772944",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772944",
+      "fetchedAt": "2026-09-16T14:11:52.714Z",
+      "rawSha256": "7e874d6295ef40d8f221ed70f9575a36ce99fe739a7bd6fc8a809bc1b8b02f6e",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772947",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772947",
+      "fetchedAt": "2026-09-16T14:11:52.938Z",
+      "rawSha256": "dec07919661083b08b38f0a74eb74321ff97d0c25e16c799e466a2a93f563021",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772949",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772949",
+      "fetchedAt": "2026-09-16T14:11:52.956Z",
+      "rawSha256": "5b00f7a9c2058165cf53543c3781920d3856d17e0b86bc6ff46562b7c09815e4",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772950",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772950",
+      "fetchedAt": "2026-09-16T14:11:52.925Z",
+      "rawSha256": "b1af33f71f2d0f5a2136fa27784b0413d2b667b6b4d8718182782db376907310",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "15864",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        },
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772952",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772952",
+      "fetchedAt": "2026-09-16T14:11:52.971Z",
+      "rawSha256": "e3b206e330f4e52b646cd6a372fb37ca4609cf45d967919e2b123bd715dd55b3",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 2,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772960",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772960",
+      "fetchedAt": "2026-09-16T14:11:53.187Z",
+      "rawSha256": "60f2cf8a4d2cb4dd6ece84cddd5cc459050e9b796d9bc52f92e35a90736594c0",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "8439",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772961",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772961",
+      "fetchedAt": "2026-09-16T14:11:53.174Z",
+      "rawSha256": "190b4133d09614bcebd8c0bb51ad64490f83bb8bd01f2410af66b9b4e88baf0d",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3912547",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772963",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772963",
+      "fetchedAt": "2026-09-16T14:11:53.208Z",
+      "rawSha256": "bcdff9c69bdc83c30fd43806610ce02a59f77912c1fe29d2ce25bf1c675d1a31",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4689114",
+          "totalFumbles": 1,
+          "fumblesLost": 0,
+          "playerRowPresent": true
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772965",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772965",
+      "fetchedAt": "2026-09-16T14:11:53.196Z",
+      "rawSha256": "a1dc19691c787142870192d11617a0441b8bd8e7f067bdf7af436d8a5737f768",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "3046779",
+          "totalFumbles": 0,
+          "fumblesLost": 0,
+          "playerRowPresent": false
+        }
+      ]
+    },
+    {
+      "providerEventId": "401772968",
+      "source": "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=401772968",
+      "fetchedAt": "2026-09-16T14:11:53.416Z",
+      "rawSha256": "6286bc43642844984f929b62ab8ba627e862d5feb713c730eea176be7cf866f3",
+      "normalizationVersion": "espn_nfl_event_summary_fumbles_v1",
+      "validated": true,
+      "qbFumbles": [
+        {
+          "providerPlayerId": "4573398",
+          "totalFumbles": 1,
+          "fumblesLost": 1,
+          "playerRowPresent": true
+        }
+      ]
+    }
+  ]
+}
