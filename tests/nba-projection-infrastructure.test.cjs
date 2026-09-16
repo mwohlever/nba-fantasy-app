@@ -77,3 +77,12 @@ test('one cached stat line scores differently under separate frozen NBA snapshot
   assert.equal(scoreCachedNbaProjection(cache, { sport: 'nba', scoring: { points: 1 } }), 10);
   assert.equal(scoreCachedNbaProjection(cache, { sport: 'nba', scoring: { points: 2 } }), 20);
 });
+
+test('batched projection history retrieval paginates beyond the Supabase 1,000-row response limit', () => {
+  const source = fs.readFileSync(require.resolve('../lib/analytics/nba/projectionRepository.server.ts'), 'utf8');
+
+  assert.match(source, /const NBA_HISTORY_PAGE_SIZE = 1000;/);
+  assert.match(source, /\.range\(from,\s*from \+ NBA_HISTORY_PAGE_SIZE - 1\)/);
+  assert.match(source, /if \(page\.length < NBA_HISTORY_PAGE_SIZE\) break;/);
+  assert.match(source, /\.order\('game_at', \{ ascending: true \}\)\s*\.order\('id', \{ ascending: true \}\)/);
+});

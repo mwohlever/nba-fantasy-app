@@ -7,6 +7,36 @@ const db = supabaseAdmin;
 const batches = <T,>(items: readonly T[], size: number) => Array.from({ length: Math.ceil(items.length / size) }, (_value, index) => items.slice(index * size, (index + 1) * size));
 function fail(label: string, error: { message: string } | null) { if (error) throw new Error(`${label}: ${error.message}`); }
 
+const NBA_HISTORY_PAGE_SIZE = 1000;
+
+async function loadNbaProjectionHistoryRows(input: {
+  playerIds: readonly number[];
+  targetSeason: number;
+  asOf: string;
+  errorLabel: string;
+}) {
+  const rows: Record<string, unknown>[] = [];
+
+  for (let from = 0; ; from += NBA_HISTORY_PAGE_SIZE) {
+    const result = await db.from('nba_player_game_observations').select('*')
+      .in('local_player_id', input.playerIds)
+      .in('season', [input.targetSeason - 1, input.targetSeason])
+      .lt('game_at', input.asOf)
+      .order('game_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, from + NBA_HISTORY_PAGE_SIZE - 1);
+
+    fail(input.errorLabel, result.error);
+
+    const page = (result.data ?? []) as Record<string, unknown>[];
+    rows.push(...page);
+
+    if (page.length < NBA_HISTORY_PAGE_SIZE) break;
+  }
+
+  return rows;
+}
+
 export type NbaProjectionHistory = {
   playerId: number;
   observations: ReturnType<typeof nbaObservationFromRecord>[];
@@ -42,11 +72,14 @@ export async function loadNbaProjectionHistories(input: { playerIds: readonly nu
   const requested = [...new Set(input.playerIds.filter(id => Number.isSafeInteger(id) && id > 0))];
   const histories = new Map<number, NbaProjectionHistory>(requested.map(playerId => [playerId, { playerId, observations: [], latestGameAt: null, latestUpdatedAt: null }]));
   for (const group of batches(requested, 200)) {
-    const result = await db.from('nba_player_game_observations').select('*').in('local_player_id', group)
-      .in('season', [input.targetSeason - 1, input.targetSeason]).lt('game_at', input.asOf).order('game_at', { ascending: true });
-    fail('NBA batched projection history lookup failed', result.error);
-    for (const raw of result.data ?? []) {
-      const row = asObservationRecord(raw as Record<string, unknown>);
+    const rows = await loadNbaProjectionHistoryRows({
+      playerIds: group,
+      targetSeason: input.targetSeason,
+      asOf: input.asOf,
+      errorLabel: 'NBA batched projection history lookup failed',
+    });
+    for (const raw of rows) {
+      const row = asObservationRecord(raw);
       if (row.local_player_id === null) continue;
       const history = histories.get(row.local_player_id)!;
       history.observations.push(nbaObservationFromRecord(row));
@@ -65,11 +98,14 @@ export function nbaProjectionGenerationRepository() {
         requested.map(playerId => [playerId, { observations: [], latestGameAt: null, latestUpdatedAt: null }]),
       );
       for (const group of batches(requested, 200)) {
-        const result = await db.from('nba_player_game_observations').select('*').in('local_player_id', group)
-          .in('season', [input.targetSeason - 1, input.targetSeason]).lt('game_at', input.asOf).order('game_at', { ascending: true });
-        fail('NBA batched projection generation history lookup failed', result.error);
-        for (const raw of result.data ?? []) {
-          const row = asObservationRecord(raw as Record<string, unknown>);
+        const rows = await loadNbaProjectionHistoryRows({
+          playerIds: group,
+          targetSeason: input.targetSeason,
+          asOf: input.asOf,
+          errorLabel: 'NBA batched projection generation history lookup failed',
+        });
+        for (const raw of rows) {
+          const row = asObservationRecord(raw);
           if (row.local_player_id === null) continue;
           const history = output.get(row.local_player_id)!;
           history.observations.push(row); history.latestGameAt = row.game_at;
