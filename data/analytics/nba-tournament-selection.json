@@ -1,0 +1,443 @@
+{
+  "version": "nba-tournament-v1",
+  "datasetSha256": "3ef533053d20e4b782449255709274346aac1bf322218a9a25acd2f34b4ab875",
+  "definitionHash": "2e95a8c24277eb38950bdf3fa3113727d79f16898c529ecdfda92c7815dc263f",
+  "sourceHashes": {
+    "lib/analytics/nba/candidates.ts": "95e46c28e08ebef4c98ab070c31e82233c867c12f161dafdac80b18fc3e3174a",
+    "lib/analytics/nba/tournamentMetrics.ts": "8e3ee8ff84388551b6e939eb93fbcd6bb7f7cd850c63d45ee81eb72172b9d244",
+    "lib/analytics/nba/backtest.ts": "e131b6e597006a963595a1fdc90f19e1bdd4e8b4bb5a3548f6aa519fbda420c0",
+    "lib/analytics/nba/history.ts": "645c7c1ee917dade317ac3548f8f8fa335a92aea392e66511dd620f03710674a",
+    "lib/analytics/nba/participation.ts": "dbbe0c319d30cdda7c94f520f469de7127a2bccac2ccb0f5b56f734e484eca2a",
+    "lib/analytics/nba/scoring.ts": "7f3f6859b00a1265e0477835bfa9bb95d8a3774979b34ef0d9aa61eb85e60836",
+    "lib/analytics/statistics.ts": "0d698ed4d6eccb354090e08c2c3814b399f3df68414620827b7858548a7ce515",
+    "lib/analytics/nba/types.ts": "73980bfdb85951d0fe39d099881a0f0ebd4e9d979e19655e880c29a963af7f02",
+    "scripts/run-nba-tournament.cjs": "4545734b566992ef0d04b07bcaa4c2512631e29f0238b31125ead73c2b3b4afc"
+  },
+  "criterion": "Lowest development macro-player MAE among V2 candidates; baseline selection separately by same rule. Holdout never used to select parameters. Report common-target metrics and coverage.",
+  "developmentSeasons": [
+    2024
+  ],
+  "holdoutSeasons": [
+    2025
+  ],
+  "selectedCandidate": "nba-v2-blend8h3s0.8-recent15-v1",
+  "selectedBaseline": "baseline-weighted10h5",
+  "definitions": [
+    {
+      "id": "baseline-season",
+      "options": {
+        "kind": "season-to-date"
+      },
+      "family": "baseline"
+    },
+    {
+      "id": "baseline-recent5",
+      "options": {
+        "kind": "recent",
+        "games": 5
+      },
+      "family": "baseline"
+    },
+    {
+      "id": "baseline-weighted10h5",
+      "options": {
+        "kind": "recent",
+        "games": 10,
+        "halfLifeGames": 5
+      },
+      "family": "baseline"
+    },
+    {
+      "id": "nba-v2-median5-recent15-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 5
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent15-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median10-recent15-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 10
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-mean5h2-recent15-v1",
+      "minutes": {
+        "kind": "weighted-mean",
+        "window": 5,
+        "halfLife": 2
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-mean10h3-recent15-v1",
+      "minutes": {
+        "kind": "weighted-mean",
+        "window": 10,
+        "halfLife": 3
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-mean10h5-recent15-v1",
+      "minutes": {
+        "kind": "weighted-mean",
+        "window": 10,
+        "halfLife": 5
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-wmedian8h3-recent15-v1",
+      "minutes": {
+        "kind": "weighted-median",
+        "window": 8,
+        "halfLife": 3
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-blend8h3s0.5-recent15-v1",
+      "minutes": {
+        "kind": "blend",
+        "window": 8,
+        "halfLife": 3,
+        "recentShare": 0.5
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-blend8h3s0.8-recent15-v1",
+      "minutes": {
+        "kind": "blend",
+        "window": 8,
+        "halfLife": 3,
+        "recentShare": 0.8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-robust35i10-recent15-v1",
+      "minutes": {
+        "kind": "robust",
+        "window": 8,
+        "halfLife": 3,
+        "lowRatio": 0.35,
+        "lowInfluence": 0.1
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-robust50i25-recent15-v1",
+      "minutes": {
+        "kind": "robust",
+        "window": 8,
+        "halfLife": 3,
+        "lowRatio": 0.5,
+        "lowInfluence": 0.25
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-adaptive50i25-recent15-v1",
+      "minutes": {
+        "kind": "robust",
+        "window": 8,
+        "halfLife": 3,
+        "lowRatio": 0.5,
+        "lowInfluence": 0.25,
+        "adapt": true
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-season-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "season"
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent5-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 5
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent10-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 10
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent20-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 20
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-weighted15h3-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "weighted",
+        "window": 15,
+        "halfLife": 3
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-weighted15h5-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "weighted",
+        "window": 15,
+        "halfLife": 5
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-weighted20h10-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "weighted",
+        "window": 20,
+        "halfLife": 10
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-blend10s0.5-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "blend",
+        "window": 10,
+        "recentShare": 0.5
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-blend10s0.8-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "blend",
+        "window": 10,
+        "recentShare": 0.8
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent15-prior100-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15,
+        "priorMinutes": 100,
+        "rareStatPriorMultiplier": 2
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-adaptive50i25-recent15-prior100-v1",
+      "minutes": {
+        "kind": "robust",
+        "window": 8,
+        "halfLife": 3,
+        "lowRatio": 0.5,
+        "lowInfluence": 0.25,
+        "adapt": true
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15,
+        "priorMinutes": 100,
+        "rareStatPriorMultiplier": 2
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent15-prior300-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15,
+        "priorMinutes": 300,
+        "rareStatPriorMultiplier": 2
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-adaptive50i25-recent15-prior300-v1",
+      "minutes": {
+        "kind": "robust",
+        "window": 8,
+        "halfLife": 3,
+        "lowRatio": 0.5,
+        "lowInfluence": 0.25,
+        "adapt": true
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15,
+        "priorMinutes": 300,
+        "rareStatPriorMultiplier": 2
+      },
+      "priorFallback": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent15-prior300-sparseMinutes-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15,
+        "priorMinutes": 300,
+        "rareStatPriorMultiplier": 2
+      },
+      "priorFallback": true,
+      "sparseMinutesPrior": true,
+      "family": "v2"
+    },
+    {
+      "id": "nba-v2-median8-recent15-currentOnly-v1",
+      "minutes": {
+        "kind": "median",
+        "window": 8
+      },
+      "rates": {
+        "kind": "recent",
+        "window": 15
+      },
+      "priorFallback": false,
+      "family": "v2"
+    }
+  ]
+}

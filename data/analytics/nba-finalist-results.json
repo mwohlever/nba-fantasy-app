@@ -1,0 +1,2586 @@
+{
+  "version": "nba-finalist-evaluation-v1",
+  "cohort": {
+    "players": 35,
+    "observations": 6854,
+    "warmupSeasons": [
+      2023
+    ]
+  },
+  "timing": "retrospective-approximation",
+  "finalists": [
+    "baseline-weighted10h5",
+    "nba-v2-blend8h3s0.8-recent15-v1",
+    "nba-v2-robust50i25-recent15-v1",
+    "nba-v2-adaptive50i25-recent15-v1"
+  ],
+  "selectionRule": "Fixed finalists. Select a LOW-complexity model within 3% of the best development macro-player MAE that passes workload behavior tests. Holdout reports only; it cannot retune selection.",
+  "selectedModel": "nba-v2-robust50i25-recent15-v1",
+  "development": [
+    {
+      "id": "baseline-weighted10h5",
+      "complexity": "LOW",
+      "metrics": {
+        "predictions": 440,
+        "mae": 8.852120627220904,
+        "rmse": 11.331978889758105,
+        "bias": -0.9374501178091902,
+        "players": 33,
+        "macroPlayerMae": 9.177049548664929,
+        "medianAbsoluteError": 7.3381704152835505,
+        "correlation": 0.6616834380564474,
+        "rankCorrelation": 0.6388269193008487,
+        "withinPlayerCorrelation": 0.17941343444496505,
+        "minutes": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "statMae": {
+          "points": null,
+          "rebounds": null,
+          "assists": null,
+          "steals": null,
+          "blocks": null,
+          "turnovers": null
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 5,
+          "mae": 10.25696339571206,
+          "rmse": 12.977578940330691,
+          "bias": 4.263725445925699,
+          "players": 5,
+          "macroPlayerMae": 10.25696339571206,
+          "medianAbsoluteError": 7.354967368965328,
+          "correlation": 0.8310950401035547,
+          "rankCorrelation": 0.6,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "established-history": {
+          "predictions": 440,
+          "mae": 8.852120627220904,
+          "rmse": 11.331978889758105,
+          "bias": -0.9374501178091902,
+          "players": 33,
+          "macroPlayerMae": 9.177049548664929,
+          "medianAbsoluteError": 7.3381704152835505,
+          "correlation": 0.6616834380564474,
+          "rankCorrelation": 0.6388269193008487,
+          "withinPlayerCorrelation": 0.17941343444496505,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "high-minutes": {
+          "predictions": 316,
+          "mae": 9.384243213310139,
+          "rmse": 12.074472892232684,
+          "bias": -0.5570149678626808,
+          "players": 29,
+          "macroPlayerMae": 9.567885125461462,
+          "medianAbsoluteError": 7.723696637201169,
+          "correlation": 0.4436038301458822,
+          "rankCorrelation": 0.41451002627596417,
+          "withinPlayerCorrelation": 0.06604935306929141,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "lower-minutes": {
+          "predictions": 54,
+          "mae": 7.189806012976078,
+          "rmse": 8.639915697130006,
+          "bias": -0.5246011762403843,
+          "players": 9,
+          "macroPlayerMae": 9.041967151005961,
+          "medianAbsoluteError": 5.941064636742848,
+          "correlation": 0.3446166795242218,
+          "rankCorrelation": 0.3708998042924392,
+          "withinPlayerCorrelation": 0.17935107124438643,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "middle-minutes": {
+          "predictions": 70,
+          "mae": 7.732324226721242,
+          "rmse": 9.56219736567894,
+          "bias": -2.9733265496350842,
+          "players": 16,
+          "macroPlayerMae": 7.202833605087529,
+          "medianAbsoluteError": 6.5674451095414454,
+          "correlation": 0.615149881775123,
+          "rankCorrelation": 0.6265528222955745,
+          "withinPlayerCorrelation": 0.32619364080218377,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "stable-workload": {
+          "predictions": 328,
+          "mae": 8.962275574909164,
+          "rmse": 11.368399576967631,
+          "bias": -0.8704495552557724,
+          "players": 33,
+          "macroPlayerMae": 9.162610898433963,
+          "medianAbsoluteError": 7.651773904024495,
+          "correlation": 0.6031215353512261,
+          "rankCorrelation": 0.5568366924533205,
+          "withinPlayerCorrelation": 0.09355812028885638,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "volatile-workload": {
+          "predictions": 112,
+          "mae": 8.52952399470529,
+          "rmse": 11.224638521320195,
+          "bias": -1.1336660510013445,
+          "players": 28,
+          "macroPlayerMae": 8.655514669982447,
+          "medianAbsoluteError": 6.039542564053001,
+          "correlation": 0.7253563454744524,
+          "rankCorrelation": 0.7452847112973257,
+          "withinPlayerCorrelation": 0.3554003301843088,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "low": {
+          "predictions": 440,
+          "mae": 8.852120627220904,
+          "rmse": 11.331978889758105,
+          "bias": -0.9374501178091902,
+          "players": 33,
+          "macroPlayerMae": 9.177049548664929,
+          "medianAbsoluteError": 7.3381704152835505,
+          "correlation": 0.6616834380564474,
+          "rankCorrelation": 0.6388269193008487,
+          "withinPlayerCorrelation": 0.17941343444496505,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 33
+      }
+    },
+    {
+      "id": "nba-v2-blend8h3s0.8-recent15-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "predictions": 470,
+        "mae": 8.664534721476453,
+        "rmse": 11.094788617986428,
+        "bias": -0.7882540484632128,
+        "players": 33,
+        "macroPlayerMae": 9.027078568572314,
+        "medianAbsoluteError": 7.265905543343219,
+        "correlation": 0.6744627280328857,
+        "rankCorrelation": 0.6569665811581186,
+        "withinPlayerCorrelation": 0.16352638798778177,
+        "minutes": {
+          "predictions": 470,
+          "mae": 3.954036673521349,
+          "rmse": 5.23023459066088,
+          "bias": 0.031300631248832776
+        },
+        "statMae": {
+          "points": 5.363672823289852,
+          "rebounds": 2.475701229913918,
+          "assists": 2.062740438296819,
+          "steals": 0.8686588239857697,
+          "blocks": 0.6842144069404813,
+          "turnovers": 1.2331600581009323
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 8,
+          "mae": 9.74077647001039,
+          "rmse": 11.651985749750853,
+          "bias": 0.23775647795706112,
+          "players": 8,
+          "macroPlayerMae": 9.74077647001039,
+          "medianAbsoluteError": 7.146457090556798,
+          "correlation": 0.9213993206899251,
+          "rankCorrelation": 0.7857142857142857,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 8,
+            "mae": 6.6031731547117705,
+            "rmse": 7.9750215626256225,
+            "bias": 2.84762612394192
+          },
+          "statMae": {
+            "points": 4.105932930463178,
+            "rebounds": 2.824292358398552,
+            "assists": 1.6864734772129766,
+            "steals": 0.6439816039296304,
+            "blocks": 0.5427482775507388,
+            "turnovers": 1.1671844793163626
+          }
+        },
+        "established-history": {
+          "predictions": 440,
+          "mae": 8.739318261792908,
+          "rmse": 11.229488866531787,
+          "bias": -0.9116285584528501,
+          "players": 33,
+          "macroPlayerMae": 9.100405846538166,
+          "medianAbsoluteError": 7.152887202409714,
+          "correlation": 0.6670909962718472,
+          "rankCorrelation": 0.6464919801874399,
+          "withinPlayerCorrelation": 0.17029342348738882,
+          "minutes": {
+            "predictions": 440,
+            "mae": 3.9398907148111793,
+            "rmse": 5.224468063633757,
+            "bias": -0.041654453868939095
+          },
+          "statMae": {
+            "points": 5.399739580362512,
+            "rebounds": 2.5163839127379033,
+            "assists": 2.0664836562958593,
+            "steals": 0.869494229270893,
+            "blocks": 0.672015182992815,
+            "turnovers": 1.2334868501356246
+          }
+        },
+        "high-minutes": {
+          "predictions": 336,
+          "mae": 9.16122426482232,
+          "rmse": 11.770290499512424,
+          "bias": -0.596512090811111,
+          "players": 29,
+          "macroPlayerMae": 9.45695085457458,
+          "medianAbsoluteError": 7.351502461000958,
+          "correlation": 0.461531730733401,
+          "rankCorrelation": 0.4454165449980477,
+          "withinPlayerCorrelation": 0.056817383755778786,
+          "minutes": {
+            "predictions": 336,
+            "mae": 3.877408726717188,
+            "rmse": 5.190583324449093,
+            "bias": 0.24025519322333574
+          },
+          "statMae": {
+            "points": 5.976158491107735,
+            "rebounds": 2.5140981640641518,
+            "assists": 2.1619518952389036,
+            "steals": 0.9149977284631681,
+            "blocks": 0.6990435843277398,
+            "turnovers": 1.3311026528104921
+          }
+        },
+        "lower-minutes": {
+          "predictions": 59,
+          "mae": 7.071798594045929,
+          "rmse": 8.578861220898418,
+          "bias": 0.013846943715158369,
+          "players": 9,
+          "macroPlayerMae": 9.050730860027564,
+          "medianAbsoluteError": 5.709368474178813,
+          "correlation": 0.3336336832437544,
+          "rankCorrelation": 0.3770475039056701,
+          "withinPlayerCorrelation": 0.19831989602764455,
+          "minutes": {
+            "predictions": 59,
+            "mae": 4.255967083744539,
+            "rmse": 5.597329170533276,
+            "bias": 0.007703263842497902
+          },
+          "statMae": {
+            "points": 3.4320221422366224,
+            "rebounds": 2.170845297511663,
+            "assists": 1.456627361570008,
+            "steals": 0.7067303858702431,
+            "blocks": 0.6142498249778376,
+            "turnovers": 1.049646714643578
+          }
+        },
+        "middle-minutes": {
+          "predictions": 75,
+          "mae": 7.692317987532371,
+          "rmse": 9.635192685670113,
+          "bias": -2.278244132591617,
+          "players": 17,
+          "macroPlayerMae": 6.698038117388534,
+          "medianAbsoluteError": 7.322965179292996,
+          "correlation": 0.5739825475572533,
+          "rankCorrelation": 0.5669395507595872,
+          "withinPlayerCorrelation": 0.16539499548174766,
+          "minutes": {
+            "predictions": 75,
+            "mae": 4.059811285828416,
+            "rmse": 5.106827613268488,
+            "bias": -0.88625254403729
+          },
+          "statMae": {
+            "points": 4.139302233894292,
+            "rebounds": 2.543502965077314,
+            "assists": 2.0950820648880324,
+            "steals": 0.7884442365779003,
+            "blocks": 0.6728184967228446,
+            "turnovers": 0.9387410639885614
+          }
+        },
+        "sparse-history": {
+          "predictions": 30,
+          "mae": 7.567709463501852,
+          "rmse": 8.887654949422048,
+          "bias": 1.0212387647181376,
+          "players": 30,
+          "macroPlayerMae": 7.567709463501852,
+          "medianAbsoluteError": 7.850800544568095,
+          "correlation": 0.7979485263660365,
+          "rankCorrelation": 0.822652445822845,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 30,
+            "mae": 4.1615107346037865,
+            "rmse": 5.314091453809856,
+            "bias": 1.1013085463094874
+          },
+          "statMae": {
+            "points": 4.834693719557521,
+            "rebounds": 1.8790218818288167,
+            "assists": 2.0078399076442217,
+            "steals": 0.8564062131372964,
+            "blocks": 0.8631363581729202,
+            "turnovers": 1.2283671082587806
+          }
+        },
+        "stable-workload": {
+          "predictions": 328,
+          "mae": 8.769115437403455,
+          "rmse": 11.209420430456245,
+          "bias": -1.0041711392688726,
+          "players": 33,
+          "macroPlayerMae": 9.022112657363026,
+          "medianAbsoluteError": 7.293917631330594,
+          "correlation": 0.6144866986891867,
+          "rankCorrelation": 0.5751926324849085,
+          "withinPlayerCorrelation": 0.09650499484461068,
+          "minutes": {
+            "predictions": 328,
+            "mae": 3.7653862796704884,
+            "rmse": 5.0134575357383815,
+            "bias": -0.012563667548186727
+          },
+          "statMae": {
+            "points": 5.501926848960879,
+            "rebounds": 2.5261282777884078,
+            "assists": 2.1370411281881077,
+            "steals": 0.8900984228142195,
+            "blocks": 0.6899680216990691,
+            "turnovers": 1.2130731088546998
+          }
+        },
+        "volatile-workload": {
+          "predictions": 112,
+          "mae": 8.652055104647738,
+          "rmse": 11.288055473881439,
+          "bias": -0.6406110003487837,
+          "players": 28,
+          "macroPlayerMae": 9.045174218802206,
+          "medianAbsoluteError": 6.935292644673801,
+          "correlation": 0.7192906712776627,
+          "rankCorrelation": 0.734354979349649,
+          "withinPlayerCorrelation": 0.3947299277722387,
+          "minutes": {
+            "predictions": 112,
+            "mae": 4.450939417723214,
+            "rmse": 5.798421245522469,
+            "bias": -0.12684889952257108
+          },
+          "statMae": {
+            "points": 5.1004768651815855,
+            "rebounds": 2.4878468436614214,
+            "assists": 1.8598510600399887,
+            "steals": 0.8091533767511475,
+            "blocks": 0.6194390124959295,
+            "turnovers": 1.2932699496011928
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 435,
+          "mae": 8.714869926458332,
+          "rmse": 11.214137936032746,
+          "bias": -0.963326949811059,
+          "players": 33,
+          "macroPlayerMae": 9.076379950068233,
+          "medianAbsoluteError": 7.054776212602722,
+          "correlation": 0.6618119818168849,
+          "rankCorrelation": 0.6423448259981702,
+          "withinPlayerCorrelation": 0.17050255802160702,
+          "minutes": {
+            "predictions": 435,
+            "mae": 3.8950068404920843,
+            "rmse": 5.161916266947701,
+            "bias": -0.09145146576806831
+          },
+          "statMae": {
+            "points": 5.40188433739607,
+            "rebounds": 2.5144498068501404,
+            "assists": 2.07350772969307,
+            "steals": 0.8746408449925084,
+            "blocks": 0.672844831486322,
+            "turnovers": 1.2289768175929023
+          }
+        },
+        "low": {
+          "predictions": 35,
+          "mae": 8.038940030987439,
+          "rmse": 9.486968818220614,
+          "bias": 1.3876520111457404,
+          "players": 31,
+          "macroPlayerMae": 7.796401682774122,
+          "medianAbsoluteError": 8.097912594972371,
+          "correlation": 0.8207257568510297,
+          "rankCorrelation": 0.8275668942374256,
+          "withinPlayerCorrelation": -0.4698461490170706,
+          "minutes": {
+            "predictions": 35,
+            "mae": 4.68769316974218,
+            "rmse": 6.014924812584229,
+            "bias": 1.5569338370303183
+          },
+          "statMae": {
+            "points": 4.888758290826883,
+            "rebounds": 1.9941117737066,
+            "assists": 1.9289183880862635,
+            "steals": 0.794310848616306,
+            "blocks": 0.8255219875850331,
+            "turnovers": 1.285151761557877
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 3
+      }
+    },
+    {
+      "id": "nba-v2-robust50i25-recent15-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "predictions": 470,
+        "mae": 8.707046739543326,
+        "rmse": 11.114974748932838,
+        "bias": -0.4728922330757447,
+        "players": 33,
+        "macroPlayerMae": 9.073497448216706,
+        "medianAbsoluteError": 7.399842943485204,
+        "correlation": 0.6719962821355571,
+        "rankCorrelation": 0.6547534613945869,
+        "withinPlayerCorrelation": 0.16576784715436194,
+        "minutes": {
+          "predictions": 470,
+          "mae": 3.987862021705477,
+          "rmse": 5.327953949714799,
+          "bias": 0.3184584085599651
+        },
+        "statMae": {
+          "points": 5.381507330483051,
+          "rebounds": 2.4831706588220843,
+          "assists": 2.076038043203751,
+          "steals": 0.869610214427458,
+          "blocks": 0.6857102558251872,
+          "turnovers": 1.2340701090983763
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 8,
+          "mae": 8.87191518769464,
+          "rmse": 11.344248475487753,
+          "bias": 3.572206255656506,
+          "players": 8,
+          "macroPlayerMae": 8.87191518769464,
+          "medianAbsoluteError": 7.809603309941943,
+          "correlation": 0.9251740165040306,
+          "rankCorrelation": 0.7142857142857143,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 8,
+            "mae": 7.607690828071001,
+            "rmse": 9.142246269927988,
+            "bias": 5.956632063325936
+          },
+          "statMae": {
+            "points": 3.6797743463569144,
+            "rebounds": 2.756217736088176,
+            "assists": 1.6090825361022658,
+            "steals": 0.6434210592854814,
+            "blocks": 0.5706843419030726,
+            "turnovers": 1.1107047151078073
+          }
+        },
+        "established-history": {
+          "predictions": 440,
+          "mae": 8.791449926647815,
+          "rmse": 11.254048088395285,
+          "bias": -0.6111889533315319,
+          "players": 33,
+          "macroPlayerMae": 9.156229425516393,
+          "medianAbsoluteError": 7.456029929786743,
+          "correlation": 0.6643079040993989,
+          "rankCorrelation": 0.6443538041911031,
+          "withinPlayerCorrelation": 0.17076748000656863,
+          "minutes": {
+            "predictions": 440,
+            "mae": 3.951574262945863,
+            "rmse": 5.298901803175344,
+            "bias": 0.2283157709008687
+          },
+          "statMae": {
+            "points": 5.411569113218617,
+            "rebounds": 2.522144283533747,
+            "assists": 2.0791140350402686,
+            "steals": 0.8705783545801633,
+            "blocks": 0.6733332662989799,
+            "turnovers": 1.2342040171776814
+          }
+        },
+        "high-minutes": {
+          "predictions": 336,
+          "mae": 9.18533675176372,
+          "rmse": 11.760318872654832,
+          "bias": -0.2572561292338459,
+          "players": 29,
+          "macroPlayerMae": 9.505883434890395,
+          "medianAbsoluteError": 7.520887632014102,
+          "correlation": 0.461305070481383,
+          "rankCorrelation": 0.4423521901451486,
+          "withinPlayerCorrelation": 0.06259497936050795,
+          "minutes": {
+            "predictions": 336,
+            "mae": 3.909875062291009,
+            "rmse": 5.261924823663774,
+            "bias": 0.5341693227918969
+          },
+          "statMae": {
+            "points": 5.979386328098131,
+            "rebounds": 2.5191058518956844,
+            "assists": 2.1730593030730883,
+            "steals": 0.9161355951046488,
+            "blocks": 0.6997637322667709,
+            "turnovers": 1.3302717355215432
+          }
+        },
+        "lower-minutes": {
+          "predictions": 59,
+          "mae": 7.232664441600863,
+          "rmse": 8.751270317241799,
+          "bias": 0.2167499627356853,
+          "players": 9,
+          "macroPlayerMae": 9.018091580565589,
+          "medianAbsoluteError": 6.262783652084249,
+          "correlation": 0.2973015910080186,
+          "rankCorrelation": 0.3301430515906337,
+          "withinPlayerCorrelation": 0.154208721265113,
+          "minutes": {
+            "predictions": 59,
+            "mae": 4.363821007474976,
+            "rmse": 5.822533037970595,
+            "bias": 0.18734327943556162
+          },
+          "statMae": {
+            "points": 3.5313637384402807,
+            "rebounds": 2.204048357004298,
+            "assists": 1.483077441003863,
+            "steals": 0.7056335969727654,
+            "blocks": 0.6176990120269895,
+            "turnovers": 1.0598765999654884
+          }
+        },
+        "middle-minutes": {
+          "predictions": 75,
+          "mae": 7.724154892510669,
+          "rmse": 9.713248087976137,
+          "bias": -1.981460505659107,
+          "players": 17,
+          "macroPlayerMae": 6.713365301445511,
+          "medianAbsoluteError": 7.190878669212026,
+          "correlation": 0.5554600676349563,
+          "rankCorrelation": 0.5690306337845944,
+          "withinPlayerCorrelation": 0.11920463151252936,
+          "minutes": {
+            "predictions": 75,
+            "mae": 4.041489197743615,
+            "rmse": 5.213576790332864,
+            "bias": -0.5447825856212247
+          },
+          "statMae": {
+            "points": 4.158455713574486,
+            "rebounds": 2.5417572046156836,
+            "assists": 2.107845139386376,
+            "steals": 0.7901714480579998,
+            "blocks": 0.6762528598214758,
+            "turnovers": 0.9401190499071258
+          }
+        },
+        "sparse-history": {
+          "predictions": 30,
+          "mae": 7.469133328677535,
+          "rmse": 8.82698257092589,
+          "bias": 1.5554596640091343,
+          "players": 30,
+          "macroPlayerMae": 7.469133328677535,
+          "medianAbsoluteError": 7.089151759795261,
+          "correlation": 0.8105983948282641,
+          "rankCorrelation": 0.8271028242151784,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 30,
+            "mae": 4.520082483513119,
+            "rmse": 5.737174989390288,
+            "bias": 1.6405504275600447
+          },
+          "statMae": {
+            "points": 4.940601183694732,
+            "rebounds": 1.9115574963843536,
+            "assists": 2.0309234962681666,
+            "steals": 0.8554108255211095,
+            "blocks": 0.8672394355428937,
+            "turnovers": 1.2321061239352291
+          }
+        },
+        "stable-workload": {
+          "predictions": 328,
+          "mae": 8.83609634210427,
+          "rmse": 11.249659103068108,
+          "bias": -0.71403215878488,
+          "players": 33,
+          "macroPlayerMae": 9.108118604203554,
+          "medianAbsoluteError": 7.471190866616851,
+          "correlation": 0.6105135116829493,
+          "rankCorrelation": 0.5700239137243233,
+          "withinPlayerCorrelation": 0.09684872288461066,
+          "minutes": {
+            "predictions": 328,
+            "mae": 3.8304602344307233,
+            "rmse": 5.107427375057833,
+            "bias": 0.23935387030920013
+          },
+          "statMae": {
+            "points": 5.517432458254709,
+            "rebounds": 2.5394790955406967,
+            "assists": 2.1468659972117763,
+            "steals": 0.8911554032585566,
+            "blocks": 0.6918118605468186,
+            "turnovers": 1.2139497044634522
+          }
+        },
+        "volatile-workload": {
+          "predictions": 112,
+          "mae": 8.660699709953875,
+          "rmse": 11.266891710196989,
+          "bias": -0.3100052802181545,
+          "players": 28,
+          "macroPlayerMae": 9.077845417781075,
+          "medianAbsoluteError": 7.203794763718596,
+          "correlation": 0.7197141019493827,
+          "rankCorrelation": 0.7343079973053253,
+          "withinPlayerCorrelation": 0.395084550836318,
+          "minutes": {
+            "predictions": 112,
+            "mae": 4.306265346454493,
+            "rmse": 5.8235447448398405,
+            "bias": 0.1959899083478971
+          },
+          "statMae": {
+            "points": 5.101540745612935,
+            "rebounds": 2.4713780483705388,
+            "assists": 1.8806975743951442,
+            "steals": 0.8103169977362972,
+            "blocks": 0.6192173831445956,
+            "turnovers": 1.293520218697925
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 435,
+          "mae": 8.771354339433143,
+          "rmse": 11.230691486577488,
+          "bias": -0.6943285629648346,
+          "players": 33,
+          "macroPlayerMae": 9.138201711188357,
+          "medianAbsoluteError": 7.351061156723372,
+          "correlation": 0.6597086678704145,
+          "rankCorrelation": 0.6390189108009918,
+          "withinPlayerCorrelation": 0.17348938199031808,
+          "minutes": {
+            "predictions": 435,
+            "mae": 3.8920021798583813,
+            "rmse": 5.208158161379146,
+            "bias": 0.1483586488724601
+          },
+          "statMae": {
+            "points": 5.420913451288293,
+            "rebounds": 2.5198051961111694,
+            "assists": 2.0874658835697932,
+            "steals": 0.8752265339295279,
+            "blocks": 0.6738688594431164,
+            "turnovers": 1.2301666242473221
+          }
+        },
+        "low": {
+          "predictions": 35,
+          "mae": 7.907795140912762,
+          "rmse": 9.560610147321436,
+          "bias": 2.2792450098315156,
+          "players": 31,
+          "macroPlayerMae": 7.675689531196101,
+          "medianAbsoluteError": 7.665932433367882,
+          "correlation": 0.8315474333645775,
+          "rankCorrelation": 0.8457767277260623,
+          "withinPlayerCorrelation": -0.7501762169860724,
+          "minutes": {
+            "predictions": 35,
+            "mae": 5.1792629132336305,
+            "rmse": 6.638841062088064,
+            "bias": 2.432555421818952
+          },
+          "statMae": {
+            "points": 4.891745543332197,
+            "rebounds": 2.0278556953720233,
+            "assists": 1.934006312940087,
+            "steals": 0.7998073863302997,
+            "blocks": 0.8328818965737842,
+            "turnovers": 1.2825848493900545
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 3
+      }
+    },
+    {
+      "id": "nba-v2-adaptive50i25-recent15-v1",
+      "complexity": "MEDIUM",
+      "metrics": {
+        "predictions": 470,
+        "mae": 8.723920547096608,
+        "rmse": 11.141451925711593,
+        "bias": -0.46280239538531465,
+        "players": 33,
+        "macroPlayerMae": 9.088939148477657,
+        "medianAbsoluteError": 7.399842943485204,
+        "correlation": 0.6702500827769386,
+        "rankCorrelation": 0.6540521633574944,
+        "withinPlayerCorrelation": 0.16227289583818608,
+        "minutes": {
+          "predictions": 470,
+          "mae": 4.019379170630075,
+          "rmse": 5.352005406629545,
+          "bias": 0.32575800405698546
+        },
+        "statMae": {
+          "points": 5.395891098276351,
+          "rebounds": 2.489745582340925,
+          "assists": 2.076866911647386,
+          "steals": 0.8707340123325028,
+          "blocks": 0.6858457639537119,
+          "turnovers": 1.2343525408174993
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 8,
+          "mae": 8.87191518769464,
+          "rmse": 11.344248475487753,
+          "bias": 3.572206255656506,
+          "players": 8,
+          "macroPlayerMae": 8.87191518769464,
+          "medianAbsoluteError": 7.809603309941943,
+          "correlation": 0.9251740165040306,
+          "rankCorrelation": 0.7142857142857143,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 8,
+            "mae": 7.607690828071001,
+            "rmse": 9.142246269927988,
+            "bias": 5.956632063325936
+          },
+          "statMae": {
+            "points": 3.6797743463569144,
+            "rebounds": 2.756217736088176,
+            "assists": 1.6090825361022658,
+            "steals": 0.6434210592854814,
+            "blocks": 0.5706843419030726,
+            "turnovers": 1.1107047151078073
+          }
+        },
+        "established-history": {
+          "predictions": 440,
+          "mae": 8.809474221079725,
+          "rmse": 11.281979631339297,
+          "bias": -0.6004111721622089,
+          "players": 33,
+          "macroPlayerMae": 9.172738952606384,
+          "medianAbsoluteError": 7.456029929786743,
+          "correlation": 0.66246034598099,
+          "rankCorrelation": 0.6435847060324524,
+          "withinPlayerCorrelation": 0.1669273070835261,
+          "minutes": {
+            "predictions": 440,
+            "mae": 3.985240308388047,
+            "rmse": 5.324729351711782,
+            "bias": 0.2361130660908677
+          },
+          "statMae": {
+            "points": 5.426933592452371,
+            "rebounds": 2.5291674972925087,
+            "assists": 2.079999417241425,
+            "steals": 0.871778775069643,
+            "blocks": 0.6734780136180858,
+            "turnovers": 1.2345057056049265
+          }
+        },
+        "high-minutes": {
+          "predictions": 336,
+          "mae": 9.18533675176372,
+          "rmse": 11.760318872654832,
+          "bias": -0.2572561292338459,
+          "players": 29,
+          "macroPlayerMae": 9.505883434890395,
+          "medianAbsoluteError": 7.520887632014102,
+          "correlation": 0.461305070481383,
+          "rankCorrelation": 0.4423521901451486,
+          "withinPlayerCorrelation": 0.06259497936050795,
+          "minutes": {
+            "predictions": 336,
+            "mae": 3.909875062291009,
+            "rmse": 5.261924823663774,
+            "bias": 0.5341693227918969
+          },
+          "statMae": {
+            "points": 5.979386328098131,
+            "rebounds": 2.5191058518956844,
+            "assists": 2.1730593030730883,
+            "steals": 0.9161355951046488,
+            "blocks": 0.6997637322667709,
+            "turnovers": 1.3302717355215432
+          }
+        },
+        "lower-minutes": {
+          "predictions": 59,
+          "mae": 7.225551571847019,
+          "rmse": 8.813122107826242,
+          "bias": 0.3405407579453276,
+          "players": 9,
+          "macroPlayerMae": 9.018905498799603,
+          "medianAbsoluteError": 6.262783652084249,
+          "correlation": 0.2885919831849292,
+          "rankCorrelation": 0.31766442159778596,
+          "withinPlayerCorrelation": 0.1585498561745405,
+          "minutes": {
+            "predictions": 59,
+            "mae": 4.449800230959495,
+            "rmse": 5.887668735709261,
+            "bias": 0.30888727422495604
+          },
+          "statMae": {
+            "points": 3.5889770074406075,
+            "rebounds": 2.2075815015407483,
+            "assists": 1.474074837311334,
+            "steals": 0.7080089192623448,
+            "blocks": 0.6183057966297252,
+            "turnovers": 1.0605396675838086
+          }
+        },
+        "middle-minutes": {
+          "predictions": 75,
+          "mae": 7.835492877384232,
+          "rmse": 9.858267071956725,
+          "bias": -2.0156129483639984,
+          "players": 17,
+          "macroPlayerMae": 6.889275457674614,
+          "medianAbsoluteError": 7.190878669212026,
+          "correlation": 0.5358359023805529,
+          "rankCorrelation": 0.5665839243947901,
+          "withinPlayerCorrelation": 0.07668466970201693,
+          "minutes": {
+            "predictions": 75,
+            "mae": 4.171359675196611,
+            "rmse": 5.309525499464797,
+            "bias": -0.5946530630742207
+          },
+          "statMae": {
+            "points": 4.203271553465581,
+            "rebounds": 2.5801806516317436,
+            "assists": 2.12012142987128,
+            "steals": 0.7953453280618118,
+            "blocks": 0.676624706872745,
+            "turnovers": 0.9413673421538838
+          }
+        },
+        "sparse-history": {
+          "predictions": 30,
+          "mae": 7.469133328677535,
+          "rmse": 8.82698257092589,
+          "bias": 1.5554596640091343,
+          "players": 30,
+          "macroPlayerMae": 7.469133328677535,
+          "medianAbsoluteError": 7.089151759795261,
+          "correlation": 0.8105983948282641,
+          "rankCorrelation": 0.8271028242151784,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 30,
+            "mae": 4.520082483513119,
+            "rmse": 5.737174989390288,
+            "bias": 1.6405504275600447
+          },
+          "statMae": {
+            "points": 4.940601183694732,
+            "rebounds": 1.9115574963843536,
+            "assists": 2.0309234962681666,
+            "steals": 0.8554108255211095,
+            "blocks": 0.8672394355428937,
+            "turnovers": 1.2321061239352291
+          }
+        },
+        "stable-workload": {
+          "predictions": 328,
+          "mae": 8.816433757284512,
+          "rmse": 11.236659443434213,
+          "bias": -0.6943695739651228,
+          "players": 33,
+          "macroPlayerMae": 9.081599690316873,
+          "medianAbsoluteError": 7.471190866616851,
+          "correlation": 0.6110580783859483,
+          "rankCorrelation": 0.5704687248394523,
+          "withinPlayerCorrelation": 0.100693134142082,
+          "minutes": {
+            "predictions": 328,
+            "mae": 3.824181931916397,
+            "rmse": 5.090015924855689,
+            "bias": 0.25735329139731977
+          },
+          "statMae": {
+            "points": 5.519561691899259,
+            "rebounds": 2.5349719525274073,
+            "assists": 2.1432940997060634,
+            "steals": 0.8915944376756447,
+            "blocks": 0.6914165450266772,
+            "turnovers": 1.2150613558812227
+          }
+        },
+        "volatile-workload": {
+          "predictions": 112,
+          "mae": 8.78909272219424,
+          "rmse": 11.413667899093062,
+          "bias": -0.3252472811679605,
+          "players": 28,
+          "macroPlayerMae": 9.163952418167321,
+          "medianAbsoluteError": 7.203794763718596,
+          "correlation": 0.7110406648530909,
+          "rankCorrelation": 0.7211572959896172,
+          "withinPlayerCorrelation": 0.34929447695300553,
+          "minutes": {
+            "predictions": 112,
+            "mae": 4.456911268055029,
+            "rmse": 5.959159217224765,
+            "bias": 0.1739095491219719
+          },
+          "statMae": {
+            "points": 5.1556655869293575,
+            "rebounds": 2.5121687355331628,
+            "assists": 1.8946364185949887,
+            "steals": 0.8137471917234949,
+            "blocks": 0.6209437430643544,
+            "turnovers": 1.2914498726529167
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 430,
+          "mae": 8.773756926333895,
+          "rmse": 11.245255600518119,
+          "bias": -0.6534598630083738,
+          "players": 33,
+          "macroPlayerMae": 9.133404636573772,
+          "medianAbsoluteError": 7.345186101542115,
+          "correlation": 0.6581399761833033,
+          "rankCorrelation": 0.6367666354476719,
+          "withinPlayerCorrelation": 0.17267871646204844,
+          "minutes": {
+            "predictions": 430,
+            "mae": 3.8963780539071506,
+            "rmse": 5.204349742487421,
+            "bias": 0.17724681760993338
+          },
+          "statMae": {
+            "points": 5.441224101431768,
+            "rebounds": 2.5178125574775048,
+            "assists": 2.098527803906706,
+            "steals": 0.8731065857136514,
+            "blocks": 0.6776499711757006,
+            "turnovers": 1.2341539321003636
+          }
+        },
+        "low": {
+          "predictions": 40,
+          "mae": 8.188179470295747,
+          "rmse": 9.95745243782241,
+          "bias": 1.586765381562572,
+          "players": 31,
+          "macroPlayerMae": 7.587013172462924,
+          "medianAbsoluteError": 7.809603309941943,
+          "correlation": 0.7765472801306641,
+          "rankCorrelation": 0.7785908656086591,
+          "withinPlayerCorrelation": -0.3457499429909396,
+          "minutes": {
+            "predictions": 40,
+            "mae": 5.341641175401489,
+            "rmse": 6.737955728562567,
+            "bias": 1.9222532583627931
+          },
+          "statMae": {
+            "points": 4.908561314355621,
+            "rebounds": 2.188025599622689,
+            "assists": 1.844012319859705,
+            "steals": 0.8452288484851535,
+            "blocks": 0.7739505363173343,
+            "turnovers": 1.2364875845267076
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 3
+      }
+    }
+  ],
+  "holdout": [
+    {
+      "id": "baseline-weighted10h5",
+      "complexity": "LOW",
+      "metrics": {
+        "predictions": 443,
+        "mae": 8.78641030396318,
+        "rmse": 11.192171312778111,
+        "bias": -0.34420181322721216,
+        "players": 35,
+        "macroPlayerMae": 8.65100699910176,
+        "medianAbsoluteError": 7.104918251511666,
+        "correlation": 0.6159390093816332,
+        "rankCorrelation": 0.6041243962440653,
+        "withinPlayerCorrelation": -0.01571691511482335,
+        "minutes": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null
+        },
+        "statMae": {
+          "points": null,
+          "rebounds": null,
+          "assists": null,
+          "steals": null,
+          "blocks": null,
+          "turnovers": null
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 4,
+          "mae": 5.811047420319876,
+          "rmse": 7.671764148188114,
+          "bias": -5.811047420319876,
+          "players": 4,
+          "macroPlayerMae": 5.811047420319876,
+          "medianAbsoluteError": 5.448334419074124,
+          "correlation": 0.837347727163569,
+          "rankCorrelation": 0.4,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "established-history": {
+          "predictions": 442,
+          "mae": 8.783272409766703,
+          "rmse": 11.19437118952811,
+          "bias": -0.36799720090149557,
+          "players": 35,
+          "macroPlayerMae": 8.641457742701853,
+          "medianAbsoluteError": 7.097978014813217,
+          "correlation": 0.6166021387294297,
+          "rankCorrelation": 0.60539928136915,
+          "withinPlayerCorrelation": -0.016024277050364775,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "high-minutes": {
+          "predictions": 294,
+          "mae": 8.681234014628009,
+          "rmse": 11.049026452053006,
+          "bias": -0.44602333358212737,
+          "players": 29,
+          "macroPlayerMae": 8.42422419877063,
+          "medianAbsoluteError": 7.077793629640912,
+          "correlation": 0.5604243873846638,
+          "rankCorrelation": 0.5453579326366723,
+          "withinPlayerCorrelation": -0.0052963321475520695,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "lower-minutes": {
+          "predictions": 37,
+          "mae": 6.959408962280268,
+          "rmse": 9.043826030449535,
+          "bias": -0.05485512204669013,
+          "players": 4,
+          "macroPlayerMae": 7.241544257148267,
+          "medianAbsoluteError": 5.477743639644601,
+          "correlation": -0.08273290346838923,
+          "rankCorrelation": -0.08667299271439832,
+          "withinPlayerCorrelation": -0.19344949311624426,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "middle-minutes": {
+          "predictions": 112,
+          "mae": 9.666061006702533,
+          "rmse": 12.164861784532961,
+          "bias": -0.17250806848912476,
+          "players": 24,
+          "macroPlayerMae": 9.458444775593629,
+          "medianAbsoluteError": 8.117043682949742,
+          "correlation": 0.23552107856353924,
+          "rankCorrelation": 0.21191490104369715,
+          "withinPlayerCorrelation": -0.1862217934422963,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "sparse-history": {
+          "predictions": 1,
+          "mae": 10.173359538806004,
+          "rmse": 10.173359538806004,
+          "bias": 10.173359538806004,
+          "players": 1,
+          "macroPlayerMae": 10.173359538806004,
+          "medianAbsoluteError": 10.173359538806004,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "stable-workload": {
+          "predictions": 361,
+          "mae": 8.681078355648157,
+          "rmse": 11.05539209762155,
+          "bias": 0.19989436649810927,
+          "players": 35,
+          "macroPlayerMae": 8.58563144874547,
+          "medianAbsoluteError": 7.026285151355943,
+          "correlation": 0.6277937221420486,
+          "rankCorrelation": 0.6074935431361336,
+          "withinPlayerCorrelation": -0.002057588402423692,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "volatile-workload": {
+          "predictions": 81,
+          "mae": 9.238729860838257,
+          "rmse": 11.793874004828297,
+          "bias": -2.898970729682452,
+          "players": 30,
+          "macroPlayerMae": 9.209109808266646,
+          "medianAbsoluteError": 7.519091961230043,
+          "correlation": 0.5779780820010967,
+          "rankCorrelation": 0.5891393212731223,
+          "withinPlayerCorrelation": -0.08424910385678032,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "low": {
+          "predictions": 443,
+          "mae": 8.78641030396318,
+          "rmse": 11.192171312778111,
+          "bias": -0.34420181322721216,
+          "players": 35,
+          "macroPlayerMae": 8.65100699910176,
+          "medianAbsoluteError": 7.104918251511666,
+          "correlation": 0.6159390093816332,
+          "rankCorrelation": 0.6041243962440653,
+          "withinPlayerCorrelation": -0.01571691511482335,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 35
+      }
+    },
+    {
+      "id": "nba-v2-blend8h3s0.8-recent15-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "predictions": 474,
+        "mae": 8.753462701615685,
+        "rmse": 11.207158493146336,
+        "bias": -0.20862650853653486,
+        "players": 35,
+        "macroPlayerMae": 8.669814477844843,
+        "medianAbsoluteError": 6.892924199113615,
+        "correlation": 0.6148087863942544,
+        "rankCorrelation": 0.6039722002348126,
+        "withinPlayerCorrelation": -0.0635896944614077,
+        "minutes": {
+          "predictions": 474,
+          "mae": 3.7102067201598414,
+          "rmse": 4.859093656286625,
+          "bias": -0.19482077559352107
+        },
+        "statMae": {
+          "points": 6.067604822997594,
+          "rebounds": 2.2424827191761803,
+          "assists": 2.081436029013388,
+          "steals": 0.8579209562844573,
+          "blocks": 0.6665339184639295,
+          "turnovers": 1.2446333876866238
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 8,
+          "mae": 10.529241932874823,
+          "rmse": 13.393060824433615,
+          "bias": -6.564058452522916,
+          "players": 7,
+          "macroPlayerMae": 11.769418530886881,
+          "medianAbsoluteError": 9.316032550044037,
+          "correlation": 0.43487560762303384,
+          "rankCorrelation": 0.14285714285714285,
+          "withinPlayerCorrelation": 1,
+          "minutes": {
+            "predictions": 8,
+            "mae": 6.338758120415766,
+            "rmse": 6.928584459509978,
+            "bias": -4.280757854040316
+          },
+          "statMae": {
+            "points": 4.392072418890319,
+            "rebounds": 2.621324381085203,
+            "assists": 1.126634211200531,
+            "steals": 0.5927638781003116,
+            "blocks": 1.22081485185798,
+            "turnovers": 0.5048225509706779
+          }
+        },
+        "established-history": {
+          "predictions": 442,
+          "mae": 8.587639685238258,
+          "rmse": 11.027905601711595,
+          "bias": -0.39765588755818454,
+          "players": 35,
+          "macroPlayerMae": 8.515765081349445,
+          "medianAbsoluteError": 6.790029058014877,
+          "correlation": 0.6291190879953515,
+          "rankCorrelation": 0.6188406983034637,
+          "withinPlayerCorrelation": -0.04029600365760099,
+          "minutes": {
+            "predictions": 442,
+            "mae": 3.599376180178094,
+            "rmse": 4.762271230177693,
+            "bias": -0.37283330314465224
+          },
+          "statMae": {
+            "points": 6.0097186478364835,
+            "rebounds": 2.219486487707686,
+            "assists": 2.0490547126497747,
+            "steals": 0.8556226165837494,
+            "blocks": 0.649977205554362,
+            "turnovers": 1.2484173976053337
+          }
+        },
+        "high-minutes": {
+          "predictions": 315,
+          "mae": 8.615280230442487,
+          "rmse": 11.045374587823533,
+          "bias": -0.2330882768413497,
+          "players": 30,
+          "macroPlayerMae": 8.199130362832761,
+          "medianAbsoluteError": 6.735046858298624,
+          "correlation": 0.5597478718328767,
+          "rankCorrelation": 0.5421765049251169,
+          "withinPlayerCorrelation": -0.06643602938154836,
+          "minutes": {
+            "predictions": 315,
+            "mae": 3.5797028812920453,
+            "rmse": 4.710342043418251,
+            "bias": 0.10793733813457254
+          },
+          "statMae": {
+            "points": 6.332652894289438,
+            "rebounds": 2.1586774236342956,
+            "assists": 2.280870182624941,
+            "steals": 0.8786208371064607,
+            "blocks": 0.662691958445791,
+            "turnovers": 1.3242061184006468
+          }
+        },
+        "lower-minutes": {
+          "predictions": 39,
+          "mae": 7.167626598622169,
+          "rmse": 9.781432021781853,
+          "bias": -0.6443923874388093,
+          "players": 5,
+          "macroPlayerMae": 11.049599721191992,
+          "medianAbsoluteError": 5.765342898186404,
+          "correlation": -0.1725561063616222,
+          "rankCorrelation": -0.18667746890024425,
+          "withinPlayerCorrelation": -0.23562827188129937,
+          "minutes": {
+            "predictions": 39,
+            "mae": 3.9324481193934107,
+            "rmse": 5.24997302949487,
+            "bias": -1.0673014142925465
+          },
+          "statMae": {
+            "points": 3.7801309820256725,
+            "rebounds": 2.1839301217292757,
+            "assists": 1.4251834934570529,
+            "steals": 0.8664971889025764,
+            "blocks": 0.6503798440192169,
+            "turnovers": 1.1025260280446882
+          }
+        },
+        "middle-minutes": {
+          "predictions": 120,
+          "mae": 9.631588421918236,
+          "rmse": 12.032288432464991,
+          "bias": -0.002790456093157297,
+          "players": 25,
+          "macroPlayerMae": 9.888280427549098,
+          "medianAbsoluteError": 7.78166744088856,
+          "correlation": 0.28395089133095197,
+          "rankCorrelation": 0.27732007286668625,
+          "withinPlayerCorrelation": -0.15852614105828325,
+          "minutes": {
+            "predictions": 120,
+            "mae": 3.9805508424368923,
+            "rmse": 5.105211448619001,
+            "bias": -0.7060046165525835
+          },
+          "statMae": {
+            "points": 6.115282634172375,
+            "rebounds": 2.4815012141438677,
+            "assists": 1.7712034498388725,
+            "steals": 0.8007964935258092,
+            "blocks": 0.6818691377060732,
+            "turnovers": 1.0819398614459408
+          }
+        },
+        "sparse-history": {
+          "predictions": 32,
+          "mae": 11.043893115328874,
+          "rmse": 13.440717103337251,
+          "bias": 2.4023417892000003,
+          "players": 31,
+          "macroPlayerMae": 11.198346220993919,
+          "medianAbsoluteError": 9.78053660789246,
+          "correlation": 0.42845785474322173,
+          "rankCorrelation": 0.4333638936245121,
+          "withinPlayerCorrelation": -1,
+          "minutes": {
+            "predictions": 32,
+            "mae": 5.241053553657724,
+            "rmse": 6.039703420041158,
+            "bias": 2.2639772612064766
+          },
+          "statMae": {
+            "points": 6.8671576174104345,
+            "rebounds": 2.5601181663347536,
+            "assists": 2.528702961285808,
+            "steals": 0.8896667734004814,
+            "blocks": 0.8952235155273305,
+            "turnovers": 1.1923667506844458
+          }
+        },
+        "stable-workload": {
+          "predictions": 361,
+          "mae": 8.489618266992789,
+          "rmse": 10.936037170222482,
+          "bias": 0.0918143469074371,
+          "players": 35,
+          "macroPlayerMae": 8.420558112973195,
+          "medianAbsoluteError": 6.735046858298624,
+          "correlation": 0.6364731795023171,
+          "rankCorrelation": 0.616000011243147,
+          "withinPlayerCorrelation": -0.04148752014973613,
+          "minutes": {
+            "predictions": 361,
+            "mae": 3.5300611434662903,
+            "rmse": 4.71541969550848,
+            "bias": -0.027409474974492892
+          },
+          "statMae": {
+            "points": 5.992974393693964,
+            "rebounds": 2.1756953480968533,
+            "assists": 2.062655887205742,
+            "steals": 0.8475482524660649,
+            "blocks": 0.6320536030622431,
+            "turnovers": 1.2556660536566338
+          }
+        },
+        "volatile-workload": {
+          "predictions": 81,
+          "mae": 9.024500573961902,
+          "rmse": 11.42836741394174,
+          "bias": -2.5791219942506456,
+          "players": 30,
+          "macroPlayerMae": 9.096659258406278,
+          "medianAbsoluteError": 7.997768827989958,
+          "correlation": 0.6055424228401467,
+          "rankCorrelation": 0.6031866123176043,
+          "withinPlayerCorrelation": -0.033802369185514845,
+          "minutes": {
+            "predictions": 81,
+            "mae": 3.9082987512022958,
+            "rmse": 4.965706375737209,
+            "bias": -1.9123148089400528
+          },
+          "statMae": {
+            "points": 6.084344274323507,
+            "rebounds": 2.4146544062201585,
+            "assists": 1.9884371322213286,
+            "steals": 0.8916083628366408,
+            "blocks": 0.7298589401180016,
+            "turnovers": 1.2161116589075593
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 437,
+          "mae": 8.632225152555694,
+          "rmse": 11.071561632065034,
+          "bias": -0.34853444643534476,
+          "players": 35,
+          "macroPlayerMae": 8.559577319609744,
+          "medianAbsoluteError": 6.808904942736547,
+          "correlation": 0.626107157105906,
+          "rankCorrelation": 0.6140874283154537,
+          "withinPlayerCorrelation": -0.05269398933389036,
+          "minutes": {
+            "predictions": 437,
+            "mae": 3.562041273211209,
+            "rmse": 4.717525986133498,
+            "bias": -0.35420319809408934
+          },
+          "statMae": {
+            "points": 6.046340191954334,
+            "rebounds": 2.2210012874212515,
+            "assists": 2.057964807897856,
+            "steals": 0.8580367407787578,
+            "blocks": 0.651765464461614,
+            "turnovers": 1.2596686532864922
+          }
+        },
+        "low": {
+          "predictions": 37,
+          "mae": 10.185376456729617,
+          "rmse": 12.699605090120347,
+          "bias": 1.4437996769169765,
+          "players": 33,
+          "macroPlayerMae": 10.502740162770094,
+          "medianAbsoluteError": 7.926202480570986,
+          "correlation": 0.4873428632991349,
+          "rankCorrelation": 0.4963841172998309,
+          "withinPlayerCorrelation": 0.06777963953944831,
+          "minutes": {
+            "predictions": 37,
+            "mae": 5.460160782769343,
+            "rmse": 6.294694323698285,
+            "bias": 1.6876148631294055
+          },
+          "statMae": {
+            "points": 6.318757357211214,
+            "rebounds": 2.496195845578981,
+            "assists": 2.3586501811076555,
+            "steals": 0.8565534475274441,
+            "blocks": 0.8409613346534388,
+            "turnovers": 1.0670547101962855
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 4
+      }
+    },
+    {
+      "id": "nba-v2-robust50i25-recent15-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "predictions": 474,
+        "mae": 8.772932526512815,
+        "rmse": 11.240677648734135,
+        "bias": -0.051090471279175396,
+        "players": 35,
+        "macroPlayerMae": 8.693780851408375,
+        "medianAbsoluteError": 6.773013980931847,
+        "correlation": 0.611638754564002,
+        "rankCorrelation": 0.6012567548227145,
+        "withinPlayerCorrelation": -0.06130062636570489,
+        "minutes": {
+          "predictions": 474,
+          "mae": 3.7286769332669536,
+          "rmse": 4.905912116497971,
+          "bias": -0.04963591269668506
+        },
+        "statMae": {
+          "points": 6.069371981371169,
+          "rebounds": 2.242257733894877,
+          "assists": 2.0847829111185434,
+          "steals": 0.8583438303012435,
+          "blocks": 0.66725227154048,
+          "turnovers": 1.2437305511306866
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 8,
+          "mae": 9.2182277348995,
+          "rmse": 12.737526820635672,
+          "bias": -3.920409171128744,
+          "players": 7,
+          "macroPlayerMae": 10.379273211202662,
+          "medianAbsoluteError": 5.843524421045581,
+          "correlation": 0.4137318905113069,
+          "rankCorrelation": 0.047619047619047616,
+          "withinPlayerCorrelation": 1,
+          "minutes": {
+            "predictions": 8,
+            "mae": 4.964052948918528,
+            "rmse": 5.704732893829716,
+            "bias": -1.8836873047546798
+          },
+          "statMae": {
+            "points": 4.219451216573155,
+            "rebounds": 2.397582354004086,
+            "assists": 1.0634077131662558,
+            "steals": 0.5563311117227742,
+            "blocks": 1.222431676321022,
+            "turnovers": 0.5868336057406343
+          }
+        },
+        "established-history": {
+          "predictions": 442,
+          "mae": 8.600367788762266,
+          "rmse": 11.049303689116202,
+          "bias": -0.26580849169165427,
+          "players": 35,
+          "macroPlayerMae": 8.537714516430297,
+          "medianAbsoluteError": 6.674583893982852,
+          "correlation": 0.6269038388334015,
+          "rankCorrelation": 0.6167093911467351,
+          "withinPlayerCorrelation": -0.03135868429338385,
+          "minutes": {
+            "predictions": 442,
+            "mae": 3.6059171796301244,
+            "rmse": 4.785554527590171,
+            "bias": -0.2503383276291632
+          },
+          "statMae": {
+            "points": 6.009343505335584,
+            "rebounds": 2.2188663094733645,
+            "assists": 2.048985693947346,
+            "steals": 0.8555925097166042,
+            "blocks": 0.6509614129140232,
+            "turnovers": 1.2462256388878603
+          }
+        },
+        "high-minutes": {
+          "predictions": 315,
+          "mae": 8.697569723638777,
+          "rmse": 11.148579484595812,
+          "bias": -0.07986029992753886,
+          "players": 30,
+          "macroPlayerMae": 8.24618445309892,
+          "medianAbsoluteError": 6.471441466616511,
+          "correlation": 0.5485106420765642,
+          "rankCorrelation": 0.5326741034566549,
+          "withinPlayerCorrelation": -0.07990262684313565,
+          "minutes": {
+            "predictions": 315,
+            "mae": 3.642213463542023,
+            "rmse": 4.8205746401151295,
+            "bias": 0.2429637097558598
+          },
+          "statMae": {
+            "points": 6.359936863846833,
+            "rebounds": 2.166766215883062,
+            "assists": 2.2871557731541072,
+            "steals": 0.8793615107075923,
+            "blocks": 0.664143065448786,
+            "turnovers": 1.3249032472235287
+          }
+        },
+        "lower-minutes": {
+          "predictions": 39,
+          "mae": 6.977186459560197,
+          "rmse": 9.497849691754077,
+          "bias": -0.40516265863720746,
+          "players": 5,
+          "macroPlayerMae": 10.575198087922345,
+          "medianAbsoluteError": 6.272177093681027,
+          "correlation": -0.07683835923714936,
+          "rankCorrelation": -0.0887831563045088,
+          "withinPlayerCorrelation": -0.17284742834739705,
+          "minutes": {
+            "predictions": 39,
+            "mae": 3.7942532212723825,
+            "rmse": 5.031806532384811,
+            "bias": -0.8135249235137746
+          },
+          "statMae": {
+            "points": 3.702290017457871,
+            "rebounds": 2.133181456050925,
+            "assists": 1.4163554697491527,
+            "steals": 0.8610916854161809,
+            "blocks": 0.6497700161372478,
+            "turnovers": 1.0941800651588574
+          }
+        },
+        "middle-minutes": {
+          "predictions": 120,
+          "mae": 9.554377355816728,
+          "rmse": 11.979662206636796,
+          "bias": 0.1395037898141394,
+          "players": 25,
+          "macroPlayerMae": 9.777695257193757,
+          "medianAbsoluteError": 7.4554180630419005,
+          "correlation": 0.2868990401922841,
+          "rankCorrelation": 0.28608833212023477,
+          "withinPlayerCorrelation": -0.16831759172739966,
+          "minutes": {
+            "predictions": 120,
+            "mae": 3.934331247693139,
+            "rmse": 5.083326070719792,
+            "bias": -0.5694459931190613
+          },
+          "statMae": {
+            "points": 6.0759408031443725,
+            "rebounds": 2.4758727589751723,
+            "assists": 1.770793066720237,
+            "steals": 0.8022793663222247,
+            "blocks": 0.6810956705372271,
+            "turnovers": 1.079256131827821
+          }
+        },
+        "sparse-history": {
+          "predictions": 32,
+          "mae": 11.156482966692167,
+          "rmse": 13.611506858830841,
+          "bias": 2.9147021856681876,
+          "players": 31,
+          "macroPlayerMae": 11.321948173078987,
+          "medianAbsoluteError": 10.413210487444289,
+          "correlation": 0.41665528531896034,
+          "rankCorrelation": 0.40091659702064636,
+          "withinPlayerCorrelation": -1,
+          "minutes": {
+            "predictions": 32,
+            "mae": 5.4242960303756425,
+            "rmse": 6.338726032753488,
+            "bias": 2.7225661935581673
+          },
+          "statMae": {
+            "points": 6.89851530661268,
+            "rebounds": 2.5653517837170106,
+            "assists": 2.579231973295713,
+            "steals": 0.8963464458765753,
+            "blocks": 0.8922697563184174,
+            "turnovers": 1.2092671514847317
+          }
+        },
+        "stable-workload": {
+          "predictions": 361,
+          "mae": 8.52637514531865,
+          "rmse": 10.973429593212677,
+          "bias": 0.19583032090974112,
+          "players": 35,
+          "macroPlayerMae": 8.457091625120567,
+          "medianAbsoluteError": 6.594312360980922,
+          "correlation": 0.6336965424160489,
+          "rankCorrelation": 0.6129356778417375,
+          "withinPlayerCorrelation": -0.030732642781548917,
+          "minutes": {
+            "predictions": 361,
+            "mae": 3.5636402421509623,
+            "rmse": 4.768681382737928,
+            "bias": 0.06570734878880934
+          },
+          "statMae": {
+            "points": 6.008311954285947,
+            "rebounds": 2.1782987941899554,
+            "assists": 2.063159688789151,
+            "steals": 0.8472709535434074,
+            "blocks": 0.6332998773782574,
+            "turnovers": 1.2552491381562745
+          }
+        },
+        "volatile-workload": {
+          "predictions": 81,
+          "mae": 8.930137471270218,
+          "rmse": 11.381309575487862,
+          "bias": -2.3232357922978735,
+          "players": 30,
+          "macroPlayerMae": 8.97272488995438,
+          "medianAbsoluteError": 7.898740412329925,
+          "correlation": 0.6046713193718749,
+          "rankCorrelation": 0.6046319927466186,
+          "withinPlayerCorrelation": -0.02444562955923824,
+          "minutes": {
+            "predictions": 81,
+            "mae": 3.7943366170372617,
+            "rmse": 4.860042314750494,
+            "bias": -1.6588875768500044
+          },
+          "statMae": {
+            "points": 6.013940911865432,
+            "rebounds": 2.399667210921635,
+            "assists": 1.9858151737264538,
+            "steals": 0.892679939081104,
+            "blocks": 0.7296751700549055,
+            "turnovers": 1.206009796469371
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 437,
+          "mae": 8.66902322299378,
+          "rmse": 11.102503334234969,
+          "bias": -0.24043591826842536,
+          "players": 35,
+          "macroPlayerMae": 8.605637531876427,
+          "medianAbsoluteError": 6.8704072820519215,
+          "correlation": 0.6232846862282865,
+          "rankCorrelation": 0.6107336364948361,
+          "withinPlayerCorrelation": -0.04272361020341697,
+          "minutes": {
+            "predictions": 437,
+            "mae": 3.584327919455202,
+            "rmse": 4.763280635095195,
+            "bias": -0.2529814389887208
+          },
+          "statMae": {
+            "points": 6.0438458518985705,
+            "rebounds": 2.224685173970615,
+            "assists": 2.0605035600785877,
+            "steals": 0.8588279663761577,
+            "blocks": 0.652672643084869,
+            "turnovers": 1.2569902006764047
+          }
+        },
+        "low": {
+          "predictions": 37,
+          "mae": 10.00018565185918,
+          "rmse": 12.759929606703178,
+          "bias": 2.1852327809992604,
+          "players": 33,
+          "macroPlayerMae": 10.422007999340678,
+          "medianAbsoluteError": 6.011342922292187,
+          "correlation": 0.48435733034018397,
+          "rankCorrelation": 0.47871962399252854,
+          "withinPlayerCorrelation": -0.4546857876175876,
+          "minutes": {
+            "predictions": 37,
+            "mae": 5.433555826124659,
+            "rmse": 6.352687021925286,
+            "bias": 2.3520396275633026
+          },
+          "statMae": {
+            "points": 6.370856267304263,
+            "rebounds": 2.4498039146219655,
+            "assists": 2.3715417328607273,
+            "steals": 0.8526257907137446,
+            "blocks": 0.8394495049216152,
+            "turnovers": 1.087123338928558
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 4
+      }
+    },
+    {
+      "id": "nba-v2-adaptive50i25-recent15-v1",
+      "complexity": "MEDIUM",
+      "metrics": {
+        "predictions": 474,
+        "mae": 8.75576697668556,
+        "rmse": 11.225410858466164,
+        "bias": -0.028962826300497783,
+        "players": 35,
+        "macroPlayerMae": 8.671934275065448,
+        "medianAbsoluteError": 6.674583893982852,
+        "correlation": 0.612765874801107,
+        "rankCorrelation": 0.602196627851422,
+        "withinPlayerCorrelation": -0.05198653672754769,
+        "minutes": {
+          "predictions": 474,
+          "mae": 3.7105926242342817,
+          "rmse": 4.886080690162728,
+          "bias": -0.028452064409203115
+        },
+        "statMae": {
+          "points": 6.063337314513142,
+          "rebounds": 2.2366988811805406,
+          "assists": 2.0852464780437208,
+          "steals": 0.8582837832846362,
+          "blocks": 0.6670390632213785,
+          "turnovers": 1.2434136007367091
+        }
+      },
+      "cohorts": {
+        "after-short-appearance": {
+          "predictions": 8,
+          "mae": 9.2182277348995,
+          "rmse": 12.737526820635672,
+          "bias": -3.920409171128744,
+          "players": 7,
+          "macroPlayerMae": 10.379273211202662,
+          "medianAbsoluteError": 5.843524421045581,
+          "correlation": 0.4137318905113069,
+          "rankCorrelation": 0.047619047619047616,
+          "withinPlayerCorrelation": 1,
+          "minutes": {
+            "predictions": 8,
+            "mae": 4.964052948918528,
+            "rmse": 5.704732893829716,
+            "bias": -1.8836873047546798
+          },
+          "statMae": {
+            "points": 4.219451216573155,
+            "rebounds": 2.397582354004086,
+            "assists": 1.0634077131662558,
+            "steals": 0.5563311117227742,
+            "blocks": 1.222431676321022,
+            "turnovers": 0.5868336057406343
+          }
+        },
+        "established-history": {
+          "predictions": 442,
+          "mae": 8.581959484196389,
+          "rmse": 11.03264680189116,
+          "bias": -0.2420788452665562,
+          "players": 35,
+          "macroPlayerMae": 8.514579377393972,
+          "medianAbsoluteError": 6.671015406882958,
+          "correlation": 0.6280997220186446,
+          "rankCorrelation": 0.6176725893929638,
+          "withinPlayerCorrelation": -0.021423339909466384,
+          "minutes": {
+            "predictions": 442,
+            "mae": 3.586523599355268,
+            "rmse": 4.763746845401086,
+            "bias": -0.2276208070674743
+          },
+          "statMae": {
+            "points": 6.002871939519511,
+            "rebounds": 2.2129050058837825,
+            "assists": 2.049482822278871,
+            "steals": 0.855528115404677,
+            "blocks": 0.6507327686985164,
+            "turnovers": 1.2458857418590248
+          }
+        },
+        "high-minutes": {
+          "predictions": 315,
+          "mae": 8.697569723638777,
+          "rmse": 11.148579484595812,
+          "bias": -0.07986029992753886,
+          "players": 30,
+          "macroPlayerMae": 8.24618445309892,
+          "medianAbsoluteError": 6.471441466616511,
+          "correlation": 0.5485106420765642,
+          "rankCorrelation": 0.5326741034566549,
+          "withinPlayerCorrelation": -0.07990262684313565,
+          "minutes": {
+            "predictions": 315,
+            "mae": 3.642213463542023,
+            "rmse": 4.8205746401151295,
+            "bias": 0.2429637097558598
+          },
+          "statMae": {
+            "points": 6.359936863846833,
+            "rebounds": 2.166766215883062,
+            "assists": 2.2871557731541072,
+            "steals": 0.8793615107075923,
+            "blocks": 0.664143065448786,
+            "turnovers": 1.3249032472235287
+          }
+        },
+        "lower-minutes": {
+          "predictions": 39,
+          "mae": 6.977186459560197,
+          "rmse": 9.497849691754077,
+          "bias": -0.40516265863720746,
+          "players": 5,
+          "macroPlayerMae": 10.575198087922345,
+          "medianAbsoluteError": 6.272177093681027,
+          "correlation": -0.07683835923714936,
+          "rankCorrelation": -0.0887831563045088,
+          "withinPlayerCorrelation": -0.17284742834739705,
+          "minutes": {
+            "predictions": 39,
+            "mae": 3.7942532212723825,
+            "rmse": 5.031806532384811,
+            "bias": -0.8135249235137746
+          },
+          "statMae": {
+            "points": 3.702290017457871,
+            "rebounds": 2.133181456050925,
+            "assists": 1.4163554697491527,
+            "steals": 0.8610916854161809,
+            "blocks": 0.6497700161372478,
+            "turnovers": 1.0941800651588574
+          }
+        },
+        "middle-minutes": {
+          "predictions": 120,
+          "mae": 9.486573433999073,
+          "rmse": 11.922982663438987,
+          "bias": 0.22690798747991747,
+          "players": 25,
+          "macroPlayerMae": 9.70131712094991,
+          "medianAbsoluteError": 7.413559038646213,
+          "correlation": 0.29395818896754106,
+          "rankCorrelation": 0.29596087115304204,
+          "withinPlayerCorrelation": -0.13722280007975227,
+          "minutes": {
+            "predictions": 120,
+            "mae": 3.862898227014087,
+            "rmse": 5.007310322356548,
+            "bias": -0.48576979238350737
+          },
+          "statMae": {
+            "points": 6.05210386905517,
+            "rebounds": 2.453915290753544,
+            "assists": 1.7726241560746874,
+            "steals": 0.8020421806066257,
+            "blocks": 0.6802534976767769,
+            "turnovers": 1.0780041777716098
+          }
+        },
+        "sparse-history": {
+          "predictions": 32,
+          "mae": 11.156482966692167,
+          "rmse": 13.611506858830841,
+          "bias": 2.9147021856681876,
+          "players": 31,
+          "macroPlayerMae": 11.321948173078987,
+          "medianAbsoluteError": 10.413210487444289,
+          "correlation": 0.41665528531896034,
+          "rankCorrelation": 0.40091659702064636,
+          "withinPlayerCorrelation": -1,
+          "minutes": {
+            "predictions": 32,
+            "mae": 5.4242960303756425,
+            "rmse": 6.338726032753488,
+            "bias": 2.7225661935581673
+          },
+          "statMae": {
+            "points": 6.89851530661268,
+            "rebounds": 2.5653517837170106,
+            "assists": 2.579231973295713,
+            "steals": 0.8963464458765753,
+            "blocks": 0.8922697563184174,
+            "turnovers": 1.2092671514847317
+          }
+        },
+        "stable-workload": {
+          "predictions": 361,
+          "mae": 8.52637514531865,
+          "rmse": 10.973429593212677,
+          "bias": 0.19583032090974112,
+          "players": 35,
+          "macroPlayerMae": 8.457091625120567,
+          "medianAbsoluteError": 6.594312360980922,
+          "correlation": 0.6336965424160489,
+          "rankCorrelation": 0.6129356778417375,
+          "withinPlayerCorrelation": -0.030732642781548917,
+          "minutes": {
+            "predictions": 361,
+            "mae": 3.5636402421509623,
+            "rmse": 4.768681382737928,
+            "bias": 0.06570734878880934
+          },
+          "statMae": {
+            "points": 6.008311954285947,
+            "rebounds": 2.1782987941899554,
+            "assists": 2.063159688789151,
+            "steals": 0.8472709535434074,
+            "blocks": 0.6332998773782574,
+            "turnovers": 1.2552491381562745
+          }
+        },
+        "volatile-workload": {
+          "predictions": 81,
+          "mae": 8.829687216725546,
+          "rmse": 11.292790172782421,
+          "bias": -2.193748092052276,
+          "players": 30,
+          "macroPlayerMae": 8.893646044569472,
+          "medianAbsoluteError": 7.623735851457688,
+          "correlation": 0.6107714402844776,
+          "rankCorrelation": 0.615483637998827,
+          "withinPlayerCorrelation": 0.029229176602622784,
+          "minutes": {
+            "predictions": 81,
+            "mae": 3.6885099197349636,
+            "rmse": 4.7416922047983245,
+            "bias": -1.5349228350195538
+          },
+          "statMae": {
+            "points": 5.978626935436985,
+            "rebounds": 2.3671376283710743,
+            "assists": 1.9885278986960093,
+            "steals": 0.892328552835772,
+            "blocks": 0.7284275065579423,
+            "turnovers": 1.2041550497194284
+          }
+        }
+      },
+      "confidence": {
+        "high": {
+          "predictions": 0,
+          "mae": null,
+          "rmse": null,
+          "bias": null,
+          "players": 0,
+          "macroPlayerMae": null,
+          "medianAbsoluteError": null,
+          "correlation": null,
+          "rankCorrelation": null,
+          "withinPlayerCorrelation": null,
+          "minutes": {
+            "predictions": 0,
+            "mae": null,
+            "rmse": null,
+            "bias": null
+          },
+          "statMae": {
+            "points": null,
+            "rebounds": null,
+            "assists": null,
+            "steals": null,
+            "blocks": null,
+            "turnovers": null
+          }
+        },
+        "medium": {
+          "predictions": 434,
+          "mae": 8.663892341427971,
+          "rmse": 11.1035642794749,
+          "bias": -0.17704291247640525,
+          "players": 35,
+          "macroPlayerMae": 8.590871950317792,
+          "medianAbsoluteError": 6.773013980931847,
+          "correlation": 0.6257952742585449,
+          "rankCorrelation": 0.6145098457175681,
+          "withinPlayerCorrelation": -0.05763957586678298,
+          "minutes": {
+            "predictions": 434,
+            "mae": 3.566833823133866,
+            "rmse": 4.746745863488643,
+            "bias": -0.21245960201899938
+          },
+          "statMae": {
+            "points": 6.0596065639711005,
+            "rebounds": 2.2133489225753884,
+            "assists": 2.0664698537890276,
+            "steals": 0.860321801343352,
+            "blocks": 0.6501270601921675,
+            "turnovers": 1.2566220349823076
+          }
+        },
+        "low": {
+          "predictions": 40,
+          "mae": 9.75260676923033,
+          "rmse": 12.471148468315143,
+          "bias": 1.5777061087081015,
+          "players": 33,
+          "macroPlayerMae": 10.379432979630215,
+          "medianAbsoluteError": 6.295331668422989,
+          "correlation": 0.4653923060266708,
+          "rankCorrelation": 0.45660944004305865,
+          "withinPlayerCorrelation": 0.46236921341025305,
+          "minutes": {
+            "predictions": 40,
+            "mae": 5.270375616173785,
+            "rmse": 6.1997198871098735,
+            "bias": 1.9680297186570868
+          },
+          "statMae": {
+            "points": 6.103815957894293,
+            "rebounds": 2.490045932046434,
+            "assists": 2.2889728512071437,
+            "steals": 0.836171287347568,
+            "blocks": 0.85053429608832,
+            "turnovers": 1.1001020891719704
+          }
+        }
+      },
+      "skips": {
+        "candidate-abstained": 4
+      }
+    }
+  ],
+  "limitations": [
+    "Every fifth eligible game is a deterministic chronological target.",
+    "ESPN history was retrieved retrospectively; this is not verified information-time evidence.",
+    "The baseline abstains more often, so its metrics have lower coverage and are not a perfect paired comparison."
+  ]
+}

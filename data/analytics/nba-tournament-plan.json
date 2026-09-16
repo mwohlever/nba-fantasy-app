@@ -1,0 +1,291 @@
+{
+  "version": "nba-tournament-v2-finalists",
+  "provider": "espn",
+  "sport": "nba",
+  "createdBeforeResults": true,
+  "warmupSeasons": [
+    2023
+  ],
+  "developmentSeasons": [
+    2024
+  ],
+  "holdoutSeasons": [
+    2025
+  ],
+  "phase": "regular",
+  "availability": "retrospective",
+  "unknownCompletionLagHours": 24,
+  "selection": "Lowest development macro-player MAE among V2 candidates; baseline selection separately by same rule. Holdout never used to select parameters. Report common-target metrics and coverage.",
+  "players": [
+    {
+      "espnPlayerId": "1966",
+      "expectedName": "LeBron James",
+      "samplingReason": "high-minute superstar",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "3112335",
+      "expectedName": "Nikola Jokic",
+      "samplingReason": "high-production starting big",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "3975",
+      "expectedName": "Stephen Curry",
+      "samplingReason": "starting guard and short-appearance sensitivity",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "3078576",
+      "expectedName": "Derrick White",
+      "samplingReason": "normal starting guard",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "3147657",
+      "expectedName": "Mikal Bridges",
+      "samplingReason": "starting wing and team changes",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4066261",
+      "expectedName": "Bam Adebayo",
+      "samplingReason": "starting big",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4066262",
+      "expectedName": "Malik Monk",
+      "samplingReason": "sixth man",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4066354",
+      "expectedName": "Payton Pritchard",
+      "samplingReason": "rotation player with changing workload",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "2530530",
+      "expectedName": "T.J. McConnell",
+      "samplingReason": "lower-minute rotation guard",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4222252",
+      "expectedName": "Isaiah Hartenstein",
+      "samplingReason": "rotation-to-starting workload",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4433247",
+      "expectedName": "Jonathan Kuminga",
+      "samplingReason": "volatile workload",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4432174",
+      "expectedName": "Cam Thomas",
+      "samplingReason": "changing scoring role and short appearances",
+      "seasons": [
+        2023,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "3062679",
+      "expectedName": "Josh Hart",
+      "samplingReason": "changing wing workload",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4433136",
+      "expectedName": "Walker Kessler",
+      "samplingReason": "rotation/starting big",
+      "seasons": [
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4684742",
+      "expectedName": "Ausar Thompson",
+      "samplingReason": "sparse history and interrupted availability",
+      "seasons": [
+        2024,
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "4600663",
+      "expectedName": "Zach Edey",
+      "samplingReason": "rookie and sparse history",
+      "seasons": [
+        2025
+      ]
+    },
+    {
+      "espnPlayerId": "3032977",
+      "expectedName": "Giannis Antetokounmpo",
+      "samplingReason": "high-minute superstar",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "3945274",
+      "expectedName": "Luka Doncic",
+      "samplingReason": "high-usage superstar",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4065648",
+      "expectedName": "Jayson Tatum",
+      "samplingReason": "high-minute starting wing",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4278073",
+      "expectedName": "Shai Gilgeous-Alexander",
+      "samplingReason": "high-usage starting guard",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "3202",
+      "expectedName": "Kevin Durant",
+      "samplingReason": "veteran star with availability gaps",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4594268",
+      "expectedName": "Anthony Edwards",
+      "samplingReason": "high-minute young starter",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4277905",
+      "expectedName": "Trae Young",
+      "samplingReason": "high-usage guard",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "3908809",
+      "expectedName": "Donovan Mitchell",
+      "samplingReason": "starting guard with availability gaps",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4279888",
+      "expectedName": "Ja Morant",
+      "samplingReason": "high-usage guard with interrupted availability",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4396993",
+      "expectedName": "Tyrese Haliburton",
+      "samplingReason": "starting point guard",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4432573",
+      "expectedName": "Paolo Banchero",
+      "samplingReason": "young high-minute forward",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "3934672",
+      "expectedName": "Jalen Brunson",
+      "samplingReason": "high-usage starting guard",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4066259",
+      "expectedName": "De'Aaron Fox",
+      "samplingReason": "starting guard with team change",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4277961",
+      "expectedName": "Jaren Jackson Jr.",
+      "samplingReason": "starting big with variable availability",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4871144",
+      "expectedName": "Alperen Sengun",
+      "samplingReason": "young starting big",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4433134",
+      "expectedName": "Scottie Barnes",
+      "samplingReason": "multi-category starting wing",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4066328",
+      "expectedName": "Jarrett Allen",
+      "samplingReason": "stable starting center",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "3136193",
+      "expectedName": "Devin Booker",
+      "samplingReason": "high-usage starting guard",
+      "seasons": [2023, 2024, 2025]
+    },
+    {
+      "espnPlayerId": "4395628",
+      "expectedName": "Zion Williamson",
+      "samplingReason": "high-production player with availability gaps",
+      "seasons": [2023, 2024, 2025]
+    }
+  ]
+}

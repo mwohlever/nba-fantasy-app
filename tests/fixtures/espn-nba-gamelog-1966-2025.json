@@ -1,0 +1,383 @@
+{
+  "filters": [
+    {
+      "name": "league",
+      "value": "nba"
+    },
+    {
+      "name": "season",
+      "value": "2025"
+    }
+  ],
+  "names": [
+    "minutes",
+    "fieldGoalsMade-fieldGoalsAttempted",
+    "fieldGoalPct",
+    "threePointFieldGoalsMade-threePointFieldGoalsAttempted",
+    "threePointPct",
+    "freeThrowsMade-freeThrowsAttempted",
+    "freeThrowPct",
+    "totalRebounds",
+    "assists",
+    "blocks",
+    "steals",
+    "fouls",
+    "turnovers",
+    "points"
+  ],
+  "seasonTypes": [
+    {
+      "displayName": "2024-25 Postseason",
+      "categories": [
+        {
+          "displayName": "Conference Quarterfinals",
+          "type": "event",
+          "splitType": "conference_quarterfinals",
+          "events": [
+            {
+              "eventId": "401768058",
+              "stats": [
+                "40",
+                "9-21",
+                "42.9",
+                "1-5",
+                "20.0",
+                "3-6",
+                "50.0",
+                "7",
+                "6",
+                "0",
+                "2",
+                "2",
+                "3",
+                "22"
+              ]
+            },
+            {
+              "eventId": "401768057",
+              "stats": [
+                "46",
+                "5-9",
+                "55.6",
+                "2-4",
+                "50.0",
+                "15-18",
+                "83.3",
+                "12",
+                "8",
+                "3",
+                "3",
+                "2",
+                "3",
+                "27"
+              ]
+            }
+          ],
+          "totals": [
+            "40.6",
+            "8.6-17.6",
+            "48.9",
+            "2.0-5.6",
+            "35.7",
+            "6.2-8.0",
+            "77.5",
+            "9.0",
+            "5.6",
+            "1.8",
+            "2.0",
+            "1.6",
+            "2.6",
+            "25.4"
+          ]
+        }
+      ]
+    },
+    {
+      "displayName": "2024-25 Regular Season",
+      "categories": [
+        {
+          "displayName": "april",
+          "type": "event",
+          "splitType": "april",
+          "events": [
+            {
+              "eventId": "401705751",
+              "stats": [
+                "22",
+                "6-11",
+                "54.5",
+                "1-4",
+                "25.0",
+                "1-1",
+                "100.0",
+                "4",
+                "8",
+                "0",
+                "1",
+                "1",
+                "1",
+                "14"
+              ]
+            },
+            {
+              "eventId": "401705725",
+              "stats": [
+                "36",
+                "11-20",
+                "55.0",
+                "0-4",
+                "0.0",
+                "5-6",
+                "83.3",
+                "7",
+                "3",
+                "0",
+                "1",
+                "2",
+                "2",
+                "27"
+              ]
+            }
+          ],
+          "totals": [
+            "33.5",
+            "8.8-16.3",
+            "54.1",
+            "2.0-5.0",
+            "40.0",
+            "5.0-5.7",
+            "88.2",
+            "4.3",
+            "6.3",
+            "0.2",
+            "1.2",
+            "1.2",
+            "2.7",
+            "24.7"
+          ]
+        }
+      ]
+    },
+    {
+      "displayName": "2024-25 Preseason",
+      "categories": [
+        {
+          "displayName": "Preseason",
+          "type": "event",
+          "events": [
+            {
+              "eventId": "401717008",
+              "stats": [
+                "23",
+                "3-9",
+                "33.3",
+                "0-0",
+                "0.0",
+                "0-0",
+                "0.0",
+                "2",
+                "4",
+                "0",
+                "0",
+                "0",
+                "3",
+                "6"
+              ]
+            },
+            {
+              "eventId": "401716980",
+              "stats": [
+                "16",
+                "4-11",
+                "36.4",
+                "2-4",
+                "50.0",
+                "1-2",
+                "50.0",
+                "6",
+                "3",
+                "0",
+                "0",
+                "2",
+                "2",
+                "11"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "events": {
+    "401705725": {
+      "id": "401705725",
+      "atVs": "@",
+      "gameDate": "2025-04-09T23:30:00.000+00:00",
+      "score": "112-97",
+      "homeTeamId": "6",
+      "awayTeamId": "13",
+      "homeTeamScore": "97",
+      "awayTeamScore": "112",
+      "gameResult": "W",
+      "opponent": {
+        "id": "6",
+        "uid": "s:40~l:46~t:6",
+        "displayName": "Dallas Mavericks",
+        "abbreviation": "DAL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/dal.png"
+      },
+      "leagueName": "National Basketball Association",
+      "leagueAbbreviation": "NBA",
+      "leagueShortName": "NBA",
+      "team": {
+        "id": "13",
+        "uid": "s:40~l:46~t:13",
+        "abbreviation": "LAL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png",
+        "isAllStar": false
+      }
+    },
+    "401705751": {
+      "id": "401705751",
+      "atVs": "vs",
+      "gameDate": "2025-04-12T02:30:00.000+00:00",
+      "score": "140-109",
+      "homeTeamId": "13",
+      "awayTeamId": "10",
+      "homeTeamScore": "140",
+      "awayTeamScore": "109",
+      "gameResult": "W",
+      "opponent": {
+        "id": "10",
+        "uid": "s:40~l:46~t:10",
+        "displayName": "Houston Rockets",
+        "abbreviation": "HOU",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/hou.png"
+      },
+      "leagueName": "National Basketball Association",
+      "leagueAbbreviation": "NBA",
+      "leagueShortName": "NBA",
+      "team": {
+        "id": "13",
+        "uid": "s:40~l:46~t:13",
+        "abbreviation": "LAL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png",
+        "isAllStar": false
+      }
+    },
+    "401716980": {
+      "id": "401716980",
+      "atVs": "@",
+      "gameDate": "2024-10-11T00:00:00.000+00:00",
+      "score": "107-102",
+      "homeTeamId": "15",
+      "awayTeamId": "13",
+      "homeTeamScore": "102",
+      "awayTeamScore": "107",
+      "gameResult": "W",
+      "opponent": {
+        "id": "15",
+        "uid": "s:40~l:46~t:15",
+        "displayName": "Milwaukee Bucks",
+        "abbreviation": "MIL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/mil.png"
+      },
+      "leagueName": "National Basketball Association",
+      "leagueAbbreviation": "NBA",
+      "leagueShortName": "NBA",
+      "team": {
+        "id": "13",
+        "uid": "s:40~l:46~t:13",
+        "abbreviation": "LAL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png",
+        "isAllStar": false
+      }
+    },
+    "401717008": {
+      "id": "401717008",
+      "atVs": "vs",
+      "gameDate": "2024-10-16T02:00:00.000+00:00",
+      "score": "111-97",
+      "homeTeamId": "13",
+      "awayTeamId": "9",
+      "homeTeamScore": "97",
+      "awayTeamScore": "111",
+      "gameResult": "L",
+      "opponent": {
+        "id": "9",
+        "uid": "s:40~l:46~t:9",
+        "displayName": "Golden State Warriors",
+        "abbreviation": "GS",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/gs.png"
+      },
+      "leagueName": "National Basketball Association",
+      "leagueAbbreviation": "NBA",
+      "leagueShortName": "NBA",
+      "team": {
+        "id": "13",
+        "uid": "s:40~l:46~t:13",
+        "abbreviation": "LAL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png",
+        "isAllStar": false
+      }
+    },
+    "401768057": {
+      "id": "401768057",
+      "atVs": "@",
+      "gameDate": "2025-04-27T19:50:00.000+00:00",
+      "score": "116-113",
+      "homeTeamId": "16",
+      "awayTeamId": "13",
+      "homeTeamScore": "116",
+      "awayTeamScore": "113",
+      "gameResult": "L",
+      "opponent": {
+        "id": "16",
+        "uid": "s:40~l:46~t:16",
+        "displayName": "Minnesota Timberwolves",
+        "abbreviation": "MIN",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/min.png"
+      },
+      "leagueName": "National Basketball Association",
+      "leagueAbbreviation": "NBA",
+      "leagueShortName": "NBA",
+      "eventNote": "West 1st Round - Game 4",
+      "team": {
+        "id": "13",
+        "uid": "s:40~l:46~t:13",
+        "abbreviation": "LAL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png",
+        "isAllStar": false
+      }
+    },
+    "401768058": {
+      "id": "401768058",
+      "atVs": "vs",
+      "gameDate": "2025-05-01T02:00:00.000+00:00",
+      "score": "103-96",
+      "homeTeamId": "13",
+      "awayTeamId": "16",
+      "homeTeamScore": "96",
+      "awayTeamScore": "103",
+      "gameResult": "L",
+      "opponent": {
+        "id": "16",
+        "uid": "s:40~l:46~t:16",
+        "displayName": "Minnesota Timberwolves",
+        "abbreviation": "MIN",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/min.png"
+      },
+      "leagueName": "National Basketball Association",
+      "leagueAbbreviation": "NBA",
+      "leagueShortName": "NBA",
+      "eventNote": "West 1st Round - Game 5",
+      "team": {
+        "id": "13",
+        "uid": "s:40~l:46~t:13",
+        "abbreviation": "LAL",
+        "logo": "https://a.espncdn.com/i/teamlogos/nba/500/lal.png",
+        "isAllStar": false
+      }
+    }
+  }
+}

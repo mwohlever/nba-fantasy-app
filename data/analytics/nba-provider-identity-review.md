@@ -1,0 +1,268 @@
+# NBA ESPN identity review
+
+Generated: 2026-09-15T18:30:55.500Z
+
+Canonical active NBA players: 530
+Current ESPN roster athletes: 557
+Tier 1 — deterministic exact name + current-team match: 367
+Tier 2 — exact name but team mismatch (manual review): 102
+Tier 3 — ambiguous/conflicting: 0
+Tier 4 — no ESPN candidate: 61
+Already mapped/blocked: 0
+35-player analytics cohort matches: 34
+
+Tier 1 SQL is generated for review only. It uses `ON CONFLICT DO NOTHING` and must be manually reviewed before execution.
+
+## Manual review
+
+- tier4: Aaron Holiday (HOU) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Aaron Wiggins (OKC) ← Aaron Wiggins (ATL): Exact normalized name, but canonical team OKC differs from ESPN team ATL
+- provider_only: — (—) ← Adam Flagler (SAC): No active canonical player has this normalized name
+- provider_only: — (—) ← Aday Mara (OKC): No active canonical player has this normalized name
+- provider_only: — (—) ← AJ Dybantsa (WAS): No active canonical player has this normalized name
+- tier2: AJ Johnson (DAL) ← AJ Johnson (NOP): Exact normalized name, but canonical team DAL differs from ESPN team NOP
+- provider_only: — (—) ← AK Okereke (LAL): No active canonical player has this normalized name
+- tier4: Alex Antetokounmpo (MIL) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Alex Karaban (SAC): No active canonical player has this normalized name
+- provider_only: — (—) ← Allen Graves (TOR): No active canonical player has this normalized name
+- provider_only: — (—) ← Alpha Diallo (DEN): No active canonical player has this normalized name
+- tier4: Amir Coffey (PHX) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Andre Drummond (PHI) ← Andre Drummond (NYK): Exact normalized name, but canonical team PHI differs from ESPN team NYK
+- tier2: Andre Jackson Jr. (MIL) ← Andre Jackson Jr. (TOR): Exact normalized name, but canonical team MIL differs from ESPN team TOR
+- tier2: Anfernee Simons (CHI) ← Anfernee Simons (PHI): Exact normalized name, but canonical team CHI differs from ESPN team PHI
+- tier4: Anthony Gill (WAS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Antonio Reeves (CHA) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Ariel Hukporti (NYK) ← Ariel Hukporti (PHI): Exact normalized name, but canonical team NYK differs from ESPN team PHI
+- provider_only: — (—) ← Baba Miller (LAC): No active canonical player has this normalized name
+- provider_only: — (—) ← Ben Simmons (SAC): No active canonical player has this normalized name
+- tier2: Bennedict Mathurin (LAC) ← Bennedict Mathurin (NOP): Exact normalized name, but canonical team LAC differs from ESPN team NOP
+- provider_only: — (—) ← Bennett Stirtz (OKC): No active canonical player has this normalized name
+- tier4: Bismack Biyombo (SAS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Blake Wesley (POR) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Bobby Portis (MIL) ← Bobby Portis (MIA): Exact normalized name, but canonical team MIL differs from ESPN team MIA
+- tier2: Bogdan Bogdanović (LAC) ← Bogdan Bogdanovic (HOU): Exact normalized name, but canonical team LAC differs from ESPN team HOU
+- provider_only: — (—) ← Bogoljub Markovic (MIL): No active canonical player has this normalized name
+- provider_only: — (—) ← Braden Smith (IND): No active canonical player has this normalized name
+- tier2: Branden Carlson (OKC) ← Branden Carlson (POR): Exact normalized name, but canonical team OKC differs from ESPN team POR
+- tier4: Brandon Clarke (MEM) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Brandon Ingram (TOR) ← Brandon Ingram (LAC): Exact normalized name, but canonical team TOR differs from ESPN team LAC
+- tier2: Brandon Williams (DAL) ← Brandon Williams (GSW): Exact normalized name, but canonical team DAL differs from ESPN team GSW
+- provider_only: — (—) ← Brayden Burries (MIL): No active canonical player has this normalized name
+- tier4: Bruce Brown (DEN) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Bruce Thornton (HOU): No active canonical player has this normalized name
+- provider_only: — (—) ← Bryce Hopkins (DEN): No active canonical player has this normalized name
+- tier2: Caleb Love (POR) ← Caleb Love (PHI): Exact normalized name, but canonical team POR differs from ESPN team PHI
+- provider_only: — (—) ← Caleb Wilson (CHI): No active canonical player has this normalized name
+- tier4: Cam Whitmore (WAS) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Cameron Boozer (MEM): No active canonical player has this normalized name
+- provider_only: — (—) ← Cameron Carr (LAL): No active canonical player has this normalized name
+- tier2: Caris LeVert (DET) ← Caris LeVert (MIL): Exact normalized name, but canonical team DET differs from ESPN team MIL
+- provider_only: — (—) ← Chris Cenac Jr. (BOS): No active canonical player has this normalized name
+- provider_only: — (—) ← Christian Anderson (CHA): No active canonical player has this normalized name
+- tier4: Christian Koloko (ATL) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Cody Williams (UTA) ← Cody Williams (MIN): Exact normalized name, but canonical team UTA differs from ESPN team MIN
+- tier2: Collin Sexton (CHI) ← Collin Sexton (LAL): Exact normalized name, but canonical team CHI differs from ESPN team LAL
+- tier4: Curtis Jones (DEN) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: D'Angelo Russell (WAS) ← D'Angelo Russell (MEM): Exact normalized name, but canonical team WAS differs from ESPN team MEM
+- provider_only: — (—) ← Dailyn Swain (CHI): No active canonical player has this normalized name
+- tier4: Dalano Banton (BOS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Dalen Terry (PHI) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Darius Acuff Jr. (SAC): No active canonical player has this normalized name
+- provider_only: — (—) ← Darryn Peterson (UTA): No active canonical player has this normalized name
+- tier2: Dean Wade (CLE) ← Dean Wade (PHI): Exact normalized name, but canonical team CLE differs from ESPN team PHI
+- tier2: Deandre Ayton (LAL) ← Deandre Ayton (WAS): Exact normalized name, but canonical team LAL differs from ESPN team WAS
+- tier2: DeMar DeRozan (SAC) ← DeMar DeRozan (DEN): Exact normalized name, but canonical team SAC differs from ESPN team DEN
+- tier2: Dennis Schröder (CLE) ← Dennis Schroder (CHA): Exact normalized name, but canonical team CLE differs from ESPN team CHA
+- tier4: Devin Carter (SAC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Dillon Jones (NYK) ← Dillon Jones (PHI): Exact normalized name, but canonical team NYK differs from ESPN team PHI
+- provider_only: — (—) ← Dillon Mitchell (BOS): No active canonical player has this normalized name
+- tier2: Dorian Finney-Smith (HOU) ← Dorian Finney-Smith (CHA): Exact normalized name, but canonical team HOU differs from ESPN team CHA
+- tier4: Doug McDermott (SAC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Drew Eubanks (SAC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Drew Timme (LAL) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Duke Miles (PHI): No active canonical player has this normalized name
+- tier4: Dwight Powell (DAL) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Ebuka Okorie (DET): No active canonical player has this normalized name
+- tier2: Elijah Harkless (UTA) ← Elijah Harkless (DET): Exact normalized name, but canonical team UTA differs from ESPN team DET
+- provider_only: — (—) ← Emanuel Sharp (SAC): No active canonical player has this normalized name
+- provider_only: — (—) ← Ernest Udeh Jr. (CLE): No active canonical player has this normalized name
+- tier4: Ethan Thompson (IND) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Felix Okpara (WAS): No active canonical player has this normalized name
+- tier4: Gabe Vincent (ATL) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Garrett Temple (TOR) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Gary Harris (MIL) ← Gary Harris (DET): Exact normalized name, but canonical team MIL differs from ESPN team DET
+- provider_only: — (—) ← Georges Niang (GSW): No active canonical player has this normalized name
+- tier2: Gradey Dick (TOR) ← Gradey Dick (LAC): Exact normalized name, but canonical team TOR differs from ESPN team LAC
+- tier2: Grayson Allen (PHX) ← Grayson Allen (CHA): Exact normalized name, but canonical team PHX differs from ESPN team CHA
+- provider_only: — (—) ← Hannes Steinbach (CHA): No active canonical player has this normalized name
+- tier4: Hayden Gray (UTA) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Henri Veesaar (ATL): No active canonical player has this normalized name
+- tier4: Hunter Dickinson (NOP) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Isaiah Evans (MIN): No active canonical player has this normalized name
+- tier2: Isaiah Joe (OKC) ← Isaiah Joe (DET): Exact normalized name, but canonical team OKC differs from ESPN team DET
+- tier4: Isaiah Stevens (SAC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Isaiah Stewart (DET) ← Isaiah Stewart (MEM): Exact normalized name, but canonical team DET differs from ESPN team MEM
+- provider_only: — (—) ← Izaiyah Nelson (ORL): No active canonical player has this normalized name
+- provider_only: — (—) ← J'Vonne Hadley (MIA): No active canonical player has this normalized name
+- provider_only: — (—) ← Ja'Kobi Gillespie (SAS): No active canonical player has this normalized name
+- provider_only: — (—) ← Jack Kayil (NYK): No active canonical player has this normalized name
+- provider_only: — (—) ← Jaden Bradley (TOR): No active canonical player has this normalized name
+- tier2: Jaden Hardy (WAS) ← Jaden Hardy (LAL): Exact normalized name, but canonical team WAS differs from ESPN team LAL
+- tier2: Jaime Jaquez Jr. (MIA) ← Jaime Jaquez Jr. (MIL): Exact normalized name, but canonical team MIA differs from ESPN team MIL
+- tier2: Jalen Pickett (DEN) ← Jalen Pickett (LAC): Exact normalized name, but canonical team DEN differs from ESPN team LAC
+- tier2: Jalen Wilson (BKN) ← Jalen Wilson (ATL): Exact normalized name, but canonical team BKN differs from ESPN team ATL
+- provider_only: — (—) ← Jamarion Sharp (LAC): No active canonical player has this normalized name
+- provider_only: — (—) ← Jameer Nelson Jr. (PHI): No active canonical player has this normalized name
+- provider_only: — (—) ← Jaron Pierre Jr. (NOP): No active canonical player has this normalized name
+- tier2: Jaxson Hayes (LAL) ← Jaxson Hayes (UTA): Exact normalized name, but canonical team LAL differs from ESPN team UTA
+- provider_only: — (—) ← Jayden Quaintance (SAS): No active canonical player has this normalized name
+- tier2: Jaylen Brown (BOS) ← Jaylen Brown (PHI): Exact normalized name, but canonical team BOS differs from ESPN team PHI
+- tier2: JD Davison (HOU) ← JD Davison (ORL): Exact normalized name, but canonical team HOU differs from ESPN team ORL
+- tier4: Jeff Green (HOU) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Jerami Grant (POR) ← Jerami Grant (MEM): Exact normalized name, but canonical team POR differs from ESPN team MEM
+- tier2: Jeremy Sochan (NYK) ← Jeremy Sochan (POR): Exact normalized name, but canonical team NYK differs from ESPN team POR
+- tier2: Jett Howard (ORL) ← Jett Howard (DAL): Exact normalized name, but canonical team ORL differs from ESPN team DAL
+- tier4: Joe Ingles (MIN) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: John Collins (LAC) ← John Collins (DET): Exact normalized name, but canonical team LAC differs from ESPN team DET
+- tier2: John Konchar (UTA) ← John Konchar (MIN): Exact normalized name, but canonical team UTA differs from ESPN team MIN
+- tier2: John Tonje (BOS) ← John Tonje (POR): Exact normalized name, but canonical team BOS differs from ESPN team POR
+- tier2: Johni Broome (PHI) ← Johni Broome (LAC): Exact normalized name, but canonical team PHI differs from ESPN team LAC
+- tier4: Jonas Valančiūnas (DEN) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Jonathan Mogbo (TOR) ← Jonathan Mogbo (SAC): Exact normalized name, but canonical team TOR differs from ESPN team SAC
+- tier2: Jordan Hawkins (NOP) ← Jordan Hawkins (MEM): Exact normalized name, but canonical team NOP differs from ESPN team MEM
+- provider_only: — (—) ← Josh Dix (OKC): No active canonical player has this normalized name
+- tier2: Josh Green (CHA) ← Josh Green (UTA): Exact normalized name, but canonical team CHA differs from ESPN team UTA
+- tier2: Josh Okogie (HOU) ← Josh Okogie (UTA): Exact normalized name, but canonical team HOU differs from ESPN team UTA
+- provider_only: — (—) ← Joshua Jefferson (BKN): No active canonical player has this normalized name
+- tier4: Julian Reese (WAS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Julius Randle (MIN) ← Julius Randle (BKN): Exact normalized name, but canonical team MIN differs from ESPN team BKN
+- tier2: Kam Jones (IND) ← Kam Jones (MIL): Exact normalized name, but canonical team IND differs from ESPN team MIL
+- provider_only: — (—) ← Karim Lopez (MEM): No active canonical player has this normalized name
+- tier2: Kasparas Jakučionis (MIA) ← Kasparas Jakucionis (MIL): Exact normalized name, but canonical team MIA differs from ESPN team MIL
+- tier2: Kawhi Leonard (LAC) ← Kawhi Leonard (TOR): Exact normalized name, but canonical team LAC differs from ESPN team TOR
+- provider_only: — (—) ← Keaton Wagler (LAC): No active canonical player has this normalized name
+- tier4: Keaton Wallace (ATL) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Kel'el Ware (MIA) ← Kel'el Ware (MIL): Exact normalized name, but canonical team MIA differs from ESPN team MIL
+- tier4: Kelly Olynyk (SAS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Kelly Oubre Jr. (PHI) ← Kelly Oubre Jr. (IND): Exact normalized name, but canonical team PHI differs from ESPN team IND
+- tier2: Kentavious Caldwell-Pope (MEM) ← Kentavious Caldwell-Pope (PHI): Exact normalized name, but canonical team MEM differs from ESPN team PHI
+- tier2: Keon Ellis (CLE) ← Keon Ellis (BKN): Exact normalized name, but canonical team CLE differs from ESPN team BKN
+- tier4: Kevin Love (UTA) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Kevon Looney (NOP) ← Kevon Looney (LAL): Exact normalized name, but canonical team NOP differs from ESPN team LAL
+- provider_only: — (—) ← Khalifa Diop (CLE): No active canonical player has this normalized name
+- tier2: Khris Middleton (DAL) ← Khris Middleton (WAS): Exact normalized name, but canonical team DAL differs from ESPN team WAS
+- tier4: Killian Hayes (SAC) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Kingston Flemings (ATL): No active canonical player has this normalized name
+- tier2: Klay Thompson (DAL) ← Klay Thompson (MIA): Exact normalized name, but canonical team DAL differs from ESPN team MIA
+- provider_only: — (—) ← Koa Peat (PHX): No active canonical player has this normalized name
+- tier2: Kris Murray (POR) ← Kris Murray (MEM): Exact normalized name, but canonical team POR differs from ESPN team MEM
+- tier2: Kyle Anderson (MIN) ← Kyle Anderson (TOR): Exact normalized name, but canonical team MIN differs from ESPN team TOR
+- tier4: Kyle Lowry (PHI) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Labaron Philon Jr. (PHI): No active canonical player has this normalized name
+- tier4: Lachlan Olbrich (CHI) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Lajae Jones (GSW): No active canonical player has this normalized name
+- tier2: LaMelo Ball (CHA) ← LaMelo Ball (MIN): Exact normalized name, but canonical team CHA differs from ESPN team MIN
+- tier2: Larry Nance Jr. (CLE) ← Larry Nance Jr. (IND): Exact normalized name, but canonical team CLE differs from ESPN team IND
+- tier4: Leaky Black (WAS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Lindy Waters III (SAS) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Lonnie Walker IV (DEN): No active canonical player has this normalized name
+- tier2: Luguentz Dort (OKC) ← Luguentz Dort (ATL): Exact normalized name, but canonical team OKC differs from ESPN team ATL
+- tier2: Luke Kennard (LAL) ← Luke Kennard (PHX): Exact normalized name, but canonical team LAL differs from ESPN team PHX
+- tier4: Malachi Smith (BKN) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Malaki Branham (ORL): No active canonical player has this normalized name
+- provider_only: — (—) ← Malik Dia (NOP): No active canonical player has this normalized name
+- provider_only: — (—) ← Maliq Brown (SAS): No active canonical player has this normalized name
+- provider_only: — (—) ← Malique Lewis (MIL): No active canonical player has this normalized name
+- tier2: Marcus Sasser (DET) ← Marcus Sasser (DAL): Exact normalized name, but canonical team DET differs from ESPN team DAL
+- tier2: Marcus Smart (LAL) ← Marcus Smart (HOU): Exact normalized name, but canonical team LAL differs from ESPN team HOU
+- provider_only: — (—) ← Mario Hezonja (CLE): No active canonical player has this normalized name
+- tier4: MarJon Beauchamp (PHI) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Marvin Bagley III (DAL) ← Marvin Bagley III (DEN): Exact normalized name, but canonical team DAL differs from ESPN team DEN
+- tier4: Mason Plumlee (SAS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Matisse Thybulle (POR) ← Matisse Thybulle (LAL): Exact normalized name, but canonical team POR differs from ESPN team LAL
+- tier4: Max Shulga (BOS) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Max Strus (CLE) ← Max Strus (LAC): Exact normalized name, but canonical team CLE differs from ESPN team LAC
+- tier4: Maxi Kleber (LAL) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Meleek Thomas (CLE): No active canonical player has this normalized name
+- tier2: Micah Peavy (NOP) ← Micah Peavy (MEM): Exact normalized name, but canonical team NOP differs from ESPN team MEM
+- tier2: Micah Potter (IND) ← Micah Potter (POR): Exact normalized name, but canonical team IND differs from ESPN team POR
+- tier2: Mike Conley (MIN) ← Mike Conley (BOS): Exact normalized name, but canonical team MIN differs from ESPN team BOS
+- provider_only: — (—) ← Mikel Brown Jr. (BKN): No active canonical player has this normalized name
+- tier2: Miles Bridges (CHA) ← Miles Bridges (PHX): Exact normalized name, but canonical team CHA differs from ESPN team PHX
+- tier2: Mitchell Robinson (NYK) ← Mitchell Robinson (BOS): Exact normalized name, but canonical team NYK differs from ESPN team BOS
+- provider_only: — (—) ← Mo Bamba (UTA): No active canonical player has this normalized name
+- provider_only: — (—) ← Morez Johnson Jr. (DAL): No active canonical player has this normalized name
+- tier2: Moritz Wagner (ORL) ← Moritz Wagner (BKN): Exact normalized name, but canonical team ORL differs from ESPN team BKN
+- tier4: Mouhamadou Gueye (CHI) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Narcisse Ngoy (LAC): No active canonical player has this normalized name
+- provider_only: — (—) ← Nate Ament (MIL): No active canonical player has this normalized name
+- provider_only: — (—) ← Nate Bittle (TOR): No active canonical player has this normalized name
+- tier2: Naz Reid (MIN) ← Naz Reid (CHA): Exact normalized name, but canonical team MIN differs from ESPN team CHA
+- tier2: Nic Claxton (BKN) ← Nic Claxton (CHI): Exact normalized name, but canonical team BKN differs from ESPN team CHI
+- provider_only: — (—) ← Nick Martinelli (LAC): No active canonical player has this normalized name
+- tier2: Nick Richards (CHI) ← Nick Richards (MIA): Exact normalized name, but canonical team CHI differs from ESPN team MIA
+- tier4: Nick Smith Jr. (LAL) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Nicolas Batum (LAC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Nikola Vučević (BOS) ← Nikola Vucevic (ORL): Exact normalized name, but canonical team BOS differs from ESPN team ORL
+- tier4: Norchad Omier (LAC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Norman Powell (MIA) ← Norman Powell (CHI): Exact normalized name, but canonical team MIA differs from ESPN team CHI
+- tier4: Ochai Agbaji (BKN) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Otega Oweh (OKC): No active canonical player has this normalized name
+- tier2: Pat Spencer (GSW) ← Pat Spencer (PHX): Exact normalized name, but canonical team GSW differs from ESPN team PHX
+- tier4: Patrick Baldwin Jr. (SAC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Paul George (PHI) ← Paul George (BOS): Exact normalized name, but canonical team PHI differs from ESPN team BOS
+- tier4: Payton Sandfort (OKC) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Peyton Watson (DEN) ← Peyton Watson (CLE): Exact normalized name, but canonical team DEN differs from ESPN team CLE
+- provider_only: — (—) ← Quadir Copeland (HOU): No active canonical player has this normalized name
+- tier2: Quentin Grimes (PHI) ← Quentin Grimes (LAL): Exact normalized name, but canonical team PHI differs from ESPN team LAL
+- tier2: Quinten Post (GSW) ← Quinten Post (MEM): Exact normalized name, but canonical team GSW differs from ESPN team MEM
+- provider_only: — (—) ← Rafael Castro (HOU): No active canonical player has this normalized name
+- tier2: Rayan Rupert (MEM) ← Rayan Rupert (PHI): Exact normalized name, but canonical team MEM differs from ESPN team PHI
+- provider_only: — (—) ← Richie Saunders (MEM): No active canonical player has this normalized name
+- tier2: Royce O'Neale (PHX) ← Royce O'Neale (CHA): Exact normalized name, but canonical team PHX differs from ESPN team CHA
+- tier2: Rui Hachimura (LAL) ← Rui Hachimura (LAC): Exact normalized name, but canonical team LAL differs from ESPN team LAC
+- tier4: Russell Westbrook (SAC) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Ryan Conwell (MIA): No active canonical player has this normalized name
+- tier2: Ryan Nembhard (DAL) ← Ryan Nembhard (ATL): Exact normalized name, but canonical team DAL differs from ESPN team ATL
+- tier2: Sandro Mamukelashvili (TOR) ← Sandro Mamukelashvili (LAL): Exact normalized name, but canonical team TOR differs from ESPN team LAL
+- tier2: Santi Aldama (MEM) ← Santi Aldama (DAL): Exact normalized name, but canonical team MEM differs from ESPN team DAL
+- tier2: Sean Pedulla (LAC) ← Sean Pedulla (HOU): Exact normalized name, but canonical team LAC differs from ESPN team HOU
+- provider_only: — (—) ← Sergio de Larrea (DAL): No active canonical player has this normalized name
+- tier4: Seth Curry (GSW) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Tacko Fall (PHI): No active canonical player has this normalized name
+- tier4: Taelon Peter (IND) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Taj Gibson (MEM) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Tamar Bates (UTA): No active canonical player has this normalized name
+- provider_only: — (—) ← Tarik Biberovic (DAL): No active canonical player has this normalized name
+- provider_only: — (—) ← Tarris Reed Jr. (SAS): No active canonical player has this normalized name
+- tier2: Taurean Prince (MIL) ← Taurean Prince (DET): Exact normalized name, but canonical team MIL differs from ESPN team DET
+- tier4: Thanasis Antetokounmpo (MIL) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Tim Hardaway Jr. (DEN) ← Tim Hardaway Jr. (MIA): Exact normalized name, but canonical team DEN differs from ESPN team MIA
+- provider_only: — (—) ← Tobe Awaka (CHI): No active canonical player has this normalized name
+- provider_only: — (—) ← Tobi Lawal (DAL): No active canonical player has this normalized name
+- tier2: Tobias Harris (DET) ← Tobias Harris (SAS): Exact normalized name, but canonical team DET differs from ESPN team SAS
+- tier4: Tony Bradley (ATL) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Tosan Evbuomwan (CHA) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Tre Donaldson (MIA): No active canonical player has this normalized name
+- tier2: Tre Mann (CHA) ← Tre Mann (WAS): Exact normalized name, but canonical team CHA differs from ESPN team WAS
+- tier2: Trendon Watford (PHI) ← Trendon Watford (NOP): Exact normalized name, but canonical team PHI differs from ESPN team NOP
+- provider_only: — (—) ← Trevon Brazile (DEN): No active canonical player has this normalized name
+- tier2: Trey Alexander (NOP) ← Trey Alexander (UTA): Exact normalized name, but canonical team NOP differs from ESPN team UTA
+- tier2: Trey Jemison III (NYK) ← Trey Jemison III (TOR): Exact normalized name, but canonical team NYK differs from ESPN team TOR
+- provider_only: — (—) ← Trey Kaufman-Renn (MIN): No active canonical player has this normalized name
+- provider_only: — (—) ← Trey Lyles (MIN): No active canonical player has this normalized name
+- tier4: Tristen Newton (HOU) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Tyler Bilodeau (BKN): No active canonical player has this normalized name
+- tier2: Tyler Herro (MIA) ← Tyler Herro (MIL): Exact normalized name, but canonical team MIA differs from ESPN team MIL
+- provider_only: — (—) ← Tyler Nickel (NYK): No active canonical player has this normalized name
+- tier4: Tyler Smith (DAL) ← — (—): No current ESPN roster athlete had this normalized name
+- tier4: Tyrese Martin (PHI) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Ugonna Onyenso (DET): No active canonical player has this normalized name
+- provider_only: — (—) ← Vsevolod Ishchenko (DAL): No active canonical player has this normalized name
+- provider_only: — (—) ← Will Baker (ATL): No active canonical player has this normalized name
+- tier4: Xavier Tillman (CHA) ← — (—): No current ESPN roster athlete had this normalized name
+- provider_only: — (—) ← Yaxel Lendeborg (GSW): No active canonical player has this normalized name
+- tier4: Yuki Kawamura (CHI) ← — (—): No current ESPN roster athlete had this normalized name
+- tier2: Zaccharie Risacher (ATL) ← Zaccharie Risacher (DAL): Exact normalized name, but canonical team ATL differs from ESPN team DAL
+- tier2: Ziaire Williams (BKN) ← Ziaire Williams (LAL): Exact normalized name, but canonical team BKN differs from ESPN team LAL
+- provider_only: — (—) ← Zuby Ejiofor (ATL): No active canonical player has this normalized name
