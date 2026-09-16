@@ -1,0 +1,615 @@
+{
+  "version": "nfl-v2-model-selection-v1",
+  "dataset": {
+    "version": "nfl-research-dataset-v1",
+    "cohortPlayers": 48,
+    "observations": 1266,
+    "warmupSeason": 2023,
+    "developmentSeason": 2024,
+    "holdoutSeason": 2025
+  },
+  "scoringSnapshot": {
+    "passingYards": 0.04,
+    "passingTouchdowns": 4,
+    "passingInterceptions": -2,
+    "rushingYards": 0.1,
+    "rushingTouchdowns": 6,
+    "receivingYards": 0.1,
+    "receivingTouchdowns": 6,
+    "receptions": 1,
+    "fumblesLost": -2
+  },
+  "candidateDefinitions": {
+    "baseline": "Recent five eligible prior games, scoring-reconstructed fantasy-point mean.",
+    "o1": "Current-season mean opportunity from last five games; ratio-of-totals production rates from last eight games.",
+    "o2": "O1 architecture with last-six opportunity: the first driver below 50% of its preceding-five-game median (at least three preceding games) receives 25% influence; consecutive low drivers receive full influence so role changes remain evidence. Production window is ten games.",
+    "o3": "O2 plus exactly one immediately prior-season game only while fewer than three current-season games exist. This bounded carryover makes it MEDIUM complexity."
+  },
+  "minimumHistoryPolicy": "Zero prior observations across all seasons abstains. One or more prior observations may project; O1/O2 require current-season evidence, while O3 may use its bounded prior-season support.",
+  "development": [
+    {
+      "candidateId": "nfl-v2-baseline-recent5-fp-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 436,
+        "abstentions": 9,
+        "coverage": 0.9797752808988764,
+        "mae": 5.172983944954127,
+        "macroPlayerMae": 4.936685036640919,
+        "byPosition": {
+          "QB": {
+            "observations": 96,
+            "mae": 6.814559027777782
+          },
+          "RB": {
+            "observations": 106,
+            "mae": 5.272248427672955
+          },
+          "WR": {
+            "observations": 118,
+            "mae": 5.163403954802257
+          },
+          "TE": {
+            "observations": 116,
+            "mae": 3.733477011494253
+          }
+        },
+        "early": {
+          "observations": 72,
+          "mae": 4.714138888888888
+        },
+        "later": {
+          "observations": 364,
+          "mae": 5.263744505494508
+        },
+        "lowOpportunity": {
+          "observations": 0,
+          "mae": null
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o1-opportunity5-production8-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 412,
+        "abstentions": 33,
+        "coverage": 0.9258426966292135,
+        "mae": 5.157618644665128,
+        "macroPlayerMae": 4.960532119405004,
+        "byPosition": {
+          "QB": {
+            "observations": 90,
+            "mae": 6.6024223661993116
+          },
+          "RB": {
+            "observations": 100,
+            "mae": 5.558139024470863
+          },
+          "WR": {
+            "observations": 112,
+            "mae": 4.923728651948023
+          },
+          "TE": {
+            "observations": 110,
+            "mae": 3.8495396107166346
+          }
+        },
+        "early": {
+          "observations": 49,
+          "mae": 4.5069387755102035
+        },
+        "later": {
+          "observations": 363,
+          "mae": 5.245451464468411
+        },
+        "lowOpportunity": {
+          "observations": 0,
+          "mae": null
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o2-robust-opportunity6-production10-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 412,
+        "abstentions": 33,
+        "coverage": 0.9258426966292135,
+        "mae": 5.207090586210797,
+        "macroPlayerMae": 5.0097409901464545,
+        "byPosition": {
+          "QB": {
+            "observations": 90,
+            "mae": 6.507210516187606
+          },
+          "RB": {
+            "observations": 100,
+            "mae": 5.681348650180795
+          },
+          "WR": {
+            "observations": 112,
+            "mae": 4.969663777986
+          },
+          "TE": {
+            "observations": 110,
+            "mae": 3.953956062813211
+          }
+        },
+        "early": {
+          "observations": 49,
+          "mae": 4.5069387755102035
+        },
+        "later": {
+          "observations": 363,
+          "mae": 5.301601436691043
+        },
+        "lowOpportunity": {
+          "observations": 160,
+          "mae": 5.312716666653049
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o3-robust-opportunity6-production10-prior1game-v1",
+      "complexity": "MEDIUM",
+      "metrics": {
+        "projectedObservations": 436,
+        "abstentions": 9,
+        "coverage": 0.9797752808988764,
+        "mae": 5.2096742848291635,
+        "macroPlayerMae": 4.995916341296726,
+        "byPosition": {
+          "QB": {
+            "observations": 96,
+            "mae": 6.54908624781477
+          },
+          "RB": {
+            "observations": 106,
+            "mae": 5.579416965579367
+          },
+          "WR": {
+            "observations": 118,
+            "mae": 5.049737371195752
+          },
+          "TE": {
+            "observations": 116,
+            "mae": 3.926021553817124
+          }
+        },
+        "early": {
+          "observations": 72,
+          "mae": 4.759120370370369
+        },
+        "later": {
+          "observations": 364,
+          "mae": 5.2987948393374955
+        },
+        "lowOpportunity": {
+          "observations": 160,
+          "mae": 5.312716666653049
+        }
+      }
+    }
+  ],
+  "selectedDevelopmentFinalist": "nfl-v2-o1-opportunity5-production8-v1",
+  "selectionRecordedBeforeHoldout": true,
+  "holdout": [
+    {
+      "candidateId": "nfl-v2-baseline-recent5-fp-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 474,
+        "abstentions": 7,
+        "coverage": 0.9854469854469855,
+        "mae": 4.863458509142053,
+        "macroPlayerMae": 4.6743149458656825,
+        "byPosition": {
+          "QB": {
+            "observations": 110,
+            "mae": 6.918569696969693
+          },
+          "RB": {
+            "observations": 98,
+            "mae": 4.938401360544217
+          },
+          "WR": {
+            "observations": 116,
+            "mae": 4.692241379310344
+          },
+          "TE": {
+            "observations": 150,
+            "mae": 3.4398222222222223
+          }
+        },
+        "early": {
+          "observations": 83,
+          "mae": 5.074072289156626
+        },
+        "later": {
+          "observations": 391,
+          "mae": 4.818750213128732
+        },
+        "lowOpportunity": {
+          "observations": 0,
+          "mae": null
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o1-opportunity5-production8-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 444,
+        "abstentions": 37,
+        "coverage": 0.9230769230769231,
+        "mae": 4.736770242678104,
+        "macroPlayerMae": 4.147533368551315,
+        "byPosition": {
+          "QB": {
+            "observations": 103,
+            "mae": 6.796976737401016
+          },
+          "RB": {
+            "observations": 91,
+            "mae": 4.496236452411093
+          },
+          "WR": {
+            "observations": 108,
+            "mae": 4.87312314225756
+          },
+          "TE": {
+            "observations": 142,
+            "mae": 3.292834980729204
+          }
+        },
+        "early": {
+          "observations": 54,
+          "mae": 5.78611111111111
+        },
+        "later": {
+          "observations": 390,
+          "mae": 4.591476891664302
+        },
+        "lowOpportunity": {
+          "observations": 0,
+          "mae": null
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o2-robust-opportunity6-production10-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 444,
+        "abstentions": 37,
+        "coverage": 0.9230769230769231,
+        "mae": 4.806946670997355,
+        "macroPlayerMae": 4.202891159715265,
+        "byPosition": {
+          "QB": {
+            "observations": 103,
+            "mae": 6.745386424325479
+          },
+          "RB": {
+            "observations": 91,
+            "mae": 4.460264524807265
+          },
+          "WR": {
+            "observations": 108,
+            "mae": 5.058041238490632
+          },
+          "TE": {
+            "observations": 142,
+            "mae": 3.432091511991924
+          }
+        },
+        "early": {
+          "observations": 54,
+          "mae": 5.78611111111111
+        },
+        "later": {
+          "observations": 390,
+          "mae": 4.671370056212376
+        },
+        "lowOpportunity": {
+          "observations": 165,
+          "mae": 4.851491388002794
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o3-robust-opportunity6-production10-prior1game-v1",
+      "complexity": "MEDIUM",
+      "metrics": {
+        "projectedObservations": 473,
+        "abstentions": 8,
+        "coverage": 0.9833679833679834,
+        "mae": 4.9869083620637555,
+        "macroPlayerMae": 4.735384391496936,
+        "byPosition": {
+          "QB": {
+            "observations": 110,
+            "mae": 6.76983153065628
+          },
+          "RB": {
+            "observations": 98,
+            "mae": 4.896095970314231
+          },
+          "WR": {
+            "observations": 115,
+            "mae": 5.051030032669463
+          },
+          "TE": {
+            "observations": 150,
+            "mae": 3.689602186907911
+          }
+        },
+        "early": {
+          "observations": 82,
+          "mae": 6.142764227642276
+        },
+        "later": {
+          "observations": 391,
+          "mae": 4.744503807134254
+        },
+        "lowOpportunity": {
+          "observations": 165,
+          "mae": 4.851491388002794
+        }
+      }
+    }
+  ],
+  "audits": [
+    {
+      "selectionRule": "first chronological projected 2025 target for each position",
+      "position": "QB",
+      "playerName": "Jared Goff",
+      "playerId": "3046779",
+      "target": {
+        "eventId": "401772835",
+        "gameAt": "2025-09-14T17:00:00.000Z",
+        "week": 2
+      },
+      "priorObservations": [
+        {
+          "eventId": "401772722",
+          "season": 2025,
+          "weight": 1
+        }
+      ],
+      "opportunity": {
+        "passingAttempts": 39,
+        "rushingAttempts": 1
+      },
+      "productionSample": 1,
+      "projectedRawStats": {
+        "passingYards": 225,
+        "passingTouchdowns": 1,
+        "interceptions": 1,
+        "rushingYards": 0,
+        "rushingTouchdowns": 0,
+        "receivingYards": 0,
+        "receivingTouchdowns": 0,
+        "receptions": 0,
+        "fumblesLost": 0
+      },
+      "scoringSnapshot": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 4,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 1,
+        "fumblesLost": -2
+      },
+      "projectedFantasyPoints": 11,
+      "actualRawStats": {
+        "passingYards": 334,
+        "passingTouchdowns": 5,
+        "interceptions": 0,
+        "rushingYards": 6,
+        "rushingTouchdowns": 0,
+        "receivingYards": 0,
+        "receivingTouchdowns": 0,
+        "receptions": 0,
+        "fumblesLost": 0
+      },
+      "actualFantasyPoints": 33.96
+    },
+    {
+      "selectionRule": "first chronological projected 2025 target for each position",
+      "position": "RB",
+      "playerName": "Tyrone Tracy Jr.",
+      "playerId": "4360516",
+      "target": {
+        "eventId": "401772834",
+        "gameAt": "2025-09-14T17:00:00.000Z",
+        "week": 2
+      },
+      "priorObservations": [
+        {
+          "eventId": "401772827",
+          "season": 2025,
+          "weight": 1
+        }
+      ],
+      "opportunity": {
+        "rushingAttempts": 10,
+        "receivingTargets": 5
+      },
+      "productionSample": 1,
+      "projectedRawStats": {
+        "passingYards": 0,
+        "passingTouchdowns": 0,
+        "interceptions": 0,
+        "rushingYards": 24,
+        "rushingTouchdowns": 0,
+        "receivingYards": 11,
+        "receivingTouchdowns": 0,
+        "receptions": 2,
+        "fumblesLost": 0
+      },
+      "scoringSnapshot": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 4,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 1,
+        "fumblesLost": -2
+      },
+      "projectedFantasyPoints": 5.5,
+      "actualRawStats": {
+        "passingYards": 0,
+        "passingTouchdowns": 0,
+        "interceptions": 0,
+        "rushingYards": 15,
+        "rushingTouchdowns": 0,
+        "receivingYards": 36,
+        "receivingTouchdowns": 0,
+        "receptions": 4,
+        "fumblesLost": 0
+      },
+      "actualFantasyPoints": 9.1
+    },
+    {
+      "selectionRule": "first chronological projected 2025 target for each position",
+      "position": "WR",
+      "playerName": "Cedric Tillman",
+      "playerId": "4369863",
+      "target": {
+        "eventId": "401772726",
+        "gameAt": "2025-09-14T17:00:00.000Z",
+        "week": 2
+      },
+      "priorObservations": [
+        {
+          "eventId": "401772829",
+          "season": 2025,
+          "weight": 1
+        }
+      ],
+      "opportunity": {
+        "receivingTargets": 8,
+        "rushingAttempts": 0
+      },
+      "productionSample": 1,
+      "projectedRawStats": {
+        "passingYards": 0,
+        "passingTouchdowns": 0,
+        "interceptions": 0,
+        "rushingYards": 0,
+        "rushingTouchdowns": 0,
+        "receivingYards": 52,
+        "receivingTouchdowns": 1,
+        "receptions": 5,
+        "fumblesLost": 0
+      },
+      "scoringSnapshot": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 4,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 1,
+        "fumblesLost": -2
+      },
+      "projectedFantasyPoints": 16.2,
+      "actualRawStats": {
+        "passingYards": 0,
+        "passingTouchdowns": 0,
+        "interceptions": 0,
+        "rushingYards": 0,
+        "rushingTouchdowns": 0,
+        "receivingYards": 22,
+        "receivingTouchdowns": 1,
+        "receptions": 2,
+        "fumblesLost": 0
+      },
+      "actualFantasyPoints": 10.2
+    },
+    {
+      "selectionRule": "first chronological projected 2025 target for each position",
+      "position": "TE",
+      "playerName": "Johnny Mundt",
+      "playerId": "3052096",
+      "target": {
+        "eventId": "401772725",
+        "gameAt": "2025-09-14T17:00:00.000Z",
+        "week": 2
+      },
+      "priorObservations": [
+        {
+          "eventId": "401772828",
+          "season": 2025,
+          "weight": 1
+        }
+      ],
+      "opportunity": {
+        "receivingTargets": 1,
+        "rushingAttempts": 0
+      },
+      "productionSample": 1,
+      "projectedRawStats": {
+        "passingYards": 0,
+        "passingTouchdowns": 0,
+        "interceptions": 0,
+        "rushingYards": 0,
+        "rushingTouchdowns": 0,
+        "receivingYards": 0,
+        "receivingTouchdowns": 0,
+        "receptions": 0,
+        "fumblesLost": 0
+      },
+      "scoringSnapshot": {
+        "passingYards": 0.04,
+        "passingTouchdowns": 4,
+        "passingInterceptions": -2,
+        "rushingYards": 0.1,
+        "rushingTouchdowns": 6,
+        "receivingYards": 0.1,
+        "receivingTouchdowns": 6,
+        "receptions": 1,
+        "fumblesLost": -2
+      },
+      "projectedFantasyPoints": 0,
+      "actualRawStats": {
+        "passingYards": 0,
+        "passingTouchdowns": 0,
+        "interceptions": 0,
+        "rushingYards": 0,
+        "rushingTouchdowns": 0,
+        "receivingYards": 0,
+        "receivingTouchdowns": 0,
+        "receptions": 0,
+        "fumblesLost": 0
+      },
+      "actualFantasyPoints": 0
+    }
+  ],
+  "robustOpportunityAudit": {
+    "selectionRule": "first chronological 2025 O2 downweighted target also projected by O1",
+    "playerName": "Jared Goff",
+    "position": "QB",
+    "targetId": "3046779:401772854",
+    "o1Opportunity": {
+      "passingAttempts": 30.5,
+      "rushingAttempts": 1.5
+    },
+    "o2Opportunity": {
+      "passingAttempts": 30.5,
+      "rushingAttempts": 1.8461538461538463
+    },
+    "o2DownweightedDrivers": 1,
+    "o1ProjectedFantasyPoints": 17.59,
+    "o2ProjectedFantasyPoints": 17.659230769230767,
+    "actualFantasyPoints": 20.32
+  }
+}

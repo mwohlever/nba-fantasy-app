@@ -1,0 +1,175 @@
+{
+  "version": "nfl-v2-development-selection-v1",
+  "datasetVersion": "nfl-research-dataset-v1",
+  "developmentSeason": 2024,
+  "holdoutSeason": 2025,
+  "selectionRule": "The direct fantasy-point baseline is a must-beat comparator. Select the lowest-MAE raw-stat opportunity model only if it beats the baseline; tie-break equal MAE by lower complexity.",
+  "developmentResults": [
+    {
+      "candidateId": "nfl-v2-baseline-recent5-fp-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 436,
+        "abstentions": 9,
+        "coverage": 0.9797752808988764,
+        "mae": 5.172983944954127,
+        "macroPlayerMae": 4.936685036640919,
+        "byPosition": {
+          "QB": {
+            "observations": 96,
+            "mae": 6.814559027777782
+          },
+          "RB": {
+            "observations": 106,
+            "mae": 5.272248427672955
+          },
+          "WR": {
+            "observations": 118,
+            "mae": 5.163403954802257
+          },
+          "TE": {
+            "observations": 116,
+            "mae": 3.733477011494253
+          }
+        },
+        "early": {
+          "observations": 72,
+          "mae": 4.714138888888888
+        },
+        "later": {
+          "observations": 364,
+          "mae": 5.263744505494508
+        },
+        "lowOpportunity": {
+          "observations": 0,
+          "mae": null
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o1-opportunity5-production8-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 412,
+        "abstentions": 33,
+        "coverage": 0.9258426966292135,
+        "mae": 5.157618644665128,
+        "macroPlayerMae": 4.960532119405004,
+        "byPosition": {
+          "QB": {
+            "observations": 90,
+            "mae": 6.6024223661993116
+          },
+          "RB": {
+            "observations": 100,
+            "mae": 5.558139024470863
+          },
+          "WR": {
+            "observations": 112,
+            "mae": 4.923728651948023
+          },
+          "TE": {
+            "observations": 110,
+            "mae": 3.8495396107166346
+          }
+        },
+        "early": {
+          "observations": 49,
+          "mae": 4.5069387755102035
+        },
+        "later": {
+          "observations": 363,
+          "mae": 5.245451464468411
+        },
+        "lowOpportunity": {
+          "observations": 0,
+          "mae": null
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o2-robust-opportunity6-production10-v1",
+      "complexity": "LOW",
+      "metrics": {
+        "projectedObservations": 412,
+        "abstentions": 33,
+        "coverage": 0.9258426966292135,
+        "mae": 5.207090586210797,
+        "macroPlayerMae": 5.0097409901464545,
+        "byPosition": {
+          "QB": {
+            "observations": 90,
+            "mae": 6.507210516187606
+          },
+          "RB": {
+            "observations": 100,
+            "mae": 5.681348650180795
+          },
+          "WR": {
+            "observations": 112,
+            "mae": 4.969663777986
+          },
+          "TE": {
+            "observations": 110,
+            "mae": 3.953956062813211
+          }
+        },
+        "early": {
+          "observations": 49,
+          "mae": 4.5069387755102035
+        },
+        "later": {
+          "observations": 363,
+          "mae": 5.301601436691043
+        },
+        "lowOpportunity": {
+          "observations": 160,
+          "mae": 5.312716666653049
+        }
+      }
+    },
+    {
+      "candidateId": "nfl-v2-o3-robust-opportunity6-production10-prior1game-v1",
+      "complexity": "MEDIUM",
+      "metrics": {
+        "projectedObservations": 436,
+        "abstentions": 9,
+        "coverage": 0.9797752808988764,
+        "mae": 5.2096742848291635,
+        "macroPlayerMae": 4.995916341296726,
+        "byPosition": {
+          "QB": {
+            "observations": 96,
+            "mae": 6.54908624781477
+          },
+          "RB": {
+            "observations": 106,
+            "mae": 5.579416965579367
+          },
+          "WR": {
+            "observations": 118,
+            "mae": 5.049737371195752
+          },
+          "TE": {
+            "observations": 116,
+            "mae": 3.926021553817124
+          }
+        },
+        "early": {
+          "observations": 72,
+          "mae": 4.759120370370369
+        },
+        "later": {
+          "observations": 364,
+          "mae": 5.2987948393374955
+        },
+        "lowOpportunity": {
+          "observations": 160,
+          "mae": 5.312716666653049
+        }
+      }
+    }
+  ],
+  "selectedDevelopmentFinalist": "nfl-v2-o1-opportunity5-production8-v1",
+  "selectedBeforeHoldout": true
+}
