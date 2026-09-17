@@ -1,0 +1,18 @@
+name: NFL projection shadow generation
+on:
+  # Manual-only until Phase C's cache migration is reviewed/applied and first-run audit is approved.
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NFL_PROJECTION_INGEST_BASE_URL: https://www.111sports.app
+      NFL_PROJECTION_INGEST_SECRET: ${{ secrets.NFL_PROJECTION_INGEST_SECRET }}
+      NFL_PROJECTION_SEASON: '2026'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: node scripts/run-nfl-projection-generation.cjs

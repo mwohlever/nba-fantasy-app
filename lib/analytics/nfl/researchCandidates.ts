@@ -46,12 +46,26 @@ function projectedFromHistory(position: NflPosition, rows: readonly ResearchRow[
   return { stats, opportunity, productionSample:production.length, downweighted };
 }
 
+/** Frozen O1 raw-stat path shared by shadow generation; it deliberately does not score fantasy points. */
+export function projectNflResearchO1Raw(target: Pick<ResearchRow, "providerPlayerId" | "position" | "season" | "gameAt">, prior: readonly ResearchRow[]) {
+  const history = prior.filter(row => row.providerPlayerId === target.providerPlayerId && row.gameAt < target.gameAt).sort((a,b)=>a.gameAt.localeCompare(b.gameAt)||a.eventId.localeCompare(b.eventId));
+  const current = history.filter(row => row.season === target.season);
+  if (!current.length) return null;
+  const projection = projectedFromHistory(target.position, current, false);
+  return { projectedStats: projection.stats, components: { history: history.length, currentSeasonGames: current.length, previousSeasonGames: history.filter(row=>row.season===target.season-1).length, admitted: current.map(row=>({eventId:row.eventId,season:row.season,weight:1})), ...projection } };
+}
+
 export function projectNflResearch(candidateId: CandidateId, target: ResearchRow, prior: readonly ResearchRow[]) {
   const history = prior.filter(row => row.providerPlayerId === target.providerPlayerId && row.gameAt < target.gameAt).sort((a,b)=>a.gameAt.localeCompare(b.gameAt)||a.eventId.localeCompare(b.eventId));
   if (!history.length) return null; // Common policy: no factual prior observation means abstain.
   if (candidateId === "nfl-v2-baseline-recent5-fp-v1") { const scores=history.slice(-5).map(row=>scoreNflResearch(actualNflResearchStats(row))); return { projectedFantasyPoints:scores.reduce((a,b)=>a+b,0)/scores.length, projectedStats:null, components:{history:history.length,baselineGames:scores.length} }; }
   const family = NFL_V2_RESEARCH_CANDIDATES.find(c=>c.id===candidateId)!.family, robust=family === "o2" || family === "o3";
   const current=history.filter(row=>row.season===target.season), previous=history.filter(row=>row.season===target.season-1);
+  if (family === "o1") {
+    const raw = projectNflResearchO1Raw(target, prior);
+    if (!raw) return null;
+    return { projectedFantasyPoints:scoreNflResearch(raw.projectedStats), projectedStats:raw.projectedStats, components:raw.components };
+  }
   const admitted = family === "o3" ? carryover(current,previous) : current;
   if (!admitted.length) return null;
   const projection=projectedFromHistory(target.position,admitted,robust);

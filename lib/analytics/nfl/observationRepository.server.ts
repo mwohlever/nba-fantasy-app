@@ -3,6 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { nflObservationHashLookupGroups, type NflEligiblePlayer, type NflObservationRecord } from "./observationIngestion";
 import type { NflObservationPosition } from "./observationFoundation";
+import { selectNflAsOfObservationVersions, type NflObservationVersionRecord, type NflProjectionCacheRecord, validateNflRawProjectionStats } from "./projectionInfrastructure";
 
 const PAGE_SIZE = 1000;
 const INSERT_BATCH_SIZE = 500;
@@ -58,6 +59,50 @@ export async function insertNflObservationVersions(rows: readonly NflObservation
     fail("NFL observation append failed", result.error);
   }
 }
+
+const HISTORY_PLAYER_BATCH_SIZE = 200;
+const CACHE_APPEND_BATCH_SIZE = 100;
+type VersionDbRow = Record<string, unknown>;
+function asVersionRecord(row: VersionDbRow): NflObservationVersionRecord {
+  const number = (key: string) => Number(row[key]), nullable = (key: string) => row[key] === null ? null : number(key), required = (key: string) => String(row[key] ?? "");
+  const position = String(row.position);
+  if (!(positions.has(position as NflObservationPosition))) throw new Error("Unexpected NFL projection history position");
+  return { id: number("id"), provider: "espn", provider_player_id: required("provider_player_id"), provider_event_id: required("provider_event_id"), local_player_id: row.local_player_id === null ? null : number("local_player_id"), position: position as NflObservationPosition,
+    season: number("season"), week: number("week"), phase: "regular", game_at: required("game_at"), known_at: required("known_at"), completions: nullable("completions"), passing_attempts: nullable("passing_attempts"), passing_yards: nullable("passing_yards"), passing_touchdowns: nullable("passing_touchdowns"), interceptions: nullable("interceptions"), rushing_attempts: nullable("rushing_attempts"), rushing_yards: nullable("rushing_yards"), rushing_touchdowns: nullable("rushing_touchdowns"), receiving_targets: nullable("receiving_targets"), receptions: nullable("receptions"), receiving_yards: nullable("receiving_yards"), receiving_touchdowns: nullable("receiving_touchdowns"), fumbles_lost: nullable("fumbles_lost") };
+}
+
+/** Explicit range paging and 200-ID batches avoid both Supabase's 1,000-row cap and oversized filters. */
+export async function loadNflProjectionHistories(input: { playerIds: readonly number[]; targetSeason: number; asOf: string }) {
+  const ids = [...new Set(input.playerIds.filter(id => Number.isSafeInteger(id) && id > 0))], output = new Map<number, NflObservationVersionRecord[]>(ids.map(id => [id, []]));
+  for (const playerIds of batches(ids, HISTORY_PLAYER_BATCH_SIZE)) {
+    const rows: VersionDbRow[] = [];
+    for (let from = 0; ; from += PAGE_SIZE) {
+      const result = await supabaseAdmin.from("nfl_player_game_observation_versions").select("id,provider,provider_player_id,provider_event_id,local_player_id,position,season,week,phase,game_at,known_at,completions,passing_attempts,passing_yards,passing_touchdowns,interceptions,rushing_attempts,rushing_yards,rushing_touchdowns,receiving_targets,receptions,receiving_yards,receiving_touchdowns,fumbles_lost")
+        .in("local_player_id", playerIds).eq("season", input.targetSeason).eq("phase", "regular").lt("game_at", input.asOf).lt("known_at", input.asOf)
+        .order("game_at", { ascending: true }).order("known_at", { ascending: true }).order("id", { ascending: true }).range(from, from + PAGE_SIZE - 1);
+      fail("NFL projection version-history lookup failed", result.error);
+      const page = (result.data ?? []) as VersionDbRow[]; rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+    for (const raw of rows) {
+      const record = asVersionRecord(raw);
+      if (record.local_player_id !== null && output.has(record.local_player_id)) output.get(record.local_player_id)!.push(record);
+    }
+  }
+  for (const [playerId, rows] of output) output.set(playerId, selectNflAsOfObservationVersions({ rows, playerId, targetSeason: input.targetSeason, asOf: input.asOf }));
+  return output;
+}
+
+/** Cache rows append by immutable raw-projection identity; no group/slate scoring is persisted. */
+export async function appendNflProjectionStatCache(rows: readonly NflProjectionCacheRecord[]) {
+  for (const group of batches(rows, CACHE_APPEND_BATCH_SIZE)) {
+    for (const row of group) if (!validateNflRawProjectionStats(row.projected_stats)) throw new Error("Invalid NFL raw projection stats");
+    const result = await supabaseAdmin.from("nfl_projection_stat_cache_versions").upsert(group, { onConflict: "provider,provider_player_id,season,model_version,as_of,projection_hash", ignoreDuplicates: true });
+    fail("NFL projection cache append failed", result.error);
+  }
+}
+
+export function nflProjectionGenerationRepository() { return { loadHistories: loadNflProjectionHistories, appendStatCache: appendNflProjectionStatCache }; }
 
 type AuditRow = { provider_player_id: string; provider_event_id: string; local_player_id: number | null; position: string; phase: string; game_at: string; fumbles_lost: number | null; fumble_summary_source_url: string | null };
 async function pagedAuditRows(source: "nfl_player_game_observations" | "nfl_player_game_observation_versions", season: number) {
