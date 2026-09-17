@@ -196,7 +196,12 @@ test('Golf Scores team rows omit implementation-status and roster-count detail',
   const tree = h.render({ scope: 'group-a:live-scoring', board, onPlayer() {} });
   assert.doesNotMatch(text(tree), /Live scoring|golfer selections|Provisional/);
   const styles = require('node:fs').readFileSync('app/globals.css', 'utf8');
-  assert.match(styles, /\.golf-scores-standing-toggle \.scores-standing-chevron \{ grid-column: 4; grid-row: 1; \}/);
+  assert.match(styles, /\.golf-scores-standing-toggle \{ grid-template-columns: 1\.4rem 1\.5rem minmax\(0, 1fr\) auto auto; \}/);
+  assert.match(styles, /\.golf-scores-standing-toggle \.scores-standing-score \{ grid-column: 4; grid-row: 1; text-align: right; \}/);
+  assert.match(styles, /\.golf-scores-standing-toggle \.scores-standing-chevron \{ grid-column: 5; grid-row: 1; \}/);
+  const header = nodes(tree).find(node => node.props?.className?.includes('golf-scores-standing-toggle'));
+  assert.equal(nodes(header).filter(node => node.props?.className === 'scores-standing-score').length, 1);
+  assert.equal(nodes(header).filter(node => node.props?.className === 'scores-standing-chevron').length, 1);
   h.unmount();
 });
 
