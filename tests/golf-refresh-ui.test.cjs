@@ -6,6 +6,7 @@ React.useCallback = (fn, deps) => React.useMemo(() => fn, deps);
 context.capturePull = true;
 const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').default;
 const { GolfFantasyRows, BestBallRoster, StandardRoster } = require('../components/lineups/GolfScoresDashboard.tsx');
+const { golfHolePar } = require('../lib/golf/scorePresentation.ts');
 const SalarySetup = require('../components/golf/GolfSalarySetup.tsx').default;
 const { golfCompareWinners } = require('../components/lineups/GolfCompareModal.tsx');
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -27,6 +28,17 @@ test('Golf Home and Scores omit the removed tabs and duplicate real-world leader
   assert.doesNotMatch(home, /golfHomeTab|GolfLiveLeaderboard|Full leaderboard →/);
   assert.match(home, /View Scores/);
   assert.match(scores, /previous\?\.scope === scope \? previous : null/);
+});
+
+test('Golf scorecard par presentation uses authoritative course metadata with the modal fallback', () => {
+  assert.equal(golfHolePar({ par: 5, strokes: 3, relative_to_par: -2 }), 5);
+  assert.equal(golfHolePar({ par: null, strokes: 3, relative_to_par: -1 }), 4);
+  assert.equal(golfHolePar({ par: null, strokes: null, relative_to_par: null }), null);
+  const modal = require('node:fs').readFileSync('components/lineups/GolfPlayerModal.tsx', 'utf8');
+  const fantasy = require('node:fs').readFileSync('lib/golf/fantasy.server.ts', 'utf8');
+  assert.match(modal, /golfHolePar\(/);
+  assert.match(fantasy, /from\('golf_course_holes'\)/);
+  assert.match(fantasy, /courseHoles: \[\.\.\.courseHoleByNumber\.values\(\)\]/);
 });
 
 test('independent team expansion survives score updates; collapse affects only one team', () => {
@@ -119,6 +131,7 @@ test('Best Ball future rounds render one selected not-started scorecard', () => 
 
 test('Best Ball team avatars and hole replay links reuse existing identity and focus state', () => {
   const h = host(GolfFantasyRows), board = bestBallBoard();
+  board.courseHoles = [{ holeNumber: 10, par: 4 }, { holeNumber: 11, par: 3 }, { holeNumber: 12, par: 5 }];
   board.events[0].golf_rounds.find(round => round.round_number === 1).golf_holes = [
     { hole_number: 10, relative_to_par: -1 },
     { hole_number: 11, relative_to_par: 1 },
@@ -141,6 +154,9 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
   let markup = require('react-dom/server').renderToStaticMarkup(tree);
   assert.match(markup, /team-one\.png/); assert.match(markup, />T</); // Team 2 uses TeamAvatar's initials fallback.
   const detail = host(BestBallRoster); tree = detail.render({ board, team: board.teams[0], selectedRound: 1, onPlayer() {}, onHole: props.onHole });
+  markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.match(markup, /<div>10<\/div><div class="text-\[9px\] font-bold text-slate-500">4<\/div>/);
+  assert.match(markup, /<div>17<\/div><div class="text-\[9px\] font-bold text-slate-500">—<\/div>/);
   const holeButtons = nodes(tree).filter(node => String(node.props?.['aria-label'] ?? '').startsWith('View Opening Golfer 1, Round 1, Hole '));
   assert.equal(holeButtons.length, 18);
   const holeButton = holeNumber => holeButtons.find(node => node.props?.['aria-label'].startsWith(`View Opening Golfer 1, Round 1, Hole ${holeNumber} —`));
@@ -184,13 +200,15 @@ test('Best Ball describes provisional scoring without implying an unsubmitted li
 
 test('Standard Golf uses the selected round scorecard and all-hole modal navigation without Best Ball rows', () => {
   const h = host(GolfFantasyRows), opened = [];
-  const board = { rules: { gameType: 'standard', rosterPeriods: { type: 'full_tournament' } }, teams: [{ team_id: 1, name: 'Standard Team', fantasy_points: -6, finish_position: 1, contributions: [{ playerId: 1, period: 'full_tournament', score: -6 }] }], events: [{ player_id: 1, golf_players: { display_name: 'Scottie', espn_player_id: '1' }, golf_rounds: [{ round_number: 1, holes_completed: 18, strokes: 70, score_to_par: -2, golf_holes: [{ hole_number: 14, relative_to_par: -1 }] }, { round_number: 4, holes_completed: 18, strokes: 68, score_to_par: -4, golf_holes: [{ hole_number: 14, relative_to_par: 1 }] }] }] };
+  const board = { rules: { gameType: 'standard', rosterPeriods: { type: 'full_tournament' } }, courseHoles: [{ holeNumber: 14, par: 4 }, { holeNumber: 17, par: 5 }], teams: [{ team_id: 1, name: 'Standard Team', fantasy_points: -6, finish_position: 1, contributions: [{ playerId: 1, period: 'full_tournament', score: -6 }] }], events: [{ player_id: 1, golf_players: { display_name: 'Scottie', espn_player_id: '1' }, golf_rounds: [{ round_number: 1, holes_completed: 18, strokes: 70, score_to_par: -2, golf_holes: [{ hole_number: 14, relative_to_par: -1 }] }, { round_number: 4, holes_completed: 18, strokes: 68, score_to_par: -4, golf_holes: [{ hole_number: 14, relative_to_par: 1 }] }] }] };
   const props = { scope: 'group-a:standard', board, onPlayer() {}, onHole: (player, focus) => opened.push({ player, focus }) };
   let tree = h.render(props); nodes(tree).find(node => node.props?.className?.includes('golf-scores-standing-toggle')).props.onClick(); tree = h.render(props);
   const detail = host(StandardRoster); tree = detail.render({ board, team: board.teams[0], selectedRound: 4, onPlayer() {}, onHole: props.onHole });
   let markup = require('react-dom/server').renderToStaticMarkup(tree);
   assert.match(markup, /Round 4 Golf scorecard/); assert.doesNotMatch(text(tree), /BEST BALL/);
   assert.match(markup, /bg-red-100 text-red-900/);
+  assert.match(markup, /<div>14<\/div><div class="text-\[9px\] font-bold text-slate-500">4<\/div>/);
+  assert.match(markup, /<div>17<\/div><div class="text-\[9px\] font-bold text-slate-500">5<\/div>/);
   const r4Future = nodes(tree).find(node => node.props?.['aria-label'] === 'View Scottie, Round 4, Hole 17 — not started');
   assert.ok(r4Future); r4Future.props.onClick(); assert.deepEqual(opened[0].focus, { roundNumber: 4, holeNumber: 17 });
   tree = detail.render({ board, team: board.teams[0], selectedRound: 1, onPlayer() {}, onHole: props.onHole });

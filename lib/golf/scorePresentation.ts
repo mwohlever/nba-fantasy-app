@@ -1,3 +1,31 @@
+export type GolfHoleParSource = {
+  par?: number | null;
+  strokes?: number | null;
+  relative_to_par?: number | null;
+};
+
+export function golfHolePar(hole: GolfHoleParSource | null | undefined) {
+  if (
+    hole?.par !== null &&
+    hole?.par !== undefined &&
+    Number.isFinite(Number(hole.par))
+  ) {
+    return Number(hole.par);
+  }
+
+  if (
+    hole?.strokes === null ||
+    hole?.strokes === undefined ||
+    hole.relative_to_par === null ||
+    hole.relative_to_par === undefined
+  ) {
+    return null;
+  }
+
+  const par = Number(hole.strokes) - Number(hole.relative_to_par);
+  return Number.isFinite(par) ? par : null;
+}
+
 export function golfHoleResultClass(relativeToPar: number | null | undefined) {
   if (relativeToPar === null || relativeToPar === undefined) return "border-slate-200 bg-slate-50 text-slate-400";
   if (relativeToPar <= -2) return "border-emerald-700 bg-emerald-700 text-white ring-2 ring-emerald-200";

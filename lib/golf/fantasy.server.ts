@@ -35,10 +35,11 @@ export async function loadGolfFantasy(slateId: number, scope?: { groupId: string
     const results = await Promise.all([
       supabaseAdmin.from('slates').select('id, sport, rules_snapshot, has_cut, cut_penalty_per_round').eq('id', slateId).single(),
       supabaseAdmin.from('golf_event_players').select('*, golf_players(display_name, espn_player_id, headshot_url, country, owgr_rank), golf_rounds(*, golf_holes(*))').eq('slate_id', slateId),
+      supabaseAdmin.from('golf_course_holes').select('hole_number, par, is_host').eq('slate_id', slateId).order('is_host', { ascending: false }).order('hole_number', { ascending: true }),
       supabaseAdmin.from('slate_teams').select('team_id, draft_order, is_participating, teams!inner(name, group_id, user_id)').eq('slate_id', slateId).eq('is_participating', true),
       scope ? supabaseAdmin.from('group_memberships').select('user_id').eq('group_id', scope.groupId).eq('is_active', true) : Promise.resolve({ data: null, error: null }),
     ]);
-    const [slate, events, slateTeamRows, membershipRows] = results.map(checked);
+    const [slate, events, courseHoleRows, slateTeamRows, membershipRows] = results.map(checked);
     if (slate.sport !== 'golf') throw new Error('Golf slate required');
     const activeUsers = new Set((membershipRows ?? []).map((row: any) => String(row.user_id)));
     const slateTeams = (slateTeamRows ?? []).filter((row: any) => !scope || (
@@ -57,7 +58,13 @@ export async function loadGolfFantasy(slateId: number, scope?: { groupId: string
     const visibleRosters = rosters.map(roster => ({ ...roster, periods: roster.periods.map(period =>
       canViewerSeeGolfRosterPeriod({ snapshot: slate.rules_snapshot, period: periodByKey.get(period.period), viewerTeamId: scope?.viewerTeamId, rosterTeamId: roster.teamId })
         ? period : { ...period, playerIds: [] }) }));
+    const courseHoleByNumber = new Map<number, { holeNumber: number; par: number | null }>();
+    (courseHoleRows ?? []).forEach((hole: any) => {
+      const holeNumber = Number(hole.hole_number);
+      if (!courseHoleByNumber.has(holeNumber)) courseHoleByNumber.set(holeNumber, { holeNumber, par: hole.par == null ? null : Number(hole.par) });
+    });
     return { rules: resolveGolfRules(slate.rules_snapshot), rosters: visibleRosters, events,
+      courseHoles: [...courseHoleByNumber.values()],
       teams: teams.map(t => {
         const hiddenRosterPeriods = t.contributions.map(contribution => contribution.period).filter((period, index, all) =>
           all.indexOf(period) === index && !canViewerSeeGolfRosterPeriod({ snapshot: slate.rules_snapshot, period: periodByKey.get(period), viewerTeamId: scope?.viewerTeamId, rosterTeamId: t.team_id }));

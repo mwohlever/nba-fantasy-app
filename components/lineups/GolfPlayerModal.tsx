@@ -3,7 +3,7 @@
 import { useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
-import { golfHoleResultClass } from "@/lib/golf/scorePresentation";
+import { golfHolePar, golfHoleResultClass } from "@/lib/golf/scorePresentation";
 import type {
   GolfHoleStat,
   GolfRoundStat,
@@ -69,31 +69,6 @@ function holeValue(hole: GolfHoleStat) {
     : String(hole.relative_to_par);
 }
 
-function holePar(hole: GolfHoleStat | null | undefined) {
-  if (
-    hole?.par !== null &&
-    hole?.par !== undefined &&
-    Number.isFinite(Number(hole.par))
-  ) {
-    return Number(hole.par);
-  }
-
-  if (
-    hole?.strokes === null ||
-    hole?.strokes === undefined ||
-    hole.relative_to_par === null ||
-    hole.relative_to_par === undefined
-  ) {
-    return null;
-  }
-
-  const par =
-    Number(hole.strokes) -
-    Number(hole.relative_to_par);
-
-  return Number.isFinite(par) ? par : null;
-}
-
 function holeResultName(
   relative: number | null | undefined,
 ) {
@@ -114,7 +89,7 @@ function holeTitle(
   holeNumber: number,
   hole: GolfHoleStat,
 ) {
-  const par = holePar(hole);
+  const par = golfHolePar(hole);
   const yardage =
     hole.yards === null ||
     hole.yards === undefined
@@ -396,7 +371,7 @@ function RoundScorecard({
                         : "text-center text-[9px] font-bold text-slate-500"
                     }
                   >
-                    {holePar(
+                    {golfHolePar(
                       holesByNumber.get(holeNumber),
                     ) ?? "—"}
                   </div>
@@ -417,7 +392,7 @@ function RoundScorecard({
                   const isSelected =
                     selectedHoleNumber === holeNumber;
 
-                  const par = holePar(hole);
+                  const par = golfHolePar(hole);
 
                   const yardage =
                     hole.yards === null ||
@@ -464,7 +439,7 @@ function RoundScorecard({
               );
 
             const selectedPar =
-              holePar(selectedHole);
+                golfHolePar(selectedHole);
 
             const selectedYardage =
               selectedHole?.yards === null ||

@@ -8,13 +8,14 @@ import type { BestBallHole } from "@/lib/golf/bestBall";
 import type { GolfFantasyTeam } from "@/lib/golf/competition";
 import { golfPeriodForRound } from "@/lib/golf/eligibleRoster";
 import type { GolfRules } from "@/lib/rules/leagueRules";
-import { golfHoleResultClass, golfHoleResultLabel } from "@/lib/golf/scorePresentation";
+import { golfHolePar, golfHoleResultClass, golfHoleResultLabel } from "@/lib/golf/scorePresentation";
 import type { Player, PlayerStat, OrderedTeam, RosterSlotConfig, Slate } from "./types";
 
 export type GolfFantasyBoard = {
   rules: GolfRules;
   teams: Array<GolfFantasyTeam & { name: string; hiddenRosterPeriods?: Array<"full_tournament" | "opening" | "weekend"> }>;
   events: Array<Record<string, any>>;
+  courseHoles?: Array<{ holeNumber: number; par: number | null }>;
 };
 
 export function golfFantasyScore(value: number | null | undefined) {
@@ -59,12 +60,13 @@ export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }:
   });
   const teamTotal = bestBallRoundTotal(holes);
   const hasScoring = holes.some(hole => hole.status !== "unscored");
+  const courseParByHole = new Map((board.courseHoles ?? []).map(hole => [hole.holeNumber, hole.par]));
   return <div className="space-y-3 px-3 py-3">
     {hidden ? <p className="text-xs text-amber-300">{round.period === "weekend" ? "Weekend lineup hidden until lock." : round.period === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock."}</p> : null}
     {!round ? <p className="text-xs text-slate-400">Round {selectedRound} is not available.</p> : hidden ? null : !roster.length ? <p className="text-xs text-slate-400">{round.period === "weekend" ? "Weekend roster is not available for this round yet." : "No saved roster for this round."}</p> : <section className="overflow-x-auto rounded-lg border border-slate-800" aria-label={`Round ${round.roundNumber} Best Ball scorecard`}>
       <div className="flex items-center justify-between border-b border-slate-800 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"><span>R{round.roundNumber} · {round.period === 'opening' ? 'Opening roster' : round.period === 'weekend' ? 'Weekend roster' : 'Full tournament'}</span><span>Best Ball {hasScoring ? golfFantasyScore(teamTotal) : 'Not started'}</span></div>
       {!hasScoring ? <p className="px-2 py-3 text-xs text-slate-400">Round {round.roundNumber} has not started.</p> : <table className="w-full min-w-[620px] border-collapse text-xs tabular-nums">
-        <thead className="bg-slate-900 text-slate-400"><tr><th className="sticky left-0 w-36 bg-slate-900 px-2 py-1.5 text-left">Golfer</th><th className="px-2 py-1.5 text-right">R{round.roundNumber}</th>{holes.map(hole => <th key={hole.holeNumber} className="px-1 py-1.5">{hole.holeNumber}</th>)}</tr></thead>
+        <thead className="bg-slate-900 text-slate-400"><tr><th className="sticky left-0 w-36 bg-slate-900 px-2 py-1.5 text-left">Golfer</th><th className="px-2 py-1.5 text-right">R{round.roundNumber}</th>{holes.map(hole => <th key={hole.holeNumber} className="px-1 py-1"><div>{hole.holeNumber}</div><div className="text-[9px] font-bold text-slate-500">{courseParByHole.get(hole.holeNumber) ?? hole.par ?? "—"}</div></th>)}</tr></thead>
         <tbody className="divide-y divide-slate-800">
           {roster.map(contribution => {
             const event = eventByPlayer.get(contribution.playerId);
@@ -92,6 +94,10 @@ export function StandardRoster({ board, team, onPlayer, onHole, selectedRound }:
   const roster = team.contributions.filter(contribution => contribution.period === period);
   const eventByPlayer = new Map(board.events.map(event => [Number(event.player_id), event]));
   const holes = Array.from({ length: 18 }, (_, index) => index + 1);
+  const courseParByHole = new Map((board.courseHoles ?? []).map(hole => [hole.holeNumber, hole.par]));
+  const fallbackParByHole = new Map<number, number | null>((((eventByPlayer.get(roster[0]?.playerId)?.golf_rounds ?? [])
+    .find((round: any) => Number(round.round_number) === selectedRound)?.golf_holes ?? [])
+    .map((hole: any) => [Number(hole.hole_number), golfHolePar(hole)])));
   const hasScoring = roster.some(contribution => {
     const round = (eventByPlayer.get(contribution.playerId)?.golf_rounds ?? []).find((item: any) => Number(item.round_number) === selectedRound);
     return Number(round?.holes_completed ?? 0) > 0 || round?.strokes !== null && round?.strokes !== undefined;
@@ -102,7 +108,7 @@ export function StandardRoster({ board, team, onPlayer, onHole, selectedRound }:
     {!hidden && roster.length ? <section className="overflow-x-auto rounded-lg border border-slate-800" aria-label={`Round ${selectedRound} Golf scorecard`}>
       <div className="flex items-center justify-between border-b border-slate-800 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"><span>R{selectedRound} · {period === "opening" ? "Opening roster" : period === "weekend" ? "Weekend roster" : "Full tournament"}</span><span>{hasScoring ? "Round scoring" : "Not started"}</span></div>
       {!hasScoring ? <p className="px-2 py-3 text-xs text-slate-400">Round {selectedRound} has not started.</p> : <table className="w-full min-w-[620px] border-collapse text-xs tabular-nums">
-        <thead className="bg-slate-900 text-slate-400"><tr><th className="sticky left-0 w-36 bg-slate-900 px-2 py-1.5 text-left">Golfer</th><th className="px-2 py-1.5 text-right">R{selectedRound}</th>{holes.map(hole => <th key={hole} className="px-1 py-1.5">{hole}</th>)}</tr></thead>
+        <thead className="bg-slate-900 text-slate-400"><tr><th className="sticky left-0 w-36 bg-slate-900 px-2 py-1.5 text-left">Golfer</th><th className="px-2 py-1.5 text-right">R{selectedRound}</th>{holes.map(hole => <th key={hole} className="px-1 py-1"><div>{hole}</div><div className="text-[9px] font-bold text-slate-500">{courseParByHole.get(hole) ?? fallbackParByHole.get(hole) ?? "—"}</div></th>)}</tr></thead>
         <tbody className="divide-y divide-slate-800">{roster.map(contribution => {
           const event = eventByPlayer.get(contribution.playerId); const player = event?.golf_players;
           const playerRound = (event?.golf_rounds ?? []).find((item: any) => Number(item.round_number) === selectedRound);
