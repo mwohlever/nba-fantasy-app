@@ -18,6 +18,19 @@ export type NflObservationRecord = {
 };
 
 const supported = new Set<NflObservationPosition>(["QB", "RB", "WR", "TE"]);
+export const NFL_OBSERVATION_HASH_LOOKUP_BATCH_SIZE = 50;
+
+/**
+ * A 500-row ingest batch is valid, but 500 SHA-256 values in one PostgREST
+ * `in` filter exceed the safe request size. Keep lookup requests bounded and
+ * deterministic without changing append-only version identity.
+ */
+export function nflObservationHashLookupGroups(hashes: readonly string[]) {
+  const unique = [...new Set(hashes)];
+  return Array.from({ length: Math.ceil(unique.length / NFL_OBSERVATION_HASH_LOOKUP_BATCH_SIZE) }, (_value, index) =>
+    unique.slice(index * NFL_OBSERVATION_HASH_LOOKUP_BATCH_SIZE, (index + 1) * NFL_OBSERVATION_HASH_LOOKUP_BATCH_SIZE));
+}
+
 export function resolveDirectNflIdentity(input: { providerPlayerId: string; position: string; eligible: readonly NflEligiblePlayer[] }) {
   const matches = input.eligible.filter(player => player.providerPlayerId === input.providerPlayerId && player.position === input.position);
   if (matches.length !== 1) throw new Error(`NFL direct ESPN identity is missing or ambiguous: ${input.providerPlayerId}:${input.position}`);

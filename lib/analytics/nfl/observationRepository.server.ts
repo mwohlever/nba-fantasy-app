@@ -1,14 +1,18 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import type { NflEligiblePlayer, NflObservationRecord } from "./observationIngestion";
+import { nflObservationHashLookupGroups, type NflEligiblePlayer, type NflObservationRecord } from "./observationIngestion";
 import type { NflObservationPosition } from "./observationFoundation";
 
 const PAGE_SIZE = 1000;
 const INSERT_BATCH_SIZE = 500;
 const positions = new Set<NflObservationPosition>(["QB", "RB", "WR", "TE"]);
 const batches = <T,>(items: readonly T[], size: number) => Array.from({ length: Math.ceil(items.length / size) }, (_value, index) => items.slice(index * size, (index + 1) * size));
-function fail(label: string, error: { message: string } | null) { if (error) throw new Error(`${label}: ${error.message}`); }
+function fail(label: string, error: { message: string; code?: string; details?: string; hint?: string } | null) {
+  if (!error) return;
+  const details = [error.code, error.details, error.hint].filter(Boolean).join("; ");
+  throw new Error(`${label}: ${error.message}${details ? ` (${details})` : ""}`);
+}
 
 /** Explicit pagination prevents the Supabase 1,000-row cap from hiding eligible athletes. */
 export async function loadActiveNflObservationPlayers(): Promise<NflEligiblePlayer[]> {
@@ -38,7 +42,7 @@ export async function loadActiveNflObservationPlayers(): Promise<NflEligiblePlay
 
 export async function existingNflObservationHashes(hashes: readonly string[]) {
   const found = new Set<string>();
-  for (const group of batches([...new Set(hashes)], 500)) {
+  for (const group of nflObservationHashLookupGroups(hashes)) {
     if (!group.length) continue;
     const result = await supabaseAdmin.from("nfl_player_game_observation_versions").select("observation_hash").in("observation_hash", group);
     fail("NFL observation dedupe lookup failed", result.error);
