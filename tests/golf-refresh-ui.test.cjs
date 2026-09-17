@@ -120,12 +120,16 @@ test('Best Ball future rounds render one selected not-started scorecard', () => 
 test('Best Ball team avatars and hole replay links reuse existing identity and focus state', () => {
   const h = host(GolfFantasyRows), board = bestBallBoard();
   board.events[0].golf_rounds.find(round => round.round_number === 1).golf_holes = [
-    { hole_number: 10, relative_to_par: -1 }, { hole_number: 11, relative_to_par: null },
+    { hole_number: 10, relative_to_par: -1 },
   ];
   board.teams.forEach(team => {
     const round = team.bestBallRounds.find(candidate => candidate.roundNumber === 1);
-    round.holes = [{ holeNumber: 10, relativeToPar: -1, contributorPlayerIds: [team.contributions[0].playerId], status: 'final' },
-      { holeNumber: 11, relativeToPar: null, contributorPlayerIds: [], status: 'unscored' }];
+    round.holes = Array.from({ length: 18 }, (_, index) => {
+      const holeNumber = index + 1;
+      return { holeNumber, relativeToPar: holeNumber === 10 ? -1 : null,
+        contributorPlayerIds: holeNumber === 10 ? [team.contributions[0].playerId] : [],
+        status: holeNumber === 10 ? 'final' : holeNumber === 14 ? 'provisional' : 'unscored' };
+    });
   });
   const opened = [];
   const props = { scope: 'group-a:avatar-and-hole', board, onPlayer() {}, onHole: (player, focus) => opened.push({ player, focus }),
@@ -134,12 +138,18 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
   let markup = require('react-dom/server').renderToStaticMarkup(tree);
   assert.match(markup, /team-one\.png/); assert.match(markup, />T</); // Team 2 uses TeamAvatar's initials fallback.
   const detail = host(BestBallRoster); tree = detail.render({ board, team: board.teams[0], selectedRound: 1, onPlayer() {}, onHole: props.onHole });
-  const holeButton = nodes(tree).find(node => node.props?.['aria-label'] === 'View Opening Golfer 1 Round 1 Hole 10 replay');
-  assert.ok(holeButton); assert.match(holeButton.props.className, /cursor-pointer/);
-  holeButton.props.onClick();
+  const holeButtons = nodes(tree).filter(node => String(node.props?.['aria-label'] ?? '').startsWith('View Opening Golfer 1, Round 1, Hole '));
+  assert.equal(holeButtons.length, 18);
+  const holeButton = holeNumber => holeButtons.find(node => node.props?.['aria-label'].startsWith(`View Opening Golfer 1, Round 1, Hole ${holeNumber} —`));
+  assert.match(holeButton(10).props['aria-label'], /1 under par/);
+  assert.match(holeButton(14).props['aria-label'], /score pending/);
+  assert.match(holeButton(17).props['aria-label'], /not started/);
+  assert.match(holeButton(17).props.className, /cursor-pointer/);
+  holeButton(10).props.onClick(); holeButton(14).props.onClick(); holeButton(17).props.onClick();
   assert.deepEqual(opened[0], { player: { id: 1, name: 'Opening Golfer 1', position_group: 'GOLFER', is_active: true,
     espn_player_id: '1001', headshot_url: 'https://example.test/opening-headshot.png', country: undefined, owgr_rank: undefined }, focus: { roundNumber: 1, holeNumber: 10 } });
-  assert.equal(nodes(tree).some(node => node.props?.['aria-label'] === 'View Opening Golfer 1 Round 1 Hole 11 replay'), false);
+  assert.deepEqual(opened.slice(1).map(entry => entry.focus), [{ roundNumber: 1, holeNumber: 14 }, { roundNumber: 1, holeNumber: 17 }]);
+  assert.match(require('react-dom/server').renderToStaticMarkup(tree), /bg-emerald-500\/20/);
   const modal = require('node:fs').readFileSync('components/lineups/GolfPlayerModal.tsx', 'utf8');
   assert.match(modal, /focus \? \[focus\.roundNumber\]/); assert.match(modal, /initialHoleNumber=\{focus\?\.roundNumber === round\.round_number \? focus\.holeNumber : null\}/);
   assert.match(modal, /<GolfHoleReplayPanel/);

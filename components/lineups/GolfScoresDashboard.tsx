@@ -6,6 +6,7 @@ import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
 import { getGolfStatusMeta } from "@/lib/golf/status";
 import { formatGolfLiveProgress } from "@/lib/golf/liveLeaderboard";
+import type { BestBallHole } from "@/lib/golf/bestBall";
 import type { GolfFantasyTeam } from "@/lib/golf/competition";
 import type { GolfRules } from "@/lib/rules/leagueRules";
 import type { Player, PlayerStat, OrderedTeam, RosterSlotConfig, Slate } from "./types";
@@ -18,6 +19,13 @@ export type GolfFantasyBoard = {
 
 export function golfFantasyScore(value: number | null | undefined) {
   return value == null ? "—" : value === 0 ? "E" : value > 0 ? `+${value}` : String(value);
+}
+
+function golfHoleNavigationLabel(value: number | null | undefined, status: "unscored" | "provisional" | "final") {
+  if (value === null || value === undefined) {
+    return status === "unscored" ? "not started" : "score pending";
+  }
+  return value === 0 ? "Even" : value > 0 ? `${value} over par` : `${Math.abs(value)} under par`;
 }
 
 function currentRound(event: Record<string, any> | undefined) {
@@ -71,7 +79,10 @@ export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }:
   const eventByPlayer = new Map(board.events.map(event => [Number(event.player_id), event]));
   const hidden = round && (team.hiddenRosterPeriods ?? []).includes(round.period);
   const roster = round ? team.contributions.filter(contribution => contribution.period === round.period) : [];
-  const holes = round?.holes.filter(hole => hole.holeNumber >= 1 && hole.holeNumber <= 18) ?? [];
+  const roundHoles = new Map((round?.holes ?? []).map(hole => [hole.holeNumber, hole]));
+  const holes: BestBallHole[] = Array.from({ length: 18 }, (_, index) => roundHoles.get(index + 1) ?? {
+    holeNumber: index + 1, strokes: null, relativeToPar: null, par: null, contributorPlayerIds: [], primaryContributorPlayerId: null, unresolvedPlayerIds: [], status: "unscored",
+  });
   const teamTotal = bestBallRoundTotal(holes);
   const hasScoring = holes.some(hole => hole.status !== "unscored");
   return <div className="space-y-3 px-3 py-3">
@@ -91,7 +102,7 @@ export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }:
             return <tr key={contribution.playerId}>
               <th className="sticky left-0 bg-slate-950 px-2 py-1.5 text-left font-semibold text-slate-100"><button type="button" aria-label={`View ${golfer.name} details`} className="flex max-w-36 items-center gap-2 text-left" onClick={() => onPlayer(golfer)}><PlayerHeadshot espnGolfPlayerId={golfer.espn_player_id} imageUrl={golfer.headshot_url} playerName={golfer.name} size="xs" className="shrink-0 border-slate-700 bg-slate-900" /><span className="truncate">{golfer.name}</span></button></th>
               <td className="px-2 py-1.5 text-right font-bold text-white">{golfFantasyScore(playerRound?.score_to_par)}</td>
-              {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); const clickable = value !== null && value !== undefined && Boolean(onHole); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold text-emerald-200' : 'text-slate-300'}`}>{clickable ? <button type="button" aria-label={`View ${golfer.name} Round ${round.roundNumber} Hole ${hole.holeNumber} replay`} onClick={() => onHole!(golfer, { roundNumber: round.roundNumber, holeNumber: hole.holeNumber })} className="cursor-pointer rounded px-0.5 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300">{golfFantasyScore(value)}</button> : golfFantasyScore(value)}</td>; })}
+              {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold text-emerald-200' : 'text-slate-300'}`}>{onHole ? <button type="button" aria-label={`View ${golfer.name}, Round ${round.roundNumber}, Hole ${hole.holeNumber} — ${golfHoleNavigationLabel(value, hole.status)}`} onClick={() => onHole(golfer, { roundNumber: round.roundNumber, holeNumber: hole.holeNumber })} className="cursor-pointer rounded px-0.5 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300">{golfFantasyScore(value)}</button> : golfFantasyScore(value)}</td>; })}
             </tr>;
           })}
           <tr className="border-t-2 border-emerald-700 bg-emerald-950/40"><th className="sticky left-0 bg-emerald-950 px-2 py-2 text-left font-black text-emerald-200">BEST BALL</th><td className="bg-emerald-950 px-2 py-2 text-right font-black text-white">{golfFantasyScore(teamTotal)}</td>{holes.map(hole => <td key={hole.holeNumber} className="px-1 py-2 text-center font-black text-white">{golfFantasyScore(hole.relativeToPar)}</td>)}</tr>
