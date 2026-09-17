@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useGroupContext } from "@/components/providers/GroupProvider";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import { getGolfStatusMeta } from "@/lib/golf/status";
 import { formatGolfLiveProgress } from "@/lib/golf/liveLeaderboard";
 import type { GolfFantasyTeam } from "@/lib/golf/competition";
@@ -52,34 +53,50 @@ function StandardRoster({ board, team, onPlayer }: { board: GolfFantasyBoard; te
   </div>;
 }
 
-function BestBallRoster({ board, team, onPlayer }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void }) {
-  const rounds = team.bestBallRounds ?? [];
+function bestBallRoundTotal(holes: Array<{ relativeToPar: number | null }>) {
+  const scored = holes.filter(hole => hole.relativeToPar !== null);
+  return scored.length ? scored.reduce((total, hole) => total + hole.relativeToPar!, 0) : null;
+}
+
+function currentBestBallRound(board: GolfFantasyBoard) {
+  const scoredRounds = [1, 2, 3, 4].filter(roundNumber => board.teams.some(team =>
+    team.bestBallRounds?.find(round => round.roundNumber === roundNumber)?.holes.some(hole => hole.status !== "unscored"),
+  ));
+  return scoredRounds.at(-1) ?? 1;
+}
+
+export function BestBallRoster({ board, team, onPlayer, selectedRound }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void; selectedRound: number }) {
+  const round = team.bestBallRounds?.find(candidate => candidate.roundNumber === selectedRound);
   const eventByPlayer = new Map(board.events.map(event => [Number(event.player_id), event]));
-  return <div className="space-y-4 px-3 py-3">
-    {(team.hiddenRosterPeriods ?? []).map(period => <p key={period} className="text-xs text-amber-300">{period === "weekend" ? "Weekend lineup hidden until lock." : period === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock."}</p>)}
-    {rounds.map(round => {
-      const roster = team.contributions.filter(c => c.period === round.period);
-      const holes = round.holes.filter(hole => hole.holeNumber >= 1 && hole.holeNumber <= 18);
-      return <section key={round.roundNumber} className="overflow-x-auto rounded-lg border border-slate-800" aria-label={`Round ${round.roundNumber} Best Ball scorecard`}>
-        <div className="border-b border-slate-800 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300">R{round.roundNumber} · {round.period === 'opening' ? 'Opening roster' : round.period === 'weekend' ? 'Weekend roster' : 'Full tournament'}</div>
-        <table className="w-full min-w-[620px] border-collapse text-xs tabular-nums">
-          <thead className="bg-slate-900 text-slate-400"><tr><th className="sticky left-0 w-24 bg-slate-900 px-2 py-1.5 text-left">Golfer</th>{holes.map(hole => <th key={hole.holeNumber} className="px-1 py-1.5">{hole.holeNumber}</th>)}</tr></thead>
-          <tbody className="divide-y divide-slate-800">
-            {roster.map(contribution => {
-              const event = eventByPlayer.get(contribution.playerId);
-              const player = event?.golf_players;
-              const playerRound = (event?.golf_rounds ?? []).find((item: any) => Number(item.round_number) === round.roundNumber);
-              const playerHoles = new Map<number, { relative_to_par?: number | null }>((playerRound?.golf_holes ?? []).map((hole: any) => [Number(hole.hole_number), hole]));
-              return <tr key={contribution.playerId}>
-                <th className="sticky left-0 bg-slate-950 px-2 py-1.5 text-left font-semibold text-slate-100"><button type="button" className="max-w-24 truncate text-left" onClick={() => onPlayer({ id: contribution.playerId, name: player?.display_name ?? 'Golfer', position_group: 'GOLFER', is_active: true, espn_player_id: player?.espn_player_id, headshot_url: player?.headshot_url, country: player?.country, owgr_rank: player?.owgr_rank })}>{player?.display_name ?? `Golfer ${contribution.playerId}`}</button></th>
-                {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold text-emerald-200' : 'text-slate-300'}`}>{golfFantasyScore(value)}</td>; })}
-              </tr>;
-            })}
-            <tr className="border-t-2 border-emerald-700 bg-emerald-950/40"><th className="sticky left-0 bg-emerald-950 px-2 py-2 text-left font-black text-emerald-200">TEAM</th>{holes.map(hole => <td key={hole.holeNumber} className="px-1 py-2 text-center font-black text-white">{golfFantasyScore(hole.relativeToPar)}</td>)}</tr>
-          </tbody>
-        </table>
-      </section>;
-    })}
+  const hidden = round && (team.hiddenRosterPeriods ?? []).includes(round.period);
+  const roster = round ? team.contributions.filter(contribution => contribution.period === round.period) : [];
+  const holes = round?.holes.filter(hole => hole.holeNumber >= 1 && hole.holeNumber <= 18) ?? [];
+  const teamTotal = bestBallRoundTotal(holes);
+  const hasScoring = holes.some(hole => hole.status !== "unscored");
+  return <div className="space-y-3 px-3 py-3">
+    {hidden ? <p className="text-xs text-amber-300">{round.period === "weekend" ? "Weekend lineup hidden until lock." : round.period === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock."}</p> : null}
+    {!round ? <p className="text-xs text-slate-400">Round {selectedRound} is not available.</p> : hidden ? null : !roster.length ? <p className="text-xs text-slate-400">{round.period === "weekend" ? "Weekend roster is not available for this round yet." : "No saved roster for this round."}</p> : <section className="overflow-x-auto rounded-lg border border-slate-800" aria-label={`Round ${round.roundNumber} Best Ball scorecard`}>
+      <div className="flex items-center justify-between border-b border-slate-800 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"><span>R{round.roundNumber} · {round.period === 'opening' ? 'Opening roster' : round.period === 'weekend' ? 'Weekend roster' : 'Full tournament'}</span><span>Best Ball {hasScoring ? golfFantasyScore(teamTotal) : 'Not started'}</span></div>
+      {!hasScoring ? <p className="px-2 py-3 text-xs text-slate-400">Round {round.roundNumber} has not started.</p> : <table className="w-full min-w-[620px] border-collapse text-xs tabular-nums">
+        <thead className="bg-slate-900 text-slate-400"><tr><th className="sticky left-0 w-36 bg-slate-900 px-2 py-1.5 text-left">Golfer</th><th className="px-2 py-1.5 text-right">R{round.roundNumber}</th>{holes.map(hole => <th key={hole.holeNumber} className="px-1 py-1.5">{hole.holeNumber}</th>)}</tr></thead>
+        <tbody className="divide-y divide-slate-800">
+          {roster.map(contribution => {
+            const event = eventByPlayer.get(contribution.playerId);
+            const player = event?.golf_players;
+            const playerRound = (event?.golf_rounds ?? []).find((item: any) => Number(item.round_number) === round.roundNumber);
+            const playerHoles = new Map<number, { relative_to_par?: number | null }>((playerRound?.golf_holes ?? []).map((hole: any) => [Number(hole.hole_number), hole]));
+            const golfer = { id: contribution.playerId, name: player?.display_name ?? 'Golfer', position_group: 'GOLFER' as const, is_active: true,
+              espn_player_id: player?.espn_player_id, headshot_url: player?.headshot_url, country: player?.country, owgr_rank: player?.owgr_rank };
+            return <tr key={contribution.playerId}>
+              <th className="sticky left-0 bg-slate-950 px-2 py-1.5 text-left font-semibold text-slate-100"><button type="button" aria-label={`View ${golfer.name} details`} className="flex max-w-36 items-center gap-2 text-left" onClick={() => onPlayer(golfer)}><PlayerHeadshot espnGolfPlayerId={golfer.espn_player_id} imageUrl={golfer.headshot_url} playerName={golfer.name} size="xs" className="shrink-0 border-slate-700 bg-slate-900" /><span className="truncate">{golfer.name}</span></button></th>
+              <td className="px-2 py-1.5 text-right font-bold text-white">{golfFantasyScore(playerRound?.score_to_par)}</td>
+              {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold text-emerald-200' : 'text-slate-300'}`}>{golfFantasyScore(value)}</td>; })}
+            </tr>;
+          })}
+          <tr className="border-t-2 border-emerald-700 bg-emerald-950/40"><th className="sticky left-0 bg-emerald-950 px-2 py-2 text-left font-black text-emerald-200">BEST BALL</th><td className="bg-emerald-950 px-2 py-2 text-right font-black text-white">{golfFantasyScore(teamTotal)}</td>{holes.map(hole => <td key={hole.holeNumber} className="px-1 py-2 text-center font-black text-white">{golfFantasyScore(hole.relativeToPar)}</td>)}</tr>
+        </tbody>
+      </table>}
+    </section>}
   </div>;
 }
 
@@ -88,8 +105,15 @@ export function GolfFantasyRows({ board, onPlayer, scope }: {
 }) {
   const [expansion, setExpansion] = useState<{ scope: string; ids: number[] }>({ scope, ids: [] });
   const ids = expansion.scope === scope ? expansion.ids : [];
+  const [roundSelection, setRoundSelection] = useState<{ scope: string; round: number }>({ scope: "", round: 1 });
+  const selectedRound = roundSelection.scope === scope ? roundSelection.round : currentBestBallRound(board);
   return (
-    <div className="scores-standings" aria-label="Golf fantasy standings">
+    <div aria-label="Golf fantasy standings">
+      {board.rules.gameType === "best_ball" ? <div className="mb-3 flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1" aria-label="Best Ball round selector">
+        {[1, 2, 3, 4].map(round => <button key={round} type="button" aria-label={`Select round ${round}`} aria-pressed={selectedRound === round} onClick={() => setRoundSelection({ scope, round })}
+          className={`min-h-9 flex-1 rounded px-2 text-xs font-bold ${selectedRound === round ? "bg-emerald-700 text-white" : "text-slate-300"}`}>R{round}</button>)}
+      </div> : null}
+      <div className="scores-standings">
       {board.teams.map(team => {
         const expanded = ids.includes(team.team_id);
         const rosterId = `golf-roster-${team.team_id}`;
@@ -105,12 +129,13 @@ export function GolfFantasyRows({ board, onPlayer, scope }: {
             </button>
             {expanded ? (
               <div id={rosterId} className="border-t border-slate-800 bg-slate-950/60">
-                {board.rules.gameType === "best_ball" ? <BestBallRoster board={board} team={team} onPlayer={onPlayer} /> : <StandardRoster board={board} team={team} onPlayer={onPlayer} />}
+                {board.rules.gameType === "best_ball" ? <BestBallRoster board={board} team={team} onPlayer={onPlayer} selectedRound={selectedRound} /> : <StandardRoster board={board} team={team} onPlayer={onPlayer} />}
               </div>
             ) : null}
           </article>
         );
       })}
+      </div>
     </div>
   );
 }

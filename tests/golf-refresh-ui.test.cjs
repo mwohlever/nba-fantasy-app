@@ -5,7 +5,7 @@ const React = require('react');
 React.useCallback = (fn, deps) => React.useMemo(() => fn, deps);
 context.capturePull = true;
 const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').default;
-const { GolfFantasyRows } = require('../components/lineups/GolfScoresDashboard.tsx');
+const { GolfFantasyRows, BestBallRoster } = require('../components/lineups/GolfScoresDashboard.tsx');
 const SalarySetup = require('../components/golf/GolfSalarySetup.tsx').default;
 const { golfCompareWinners } = require('../components/lineups/GolfCompareModal.tsx');
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -53,6 +53,67 @@ test('Golf Scores shows a compact hidden-period state without roster identities'
   assert.match(text(tree), /Lineup hidden until lock/);
   assert.doesNotMatch(text(tree), /Golfer \d+/);
   assert.match(require('node:fs').readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8'), /Weekend lineup hidden until lock/);
+  h.unmount();
+});
+
+function bestBallBoard({ future = false } = {}) {
+  const players = Array.from({ length: 16 }, (_, index) => {
+    const id = index + 1;
+    const opening = id <= 4 || (id >= 9 && id <= 12);
+    return { player_id: id, golf_players: { display_name: `${opening ? 'Opening' : 'Weekend'} Golfer ${id}`, espn_player_id: id === 2 ? null : String(1000 + id),
+      headshot_url: id === 1 ? 'https://example.test/opening-headshot.png' : null }, golf_rounds: [1, 2, 3, 4].map(round_number => ({
+      round_number, score_to_par: round_number - 3, golf_holes: [{ hole_number: 1, relative_to_par: round_number - 3 }],
+    })) };
+  });
+  const team = (team_id, opening, weekend) => ({ team_id, name: `Team ${team_id}`, fantasy_points: -6, finish_position: team_id, contributions: [
+    ...opening.map(playerId => ({ playerId, period: 'opening', score: -1 })),
+    ...weekend.map(playerId => ({ playerId, period: 'weekend', score: -1 })),
+  ], bestBallRounds: [1, 2, 3, 4].map(roundNumber => ({ roundNumber, period: roundNumber <= 2 ? 'opening' : 'weekend', holes: [{
+    holeNumber: 1, relativeToPar: roundNumber - 3, contributorPlayerIds: [roundNumber <= 2 ? opening[0] : weekend[0]],
+    status: future && roundNumber >= 3 ? 'unscored' : 'final',
+  }] })) });
+  return { rules: { gameType: 'best_ball', rosterPeriods: { type: 'split_after_round_2' } }, events: players,
+    teams: [team(1, [1, 2, 3, 4], [5, 6, 7, 8]), team(2, [9, 10, 11, 12], [13, 14, 15, 16])] };
+}
+
+test('Best Ball Scores selects one shared round, keeps overall standings, and resolves opening/weekend rosters by round', () => {
+  const h = host(GolfFantasyRows), board = bestBallBoard(), selected = [];
+  const props = { scope: 'group-a:best-ball', board, onPlayer: player => selected.push(player) };
+  const standingRows = tree => nodes(tree).filter(node => node.props?.className?.includes('golf-scores-standing-toggle'));
+  let tree = h.render(props);
+  assert.match(text(tree), /Team 1.*-6/); // standings remain the overall tournament total
+  standingRows(tree)[0].props.onClick(); tree = h.render(props);
+  standingRows(tree)[1].props.onClick(); tree = h.render(props);
+  let markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.equal((markup.match(/aria-label="Round 4 Best Ball scorecard"/g) ?? []).length, 2);
+  nodes(tree).find(node => node.props?.['aria-label'] === 'Select round 1').props.onClick(); tree = h.render(props);
+  markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.match(markup, /Opening Golfer 1/); assert.doesNotMatch(markup, /Weekend Golfer 5/);
+  assert.match(markup, /opening-headshot\.png/); assert.match(markup, />OG</); // shared initials fallback, never a broken image
+  nodes(tree).find(node => node.props?.['aria-label'] === 'Select round 3').props.onClick(); tree = h.render(props);
+  markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.equal((markup.match(/aria-label="Round 3 Best Ball scorecard"/g) ?? []).length, 2);
+  assert.match(markup, /Weekend Golfer 5/); assert.doesNotMatch(markup, /Opening Golfer 1/);
+  assert.match(markup, /BEST BALL/); assert.match(markup, /R3/);
+  const detail = host(BestBallRoster); tree = detail.render({ board, team: board.teams[0], selectedRound: 3, onPlayer: player => selected.push(player) });
+  nodes(tree).find(node => node.props?.['aria-label'] === 'View Weekend Golfer 5 details').props.onClick();
+  assert.equal(selected[0].id, 5);
+  detail.unmount();
+  h.unmount();
+});
+
+test('Best Ball future rounds render one selected not-started scorecard', () => {
+  const h = host(GolfFantasyRows), board = bestBallBoard({ future: true });
+  const props = { scope: 'group-a:future-best-ball', board, onPlayer() {} };
+  let tree = h.render(props);
+  nodes(tree).filter(node => node.props?.className?.includes('golf-scores-standing-toggle'))[0].props.onClick(); tree = h.render(props);
+  nodes(tree).filter(node => node.props?.className?.includes('golf-scores-standing-toggle'))[1].props.onClick();
+  tree = h.render(props);
+  nodes(tree).find(node => node.props?.['aria-label'] === 'Select round 4').props.onClick(); tree = h.render(props);
+  const markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.equal((markup.match(/aria-label="Round 4 Best Ball scorecard"/g) ?? []).length, 2);
+  assert.match(markup, /Round 4 has not started/);
+  assert.doesNotMatch(markup, /Round 1 Best Ball scorecard|Round 2 Best Ball scorecard|Round 3 Best Ball scorecard/);
   h.unmount();
 });
 
