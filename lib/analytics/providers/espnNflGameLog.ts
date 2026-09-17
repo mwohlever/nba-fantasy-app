@@ -65,7 +65,14 @@ export function normalizeEspnNflGameLog(payload: unknown, request: { espnPlayerI
     for (const rawCategory of array(seasonType.categories)) {
       const category = obj(rawCategory);
       if (category.splitType !== "2") continue;
-      if (!Array.isArray(category.events)) throw new Error("Regular-season category missing event rows");
+      // ESPN emits this exact metadata-only category for an active athlete with
+      // no regular-season appearance yet: { displayName, type: "event",
+      // splitType: "2" }. It is factual absence, not malformed provider data.
+      if (!Object.hasOwn(category, "events")) {
+        if (category.displayName === "Regular Season Stats" && category.type === "event") continue;
+        throw new Error("Regular-season category missing event rows");
+      }
+      if (!Array.isArray(category.events)) throw new Error("Regular-season category has invalid event rows");
       for (const rawRow of category.events) {
         const row = obj(rawRow), eventId = id(row.eventId);
         if (!eventId) throw new Error("Regular-season row missing provider event ID");
