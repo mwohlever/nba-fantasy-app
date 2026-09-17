@@ -1,6 +1,7 @@
 "use client";
 
 import GolfPlayerModal from "@/components/lineups/GolfPlayerModal";
+import type { GolfScorecardFocus } from "@/components/lineups/GolfPlayerModal";
 import PlayerModal from "@/components/lineups/PlayerModal";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import type {
@@ -15,6 +16,7 @@ type Props = {
   playerProjections: Record<number, any>;
   golfStat?: PlayerStat | null;
   golfSlateId?: number | null;
+  golfFocus?: GolfScorecardFocus | null;
 };
 
 export default function ReadOnlyPlayerModal({
@@ -24,6 +26,7 @@ export default function ReadOnlyPlayerModal({
   playerProjections,
   golfStat = null,
   golfSlateId = null,
+  golfFocus = null,
 }: Props) {
   const { selectedSport } = useSelectedSport();
 
@@ -33,6 +36,7 @@ export default function ReadOnlyPlayerModal({
         player={player}
         stat={golfStat}
         slateId={golfSlateId}
+        focus={golfFocus}
         onClose={() => setPlayer(null)}
       />
     );

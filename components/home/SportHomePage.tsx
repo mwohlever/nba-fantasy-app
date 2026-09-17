@@ -1307,7 +1307,11 @@ function HomePageContent() {
                   <div className="divide-y divide-slate-800">
                     {latestSlateRows.slice(0, 6).map(row => (
                       <div key={row.team_id} className="flex items-center justify-between px-3 py-2 text-sm">
-                        <span>{row.finish_position ?? "—"}. {row.teamName}</span>
+                        <div className="flex min-w-0 items-center gap-2"><span className="shrink-0 text-slate-400">{row.finish_position ?? "—"}.</span><TeamProfileButton teamName={row.teamName} avatarUrl={row.avatarUrl} onClick={() => {
+                          if (dataGroupId === activeGroupId && dataSport === sport && !isGroupLoading && !isSwitchingGroup) {
+                            setFantasyProfile({ scope: profileScope, team: { id: row.team_id, name: row.teamName } });
+                          }
+                        }} /></div>
                         <strong>{formatGolfScore(row.fantasy_points)}</strong>
                       </div>
                     ))}

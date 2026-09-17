@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import TeamAvatar from "@/components/ui/TeamAvatar";
 import { getGolfStatusMeta } from "@/lib/golf/status";
 import { formatGolfLiveProgress } from "@/lib/golf/liveLeaderboard";
 import type { GolfFantasyTeam } from "@/lib/golf/competition";
@@ -65,7 +66,7 @@ function currentBestBallRound(board: GolfFantasyBoard) {
   return scoredRounds.at(-1) ?? 1;
 }
 
-export function BestBallRoster({ board, team, onPlayer, selectedRound }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void; selectedRound: number }) {
+export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void; onHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void; selectedRound: number }) {
   const round = team.bestBallRounds?.find(candidate => candidate.roundNumber === selectedRound);
   const eventByPlayer = new Map(board.events.map(event => [Number(event.player_id), event]));
   const hidden = round && (team.hiddenRosterPeriods ?? []).includes(round.period);
@@ -90,7 +91,7 @@ export function BestBallRoster({ board, team, onPlayer, selectedRound }: { board
             return <tr key={contribution.playerId}>
               <th className="sticky left-0 bg-slate-950 px-2 py-1.5 text-left font-semibold text-slate-100"><button type="button" aria-label={`View ${golfer.name} details`} className="flex max-w-36 items-center gap-2 text-left" onClick={() => onPlayer(golfer)}><PlayerHeadshot espnGolfPlayerId={golfer.espn_player_id} imageUrl={golfer.headshot_url} playerName={golfer.name} size="xs" className="shrink-0 border-slate-700 bg-slate-900" /><span className="truncate">{golfer.name}</span></button></th>
               <td className="px-2 py-1.5 text-right font-bold text-white">{golfFantasyScore(playerRound?.score_to_par)}</td>
-              {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold text-emerald-200' : 'text-slate-300'}`}>{golfFantasyScore(value)}</td>; })}
+              {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); const clickable = value !== null && value !== undefined && Boolean(onHole); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold text-emerald-200' : 'text-slate-300'}`}>{clickable ? <button type="button" aria-label={`View ${golfer.name} Round ${round.roundNumber} Hole ${hole.holeNumber} replay`} onClick={() => onHole!(golfer, { roundNumber: round.roundNumber, holeNumber: hole.holeNumber })} className="cursor-pointer rounded px-0.5 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300">{golfFantasyScore(value)}</button> : golfFantasyScore(value)}</td>; })}
             </tr>;
           })}
           <tr className="border-t-2 border-emerald-700 bg-emerald-950/40"><th className="sticky left-0 bg-emerald-950 px-2 py-2 text-left font-black text-emerald-200">BEST BALL</th><td className="bg-emerald-950 px-2 py-2 text-right font-black text-white">{golfFantasyScore(teamTotal)}</td>{holes.map(hole => <td key={hole.holeNumber} className="px-1 py-2 text-center font-black text-white">{golfFantasyScore(hole.relativeToPar)}</td>)}</tr>
@@ -100,8 +101,8 @@ export function BestBallRoster({ board, team, onPlayer, selectedRound }: { board
   </div>;
 }
 
-export function GolfFantasyRows({ board, onPlayer, scope }: {
-  board: GolfFantasyBoard; onPlayer: (player: Player) => void; scope: string;
+export function GolfFantasyRows({ board, onPlayer, onHole, scope, teamAvatarById = new Map<number, string | null>() }: {
+  board: GolfFantasyBoard; onPlayer: (player: Player) => void; onHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void; scope: string; teamAvatarById?: Map<number, string | null>;
 }) {
   const [expansion, setExpansion] = useState<{ scope: string; ids: number[] }>({ scope, ids: [] });
   const ids = expansion.scope === scope ? expansion.ids : [];
@@ -122,6 +123,7 @@ export function GolfFantasyRows({ board, onPlayer, scope }: {
             <button type="button" className="scores-standing-toggle golf-scores-standing-toggle" aria-expanded={expanded} aria-controls={rosterId}
               onClick={() => setExpansion({ scope, ids: expanded ? ids.filter(id => id !== team.team_id) : [...ids, team.team_id] })}>
               <span className="scores-standing-rank">{team.finish_position ?? "—"}</span>
+              <TeamAvatar teamName={team.name} avatarUrl={teamAvatarById.get(team.team_id) ?? null} size="chip" />
               <span className="scores-standing-name"><strong>{team.name}</strong></span>
               <span className="scores-standing-score">{golfFantasyScore(team.fantasy_points)}</span>
               <span className="scores-standing-chevron" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
@@ -129,7 +131,7 @@ export function GolfFantasyRows({ board, onPlayer, scope }: {
             </button>
             {expanded ? (
               <div id={rosterId} className="border-t border-slate-800 bg-slate-950/60">
-                {board.rules.gameType === "best_ball" ? <BestBallRoster board={board} team={team} onPlayer={onPlayer} selectedRound={selectedRound} /> : <StandardRoster board={board} team={team} onPlayer={onPlayer} />}
+                {board.rules.gameType === "best_ball" ? <BestBallRoster board={board} team={team} onPlayer={onPlayer} onHole={onHole} selectedRound={selectedRound} /> : <StandardRoster board={board} team={team} onPlayer={onPlayer} />}
               </div>
             ) : null}
           </article>
@@ -145,9 +147,10 @@ type Props = {
   lastRefreshSummary: unknown; getPlayersForTeam: (id: number) => Player[];
   getTeamStats: (id: number) => unknown; getRawPlayerStat: (id: number) => PlayerStat | null;
   controls?: ReactNode; setProfilePlayer: (player: Player | null) => void;
+  openGolfHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void;
 };
 
-export default function GolfScoresDashboard({ selectedSlate, lastRefreshSummary, controls, setProfilePlayer }: Props) {
+export default function GolfScoresDashboard({ teams, selectedSlate, lastRefreshSummary, controls, setProfilePlayer, openGolfHole }: Props) {
   const { groupContext, isLoading, isSwitchingGroup } = useGroupContext();
   const scope = `${groupContext?.group.id}:${selectedSlate?.id}`;
   const [state, setState] = useState<{ scope: string; board?: GolfFantasyBoard; error?: string } | null>(null);
@@ -168,7 +171,8 @@ export default function GolfScoresDashboard({ selectedSlate, lastRefreshSummary,
         <p className="text-xs text-slate-500">Fantasy scoring · Lower is better · Expand teams to compare golfers</p></header>
       {controls}
       {current?.error ? <p role="alert" className="text-sm text-red-700">{current.error}</p> : null}
-      {current?.board ? <GolfFantasyRows board={current.board} scope={scope} onPlayer={setProfilePlayer} />
+      {current?.board ? <GolfFantasyRows board={current.board} scope={scope} onPlayer={setProfilePlayer} onHole={openGolfHole}
+        teamAvatarById={new Map(teams.map(team => [team.id, team.avatarUrl ?? null]))} />
           : <p className="text-sm text-slate-500">Loading fantasy scores…</p>}
     </section>
   );

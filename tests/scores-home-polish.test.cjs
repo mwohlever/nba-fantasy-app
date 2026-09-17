@@ -98,6 +98,7 @@ test('Golf retains its separate modal and roster route; Home pull is limited to 
   assert.match(source, /if \(!isGolf \|\| !slateRosterModal\)/);
   assert.match(source, /api\/team-slate-roster/);
   assert.match(source, /isGolf && <ReadOnlyPlayerModal/);
+  assert.match(source, /<TeamProfileButton teamName=\{row\.teamName\} avatarUrl=\{row\.avatarUrl\}/);
 });
 
 test('Home row has four explicit grid regions with shrinkable details and a separate right-aligned score', () => {

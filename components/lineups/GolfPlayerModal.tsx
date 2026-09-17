@@ -14,8 +14,11 @@ type Props = {
   player: Player;
   stat: PlayerStat | null;
   slateId: number | null;
+  focus?: GolfScorecardFocus | null;
   onClose: () => void;
 };
+
+export type GolfScorecardFocus = { roundNumber: number; holeNumber: number };
 
 function formatToPar(value: number | null | undefined) {
   if (value === null || value === undefined) return "—";
@@ -275,6 +278,7 @@ function RoundScorecard({
   onToggle,
   slateId,
   playerId,
+  initialHoleNumber = null,
 }: {
   round: GolfRoundStat;
   contextLabel: string;
@@ -282,6 +286,7 @@ function RoundScorecard({
   onToggle: () => void;
   slateId: number | null;
   playerId: number;
+  initialHoleNumber?: number | null;
 }) {
   // Accepted server props are the only scorecard state. Replay requests reload the parent data.
   const holesByNumber = new Map(round.holes.map(hole => [hole.hole_number, hole]));
@@ -327,7 +332,7 @@ function RoundScorecard({
       : round.strokes;
 
   const [selectedHoleNumber, setSelectedHoleNumber] =
-    useState<number | null>(null);
+    useState<number | null>(initialHoleNumber);
 
   const roundProgress =
     displayHolesCompleted >= 18
@@ -525,6 +530,7 @@ export default function GolfPlayerModal({
   player,
   stat,
   slateId,
+  focus = null,
   onClose,
 }: Props) {
   const persistedRounds = [
@@ -613,7 +619,7 @@ export default function GolfPlayerModal({
 
   const [expandedRoundNumbers, setExpandedRoundNumbers] =
     useState<number[]>(() =>
-      primaryRound ? [primaryRound.round_number] : [],
+      focus ? [focus.roundNumber] : primaryRound ? [primaryRound.round_number] : [],
     );
 
   function toggleRound(roundNumber: number) {
@@ -810,6 +816,7 @@ export default function GolfPlayerModal({
                       }
                       slateId={slateId}
                       playerId={player.id}
+                      initialHoleNumber={focus?.roundNumber === round.round_number ? focus.holeNumber : null}
                     />
                   );
                 })}

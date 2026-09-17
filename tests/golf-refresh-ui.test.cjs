@@ -117,6 +117,42 @@ test('Best Ball future rounds render one selected not-started scorecard', () => 
   h.unmount();
 });
 
+test('Best Ball team avatars and hole replay links reuse existing identity and focus state', () => {
+  const h = host(GolfFantasyRows), board = bestBallBoard();
+  board.events[0].golf_rounds.find(round => round.round_number === 1).golf_holes = [
+    { hole_number: 10, relative_to_par: -1 }, { hole_number: 11, relative_to_par: null },
+  ];
+  board.teams.forEach(team => {
+    const round = team.bestBallRounds.find(candidate => candidate.roundNumber === 1);
+    round.holes = [{ holeNumber: 10, relativeToPar: -1, contributorPlayerIds: [team.contributions[0].playerId], status: 'final' },
+      { holeNumber: 11, relativeToPar: null, contributorPlayerIds: [], status: 'unscored' }];
+  });
+  const opened = [];
+  const props = { scope: 'group-a:avatar-and-hole', board, onPlayer() {}, onHole: (player, focus) => opened.push({ player, focus }),
+    teamAvatarById: new Map([[1, 'https://example.test/team-one.png']]) };
+  let tree = h.render(props);
+  let markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.match(markup, /team-one\.png/); assert.match(markup, />T</); // Team 2 uses TeamAvatar's initials fallback.
+  const detail = host(BestBallRoster); tree = detail.render({ board, team: board.teams[0], selectedRound: 1, onPlayer() {}, onHole: props.onHole });
+  const holeButton = nodes(tree).find(node => node.props?.['aria-label'] === 'View Opening Golfer 1 Round 1 Hole 10 replay');
+  assert.ok(holeButton); assert.match(holeButton.props.className, /cursor-pointer/);
+  holeButton.props.onClick();
+  assert.deepEqual(opened[0], { player: { id: 1, name: 'Opening Golfer 1', position_group: 'GOLFER', is_active: true,
+    espn_player_id: '1001', headshot_url: 'https://example.test/opening-headshot.png', country: undefined, owgr_rank: undefined }, focus: { roundNumber: 1, holeNumber: 10 } });
+  assert.equal(nodes(tree).some(node => node.props?.['aria-label'] === 'View Opening Golfer 1 Round 1 Hole 11 replay'), false);
+  const modal = require('node:fs').readFileSync('components/lineups/GolfPlayerModal.tsx', 'utf8');
+  assert.match(modal, /focus \? \[focus\.roundNumber\]/); assert.match(modal, /initialHoleNumber=\{focus\?\.roundNumber === round\.round_number \? focus\.holeNumber : null\}/);
+  assert.match(modal, /<GolfHoleReplayPanel/);
+  detail.unmount();
+  h.unmount();
+});
+
+test('Golf Scores uses Tournaments while non-Golf Scores retains Slates', () => {
+  const builder = require('node:fs').readFileSync('components/lineups/LineupBuilder.tsx', 'utf8');
+  assert.match(builder, /\? "Tournaments" : "Slates"/);
+  assert.match(builder, /setIsGolfSlateMenuOpen\(true\)/);
+});
+
 test('pull refresh preserves unsaved period selections, flags invalidity and retains revision conflict', async () => {
   const oldFetch = global.fetch;
   let revision = 1, eligible = true, requests = 0;

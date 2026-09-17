@@ -20,6 +20,7 @@ import { refreshGolfFromBrowser, shouldApplyGolfSnapshot } from "@/lib/client/re
 
 import DraftPlayerModal from "@/components/lineups/DraftPlayerModal";
 import ReadOnlyPlayerModal from "@/components/lineups/ReadOnlyPlayerModal";
+import type { GolfScorecardFocus } from "@/components/lineups/GolfPlayerModal";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import SlotDraftModal from "@/components/lineups/SlotDraftModal";
@@ -174,6 +175,7 @@ export default function LineupBuilder({
     setIsInspectingPlayerFromSlot,
   ] = useState(false);
   const [profilePlayer, setProfilePlayer] = useState<Player | null>(null);
+  const [golfScorecardFocus, setGolfScorecardFocus] = useState<GolfScorecardFocus | null>(null);
   const [leagueResearchPlayer, setLeagueResearchPlayer] =
     useState<Player | null>(null);
   const [targetDraftSlot, setTargetDraftSlot] =
@@ -2333,7 +2335,7 @@ export default function LineupBuilder({
             }
             className="flex shrink-0 items-center justify-center rounded-xl border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm font-black text-slate-100 transition hover:border-sky-500"
           >
-            Slates
+            {(selectedSlate?.sport ?? selectedSport) === "golf" ? "Tournaments" : "Slates"}
             <span
               aria-hidden="true"
               className="ml-1"
@@ -2813,7 +2815,8 @@ export default function LineupBuilder({
               ? golfScoresControls
               : lineupControls
           }
-          setProfilePlayer={setProfilePlayer}
+          setProfilePlayer={(player) => { setGolfScorecardFocus(null); setProfilePlayer(player); }}
+          openGolfHole={(player, focus) => { setGolfScorecardFocus(focus); setProfilePlayer(player); }}
         />
       )}
 
@@ -2925,7 +2928,7 @@ export default function LineupBuilder({
 
       <ReadOnlyPlayerModal
         player={profilePlayer}
-        setPlayer={setProfilePlayer}
+        setPlayer={(player) => { if (!player) setGolfScorecardFocus(null); setProfilePlayer(player); }}
         playerAverageMap={playerAverageMap}
         playerProjections={playerProjections}
         golfStat={
@@ -2938,6 +2941,7 @@ export default function LineupBuilder({
             ? selectedSlate.id
             : null
         }
+        golfFocus={golfScorecardFocus}
       />
 
       <PlayerResearchModal

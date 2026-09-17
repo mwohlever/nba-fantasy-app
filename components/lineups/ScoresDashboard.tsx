@@ -68,6 +68,7 @@ type Props = {
   playerProjections: Record<number, any>;
   controls?: ReactNode;
   setProfilePlayer: (player: Player | null) => void;
+  openGolfHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void;
 };
 
 function formatScore(value: number | null | undefined) {
@@ -270,6 +271,7 @@ export default function ScoresDashboard(props: Props) {
         getRawPlayerStat={props.getRawPlayerStat}
         controls={props.controls}
         setProfilePlayer={props.setProfilePlayer}
+        openGolfHole={props.openGolfHole}
       />
     );
   }

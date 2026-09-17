@@ -8244,9 +8244,9 @@ html
 .scores-standing-score small, .scores-roster-points small { font-size: 0.65rem; font-weight: 500; color: var(--app-text-muted); }
 .scores-standing-chevron { grid-column: 4; grid-row: 2; text-align: right; color: var(--app-text-muted); }
 .scores-standing-games { grid-column: 3; font-size: 0.7rem; color: var(--app-text-muted); }
-.golf-scores-standing-toggle { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
-.golf-scores-standing-toggle .scores-standing-chevron { grid-column: 3; }
-.golf-scores-standing-toggle .scores-standing-games { grid-column: 2; }
+.golf-scores-standing-toggle { grid-template-columns: 1.4rem 1.5rem minmax(0, 1fr) auto; }
+.golf-scores-standing-toggle .scores-standing-chevron { grid-column: 4; }
+.golf-scores-standing-toggle .scores-standing-games { grid-column: 3; }
 .scores-expanded-roster { padding: 0 0.2rem 0.5rem; }
 .scores-roster-row { position: relative; border-top: 1px solid var(--app-border); }
 .scores-roster-player {

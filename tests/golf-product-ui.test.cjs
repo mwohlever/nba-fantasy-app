@@ -149,7 +149,7 @@ test('Scores uses compact Standard context and authoritative Best Ball hole cont
   assert.doesNotMatch(scores, /Tour<br/);
   assert.doesNotMatch(scores, /Fantasy<\/small/);
   assert.match(scores, /golf-scores-standing-toggle/);
-  assert.match(fs.readFileSync('app/globals.css', 'utf8'), /\.golf-scores-standing-toggle \{ grid-template-columns: 1\.4rem minmax\(0, 1fr\) auto; \}/);
+  assert.match(fs.readFileSync('app/globals.css', 'utf8'), /\.golf-scores-standing-toggle \{ grid-template-columns: 1\.4rem 1\.5rem minmax\(0, 1fr\) auto; \}/);
   assert.match(scores, /grid-cols-\[3\.7rem_2\.6rem_4\.5rem\]/);
 });
 
