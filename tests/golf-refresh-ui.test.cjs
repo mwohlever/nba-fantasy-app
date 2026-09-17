@@ -121,14 +121,17 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
   const h = host(GolfFantasyRows), board = bestBallBoard();
   board.events[0].golf_rounds.find(round => round.round_number === 1).golf_holes = [
     { hole_number: 10, relative_to_par: -1 },
+    { hole_number: 11, relative_to_par: 1 },
+    { hole_number: 12, relative_to_par: 0 },
   ];
   board.teams.forEach(team => {
     const round = team.bestBallRounds.find(candidate => candidate.roundNumber === 1);
     round.holes = Array.from({ length: 18 }, (_, index) => {
       const holeNumber = index + 1;
-      return { holeNumber, relativeToPar: holeNumber === 10 ? -1 : null,
+      const relativeToPar = holeNumber === 10 ? -1 : holeNumber === 11 ? 1 : holeNumber === 12 ? 0 : null;
+      return { holeNumber, relativeToPar,
         contributorPlayerIds: holeNumber === 10 ? [team.contributions[0].playerId] : [],
-        status: holeNumber === 10 ? 'final' : holeNumber === 14 ? 'provisional' : 'unscored' };
+        status: [10, 11, 12].includes(holeNumber) ? 'final' : holeNumber === 14 ? 'provisional' : 'unscored' };
     });
   });
   const opened = [];
@@ -145,11 +148,16 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
   assert.match(holeButton(14).props['aria-label'], /score pending/);
   assert.match(holeButton(17).props['aria-label'], /not started/);
   assert.match(holeButton(17).props.className, /cursor-pointer/);
+  assert.match(holeButton(10).props.className, /bg-emerald-100 text-emerald-900/);
+  assert.match(holeButton(11).props.className, /bg-red-100 text-red-900/);
+  assert.match(holeButton(12).props.className, /bg-white text-slate-700/);
+  assert.match(holeButton(17).props.className, /bg-slate-50 text-slate-400/);
+  assert.match(holeButton(10).props.className, /outline-sky-200/);
+  assert.doesNotMatch(holeButton(10).props.className, /bg-emerald-500\/20/);
   holeButton(10).props.onClick(); holeButton(14).props.onClick(); holeButton(17).props.onClick();
   assert.deepEqual(opened[0], { player: { id: 1, name: 'Opening Golfer 1', position_group: 'GOLFER', is_active: true,
     espn_player_id: '1001', headshot_url: 'https://example.test/opening-headshot.png', country: undefined, owgr_rank: undefined }, focus: { roundNumber: 1, holeNumber: 10 } });
   assert.deepEqual(opened.slice(1).map(entry => entry.focus), [{ roundNumber: 1, holeNumber: 14 }, { roundNumber: 1, holeNumber: 17 }]);
-  assert.match(require('react-dom/server').renderToStaticMarkup(tree), /bg-emerald-500\/20/);
   const modal = require('node:fs').readFileSync('components/lineups/GolfPlayerModal.tsx', 'utf8');
   assert.match(modal, /focus \? \[focus\.roundNumber\]/); assert.match(modal, /initialHoleNumber=\{focus\?\.roundNumber === round\.round_number \? focus\.holeNumber : null\}/);
   assert.match(modal, /<GolfHoleReplayPanel/);
@@ -179,10 +187,14 @@ test('Standard Golf uses the selected round scorecard and all-hole modal navigat
   const props = { scope: 'group-a:standard', board, onPlayer() {}, onHole: (player, focus) => opened.push({ player, focus }) };
   let tree = h.render(props); nodes(tree).find(node => node.props?.className?.includes('golf-scores-standing-toggle')).props.onClick(); tree = h.render(props);
   const detail = host(StandardRoster); tree = detail.render({ board, team: board.teams[0], selectedRound: 4, onPlayer() {}, onHole: props.onHole });
-  assert.match(require('react-dom/server').renderToStaticMarkup(tree), /Round 4 Golf scorecard/); assert.doesNotMatch(text(tree), /BEST BALL/);
+  let markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.match(markup, /Round 4 Golf scorecard/); assert.doesNotMatch(text(tree), /BEST BALL/);
+  assert.match(markup, /bg-red-100 text-red-900/);
   const r4Future = nodes(tree).find(node => node.props?.['aria-label'] === 'View Scottie, Round 4, Hole 17 — not started');
   assert.ok(r4Future); r4Future.props.onClick(); assert.deepEqual(opened[0].focus, { roundNumber: 4, holeNumber: 17 });
   tree = detail.render({ board, team: board.teams[0], selectedRound: 1, onPlayer() {}, onHole: props.onHole });
+  markup = require('react-dom/server').renderToStaticMarkup(tree);
+  assert.match(markup, /bg-emerald-100 text-emerald-900/);
   const r1Completed = nodes(tree).find(node => node.props?.['aria-label'] === 'View Scottie, Round 1, Hole 14 — 1 under par');
   assert.ok(r1Completed); r1Completed.props.onClick(); assert.deepEqual(opened[1].focus, { roundNumber: 1, holeNumber: 14 });
   assert.equal(nodes(tree).filter(node => String(node.props?.['aria-label'] ?? '').startsWith('View Scottie, Round 1, Hole ')).length, 18);
