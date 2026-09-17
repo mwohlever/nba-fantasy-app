@@ -41,6 +41,7 @@ import {
   canPlayerFillRosterSlot,
   getRosterSlotsFromRulesSnapshot,
 } from "@/lib/rules/leagueRules";
+import type { DraftProjection } from "@/lib/lineups/draftProjectionTypes";
 import type {
   Player,
   PlayerHistoryDetailRow,
@@ -578,24 +579,27 @@ export default function LineupBuilder({
     return map;
   }, [playerStatsState]);
 
-  const [playerProjections, setPlayerProjections] = useState<Record<number, any>>({});
+  const [playerProjections, setPlayerProjections] = useState<Record<number, DraftProjection>>({});
 
   useEffect(() => {
-    if (!selectedSeason) return;
-
-    if ((sport ?? "nba") !== "nba") {
+    if (!isDraftPage || !selectedSlateIdNumber || (sport ?? selectedSport) === "golf") {
       setPlayerProjections({});
       return;
     }
-
-    fetch(`/api/player-projections?season=${selectedSeason}`, { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => setPlayerProjections(data.projections || {}))
+    let cancelled = false;
+    setPlayerProjections({});
+    fetch(`/api/draft-projections?slateId=${selectedSlateIdNumber}`, { cache: "no-store" })
+      .then(async (response) => ({ response, body: await response.json() }))
+      .then(({ response, body }) => {
+        if (!response.ok) throw new Error(body?.error || "Failed to load Draft projections");
+        if (!cancelled) setPlayerProjections(body.projections || {});
+      })
       .catch((error) => {
-        console.error("Failed to load player projections", error);
-        setPlayerProjections({});
+        console.error("Failed to load Draft projections", error);
+        if (!cancelled) setPlayerProjections({});
       });
-  }, [selectedSeason, sport]);
+    return () => { cancelled = true; };
+  }, [isDraftPage, selectedSlateIdNumber, selectedSport, sport]);
 
   const playerAverageMap = useMemo(() => {
     const map = new Map<number, number>();

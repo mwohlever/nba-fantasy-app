@@ -147,7 +147,6 @@ export function GolfFantasyRows({ board, onPlayer, onHole, scope, teamAvatarById
               <span className="scores-standing-name"><strong>{team.name}</strong></span>
               <span className="scores-standing-score">{golfFantasyScore(team.fantasy_points)}</span>
               <span className="scores-standing-chevron" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
-              <span className="scores-standing-games">{team.provisional ? "Live scoring · " : ""}{(team.hiddenRosterPeriods?.length ?? 0) > 0 ? "Lineup hidden until lock" : `${team.contributions.length} golfer selections`}</span>
             </button>
             {expanded ? (
               <div id={rosterId} className="border-t border-slate-800 bg-slate-950/60">

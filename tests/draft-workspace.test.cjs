@@ -477,7 +477,7 @@ test('ordinary member has no Edit Picks even on their own completed history',asy
   h.unmount();
 });
 
-test('NBA/NFL card primary selects fixed target; Info researches; normal pool retains profile flow',async()=>{
+test('NBA/NFL Projection cards select fixed targets; Info researches; normal pool opens the Draft flow',async()=>{
   for(const sport of ['nba','nfl']) {
     const {h,props,tree}=await setup(sport,{role:'admin'});
     const poolProps=find(tree,Pool).props;
@@ -494,8 +494,8 @@ test('NBA/NFL card primary selects fixed target; Info researches; normal pool re
     pool=p.render(poolProps);
     assert.ok(!nodes(pool).some(n=>n.props?.['aria-label']==='Info about Player Ten'));
     nodes(pool).find(n=>n.type==='button' && n.props.className?.startsWith('draft-player-card ')).props.onClick();
-    assert.equal(find(p.render(poolProps),Research).props.player.id,10);
-    assert.equal(find(h.render(props),Modal).props.draftingPlayer,null);
+    assert.equal(find(p.render(poolProps),Research).props.player,null);
+    assert.equal(find(h.render(props),Modal).props.draftingPlayer.id,10);
     p.unmount();h.unmount();
   }
 });

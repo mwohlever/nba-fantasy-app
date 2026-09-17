@@ -57,12 +57,12 @@ test('independent team expansion survives score updates; collapse affects only o
 
 test('Golf Scores shows a compact hidden-period state without roster identities', () => {
   const h = host(GolfFantasyRows);
-  const board = { rules: { gameType: 'standard' }, events: [], teams: [{ team_id: 2, name: 'Other Team', fantasy_points: null, contributions: [], hiddenRosterPeriods: ['weekend'] }] };
+  const board = { rules: { gameType: 'standard', rosterPeriods: { type: 'split_after_round_2' } }, events: [], teams: [{ team_id: 2, name: 'Other Team', fantasy_points: null, contributions: [], hiddenRosterPeriods: ['weekend'] }] };
   const props = { scope: 'group-a:1', board, onPlayer() {} };
   let tree = h.render(props);
   nodes(tree).find(n => n.props?.className?.includes('golf-scores-standing-toggle')).props.onClick();
   tree = h.render(props);
-  assert.match(text(tree), /Lineup hidden until lock/);
+  assert.doesNotMatch(text(tree), /Lineup hidden until lock/);
   assert.doesNotMatch(text(tree), /Golfer \d+/);
   assert.match(require('node:fs').readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8'), /Weekend lineup hidden until lock/);
   h.unmount();
@@ -189,13 +189,14 @@ test('Golf Scores uses Tournaments while non-Golf Scores retains Slates', () => 
   assert.match(builder, /setIsGolfSlateMenuOpen\(true\)/);
 });
 
-test('Best Ball describes provisional scoring without implying an unsubmitted lineup', () => {
+test('Golf Scores team rows omit implementation-status and roster-count detail', () => {
   const h = host(GolfFantasyRows);
   const board = bestBallBoard();
   board.teams[0].provisional = true;
   const tree = h.render({ scope: 'group-a:live-scoring', board, onPlayer() {} });
-  assert.match(text(tree), /Live scoring ·\s+8 golfer selections/);
-  assert.doesNotMatch(text(tree), /Provisional/);
+  assert.doesNotMatch(text(tree), /Live scoring|golfer selections|Provisional/);
+  const styles = require('node:fs').readFileSync('app/globals.css', 'utf8');
+  assert.match(styles, /\.golf-scores-standing-toggle \.scores-standing-chevron \{ grid-column: 4; grid-row: 1; \}/);
   h.unmount();
 });
 

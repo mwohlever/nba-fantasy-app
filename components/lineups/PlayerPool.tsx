@@ -6,6 +6,7 @@ import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import PlayerResearchModal from "@/components/lineups/PlayerResearchModal";
 import GolfCompareModal from "@/components/lineups/GolfCompareModal";
 import { useSelectedSport } from "@/components/providers/SportProvider";
+import { compareDraftProjections, type DraftProjection, withHistoricalFantasyAverage } from "@/lib/lineups/draftProjectionTypes";
 import type {
   Player,
   PositionFilter,
@@ -33,7 +34,7 @@ type PlayerPoolProps = {
   availablePlayerIdsForSlate: number[];
   availablePlayerIdSet: Set<number>;
   playerAverageMap: Map<number, number>;
-  playerProjections: Record<number, any>;
+  playerProjections: Record<number, DraftProjection>;
   getOwnerTeamForPlayer: (
     playerId: number
   ) => Team | null;
@@ -259,6 +260,7 @@ type LeagueHistoryStat = {
 };
 
 type ResearchMode =
+  | "projection"
   | "league"
   | "season";
 
@@ -303,6 +305,14 @@ function formatScore(value: unknown) {
     : "—";
 }
 
+function resolveDraftProjection(
+  playerId: number,
+  playerProjections: Record<number, DraftProjection>,
+  playerAverageMap: Map<number, number>,
+): DraftProjection {
+  return withHistoricalFantasyAverage(playerProjections[playerId], playerAverageMap.get(playerId));
+}
+
 export default function PlayerPool({
   players,
   filteredPlayers,
@@ -341,8 +351,8 @@ export default function PlayerPool({
     researchMode,
     setResearchMode,
   ] =
-    useState<ResearchMode>(
-      "season",
+  useState<ResearchMode>(
+      selectedSport === "golf" ? "season" : "projection",
     );
 
   const [
@@ -431,16 +441,16 @@ export default function PlayerPool({
 
   const [nflStatsSeason, setNflStatsSeason] = useState<number | null>(null);
   const [nflAscending, setNflAscending] = useState(false);
+  const [sortBy, setSortBy] =
+    useState<SortOption>(
+      selectedSport === "golf" ? "owgr" : "projection",
+    );
+
   useEffect(() => {
     if (!isNfl || researchMode !== "season") return;
     setSortBy(nflPositionStats(positionFilter)[0] ?? "name");
     setNflAscending(nflPositionStats(positionFilter).length === 0);
   }, [isNfl, positionFilter, researchMode]);
-
-  const [sortBy, setSortBy] =
-    useState<SortOption>(
-      selectedSport === "golf" ? "owgr" : "projection",
-    );
 
   useEffect(() => {
     setOnSlateOnly(false);
@@ -448,7 +458,7 @@ export default function PlayerPool({
 
   useEffect(() => {
     setResearchMode(
-      "season",
+      isGolf ? "season" : "projection",
     );
 
     setCompareMode(
@@ -470,9 +480,7 @@ export default function PlayerPool({
     setSortBy(
       isGolf
         ? "golf_scoring_avg"
-        : isNfl
-          ? (nflPositionStats(positionFilter)[0] ?? "name")
-          : "season_fp",
+        : "projection",
     );
   }, [
     selectedSport,
@@ -1171,17 +1179,11 @@ export default function PlayerPool({
       }
 
       if (sortBy === "projection") {
-        const aScore =
-          playerProjections?.[a.id]?.projection ??
-          playerAverageMap.get(a.id) ??
-          0;
-
-        const bScore =
-          playerProjections?.[b.id]?.projection ??
-          playerAverageMap.get(b.id) ??
-          0;
-
-        return Number(bScore) - Number(aScore);
+        const comparison = compareDraftProjections(
+          resolveDraftProjection(a.id, playerProjections, playerAverageMap),
+          resolveDraftProjection(b.id, playerProjections, playerAverageMap),
+        );
+        return comparison !== 0 ? comparison : a.name.localeCompare(b.name);
       }
 
       if (sortBy === "average") {
@@ -1718,10 +1720,10 @@ export default function PlayerPool({
     }
 
     setResearchMode(
-      "season",
+      "projection",
     );
 
-    setSortBy(nflPositionStats(positionFilter)[0] ?? "name");
+    setSortBy("projection");
 
     setCompareMode(
       false,
@@ -1738,7 +1740,27 @@ export default function PlayerPool({
     <section className="draft-player-pool">
       {hasSeasonResearch ? (
         <div className="mb-4 space-y-3 rounded-2xl border border-slate-700 bg-slate-950 p-3 text-white">
-          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900 p-1">
+          <div className={`grid gap-1 rounded-xl bg-slate-900 p-1 ${isGolf ? "grid-cols-2" : "grid-cols-3"}`}>
+            {!isGolf ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setResearchMode("projection");
+                  setSortBy("projection");
+                  setCompareMode(false);
+                  setComparePlayerIds([]);
+                }}
+                className={`rounded-lg px-3 py-2 text-sm font-black transition ${
+                  researchMode === "projection"
+                    ? isNfl
+                      ? "bg-sky-600 text-white"
+                      : "bg-orange-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Projection
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => {
@@ -2047,15 +2069,16 @@ export default function PlayerPool({
 
             <select
               value={sortBy}
-              onChange={(event) =>
-                setSortBy(
-                  event.target.value as SortOption
-                )
-              }
+              onChange={(event) => {
+                const next = event.target.value as SortOption;
+                if (next === "projection" && !isGolf) setResearchMode("projection");
+                setSortBy(next);
+              }}
             >
               {researchMode ===
                 "league" ? (
                 <>
+                  {!isGolf ? <option value="projection">Projection</option> : null}
                   <option value="times_drafted">
                     Times Drafted
                   </option>
@@ -2164,6 +2187,7 @@ export default function PlayerPool({
                 researchMode ===
                   "season" ? (
                 <>
+                  <option value="projection">Projection</option>
                   {nflPositionStats(positionFilter).map(key => <option key={key} value={key}>{nflStatFields[key][1]}</option>)}
                   <option value="name">Player Name</option>
                 </>
@@ -2171,6 +2195,7 @@ export default function PlayerPool({
                 researchMode ===
                   "season" ? (
                 <>
+                  <option value="projection">Projection</option>
                   <option value="season_fp">
                     Fantasy Points
                   </option>
@@ -2264,6 +2289,8 @@ export default function PlayerPool({
             const projectionMeta =
               playerProjections?.[player.id];
 
+            const draftProjection = resolveDraftProjection(player.id, playerProjections, playerAverageMap);
+
             const seasonStat =
               nbaSeasonStatByPlayerId.get(
                 player.id,
@@ -2304,16 +2331,12 @@ export default function PlayerPool({
                     ? seasonSortValue(
                         seasonStat,
                       )
-                    : sortBy ===
+                      : sortBy ===
                       "average"
                       ? playerAverageMap.get(
                           player.id,
                         ) ?? 0
-                      : projectionMeta?.projection ??
-                        playerAverageMap.get(
-                          player.id,
-                        ) ??
-                        0;
+                      : draftProjection.projection ?? 0;
 
             const scoreLabel =
               isGolf
@@ -2432,6 +2455,25 @@ export default function PlayerPool({
                               0
                             }x`
                           : "Not drafted yet"}
+                      </span>
+                    ) : null}
+
+                    {researchMode === "projection" ? (
+                      <span
+                        className="draft-player-score"
+                        title={
+                          draftProjection.source === "nba_v2" || draftProjection.source === "nfl_v2"
+                            ? `${draftProjection.modelVersion ?? "V2"} · ${draftProjection.confidence ?? "unknown"} confidence`
+                            : draftProjection.source === "unavailable"
+                              ? "No V2 or fallback projection is available"
+                              : "Historical fallback; not a V2 projection"
+                        }
+                      >
+                        {draftProjection.projection === null
+                          ? "Proj —"
+                          : draftProjection.source === "nba_v2" || draftProjection.source === "nfl_v2"
+                            ? `Proj ${formatScore(draftProjection.projection)}`
+                            : `111 Avg ${formatScore(draftProjection.projection)}`}
                       </span>
                     ) : null}
 
