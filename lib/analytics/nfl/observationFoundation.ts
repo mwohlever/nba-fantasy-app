@@ -58,6 +58,17 @@ function requiredNumericId(label: string, value: string) {
 function validStat(value: number | null) {
   return value === null || Number.isFinite(value) && value >= 0 && Number.isInteger(value);
 }
+function timestamp(label: string, value: string | null) {
+  if (value === null) return null;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) throw new Error(`NFL observation requires valid ${label}`);
+  return parsed;
+}
+function sourceUrl(label: string, value: string | null) {
+  if (value === null) return;
+  try { if (new URL(value).protocol !== "https:") throw new Error("non-https"); }
+  catch { throw new Error(`NFL observation requires HTTPS ${label}`); }
+}
 
 /**
  * Fixed-key-order factual payload used for version identity. Do not add fetch,
@@ -70,9 +81,20 @@ export function canonicalNflObservationHashPayload(row: NflObservation) {
   requiredNumericId("provider event ID", row.providerEventId);
   requiredNumericId("team provider ID", row.team.providerId);
   requiredNumericId("opponent provider ID", row.opponent.providerId);
-  if (!Number.isInteger(row.season) || !Number.isInteger(row.week)) throw new Error("NFL observation requires integer season/week");
+  if (!Number.isInteger(row.season) || row.season < 2000 || row.season > 2100 || !Number.isInteger(row.week) || row.week < 1 || row.week > 18) throw new Error("NFL observation requires valid regular-season year/week");
+  if (row.phase !== "regular") throw new Error("NFL observation phase must be regular");
+  if (row.homeAway !== null && row.homeAway !== "home" && row.homeAway !== "away") throw new Error("Invalid NFL home/away value");
   if (row.localPlayerId !== null && (!Number.isSafeInteger(row.localPlayerId) || row.localPlayerId <= 0)) throw new Error("Invalid local NFL player ID");
   if ((row.provenance.fumbleSummarySourceUrl === null) !== (row.provenance.fumbleSummaryFetchedAt === null)) throw new Error("NFL fumble provenance URL/timestamp must be paired");
+  sourceUrl("game-log source URL", row.provenance.gameLogSourceUrl);
+  sourceUrl("fumble-summary source URL", row.provenance.fumbleSummarySourceUrl);
+  const gameAt = timestamp("game timestamp", row.gameAt), completedAt = timestamp("completion timestamp", row.completedAt);
+  const gameLogFetchedAt = timestamp("game-log fetch timestamp", row.provenance.gameLogFetchedAt)!;
+  const fumbleFetchedAt = timestamp("fumble-summary fetch timestamp", row.provenance.fumbleSummaryFetchedAt);
+  const knownAt = timestamp("known timestamp", row.provenance.knownAt)!;
+  if (completedAt !== null && completedAt < gameAt!) throw new Error("NFL completion cannot precede game");
+  if (knownAt < gameLogFetchedAt || fumbleFetchedAt !== null && knownAt < fumbleFetchedAt || knownAt <= gameAt!) throw new Error("NFL known timestamp is inconsistent with final evidence");
+  if (!row.provenance.normalizationVersion.trim()) throw new Error("NFL observation needs normalization version");
   for (const key of STAT_KEYS) if (!validStat(row.stats[key])) throw new Error(`Invalid NFL factual stat: ${key}`);
   return {
     provider: row.provider,

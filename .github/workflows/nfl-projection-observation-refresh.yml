@@ -1,0 +1,28 @@
+name: NFL projection observation refresh
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate ESPN acquisition without writing observations
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # 10:15 ET Tue and 14:15 ET Wed during EDT; static UTC runs one hour earlier in EST.
+    - cron: '15 14 * * 2'
+    - cron: '15 18 * * 3'
+permissions: { contents: read }
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NFL_PROJECTION_INGEST_BASE_URL: https://www.111sports.app
+      NFL_PROJECTION_INGEST_SECRET: ${{ secrets.NFL_PROJECTION_INGEST_SECRET }}
+      NFL_PROJECTION_SEASON: '2026'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: npm ci --ignore-scripts --omit=optional
+      - run: node scripts/run-nfl-projection-observation-refresh.cjs ${{ inputs.dry_run && '--dry-run' || '' }}

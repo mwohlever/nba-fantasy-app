@@ -15,6 +15,14 @@ export function espnNflEventSummaryUrl(eventId: string) {
   return `https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${eventId}`;
 }
 
+/** Production acquisition wrapper; strict FUM/LOST validation remains below. */
+export async function fetchEspnNflEventFumbles(eventId: string, fetcher: typeof fetch = fetch) {
+  const source = espnNflEventSummaryUrl(eventId);
+  const response = await fetcher(source, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) throw new Error(`ESPN NFL event summary HTTP ${response.status}: ${eventId}`);
+  return normalizeEspnNflEventFumbles(await response.json(), { eventId, fetchedAt: new Date().toISOString() });
+}
+
 /** Strictly normalize only the factual FUM/LOST evidence used by offline NFL research. */
 export function normalizeEspnNflEventFumbles(payload: unknown, request: { eventId: string; fetchedAt: string }) {
   const source = espnNflEventSummaryUrl(request.eventId);

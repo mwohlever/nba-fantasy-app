@@ -33,6 +33,15 @@ export function espnNflGameLogUrl(espnPlayerId: string, season: number) {
   return `https://site.web.api.espn.com/apis/common/v3/sports/football/nfl/athletes/${espnPlayerId}/gamelog?season=${season}`;
 }
 
+/** Production acquisition wrapper; the frozen normalizer remains the source of truth. */
+export async function fetchEspnNflGameLog(request: { espnPlayerId: string; playerName?: string; season: number; position: NflResearchPosition }, fetcher: typeof fetch = fetch) {
+  const source = espnNflGameLogUrl(request.espnPlayerId, request.season);
+  const response = await fetcher(source, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) throw new Error(`ESPN NFL game log HTTP ${response.status}: ${request.espnPlayerId}`);
+  const fetchedAt = new Date().toISOString();
+  return normalizeEspnNflGameLog(await response.json(), { ...request, fetchedAt });
+}
+
 /** Strict historical regular-season parser. It never substitutes unknown fields with zero. */
 export function normalizeEspnNflGameLog(payload: unknown, request: { espnPlayerId: string; playerName?: string; season: number; position: NflResearchPosition; fetchedAt: string }) {
   const source = espnNflGameLogUrl(request.espnPlayerId, request.season);
