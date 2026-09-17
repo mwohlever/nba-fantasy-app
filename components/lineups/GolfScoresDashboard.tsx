@@ -49,6 +49,26 @@ function currentGolfScoresRound(board: GolfFantasyBoard) {
   return scoredRounds.length ? Math.max(...scoredRounds) : 1;
 }
 
+
+function golfTeamRoundScore(
+  board: GolfFantasyBoard,
+  team: GolfFantasyBoard["teams"][number],
+  roundNumber: number,
+) {
+  if (board.rules.gameType === "best_ball") {
+    const round = team.bestBallRounds?.find(candidate => candidate.roundNumber === roundNumber);
+    return round ? bestBallRoundTotal(round.holes) : null;
+  }
+
+  const roundScores = team.contributions
+    .map(contribution => contribution.rounds?.find(round => round.roundNumber === roundNumber)?.score)
+    .filter((score): score is number => score !== undefined);
+
+  return roundScores.length
+    ? roundScores.reduce((total, score) => total + score, 0)
+    : null;
+}
+
 export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void; onHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void; selectedRound: number }) {
   const round = team.bestBallRounds?.find(candidate => candidate.roundNumber === selectedRound);
   const eventByPlayer = new Map(board.events.map(event => [Number(event.player_id), event]));
@@ -135,9 +155,16 @@ export function GolfFantasyRows({ board, onPlayer, onHole, scope, teamAvatarById
           className={`min-h-9 flex-1 rounded px-2 text-xs font-bold ${selectedRound === round ? "bg-emerald-700 text-white" : "text-slate-300"}`}>R{round}</button>)}
       </div>
       <div className="scores-standings">
-      {board.teams.map(team => {
+      {[...board.teams]
+        .sort((a, b) =>
+          (a.fantasy_points ?? Infinity) - (b.fantasy_points ?? Infinity) ||
+          (a.finish_position ?? Infinity) - (b.finish_position ?? Infinity) ||
+          a.team_id - b.team_id
+        )
+        .map(team => {
         const expanded = ids.includes(team.team_id);
         const rosterId = `golf-roster-${team.team_id}`;
+        const roundScore = golfTeamRoundScore(board, team, selectedRound);
         return (
           <article key={team.team_id} className="scores-standing">
             <button type="button" className="scores-standing-toggle golf-scores-standing-toggle" aria-expanded={expanded} aria-controls={rosterId}
@@ -145,7 +172,12 @@ export function GolfFantasyRows({ board, onPlayer, onHole, scope, teamAvatarById
               <span className="scores-standing-rank">{team.finish_position ?? "—"}</span>
               <TeamAvatar teamName={team.name} avatarUrl={teamAvatarById.get(team.team_id) ?? null} size="chip" />
               <span className="scores-standing-name"><strong>{team.name}</strong></span>
-              <span className="scores-standing-score">{golfFantasyScore(team.fantasy_points)}</span>
+              <span className="scores-standing-score">
+                 <strong>{golfFantasyScore(team.fantasy_points)}</strong>
+                 <small className="ml-1">
+                   (R{selectedRound} {golfFantasyScore(roundScore)})
+                 </small>
+               </span>
               <span className="scores-standing-chevron" aria-hidden="true">{expanded ? "▴" : "▾"}</span>
             </button>
             {expanded ? (

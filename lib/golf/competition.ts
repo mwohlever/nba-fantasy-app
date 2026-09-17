@@ -4,7 +4,14 @@ import { standardGolfContributions } from './standardPeriods';
 import type { EligibleGolfRoster, GolfPeriod } from './eligibleRoster';
 import type { BestBallHole } from './bestBall';
 
-export type GolfContribution = { playerId: number; period: GolfPeriod; score: number | null; countingHoles?: number; tiedHoles?: number };
+export type GolfContribution = {
+  playerId: number;
+  period: GolfPeriod;
+  score: number | null;
+  countingHoles?: number;
+  tiedHoles?: number;
+  rounds?: Array<{ roundNumber: number; score: number; complete: boolean }>;
+};
 export type GolfBestBallRound = { roundNumber: number; period: GolfPeriod; holes: BestBallHole[] };
 export type GolfFantasyTeam = {
   slate_id: number; team_id: number; fantasy_points: number | null; finish_position: number | null;
