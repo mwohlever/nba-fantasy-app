@@ -275,7 +275,7 @@ async function makeUniqueTeamName(
   desiredName:
     string,
 
-  groupName:
+  _groupName:
     string,
 ) {
   const base =
@@ -287,8 +287,6 @@ async function makeUniqueTeamName(
 
   const candidates = [
     base,
-
-    `${base} (${groupName})`,
   ];
 
 
@@ -301,7 +299,7 @@ async function makeUniqueTeamName(
       1
   ) {
     candidates.push(
-      `${base} (${groupName} ${index})`,
+      `${base} (${index})`,
     );
   }
 

@@ -151,13 +151,14 @@ test('PIN login verifies credentials before session creation for new and legacy 
     assert.deepEqual(sessions,['ua']);
   }
 });
-test('invite naming allows duplicate names across Groups, preserving same-Group suffix behavior',async()=>{
+test('invite naming allows duplicate names across Groups without surfacing the Group name in a generated suffix',async()=>{
   const file='app/api/group-invites/[token]/route.ts';
   const db=database(fixture()); const mocks={'@/lib/supabaseAdmin':{supabaseAdmin:db}};
   for (const match of source(file).matchAll(/from\s+["']([^"']+)["']/g)) if (!(match[1] in mocks)) mocks[match[1]]={};
   const {makeUniqueTeamName}=load(file,mocks,'\nexports.makeUniqueTeamName = makeUniqueTeamName;');
   assert.equal(await makeUniqueTeamName('c','Same','Third'),'Same');
-  assert.equal(await makeUniqueTeamName('a','Same','111'),'Same (111)');
+  assert.equal(await makeUniqueTeamName('a','Same','111'),'Same (2)');
+  assert.doesNotMatch(await makeUniqueTeamName('a','Same','111'),/111/);
 });
 test('migration defines scoped identity, verifies old objects, and protects data before dropping indexes',()=>{
   const sql=source('supabase/migrations/20260910000100_groups_batch4_scoped_uniqueness.sql');

@@ -230,15 +230,48 @@ for (const sport of ['nba', 'nfl']) test(`${sport}: creation preview and creatio
   assert.equal(db.writes.length, 0);
 });
 
-test('own fantasy profile uses active Group context without falling back to legacy identity', () => {
+test('own fantasy profile uses the active Group team for every sport, independent of legacy ID or team name', () => {
   const page = source('app/profile/page.tsx');
+  const { resolveActiveGroupProfileTeamId } = load('lib/profile/activeGroupTeam.ts');
   assert.match(page, /setGroupTeamId\(result.groupContext\?\.team\?\.id \?\? null\)/);
-  assert.match(page, /selectedSport === "nba" \|\| selectedSport === "nfl"\s*\? groupTeamId : user.teamId/);
+  assert.match(page, /resolveActiveGroupProfileTeamId\(\s*groupTeamId,/);
+  assert.doesNotMatch(page, /user\.teamId/);
+  const teamBeforeRename = { id: 11, name: 'Mark (Test Group)' };
+  const teamAfterRename = { id: 11, name: 'Mark' };
+  assert.equal(
+    resolveActiveGroupProfileTeamId(teamBeforeRename.id),
+    resolveActiveGroupProfileTeamId(teamAfterRename.id),
+  );
+  for (const sport of ['nba', 'nfl', 'golf', 'ncaa']) {
+    // Every sport feeds the same resolved active-Group ID into the shared
+    // team-profile endpoint; neither a legacy ID nor a renamed label enters
+    // the resolution path.
+    assert.equal(resolveActiveGroupProfileTeamId(11), 11, sport);
+    assert.notEqual(resolveActiveGroupProfileTeamId(11), 999, sport);
+    assert.equal(resolveActiveGroupProfileTeamId(null), null, sport);
+  }
+  assert.match(page, /\/api\/team-profile\?teamId=\$\{profileTeamId\}&season=\$\{season\}&sport=\$\{selectedSport\}/);
   assert.match(page, /if \(!profileTeamId\) \{[\s\S]*?setProfile\(null\);[\s\S]*?return;/);
   const context = source('lib/groups/context.ts');
   assert.match(context, /if \(\s*!group \|\|\s*!group.is_active \|\|\s*!membership.is_active/);
   assert.match(context, /"user_id",\s*userId,[\s\S]*?"group_id",\s*groupId,/);
+  assert.doesNotMatch(context, /loadGroupTeam[\s\S]{0,700}\.eq\(\s*["']name["']/);
   const historicalRoute = source('app/api/team-profile/route.ts');
   assert.match(historicalRoute, /teamBelongsToGroup\(\s*teamId,\s*activeLeague.context.group.id/);
   assert.doesNotMatch(historicalRoute, /loadActiveGroupTeamIds/);
+  assert.doesNotMatch(historicalRoute, /\.eq\(\s*["']name["']/);
+
+  // Profile summaries, history, stats, and rosters retain their stable
+  // `team_id` relationship after a team label changes.
+  for (const file of [
+    'lib/profile/fantasyTeamProfile.ts',
+    'lib/profile/golfTeamProfile.ts',
+    'lib/profile/ncaaPickEmTeamProfile.ts',
+  ]) {
+    const profileSource = source(file);
+    assert.match(profileSource, /teamId/);
+    assert.doesNotMatch(profileSource, /\.eq\(\s*["']name["']/);
+  }
+  assert.match(source('lib/profile/fantasyTeamProfile.ts'), /\.eq\("team_id", teamId\)/);
+  assert.match(source('lib/profile/golfTeamProfile.ts'), /\.eq\("team_id", teamId\)/);
 });

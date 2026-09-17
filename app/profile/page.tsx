@@ -17,6 +17,7 @@ import NflProfileOverview from "@/components/profile/NflProfileOverview";
 import GolfProfileOverview from "@/components/profile/GolfProfileOverview";
 import NcaaPickEmProfileOverview from "@/components/profile/NcaaPickEmProfileOverview";
 import NcaaPickEmTrophyCase from "@/components/profile/NcaaPickEmTrophyCase";
+import { resolveActiveGroupProfileTeamId } from "@/lib/profile/activeGroupTeam";
 import TrophyCase, {
   type LeagueAward,
   type TrophyMilestones,
@@ -25,7 +26,6 @@ import TrophyCase, {
 
 type CurrentUser = {
   id: string;
-  teamId: number;
   displayName: string;
   role: "player" | "admin";
   avatarUrl: string | null;
@@ -417,8 +417,13 @@ function ProfilePageContent() {
       return;
     }
 
-    const profileTeamId = selectedSport === "nba" || selectedSport === "nfl"
-      ? groupTeamId : user.teamId;
+    // Profile data is always scoped to the viewer's active Group. The account
+    // team's legacy ID is retained for authentication compatibility only and
+    // may point to a historical team in another Group.
+    const profileTeamId =
+      resolveActiveGroupProfileTeamId(
+        groupTeamId,
+      );
     if (!profileTeamId) {
       setProfile(null);
       setMessage("No team is available in the active Group.");
