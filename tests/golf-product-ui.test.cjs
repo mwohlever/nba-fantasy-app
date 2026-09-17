@@ -151,7 +151,8 @@ test('Scores uses compact Standard context and authoritative Best Ball hole cont
   assert.doesNotMatch(scores, /Fantasy<\/small/);
   assert.match(scores, /golf-scores-standing-toggle/);
   assert.match(fs.readFileSync('app/globals.css', 'utf8'), /\.golf-scores-standing-toggle \{ grid-template-columns: 1\.4rem 1\.5rem minmax\(0, 1fr\) auto; \}/);
-  assert.match(scores, /w-full min-w-\[620px\] border-collapse/);
+  assert.match(scores, /w-full min-w-\[840px\] border-collapse text-xs tabular-nums sm:min-w-\[620px\]/);
+  assert.match(scores, /min-w-\[38px\].*sm:min-w-0/);
 });
 
 test('Golf Scores scope canonical participants to the active Group', () => {

@@ -164,6 +164,7 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
   assert.match(holeButton(14).props['aria-label'], /score pending/);
   assert.match(holeButton(17).props['aria-label'], /not started/);
   assert.match(holeButton(17).props.className, /cursor-pointer/);
+  assert.match(holeButton(10).props.className, /min-w-\[38px\].*sm:min-w-0/);
   assert.match(holeButton(10).props.className, /bg-emerald-100 text-emerald-900/);
   assert.match(holeButton(11).props.className, /bg-red-100 text-red-900/);
   assert.match(holeButton(12).props.className, /bg-white text-slate-700/);
@@ -210,6 +211,7 @@ test('Standard Golf uses the selected round scorecard and all-hole modal navigat
   assert.match(markup, /<div>14<\/div><div class="text-\[9px\] font-bold text-slate-500">4<\/div>/);
   assert.match(markup, /<div>17<\/div><div class="text-\[9px\] font-bold text-slate-500">5<\/div>/);
   const r4Future = nodes(tree).find(node => node.props?.['aria-label'] === 'View Scottie, Round 4, Hole 17 — not started');
+  assert.match(r4Future.props.className, /min-w-\[38px\].*sm:min-w-0/);
   assert.ok(r4Future); r4Future.props.onClick(); assert.deepEqual(opened[0].focus, { roundNumber: 4, holeNumber: 17 });
   tree = detail.render({ board, team: board.teams[0], selectedRound: 1, onPlayer() {}, onHole: props.onHole });
   markup = require('react-dom/server').renderToStaticMarkup(tree);
