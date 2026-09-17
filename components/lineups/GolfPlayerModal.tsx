@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import GolfHoleReplayPanel from "@/components/lineups/GolfHoleReplayPanel";
+import { golfHoleResultClass } from "@/lib/golf/scorePresentation";
 import type {
   GolfHoleStat,
   GolfRoundStat,
@@ -35,9 +36,15 @@ function statusLabel(stat: PlayerStat | null) {
   const status = stat?.status ?? "scheduled";
 
   if (status === "active") {
-    return stat?.last_hole
-      ? `Round ${stat.current_round ?? "—"} · Thru ${stat.last_hole}`
-      : `Round ${stat?.current_round ?? "—"}`;
+    const round = [...(stat?.rounds ?? [])].filter(candidate => candidate.holes_completed > 0 && candidate.holes_completed < 18).at(-1);
+    if (round) {
+      const acceptedHoles = round.holes.filter(hole => hole.strokes !== null && hole.strokes !== undefined).length;
+      const holesCompleted = Math.max(round.holes_completed, acceptedHoles);
+      const lastHole = Number(stat?.current_round) === round.round_number && Number(stat?.last_hole) > 0
+        ? ` · Last hole ${stat?.last_hole}` : "";
+      return `Round ${round.round_number} · Thru ${holesCompleted}${lastHole}`;
+    }
+    return `Round ${stat?.current_round ?? "—"}`;
   }
 
   if (status === "finished") return "Tournament complete";
@@ -52,32 +59,6 @@ function statusLabel(stat: PlayerStat | null) {
       stat?.tee_time,
     ) ?? "Scheduled"
   );
-}
-
-function holeClass(hole: GolfHoleStat) {
-  const relative = hole.relative_to_par;
-
-  if (relative === null) {
-    return "border-slate-200 bg-slate-50 text-slate-400";
-  }
-
-  if (relative <= -2) {
-    return "border-emerald-700 bg-emerald-700 text-white ring-2 ring-emerald-200";
-  }
-
-  if (relative === -1) {
-    return "border-emerald-300 bg-emerald-100 text-emerald-900";
-  }
-
-  if (relative === 0) {
-    return "border-slate-200 bg-white text-slate-700";
-  }
-
-  if (relative === 1) {
-    return "border-red-300 bg-red-100 text-red-900";
-  }
-
-  return "border-red-700 bg-red-700 text-white ring-2 ring-red-200";
 }
 
 function holeValue(hole: GolfHoleStat) {
@@ -451,9 +432,7 @@ function RoundScorecard({
                     >
                       <button
                         type="button"
-                        className={`flex h-9 w-full items-center justify-center rounded-lg border text-xs font-black ${holeClass(
-                          hole,
-                        )}`}
+                        className={`flex h-9 w-full items-center justify-center rounded-lg border text-xs font-black ${golfHoleResultClass(hole.relative_to_par)}`}
                         title={holeTitle(holeNumber, hole)}
                         aria-label={holeTitle(
                           holeNumber,

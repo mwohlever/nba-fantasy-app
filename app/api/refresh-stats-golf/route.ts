@@ -2035,7 +2035,7 @@ export async function POST(request: Request) {
         if (!roundId) return [];
         const card = await fetchGolfRoundScorecard({
           year: Number(slate.start_date.slice(0, 4)), tournamentName: slate.display_name ?? tournament.name,
-          playerName: competitor.displayName, roundNumber: competitor.currentRound!,
+          playerName: competitor.displayName, roundNumber: competitor.currentRound!, cacheBust: observedAt,
         });
         return card.holes.flatMap(hole => {
           const observation = shotcastObservation(hole, card.observedAt);

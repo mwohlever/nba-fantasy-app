@@ -80,6 +80,20 @@ test('ShotCast final evidence improves an incomplete ESPN observation', () => {
  const result=run(state,{observedAt:t(2),holes:[{...observation,round_id:10}]});
  assert.equal(roundOf(result).strokes,3); assert.equal(result.teamWrites[0].fantasy_points,-1);
 });
+test('newer completed ShotCast holes cross a Hole-10 start into the accepted scorecard', () => {
+ const state=fixture(), round=state.events[0].golf_rounds[0];
+ round.golf_holes=Array.from({length:9},(_,index)=>hole(4,'espn',1,index+10));
+ Object.assign(round,{holes_completed:9,strokes:36,score_to_par:0});
+ Object.assign(state.events[0],{holes_completed:9,last_hole:18});
+ const observations=[1,2].map(number=>({
+   ...shotcastObservation({holeNumber:number,par:4,shots:[1,2,3,4,5].map(strokeNumber=>({strokeNumber,finalStroke:strokeNumber===5}))},t(2)),round_id:10,
+ }));
+ const result=run(state,{observedAt:t(2),holes:observations});
+ assert.equal(roundOf(result).holes_completed,11); assert.equal(result.events[0].holes_completed,11);
+ assert.equal(result.events[0].last_hole,2);
+ assert.deepEqual(roundOf(result).golf_holes.map(h=>h.hole_number).sort((a,b)=>a-b),[1,2,10,11,12,13,14,15,16,17,18]);
+ assert.equal(roundOf(result).golf_holes.find(h=>h.hole_number===2).strokes,5);
+});
 test('stale ESPN cannot overwrite accepted ShotCast',()=>{
  const state=fixture(); state.events[0].golf_rounds[0].golf_holes=[hole(4,'shotcast',3)];
  const result=run(state,espn(5,2)); assert.equal(roundOf(result).golf_holes[0].strokes,4);assert.equal(result.teamWrites.length,0);

@@ -1141,7 +1141,7 @@ async function loadPlayerRoundShots(input: {
 
 /** Score evidence only: one existing cached round request, without replay rendering assets. */
 export async function fetchGolfRoundScorecard(input: {
-  year: number; tournamentName: string; playerName: string; roundNumber: number;
+  year: number; tournamentName: string; playerName: string; roundNumber: number; cacheBust?: string | null;
 }) {
   const { payload } = await loadPlayerRoundShots(input);
   return {

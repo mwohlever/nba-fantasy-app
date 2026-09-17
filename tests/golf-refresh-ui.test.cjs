@@ -5,7 +5,7 @@ const React = require('react');
 React.useCallback = (fn, deps) => React.useMemo(() => fn, deps);
 context.capturePull = true;
 const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').default;
-const { GolfFantasyRows, BestBallRoster } = require('../components/lineups/GolfScoresDashboard.tsx');
+const { GolfFantasyRows, BestBallRoster, StandardRoster } = require('../components/lineups/GolfScoresDashboard.tsx');
 const SalarySetup = require('../components/golf/GolfSalarySetup.tsx').default;
 const { golfCompareWinners } = require('../components/lineups/GolfCompareModal.tsx');
 const flush = () => new Promise(resolve => setImmediate(resolve));
@@ -171,6 +171,38 @@ test('Best Ball describes provisional scoring without implying an unsubmitted li
   assert.match(text(tree), /Live scoring ·\s+8 golfer selections/);
   assert.doesNotMatch(text(tree), /Provisional/);
   h.unmount();
+});
+
+test('Standard Golf uses the selected round scorecard and all-hole modal navigation without Best Ball rows', () => {
+  const h = host(GolfFantasyRows), opened = [];
+  const board = { rules: { gameType: 'standard', rosterPeriods: { type: 'full_tournament' } }, teams: [{ team_id: 1, name: 'Standard Team', fantasy_points: -6, finish_position: 1, contributions: [{ playerId: 1, period: 'full_tournament', score: -6 }] }], events: [{ player_id: 1, golf_players: { display_name: 'Scottie', espn_player_id: '1' }, golf_rounds: [{ round_number: 1, holes_completed: 18, strokes: 70, score_to_par: -2, golf_holes: [{ hole_number: 14, relative_to_par: -1 }] }, { round_number: 4, holes_completed: 18, strokes: 68, score_to_par: -4, golf_holes: [{ hole_number: 14, relative_to_par: 1 }] }] }] };
+  const props = { scope: 'group-a:standard', board, onPlayer() {}, onHole: (player, focus) => opened.push({ player, focus }) };
+  let tree = h.render(props); nodes(tree).find(node => node.props?.className?.includes('golf-scores-standing-toggle')).props.onClick(); tree = h.render(props);
+  const detail = host(StandardRoster); tree = detail.render({ board, team: board.teams[0], selectedRound: 4, onPlayer() {}, onHole: props.onHole });
+  assert.match(require('react-dom/server').renderToStaticMarkup(tree), /Round 4 Golf scorecard/); assert.doesNotMatch(text(tree), /BEST BALL/);
+  const r4Future = nodes(tree).find(node => node.props?.['aria-label'] === 'View Scottie, Round 4, Hole 17 — not started');
+  assert.ok(r4Future); r4Future.props.onClick(); assert.deepEqual(opened[0].focus, { roundNumber: 4, holeNumber: 17 });
+  tree = detail.render({ board, team: board.teams[0], selectedRound: 1, onPlayer() {}, onHole: props.onHole });
+  const r1Completed = nodes(tree).find(node => node.props?.['aria-label'] === 'View Scottie, Round 1, Hole 14 — 1 under par');
+  assert.ok(r1Completed); r1Completed.props.onClick(); assert.deepEqual(opened[1].focus, { roundNumber: 1, holeNumber: 14 });
+  assert.equal(nodes(tree).filter(node => String(node.props?.['aria-label'] ?? '').startsWith('View Scottie, Round 1, Hole ')).length, 18);
+  detail.unmount(); h.unmount();
+});
+
+test('Golf modal progress uses the accepted round count and preserves the course-hole position', () => {
+  const modal = require('node:fs').readFileSync('components/lineups/GolfPlayerModal.tsx', 'utf8');
+  assert.match(modal, /Math\.max\(round\.holes_completed, acceptedHoles\)/);
+  assert.match(modal, /Last hole \$\{stat\?\.last_hole\}/);
+  assert.match(modal, /Round \$\{round\.round_number\} · Thru \$\{holesCompleted\}/);
+});
+
+test('Golf refresh requests fresh completed ShotCast evidence and Scores reloads accepted revisions', () => {
+  const refresh = require('node:fs').readFileSync('app/api/refresh-stats-golf/route.ts', 'utf8');
+  const scores = require('node:fs').readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8');
+  const provider = require('node:fs').readFileSync('lib/providers/pgaTourShots.ts', 'utf8');
+  assert.match(refresh, /cacheBust: observedAt/);
+  assert.match(provider, /roundNumber: number; cacheBust\?: string \| null/);
+  assert.match(scores, /window\.addEventListener\("golf-accepted-change", reloadAcceptedBoard\)/);
 });
 
 test('pull refresh preserves unsaved period selections, flags invalidity and retains revision conflict', async () => {

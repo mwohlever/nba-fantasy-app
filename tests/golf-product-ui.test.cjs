@@ -143,14 +143,15 @@ test('Live renders neutral, other-owner and current-user rows without reordering
 
 test('Scores uses compact Standard context and authoritative Best Ball hole contributors', () => {
   const scores = fs.readFileSync('components/lineups/GolfScoresDashboard.tsx', 'utf8');
-  assert.match(scores, /Total \{golfFantasyScore\(event\?\.official_score_to_par\)\}/);
+  assert.match(scores, /StandardRoster/);
+  assert.doesNotMatch(scores, /Total \{golfFantasyScore\(event\?\.official_score_to_par\)\}/);
   assert.match(scores, /contributorPlayerIds\.includes/);
   assert.match(scores, /bestBallRounds/);
   assert.doesNotMatch(scores, /Tour<br/);
   assert.doesNotMatch(scores, /Fantasy<\/small/);
   assert.match(scores, /golf-scores-standing-toggle/);
   assert.match(fs.readFileSync('app/globals.css', 'utf8'), /\.golf-scores-standing-toggle \{ grid-template-columns: 1\.4rem 1\.5rem minmax\(0, 1fr\) auto; \}/);
-  assert.match(scores, /grid-cols-\[3\.7rem_2\.6rem_4\.5rem\]/);
+  assert.match(scores, /w-full min-w-\[620px\] border-collapse/);
 });
 
 test('Golf Scores scope canonical participants to the active Group', () => {

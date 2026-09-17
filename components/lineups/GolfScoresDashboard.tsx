@@ -4,11 +4,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import TeamAvatar from "@/components/ui/TeamAvatar";
-import { getGolfStatusMeta } from "@/lib/golf/status";
-import { formatGolfLiveProgress } from "@/lib/golf/liveLeaderboard";
 import type { BestBallHole } from "@/lib/golf/bestBall";
 import type { GolfFantasyTeam } from "@/lib/golf/competition";
+import { golfPeriodForRound } from "@/lib/golf/eligibleRoster";
 import type { GolfRules } from "@/lib/rules/leagueRules";
+import { golfHoleResultLabel, golfHoleResultTextClass } from "@/lib/golf/scorePresentation";
 import type { Player, PlayerStat, OrderedTeam, RosterSlotConfig, Slate } from "./types";
 
 export type GolfFantasyBoard = {
@@ -25,41 +25,7 @@ function golfHoleNavigationLabel(value: number | null | undefined, status: "unsc
   if (value === null || value === undefined) {
     return status === "unscored" ? "not started" : "score pending";
   }
-  return value === 0 ? "Even" : value > 0 ? `${value} over par` : `${Math.abs(value)} under par`;
-}
-
-function currentRound(event: Record<string, any> | undefined) {
-  const rounds = [...(event?.golf_rounds ?? [])].sort((a, b) => Number(b.round_number) - Number(a.round_number));
-  return rounds.find(round => Number(round.holes_completed ?? 0) > 0) ?? rounds[0] ?? null;
-}
-
-function StandardRoster({ board, team, onPlayer }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void }) {
-  return <div className="divide-y divide-slate-800 px-3">
-    {(team.hiddenRosterPeriods ?? []).map(period => <p key={period} className="py-3 text-xs text-amber-300">{period === "weekend" ? "Weekend lineup hidden until lock." : period === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock."}</p>)}
-    {team.contributions.length === 0 && (team.hiddenRosterPeriods ?? []).length === 0 ? <p className="py-3 text-xs text-slate-400">No saved roster.</p> : null}
-    {team.contributions.map(contribution => {
-      const event = board.events.find(e => Number(e.player_id) === contribution.playerId);
-      const player = event?.golf_players;
-      const meta = getGolfStatusMeta({ ...event, rounds: event?.golf_rounds ?? [] });
-      const progress = formatGolfLiveProgress({ status: event?.status, statusState: meta.state, progressHoles: meta.holes, teeTime: meta.teeTime });
-      const round = currentRound(event);
-      const period = contribution.period === "opening" ? "Opening · R1–2" : contribution.period === "weekend" ? "Weekend · R3–4" : "";
-      return <div key={`${contribution.period}-${contribution.playerId}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2.5 text-sm">
-        <button type="button" className="min-w-0 text-left" onClick={() => onPlayer({
-          id: contribution.playerId, name: player?.display_name ?? "Golfer", position_group: "GOLFER", is_active: true,
-          espn_player_id: player?.espn_player_id, headshot_url: player?.headshot_url, country: player?.country, owgr_rank: player?.owgr_rank,
-        })}>
-          <span className="block truncate font-semibold text-slate-100">{player?.display_name ?? `Golfer ${contribution.playerId}`}</span>
-          <span className="block text-[11px] text-slate-400">{period || "Full tournament"}</span>
-        </button>
-        <div className="grid grid-cols-[3.7rem_2.6rem_4.5rem] items-center gap-1 text-right text-xs tabular-nums">
-          <span className="whitespace-nowrap text-slate-300">{round ? `R${round.round_number} ${golfFantasyScore(round.score_to_par)}` : "R—"}</span>
-          <span className="whitespace-nowrap text-center font-semibold text-emerald-300">{progress}</span>
-          <span className="whitespace-nowrap font-bold text-white">Total {golfFantasyScore(event?.official_score_to_par)}</span>
-        </div>
-      </div>;
-    })}
-  </div>;
+  return golfHoleResultLabel(value) ?? "score pending";
 }
 
 function bestBallRoundTotal(holes: Array<{ relativeToPar: number | null }>) {
@@ -72,6 +38,14 @@ function currentBestBallRound(board: GolfFantasyBoard) {
     team.bestBallRounds?.find(round => round.roundNumber === roundNumber)?.holes.some(hole => hole.status !== "unscored"),
   ));
   return scoredRounds.at(-1) ?? 1;
+}
+
+function currentGolfScoresRound(board: GolfFantasyBoard) {
+  if (board.rules.gameType === "best_ball") return currentBestBallRound(board);
+  const scoredRounds = board.events.flatMap(event => event.golf_rounds ?? [])
+    .filter((round: any) => Number(round.holes_completed ?? 0) > 0 || round.strokes !== null && round.strokes !== undefined)
+    .map((round: any) => Number(round.round_number));
+  return scoredRounds.length ? Math.max(...scoredRounds) : 1;
 }
 
 export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void; onHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void; selectedRound: number }) {
@@ -102,7 +76,7 @@ export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }:
             return <tr key={contribution.playerId}>
               <th className="sticky left-0 bg-slate-950 px-2 py-1.5 text-left font-semibold text-slate-100"><button type="button" aria-label={`View ${golfer.name} details`} className="flex max-w-36 items-center gap-2 text-left" onClick={() => onPlayer(golfer)}><PlayerHeadshot espnGolfPlayerId={golfer.espn_player_id} imageUrl={golfer.headshot_url} playerName={golfer.name} size="xs" className="shrink-0 border-slate-700 bg-slate-900" /><span className="truncate">{golfer.name}</span></button></th>
               <td className="px-2 py-1.5 text-right font-bold text-white">{golfFantasyScore(playerRound?.score_to_par)}</td>
-              {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold text-emerald-200' : 'text-slate-300'}`}>{onHole ? <button type="button" aria-label={`View ${golfer.name}, Round ${round.roundNumber}, Hole ${hole.holeNumber} — ${golfHoleNavigationLabel(value, hole.status)}`} onClick={() => onHole(golfer, { roundNumber: round.roundNumber, holeNumber: hole.holeNumber })} className="cursor-pointer rounded px-0.5 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300">{golfFantasyScore(value)}</button> : golfFantasyScore(value)}</td>; })}
+              {holes.map(hole => { const value = playerHoles.get(hole.holeNumber)?.relative_to_par; const contributes = hole.contributorPlayerIds.includes(contribution.playerId); return <td key={hole.holeNumber} className={`px-1 py-1.5 text-center ${contributes ? 'bg-emerald-500/20 font-bold' : ''}`}>{onHole ? <button type="button" aria-label={`View ${golfer.name}, Round ${round.roundNumber}, Hole ${hole.holeNumber} — ${golfHoleNavigationLabel(value, hole.status)}`} onClick={() => onHole(golfer, { roundNumber: round.roundNumber, holeNumber: hole.holeNumber })} className={`cursor-pointer rounded px-0.5 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 ${golfHoleResultTextClass(value)} ${contributes ? 'ring-1 ring-inset ring-emerald-400/80' : ''}`}>{golfFantasyScore(value)}</button> : golfFantasyScore(value)}</td>; })}
             </tr>;
           })}
           <tr className="border-t-2 border-emerald-700 bg-emerald-950/40"><th className="sticky left-0 bg-emerald-950 px-2 py-2 text-left font-black text-emerald-200">BEST BALL</th><td className="bg-emerald-950 px-2 py-2 text-right font-black text-white">{golfFantasyScore(teamTotal)}</td>{holes.map(hole => <td key={hole.holeNumber} className="px-1 py-2 text-center font-black text-white">{golfFantasyScore(hole.relativeToPar)}</td>)}</tr>
@@ -112,19 +86,48 @@ export function BestBallRoster({ board, team, onPlayer, onHole, selectedRound }:
   </div>;
 }
 
+export function StandardRoster({ board, team, onPlayer, onHole, selectedRound }: { board: GolfFantasyBoard; team: GolfFantasyBoard['teams'][number]; onPlayer: (player: Player) => void; onHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void; selectedRound: number }) {
+  const period = golfPeriodForRound(board.rules.rosterPeriods.type, selectedRound as 1 | 2 | 3 | 4);
+  const hidden = (team.hiddenRosterPeriods ?? []).includes(period);
+  const roster = team.contributions.filter(contribution => contribution.period === period);
+  const eventByPlayer = new Map(board.events.map(event => [Number(event.player_id), event]));
+  const holes = Array.from({ length: 18 }, (_, index) => index + 1);
+  const hasScoring = roster.some(contribution => {
+    const round = (eventByPlayer.get(contribution.playerId)?.golf_rounds ?? []).find((item: any) => Number(item.round_number) === selectedRound);
+    return Number(round?.holes_completed ?? 0) > 0 || round?.strokes !== null && round?.strokes !== undefined;
+  });
+  return <div className="space-y-3 px-3 py-3">
+    {hidden ? <p className="text-xs text-amber-300">{period === "weekend" ? "Weekend lineup hidden until lock." : period === "opening" ? "Roster hidden until Round 1." : "Lineup hidden until lock."}</p> : null}
+    {!hidden && !roster.length ? <p className="text-xs text-slate-400">No saved roster for this round.</p> : null}
+    {!hidden && roster.length ? <section className="overflow-x-auto rounded-lg border border-slate-800" aria-label={`Round ${selectedRound} Golf scorecard`}>
+      <div className="flex items-center justify-between border-b border-slate-800 px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-emerald-300"><span>R{selectedRound} · {period === "opening" ? "Opening roster" : period === "weekend" ? "Weekend roster" : "Full tournament"}</span><span>{hasScoring ? "Round scoring" : "Not started"}</span></div>
+      {!hasScoring ? <p className="px-2 py-3 text-xs text-slate-400">Round {selectedRound} has not started.</p> : <table className="w-full min-w-[620px] border-collapse text-xs tabular-nums">
+        <thead className="bg-slate-900 text-slate-400"><tr><th className="sticky left-0 w-36 bg-slate-900 px-2 py-1.5 text-left">Golfer</th><th className="px-2 py-1.5 text-right">R{selectedRound}</th>{holes.map(hole => <th key={hole} className="px-1 py-1.5">{hole}</th>)}</tr></thead>
+        <tbody className="divide-y divide-slate-800">{roster.map(contribution => {
+          const event = eventByPlayer.get(contribution.playerId); const player = event?.golf_players;
+          const playerRound = (event?.golf_rounds ?? []).find((item: any) => Number(item.round_number) === selectedRound);
+          const playerHoles = new Map<number, { relative_to_par?: number | null }>((playerRound?.golf_holes ?? []).map((hole: any) => [Number(hole.hole_number), hole]));
+          const golfer = { id: contribution.playerId, name: player?.display_name ?? "Golfer", position_group: "GOLFER" as const, is_active: true, espn_player_id: player?.espn_player_id, headshot_url: player?.headshot_url, country: player?.country, owgr_rank: player?.owgr_rank };
+          return <tr key={contribution.playerId}><th className="sticky left-0 bg-slate-950 px-2 py-1.5 text-left font-semibold text-slate-100"><button type="button" aria-label={`View ${golfer.name} details`} className="flex max-w-36 items-center gap-2 text-left" onClick={() => onPlayer(golfer)}><PlayerHeadshot espnGolfPlayerId={golfer.espn_player_id} imageUrl={golfer.headshot_url} playerName={golfer.name} size="xs" className="shrink-0 border-slate-700 bg-slate-900" /><span className="truncate">{golfer.name}</span></button></th><td className="px-2 py-1.5 text-right font-bold text-white">{golfFantasyScore(playerRound?.score_to_par)}</td>{holes.map(hole => { const value = playerHoles.get(hole)?.relative_to_par; return <td key={hole} className="px-1 py-1.5 text-center">{onHole ? <button type="button" aria-label={`View ${golfer.name}, Round ${selectedRound}, Hole ${hole} — ${value == null ? "not started" : golfHoleNavigationLabel(value, "final")}`} onClick={() => onHole(golfer, { roundNumber: selectedRound, holeNumber: hole })} className={`cursor-pointer rounded px-0.5 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300 ${golfHoleResultTextClass(value)}`}>{golfFantasyScore(value)}</button> : golfFantasyScore(value)}</td>; })}</tr>;
+        })}</tbody>
+      </table>}
+    </section> : null}
+  </div>;
+}
+
 export function GolfFantasyRows({ board, onPlayer, onHole, scope, teamAvatarById = new Map<number, string | null>() }: {
   board: GolfFantasyBoard; onPlayer: (player: Player) => void; onHole?: (player: Player, focus: { roundNumber: number; holeNumber: number }) => void; scope: string; teamAvatarById?: Map<number, string | null>;
 }) {
   const [expansion, setExpansion] = useState<{ scope: string; ids: number[] }>({ scope, ids: [] });
   const ids = expansion.scope === scope ? expansion.ids : [];
   const [roundSelection, setRoundSelection] = useState<{ scope: string; round: number }>({ scope: "", round: 1 });
-  const selectedRound = roundSelection.scope === scope ? roundSelection.round : currentBestBallRound(board);
+  const selectedRound = roundSelection.scope === scope ? roundSelection.round : currentGolfScoresRound(board);
   return (
     <div aria-label="Golf fantasy standings">
-      {board.rules.gameType === "best_ball" ? <div className="mb-3 flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1" aria-label="Best Ball round selector">
+      <div className="mb-3 flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/60 p-1" aria-label="Golf round selector">
         {[1, 2, 3, 4].map(round => <button key={round} type="button" aria-label={`Select round ${round}`} aria-pressed={selectedRound === round} onClick={() => setRoundSelection({ scope, round })}
           className={`min-h-9 flex-1 rounded px-2 text-xs font-bold ${selectedRound === round ? "bg-emerald-700 text-white" : "text-slate-300"}`}>R{round}</button>)}
-      </div> : null}
+      </div>
       <div className="scores-standings">
       {board.teams.map(team => {
         const expanded = ids.includes(team.team_id);
@@ -142,7 +145,7 @@ export function GolfFantasyRows({ board, onPlayer, onHole, scope, teamAvatarById
             </button>
             {expanded ? (
               <div id={rosterId} className="border-t border-slate-800 bg-slate-950/60">
-                {board.rules.gameType === "best_ball" ? <BestBallRoster board={board} team={team} onPlayer={onPlayer} onHole={onHole} selectedRound={selectedRound} /> : <StandardRoster board={board} team={team} onPlayer={onPlayer} />}
+                {board.rules.gameType === "best_ball" ? <BestBallRoster board={board} team={team} onPlayer={onPlayer} onHole={onHole} selectedRound={selectedRound} /> : <StandardRoster board={board} team={team} onPlayer={onPlayer} onHole={onHole} selectedRound={selectedRound} />}
               </div>
             ) : null}
           </article>
@@ -175,6 +178,19 @@ export default function GolfScoresDashboard({ teams, selectedSlate, lastRefreshS
       .catch(error => { if (!controller.signal.aborted) setState(previous => ({ scope, board: previous?.scope === scope ? previous.board : undefined, error: error.message })); });
     return () => controller.abort();
   }, [scope, lastRefreshSummary, isLoading, isSwitchingGroup]);
+  useEffect(() => {
+    if (!selectedSlate || !groupContext || isLoading || isSwitchingGroup) return;
+    let cancelled = false;
+    const reloadAcceptedBoard = (event: Event) => {
+      if ((event as CustomEvent).detail?.slateId !== selectedSlate.id) return;
+      fetch(`/api/golf/fantasy?slateId=${selectedSlate.id}`, { cache: "no-store" })
+        .then(async response => { const result = await response.json(); if (!response.ok) throw new Error(result.error); return result; })
+        .then(board => { if (!cancelled) setState({ scope, board }); })
+        .catch(error => { if (!cancelled) setState(previous => ({ scope, board: previous?.scope === scope ? previous.board : undefined, error: error.message })); });
+    };
+    window.addEventListener("golf-accepted-change", reloadAcceptedBoard);
+    return () => { cancelled = true; window.removeEventListener("golf-accepted-change", reloadAcceptedBoard); };
+  }, [scope, selectedSlate?.id, isLoading, isSwitchingGroup]);
   const current = !isLoading && !isSwitchingGroup && state?.scope === scope ? state : null;
   return (
     <section className="scores-page space-y-3">
