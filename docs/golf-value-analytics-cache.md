@@ -62,9 +62,10 @@ The read path selects only ready, accepted event versions pinned by that refresh
 with event end and readiness before the target cutoff, observation/readiness by
 the board's `asOfAt`, target event ID excluded, and the existing UTC calendar-year
 V1 season policy. `asOfAt` is captured before Salary Setup reads the cache. The
-current route uses midnight UTC on the slate's start date as a conservative
-cutoff; a future targeted change should use a verified provider/tee-time start
-instant. No commissioner request downloads the season response.
+current route uses the earliest valid authoritative `golf_event_players.tee_time`,
+the same field evidence used for the Golf acquisition deadline. If no trustworthy
+tee time is available, it conservatively falls back to midnight UTC on the slate's
+start date. No commissioner request downloads the season response.
 
 The immutable board-input manifest is inserted atomically with the generated
 price set. It copies the target field, amateur flags, exact OWGR ranks and rank

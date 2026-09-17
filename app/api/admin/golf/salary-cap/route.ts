@@ -6,6 +6,7 @@ import { loadGolfAnalyticsHistory } from "@/lib/golf/valueAnalytics.server";
 import { authorizeSlateResource } from "@/lib/security/resourceAuthorization";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { formatGolfMoney } from "@/lib/golf/money";
+import { resolveGolfSalaryGenerationCutoff } from "@/lib/golf/salaryGenerationCutoff";
 
 type SetupAction = "generate" | "regenerate" | "override" | "freeze" | "open_weekend";
 
@@ -91,13 +92,16 @@ export async function POST(request: Request) {
       if (action === "regenerate" && priceSet?.status === "frozen") return NextResponse.json({ error: "Frozen Golf salaries are immutable." }, { status: 400 });
       if (!priceSet || action === "regenerate") {
         const field = await supabaseAdmin.from("golf_event_players")
-          .select("player_id, is_amateur, golf_players!inner(display_name, espn_player_id, owgr_rank, owgr_updated_at)")
+          .select("player_id, is_amateur, tee_time, golf_players!inner(display_name, espn_player_id, owgr_rank, owgr_updated_at)")
           .eq("slate_id", slateId);
         rpcFailure("Golf field could not be loaded", field.error);
         if (!field.data?.length) return NextResponse.json({ error: "Import the tournament field before generating salaries." }, { status: 409 });
         if (!slate.external_event_id) return NextResponse.json({ error: "ESPN tournament identity required before generating salaries." }, { status: 409 });
         const asOfAt = new Date().toISOString();
-        const startsAt = `${slate.start_date}T00:00:00.000Z`;
+        const { cutoffAt: startsAt } = resolveGolfSalaryGenerationCutoff({
+          startDate: slate.start_date,
+          teeTimes: field.data.map((row: any) => row.tee_time),
+        });
         const season = Number(String(slate.start_date).slice(0, 4));
         const fieldInputs = field.data.map((row: any) => {
           const player = Array.isArray(row.golf_players) ? row.golf_players[0] : row.golf_players;

@@ -87,6 +87,9 @@ test('server contract never accepts client salaries and routes Salary Cap separa
 
 test('salary generation partitions PGA-only field identities instead of rejecting the board',()=>{
  const route=fs.readFileSync(path.join(__dirname,'../app/api/admin/golf/salary-cap/route.ts'),'utf8');
+ assert.match(route,/tee_time, golf_players!inner/);
+ assert.match(route,/resolveGolfSalaryGenerationCutoff\(\{/);
+ assert.match(route,/teeTimes: field\.data\.map\(\(row: any\) => row\.tee_time\)/);
  assert.match(route,/identityStatus:.*espn_resolved.*pga_unresolved/s);
  assert.match(route,/const resolvedField = fieldInputs\.filter/);
  assert.match(route,/playerIds: resolvedField\.map/);

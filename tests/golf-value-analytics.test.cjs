@@ -15,9 +15,29 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 }).outputText, filename);
 const { golfValueInputsFromEspn, normalizeEspnGolfValueEvent } = require('../lib/golf/valueEspn.ts');
 const { buildGolfValues } = require('../lib/golf/valueModel.ts');
+const { resolveGolfSalaryGenerationCutoff, canGenerateGolfSalariesAt } = require('../lib/golf/salaryGenerationCutoff.ts');
 const { planGolfSeasonIngestion, selectGolfAnalyticsHistories, buildGolfBoardInputManifest, preserveGolfOwgrInput,
   summarizeGolfAnalyticsRefresh, buildGolfAnalyticsProviderPlan, bindGolfAnalyticsProviderPlan, golfAnalyticsBeginPayload } = require('../lib/golf/valueAnalytics.ts');
 const { fetchGolfSeasonScoreboardPayload } = require('../lib/providers/golf.ts');
+
+test('salary generation uses the authoritative first tee boundary rather than slate-date midnight', () => {
+  const cutoff = resolveGolfSalaryGenerationCutoff({
+    startDate: '2026-09-17',
+    teeTimes: ['2026-09-17T11:20:00Z', '2026-09-17T11:30:00Z'],
+  });
+  assert.deepEqual(cutoff, { cutoffAt: '2026-09-17T11:20:00.000Z', source: 'authoritative_tee_time' });
+  assert.equal(canGenerateGolfSalariesAt({ asOfAt: '2026-09-17T11:19:59.999Z', cutoffAt: cutoff.cutoffAt, nowAt: '2026-09-17T11:19:59.999Z' }), true);
+  assert.equal(canGenerateGolfSalariesAt({ asOfAt: '2026-09-17T11:20:00.000Z', cutoffAt: cutoff.cutoffAt, nowAt: '2026-09-17T11:20:00.000Z' }), false);
+});
+
+test('salary generation falls back conservatively when authoritative tee times are unavailable or malformed', () => {
+  const cutoff = resolveGolfSalaryGenerationCutoff({
+    startDate: '2026-09-17', teeTimes: [null, 'not-a-timestamp', '2026-09-17'],
+  });
+  assert.deepEqual(cutoff, { cutoffAt: '2026-09-17T00:00:00.000Z', source: 'start_date_fallback' });
+  assert.equal(canGenerateGolfSalariesAt({ asOfAt: '2026-09-16T23:59:59.999Z', cutoffAt: cutoff.cutoffAt, nowAt: '2026-09-16T23:59:59.999Z' }), true);
+  assert.equal(canGenerateGolfSalariesAt({ asOfAt: cutoff.cutoffAt, cutoffAt: cutoff.cutoffAt, nowAt: cutoff.cutoffAt }), false);
+});
 
 const round = period => ({ period, value: 72, displayValue: 'E', linescores: Array.from({ length: 18 }, (_, i) => ({ period: i + 1, value: 4 })) });
 const entrant = (i, rounds = 4) => ({ id: String(i), type: 'athlete', order: i, score: i === 1 ? '-2' : 'E',

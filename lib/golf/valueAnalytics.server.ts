@@ -5,6 +5,7 @@ import { GOLF_ANALYTICS_PROVIDER, GOLF_VALUE_CACHE_MAX_AGE_MS, bindGolfAnalytics
   golfAnalyticsHash, selectGolfAnalyticsHistories, summarizeGolfAnalyticsRefresh,
   type CachedGolfEventVersion, type CachedGolfObservation, type GolfAnalyticsIdentity, type GolfAnalyticsProviderPlan } from './valueAnalytics';
 import { GOLF_ESPN_HISTORY_VERSION, type EspnEvent } from './valueEspn';
+import { canGenerateGolfSalariesAt } from './salaryGenerationCutoff';
 
 const db = supabaseAdmin;
 const batches = <T,>(items: readonly T[], size: number) => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
@@ -145,7 +146,7 @@ export async function loadGolfAnalyticsHistory(input: {
 }) {
   if (!input.targetEventId || !input.playerIds.length) throw new Error('Golf target event and field required');
   const asOf = Date.parse(input.asOfAt), cutoff = Date.parse(input.targetCutoffAt);
-  if (!Number.isFinite(asOf) || !Number.isFinite(cutoff) || asOf >= cutoff || asOf > Date.now()) throw new Error('Golf salary generation must precede target start');
+  if (!canGenerateGolfSalariesAt({ asOfAt: input.asOfAt, cutoffAt: input.targetCutoffAt })) throw new Error('Golf salary generation must precede target start');
   const refresh = await db.from('golf_analytics_season_refreshes')
     .select('id,source_hash,normalized_hash,observed_at,ready_at,last_checked_at,event_ids,event_version_ids')
     .eq('provider', 'espn_pga').eq('season', input.season).eq('status', 'ready')
