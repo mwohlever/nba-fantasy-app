@@ -22,6 +22,8 @@ export function actualNflResearchStats(row: ResearchRow): RawStats { return { pa
 
 type Driver = "passingAttempts" | "rushingAttempts" | "receivingTargets";
 function drivers(position: NflPosition): Driver[] { return position === "QB" ? ["passingAttempts", "rushingAttempts"] : position === "RB" ? ["rushingAttempts", "receivingTargets"] : position === "WR" ? ["receivingTargets", "rushingAttempts"] : ["receivingTargets", "rushingAttempts"]; }
+/** Position-relevant opportunity used by the frozen O1 opportunity adapters. */
+export function hasNflResearchPositionOpportunity(position: NflPosition, row: Pick<ResearchRow, "stats">) { return drivers(position).some(driver => numeric(row.stats[driver]) > 0); }
 function robustOpportunity(rows: readonly ResearchRow[], driver: Driver) {
   const recent = rows.slice(-6); let downweighted = 0;
   const estimate = mean(recent.map((row, index) => { const absolute = rows.length - recent.length + index, prior = rows.slice(Math.max(0, absolute - 5), absolute).map(x => numeric(x.stats[driver])); const precedingReference = median(prior.slice(0, -1)); const priorWasLow = precedingReference !== null && numeric(prior.at(-1)) < precedingReference * .5; const low = prior.length >= 3 && numeric(row.stats[driver]) < (median(prior) ?? 0) * .5 && !priorWasLow; if (low) downweighted++; return { value:numeric(row.stats[driver]), weight:low ? .25 : 1 }; }));

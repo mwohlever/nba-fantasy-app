@@ -1,13 +1,15 @@
 import { createHash } from "node:crypto";
 import { calculateNflFantasyPoints, type NflScoringRules } from "../../scoring/nfl";
 import { resolveLeagueRules } from "../../rules/leagueRules";
-import { projectNflResearchO1RawWithWindows, type RawStats, type ResearchRow } from "./researchCandidates";
+import { hasNflResearchPositionOpportunity, projectNflResearchO1RawWithWindows, type RawStats, type ResearchRow } from "./researchCandidates";
 import type { NflObservationPosition } from "./observationFoundation";
 
 /** Original current-season-only first-run cache rows remain historically traceable. */
 export const NFL_PROJECTION_V2_CURRENT_SEASON_V1 = "nfl-v2-o1-opportunity5-production8-v1" as const;
 /** O1 with only immediate-prior-season real observations filling unfilled early-season windows. */
-export const NFL_PROJECTION_V2 = "nfl-v2-o1-opportunity5-production8-coldstart-v1" as const;
+export const NFL_PROJECTION_V2_COLDSTART_V1 = "nfl-v2-o1-opportunity5-production8-coldstart-v1" as const;
+/** Cold-start O1 where zero position-relevant-opportunity appearances do not consume opportunity slots. */
+export const NFL_PROJECTION_V2 = "nfl-v2-o1-opportunity5-production8-coldstart-v2" as const;
 export type NflRawProjectionStats = { passing_yards: number; passing_tds: number; passing_ints: number; rushing_yards: number; rushing_tds: number; receiving_yards: number; receiving_tds: number; receptions: number; fumbles_lost: number };
 export type NflProjectionConfidence = "low" | "normal";
 export type NflObservationVersionRecord = {
@@ -58,7 +60,10 @@ function cachedStats(stats: RawStats): NflRawProjectionStats { return { passing_
 export function projectNflV2O1Raw(input: { playerId: number; providerPlayerId: string; position: NflObservationPosition; season: number; asOf: string; history: readonly NflObservationVersionRecord[] }) {
   const current = selectNflAsOfObservationVersions({ rows: input.history, playerId: input.playerId, targetSeason: input.season, asOf: input.asOf });
   const previous = selectNflAsOfObservationVersions({ rows: input.history, playerId: input.playerId, targetSeason: input.season - 1, asOf: input.asOf });
-  const opportunity = fillWindow(current, previous, 5), production = fillWindow(current, previous, 8);
+  // Factual zero-opportunity appearances remain in history for production, but
+  // cannot consume one of O1's five offensive-opportunity slots.
+  const opportunity = fillWindow(current.filter(row => hasNflResearchPositionOpportunity(input.position, researchRow(row))), previous.filter(row => hasNflResearchPositionOpportunity(input.position, researchRow(row))), 5);
+  const production = fillWindow(current, previous, 8);
   if (!opportunity.length || !production.length) return null;
   const target: ResearchRow = { providerPlayerId: input.providerPlayerId, position: input.position, season: input.season, eventId: `projection:${input.playerId}`, gameAt: input.asOf, week: 1, stats: {} };
   const result = projectNflResearchO1RawWithWindows(target, { opportunity: opportunity.map(researchRow), production: production.map(researchRow) });
