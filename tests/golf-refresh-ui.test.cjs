@@ -152,7 +152,8 @@ test('Best Ball team avatars and hole replay links reuse existing identity and f
   assert.match(holeButton(11).props.className, /bg-red-100 text-red-900/);
   assert.match(holeButton(12).props.className, /bg-white text-slate-700/);
   assert.match(holeButton(17).props.className, /bg-slate-50 text-slate-400/);
-  assert.match(holeButton(10).props.className, /outline-sky-200/);
+  assert.match(holeButton(10).props['aria-label'], /Best Ball contributor/);
+  assert.doesNotMatch(holeButton(10).props.className, /outline-sky|outline-offset-\[-2px\]|ring-inset|sky|cyan/);
   assert.doesNotMatch(holeButton(10).props.className, /bg-emerald-500\/20/);
   holeButton(10).props.onClick(); holeButton(14).props.onClick(); holeButton(17).props.onClick();
   assert.deepEqual(opened[0], { player: { id: 1, name: 'Opening Golfer 1', position_group: 'GOLFER', is_active: true,
