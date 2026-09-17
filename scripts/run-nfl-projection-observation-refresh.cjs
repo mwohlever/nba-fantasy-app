@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* GitHub worker: ESPN acquisition stays outside Vercel; this script only appends factual evidence. */
 const fs=require('fs'),path=require('path'),ts=require('typescript');
 require.extensions['.ts']=(m,f)=>m._compile(ts.transpileModule(fs.readFileSync(f,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true},fileName:f}).outputText,f);
 const {fetchEspnNflGameLog}=require(path.join(__dirname,'../lib/analytics/providers/espnNflGameLog.ts'));
 const {fetchEspnNflEventFumbles}=require(path.join(__dirname,'../lib/analytics/providers/espnNflEventFumbles.ts'));
-const {espnNflRegularSeasonScoreboardUrl,normalizeEspnNflRegularSeasonScoreboard}=require(path.join(__dirname,'../lib/analytics/providers/espnNflScoreboard.ts'));
+const {espnNflRegularSeasonScoreboardWeekUrl,normalizeEspnNflRegularSeasonScoreboard,mergeEspnNflRegularSeasonScoreboards}=require(path.join(__dirname,'../lib/analytics/providers/espnNflScoreboard.ts'));
 const {acquireNflObservations}=require(path.join(__dirname,'../lib/analytics/nfl/observationAcquisition.ts'));
 const base=process.env.NFL_PROJECTION_INGEST_BASE_URL?.trim(),secret=process.env.NFL_PROJECTION_INGEST_SECRET?.trim();
 if(!base||!secret)throw new Error('NFL observation worker requires NFL_PROJECTION_INGEST_BASE_URL and NFL_PROJECTION_INGEST_SECRET');
@@ -12,7 +13,7 @@ if(!Number.isInteger(season)||season<2000||season>2100)throw new Error('NFL_PROJ
 const chunks=(items,size)=>Array.from({length:Math.ceil(items.length/size)},(_,i)=>items.slice(i*size,(i+1)*size));
 async function post(body){const r=await fetch(new URL('/api/internal/nfl/projection-ingest',base),{method:'POST',headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(90000)});let p;try{p=await r.json()}catch{throw new Error(`NFL ingest returned non-JSON HTTP ${r.status}`)}if(!r.ok)throw new Error(p.error||`NFL ingest HTTP ${r.status}`);return p}
 async function mapLimit(items,limit,fn){const out=new Array(items.length);let next=0;const workers=Array.from({length:Math.min(limit,items.length)},async()=>{for(;;){const i=next++;if(i>=items.length)return;out[i]=await fn(items[i])}});await Promise.all(workers);return out}
-async function scoreboard(){const url=espnNflRegularSeasonScoreboardUrl(season),r=await fetch(url,{signal:AbortSignal.timeout(30000)});if(!r.ok)throw new Error(`ESPN NFL scoreboard HTTP ${r.status}`);return normalizeEspnNflRegularSeasonScoreboard(await r.json(),season)}
+async function scoreboard(){const weeks=Array.from({length:18},(_,index)=>index+1);const groups=await mapLimit(weeks,4,async week=>{const url=espnNflRegularSeasonScoreboardWeekUrl(season,week),r=await fetch(url,{signal:AbortSignal.timeout(30000)});if(!r.ok)throw new Error(`ESPN NFL scoreboard HTTP ${r.status}: week ${week}`);return normalizeEspnNflRegularSeasonScoreboard(await r.json(),season,week)});return mergeEspnNflRegularSeasonScoreboards(groups)}
 (async()=>{
   const players=(await post({action:'eligible'})).players;
   if(!Array.isArray(players))throw new Error('NFL eligible endpoint returned no player list');
