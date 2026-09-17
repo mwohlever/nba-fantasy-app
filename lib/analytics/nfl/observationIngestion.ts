@@ -38,7 +38,12 @@ export function buildNflObservation(input: {
   const row = input.gameLog;
   if (!supported.has(row.position) || !finalRegularEvent({ eventId: row.eventId, season: row.season, events: input.finalEvents })) return null;
   const identity = resolveDirectNflIdentity({ providerPlayerId: row.providerPlayerId, position: row.position, eligible: input.eligible });
-  const matches = input.fumbles.filter(evidence => evidence.providerEventId === row.eventId && evidence.providerPlayerId === row.providerPlayerId);
+  // ESPN's event summary contains fumble rows for every position. Phase B uses
+  // it only to complete QB LOST evidence; skill-player facts remain sourced
+  // solely from their validated athlete game log.
+  const matches = row.position === "QB"
+    ? input.fumbles.filter(evidence => evidence.providerEventId === row.eventId && evidence.providerPlayerId === row.providerPlayerId)
+    : [];
   if (matches.length > 1) throw new Error(`Duplicate NFL QB fumble evidence: ${row.providerPlayerId}:${row.eventId}`);
   if (row.position === "QB" && matches.length !== 1) throw new Error(`Missing validated NFL QB fumble evidence: ${row.providerPlayerId}:${row.eventId}`);
   const fumble = matches[0] ?? null;
