@@ -2,6 +2,11 @@ name: NFL projection observation refresh
 on:
   workflow_dispatch:
     inputs:
+      season:
+        description: NFL season to acquire (manual runs only; scheduled refresh remains 2026)
+        required: false
+        default: '2026'
+        type: string
       dry_run:
         description: Validate ESPN acquisition without writing observations
         required: false
@@ -19,7 +24,7 @@ jobs:
     env:
       NFL_PROJECTION_INGEST_BASE_URL: https://www.111sports.app
       NFL_PROJECTION_INGEST_SECRET: ${{ secrets.NFL_PROJECTION_INGEST_SECRET }}
-      NFL_PROJECTION_SEASON: '2026'
+      NFL_PROJECTION_SEASON: ${{ inputs.season || '2026' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -10,10 +10,10 @@ export type NflProjectionGenerationRepository = {
 export async function generateNflProjectionStatCache(input: { repository: NflProjectionGenerationRepository; players: readonly NflEligiblePlayer[]; targetSeason: number; asOf: string; generatedAt?: string }) {
   const players = [...new Map(input.players.map(player => [player.localPlayerId, player])).values()].sort((a, b) => a.localPlayerId - b.localPlayerId);
   const histories = await input.repository.loadHistories({ playerIds: players.map(player => player.localPlayerId), targetSeason: input.targetSeason, asOf: input.asOf });
-  const cacheRows: NflProjectionCacheRecord[] = [], unavailable: Array<{ playerId: number; reason: "zero_current_season_history" }> = [];
+  const cacheRows: NflProjectionCacheRecord[] = [], unavailable: Array<{ playerId: number; reason: "zero_current_or_prior_season_history" }> = [];
   for (const player of players) {
     const projection = projectNflV2O1Raw({ playerId: player.localPlayerId, providerPlayerId: player.providerPlayerId, position: player.position, season: input.targetSeason, asOf: input.asOf, history: histories.get(player.localPlayerId) ?? [] });
-    if (!projection) { unavailable.push({ playerId: player.localPlayerId, reason: "zero_current_season_history" }); continue; }
+    if (!projection) { unavailable.push({ playerId: player.localPlayerId, reason: "zero_current_or_prior_season_history" }); continue; }
     cacheRows.push(nflProjectionCacheRecord({ playerId: player.localPlayerId, providerPlayerId: player.providerPlayerId, position: player.position, season: input.targetSeason, asOf: input.asOf, generatedAt: input.generatedAt ?? input.asOf, projection }));
   }
   if (cacheRows.length) await input.repository.appendStatCache(cacheRows);

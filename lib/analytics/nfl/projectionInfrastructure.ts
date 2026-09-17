@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
 import { calculateNflFantasyPoints, type NflScoringRules } from "../../scoring/nfl";
 import { resolveLeagueRules } from "../../rules/leagueRules";
-import { projectNflResearchO1Raw, type RawStats, type ResearchRow } from "./researchCandidates";
+import { projectNflResearchO1RawWithWindows, type RawStats, type ResearchRow } from "./researchCandidates";
 import type { NflObservationPosition } from "./observationFoundation";
 
-export const NFL_PROJECTION_V2 = "nfl-v2-o1-opportunity5-production8-v1" as const;
+/** Original current-season-only first-run cache rows remain historically traceable. */
+export const NFL_PROJECTION_V2_CURRENT_SEASON_V1 = "nfl-v2-o1-opportunity5-production8-v1" as const;
+/** O1 with only immediate-prior-season real observations filling unfilled early-season windows. */
+export const NFL_PROJECTION_V2 = "nfl-v2-o1-opportunity5-production8-coldstart-v1" as const;
 export type NflRawProjectionStats = { passing_yards: number; passing_tds: number; passing_ints: number; rushing_yards: number; rushing_tds: number; receiving_yards: number; receiving_tds: number; receptions: number; fumbles_lost: number };
 export type NflProjectionConfidence = "low" | "normal";
 export type NflObservationVersionRecord = {
@@ -33,6 +36,12 @@ export function selectNflAsOfObservationVersions(input: { rows: readonly NflObse
   return [...current.values()].sort((left, right) => instant(left.game_at) - instant(right.game_at) || left.provider_event_id.localeCompare(right.provider_event_id) || left.id - right.id);
 }
 
+function fillWindow(current: readonly NflObservationVersionRecord[], previous: readonly NflObservationVersionRecord[], size: number) {
+  const currentWindow = current.slice(-size);
+  const missing = size - currentWindow.length;
+  return [...(missing > 0 ? previous.slice(-missing) : []), ...currentWindow];
+}
+
 function researchRow(row: NflObservationVersionRecord): ResearchRow {
   return { providerPlayerId: row.provider_player_id, position: row.position, season: row.season, eventId: row.provider_event_id, gameAt: row.game_at, week: row.week,
     stats: { completions: row.completions, passingAttempts: row.passing_attempts, passingYards: row.passing_yards, passingTouchdowns: row.passing_touchdowns, interceptions: row.interceptions,
@@ -40,18 +49,26 @@ function researchRow(row: NflObservationVersionRecord): ResearchRow {
 }
 function cachedStats(stats: RawStats): NflRawProjectionStats { return { passing_yards: stats.passingYards, passing_tds: stats.passingTouchdowns, passing_ints: stats.interceptions, rushing_yards: stats.rushingYards, rushing_tds: stats.rushingTouchdowns, receiving_yards: stats.receivingYards, receiving_tds: stats.receivingTouchdowns, receptions: stats.receptions, fumbles_lost: stats.fumblesLost }; }
 
-/** Frozen O1 only: current-season history, opportunity last 5, production ratio-of-totals last 8. */
+/**
+ * Frozen O1 raw-stat generator with a bounded early-season bridge. Each window
+ * independently fills from the immediately preceding regular season, then is
+ * naturally replaced by current-season evidence. No weights or older seasons
+ * enter this path.
+ */
 export function projectNflV2O1Raw(input: { playerId: number; providerPlayerId: string; position: NflObservationPosition; season: number; asOf: string; history: readonly NflObservationVersionRecord[] }) {
-  const selected = selectNflAsOfObservationVersions({ rows: input.history, playerId: input.playerId, targetSeason: input.season, asOf: input.asOf });
-  if (!selected.length) return null;
+  const current = selectNflAsOfObservationVersions({ rows: input.history, playerId: input.playerId, targetSeason: input.season, asOf: input.asOf });
+  const previous = selectNflAsOfObservationVersions({ rows: input.history, playerId: input.playerId, targetSeason: input.season - 1, asOf: input.asOf });
+  const opportunity = fillWindow(current, previous, 5), production = fillWindow(current, previous, 8);
+  if (!opportunity.length || !production.length) return null;
   const target: ResearchRow = { providerPlayerId: input.providerPlayerId, position: input.position, season: input.season, eventId: `projection:${input.playerId}`, gameAt: input.asOf, week: 1, stats: {} };
-  const result = projectNflResearchO1Raw(target, selected.map(researchRow));
-  if (!result?.projectedStats) throw new Error("Frozen NFL O1 unexpectedly abstained with current-season history");
+  const result = projectNflResearchO1RawWithWindows(target, { opportunity: opportunity.map(researchRow), production: production.map(researchRow) });
+  if (!result?.projectedStats) throw new Error("NFL O1 cold-start bridge unexpectedly abstained with admitted history");
   const components = result.components as { opportunity: Record<string, number>; productionSample: number };
-  return { projectedStats: cachedStats(result.projectedStats), confidence: selected.length < 5 ? "low" as const : "normal" as const,
-    sample: { current_season_games: selected.length, opportunity_window_games: Math.min(5, selected.length), production_window_games: Math.min(8, selected.length) },
+  const source = [...previous, ...current].sort((left, right) => instant(left.game_at) - instant(right.game_at) || left.id - right.id).at(-1);
+  return { projectedStats: cachedStats(result.projectedStats), confidence: current.length < 5 ? "low" as const : "normal" as const,
+    sample: { current_season_games: current.length, prior_season_games: previous.length, opportunity_window_games: opportunity.length, opportunity_current_games: Math.min(5, current.length), opportunity_prior_games: Math.max(0, opportunity.length - Math.min(5, current.length)), production_window_games: production.length, production_current_games: Math.min(8, current.length), production_prior_games: Math.max(0, production.length - Math.min(8, current.length)) },
     components: { passing_attempts: components.opportunity.passingAttempts ?? 0, rushing_attempts: components.opportunity.rushingAttempts ?? 0, receiving_targets: components.opportunity.receivingTargets ?? 0, production_window_games: components.productionSample },
-    sourceLatestGameAt: selected.at(-1)?.game_at ?? null, sourceLatestKnownAt: selected.at(-1)?.known_at ?? null };
+    sourceLatestGameAt: source?.game_at ?? null, sourceLatestKnownAt: source?.known_at ?? null };
 }
 
 /** Hash includes raw model output and factual source boundary, never volatile generation timestamps. */

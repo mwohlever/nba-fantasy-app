@@ -34,9 +34,9 @@ function carryover(current: readonly ResearchRow[], previous: readonly ResearchR
   return current.length >= 3 || !previous.length ? [...current] : [...previous.slice(-1), ...current];
 }
 function estimateOpportunity(rows: readonly ResearchRow[], driver: Driver, robust: boolean) { return robust ? robustOpportunity(rows, driver) : standardOpportunity(rows, driver); }
-function projectedFromHistory(position: NflPosition, rows: readonly ResearchRow[], robust: boolean) {
-  const production = rows.slice(-(robust ? 10 : 8)), weights = production.map(() => 1), opportunity: Record<string, number> = {};
-  let downweighted = 0; for (const driver of drivers(position)) { const result = estimateOpportunity(rows, driver, robust); opportunity[driver] = result.value; downweighted += result.downweighted; }
+function projectedFromWindows(position: NflPosition, opportunityRows: readonly ResearchRow[], production: readonly ResearchRow[], robust: boolean) {
+  const weights = production.map(() => 1), opportunity: Record<string, number> = {};
+  let downweighted = 0; for (const driver of drivers(position)) { const result = estimateOpportunity(opportunityRows, driver, robust); opportunity[driver] = result.value; downweighted += result.downweighted; }
   const component = (numerator: string, denominator: Driver) => { const rate = ratio(production,numerator,denominator,weights); return rate === null ? 0 : opportunity[denominator] * rate; };
   const totalOpportunity = (row: ResearchRow) => numeric(row.stats.rushingAttempts) + numeric(row.stats.receivingTargets) + (position === "QB" ? numeric(row.stats.passingAttempts) : 0);
   const totalProjectedOpportunity = opportunity.rushingAttempts + (opportunity.receivingTargets ?? 0) + (position === "QB" ? opportunity.passingAttempts : 0);
@@ -45,14 +45,23 @@ function projectedFromHistory(position: NflPosition, rows: readonly ResearchRow[
   if (position === "QB") { stats.passingYards=component("passingYards","passingAttempts");stats.passingTouchdowns=component("passingTouchdowns","passingAttempts");stats.interceptions=component("interceptions","passingAttempts"); }
   return { stats, opportunity, productionSample:production.length, downweighted };
 }
+function projectedFromHistory(position: NflPosition, rows: readonly ResearchRow[], robust: boolean) { return projectedFromWindows(position, rows, rows.slice(-(robust ? 10 : 8)), robust); }
+
+/** Raw O1 core for a supplied real-observation window fill; no fantasy scoring or weights are introduced. */
+export function projectNflResearchO1RawWithWindows(target: Pick<ResearchRow, "position">, windows: { opportunity: readonly ResearchRow[]; production: readonly ResearchRow[] }) {
+  if (!windows.opportunity.length || !windows.production.length) return null;
+  const projection = projectedFromWindows(target.position, windows.opportunity.slice(-5), windows.production.slice(-8), false);
+  return { projectedStats: projection.stats, components: projection };
+}
 
 /** Frozen O1 raw-stat path shared by shadow generation; it deliberately does not score fantasy points. */
 export function projectNflResearchO1Raw(target: Pick<ResearchRow, "providerPlayerId" | "position" | "season" | "gameAt">, prior: readonly ResearchRow[]) {
   const history = prior.filter(row => row.providerPlayerId === target.providerPlayerId && row.gameAt < target.gameAt).sort((a,b)=>a.gameAt.localeCompare(b.gameAt)||a.eventId.localeCompare(b.eventId));
   const current = history.filter(row => row.season === target.season);
   if (!current.length) return null;
-  const projection = projectedFromHistory(target.position, current, false);
-  return { projectedStats: projection.stats, components: { history: history.length, currentSeasonGames: current.length, previousSeasonGames: history.filter(row=>row.season===target.season-1).length, admitted: current.map(row=>({eventId:row.eventId,season:row.season,weight:1})), ...projection } };
+  const projection = projectNflResearchO1RawWithWindows(target, { opportunity: current, production: current });
+  if (!projection) return null;
+  return { projectedStats: projection.projectedStats, components: { history: history.length, currentSeasonGames: current.length, previousSeasonGames: history.filter(row=>row.season===target.season-1).length, admitted: current.map(row=>({eventId:row.eventId,season:row.season,weight:1})), ...projection.components } };
 }
 
 export function projectNflResearch(candidateId: CandidateId, target: ResearchRow, prior: readonly ResearchRow[]) {

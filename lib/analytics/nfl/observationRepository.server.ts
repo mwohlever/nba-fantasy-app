@@ -3,7 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { nflObservationHashLookupGroups, type NflEligiblePlayer, type NflObservationRecord } from "./observationIngestion";
 import type { NflObservationPosition } from "./observationFoundation";
-import { selectNflAsOfObservationVersions, type NflObservationVersionRecord, type NflProjectionCacheRecord, validateNflRawProjectionStats } from "./projectionInfrastructure";
+import { type NflObservationVersionRecord, type NflProjectionCacheRecord, validateNflRawProjectionStats } from "./projectionInfrastructure";
 
 const PAGE_SIZE = 1000;
 const INSERT_BATCH_SIZE = 500;
@@ -78,7 +78,7 @@ export async function loadNflProjectionHistories(input: { playerIds: readonly nu
     const rows: VersionDbRow[] = [];
     for (let from = 0; ; from += PAGE_SIZE) {
       const result = await supabaseAdmin.from("nfl_player_game_observation_versions").select("id,provider,provider_player_id,provider_event_id,local_player_id,position,season,week,phase,game_at,known_at,completions,passing_attempts,passing_yards,passing_touchdowns,interceptions,rushing_attempts,rushing_yards,rushing_touchdowns,receiving_targets,receptions,receiving_yards,receiving_touchdowns,fumbles_lost")
-        .in("local_player_id", playerIds).eq("season", input.targetSeason).eq("phase", "regular").lt("game_at", input.asOf).lt("known_at", input.asOf)
+        .in("local_player_id", playerIds).in("season", [input.targetSeason - 1, input.targetSeason]).eq("phase", "regular").lt("game_at", input.asOf).lt("known_at", input.asOf)
         .order("game_at", { ascending: true }).order("known_at", { ascending: true }).order("id", { ascending: true }).range(from, from + PAGE_SIZE - 1);
       fail("NFL projection version-history lookup failed", result.error);
       const page = (result.data ?? []) as VersionDbRow[]; rows.push(...page);
@@ -89,7 +89,6 @@ export async function loadNflProjectionHistories(input: { playerIds: readonly nu
       if (record.local_player_id !== null && output.has(record.local_player_id)) output.get(record.local_player_id)!.push(record);
     }
   }
-  for (const [playerId, rows] of output) output.set(playerId, selectNflAsOfObservationVersions({ rows, playerId, targetSeason: input.targetSeason, asOf: input.asOf }));
   return output;
 }
 
