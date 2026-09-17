@@ -144,7 +144,9 @@ test('avatars follow team.user_id including historical owners and null fallback'
   assert.equal(avatars.get(14), null);
   assert.equal(avatars.has(12), false);
   assert.equal(db.calls.some(c => c[0] === 'app_users' && c[2] === 'team_id'), false);
-  assert.match(source('app/lineups/scores/page.tsx'), /loadFantasyTeamAvatars\(supabaseAdmin, teams \?\? \[\]\)/);
+  assert.match(source('app/lineups/scores/page.tsx'), /loadFantasyTeamAvatars\(\s*supabaseAdmin,\s*teams \?\? \[\],/);
+  assert.match(source('lib/home/golfHomeSummary.ts'), /loadFantasyTeamAvatars\(\s*supabaseAdmin,\s*activeTeams/);
+  assert.doesNotMatch(source('lib/home/golfHomeSummary.ts'), /select\("team_id, avatar_url"\)/);
   assert.doesNotMatch(source('lib/profile/fantasyTeamProfile.ts'), /\.eq\("team_id", teamId\)[\s\S]{0,40}\.maybeSingle/);
 });
 test('NCAA and NBA Skins cannot enter fantasy notification workflows', async () => {

@@ -153,6 +153,16 @@ test('Golf Scores uses Tournaments while non-Golf Scores retains Slates', () => 
   assert.match(builder, /setIsGolfSlateMenuOpen\(true\)/);
 });
 
+test('Best Ball describes provisional scoring without implying an unsubmitted lineup', () => {
+  const h = host(GolfFantasyRows);
+  const board = bestBallBoard();
+  board.teams[0].provisional = true;
+  const tree = h.render({ scope: 'group-a:live-scoring', board, onPlayer() {} });
+  assert.match(text(tree), /Live scoring ·\s+8 golfer selections/);
+  assert.doesNotMatch(text(tree), /Provisional/);
+  h.unmount();
+});
+
 test('pull refresh preserves unsaved period selections, flags invalidity and retains revision conflict', async () => {
   const oldFetch = global.fetch;
   let revision = 1, eligible = true, requests = 0;

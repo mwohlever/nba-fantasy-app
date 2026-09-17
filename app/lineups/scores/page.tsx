@@ -117,7 +117,6 @@ export default async function ScoresLineupsPage({
       data: activeMemberships,
       error: activeMembershipsError,
     },
-    { data: teamUsers, error: teamUsersError },
     { data: slates, error: slatesError },
     { data: slateTeams, error: slateTeamsError },
     { data: allPlayerStats, error: allPlayerStatsError },
@@ -145,10 +144,6 @@ export default async function ScoresLineupsPage({
         "is_active",
         true,
       ),
-    sport !== "golf" ? { data: [], error: null } : supabaseAdmin
-      .from("app_users")
-      .select("team_id, avatar_url")
-      .not("team_id", "is", null),
     supabaseAdmin
       .from("slates")
       .select(
@@ -180,7 +175,6 @@ export default async function ScoresLineupsPage({
     playersError ||
     teamsError ||
     activeMembershipsError ||
-    teamUsersError ||
     slatesError ||
     slateTeamsError ||
     allPlayerStatsError
@@ -198,7 +192,6 @@ export default async function ScoresLineupsPage({
                 {playersError?.message ||
                   teamsError?.message ||
                   activeMembershipsError?.message ||
-                  teamUsersError?.message ||
                   slatesError?.message ||
                   slateTeamsError?.message ||
                   allPlayerStatsError?.message}
@@ -210,18 +203,10 @@ export default async function ScoresLineupsPage({
     );
   }
 
-  const avatarUrlByTeamId = sport !== "golf"
-    ? await loadFantasyTeamAvatars(supabaseAdmin, teams ?? [])
-    : new Map<number, string | null>();
-
-  (teamUsers ?? []).forEach((user: any) => {
-    if (user.team_id === null || user.team_id === undefined) return;
-
-    avatarUrlByTeamId.set(
-      Number(user.team_id),
-      user.avatar_url ?? null
-    );
-  });
+  const avatarUrlByTeamId = await loadFantasyTeamAvatars(
+    supabaseAdmin,
+    teams ?? [],
+  );
 
   /*
    * A Group can retain old/inactive team identities for history.

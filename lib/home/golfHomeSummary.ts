@@ -8,6 +8,7 @@ import { resolveGolfRules } from "@/lib/rules/leagueRules";
 import { relevantGolfRosterPeriodKey } from "@/lib/golf/relevantRosterPeriod";
 import { loadGolfFantasy, loadGolfRosters } from '@/lib/golf/fantasy.server';
 import { canViewerSeeGolfRosterPeriod } from '@/lib/golf/rosterVisibility';
+import { loadFantasyTeamAvatars } from '@/lib/fantasyTeamIdentity';
 
 type GolfSlateRow = {
   id: number;
@@ -171,7 +172,6 @@ export async function getGolfHomeSummary() {
       data: activeMembershipData,
       error: activeMembershipError,
     },
-    { data: teamUserData, error: teamUserError },
     { data: slateTeamData, error: slateTeamError },
   ] = await Promise.all([
     supabaseAdmin
@@ -216,11 +216,6 @@ export async function getGolfHomeSummary() {
       ),
 
     supabaseAdmin
-      .from("app_users")
-      .select("team_id, avatar_url")
-      .not("team_id", "is", null),
-
-    supabaseAdmin
       .from("slate_teams")
       .select(
         "slate_id, team_id, is_participating",
@@ -233,7 +228,6 @@ export async function getGolfHomeSummary() {
     resultError ||
     teamError ||
     activeMembershipError ||
-    teamUserError ||
     slateTeamError;
 
   if (initialError) {
@@ -287,17 +281,10 @@ export async function getGolfHomeSummary() {
     ]),
   );
 
-  const avatarByTeamId =
-    new Map<number, string | null>();
-
-  (teamUserData ?? []).forEach((user) => {
-    if (user.team_id == null) return;
-
-    avatarByTeamId.set(
-      Number(user.team_id),
-      user.avatar_url ?? null,
-    );
-  });
+  const avatarByTeamId = await loadFantasyTeamAvatars(
+    supabaseAdmin,
+    activeTeams,
+  );
 
   const participatingTeamIdsBySlate =
     new Map<number, Set<number>>();
