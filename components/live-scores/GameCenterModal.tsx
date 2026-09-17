@@ -1173,7 +1173,7 @@ export default function GameCenterModal({
         <div className="min-h-0 flex-1 overflow-y-auto pb-24 sm:pb-6">
           {error && detail ? <p role="status" className="px-4 pt-3 text-xs text-rose-700">Refresh failed. Showing the last available update. {error}</p> : null}
           {tab === "pbp" ? <div className="px-4 pt-4">
-            <FootballLiveField field={error ? null : detail?.field} />
+            <FootballLiveField field={detail?.field} />
           </div> : null}
           {loading ? (
             <div className="p-6 text-center text-sm text-slate-500">

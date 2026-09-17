@@ -65,23 +65,18 @@ test('goal-to-go, down distance, clock and compact accessible LOS/first-down SVG
   const markup = render(React.createElement(Field, { field }));
   assert.match(markup, /h-20/); assert.match(markup, /AAA possession/);
   assert.match(markup, /Solid: scrimmage/); assert.match(markup, /stroke-dasharray/);
-  assert.match(markup, /Latest:/); assert.match(markup, /After latest play/);
+  assert.match(markup, /Latest play:/); assert.match(markup, /After latest play/);
   assert.match(render(React.createElement(Field, { field: null })), /Football field; current ball position unavailable/);
 });
 for (const [label, change] of [
   ['no explicit possession', s => s.header.competitions[0].competitors[0].possession = false],
   ['ambiguous possession', s => s.header.competitions[0].competitors[1].possession = true],
   ['possession changes before current drive', s => { s.header.competitions[0].competitors[0].possession = false; s.header.competitions[0].competitors[1].possession = true; }],
-  ['turnover', s => s.drives.current.plays[0].isTurnover = true],
-  ['touchdown', s => s.drives.current.plays[0].scoringPlay = true],
-  ['PAT', s => s.drives.current.plays[0].type.text = 'Extra Point Good'],
-  ['kickoff', s => s.drives.current.plays[0].type.text = 'Kickoff'],
-  ['punt', s => s.drives.current.plays[0].type.text = 'Punt'],
-  ['quarter ended', s => s.drives.current.plays[0].type.text = 'End Period'],
-  ['halftime', s => s.header.competitions[0].status.type.name = 'STATUS_HALFTIME'],
+  ['turnover without a resulting possession', s => { s.drives.current.plays[0].isTurnover = true; delete s.drives.current.plays[0].end.team; }],
+  ['touchdown without a post-score spot', s => s.drives.current.plays[0].scoringPlay = true],
+  ['PAT without a post-score spot', s => s.drives.current.plays[0].type.text = 'Extra Point Good'],
   ['pregame', s => s.header.competitions[0].status.type.state = 'pre'],
   ['final', s => s.header.competitions[0].status.type.completed = true],
-  ['no current drive', s => { s.drives.previous = [s.drives.current]; delete s.drives.current; }],
 ]) test(`uncertain markers clear safely: ${label}`, () => { const s = summary(); change(s); assert.equal(normalizeNflField(s), null); });
 test('possession change with new drive normalizes both teams in same direction', () => {
   const s = summary(63); const c = s.header.competitions[0];
@@ -91,28 +86,28 @@ test('possession change with new drive normalizes both teams in same direction',
   assert.equal(field.offense, 'BBB'); assert.equal(field.position, 'BBB 37'); assert.equal(field.ball, 37);
 });
 
-test('field shell persists through punt, unknown event, penalty/no-play, score and final without invented markers', () => {
-  for (const type of ['Punt','Unknown','Penalty','Extra Point Good']) {
+test('field shell preserves a prior structured spot through an incomplete newest event', () => {
+  for (const type of ['Unknown','Penalty']) {
     const raw=summary(); raw.drives.current.plays.push({type:{text:type},text:'NE at SEA 20 (not structured state)'});
     const field=normalizeNflField(raw);
     const markup=render(React.createElement(Field,{field}));
     assert.match(markup,/<svg/); assert.match(markup,/h-20/);
-    assert.doesNotMatch(markup,/<ellipse|stroke-dasharray|AAA possession/);
+    assert.match(markup,/<ellipse/); assert.match(markup,/AAA possession/);
   }
   const raw=summary(); raw.header.competitions[0].status.type.completed=true;
   assert.match(render(React.createElement(Field,{field:normalizeNflField(raw)})),/<svg/);
 });
 test('structured same-period timeout retains last trustworthy spot; missing fields are independent', () => {
   const raw=summary();raw.drives.current.plays.push({type:{text:'Timeout'},period:{number:3},clock:{displayValue:'8:40'}});
-  const retained=normalizeNflField(raw);assert.equal(retained.ball,37);assert.equal(retained.clock,'8:42 Q3');assert.equal(retained.stateLabel,'Last structured spot');
+  const retained=normalizeNflField(raw);assert.equal(retained.ball,37);assert.equal(retained.clock,'8:42 Q3');assert.equal(retained.stateLabel,'Retained field state');
   delete raw.drives.current.plays[1].period;
   assert.equal(normalizeNflField(raw).ball,37,'an administrative event without period metadata does not erase a known spot');
   raw.drives.current.plays.splice(1,0,{type:{text:'Punt'},period:{number:3}});
   assert.equal(normalizeNflField(raw),null,'do not cross a punt when searching past a timeout');
-  for(const key of ['down','distance','yardsToEndzone']){
+  for(const key of ['down','distance']){
     const incomplete=summary();delete incomplete.drives.current.plays[0].end[key];
     const field=normalizeNflField(incomplete);assert.ok(field);assert.equal(field.firstDown,null);
-    assert.equal(field.ball,key==='yardsToEndzone'?null:37);
+    assert.equal(field.ball,37);
   }
   const penalty=summary();penalty.drives.current.plays[0].type.text='Penalty';
   assert.equal(normalizeNflField(penalty).ball,37);
@@ -122,6 +117,59 @@ test('known new possession never reuses old drive or old timeout state', () => {
   raw.header.competitions[0].competitors[0].possession=false;raw.header.competitions[0].competitors[1].possession=true;
   assert.equal(normalizeNflField(raw),null);
   assert.doesNotMatch(render(React.createElement(Field,{field:normalizeNflField(raw)})),/AAA possession|<ellipse/);
+});
+
+function resolvedSummary(plays, possession = '1') {
+  return { header: { competitions: [{ status: { type: { state: 'in', name: 'STATUS_IN_PROGRESS' } }, competitors: [
+    { id: '1', possession: possession === '1', team: { id: '1', abbreviation: 'AAA', color: '123456' } },
+    { id: '2', possession: possession === '2', team: { id: '2', abbreviation: 'BBB', color: '654321' } },
+  ] }] }, drives: { previous: [{ plays }] } };
+}
+function structuredPlay(overrides = {}) {
+  return { id: 'base', type: { id: '5', text: 'Rush' }, text: 'Base football play', period: { number: 3 }, clock: { displayValue: '8:42' }, start: { team: { id: '1' }, down: 1, distance: 10, yardsToEndzone: 63 }, end: { team: { id: '1' }, down: 2, distance: 6, yardsToEndzone: 59, shortDownDistanceText: '2nd & 6' }, ...overrides };
+}
+test('shared resolver retains a fresh-load spot and communicates timeout, official timeout, two-minute warning and end period', () => {
+  for (const type of ['Timeout', 'Official Timeout', 'Two-minute warning', 'End Period']) {
+    const field = normalizeNflField(resolvedSummary([structuredPlay(), { id: type, type: { text: type }, text: `${type} now`, period: { number: 3 }, clock: { displayValue: '8:40' } }]));
+    assert.equal(field.ball, 41); assert.equal(field.latestEvent.type, type); assert.equal(field.lastFootballPlay.text, 'Base football play');
+    assert.equal(field.fieldStatePlay.text, 'Base football play'); assert.equal(field.stateLabel, 'Retained field state');
+    if (type === 'Timeout') assert.match(render(React.createElement(Field, { field })), /Current event:.*Timeout now.*Last play:.*Base football play/s);
+  }
+});
+test('shared resolver classifies major events and clears emphasis on the next field-producing play', () => {
+  const touchdown = structuredPlay({ id: 'td', type: { id: '67', text: 'Passing Touchdown' }, scoringPlay: true, text: 'AAA touchdown', end: { team: { id: '1' }, yardsToEndzone: 0 } });
+  let field = normalizeNflField(resolvedSummary([structuredPlay(), touchdown]));
+  assert.deepEqual(field.eventEmphasis, { kind: 'touchdown', team: 'AAA' });
+  field = normalizeNflField(resolvedSummary([structuredPlay(), touchdown, { id: 'off', type: { id: '74', text: 'Official Timeout' }, text: 'Official timeout' }]));
+  assert.equal(field.latestEvent.type, 'Official Timeout'); assert.equal(field.lastFootballPlay.text, 'AAA touchdown'); assert.equal(field.eventEmphasis.kind, 'touchdown');
+  field = normalizeNflField(resolvedSummary([structuredPlay(), touchdown, { id: 'pat', type: { text: 'Extra Point Good' }, pointAfterAttempt: true, text: 'PAT good' }]));
+  assert.equal(field.latestEvent.text, 'PAT good'); assert.equal(field.lastFootballPlay.text, 'AAA touchdown'); assert.equal(field.eventEmphasis.kind, 'touchdown');
+  const kickoff = structuredPlay({ id: 'kick', type: { id: '53', text: 'Kickoff' }, text: 'Kickoff touchback', start: { team: { id: '1' } }, end: { team: { id: '2' }, down: 1, distance: 10, yardsToEndzone: 75 } });
+  field = normalizeNflField(resolvedSummary([structuredPlay(), touchdown, kickoff], '2'));
+  assert.equal(field.position, 'BBB 25'); assert.equal(field.eventEmphasis, null);
+  const fieldGoal = structuredPlay({ id: 'fg', type: { id: '59', text: 'Field Goal Good' }, scoringPlay: true, end: { team: { id: '1' }, yardsToEndzone: 0 } });
+  assert.equal(normalizeNflField(resolvedSummary([structuredPlay(), fieldGoal])).eventEmphasis.kind, 'field-goal');
+});
+test('shared resolver uses authoritative transition and enforcement end spots', () => {
+  const transition = (id, type, startId, endId, yards, extra = {}) => structuredPlay({ id, type, start: { team: { id: startId }, down: 4, distance: 4, yardsToEndzone: 45 }, end: { team: { id: endId }, down: 1, distance: 10, yardsToEndzone: yards }, ...extra });
+  let field = normalizeNflField(resolvedSummary([transition('punt', { id: '52', text: 'Punt' }, '1', '2', 80)], '2'));
+  assert.equal(field.position, 'BBB 20'); assert.equal(field.fieldStatePlay.type, 'Punt');
+  field = normalizeNflField(resolvedSummary([transition('int', { id: '26', text: 'Pass Interception Return' }, '1', '2', 70, { isTurnover: true })], '2'));
+  assert.equal(field.eventEmphasis.kind, 'interception'); assert.equal(field.eventEmphasis.team, 'BBB');
+  field = normalizeNflField(resolvedSummary([transition('fumble', { id: '29', text: 'Fumble Recovery (Opponent)' }, '1', '2', 70, { isTurnover: true })], '2'));
+  assert.equal(field.eventEmphasis.kind, 'turnover');
+  field = normalizeNflField(resolvedSummary([transition('own', { id: '9', text: 'Fumble Recovery (Own)' }, '1', '1', 55)], '1'));
+  assert.equal(field.eventEmphasis, null);
+  field = normalizeNflField(resolvedSummary([transition('penalty', { id: '8', text: 'Penalty' }, '1', '1', 50, { isPenalty: true, text: 'Penalty enforcement - No Play' })]));
+  assert.equal(field.position, '50'); assert.equal(field.lastFootballPlay.type, 'Penalty');
+  field = normalizeNflField(resolvedSummary([transition('declined', { id: '8', text: 'Penalty' }, '1', '1', 55, { isPenalty: true, text: 'Penalty declined' })]));
+  assert.equal(field.position, 'AAA 45');
+});
+test('incomplete newest events fall back safely, while ambiguous possession remains unavailable', () => {
+  let field = normalizeNflField(resolvedSummary([structuredPlay(), { id: 'incomplete', type: { text: 'Unknown' }, text: 'Provider pending' }]));
+  assert.equal(field.ball, 41); assert.equal(field.latestEvent.text, 'Provider pending');
+  const raw = resolvedSummary([structuredPlay()]); raw.header.competitions[0].competitors[1].possession = true;
+  assert.equal(normalizeNflField(raw), null);
 });
 
 test('batched roster loader scopes league, week, Group teams and provider table; excludes synthetic D/ST', async () => {
@@ -260,7 +308,7 @@ for (const apiBase of ['/api/live-scores/nfl', '/api/ncaa-pickem']) {
     assert.match(fallback, /current ball position unavailable/); assert.match(fallback, /Period 1 play/);
     assert.doesNotMatch(fallback, /<ellipse/);
     states[1].field = normalizeNflField(summary()); states[4] = 'Provider unavailable';
-    assert.doesNotMatch(render(draw({ apiBase })), /<ellipse/);
+    assert.match(render(draw({ apiBase })), /<ellipse/);
   }));
 }
 
