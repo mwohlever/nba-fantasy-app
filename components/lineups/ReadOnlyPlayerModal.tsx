@@ -17,6 +17,8 @@ type Props = {
   golfStat?: PlayerStat | null;
   golfSlateId?: number | null;
   golfFocus?: GolfScorecardFocus | null;
+  golfStatsLoading?: boolean;
+  golfStatsError?: string | null;
 };
 
 export default function ReadOnlyPlayerModal({
@@ -27,6 +29,8 @@ export default function ReadOnlyPlayerModal({
   golfStat = null,
   golfSlateId = null,
   golfFocus = null,
+  golfStatsLoading = false,
+  golfStatsError = null,
 }: Props) {
   const { selectedSport } = useSelectedSport();
 
@@ -37,6 +41,8 @@ export default function ReadOnlyPlayerModal({
         stat={golfStat}
         slateId={golfSlateId}
         focus={golfFocus}
+        isLoading={golfStatsLoading}
+        loadError={golfStatsError}
         onClose={() => setPlayer(null)}
       />
     );

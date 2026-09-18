@@ -1503,7 +1503,11 @@ function AppNavContent() {
 
           <div className="flex min-w-0 items-center gap-2">
             {mobileGroupControl}
-            <MobileAccountMenu />
+            <MobileAccountMenu
+              currentUser={currentUser}
+              isLoading={isUserLoading}
+              onLogout={() => setCurrentUser(null)}
+            />
           </div>
         </div>
       </nav>

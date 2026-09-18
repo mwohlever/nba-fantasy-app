@@ -3,13 +3,15 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 const fs = require('node:fs');
 const ts = require('typescript');
-const { host, nodes } = require('./helpers/scores-harness.cjs');
+const { host, nodes, context } = require('./helpers/scores-harness.cjs');
 const React = require('react');
 React.useCallback = (fn, deps) => React.useMemo(() => fn, deps);
 const { renderToStaticMarkup } = require('react-dom/server');
 const Setup = require('../components/golf/GolfGameSetup.tsx').default;
 const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').default;
 const Leaderboard = require('../components/golf/GolfLiveLeaderboard.tsx').default;
+const GolfLivePage = require('../components/golf/GolfLivePage.tsx').default;
+const ReadOnlyPlayerModal = require('../components/lineups/ReadOnlyPlayerModal.tsx').default;
 const { calculateGolfCutLine } = require('../lib/golf/cutLine.ts');
 const { getGroupSwitchDestination } = require('../lib/groups/navigation.ts');
 
@@ -53,6 +55,77 @@ test('Golf Live preserves Group switching only when Golf is enabled', () => {
   assert.equal(getGroupSwitchDestination(input), '/golf/live');
   assert.equal(getGroupSwitchDestination({ ...input, enabledSports: ['nba'] }), '/groups/test');
   assert.equal(getGroupSwitchDestination({ ...input, search: '?slateId=123' }), '/groups/test');
+});
+
+test('Golf Live renders its leaderboard before lazy scorecard stats and reuses loaded stats', async () => {
+  const previousFetch = global.fetch;
+  const previousCapturePull = context.capturePull;
+  const flush = () => new Promise(resolve => setImmediate(resolve));
+  const calls = [];
+  context.capturePull = true;
+  context.pathname = '/golf/live';
+  context.sport = 'golf';
+  context.group = 'golf-group';
+  context.loading = false;
+  context.switching = false;
+  global.fetch = async url => {
+    calls.push(String(url));
+    if (String(url).startsWith('/api/home-summary')) {
+      return {
+        ok: true,
+        json: async () => ({
+          latestSlate: { id: 187, label: 'Tournament', start_date: '2026-09-17', end_date: '2026-09-20', is_locked: false },
+          tournamentLeaderboard: [{ playerId: 1, name: 'First Golfer', score: -2, scoreDisplay: '-2', position: 1, positionDisplay: '1', statusState: 'playing' }],
+        }),
+      };
+    }
+    if (String(url).startsWith('/api/player-stats')) {
+      return { ok: true, json: async () => ({ playerStats: [{ player_id: 1, rounds: [] }] }) };
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  try {
+    const h = host(GolfLivePage);
+    h.render({}, true);
+    await flush();
+    let tree = h.render({});
+    let leaderboard = nodes(tree).find(node => node.type === Leaderboard);
+    assert.ok(leaderboard, 'home summary alone renders the leaderboard');
+    assert.equal(calls.filter(url => url.startsWith('/api/player-stats')).length, 0);
+
+    leaderboard.props.onSelect(leaderboard.props.rows[0]);
+    tree = h.render({});
+    assert.ok(nodes(tree).find(node => node.type === Leaderboard), 'the leaderboard remains mounted while scorecard stats load');
+    assert.equal(nodes(tree).find(node => node.type === ReadOnlyPlayerModal).props.golfStatsLoading, true);
+    assert.equal(calls.filter(url => url.startsWith('/api/player-stats')).length, 1);
+
+    await flush();
+    tree = h.render({});
+    leaderboard = nodes(tree).find(node => node.type === Leaderboard);
+    leaderboard.props.onSelect({ ...leaderboard.props.rows[0], playerId: 2, name: 'Second Golfer' });
+    assert.equal(calls.filter(url => url.startsWith('/api/player-stats')).length, 1, 'the mounted slate reuses its scorecard payload');
+    h.unmount();
+  } finally {
+    global.fetch = previousFetch;
+    context.capturePull = previousCapturePull;
+  }
+});
+
+test('shared Scores owns one initial availability request and mobile account UI reuses AppNav user state', () => {
+  const builder = fs.readFileSync('components/lineups/LineupBuilder.tsx', 'utf8');
+  const nav = fs.readFileSync('components/AppNav.tsx', 'utf8');
+  const mobileMenu = fs.readFileSync('components/MobileAccountMenu.tsx', 'utf8');
+
+  assert.equal(
+    (builder.match(/\/api\/slate-availability\?slateId=\$\{nextSlateId\}/g) || []).length,
+    1,
+    'non-draft Scores loads availability once with its primary slate payload',
+  );
+  assert.match(builder, /const availabilityRequest = fetch\(/);
+  assert.match(builder, /const \[lineupsResponse, statsResponse, resultsResponse\] = await Promise\.all/);
+  assert.doesNotMatch(mobileMenu, /fetch\("\/api\/me"/);
+  assert.match(nav, /<MobileAccountMenu\s+currentUser=\{currentUser\}\s+isLoading=\{isUserLoading\}/);
 });
 
 test('compact setup renders six choices, selected states and derived cap', () => {

@@ -53,10 +53,14 @@ export default function GolfLivePage() {
   const [summary, setSummary] = useState<GolfLiveSummary | null>(null);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [isPlayerStatsLoading, setIsPlayerStatsLoading] = useState(false);
+  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [message, setMessage] = useState("");
   const requestRef = useRef(0);
+  const playerStatsCacheRef = useRef<{ slateId: number; stats: PlayerStat[] } | null>(null);
+  const playerStatsRequestRef = useRef<{ slateId: number; promise: Promise<void> } | null>(null);
   const surfaceRef = useRef<HTMLElement | null>(null);
   const refreshingRef = useRef(false);
   const scopeRef = useRef(groupContext?.group.id);
@@ -80,18 +84,15 @@ export default function GolfLivePage() {
       if (requestId !== requestRef.current) return;
       if (!response.ok) throw new Error(result.error || "Golf Live is unavailable.");
 
-      setSummary(result);
       const slateId = Number(result.latestSlate?.id);
-      if (Number.isInteger(slateId) && slateId > 0) {
-        const statsResponse = await fetch(`/api/player-stats?slateId=${slateId}`, {
-          cache: "no-store",
-        });
-        const statsResult = await statsResponse.json();
-        if (requestId !== requestRef.current) return;
-        setPlayerStats(statsResponse.ok ? statsResult.playerStats ?? [] : []);
-      } else {
+      if (playerStatsCacheRef.current?.slateId !== slateId) {
+        playerStatsCacheRef.current = null;
+        playerStatsRequestRef.current = null;
         setPlayerStats([]);
+        setPlayerStatsError(null);
+        setIsPlayerStatsLoading(false);
       }
+      setSummary(result);
     } catch (error) {
       if (requestId !== requestRef.current) return;
       setMessage(error instanceof Error ? error.message : "Golf Live is unavailable.");
@@ -101,6 +102,43 @@ export default function GolfLivePage() {
       if (requestId === requestRef.current) setIsLoading(false);
     }
   }, [groupContext?.group.id, isGroupLoading, isSwitchingGroup]);
+
+  const loadPlayerStats = useCallback(async (slateId: number) => {
+    if (playerStatsCacheRef.current?.slateId === slateId) return;
+    if (playerStatsRequestRef.current?.slateId === slateId) {
+      return playerStatsRequestRef.current.promise;
+    }
+
+    setIsPlayerStatsLoading(true);
+    setPlayerStatsError(null);
+    const promise = fetch(`/api/player-stats?slateId=${slateId}`, {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Player scorecard details are unavailable.");
+        }
+        if (playerStatsRequestRef.current?.slateId !== slateId) return;
+        const stats = result.playerStats ?? [];
+        playerStatsCacheRef.current = { slateId, stats };
+        setPlayerStats(stats);
+      })
+      .catch((error) => {
+        if (playerStatsRequestRef.current?.slateId !== slateId) return;
+        setPlayerStats([]);
+        setPlayerStatsError(
+          error instanceof Error ? error.message : "Player scorecard details are unavailable.",
+        );
+      })
+      .finally(() => {
+        if (playerStatsRequestRef.current?.slateId !== slateId) return;
+        playerStatsRequestRef.current = null;
+        setIsPlayerStatsLoading(false);
+      });
+    playerStatsRequestRef.current = { slateId, promise };
+    return promise;
+  }, []);
 
   useEffect(() => {
     setSelectedPlayer(null);
@@ -120,7 +158,13 @@ export default function GolfLivePage() {
       setMessage("");
       await refreshGolfFromBrowser(slateId);
       if (scope !== scopeRef.current) return { status: "skipped" };
+      playerStatsCacheRef.current = null;
+      playerStatsRequestRef.current = null;
+      setPlayerStats([]);
+      setPlayerStatsError(null);
+      setIsPlayerStatsLoading(false);
       await loadSummary();
+      if (selectedPlayer) void loadPlayerStats(Number(slateId));
       return { status: "success" };
     } catch (error) {
       const message = error instanceof Error ? error.message : "Golf refresh failed.";
@@ -136,10 +180,10 @@ export default function GolfLivePage() {
     isRefreshing, scopeKey: `${groupContext?.group.id}:${summary?.latestSlate?.id}` });
 
   const rows = summary?.tournamentLeaderboard ?? [];
-  const selectedStat = selectedPlayer
+  const slate = summary?.latestSlate ?? null;
+  const selectedStat = selectedPlayer && playerStatsCacheRef.current?.slateId === Number(slate?.id)
     ? playerStats.find((stat) => Number(stat.player_id) === selectedPlayer.id) ?? null
     : null;
-  const slate = summary?.latestSlate ?? null;
   const statusLabel =
     summary?.latestGolfTournamentIsFinal
       ? "Final"
@@ -200,7 +244,14 @@ export default function GolfLivePage() {
               rows={rows}
               projectedCut={summary?.projectedCut}
               currentTournamentRound={summary?.liveTournamentRound}
-              onSelect={(row) => setSelectedPlayer(playerFromRow(row))}
+              onSelect={(row) => {
+                const player = playerFromRow(row);
+                setSelectedPlayer(player);
+                const slateId = Number(slate?.id);
+                if (Number.isInteger(slateId) && slateId > 0) {
+                  void loadPlayerStats(slateId);
+                }
+              }}
             />
           )}
         </section>
@@ -219,6 +270,8 @@ export default function GolfLivePage() {
         playerProjections={EMPTY_PROJECTIONS}
         golfStat={selectedStat}
         golfSlateId={slate?.id ?? null}
+        golfStatsLoading={isPlayerStatsLoading}
+        golfStatsError={playerStatsError}
       />
     </main>
   );

@@ -16,6 +16,8 @@ type Props = {
   stat: PlayerStat | null;
   slateId: number | null;
   focus?: GolfScorecardFocus | null;
+  isLoading?: boolean;
+  loadError?: string | null;
   onClose: () => void;
 };
 
@@ -485,6 +487,8 @@ export default function GolfPlayerModal({
   stat,
   slateId,
   focus = null,
+  isLoading = false,
+  loadError = null,
   onClose,
 }: Props) {
   const persistedRounds = [
@@ -704,7 +708,15 @@ export default function GolfPlayerModal({
         </header>
 
         <div className="space-y-4 overflow-y-auto p-4 sm:p-5">
-          {rounds.length === 0 ? (
+          {isLoading ? (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center text-sm text-slate-500">
+              Loading scorecard details…
+            </div>
+          ) : loadError ? (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-10 text-center text-sm text-amber-900">
+              {loadError}
+            </div>
+          ) : rounds.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center text-sm text-slate-500">
               No completed holes are available yet.
             </div>

@@ -12,7 +12,7 @@ import { useSelectedSport } from "@/components/providers/SportProvider";
 import { useGroupContext } from "@/components/providers/GroupProvider";
 import { getAdminMenuGroups } from "@/lib/adminMenu";
 
-type CurrentUser = {
+export type MobileAccountUser = {
   id: string;
   teamId: number;
   displayName: string;
@@ -74,7 +74,17 @@ function getLinkHref(href: string, sport: string) {
   return href;
 }
 
-function MobileAccountMenuContent() {
+type Props = {
+  currentUser: MobileAccountUser | null;
+  isLoading: boolean;
+  onLogout: () => void;
+};
+
+function MobileAccountMenuContent({
+  currentUser,
+  isLoading,
+  onLogout,
+}: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -112,8 +122,6 @@ function MobileAccountMenuContent() {
         ]
       : profileLinks;
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -123,60 +131,6 @@ function MobileAccountMenuContent() {
     pathname.startsWith("/profile")
       ? searchParams.get("tab") ?? "overview"
       : null;
-
-  useEffect(() => {
-    async function loadCurrentUser() {
-      try {
-        const response = await fetch("/api/me", {
-          cache: "no-store",
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.authenticated && result.user) {
-          setCurrentUser(result.user as CurrentUser);
-        } else {
-          setCurrentUser(null);
-        }
-      } catch (error) {
-        console.error("Failed to load mobile account user", error);
-        setCurrentUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    void loadCurrentUser();
-  }, [pathname]);
-
-  useEffect(() => {
-    function handleAvatarUpdated(event: Event) {
-      const customEvent = event as CustomEvent<{
-        avatarUrl: string | null;
-      }>;
-
-      setCurrentUser((current) =>
-        current
-          ? {
-              ...current,
-              avatarUrl: customEvent.detail.avatarUrl,
-            }
-          : current
-      );
-    }
-
-    window.addEventListener(
-      "profile-avatar-updated",
-      handleAvatarUpdated
-    );
-
-    return () => {
-      window.removeEventListener(
-        "profile-avatar-updated",
-        handleAvatarUpdated
-      );
-    };
-  }, []);
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -206,7 +160,7 @@ function MobileAccountMenuContent() {
         throw new Error("Logout failed.");
       }
 
-      setCurrentUser(null);
+      onLogout();
       setIsOpen(false);
 
       router.push("/login");
@@ -396,14 +350,14 @@ function MobileAccountMenuContent() {
   );
 }
 
-export default function MobileAccountMenu() {
+export default function MobileAccountMenu(props: Props) {
   return (
     <Suspense
       fallback={
         <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-slate-200 sm:hidden" />
       }
     >
-      <MobileAccountMenuContent />
+      <MobileAccountMenuContent {...props} />
     </Suspense>
   );
 }

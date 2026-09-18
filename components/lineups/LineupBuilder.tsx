@@ -468,45 +468,6 @@ export default function LineupBuilder({
   }, [teamResults]);
 
   useEffect(() => {
-    if (!selectedSlateIdNumber) return;
-
-    let isActive = true;
-
-    if (isDraftPage) return;
-
-    async function loadAvailability() {
-      try {
-        setIsAvailabilityLoading(true);
-
-        const res = await fetch(
-          `/api/slate-availability?slateId=${selectedSlateIdNumber}`,
-          { cache: "no-store" }
-        );
-        const data = await res.json();
-
-        if (!isActive) return;
-
-        const nextIds = data.availablePlayerIds || [];
-        setAvailablePlayerIdsForSlate(nextIds);
-      } catch (err) {
-        console.error("Failed to load availability", err);
-        if (!isActive) return;
-        setAvailablePlayerIdsForSlate([]);
-      } finally {
-        if (isActive) {
-          setIsAvailabilityLoading(false);
-        }
-      }
-    }
-
-    void loadAvailability();
-
-    return () => {
-      isActive = false;
-    };
-  }, [selectedSlateIdNumber]);
-
-  useEffect(() => {
     if (!selectedSlateIdNumber || isDraftPage) return;
 
     if (!scopeReady) return;
@@ -1421,18 +1382,28 @@ export default function LineupBuilder({
 
     try {
       setIsSlateLoading(true);
+      setIsAvailabilityLoading(true);
       setMessage("");
       setSaveMessage("");
 
+      const availabilityRequest = fetch(
+        `/api/slate-availability?slateId=${nextSlateId}`,
+        { cache: "no-store" },
+      ).catch((error) => {
+        console.error(error);
+        return null;
+      });
       const [lineupsResponse, statsResponse, resultsResponse] = await Promise.all([
         fetch(`/api/lineups?slateId=${nextSlateId}`, { cache: "no-store" }),
         fetch(`/api/player-stats?slateId=${nextSlateId}`, { cache: "no-store" }),
         fetch(`/api/team-results?slateId=${nextSlateId}`, { cache: "no-store" }),
       ]);
 
-      const lineupsResult = await lineupsResponse.json();
-      const statsResult = await statsResponse.json();
-      const resultsResult = await resultsResponse.json();
+      const [lineupsResult, statsResult, resultsResult] = await Promise.all([
+        lineupsResponse.json(),
+        statsResponse.json(),
+        resultsResponse.json(),
+      ]);
 
       if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
 
@@ -1459,6 +1430,28 @@ export default function LineupBuilder({
         setTeamResultsState(resultsResult.teamResults ?? []);
       }
       setSaveMessage("");
+
+      try {
+        const availabilityResponse = await availabilityRequest;
+        if (!availabilityResponse) {
+          setAvailablePlayerIdsForSlate([]);
+          return;
+        }
+        const availabilityResult = await availabilityResponse.json();
+        if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
+        if (!availabilityResponse.ok) {
+          console.error(
+            availabilityResult.error || "Failed to load slate availability."
+          );
+          setAvailablePlayerIdsForSlate([]);
+        } else {
+          setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
+        }
+      } catch (error) {
+        if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
+        console.error(error);
+        setAvailablePlayerIdsForSlate([]);
+      }
     } catch (error) {
       if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
       console.error(error);
@@ -1466,39 +1459,10 @@ export default function LineupBuilder({
     } finally {
       if (isCurrent() && loadId === latestSlateLoadRef.current) {
         setIsSlateLoading(false);
-      }
-    }
-
-    try {
-      setIsAvailabilityLoading(true);
-
-      const availabilityResponse = await fetch(
-        `/api/slate-availability?slateId=${nextSlateId}`,
-        { cache: "no-store" }
-      );
-
-      const availabilityResult = await availabilityResponse.json();
-
-      if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
-
-      if (!availabilityResponse.ok) {
-        console.error(
-          availabilityResult.error || "Failed to load slate availability."
-        );
-        setAvailablePlayerIdsForSlate([]);
-        return;
-      }
-
-      setAvailablePlayerIdsForSlate(availabilityResult.availablePlayerIds ?? []);
-    } catch (error) {
-      if (!isCurrent() || loadId !== latestSlateLoadRef.current) return;
-      console.error(error);
-      setAvailablePlayerIdsForSlate([]);
-    } finally {
-      if (isCurrent() && loadId === latestSlateLoadRef.current) {
         setIsAvailabilityLoading(false);
       }
     }
+
   }
 
   useEffect(() => {
