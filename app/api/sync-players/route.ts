@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireSuperAdminApi } from "@/lib/requireAdminApi";
+import { cacheSportsHeadshots } from "@/scripts/lib/sportsHeadshotCache";
 
 function normalizeNbaTeamCode(value: string | null | undefined) {
   const code = String(value ?? "").trim().toUpperCase();
@@ -303,7 +305,7 @@ export async function POST() {
       const { data: insertedRows, error: insertError } = await supabaseAdmin
         .from("players")
         .insert(inserts)
-        .select("id");
+        .select("id, nba_player_id, headshot_url");
 
       if (insertError) {
         return NextResponse.json(
@@ -315,6 +317,24 @@ export async function POST() {
       }
 
       insertedCount = insertedRows?.length ?? 0;
+
+      // This is intentionally post-response maintenance for only records this
+      // sync just discovered. Player persistence remains successful and usable
+      // even when a provider image is absent or cannot be optimized.
+      if (insertedRows?.length) {
+        after(async () => {
+          try {
+            const result = await cacheSportsHeadshots({
+              client: supabaseAdmin,
+              sport: "nba",
+              players: insertedRows,
+            });
+            console.info("NBA new-player headshot cache completed", result);
+          } catch (error) {
+            console.warn("NBA new-player headshot cache could not run:", error);
+          }
+        });
+      }
     }
 
     return NextResponse.json({

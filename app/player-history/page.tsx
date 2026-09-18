@@ -2259,6 +2259,9 @@ function PlayerCompareModal({
                         nflPlayerId={
                           row.nfl_player_id
                         }
+                        imageUrl={
+                          row.headshot_url
+                        }
                         playerName={
                           row.player_name
                         }
@@ -6069,6 +6072,9 @@ export default function PlayerHistoryPage() {
                             nflPlayerId={
                               row.nfl_player_id
                             }
+                            imageUrl={
+                              row.headshot_url
+                            }
                             playerName={
                               row.player_name
                             }
@@ -6297,6 +6303,9 @@ export default function PlayerHistoryPage() {
                                 }
                                 nflPlayerId={
                                   row.nfl_player_id
+                                }
+                                imageUrl={
+                                  row.headshot_url
                                 }
                                 playerName={
                                   row.player_name
@@ -6586,6 +6595,9 @@ export default function PlayerHistoryPage() {
                             nflPlayerId={
                               null
                             }
+                            imageUrl={
+                              row.headshot_url
+                            }
                             playerName={
                               row.player_name
                             }
@@ -6801,6 +6813,9 @@ export default function PlayerHistoryPage() {
                                 }
                                 nflPlayerId={
                                   null
+                                }
+                                imageUrl={
+                                  row.headshot_url
                                 }
                                 playerName={
                                   row.player_name
@@ -7638,6 +7653,9 @@ export default function PlayerHistoryPage() {
                             nflPlayerId={
                               row.nfl_player_id
                             }
+                            imageUrl={
+                              row.headshot_url
+                            }
                             playerName={
                               row.player_name
                             }
@@ -7826,6 +7844,9 @@ export default function PlayerHistoryPage() {
                               }
                               nflPlayerId={
                                 row.nfl_player_id
+                              }
+                              imageUrl={
+                                row.headshot_url
                               }
                               playerName={
                                 row.player_name

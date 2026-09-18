@@ -31,6 +31,7 @@ type PlayerRow = {
   id: number;
   name: string;
   external_id: number | null;
+  headshot_url?: string | null;
 };
 
 type LineupRow = {
@@ -1069,8 +1070,8 @@ export async function GET(
         )
         .select(
           sport === "nfl"
-            ? "id, name, external_id:nfl_player_id"
-            : "id, name, external_id:nba_player_id",
+            ? "id, name, external_id:nfl_player_id, headshot_url"
+            : "id, name, external_id:nba_player_id, headshot_url",
         )
         .order(
           "name",
@@ -1270,6 +1271,8 @@ export async function GET(
             string;
           external_id:
             number | null;
+          headshot_url:
+            string | null;
           times_drafted:
             number;
           scores:
@@ -1333,6 +1336,8 @@ export async function GET(
               player.name,
             external_id:
               player.external_id,
+            headshot_url:
+              player.headshot_url ?? null,
             times_drafted:
               0,
             scores: [],
@@ -1465,6 +1470,8 @@ export async function GET(
                 "nfl"
                   ? row.external_id
                   : null,
+              headshot_url:
+                row.headshot_url,
 
               times_drafted:
                 row.times_drafted,

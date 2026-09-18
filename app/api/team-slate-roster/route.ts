@@ -575,7 +575,7 @@ export async function GET(
         supabaseAdmin
           .from("players_nfl")
           .select(
-            "id, name, nfl_player_id, position",
+            "id, name, nfl_player_id, position, headshot_url",
           )
           .in("id", playerIds),
 
@@ -653,6 +653,9 @@ export async function GET(
             nflPlayerId:
               player?.nfl_player_id ??
               null,
+            headshotUrl:
+              player?.headshot_url ??
+              null,
             positionGroup:
               player?.position ?? null,
             ...statValues,
@@ -707,7 +710,7 @@ export async function GET(
       supabaseAdmin
         .from("players")
         .select(
-          "id, name, nba_player_id, position_group",
+          "id, name, nba_player_id, position_group, headshot_url",
         )
         .in("id", playerIds),
 
@@ -846,6 +849,9 @@ export async function GET(
             `Player ${playerId}`,
           nbaPlayerId:
             player?.nba_player_id ??
+            null,
+          headshotUrl:
+            player?.headshot_url ??
             null,
           nflPlayerId: null,
           positionGroup:

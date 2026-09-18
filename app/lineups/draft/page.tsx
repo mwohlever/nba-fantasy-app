@@ -100,10 +100,10 @@ export default async function DraftLineupsPage({
 
   const playersSelect =
     sport === "nfl"
-      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id, team_abbreviation"
+      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id, team_abbreviation, headshot_url"
       : sport === "golf"
         ? "id, display_name, short_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
-        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+        : "id, name, position_group, is_active, is_playing_today, nba_player_id, headshot_url";
 
   const playerOrderColumn =
     sport === "golf" ? "display_name" : "name";
@@ -232,6 +232,7 @@ export default async function DraftLineupsPage({
         nfl_player_id: player.nfl_player_id,
         team_abbreviation: player.team_abbreviation,
         espn_player_id: null,
+        headshot_url: player.headshot_url ?? null,
       };
     }
 
@@ -270,6 +271,7 @@ export default async function DraftLineupsPage({
       nba_player_id: player.nba_player_id,
       nfl_player_id: null,
       espn_player_id: null,
+      headshot_url: player.headshot_url ?? null,
     };
   });
 

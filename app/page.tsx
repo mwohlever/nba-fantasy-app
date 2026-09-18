@@ -35,7 +35,7 @@ export default async function PlatformLandingPage() {
       <div className="mx-auto max-w-6xl px-4 pb-16 pt-5 sm:px-6 sm:pt-8">
         <header className="flex items-center justify-between gap-4">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logos/logo_all_sports.png" alt="111 Sports" width={48} height={48} priority className="h-12 w-12 rounded-full object-cover shadow-lg shadow-teal-950" />
+            <Image src="/logos/logo_all_sports.webp" alt="111 Sports" width={48} height={48} priority className="h-12 w-12 rounded-full object-cover shadow-lg shadow-teal-950" />
             <span className="text-lg font-black tracking-tight">111 SPORTS</span>
           </Link>
           <div className="flex items-center gap-2 text-sm">

@@ -13,26 +13,26 @@ export type PlatformGameConfig = {
 };
 
 export const SPORTS: SportConfig[] = [
-  { key: "nba", label: "NBA", emoji: "🏀", logo: "/logos/nba.png" },
+  { key: "nba", label: "NBA", emoji: "🏀", logo: "/logos/nba.webp" },
   {
     key: "nba-skins",
     label: "NBA Skins",
     emoji: "🏀",
-    logo: "/logos/nba.png",
+    logo: "/logos/nba.webp",
   },
-  { key: "nfl", label: "NFL", emoji: "🏈", logo: "/logos/nfl.png" },
+  { key: "nfl", label: "NFL", emoji: "🏈", logo: "/logos/nfl.webp" },
   {
     key: "ncaa",
     label: "NCAA Pick 'Em",
     emoji: "🏈",
-    logo: "/logos/nfl.png",
+    logo: "/logos/nfl.webp",
   },
-  { key: "golf", label: "Golf", emoji: "⛳", logo: "/logos/golf.png" },
+  { key: "golf", label: "Golf", emoji: "⛳", logo: "/logos/golf.webp" },
   {
     key: "bracket-challenge",
     label: "Bracket Challenge",
     emoji: "🏆",
-    logo: "/logos/nfl.png",
+    logo: "/logos/nfl.webp",
   },
 ];
 
@@ -42,42 +42,42 @@ export const PLATFORM_GAMES: PlatformGameConfig[] = [
     label: "NBA",
     description:
       "Daily fantasy drafts throughout the NBA calendar.",
-    logo: "/logos/nba.png",
+    logo: "/logos/nba.webp",
   },
   {
     key: "nfl",
     label: "NFL",
     description:
       "Weekly fantasy drafts.",
-    logo: "/logos/nfl.png",
+    logo: "/logos/nfl.webp",
   },
   {
     key: "golf",
     label: "Golf",
     description:
       "Fantasy drafts for PGA TOUR tournaments.",
-    logo: "/logos/golf.png",
+    logo: "/logos/golf.webp",
   },
   {
     key: "ncaa",
     label: "College Football Pick'em",
     description:
       "Weekly picks against your friends.",
-    logo: "/logos/nfl.png",
+    logo: "/logos/nfl.webp",
   },
   {
     key: "nba-skins",
     label: "NBA Skins",
     description:
       "A season-long NBA prediction game.",
-    logo: "/logos/nba.png",
+    logo: "/logos/nba.webp",
   },
   {
     key: "bracket-challenge",
     label: "Bracket Challenge",
     description:
       "Tournament brackets for college football, March Madness, and more.",
-    logo: "/logos/nfl.png",
+    logo: "/logos/nfl.webp",
   },
 ];
 

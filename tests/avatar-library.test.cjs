@@ -11,7 +11,7 @@ require.extensions[".ts"] = function compile(module, filename) {
   }).outputText, filename);
 };
 
-const { avatarStoragePathFromPublicUrl, findAvatarByHash, findOwnedAvatar, splitAvatarRetention } = require("../lib/profile/avatarLibrary.ts");
+const { avatarDisplayStoragePath, avatarStoragePathFromPublicUrl, findAvatarByHash, findOwnedAvatar, splitAvatarRetention } = require("../lib/profile/avatarLibrary.ts");
 
 function record(id, userId, hash, day) {
   return { id, user_id: userId, storage_path: `${userId}/${id}.jpg`, content_sha256: hash, mime_type: "image/jpeg", created_at: `2026-09-${String(day).padStart(2, "0")}T12:00:00.000Z` };
@@ -55,4 +55,23 @@ test("public URLs resolve only inside the authenticated user's bucket folder", (
 test("clearing the canonical avatar leaves retained history unchanged", () => {
   const records = [record("one", "user-1", "a".repeat(64), 1)];
   assert.deepEqual(splitAvatarRetention(records).retained, records);
+});
+
+test("display derivatives are preferred without losing the original avatar path", () => {
+  const original = record("one", "user-1", "a".repeat(64), 1);
+  const optimized = { ...original, optimized_storage_path: "user-1/display/avatar-a.webp" };
+  assert.equal(avatarDisplayStoragePath(original), "user-1/one.jpg");
+  assert.equal(avatarDisplayStoragePath(optimized), "user-1/display/avatar-a.webp");
+});
+
+test("avatar optimization remains a bounded, non-render backfill", () => {
+  const source = fs.readFileSync("scripts/cache-profile-avatars.mjs", "utf8");
+  const upload = fs.readFileSync("app/api/account/profile-picture/route.ts", "utf8");
+  assert.match(source, /const CONCURRENCY = 3/);
+  assert.match(source, /cacheControl: "31536000"/);
+  assert.match(source, /withoutEnlargement: true/);
+  assert.match(source, /if \(!options\.force && record\.optimized_storage_path/);
+  assert.match(upload, /const DISPLAY_SIZE = 256/);
+  assert.match(upload, /Unable to optimize profile image; keeping original/);
+  assert.match(upload, /optimized_storage_path/);
 });

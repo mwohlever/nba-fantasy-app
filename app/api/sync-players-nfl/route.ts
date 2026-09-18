@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireSuperAdminApi } from "@/lib/requireAdminApi";
+import { cacheSportsHeadshots } from "@/scripts/lib/sportsHeadshotCache";
 import {
   fetchTeams,
   fetchTeamRoster,
@@ -458,7 +460,7 @@ export async function POST() {
       const { data: insertedRows, error: insertError } = await supabaseAdmin
         .from("players_nfl")
         .upsert(inserts, { onConflict: "nfl_player_id" })
-        .select("id");
+        .select("id, nfl_player_id, headshot_url");
 
       if (insertError) {
         return NextResponse.json(
@@ -468,6 +470,23 @@ export async function POST() {
       }
 
       insertedCount = insertedRows?.length ?? 0;
+
+      // NFL roster persistence is complete before this best-effort image work
+      // begins. Synthetic D/ST records are skipped by the shared cache helper.
+      if (insertedRows?.length) {
+        after(async () => {
+          try {
+            const result = await cacheSportsHeadshots({
+              client: supabaseAdmin,
+              sport: "nfl",
+              players: insertedRows,
+            });
+            console.info("NFL new-player headshot cache completed", result);
+          } catch (error) {
+            console.warn("NFL new-player headshot cache could not run:", error);
+          }
+        });
+      }
     }
     timings.insertMs = Date.now() - stepStart;
 

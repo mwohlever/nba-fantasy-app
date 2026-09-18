@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "import-shotcast-course": "node scripts/import-shotcast-course.mjs",
-    "cache-golf-headshots": "node scripts/cache-golf-headshots.mjs"
+    "cache-golf-headshots": "node scripts/cache-golf-headshots.mjs",
+    "cache-profile-avatars": "node scripts/cache-profile-avatars.mjs",
+    "cache-sports-headshots": "node scripts/cache-sports-headshots.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",

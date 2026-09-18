@@ -100,10 +100,10 @@ export default async function ScoresLineupsPage({
 
   const playersSelect =
     sport === "nfl"
-      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id, team_abbreviation"
+      ? "id, name, position, is_active, is_playing_this_week, nfl_player_id, team_abbreviation, headshot_url"
       : sport === "golf"
         ? "id, display_name, is_active, espn_player_id, country, country_flag_url, headshot_url, owgr_player_id, owgr_rank, owgr_points, owgr_updated_at"
-        : "id, name, position_group, is_active, is_playing_today, nba_player_id";
+        : "id, name, position_group, is_active, is_playing_today, nba_player_id, headshot_url";
 
   const statsTable =
     sport === "nfl"
@@ -291,6 +291,7 @@ export default async function ScoresLineupsPage({
         nba_player_id: null,
         nfl_player_id: p.nfl_player_id,
         team_abbreviation: p.team_abbreviation,
+        headshot_url: p.headshot_url ?? null,
       };
     }
 
@@ -328,6 +329,7 @@ export default async function ScoresLineupsPage({
       is_playing_today: p.is_playing_today,
       nba_player_id: p.nba_player_id,
       nfl_player_id: null,
+      headshot_url: p.headshot_url ?? null,
     };
   });
 

@@ -29,10 +29,10 @@ type CurrentUser = {
 
 function getFallbackProfileImage(displayName: string) {
   const imageMap: Record<string, string> = {
-    mark: "/team-headshots/mark.jpg",
-    andy: "/team-headshots/andy.jpg",
-    jon: "/team-headshots/jon.jpg",
-    josh: "/team-headshots/josh.jpg",
+    mark: "/team-headshots/mark.webp",
+    andy: "/team-headshots/andy.webp",
+    jon: "/team-headshots/jon.webp",
+    josh: "/team-headshots/josh.webp",
   };
 
   return imageMap[displayName.trim().toLowerCase()] ?? null;
@@ -1197,7 +1197,7 @@ function AppNavContent() {
               aria-label="111 Sports platform home"
               className="mr-1 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-950"
             >
-              <img src="/logos/logo_all_sports.png" alt="" className="h-8 w-8 rounded-full object-cover" />
+              <img src="/logos/logo_all_sports.webp" alt="" width={32} height={32} className="h-8 w-8 rounded-full object-cover" />
             </Link>
             {!isGroupHomeRoute ? displayedMainLinks.map((link) => (
               <Link
@@ -1389,6 +1389,8 @@ function AppNavContent() {
                           undefined
                         }
                         alt={`${currentUser.displayName} profile`}
+                        width={32}
+                        height={32}
                         className="h-8 w-8 rounded-full object-cover ring-1 ring-white shadow-sm"
                       />
                     ) : (
@@ -1515,8 +1517,10 @@ function AppNavContent() {
                 className="block h-12 w-12 shrink-0 rounded-full bg-slate-950"
               >
                 <img
-                  src="/logos/logo_all_sports.png"
+                  src="/logos/logo_all_sports.webp"
                   alt=""
+                  width={48}
+                  height={48}
                   className="h-12 w-12 rounded-full object-cover shadow-sm"
                 />
               </Link>
@@ -1532,8 +1536,10 @@ function AppNavContent() {
                 >
                   <span className="relative block h-12 w-12">
                     <img
-                      src={getSportConfig(activeSport).logo}
-                      alt={`${getSportConfig(activeSport).label} logo`}
+                  src={getSportConfig(activeSport).logo}
+                  alt={`${getSportConfig(activeSport).label} logo`}
+                  width={48}
+                  height={48}
                       className="h-12 w-12 rounded-full object-cover shadow-sm"
                     />
                     {activeSport === "ncaa" || activeSport === "nba-skins" ? (

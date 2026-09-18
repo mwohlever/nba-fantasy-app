@@ -22,10 +22,10 @@ export type MobileAccountUser = {
 
 function getFallbackProfileImage(displayName: string) {
   const imageMap: Record<string, string> = {
-    mark: "/team-headshots/mark.jpg",
-    andy: "/team-headshots/andy.jpg",
-    jon: "/team-headshots/jon.jpg",
-    josh: "/team-headshots/josh.jpg",
+    mark: "/team-headshots/mark.webp",
+    andy: "/team-headshots/andy.webp",
+    jon: "/team-headshots/jon.webp",
+    josh: "/team-headshots/josh.webp",
   };
 
   return imageMap[displayName.trim().toLowerCase()] ?? null;
@@ -223,6 +223,8 @@ function MobileAccountMenuContent({
           <img
             src={imageSrc}
             alt={`${currentUser.displayName} profile`}
+            width={40}
+            height={40}
             className="h-10 w-10 rounded-full object-cover"
           />
         ) : (
@@ -239,6 +241,8 @@ function MobileAccountMenuContent({
               <img
                 src={imageSrc}
                 alt=""
+                width={44}
+                height={44}
                 className="h-11 w-11 rounded-full object-cover shadow-sm"
               />
             ) : (

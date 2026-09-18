@@ -16,10 +16,10 @@ function getFallbackTeamImage(teamName: string) {
   const normalized = teamName.trim().toLowerCase();
 
   const map: Record<string, string> = {
-    mark: "/team-headshots/mark.jpg",
-    andy: "/team-headshots/andy.jpg",
-    jon: "/team-headshots/jon.jpg",
-    josh: "/team-headshots/josh.jpg",
+    mark: "/team-headshots/mark.webp",
+    andy: "/team-headshots/andy.webp",
+    jon: "/team-headshots/jon.webp",
+    josh: "/team-headshots/josh.webp",
   };
 
   return map[normalized] ?? "";
@@ -37,6 +37,8 @@ export default function TeamAvatar({
       <img
         src={imageSrc}
         alt={teamName}
+        width={size === "chip" ? 20 : size === "xs" ? 24 : size === "sm" ? 32 : size === "md" ? 40 : 56}
+        height={size === "chip" ? 20 : size === "xs" ? 24 : size === "sm" ? 32 : size === "md" ? 40 : 56}
         className={`${sizeMap[size]} rounded-full object-cover ring-2 ring-white shadow-sm`}
       />
     );

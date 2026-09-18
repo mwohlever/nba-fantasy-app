@@ -18,6 +18,11 @@ const {
   getGolfProviderHeadshotUrl,
   isOptimizedGolfHeadshotUrl,
 } = require('../lib/golf/headshots.ts');
+const {
+  getNbaProviderHeadshotUrl,
+  getNflProviderHeadshotUrl,
+  isOptimizedSportsHeadshotUrl,
+} = require('../lib/sports/headshots.ts');
 const { getGroupSwitchDestination } = require('../lib/groups/navigation.ts');
 
 test('Golf derives the canonical mobile nav for both Golf and shared profile routes', () => {
@@ -181,6 +186,54 @@ test('Golf headshots prefer cached assets, then ESPN, then initials', () => {
   assert.equal(getGolfProviderHeadshotUrl('pga:123'), null);
   assert.equal(isOptimizedGolfHeadshotUrl(optimizedUrl), true);
   assert.equal(isOptimizedGolfHeadshotUrl('https://a.espncdn.com/i/headshots/golf/players/full/123.png'), false);
+});
+
+test('NBA and NFL headshots prefer cached assets, then their provider originals, then initials', () => {
+  const optimizedNba = 'https://example.supabase.co/storage/v1/object/public/sports-headshots/nba/203999.webp?v=abcdef';
+  const optimizedNfl = 'https://example.supabase.co/storage/v1/object/public/sports-headshots/nfl/3139477.webp?v=abcdef';
+  const nba = host(PlayerHeadshot);
+
+  let tree = nba.render({ nbaPlayerId: 203999, imageUrl: optimizedNba, playerName: 'NBA Player' }, true);
+  let image = nodes(tree).find(node => node.type === 'img');
+  assert.equal(image.props.src, optimizedNba);
+  image.props.onError();
+  tree = nba.render({ nbaPlayerId: 203999, imageUrl: optimizedNba, playerName: 'NBA Player' });
+  image = nodes(tree).find(node => node.type === 'img');
+  assert.equal(image.props.src, getNbaProviderHeadshotUrl(203999));
+  image.props.onError();
+  assert.equal(nodes(nba.render({ nbaPlayerId: 203999, imageUrl: optimizedNba, playerName: 'NBA Player' })).filter(node => node.type === 'img').length, 0);
+
+  const nfl = host(PlayerHeadshot);
+  tree = nfl.render({ nflPlayerId: 3139477, imageUrl: optimizedNfl, playerName: 'NFL Player' }, true);
+  image = nodes(tree).find(node => node.type === 'img');
+  assert.equal(image.props.src, optimizedNfl);
+  image.props.onError();
+  tree = nfl.render({ nflPlayerId: 3139477, imageUrl: optimizedNfl, playerName: 'NFL Player' });
+  assert.equal(nodes(tree).find(node => node.type === 'img').props.src, getNflProviderHeadshotUrl(3139477));
+  assert.equal(isOptimizedSportsHeadshotUrl(optimizedNba), true);
+  assert.equal(isOptimizedSportsHeadshotUrl('https://cdn.nba.com/headshots/nba/latest/1040x760/203999.png'), false);
+});
+
+test('NBA/NFL caching is shared, post-sync maintenance and backfills only successful optimized assets', () => {
+  const script = fs.readFileSync('scripts/cache-sports-headshots.mjs', 'utf8');
+  const cache = fs.readFileSync('scripts/lib/sportsHeadshotCache.js', 'utf8');
+  const nbaSync = fs.readFileSync('app/api/sync-players/route.ts', 'utf8');
+  const nflSync = fs.readFileSync('app/api/sync-players-nfl/route.ts', 'utf8');
+  const migration = fs.readFileSync('supabase/migrations/20260928000300_nba_nfl_optimized_headshots.sql', 'utf8');
+  assert.match(script, /cacheSportsHeadshots/);
+  assert.match(script, /--sport nba or --sport nfl is required/);
+  assert.match(cache, /SPORTS_HEADSHOT_CONCURRENCY = 3/);
+  assert.match(cache, /cacheControl: "31536000"/);
+  assert.match(cache, /withoutEnlargement: true/);
+  assert.match(cache, /isCachedSportsHeadshot/);
+  assert.match(cache, /\.update\(\{ headshot_url:/);
+  for (const sync of [nbaSync, nflSync]) {
+    assert.match(sync, /after\(async \(\) =>/);
+    assert.match(sync, /cacheSportsHeadshots\(/);
+    assert.doesNotMatch(sync, /\.update\(\{[^}]*headshot_url/);
+  }
+  assert.match(migration, /add column if not exists headshot_url text/);
+  assert.match(migration, /'sports-headshots'/);
 });
 
 test('Golf headshot caching is a separate non-critical backfill, never a Live render action', () => {

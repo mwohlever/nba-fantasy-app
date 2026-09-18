@@ -6,6 +6,8 @@ export type AvatarLibraryRecord = {
   storage_path: string;
   content_sha256: string;
   mime_type: string;
+  optimized_storage_path?: string | null;
+  optimized_content_sha256?: string | null;
   created_at: string;
 };
 
@@ -60,4 +62,10 @@ export function avatarStoragePathFromPublicUrl(
   } catch {
     return null;
   }
+}
+
+export function avatarDisplayStoragePath(
+  record: Pick<AvatarLibraryRecord, "storage_path" | "optimized_storage_path">,
+) {
+  return record.optimized_storage_path ?? record.storage_path;
 }

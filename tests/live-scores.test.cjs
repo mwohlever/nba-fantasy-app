@@ -117,7 +117,7 @@ test('Home chip uses the same account-first photo resolution as Standings', () =
     const render = (size, avatarUrl) => renderToStaticMarkup(createElement(TeamAvatar, { size, teamName: name, avatarUrl }));
     for (const size of ['chip', 'md']) {
       assert.match(render(size, 'https://images.example/account.jpg'), /src="https:\/\/images.example\/account.jpg"/);
-      assert.match(render(size, null), new RegExp(`/team-headshots/${name.toLowerCase()}.jpg`));
+      assert.match(render(size, null), new RegExp(`/team-headshots/${name.toLowerCase()}.webp`));
     }
   }
   const missing = renderToStaticMarkup(createElement(TeamAvatar, { size: 'chip', teamName: 'No Photo', avatarUrl: null }));

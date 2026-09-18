@@ -299,11 +299,11 @@ export async function GET(request: Request) {
       sport === "nfl"
         ? supabaseAdmin
             .from("players_nfl")
-            .select("id, name, nfl_player_id, team_abbreviation")
+            .select("id, name, nfl_player_id, team_abbreviation, headshot_url")
             .order("name", { ascending: true })
         : supabaseAdmin
             .from("players")
-            .select("id, name, external_id:nba_player_id")
+            .select("id, name, external_id:nba_player_id, headshot_url")
             .order("name", { ascending: true }),
       supabaseAdmin
         .from(statsTable)

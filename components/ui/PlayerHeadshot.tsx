@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { getGolfProviderHeadshotUrl } from "@/lib/golf/headshots";
+import {
+  getNbaProviderHeadshotUrl,
+  getNflProviderHeadshotUrl,
+} from "@/lib/sports/headshots";
 
 const NFL_DST_PLAYER_ID_BASE = 100_000_000;
 
@@ -90,30 +94,29 @@ export default function PlayerHeadshot({
     );
 
   const [imageFailed, setImageFailed] = useState(false);
-  const [useGolfProviderFallback, setUseGolfProviderFallback] = useState(false);
+  const [useProviderFallback, setUseProviderFallback] = useState(false);
 
   const golfProviderHeadshotUrl = getGolfProviderHeadshotUrl(
     espnGolfPlayerId,
   );
+  const providerHeadshotUrl =
+    getNbaProviderHeadshotUrl(nbaPlayerId) ??
+    getNflProviderHeadshotUrl(nflPlayerId) ??
+    golfProviderHeadshotUrl;
 
   const resolvedImageUrl =
     nflTeamLogoUrl ??
     (
-      (useGolfProviderFallback
-        ? golfProviderHeadshotUrl
+      (useProviderFallback
+        ? providerHeadshotUrl
         : imageUrl?.trim()) ||
-      (nbaPlayerId
-        ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaPlayerId}.png`
-        : nflPlayerId
-          ? `https://a.espncdn.com/i/headshots/nfl/players/full/${nflPlayerId}.png`
-          : golfProviderHeadshotUrl
-        )
+      providerHeadshotUrl
     );
 
   useEffect(() => {
     setImageFailed(false);
-    setUseGolfProviderFallback(false);
-  }, [imageUrl, golfProviderHeadshotUrl]);
+    setUseProviderFallback(false);
+  }, [imageUrl, providerHeadshotUrl]);
 
   const showImage = Boolean(resolvedImageUrl) && !imageFailed;
 
@@ -131,12 +134,12 @@ export default function PlayerHeadshot({
           height={sizePixels[size]}
           onError={() => {
             if (
-              !useGolfProviderFallback &&
-              golfProviderHeadshotUrl &&
+              !useProviderFallback &&
+              providerHeadshotUrl &&
               imageUrl?.trim() &&
-              imageUrl.trim() !== golfProviderHeadshotUrl
+              imageUrl.trim() !== providerHeadshotUrl
             ) {
-              setUseGolfProviderFallback(true);
+              setUseProviderFallback(true);
               return;
             }
             setImageFailed(true);

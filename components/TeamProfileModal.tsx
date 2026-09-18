@@ -120,10 +120,10 @@ type Props = {
 };
 
 const TEAM_HEADSHOTS: Record<string, string> = {
-  Andy: "/team-headshots/andy.jpg",
-  Jon: "/team-headshots/jon.jpg",
-  Josh: "/team-headshots/josh.jpg",
-  Mark: "/team-headshots/mark.jpg",
+  Andy: "/team-headshots/andy.webp",
+  Jon: "/team-headshots/jon.webp",
+  Josh: "/team-headshots/josh.webp",
+  Mark: "/team-headshots/mark.webp",
 };
 
 export default function TeamProfileModal({ team, setTeam }: Props) {

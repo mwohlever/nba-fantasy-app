@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 import { getCurrentUser } from "@/lib/auth";
 import {
   avatarStoragePathFromPublicUrl,
+  avatarDisplayStoragePath,
   splitAvatarRetention,
   type AvatarLibraryRecord,
 } from "@/lib/profile/avatarLibrary";
@@ -12,6 +14,7 @@ export const runtime = "nodejs";
 
 const BUCKET_NAME = "profile-images";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const DISPLAY_SIZE = 256;
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function getExtension(contentType: string) {
@@ -20,15 +23,32 @@ function getExtension(contentType: string) {
   return "jpg";
 }
 
-function getPublicAvatarUrl(storagePath: string) {
+function getPublicAvatarUrl(storagePath: string, version?: string | null) {
   const { data } = supabaseAdmin.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
-  return `${data.publicUrl}?v=${Date.now()}`;
+  return `${data.publicUrl}?v=${version ?? Date.now()}`;
+}
+
+async function createDisplayAvatar(bytes: Buffer) {
+  const optimized = await sharp(bytes, { failOn: "none", limitInputPixels: 16_000_000 })
+    .rotate()
+    .resize(DISPLAY_SIZE, DISPLAY_SIZE, {
+      fit: "cover",
+      position: "centre",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 82, effort: 4 })
+    .toBuffer();
+
+  return {
+    bytes: optimized,
+    contentSha256: createHash("sha256").update(optimized).digest("hex"),
+  };
 }
 
 async function loadAvatarRecords(userId: string) {
   const { data, error } = await supabaseAdmin
     .from("user_avatar_images")
-    .select("id, user_id, storage_path, content_sha256, mime_type, created_at")
+    .select("id, user_id, storage_path, content_sha256, mime_type, optimized_storage_path, optimized_content_sha256, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -57,14 +77,10 @@ async function lazilyBackfillCurrentAvatar(userId: string, avatarUrl: string | n
   const storagePath = avatarStoragePathFromPublicUrl(avatarUrl, userId, BUCKET_NAME);
   if (!storagePath) return;
 
-  const { data: existing, error: existingError } = await supabaseAdmin
-    .from("user_avatar_images")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("storage_path", storagePath)
-    .maybeSingle();
-  if (existingError) throw existingError;
-  if (existing) return;
+  const existing = await loadAvatarRecords(userId);
+  if (existing.some((record) =>
+    record.storage_path === storagePath || record.optimized_storage_path === storagePath,
+  )) return;
 
   const { data: blob, error: downloadError } = await supabaseAdmin.storage
     .from(BUCKET_NAME)
@@ -109,9 +125,14 @@ async function cleanupAvatarRetention(userId: string, protectedStoragePath: stri
     return;
   }
 
+  const paths = evicted.flatMap((record) =>
+    [record.storage_path, record.optimized_storage_path].filter(
+      (path): path is string => Boolean(path),
+    ),
+  );
   const { error: storageError } = await supabaseAdmin.storage
     .from(BUCKET_NAME)
-    .remove(evicted.map((record) => record.storage_path));
+    .remove(paths);
   // Activation is already complete. A harmless orphan is preferable to
   // rolling back a valid new current avatar.
   if (storageError) console.error("Unable to remove pruned avatar objects", storageError);
@@ -125,9 +146,14 @@ function serializeAvatarRecords(
   const currentPath = avatarStoragePathFromPublicUrl(currentAvatarUrl, userId, BUCKET_NAME);
   return records.map((record) => ({
     id: record.id,
-    url: getPublicAvatarUrl(record.storage_path),
+    url: getPublicAvatarUrl(
+      avatarDisplayStoragePath(record),
+      record.optimized_content_sha256 ?? record.content_sha256,
+    ),
     createdAt: record.created_at,
-    isActive: currentPath === record.storage_path,
+    isActive:
+      currentPath === record.storage_path ||
+      currentPath === record.optimized_storage_path,
   }));
 }
 
@@ -149,7 +175,10 @@ export async function GET() {
     await lazilyBackfillCurrentAvatar(user.id, avatarUrl);
     await cleanupAvatarRetention(
       user.id,
-      avatarStoragePathFromPublicUrl(avatarUrl, user.id, BUCKET_NAME),
+      (await loadAvatarRecords(user.id)).find((record) => {
+        const currentPath = avatarStoragePathFromPublicUrl(avatarUrl, user.id, BUCKET_NAME);
+        return currentPath === record.storage_path || currentPath === record.optimized_storage_path;
+      })?.storage_path ?? null,
     );
     return NextResponse.json(await avatarResponse(user.id, avatarUrl));
   } catch (error) {
@@ -182,28 +211,48 @@ export async function POST(request: Request) {
     const contentSha256 = createHash("sha256").update(bytes).digest("hex");
     const { data: duplicate, error: duplicateError } = await supabaseAdmin
       .from("user_avatar_images")
-      .select("id, storage_path")
+      .select("id, storage_path, content_sha256, optimized_storage_path, optimized_content_sha256")
       .eq("user_id", user.id)
       .eq("content_sha256", contentSha256)
       .maybeSingle();
     if (duplicateError) throw duplicateError;
 
     if (duplicate) {
-      const avatarUrl = getPublicAvatarUrl(duplicate.storage_path);
+      const avatarUrl = getPublicAvatarUrl(
+        avatarDisplayStoragePath(duplicate),
+        duplicate.optimized_content_sha256 ?? duplicate.content_sha256,
+      );
       await setCurrentAvatar(user.id, avatarUrl);
       return NextResponse.json(await avatarResponse(user.id, avatarUrl));
     }
 
     const extension = getExtension(file.type);
-    const storagePath = `${user.id}/avatar-${Date.now()}-${contentSha256.slice(0, 10)}.${extension}`;
+    const storagePath = `${user.id}/original/avatar-${Date.now()}-${contentSha256.slice(0, 10)}.${extension}`;
     const { error: uploadError } = await supabaseAdmin.storage.from(BUCKET_NAME).upload(
       storagePath,
       bytes,
-      { contentType: file.type, cacheControl: "3600", upsert: false },
+      { contentType: file.type, cacheControl: "31536000", upsert: false },
     );
     if (uploadError) {
       console.error("Failed to upload profile image", uploadError);
       return NextResponse.json({ error: `Unable to upload image: ${uploadError.message}` }, { status: 500 });
+    }
+
+    let displayAvatar: Awaited<ReturnType<typeof createDisplayAvatar>> | null = null;
+    let optimizedStoragePath: string | null = null;
+    try {
+      displayAvatar = await createDisplayAvatar(bytes);
+      optimizedStoragePath = `${user.id}/display/avatar-${contentSha256.slice(0, 16)}.webp`;
+      const { error: displayUploadError } = await supabaseAdmin.storage.from(BUCKET_NAME).upload(
+        optimizedStoragePath,
+        displayAvatar.bytes,
+        { contentType: "image/webp", cacheControl: "31536000", upsert: true },
+      );
+      if (displayUploadError) throw displayUploadError;
+    } catch (error) {
+      console.error("Unable to optimize profile image; keeping original", error);
+      displayAvatar = null;
+      optimizedStoragePath = null;
     }
 
     const { error: insertError } = await supabaseAdmin.from("user_avatar_images").insert({
@@ -211,18 +260,23 @@ export async function POST(request: Request) {
       storage_path: storagePath,
       content_sha256: contentSha256,
       mime_type: file.type,
+      optimized_storage_path: optimizedStoragePath,
+      optimized_content_sha256: displayAvatar?.contentSha256 ?? null,
     });
     if (insertError) {
       const { error: compensationError } = await supabaseAdmin.storage
         .from(BUCKET_NAME)
-        .remove([storagePath]);
+        .remove([storagePath, ...(optimizedStoragePath ? [optimizedStoragePath] : [])]);
       if (compensationError) {
         console.error("Unable to remove avatar after history insert failure", compensationError);
       }
       return NextResponse.json({ error: `Unable to save profile image: ${insertError.message}` }, { status: 500 });
     }
 
-    const avatarUrl = getPublicAvatarUrl(storagePath);
+    const avatarUrl = getPublicAvatarUrl(
+      optimizedStoragePath ?? storagePath,
+      displayAvatar?.contentSha256 ?? contentSha256,
+    );
     try {
       await setCurrentAvatar(user.id, avatarUrl);
     } catch (error) {
@@ -233,7 +287,7 @@ export async function POST(request: Request) {
         .eq("storage_path", storagePath);
       const { error: objectCleanupError } = await supabaseAdmin.storage
         .from(BUCKET_NAME)
-        .remove([storagePath]);
+        .remove([storagePath, ...(optimizedStoragePath ? [optimizedStoragePath] : [])]);
       if (rowCleanupError || objectCleanupError) {
         console.error("Unable to fully compensate failed avatar activation", {
           rowCleanupError,
@@ -267,7 +321,7 @@ export async function PATCH(request: Request) {
 
     const { data: avatar, error } = await supabaseAdmin
       .from("user_avatar_images")
-      .select("id, storage_path")
+      .select("id, storage_path, content_sha256, optimized_storage_path, optimized_content_sha256")
       .eq("id", body.avatarImageId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -276,7 +330,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "That profile picture is not available." }, { status: 404 });
     }
 
-    const avatarUrl = getPublicAvatarUrl(avatar.storage_path);
+    const avatarUrl = getPublicAvatarUrl(
+      avatarDisplayStoragePath(avatar),
+      avatar.optimized_content_sha256 ?? avatar.content_sha256,
+    );
     await setCurrentAvatar(user.id, avatarUrl);
     return NextResponse.json(await avatarResponse(user.id, avatarUrl));
   } catch (error) {

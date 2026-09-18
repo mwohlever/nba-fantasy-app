@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import FantasyOwnerLabel from "./FantasyOwnerLabel";
 import FootballLiveField from "./NflLiveField";
 import { nflAthleteId, type NflOwnership } from "@/lib/live-scores/nflOwnership";
+import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
 import { footballPlaysByQuarter } from "@/lib/live-scores/football-plays";
 import type { LiveScoreGame } from "./LiveScoreCard";
 
@@ -164,9 +165,20 @@ type SelectedPlayer = {
   displayName: string;
   shortName?: string;
   headshot?: string;
+  optimizedHeadshotUrl?: string;
   teamId: string;
   teamName: string;
 };
+
+function preferredHeadshot(
+  optimizedHeadshotsByAthleteId: Record<string, string> | undefined,
+  athleteId: string | undefined,
+  providerUrl: string | undefined,
+) {
+  return athleteId && optimizedHeadshotsByAthleteId?.[athleteId]
+    ? optimizedHeadshotsByAthleteId[athleteId]
+    : providerUrl;
+}
 
 type LivePlayerGame = {
   eventId: string;
@@ -215,6 +227,7 @@ type PlayerDetailResponse = {
 
 type GameDetailResponse = {
   ownership?: NflOwnership | null;
+  optimizedHeadshotsByAthleteId?: Record<string, string>;
   field?: import("@/lib/live-scores/nflField").NflFieldState | null;
   success?: boolean;
   error?: string;
@@ -559,15 +572,16 @@ function PlayerDetailModal({
             ←
           </button>
 
-          {player.headshot ? (
-            <img
-              src={player.headshot}
-              alt=""
-              className="h-10 w-10 rounded-full object-cover"
+          {apiBase === "/api/live-scores/nfl" ? (
+            <PlayerHeadshot
+              nflPlayerId={Number(player.id) || null}
+              imageUrl={player.optimizedHeadshotUrl ?? player.headshot}
+              playerName={player.displayName}
+              size="md"
             />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-slate-100" />
-          )}
+          ) : player.headshot ? (
+            <img src={player.headshot} alt="" className="h-10 w-10 rounded-full object-cover" />
+          ) : <div className="h-10 w-10 rounded-full bg-slate-100" />}
 
           <div className="min-w-0 flex-1">
             <div className="truncate text-base font-black text-slate-950">
@@ -1661,6 +1675,8 @@ export default function GameCenterModal({
                                           shortName: row.athlete.shortName,
                                           headshot:
                                             row.athlete.headshot?.href,
+                                          optimizedHeadshotUrl:
+                                            preferredHeadshot(detail?.optimizedHeadshotsByAthleteId, row.athlete.id, row.athlete.headshot?.href),
                                           teamId:
                                             selectedPlayerTeam.team.id,
                                           teamName:
@@ -1696,17 +1712,17 @@ export default function GameCenterModal({
                                     >
                                       <td className={`sticky left-0 px-3 py-2 ${ownerFor(row.athlete?.id)?.isYou ? "bg-sky-50 dark:bg-sky-950" : ownerFor(row.athlete?.id) ? "bg-slate-50 dark:bg-slate-800" : "bg-white"}`}>
                                         <div className="flex min-w-[135px] items-center gap-2">
-                                          {row.athlete?.headshot?.href ? (
-                                            <img
-                                              src={
-                                                row.athlete.headshot.href
-                                              }
-                                              alt=""
-                                              className="h-7 w-7 rounded-full object-cover"
+                                          {apiBase === "/api/live-scores/nfl" ? (
+                                            <PlayerHeadshot
+                                              nflPlayerId={Number(row.athlete?.id) || null}
+                                              imageUrl={preferredHeadshot(detail?.optimizedHeadshotsByAthleteId, row.athlete?.id, row.athlete?.headshot?.href)}
+                                              playerName={row.athlete?.displayName ?? row.athlete?.shortName}
+                                              size="sm"
+                                              className="h-7 w-7"
                                             />
-                                          ) : (
-                                            <div className="h-7 w-7 rounded-full bg-slate-100" />
-                                          )}
+                                          ) : row.athlete?.headshot?.href ? (
+                                            <img src={row.athlete.headshot.href} alt="" className="h-7 w-7 rounded-full object-cover" />
+                                          ) : <div className="h-7 w-7 rounded-full bg-slate-100" />}
                                           <div><span className="font-bold text-slate-900 underline decoration-slate-300 underline-offset-2">
                                             {row.athlete?.shortName ||
                                               row.athlete?.displayName ||

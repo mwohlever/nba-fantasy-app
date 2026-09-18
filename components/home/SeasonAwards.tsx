@@ -12,6 +12,7 @@ type FirstTeamPlayer = {
   name: string;
   positionGroup: "G" | "F/C" | null;
   nbaPlayerId: number | null;
+  headshotUrl?: string | null;
   games: number;
   avgFantasy: number;
 };
@@ -85,6 +86,7 @@ export default function SeasonAwards({ season,
                 </div>
                 <PlayerHeadshot
                   nbaPlayerId={player.nbaPlayerId}
+                  imageUrl={player.headshotUrl}
                   playerName={player.name}
                   size="sm"
                 />

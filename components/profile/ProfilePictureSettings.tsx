@@ -250,6 +250,8 @@ export default function ProfilePictureSettings({
           <img
             src={imageSrc}
             alt={`${displayName} profile preview`}
+            width={128}
+            height={128}
             className="h-32 w-32 rounded-3xl border border-slate-200 object-cover shadow-sm"
           />
         ) : (
@@ -344,7 +346,7 @@ export default function ProfilePictureSettings({
                       : "border-slate-200 hover:border-sky-300"
                   }`}
                 >
-                  <img src={avatar.url} alt="" className="h-full w-full object-cover" />
+                  <img src={avatar.url} alt="" width={64} height={64} loading="lazy" className="h-full w-full object-cover" />
                   {avatar.isActive ? (
                     <span className="absolute inset-x-0 bottom-0 bg-sky-700/90 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
                       Current

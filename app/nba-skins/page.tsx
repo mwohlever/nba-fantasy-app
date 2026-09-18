@@ -22,16 +22,16 @@ const TEAM_HEADSHOTS: Record<
   string
 > = {
   Andy:
-    "/team-headshots/andy.jpg",
+    "/team-headshots/andy.webp",
 
   Jon:
-    "/team-headshots/jon.jpg",
+    "/team-headshots/jon.webp",
 
   Josh:
-    "/team-headshots/josh.jpg",
+    "/team-headshots/josh.webp",
 
   Mark:
-    "/team-headshots/mark.jpg",
+    "/team-headshots/mark.webp",
 };
 
 

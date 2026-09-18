@@ -53,6 +53,7 @@ type PlayerRow = {
 
   nba_player_id:
     number | null;
+  headshot_url?: string | null;
 };
 
 
@@ -249,7 +250,7 @@ export async function GET(
             "players",
           )
           .select(
-            "id, name, position_group, nba_player_id",
+            "id, name, position_group, nba_player_id, headshot_url",
           ),
       ]);
 
@@ -837,6 +838,9 @@ export async function GET(
 
             nbaPlayerId:
               player.nba_player_id,
+
+            headshotUrl:
+              player.headshot_url ?? null,
 
             games: 0,
 
