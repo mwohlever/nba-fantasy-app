@@ -127,3 +127,14 @@ test('lifecycle SQL locks opening and weekend independently',()=>{
  assert.doesNotMatch(sql,/should_lock:=p_lock_reason is not null or \(select is_locked from slates/);
  assert.match(sql,/evidence_snapshot=p\.evidence_snapshot\|\|jsonb_build_object/);
 });
+
+test('R1 Weekend migration opens from accepted R1, retains R3 lock, and grandfathers only the exact saved player',()=>{
+ const sql=fs.readFileSync(path.join(__dirname,'../supabase/migrations/20260925000100_golf_best_ball_weekend_r1_window.sql'),'utf8');
+ assert.match(sql,/should_open:=p\.period_key='weekend' and starts && array\[1\] and not \(starts && array\[3,4\]\)/);
+ assert.match(sql,/p\.period_key='weekend' and starts && array\[3,4\]/);
+ assert.match(sql,/select \* into lineup from public\.golf_salary_cap_lineups where slate_id=p_slate and period_id=period_row\.id and team_id=p_team for update/);
+ assert.match(sql,/lp\.lineup_id=lineup\.id and lp\.player_id=x/);
+ assert.match(sql,/e\.status in \('cut','withdrawn','disqualified','did_not_start'\)/);
+ assert.match(sql,/lineup_exists:=found/);
+ assert.match(sql,/delete from public\.golf_salary_cap_lineup_players where lineup_id=lineup\.id/);
+});

@@ -89,15 +89,7 @@ export async function GET(request: NextRequest) {
     }
     const priceByPlayer = new Map(prices.map(row => [Number(row.player_id), row]));
 
-    const eligibleWeekendIds = new Set<number>();
     const evidence = objectValue(period?.evidence_snapshot);
-    if (Array.isArray(evidence?.players)) {
-      for (const raw of evidence.players) {
-        const player = objectValue(raw);
-        const id = positiveInteger(player?.playerId);
-        if (id && (player?.eligibility === "made_cut" || player?.eligibility === "continuing")) eligibleWeekendIds.add(id);
-      }
-    }
 
     const openingStarted = (fieldResult.data ?? []).some((row: any) =>
       (row.golf_rounds ?? []).some((round: any) => Number(round.round_number) === 1 && Number(round.holes_completed) > 0));
@@ -120,6 +112,8 @@ export async function GET(request: NextRequest) {
       : { data: null, error: null };
     if (lineupResult.error) throw new Error(`Failed to load saved Golf lineup: ${lineupResult.error.message}`);
     const lineup = lineupResult.data as Record<string, any> | null;
+    const savedPlayerIds = new Set((lineup?.golf_salary_cap_lineup_players ?? []).map((row: any) => Number(row.player_id)));
+    const weekendDraftable = (status: unknown) => !["cut", "withdrawn", "disqualified", "did_not_start"].includes(String(status));
 
     const board = (fieldResult.data ?? []).map((row: any) => {
       const playerId = Number(row.player_id);
@@ -144,7 +138,9 @@ export async function GET(request: NextRequest) {
         effectiveSalary: priceSet?.status === "frozen" && price?.effective_salary !== null && price?.effective_salary !== undefined
           ? formatGolfMoney(price.effective_salary) : null,
         priced: priceSet?.status === "frozen" && price?.effective_salary !== null && price?.effective_salary !== undefined,
-        eligible: periodKey === "weekend" ? eligibleWeekendIds.has(playerId) : true,
+        // Existing selections remain loadable/saveable after a later CUT/WD/etc.
+        // Only currently draftable players may be added to a Weekend roster.
+        eligible: periodKey === "weekend" ? weekendDraftable(row.status) || savedPlayerIds.has(playerId) : true,
       };
     }).sort((a, b) => (golfMoneyToCents(b.effectiveSalary) ?? -1) - (golfMoneyToCents(a.effectiveSalary) ?? -1) || a.name.localeCompare(b.name));
 

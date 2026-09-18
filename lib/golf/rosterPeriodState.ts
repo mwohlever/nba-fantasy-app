@@ -5,7 +5,7 @@ import type { AcceptedGolfEvent } from './scoring';
 
 export type PeriodState = 'unavailable' | 'upcoming' | 'open' | 'locked' | 'completed' | 'uncertain';
 export type PeriodReason = 'acquisition_open' | 'acquisition_pending' | 'acquisition_locked'
-  | 'awaiting_round_2_completion' | 'awaiting_cut_confirmation' | 'weekend_field_ready'
+  | 'awaiting_round_1_start' | 'awaiting_round_2_completion' | 'awaiting_cut_confirmation' | 'weekend_field_ready'
   | 'round_3_started' | 'opening_play_started' | 'shortened_event_no_weekend'
   | 'tournament_complete' | 'retained_completion' | 'provider_state_uncertain' | 'round_2_complete';
 export type WeekendEligibility = 'made_cut' | 'continuing' | 'missed_cut' | 'withdrawn'
@@ -59,6 +59,7 @@ export function evaluateGolfRosterPeriodState(input: {
   }
   const r3Started = e.round3NotStarted === false || [...played].some(r => r >= 3);
   const initialPlay = played.size > 0;
+  const r1Started = played.has(1);
   const sorted = [...e.players].sort((a, b) => a.playerId - b.playerId);
   const eligiblePlayerIds: number[] = [], unresolvedPlayerIds: number[] = [], ineligiblePlayerIds: number[] = [];
   for (const player of sorted) {
@@ -98,10 +99,9 @@ export function evaluateGolfRosterPeriodState(input: {
   else if (e.regulationRoundCount !== null && e.regulationRoundCount <= 2) weekend = make('weekend', 'unavailable', 'shortened_event_no_weekend', true);
   else if (e.tournamentComplete === true) weekend = make('weekend', 'completed', 'tournament_complete', true);
   else if (e.acquisition.weekendLocked) weekend = make('weekend', 'locked', 'acquisition_locked', true);
-  else if (e.round2Complete === false) weekend = make('weekend', 'unavailable', 'awaiting_round_2_completion');
-  else if (e.round2Complete === null || e.regulationRoundCount === null || e.tournamentComplete === null || e.round3NotStarted === null) weekend = make('weekend', 'uncertain', 'provider_state_uncertain');
-  else if (e.cut === 'pending') weekend = make('weekend', 'uncertain', 'awaiting_cut_confirmation');
-  else if (e.cut === 'unknown' || !eligibilityKnown) weekend = make('weekend', 'uncertain', 'provider_state_uncertain');
+  // Weekend acquisition opens on accepted R1 play. Cut classification affects
+  // new-player eligibility only; it never controls this acquisition window.
+  else if (!r1Started) weekend = make('weekend', 'unavailable', 'awaiting_round_1_start');
   else weekend = make('weekend', 'open', 'weekend_field_ready');
   return { rosterPeriodType: type,
     currentPeriod: e.tournamentComplete === true ? null : (r3Started || weekend.state === 'open' ? 'weekend' : 'opening') as GolfPeriod,

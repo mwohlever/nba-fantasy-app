@@ -37,7 +37,7 @@ const scope={slateId:7,groupId:'g',leagueId:'l'};
 const snapshot={sport:'golf',rosterPeriods:{type:'split_after_round_2'}};
 const row=period=>({...scope,period,revision:2,acceptedRevision:4,startedRounds:[],openedAt:null,lockedAt:null,completedAt:null,lockReason:null});
 const fixture=()=>({scope,snapshot,rows:[row('opening'),row('weekend')],period:'weekend',expectedPeriodRevision:2,expectedAcceptedRevision:4,currentAcceptedRevision:4,actorAuthorized:true,teamParticipating:true,
- evidence:{regulationRoundCount:4,tournamentComplete:false,round2Complete:true,round3NotStarted:true,cut:'confirmed',fieldComplete:true,players:[{playerId:1,eligibility:'made_cut'}],acceptedEvents:[],startedRounds:[],acquisition:{initial:'locked',weekendLocked:false}},
+ evidence:{regulationRoundCount:4,tournamentComplete:false,round2Complete:false,round3NotStarted:true,cut:'pending',fieldComplete:true,players:[{playerId:1,eligibility:'made_cut'}],acceptedEvents:[],startedRounds:[1],acquisition:{initial:'locked',weekendLocked:false}},
  tournamentPlayerIds:[1],selectedPlayerIds:[1],now:'2026-09-12T12:00:00Z',lease:{sourceReference:'review:1',observedAt:'2026-09-12T11:59:00Z',acquisitionDeadline:'2026-09-12T12:05:00Z',acceptedRevision:4,periodRevision:2}});
 test('initialization plan is idempotent and snapshot scoped',()=>{
  assert.deepEqual(missingGolfPeriodKeys(scope,null,[]),['full_tournament']);
@@ -62,8 +62,9 @@ test('retained lock defeats a stale open view even with matching newer revisions
 test('missing or expired confirmation cannot authorize',()=>{
  for(const lease of [null,{...fixture().lease,acquisitionDeadline:fixture().now},{...fixture().lease,observedAt:'2026-09-13'}])assert.throws(()=>assertGolfLifecycleAcquisition({...fixture(),lease}),/confirmation/);
 });
-test('unresolved, delayed R2 and tournament final deny acquisition',()=>{
- for(const patch of [{round2Complete:false},{round3NotStarted:null},{tournamentComplete:true},{players:[{playerId:1,eligibility:'unknown'}]}]){const f=fixture();Object.assign(f.evidence,patch);assert.throws(()=>assertGolfLifecycleAcquisition(f),/unavailable/);}
+test('R2/cut confirmation does not govern the R1-open window; finals and unknown eligibility remain protected',()=>{
+ for(const patch of [{tournamentComplete:true},{players:[{playerId:1,eligibility:'unknown'}]}]){const f=fixture();Object.assign(f.evidence,patch);assert.throws(()=>assertGolfLifecycleAcquisition(f),/unavailable|eligible/);}
+ for(const patch of [{round2Complete:false},{round3NotStarted:null}]){const f=fixture();Object.assign(f.evidence,patch);assert.doesNotThrow(()=>assertGolfLifecycleAcquisition(f));}
 });
 test('72/54 permit confirmed weekend; 36 denies it',()=>{
  for(const regulationRoundCount of [4,3,2]){const f=fixture();f.evidence.regulationRoundCount=regulationRoundCount;if(regulationRoundCount===2)assert.throws(()=>assertGolfLifecycleAcquisition(f),/unavailable/);else assert.doesNotThrow(()=>assertGolfLifecycleAcquisition(f));}
