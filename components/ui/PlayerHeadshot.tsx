@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getGolfProviderHeadshotUrl } from "@/lib/golf/headshots";
 
 const NFL_DST_PLAYER_ID_BASE = 100_000_000;
 
@@ -54,6 +55,13 @@ const sizeClasses = {
   xl: "h-20 w-20 sm:h-24 sm:w-24",
 };
 
+const sizePixels = {
+  xs: 24,
+  sm: 32,
+  md: 40,
+  xl: 96,
+};
+
 function getInitials(playerName?: string) {
   if (!playerName) return "?";
 
@@ -82,23 +90,30 @@ export default function PlayerHeadshot({
     );
 
   const [imageFailed, setImageFailed] = useState(false);
+  const [useGolfProviderFallback, setUseGolfProviderFallback] = useState(false);
+
+  const golfProviderHeadshotUrl = getGolfProviderHeadshotUrl(
+    espnGolfPlayerId,
+  );
 
   const resolvedImageUrl =
     nflTeamLogoUrl ??
     (
-      imageUrl?.trim() ||
+      (useGolfProviderFallback
+        ? golfProviderHeadshotUrl
+        : imageUrl?.trim()) ||
       (nbaPlayerId
         ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaPlayerId}.png`
         : nflPlayerId
           ? `https://a.espncdn.com/i/headshots/nfl/players/full/${nflPlayerId}.png`
-          : espnGolfPlayerId
-            ? `https://a.espncdn.com/i/headshots/golf/players/full/${espnGolfPlayerId}.png`
-            : null)
+          : golfProviderHeadshotUrl
+        )
     );
 
   useEffect(() => {
     setImageFailed(false);
-  }, [resolvedImageUrl]);
+    setUseGolfProviderFallback(false);
+  }, [imageUrl, golfProviderHeadshotUrl]);
 
   const showImage = Boolean(resolvedImageUrl) && !imageFailed;
 
@@ -112,7 +127,20 @@ export default function PlayerHeadshot({
           alt={playerName ?? "Player"}
           className="h-full w-full object-cover"
           loading="lazy"
-          onError={() => setImageFailed(true)}
+          width={sizePixels[size]}
+          height={sizePixels[size]}
+          onError={() => {
+            if (
+              !useGolfProviderFallback &&
+              golfProviderHeadshotUrl &&
+              imageUrl?.trim() &&
+              imageUrl.trim() !== golfProviderHeadshotUrl
+            ) {
+              setUseGolfProviderFallback(true);
+              return;
+            }
+            setImageFailed(true);
+          }}
         />
       ) : (
         <div className="text-[10px] font-semibold text-slate-400">

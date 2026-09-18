@@ -12,7 +12,12 @@ const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').defaul
 const Leaderboard = require('../components/golf/GolfLiveLeaderboard.tsx').default;
 const GolfLivePage = require('../components/golf/GolfLivePage.tsx').default;
 const ReadOnlyPlayerModal = require('../components/lineups/ReadOnlyPlayerModal.tsx').default;
+const PlayerHeadshot = require('../components/ui/PlayerHeadshot.tsx').default;
 const { calculateGolfCutLine } = require('../lib/golf/cutLine.ts');
+const {
+  getGolfProviderHeadshotUrl,
+  isOptimizedGolfHeadshotUrl,
+} = require('../lib/golf/headshots.ts');
 const { getGroupSwitchDestination } = require('../lib/groups/navigation.ts');
 
 test('Golf derives the canonical mobile nav for both Golf and shared profile routes', () => {
@@ -26,7 +31,7 @@ test('Golf derives the canonical mobile nav for both Golf and shared profile rou
   const getSharedRouteSport = Function('sportParam', `return (${declarations.get('sharedRouteSport').getText(ast)})`);
   const getRouteSport = Function('pathname', 'sharedRouteSport', `return (${declarations.get('routeSport').getText(ast)})`);
   const getActiveSport = Function('routeSport', 'selectedSport', `return (${declarations.get('activeSport').getText(ast)})`);
-  const getMoreLinks = Function('activeSport', `return (${declarations.get('mobileMoreLinks').getText(ast)})`);
+  const getMoreLinks = Function('isBracketChallenge', 'activeSport', `return (${declarations.get('mobileMoreLinks').getText(ast)})`);
   const getMoreIsActive = Function('pathname', `return (${declarations.get('moreIsActive').getText(ast)})`);
   const golf = getLinks(false, false, false, null, 'golf', main);
   const profileRouteSport = getRouteSport('/profile', getSharedRouteSport('golf'));
@@ -36,7 +41,7 @@ test('Golf derives the canonical mobile nav for both Golf and shared profile rou
   assert.deepEqual(getLinks(false, false, false, null, profileActiveSport, main).map(x => x.label), ['Home', 'Lineup', 'Scores', 'Live']);
   assert.equal(golf[2].href, '/lineups/scores');
   assert.equal(golf[3].href, '/golf/live');
-  assert.deepEqual(getMoreLinks('golf').map(x => x.label), ['Standings', 'Player History']);
+  assert.deepEqual(getMoreLinks(false, 'golf').map(x => x.label), ['Standings', 'Player History']);
   assert.equal(getMoreIsActive('/standings'), true);
   assert.equal(getMoreIsActive('/player-history'), true);
   assert.equal(getMoreIsActive('/profile'), false);
@@ -152,6 +157,41 @@ test('Golf Live requests the lightweight accepted-summary variant before Home-on
   assert.match(summary, /const seasonSnapshot = liveOnly \? \[\]/);
   assert.match(summary, /latestGolfTournamentIsFinal,\s+tournamentLeaderboard,\s+projectedCut,\s+liveTournamentRound/s);
   assert.match(live, /playerStatsCacheRef\.current = null/);
+});
+
+test('Golf headshots prefer cached assets, then ESPN, then initials', () => {
+  const optimizedUrl = 'https://example.supabase.co/storage/v1/object/public/golf-headshots/espn/123.webp?v=abcdef';
+  const h = host(PlayerHeadshot);
+  const props = { espnGolfPlayerId: '123', imageUrl: optimizedUrl, playerName: 'Golf Player' };
+  let tree = h.render(props, true);
+  let image = nodes(tree).find(node => node.type === 'img');
+  assert.equal(image.props.src, optimizedUrl);
+  assert.equal(image.props.width, 32);
+  assert.equal(image.props.height, 32);
+  assert.equal(image.props.loading, 'lazy');
+
+  image.props.onError();
+  tree = h.render(props);
+  image = nodes(tree).find(node => node.type === 'img');
+  assert.equal(image.props.src, 'https://a.espncdn.com/i/headshots/golf/players/full/123.png');
+  image.props.onError();
+  tree = h.render(props);
+  assert.equal(nodes(tree).filter(node => node.type === 'img').length, 0);
+  assert.ok(nodes(tree).some(node => node.props?.children === 'GP'));
+  assert.equal(getGolfProviderHeadshotUrl('pga:123'), null);
+  assert.equal(isOptimizedGolfHeadshotUrl(optimizedUrl), true);
+  assert.equal(isOptimizedGolfHeadshotUrl('https://a.espncdn.com/i/headshots/golf/players/full/123.png'), false);
+});
+
+test('Golf headshot caching is a separate non-critical backfill, never a Live render action', () => {
+  const live = fs.readFileSync('components/golf/GolfLivePage.tsx', 'utf8');
+  const script = fs.readFileSync('scripts/cache-golf-headshots.mjs', 'utf8');
+  assert.doesNotMatch(live, /cache-golf-headshots|sharp|storage\.from/);
+  assert.match(script, /const CONCURRENCY = 3/);
+  assert.match(script, /cacheControl: "31536000"/);
+  assert.match(script, /withoutEnlargement: true/);
+  assert.match(script, /if \(!options\.force && isCachedHeadshot/);
+  assert.match(script, /const storagePath = `espn\/\$\{golfer\.espn_player_id\}\.webp`/);
 });
 
 test('compact setup renders six choices, selected states and derived cap', () => {

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "import-shotcast-course": "node scripts/import-shotcast-course.mjs"
+    "import-shotcast-course": "node scripts/import-shotcast-course.mjs",
+    "cache-golf-headshots": "node scripts/cache-golf-headshots.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.3",
@@ -16,6 +17,7 @@
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "sharp": "^0.34.5",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },

@@ -41,7 +41,6 @@ function playerRow(competitor: GolfCompetitor, updatedAt: string) {
     country: competitor.country,
     country_flag_url: competitor.countryFlagUrl,
     player_url: competitor.playerUrl,
-    headshot_url: `https://a.espncdn.com/i/headshots/golf/players/full/${competitor.espnPlayerId}.png`,
     is_active: true,
     updated_at: updatedAt,
   };

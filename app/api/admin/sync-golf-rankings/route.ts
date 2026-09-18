@@ -123,9 +123,6 @@ export async function POST() {
           player_url:
             `https://www.espn.com/golf/player/_/id/` +
             `${espnPlayerId}`,
-          headshot_url:
-            `https://a.espncdn.com/i/headshots/golf/players/full/` +
-            `${espnPlayerId}.png`,
           owgr_player_id: espnPlayerId,
           owgr_rank: ranking.rank,
           owgr_points: ranking.points,

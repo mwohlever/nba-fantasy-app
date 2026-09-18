@@ -1084,12 +1084,17 @@ function AppNavContent() {
     );
   }
 
-  const mobileMoreLinks = activeSport === "golf"
-    ? [{ href: "/standings", label: "Standings" }, { href: "/player-history", label: "Player History" }]
-    : [
-        { href: "/standings", label: "Standings" },
-        { href: "/player-history", label: "Player History" },
-      ];
+  const mobileMoreLinks = isBracketChallenge
+    ? []
+    : activeSport === "golf"
+      ? [
+          { href: "/standings", label: "Standings" },
+          { href: "/player-history", label: "Player History" },
+        ]
+      : [
+          { href: "/standings", label: "Standings" },
+          { href: "/player-history", label: "Player History" },
+        ];
 
   const mobileGroupControl = groupContext ? (
     displayedGroups.length > 1 ? (
@@ -1208,7 +1213,10 @@ function AppNavContent() {
               </Link>
             )) : null}
 
-            {!isGroupHomeRoute && !isNcaaPickEm && !isNbaSkins ? (
+            {!isGroupHomeRoute &&
+            !isNcaaPickEm &&
+            !isNbaSkins &&
+            !isBracketChallenge ? (
               <>
                 {activeSport !== "golf" ? <Link
                   href={getLinkHref(
@@ -1584,7 +1592,7 @@ function AppNavContent() {
       </nav>
 
       {/* White shield behind mobile nav */}
-      {!isGroupHomeRoute ? (
+      {!isGroupHomeRoute && !(isBracketChallenge && !bracketContestId) ? (
       <div
         className="app-mobile-nav-shield pointer-events-none fixed bottom-[-52px] left-0 right-0 z-[9998] h-28 bg-white sm:hidden"
         aria-hidden="true"
@@ -1592,7 +1600,7 @@ function AppNavContent() {
       ) : null}
 
       {/* Mobile bottom nav only */}
-      {!isGroupHomeRoute ? (
+      {!isGroupHomeRoute && !(isBracketChallenge && !bracketContestId) ? (
       <div
         ref={mobileMoreRef}
         className="app-mobile-bottom-nav fixed bottom-[-42px] left-0 right-0 z-[9999] border-t border-slate-200 bg-white px-3 pb-[42px] pt-1 shadow-[0_-6px_16px_rgba(15,23,42,0.10)] sm:hidden"
