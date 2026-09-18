@@ -22,6 +22,19 @@ export type GolfLiveTournamentPlayer = {
   rounds?: GolfLiveRound[] | null;
 };
 
+export type GolfLiveLeaderboardOrderRow = {
+  playerId: number;
+  name: string;
+  score: number | null;
+  status?: string | null;
+  providerPosition?: number | null;
+};
+
+export type GolfLiveLeaderboardRank = {
+  position: number | null;
+  positionDisplay: string | null;
+};
+
 const terminalStates = new Set([
   "cut",
   "withdrawn",
@@ -29,6 +42,77 @@ const terminalStates = new Set([
   "did_not_start",
   "finished",
 ]);
+
+const unrankedLeaderboardStatuses = new Set([
+  "withdrawn",
+  "disqualified",
+  "did_not_start",
+]);
+
+/**
+ * Order the Live presentation by accepted tournament score and calculate
+ * standard competition ranks from that same score. Provider order remains a
+ * fallback only for terminal/no-score rows, whose legacy presentation is not
+ * a live scoring rank.
+ */
+export function orderGolfLiveLeaderboard<T extends GolfLiveLeaderboardOrderRow>(
+  rows: T[],
+): Array<T & GolfLiveLeaderboardRank> {
+  const ranked = rows
+    .filter((row) => {
+      const score = Number(row.score);
+      return (
+        row.score !== null &&
+        row.score !== undefined &&
+        Number.isFinite(score) &&
+        !unrankedLeaderboardStatuses.has(String(row.status ?? "").toLowerCase())
+      );
+    })
+    .sort((a, b) => {
+      const scoreDifference = Number(a.score) - Number(b.score);
+      if (scoreDifference !== 0) return scoreDifference;
+
+      const nameDifference = a.name.localeCompare(b.name);
+      if (nameDifference !== 0) return nameDifference;
+
+      return Number(a.playerId) - Number(b.playerId);
+    });
+
+  const countByScore = new Map<number, number>();
+  ranked.forEach((row) => {
+    const score = Number(row.score);
+    countByScore.set(score, (countByScore.get(score) ?? 0) + 1);
+  });
+
+  const rankByPlayerId = new Map<number, GolfLiveLeaderboardRank>();
+  ranked.forEach((row, index) => {
+    const previous = ranked[index - 1];
+    const position =
+      previous && Number(previous.score) === Number(row.score)
+        ? rankByPlayerId.get(previous.playerId)!.position!
+        : index + 1;
+    const tied = (countByScore.get(Number(row.score)) ?? 0) > 1;
+
+    rankByPlayerId.set(row.playerId, {
+      position,
+      positionDisplay: tied ? `T${position}` : String(position),
+    });
+  });
+
+  const unranked = rows.filter((row) => !rankByPlayerId.has(row.playerId));
+
+  return [
+    ...ranked.map((row) => ({ ...row, ...rankByPlayerId.get(row.playerId)! })),
+    ...unranked.map((row) => ({
+      ...row,
+      position: row.providerPosition ?? null,
+      positionDisplay:
+        row.providerPosition === null || row.providerPosition === undefined
+          ? null
+          : String(row.providerPosition),
+    })),
+  ];
+}
 
 /** Resolve the active tournament round, not each golfer's last completed one. */
 export function resolveGolfLiveTournamentRound(players: GolfLiveTournamentPlayer[]) {

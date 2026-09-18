@@ -142,6 +142,21 @@ test('Live renders neutral, other-owner and current-user rows without reordering
   assert.ok(markup.indexOf('Neutral') < markup.indexOf('Other') && markup.indexOf('Other') < markup.indexOf('Mine'));
 });
 
+test('Live renders the presentation tie rank supplied by the accepted-score ordering', () => {
+  const rows = [
+    { playerId: 1, name: 'Leader', position: 1, positionDisplay: '1' },
+    { playerId: 2, name: 'Tied golfer', position: 2, positionDisplay: 'T2' },
+  ].map((row) => ({
+    ...row, shortName: row.name, espnGolfPlayerId: null, headshotUrl: null, country: null,
+    owgrRank: null, score: -2, scoreDisplay: '-2', status: 'active', statusLabel: 'active',
+    statusState: 'playing', teeTime: null, currentRound: 2, progressHoles: 7, lastHole: 7,
+    holesCompleted: 25, currentRoundScore: -1, currentRoundScoreDisplay: '-1', isDrafted: false,
+    draftedBy: [],
+  }));
+  const markup = renderToStaticMarkup(React.createElement(Leaderboard, { rows }));
+  assert.match(markup, />T2<\/span>/);
+});
+
 test('Live inserts the canonical projected cut divider after every tied eligible golfer only while projected', () => {
   const cut = calculateGolfCutLine([
     { playerId: '1', score: -3, position: 1, holesCompleted: 18, status: 'round_complete' },
@@ -166,6 +181,36 @@ test('Live inserts the canonical projected cut divider after every tied eligible
   assert.doesNotMatch(renderToStaticMarkup(React.createElement(Leaderboard, { rows, projectedCut: { ...cut, official: true } })), /PROJECTED CUT/);
   assert.doesNotMatch(renderToStaticMarkup(React.createElement(Leaderboard, { rows, projectedCut: cut, currentTournamentRound: 3 })), /PROJECTED CUT/);
   assert.match(fs.readFileSync('components/golf/GolfLivePage.tsx', 'utf8'), /projectedCut\.official \? "Cut line" : "Projected cut"/);
+});
+
+test('Live renders one divider from a serialized Round 2 home-summary response', () => {
+  const summary = JSON.parse(JSON.stringify({
+    liveTournamentRound: 2,
+    projectedCut: {
+      score: -2, display: '-2', inside: 78, tiedAtCut: 14, outside: 54,
+      official: false, cutSize: 65, ruleLabel: 'Top 65 + ties', insidePlayerIds: [101, 102, 103],
+    },
+    tournamentLeaderboard: [
+      { playerId: 101, name: 'Neal Shipley', position: 76, score: -2, isProjectedCutEligible: true },
+      { playerId: 102, name: 'Tied Golfer', position: 77, score: -2, isProjectedCutEligible: true },
+      { playerId: 103, name: 'Austin Duncan', position: 78, score: -2, isProjectedCutEligible: true },
+      { playerId: 104, name: 'Christiaan Bezuidenhout', position: 79, score: -1, isProjectedCutEligible: false },
+    ].map(row => ({
+      ...row, shortName: row.name, espnGolfPlayerId: null, headshotUrl: null, country: null,
+      owgrRank: null, scoreDisplay: null, status: 'round_complete', statusLabel: 'complete',
+      statusState: 'round_complete', teeTime: null, currentRound: 2, progressHoles: 18,
+      lastHole: 18, holesCompleted: 36, currentRoundScore: 0, currentRoundScoreDisplay: 'E',
+      isDrafted: false, draftedBy: [],
+    })),
+  }));
+  const markup = renderToStaticMarkup(React.createElement(Leaderboard, {
+    rows: summary.tournamentLeaderboard,
+    projectedCut: summary.projectedCut,
+    currentTournamentRound: summary.liveTournamentRound,
+  }));
+  assert.equal((markup.match(/PROJECTED CUT: -2/g) || []).length, 1);
+  assert.ok(markup.indexOf('Austin Duncan') < markup.indexOf('PROJECTED CUT: -2'));
+  assert.ok(markup.indexOf('PROJECTED CUT: -2') < markup.indexOf('Christiaan Bezuidenhout'));
 });
 
 test('Scores uses compact Standard context and authoritative Best Ball hole contributors', () => {

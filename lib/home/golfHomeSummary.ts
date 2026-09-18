@@ -4,6 +4,7 @@ import { formatGolfTeeTime, getGolfStatusMeta } from "@/lib/golf/status";
 import { calculateGolfCutLine } from "@/lib/golf/cutLine";
 import {
   getGolfLiveRoundStatus,
+  orderGolfLiveLeaderboard,
   resolveGolfLiveTournamentRound,
 } from "@/lib/golf/liveLeaderboard";
 import { getCurrentUser } from "@/lib/auth";
@@ -1207,7 +1208,7 @@ export async function getGolfHomeSummary() {
       })),
     );
 
-  const tournamentLeaderboard =
+  const tournamentLeaderboard = orderGolfLiveLeaderboard(
     latestEventPlayers
       .filter(
         (player) =>
@@ -1259,8 +1260,7 @@ export async function getGolfHomeSummary() {
             golfPlayer?.country ?? null,
           owgrRank:
             golfPlayer?.owgr_rank ?? null,
-          position:
-            player.leaderboard_order,
+          providerPosition: player.leaderboard_order,
           score:
             player.official_score_to_par,
           scoreDisplay:
@@ -1299,7 +1299,8 @@ export async function getGolfHomeSummary() {
           draftedBy,
           isProjectedCutEligible: false,
         };
-      });
+      }),
+  );
 
   const cutRoundScoresByEventPlayerId =
     new Map<
@@ -1391,7 +1392,7 @@ export async function getGolfHomeSummary() {
     tournamentLeaderboard
       .slice(0, 25)
       .map((player) => ({
-        label: `#${player.position}`,
+        label: `#${player.positionDisplay ?? player.position ?? "—"}`,
         value:
           `${player.shortName}` +
           `${player.isDrafted ? "*" : ""} ` +

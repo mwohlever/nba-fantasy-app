@@ -12,6 +12,7 @@ require.extensions[".ts"] = (module, filename) => module._compile(
 const {
   formatGolfLiveProgress,
   getGolfLiveRoundStatus,
+  orderGolfLiveLeaderboard,
   resolveGolfLiveTournamentRound,
 } = require("../lib/golf/liveLeaderboard.ts");
 const { relevantGolfRosterPeriodKey } = require("../lib/golf/relevantRosterPeriod.ts");
@@ -60,6 +61,40 @@ test("Live current-round status preserves terminal golfer states", () => {
   }
 });
 
+test("Live orders and ranks accepted tournament totals independently of stale provider rank", () => {
+  const rows = orderGolfLiveLeaderboard([
+    { playerId: 20, name: "Even Player", score: 0, status: "active", providerPosition: 20, isProjectedCutEligible: false },
+    { playerId: 99, name: "Fabián Gómez", score: -4, status: "active", providerPosition: 99, isProjectedCutEligible: true },
+    { playerId: 31, name: "Tie One", score: -2, status: "active", providerPosition: 31, isProjectedCutEligible: true },
+    { playerId: 32, name: "Tie Two", score: -2, status: "active", providerPosition: 32, isProjectedCutEligible: true },
+    { playerId: 41, name: "Plus One", score: 1, status: "active", providerPosition: 41, isProjectedCutEligible: false },
+    { playerId: 50, name: "Cut Golfer", score: 2, status: "cut", providerPosition: 50, isProjectedCutEligible: false },
+    { playerId: 6, name: "Withdrawn", score: -9, status: "withdrawn", providerPosition: 6, isProjectedCutEligible: false },
+    { playerId: 7, name: "No Score", score: null, status: "did_not_start", providerPosition: 7, isProjectedCutEligible: false },
+  ]);
+
+  assert.deepEqual(
+    rows.map(({ playerId, position, positionDisplay }) => ({ playerId, position, positionDisplay })),
+    [
+      { playerId: 99, position: 1, positionDisplay: "1" },
+      { playerId: 31, position: 2, positionDisplay: "T2" },
+      { playerId: 32, position: 2, positionDisplay: "T2" },
+      { playerId: 20, position: 4, positionDisplay: "4" },
+      { playerId: 41, position: 5, positionDisplay: "5" },
+      { playerId: 50, position: 6, positionDisplay: "6" },
+      { playerId: 6, position: 6, positionDisplay: "6" },
+      { playerId: 7, position: 7, positionDisplay: "7" },
+    ],
+  );
+  assert.deepEqual(
+    rows.map((row) => row.isProjectedCutEligible),
+    [true, true, true, false, false, false, false, false],
+    "accepted-score ordering keeps the projected in-cut block contiguous",
+  );
+  assert.equal(rows.at(-2).status, "withdrawn");
+  assert.equal(rows.at(-1).status, "did_not_start");
+});
+
 test("Golf Live reuses accepted ordering and both ownership stores", () => {
   const summary = fs.readFileSync(
     require("node:path").join(__dirname, "../lib/home/golfHomeSummary.ts"),
@@ -79,6 +114,7 @@ test("Golf Live reuses accepted ordering and both ownership stores", () => {
   );
 
   assert.match(summary, /order\("leaderboard_order"/);
+  assert.match(summary, /orderGolfLiveLeaderboard/);
   assert.match(summary, /from\("lineup_players"\)/);
   assert.match(summary, /from\("golf_salary_cap_lineups"\)/);
   assert.match(summary, /relevantPeriod/);

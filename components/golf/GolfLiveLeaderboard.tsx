@@ -13,6 +13,7 @@ export type GolfLiveLeaderboardRow = {
   country: string | null;
   owgrRank: number | null;
   position: number | null;
+  positionDisplay?: string | null;
   score: number | null;
   scoreDisplay: string | null;
   status: string | null;
@@ -94,7 +95,7 @@ export default function GolfLiveLeaderboard({
             }`}
           >
             <span className="text-center text-sm font-bold text-slate-300">
-              {row.position ?? "—"}
+              {row.positionDisplay ?? row.position ?? "—"}
             </span>
 
             <button
