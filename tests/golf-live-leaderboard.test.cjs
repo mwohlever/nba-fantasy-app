@@ -9,7 +9,11 @@ require.extensions[".ts"] = (module, filename) => module._compile(
   }).outputText,
   filename,
 );
-const { formatGolfLiveProgress } = require("../lib/golf/liveLeaderboard.ts");
+const {
+  formatGolfLiveProgress,
+  getGolfLiveRoundStatus,
+  resolveGolfLiveTournamentRound,
+} = require("../lib/golf/liveLeaderboard.ts");
 const { relevantGolfRosterPeriodKey } = require("../lib/golf/relevantRosterPeriod.ts");
 
 test("live progress uses accepted holes and never emits thru 0", () => {
@@ -27,6 +31,33 @@ test("terminal and playoff conventions stay golf-native", () => {
   }
   assert.equal(formatGolfLiveProgress({ status: "playoff" }), "Playoff");
   assert.equal(formatGolfLiveProgress({ statusState: "finished" }), "F");
+});
+
+test("Live status describes the active tournament round, not a prior completed round", () => {
+  const tee = (raw, parsed) => raw || parsed || null;
+  const status = (round, playerStatus = "round_complete") => formatGolfLiveProgress(
+    getGolfLiveRoundStatus({ status: playerStatus, round, formatTeeTime: tee }),
+  );
+  const r1 = { round_number: 1, holes_completed: 18 };
+  const r2Scheduled = { round_number: 2, holes_completed: 0, tee_time_raw: "1:27 PM" };
+
+  assert.equal(resolveGolfLiveTournamentRound([{ status: "round_complete", current_round: 2, rounds: [r1, r2Scheduled] }]), 2);
+  assert.equal(status(r2Scheduled), "1:27 PM", "R1 complete does not make scheduled R2 final");
+  assert.equal(status({ round_number: 2, holes_completed: 8 }), "thru 8");
+  assert.equal(status({ round_number: 2, holes_completed: 18 }), "F");
+  assert.equal(status({ round_number: 1, holes_completed: 0, tee_time_raw: "8:00 AM" }, "scheduled"), "8:00 AM");
+  assert.equal(status({ round_number: 3, holes_completed: 4 }), "thru 4");
+  assert.equal(status({ round_number: 4, holes_completed: 18 }), "F");
+});
+
+test("Live current-round status preserves terminal golfer states", () => {
+  const tee = () => "1:27 PM";
+  for (const [status, expected] of [["cut", "CUT"], ["withdrawn", "WD"], ["disqualified", "DQ"], ["did_not_start", "DNS"]]) {
+    assert.equal(
+      formatGolfLiveProgress(getGolfLiveRoundStatus({ status, round: { round_number: 2, holes_completed: 0 }, formatTeeTime: tee })),
+      expected,
+    );
+  }
 });
 
 test("Golf Live reuses accepted ordering and both ownership stores", () => {

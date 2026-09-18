@@ -10,6 +10,7 @@ const { renderToStaticMarkup } = require('react-dom/server');
 const Setup = require('../components/golf/GolfGameSetup.tsx').default;
 const Builder = require('../components/lineups/GolfSalaryCapBuilder.tsx').default;
 const Leaderboard = require('../components/golf/GolfLiveLeaderboard.tsx').default;
+const { calculateGolfCutLine } = require('../lib/golf/cutLine.ts');
 const { getGroupSwitchDestination } = require('../lib/groups/navigation.ts');
 
 test('Golf derives the canonical mobile nav for both Golf and shared profile routes', () => {
@@ -139,6 +140,32 @@ test('Live renders neutral, other-owner and current-user rows without reordering
   const markup = renderToStaticMarkup(React.createElement(Leaderboard, { rows }));
   assert.match(markup, /Your golfer/); assert.match(markup, /Team B/); assert.match(markup, /thru 7/);
   assert.ok(markup.indexOf('Neutral') < markup.indexOf('Other') && markup.indexOf('Other') < markup.indexOf('Mine'));
+});
+
+test('Live inserts the canonical projected cut divider after every tied eligible golfer only while projected', () => {
+  const cut = calculateGolfCutLine([
+    { playerId: 1, score: -3, position: 1, holesCompleted: 18, status: 'round_complete' },
+    { playerId: 2, score: -2, position: 2, holesCompleted: 18, status: 'round_complete' },
+    { playerId: 3, score: -2, position: 3, holesCompleted: 18, status: 'round_complete' },
+    { playerId: 4, score: -1, position: 4, holesCompleted: 18, status: 'round_complete' },
+  ], 2);
+  assert.deepEqual(cut.insidePlayerIds, [1, 2, 3]);
+  const rows = [1, 2, 3, 4].map((playerId, index) => ({
+    playerId, name: `Player ${playerId}`, shortName: `P${playerId}`, espnGolfPlayerId: null,
+    headshotUrl: null, country: null, owgrRank: null, position: index + 1, score: -4 + index,
+    scoreDisplay: null, status: 'round_complete', statusLabel: 'complete', statusState: 'round_complete',
+    teeTime: null, currentRound: 2, progressHoles: 18, lastHole: 18, holesCompleted: 36,
+    currentRoundScore: 0, currentRoundScoreDisplay: 'E', isDrafted: false, draftedBy: [],
+    isProjectedCutEligible: cut.insidePlayerIds.includes(playerId),
+  }));
+  const projectedMarkup = renderToStaticMarkup(React.createElement(Leaderboard, { rows, projectedCut: cut }));
+  assert.equal((projectedMarkup.match(/PROJECTED CUT: -2/g) || []).length, 1);
+  assert.ok(projectedMarkup.indexOf('Player 3') < projectedMarkup.indexOf('PROJECTED CUT: -2'));
+  assert.ok(projectedMarkup.indexOf('PROJECTED CUT: -2') < projectedMarkup.indexOf('Player 4'));
+  assert.doesNotMatch(renderToStaticMarkup(React.createElement(Leaderboard, { rows, projectedCut: null })), /PROJECTED CUT/);
+  assert.doesNotMatch(renderToStaticMarkup(React.createElement(Leaderboard, { rows, projectedCut: { ...cut, official: true } })), /PROJECTED CUT/);
+  assert.doesNotMatch(renderToStaticMarkup(React.createElement(Leaderboard, { rows, projectedCut: cut, currentTournamentRound: 3 })), /PROJECTED CUT/);
+  assert.match(fs.readFileSync('components/golf/GolfLivePage.tsx', 'utf8'), /projectedCut\.official \? "Cut line" : "Projected cut"/);
 });
 
 test('Scores uses compact Standard context and authoritative Best Ball hole contributors', () => {

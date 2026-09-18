@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { getGolfStatusMeta } from "@/lib/golf/status";
+import { formatGolfTeeTime, getGolfStatusMeta } from "@/lib/golf/status";
 import { calculateGolfCutLine } from "@/lib/golf/cutLine";
+import {
+  getGolfLiveRoundStatus,
+  resolveGolfLiveTournamentRound,
+} from "@/lib/golf/liveLeaderboard";
 import { getCurrentUser } from "@/lib/auth";
 import { getActiveLeagueForSport } from "@/lib/groups/context";
 import { resolveGolfRules } from "@/lib/rules/leagueRules";
@@ -59,6 +63,8 @@ type GolfCutRoundRow = {
   score_display: string | null;
   holes_completed: number | null;
   status: string | null;
+  tee_time: string | null;
+  tee_time_raw: string | null;
 };
 
 type GolfPlayerRow = {
@@ -541,7 +547,7 @@ export async function getGolfHomeSummary() {
       } = await supabaseAdmin
         .from("golf_rounds")
         .select(
-          "event_player_id, round_number, score_to_par, score_display, holes_completed, status",
+          "event_player_id, round_number, score_to_par, score_display, holes_completed, status, tee_time, tee_time_raw",
         )
         .in(
           "event_player_id",
@@ -1184,6 +1190,23 @@ export async function getGolfHomeSummary() {
       );
     });
 
+  const liveTournamentRound =
+    resolveGolfLiveTournamentRound(
+      latestEventPlayers.map((player) => ({
+        status: player.status,
+        current_round: player.current_round,
+        rounds: latestGolfCutRounds
+          .filter((round) => round.event_player_id === player.id)
+          .map((round) => ({
+            round_number: round.round_number,
+            holes_completed: round.holes_completed,
+            tee_time: round.tee_time,
+            tee_time_raw: round.tee_time_raw,
+            status: round.status,
+          })),
+      })),
+    );
+
   const tournamentLeaderboard =
     latestEventPlayers
       .filter(
@@ -1206,10 +1229,15 @@ export async function getGolfHomeSummary() {
           ...player,
           rounds: playerRounds,
         });
-        const currentRound = playerRounds.find(
+        const liveRound = playerRounds.find(
           (round) =>
-            round.round_number === player.current_round,
+            round.round_number === liveTournamentRound,
         );
+        const liveStatus = getGolfLiveRoundStatus({
+          status: player.status,
+          round: liveRound,
+          formatTeeTime: formatGolfTeeTime,
+        });
         const currentTeamId = context.team?.id ?? null;
 
         return {
@@ -1244,23 +1272,23 @@ export async function getGolfHomeSummary() {
             player.status,
           statusLabel:
             statusMeta.compactLabel,
-          statusState: statusMeta.state,
-          teeTime: statusMeta.teeTime,
+          statusState: liveStatus.statusState,
+          teeTime: liveStatus.teeTime,
           currentRound:
-            player.current_round,
+            liveTournamentRound,
           lastHole:
             player.last_hole,
           holesCompleted:
             player.holes_completed,
-          progressHoles: statusMeta.holes,
+          progressHoles: liveStatus.progressHoles,
           currentRoundScore:
-            currentRound?.score_to_par ?? null,
+            liveRound?.score_to_par ?? null,
           currentRoundScoreDisplay:
-            currentRound?.score_display?.trim() ||
-            (currentRound?.score_to_par === null ||
-            currentRound?.score_to_par === undefined
+            liveRound?.score_display?.trim() ||
+            (liveRound?.score_to_par === null ||
+            liveRound?.score_to_par === undefined
               ? null
-              : golfScore(currentRound.score_to_par)),
+              : golfScore(liveRound.score_to_par)),
           roundsCompleted:
             player.rounds_completed,
           isDrafted:
@@ -1269,6 +1297,7 @@ export async function getGolfHomeSummary() {
             currentTeamId !== null &&
             (ownerTeamIdsByPlayerId.get(player.player_id)?.has(currentTeamId) ?? false),
           draftedBy,
+          isProjectedCutEligible: false,
         };
       });
 
@@ -1329,6 +1358,7 @@ export async function getGolfHomeSummary() {
               : null;
 
           return {
+            playerId: player.player_id,
             /*
              * R1/R2 remains dynamic while Friday is in progress.
              * After R2, this value is frozen even while the golfer's
@@ -1351,6 +1381,11 @@ export async function getGolfHomeSummary() {
           ),
         )
       : null;
+
+  const projectedCutPlayerIds = new Set(projectedCut?.insidePlayerIds ?? []);
+  tournamentLeaderboard.forEach((player) => {
+    player.isProjectedCutEligible = projectedCutPlayerIds.has(player.playerId);
+  });
 
   const tournamentFacts =
     tournamentLeaderboard
@@ -1423,6 +1458,7 @@ export async function getGolfHomeSummary() {
     latestSlateRows: canonicalLatestRows,
     tournamentLeaderboard,
     projectedCut,
+    liveTournamentRound,
     seasonSnapshot,
     funFacts,
     latestSeason,

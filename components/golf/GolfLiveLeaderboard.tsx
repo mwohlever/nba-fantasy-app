@@ -1,6 +1,7 @@
 "use client";
 
 import PlayerHeadshot from "@/components/ui/PlayerHeadshot";
+import type { GolfCutLine } from "@/lib/golf/cutLine";
 import { formatGolfLiveProgress } from "@/lib/golf/liveLeaderboard";
 
 export type GolfLiveLeaderboardRow = {
@@ -27,6 +28,7 @@ export type GolfLiveLeaderboardRow = {
   isDrafted: boolean;
   isCurrentUser?: boolean;
   draftedBy: string[];
+  isProjectedCutEligible?: boolean;
 };
 
 function scoreLabel(row: GolfLiveLeaderboardRow) {
@@ -40,12 +42,22 @@ export default function GolfLiveLeaderboard({
   rows,
   maxRows,
   onSelect,
+  projectedCut,
+  currentTournamentRound,
 }: {
   rows: GolfLiveLeaderboardRow[];
   maxRows?: number;
   onSelect?: (row: GolfLiveLeaderboardRow) => void;
+  projectedCut?: GolfCutLine | null;
+  currentTournamentRound?: number | null;
 }) {
   const visibleRows = typeof maxRows === "number" ? rows.slice(0, maxRows) : rows;
+  const inlineProjectedCut = projectedCut && !projectedCut.official && Number(currentTournamentRound ?? 1) <= 2
+    ? projectedCut
+    : null;
+  const finalProjectedCutIndex = inlineProjectedCut
+    ? visibleRows.reduce((index, row, rowIndex) => row.isProjectedCutEligible ? rowIndex : index, -1)
+    : -1;
 
   if (visibleRows.length === 0) {
     return (
@@ -64,15 +76,15 @@ export default function GolfLiveLeaderboard({
         <span className="text-right">Total</span>
       </div>
 
-      {visibleRows.map((row) => {
+      {visibleRows.map((row, rowIndex) => {
         const progress = formatGolfLiveProgress(row);
         const ownerLabel = row.isCurrentUser
           ? "Your golfer"
           : row.draftedBy.join(", ");
 
         return (
+          <div key={row.playerId}>
           <div
-            key={row.playerId}
             className={`grid grid-cols-[2rem_minmax(0,1fr)_2.8rem_4.2rem] items-center gap-2 border-b border-slate-800/90 px-3 py-2 ${
               row.isCurrentUser
                 ? "bg-emerald-900/55 ring-inset ring-1 ring-emerald-500/35"
@@ -127,6 +139,12 @@ export default function GolfLiveLeaderboard({
             <span className={`text-right text-lg font-black ${row.isCurrentUser ? "text-emerald-300" : "text-white"}`}>
               {scoreLabel(row)}
             </span>
+          </div>
+          {rowIndex === finalProjectedCutIndex ? (
+            <div className="border-b border-amber-700/50 bg-amber-950/30 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-amber-200">
+              PROJECTED CUT: {inlineProjectedCut?.display}
+            </div>
+          ) : null}
           </div>
         );
       })}

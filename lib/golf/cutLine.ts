@@ -1,6 +1,7 @@
 export const DEFAULT_GOLF_CUT_SIZE = 65;
 
 export type GolfCutLineInput = {
+  playerId?: number | null;
   score?: number | null;
   status?: string | null;
   position?: number | null;
@@ -18,6 +19,7 @@ export type GolfCutLine = {
   official: boolean;
   cutSize: number;
   ruleLabel: string;
+  insidePlayerIds: number[];
 };
 
 export function formatGolfCutScore(
@@ -137,6 +139,12 @@ export function calculateGolfCutLine(
       Number(row.score) > cutScore,
   ).length;
 
+  const insidePlayerIds = ordered.flatMap((row) =>
+    Number(row.score) <= cutScore && Number.isSafeInteger(row.playerId)
+      ? [Number(row.playerId)]
+      : [],
+  );
+
   const cutAlreadyReported =
     rows.some(
       (row) =>
@@ -246,5 +254,6 @@ export function calculateGolfCutLine(
     cutSize,
     ruleLabel:
       `Top ${cutSize} + ties`,
+    insidePlayerIds,
   };
 }

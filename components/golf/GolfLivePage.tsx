@@ -25,6 +25,7 @@ type GolfLiveSummary = {
     is_locked: boolean;
   } | null;
   latestGolfTournamentIsFinal?: boolean;
+  liveTournamentRound?: number | null;
   tournamentLeaderboard?: GolfLiveLeaderboardRow[];
   projectedCut?: GolfCutLine | null;
 };
@@ -197,6 +198,8 @@ export default function GolfLivePage() {
           ) : (
             <GolfLiveLeaderboard
               rows={rows}
+              projectedCut={summary?.projectedCut}
+              currentTournamentRound={summary?.liveTournamentRound}
               onSelect={(row) => setSelectedPlayer(playerFromRow(row))}
             />
           )}
