@@ -1384,7 +1384,7 @@ export async function getGolfHomeSummary() {
 
   const projectedCutPlayerIds = new Set(projectedCut?.insidePlayerIds ?? []);
   tournamentLeaderboard.forEach((player) => {
-    player.isProjectedCutEligible = projectedCutPlayerIds.has(player.playerId);
+    player.isProjectedCutEligible = projectedCutPlayerIds.has(Number(player.playerId));
   });
 
   const tournamentFacts =

@@ -144,10 +144,10 @@ test('Live renders neutral, other-owner and current-user rows without reordering
 
 test('Live inserts the canonical projected cut divider after every tied eligible golfer only while projected', () => {
   const cut = calculateGolfCutLine([
-    { playerId: 1, score: -3, position: 1, holesCompleted: 18, status: 'round_complete' },
-    { playerId: 2, score: -2, position: 2, holesCompleted: 18, status: 'round_complete' },
-    { playerId: 3, score: -2, position: 3, holesCompleted: 18, status: 'round_complete' },
-    { playerId: 4, score: -1, position: 4, holesCompleted: 18, status: 'round_complete' },
+    { playerId: '1', score: -3, position: 1, holesCompleted: 18, status: 'round_complete' },
+    { playerId: '2', score: -2, position: 2, holesCompleted: 18, status: 'round_complete' },
+    { playerId: '3', score: -2, position: 3, holesCompleted: 18, status: 'round_complete' },
+    { playerId: '4', score: -1, position: 4, holesCompleted: 18, status: 'round_complete' },
   ], 2);
   assert.deepEqual(cut.insidePlayerIds, [1, 2, 3]);
   const rows = [1, 2, 3, 4].map((playerId, index) => ({
