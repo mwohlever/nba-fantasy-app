@@ -165,14 +165,18 @@ function AppNavContent() {
     pathname.startsWith("/golf/")
       ? "golf"
       : pathname.startsWith(
-      "/nba-skins",
-    )
-      ? "nba-skins"
-      : pathname.startsWith(
-            "/ncaa-pickem",
-          )
-        ? "ncaa"
-        : sharedRouteSport;
+          "/nba-skins",
+        )
+        ? "nba-skins"
+        : pathname.startsWith(
+              "/ncaa-pickem",
+            )
+          ? "ncaa"
+          : pathname.startsWith(
+                "/bracket-challenge",
+              )
+            ? "bracket-challenge"
+            : sharedRouteSport;
 
   const activeSport =
     routeSport ??

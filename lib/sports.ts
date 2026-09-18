@@ -6,7 +6,7 @@ export type SportConfig = {
 };
 
 export type PlatformGameConfig = {
-  key: "nba" | "nfl" | "golf" | "ncaa" | "nba-skins";
+  key: "nba" | "nfl" | "golf" | "ncaa" | "nba-skins" | "bracket-challenge";
   label: string;
   description: string;
   logo: string;
@@ -28,6 +28,12 @@ export const SPORTS: SportConfig[] = [
     logo: "/logos/nfl.png",
   },
   { key: "golf", label: "Golf", emoji: "⛳", logo: "/logos/golf.png" },
+  {
+    key: "bracket-challenge",
+    label: "Bracket Challenge",
+    emoji: "🏆",
+    logo: "/logos/nfl.png",
+  },
 ];
 
 export const PLATFORM_GAMES: PlatformGameConfig[] = [
@@ -66,6 +72,13 @@ export const PLATFORM_GAMES: PlatformGameConfig[] = [
       "A season-long NBA prediction game.",
     logo: "/logos/nba.png",
   },
+  {
+    key: "bracket-challenge",
+    label: "Bracket Challenge",
+    description:
+      "Tournament brackets for college football, March Madness, and more.",
+    logo: "/logos/nfl.png",
+  },
 ];
 
 export function getPlatformGameConfig(
@@ -103,6 +116,13 @@ export function sportKeyFromLeagueSportKey(
     return "ncaa";
   }
 
+  if (
+    leagueSportKey ===
+    "bracket_challenge"
+  ) {
+    return "bracket-challenge";
+  }
+
   return leagueSportKey;
 }
 
@@ -123,6 +143,13 @@ export function leagueSportKeyFromSportKey(
     "ncaa"
   ) {
     return "ncaa_pickem";
+  }
+
+  if (
+    sportKey ===
+    "bracket-challenge"
+  ) {
+    return "bracket_challenge";
   }
 
   return sportKey;

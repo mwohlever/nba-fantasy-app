@@ -672,7 +672,8 @@ export type LeagueSportKey =
   | "nfl"
   | "golf"
   | "ncaa_pickem"
-  | "nba_skins";
+  | "nba_skins"
+  | "bracket_challenge";
 
 
 export async function getActiveLeagueForSport(

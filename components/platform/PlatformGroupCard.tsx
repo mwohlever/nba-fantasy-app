@@ -16,6 +16,7 @@ type GroupCard = {
 function hrefForSport(sportKey: string) {
   if (sportKey === "ncaa") return "/ncaa-pickem";
   if (sportKey === "nba-skins") return "/nba-skins";
+  if (sportKey === "bracket-challenge") return "/bracket-challenge";
   return `/home?sport=${encodeURIComponent(sportKey)}`;
 }
 
