@@ -280,6 +280,113 @@ function categoryTitle(category?: EspnPlayerCategory) {
   return category?.displayName || category?.name || "Stats";
 }
 
+function statNumber(value?: string) {
+  if (!value) return 0;
+  const cleaned = value.replace(/,/g, "").trim();
+  const number = Number.parseFloat(cleaned);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function statValue(
+  row: EspnAthleteStat,
+  labels: string[],
+  label: string,
+) {
+  const index = labels.findIndex(
+    (candidate) => candidate.trim().toUpperCase() === label,
+  );
+  return index >= 0 ? statNumber(row.stats?.[index]) : 0;
+}
+
+function passingAttempts(
+  row: EspnAthleteStat,
+  labels: string[],
+): number | null {
+  const attemptIndex = labels.findIndex(
+    (label) => label.trim().toUpperCase() === "ATT",
+  );
+
+  if (attemptIndex >= 0) {
+    return statNumber(row.stats?.[attemptIndex]);
+  }
+
+  const completionAttemptIndex = labels.findIndex((label) => {
+    const normalized = label.trim().toUpperCase();
+    return normalized === "C/ATT" || normalized === "COMP/ATT";
+  });
+
+  if (completionAttemptIndex >= 0) {
+    const value = row.stats?.[completionAttemptIndex] ?? "";
+    const attempt = value.split("/").at(-1);
+    return statNumber(attempt);
+  }
+
+  // Some ESPN/provider shapes omit attempts entirely. In that case we
+  // cannot safely infer inactivity, so preserve the supplied rows.
+  return null;
+}
+
+function hasAnyRecordedStat(row: EspnAthleteStat) {
+  return (row.stats || []).some((value) => {
+    const normalized = String(value ?? "").trim();
+    if (!normalized || normalized === "-" || normalized === "—") return false;
+
+    // Handles ordinary numeric stats as well as values such as 1.0,
+    // 1/2, 3-24 and similar provider display formats.
+    return normalized
+      .split(/[\/-]/)
+      .some((part) => statNumber(part) !== 0);
+  });
+}
+
+function playerStatRows(category: EspnPlayerCategory) {
+  const labels = category.labels || [];
+  const name = (category.name || category.displayName || "").toLowerCase();
+  let athletes = [...(category.athletes || [])];
+
+  if (name.includes("passing")) {
+    athletes = athletes.filter((row) => {
+      const attempts = passingAttempts(row, labels);
+      return attempts === null || attempts > 0;
+    });
+  } else if (name.includes("defens")) {
+    athletes = athletes.filter(hasAnyRecordedStat);
+  }
+
+  const sortLabel =
+    name.includes("passing") ||
+    name.includes("rushing") ||
+    name.includes("receiving")
+      ? "YDS"
+      : name.includes("defens")
+        ? labels.some((label) => label.trim().toUpperCase() === "TOT")
+          ? "TOT"
+          : labels.some((label) => label.trim().toUpperCase() === "TOTAL")
+            ? "TOTAL"
+            : null
+        : null;
+
+  if (sortLabel) {
+    athletes.sort((a, b) => {
+      const primary =
+        statValue(b, labels, sortLabel) - statValue(a, labels, sortLabel);
+
+      if (primary !== 0) return primary;
+
+      // Stable, useful secondary ordering for tied defensive totals.
+      if (name.includes("defens")) {
+        const solo =
+          statValue(b, labels, "SOLO") - statValue(a, labels, "SOLO");
+        if (solo !== 0) return solo;
+      }
+
+      return 0;
+    });
+  }
+
+  return athletes;
+}
+
 function seasonStatsToPlayerBoxes(
   detail: GameDetailResponse | null,
   away?: EspnCompetitor,
@@ -1414,9 +1521,9 @@ export default function GameCenterModal({
                           </div>
                         </div>
 
-                        {statRows.map((row) => (
+                        {statRows.map((row, index) => (
                           <div
-                            key={row.key}
+                            key={`${row.key}-${row.label}-${index}`}
                             className="grid grid-cols-[1fr_auto_1fr] items-center border-t border-slate-100 px-3 py-2 text-sm"
                           >
                             <div className="font-bold text-slate-900">
@@ -1496,7 +1603,7 @@ export default function GameCenterModal({
                     {(selectedPlayerTeam?.statistics || []).map(
                       (category, categoryIndex) => {
                         const labels = category.labels || [];
-                        const athletes = category.athletes || [];
+                        const athletes = playerStatRows(category);
 
                         if (!athletes.length) return null;
 

@@ -5,7 +5,20 @@ export type FootballPlay = { id?: string; text?: string; type?: { id?: string; t
 type Drive = { team?: { id?: string }; plays?: FootballPlay[] };
 export type NflFieldInput = { header?: { competitions?: Array<{ status?: { type?: { state?: string; completed?: boolean; name?: string; description?: string } }; competitors?: Array<{ id?: string; possession?: boolean; team?: { id?: string; abbreviation?: string; color?: string } }> }> }; drives?: { current?: Drive; previous?: Drive[] } };
 export type FootballEvent = { id: string | null; text: string; type: string; period: number | null; clock: string };
-export type FootballEventEmphasis = { kind: "touchdown" | "field-goal" | "interception" | "turnover"; team: string | null; secondary?: "interception-return" };
+export type FootballEventEmphasis = {
+  kind:
+    | "touchdown"
+    | "field-goal"
+    | "extra-point"
+    | "extra-point-missed"
+    | "two-point"
+    | "two-point-missed"
+    | "safety"
+    | "interception"
+    | "turnover";
+  team: string | null;
+  secondary?: "interception-return";
+};
 export type NflFieldState = { offense: string; defense: string; color: string | null; ball: number | null; firstDown: number | null; downDistance: string; position: string; clock: string; latestPlay: string; stateLabel?: string; latestEvent: FootballEvent | null; lastFootballPlay: FootballEvent | null; fieldStatePlay: FootballEvent | null; eventEmphasis: FootballEventEmphasis | null };
 
 const ADMIN_TYPES = new Set(["Timeout", "Official Timeout", "TV Timeout", "Two-minute warning", "Two Minute Warning", "End Period", "End of Half", "End of Game", "Review"]);
@@ -37,10 +50,51 @@ function teamAbbreviation(teamId: string | undefined, teams: Array<{ id?: string
 
 function emphasisFor(play: FootballPlay, possession: string, teams: Array<{ id?: string; team?: { id?: string; abbreviation?: string } }>): FootballEventEmphasis | null {
   const typeId = play.type?.id;
-  if (play.scoringPlay && (typeId === "67" || typeId === "68")) return { kind: "touchdown", team: teamAbbreviation(play.end?.team?.id, teams) };
-  if (play.scoringPlay && typeId === "59") return { kind: "field-goal", team: teamAbbreviation(play.end?.team?.id, teams) };
+  const type = typeText(play);
+  const text = `${type} ${play.text ?? ""}`.toLowerCase();
+  const scoringTeam =
+    teamAbbreviation(play.end?.team?.id, teams) ??
+    teamAbbreviation(play.start?.team?.id, teams) ??
+    teamAbbreviation(possession, teams);
+
+  if (isScoreFollowUp(play)) {
+    if (/two[- ]?point/.test(text)) {
+      return {
+        kind: /no good|failed|fails|unsuccessful/.test(text) ? "two-point-missed" : "two-point",
+        team: scoringTeam,
+      };
+    }
+
+    return {
+      kind: /no good|missed|failed|fails|unsuccessful/.test(text) ? "extra-point-missed" : "extra-point",
+      team: scoringTeam,
+    };
+  }
+
+  if (
+    (play.scoringPlay && (typeId === "67" || typeId === "68")) ||
+    /touchdown/.test(text)
+  ) {
+    return { kind: "touchdown", team: scoringTeam };
+  }
+
+  if (
+    (play.scoringPlay && typeId === "59") ||
+    /field goal good|field goal is good/.test(text)
+  ) {
+    return { kind: "field-goal", team: scoringTeam };
+  }
+
+  if (/safety/.test(text)) {
+    return { kind: "safety", team: scoringTeam };
+  }
+
   if (!play.isTurnover) return null;
-  if (typeId === "26" || typeId === "63") return { kind: "interception", team: teamAbbreviation(possession, teams) };
+
+  if (typeId === "26" || typeId === "63" || /interception/.test(text)) {
+    return { kind: "interception", team: teamAbbreviation(possession, teams) };
+  }
+
   return { kind: "turnover", team: teamAbbreviation(possession, teams) };
 }
 
@@ -73,7 +127,15 @@ export function normalizeNflField(summary: NflFieldInput): NflFieldState | null 
   let emphasisPlay: FootballPlay | undefined;
   for (let index = plays.length - 1; index >= 0; index--) {
     const play = plays[index];
-    if (!isAdministrative(play) && !isScoreFollowUp(play)) { emphasisPlay = play; break; }
+
+    // Administrative events such as timeouts/reviews do not replace the
+    // meaningful football event immediately before them. Scoring follow-ups
+    // DO replace it: after a PAT, the field should say EXTRA POINT rather
+    // than continuing to display the preceding touchdown.
+    if (!isAdministrative(play)) {
+      emphasisPlay = play;
+      break;
+    }
   }
   const spot = fieldPlay.end!;
   const yards = spot.yardsToEndzone!;

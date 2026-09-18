@@ -1,7 +1,15 @@
 import type { FootballEventEmphasis, NflFieldState } from "@/lib/live-scores/nflField";
 
 const emphasisLabel = (kind: FootballEventEmphasis["kind"]) => ({
-  touchdown: "TOUCHDOWN!", "field-goal": "FIELD GOAL!", interception: "INTERCEPTION!", turnover: "TURNOVER!",
+  touchdown: "TOUCHDOWN!",
+  "field-goal": "FIELD GOAL!",
+  "extra-point": "EXTRA POINT · GOOD",
+  "extra-point-missed": "EXTRA POINT · NO GOOD",
+  "two-point": "2-POINT CONVERSION · GOOD",
+  "two-point-missed": "2-POINT CONVERSION · NO GOOD",
+  safety: "SAFETY!",
+  interception: "INTERCEPTION!",
+  turnover: "TURNOVER!",
 }[kind] ?? "");
 
 // Shared NFL/college field; keep the module path stable for existing consumers.
@@ -14,10 +22,25 @@ export default function FootballLiveField({ field }: { field: NflFieldState | nu
     display.latestEvent.id === null && (display.latestEvent.text !== display.lastFootballPlay.text || display.latestEvent.type !== display.lastFootballPlay.type)
   ));
   const emphasis = display.eventEmphasis;
+  const showScrimmageState = Boolean(state && !emphasis && display.ball !== null);
+
   return <section className="mb-3 text-xs text-slate-700 dark:text-slate-200" aria-label="Live football field">
     <div className="mb-1 flex flex-wrap items-center justify-between gap-x-2 font-semibold">
-      <span><span className="mr-1 inline-block h-2 w-2 rounded-full border border-slate-400" style={{ backgroundColor: display.color ?? undefined }} aria-hidden="true" />{display.offense ? `${display.offense} possession →` : "Field state unavailable"}{display.downDistance ? ` · ${display.downDistance}` : ""}</span>
-      <span>{[display.position, display.clock].filter(Boolean).join(" · ")}</span>
+      <span>
+        <span
+          className="mr-1 inline-block h-2 w-2 rounded-full border border-slate-400"
+          style={{ backgroundColor: display.color ?? undefined }}
+          aria-hidden="true"
+        />
+        {display.offense ? `${display.offense} possession →` : "Field state unavailable"}
+        {showScrimmageState && display.downDistance ? ` · ${display.downDistance}` : ""}
+      </span>
+      <span>
+        {[
+          showScrimmageState ? display.position : "",
+          emphasis ? display.latestEvent?.clock : display.clock,
+        ].filter(Boolean).join(" · ")}
+      </span>
     </div>
     <div className="relative">
       <svg viewBox="0 0 320 66" className="block h-20 w-full rounded bg-emerald-950" role="img"
@@ -29,9 +52,9 @@ export default function FootballLiveField({ field }: { field: NflFieldState | nu
         </g>)}
         <text x="12" y="35" textAnchor="middle" fill="white" fontSize="8" transform="rotate(-90 12 35)">{display.offense}</text>
         <text x="308" y="35" textAnchor="middle" fill="white" fontSize="8" transform="rotate(90 308 35)">{display.defense}</text>
-        {display.ball !== null && <line x1={x(display.ball)} x2={x(display.ball)} y1="7" y2="59" stroke="#7dd3fc" strokeWidth="2" />}
-        {display.firstDown !== null ? <line x1={x(display.firstDown)} x2={x(display.firstDown)} y1="7" y2="59" stroke="#fcd34d" strokeWidth="2" strokeDasharray="4 2" /> : null}
-        {display.ball !== null && <ellipse cx={x(display.ball)} cy="37" rx="5" ry="3" fill="#fff" stroke="#0f172a" />}
+        {showScrimmageState && display.ball !== null ? <line x1={x(display.ball)} x2={x(display.ball)} y1="7" y2="59" stroke="#7dd3fc" strokeWidth="2" /> : null}
+        {showScrimmageState && display.firstDown !== null ? <line x1={x(display.firstDown)} x2={x(display.firstDown)} y1="7" y2="59" stroke="#fcd34d" strokeWidth="2" strokeDasharray="4 2" /> : null}
+        {showScrimmageState && display.ball !== null ? <ellipse cx={x(display.ball)} cy="37" rx="5" ry="3" fill="#fff" stroke="#0f172a" /> : null}
       </svg>
       {emphasis ? <div className="pointer-events-none absolute inset-0 flex items-center justify-center" aria-live="polite">
         <div className="rounded bg-slate-950/80 px-3 py-1 text-center text-white shadow">
@@ -40,7 +63,10 @@ export default function FootballLiveField({ field }: { field: NflFieldState | nu
         </div>
       </div> : null}
     </div>
-    <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-400"><span>Solid: scrimmage · Dashed: first down</span><span>{state ? `${display.stateLabel ?? "After latest play"} · →` : "Awaiting structured state"}</span></div>
+    <div className="mt-1 flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+      <span>{showScrimmageState ? "Solid: scrimmage · Dashed: first down" : emphasis ? "Latest game event" : "Field position unavailable"}</span>
+      <span>{showScrimmageState ? `${display.stateLabel ?? "After latest play"} · →` : emphasis ? "" : "Awaiting structured state"}</span>
+    </div>
     {latestDiffers && display.latestEvent?.text ? <p className="mt-1 leading-snug"><span className="font-semibold">Current event: </span>{display.latestEvent.text}</p> : null}
     {display.lastFootballPlay?.text ? <p className="mt-1 leading-snug"><span className="font-semibold">{latestDiffers ? "Last play: " : "Latest play: "}</span>{display.lastFootballPlay.text}</p> : null}
   </section>;

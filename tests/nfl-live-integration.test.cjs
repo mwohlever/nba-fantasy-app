@@ -143,7 +143,7 @@ test('shared resolver classifies major events and clears emphasis on the next fi
   field = normalizeNflField(resolvedSummary([structuredPlay(), touchdown, { id: 'off', type: { id: '74', text: 'Official Timeout' }, text: 'Official timeout' }]));
   assert.equal(field.latestEvent.type, 'Official Timeout'); assert.equal(field.lastFootballPlay.text, 'AAA touchdown'); assert.equal(field.eventEmphasis.kind, 'touchdown');
   field = normalizeNflField(resolvedSummary([structuredPlay(), touchdown, { id: 'pat', type: { text: 'Extra Point Good' }, pointAfterAttempt: true, text: 'PAT good' }]));
-  assert.equal(field.latestEvent.text, 'PAT good'); assert.equal(field.lastFootballPlay.text, 'AAA touchdown'); assert.equal(field.eventEmphasis.kind, 'touchdown');
+  assert.equal(field.latestEvent.text, 'PAT good'); assert.equal(field.lastFootballPlay.text, 'AAA touchdown'); assert.equal(field.eventEmphasis.kind, 'extra-point');
   const kickoff = structuredPlay({ id: 'kick', type: { id: '53', text: 'Kickoff' }, text: 'Kickoff touchback', start: { team: { id: '1' } }, end: { team: { id: '2' }, down: 1, distance: 10, yardsToEndzone: 75 } });
   field = normalizeNflField(resolvedSummary([structuredPlay(), touchdown, kickoff], '2'));
   assert.equal(field.position, 'BBB 25'); assert.equal(field.eventEmphasis, null);
@@ -238,7 +238,9 @@ test('actual Player Stats rows annotate stable IDs, preserve detail actions and 
     assert.doesNotMatch(render(draw(overrides)), /Owner A|Owner B/);
   }
   function findRows(node) { if (!node) return []; if (Array.isArray(node)) return node.flatMap(findRows); return node.type === 'tr' && node.props.role === 'button' ? [node] : findRows(node.props?.children); }
-  findRows(tree)[0].props.onClick(); assert.equal(states[7].id, '123');
+  const ownedRow = findRows(tree).find((row) => /Owner A · You/.test(render(row)));
+  assert.ok(ownedRow, 'Expected owned player row after stat sorting');
+  ownedRow.props.onClick(); assert.equal(states[7].id, '123');
 }));
 test('aborted Group A response cannot replace B or a later A response; one existing refresh request', () => modalHarness(async ({ states, draw, effects }) => {
   const oldFetch = global.fetch; const pending = [];
