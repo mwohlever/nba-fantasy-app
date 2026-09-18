@@ -142,7 +142,11 @@ function isTerminalGolfStatus(
   ].includes(String(status ?? "").toLowerCase());
 }
 
-export async function getGolfHomeSummary() {
+export async function getGolfHomeSummary({
+  liveOnly = false,
+}: {
+  liveOnly?: boolean;
+} = {}) {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -288,10 +292,12 @@ export async function getGolfHomeSummary() {
     ]),
   );
 
-  const avatarByTeamId = await loadFantasyTeamAvatars(
-    supabaseAdmin,
-    activeTeams,
-  );
+  const avatarByTeamId = liveOnly
+    ? new Map<number, string | null>()
+    : await loadFantasyTeamAvatars(
+        supabaseAdmin,
+        activeTeams,
+      );
 
   const participatingTeamIdsBySlate =
     new Map<number, Set<number>>();
@@ -1005,7 +1011,7 @@ export async function getGolfHomeSummary() {
     );
   }
 
-  const latestRows = latestSlate
+  const latestRows = !liveOnly && latestSlate
     ? rowsForSlate(latestSlate.id)
         .map((row) => ({
           ...row,
@@ -1090,8 +1096,10 @@ export async function getGolfHomeSummary() {
     ? getSeason(latestSlate.start_date)
     : new Date().getFullYear();
 
-  const lockedSlateIds = new Set(
-    normalizedSlates
+  const lockedSlateIds = liveOnly
+    ? new Set<number>()
+    : new Set(
+      normalizedSlates
       .filter((slate) => {
         if (slate.is_locked) {
           return true;
@@ -1106,10 +1114,10 @@ export async function getGolfHomeSummary() {
 
         return isCompleteSlate(slate.id);
       })
-      .map((slate) => slate.id),
-  );
+        .map((slate) => slate.id),
+    );
 
-  const seasonResults = results.filter(
+  const seasonResults = liveOnly ? [] : results.filter(
     (row) => {
       const slate = normalizedSlates.find(
         (item) => item.id === row.slate_id,
@@ -1124,7 +1132,7 @@ export async function getGolfHomeSummary() {
     },
   );
 
-  const seasonSnapshot = Array.from(
+  const seasonSnapshot = liveOnly ? [] : Array.from(
     teamNameById.entries(),
   )
     .map(([teamId, name]) => {
@@ -1387,6 +1395,17 @@ export async function getGolfHomeSummary() {
   tournamentLeaderboard.forEach((player) => {
     player.isProjectedCutEligible = projectedCutPlayerIds.has(Number(player.playerId));
   });
+
+  if (liveOnly) {
+    return NextResponse.json({
+      success: true,
+      latestSlate: serializeSlate(latestSlate),
+      latestGolfTournamentIsFinal,
+      tournamentLeaderboard,
+      projectedCut,
+      liveTournamentRound,
+    });
+  }
 
   const tournamentFacts =
     tournamentLeaderboard

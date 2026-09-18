@@ -188,6 +188,14 @@ function AppNavContent() {
   const isNcaaPickEm =
     activeSport === "ncaa";
 
+  const isBracketChallenge =
+    activeSport === "bracket-challenge";
+
+  const bracketContestId =
+    pathname.match(
+      /^\/bracket-challenge\/([^/]+)/,
+    )?.[1] ?? null;
+
   const displayedProfileLinks =
     isNbaSkins
       ? [
@@ -444,16 +452,42 @@ function AppNavContent() {
             icon: "▦",
           },
         ]
-      : activeSport === "nfl"
-        ? [...mainLinks, { href: "/live-scores", label: "Live", icon: "◫" }]
-        : activeSport === "golf"
+      : isBracketChallenge
+        ? bracketContestId
           ? [
-              { href: "/home", label: "Home", icon: "⌂" },
-              { href: "/lineups/draft", label: "Lineup", icon: "✎" },
-              { href: "/lineups/scores", label: "Scores", icon: "▦" },
-              { href: "/golf/live", label: "Live", icon: "◫" },
+              {
+                href: `/bracket-challenge/${bracketContestId}`,
+                label: "Home",
+                icon: "⌂",
+              },
+              {
+                href: `/bracket-challenge/${bracketContestId}/bracket`,
+                label: "Bracket",
+                icon: "✎",
+              },
+              {
+                href: `/bracket-challenge/${bracketContestId}/live`,
+                label: "Live Scores",
+                icon: "◫",
+              },
             ]
-          : mainLinks;
+          : [
+              {
+                href: "/bracket-challenge",
+                label: "Home",
+                icon: "⌂",
+              },
+            ]
+        : activeSport === "nfl"
+          ? [...mainLinks, { href: "/live-scores", label: "Live", icon: "◫" }]
+          : activeSport === "golf"
+            ? [
+                { href: "/home", label: "Home", icon: "⌂" },
+                { href: "/lineups/draft", label: "Lineup", icon: "✎" },
+                { href: "/lineups/scores", label: "Scores", icon: "▦" },
+                { href: "/golf/live", label: "Live", icon: "◫" },
+              ]
+            : mainLinks;
 
   const sportScopedPaths = [
     "/live-scores",
@@ -500,9 +534,23 @@ function AppNavContent() {
     if (
       pathname === "/home" ||
       pathname === "/nba-skins" ||
-      pathname === "/ncaa-pickem"
+      pathname === "/ncaa-pickem" ||
+      pathname === "/bracket-challenge" ||
+      /^\/bracket-challenge\/[^/]+\/?$/.test(pathname)
     ) {
       return "home";
+    }
+
+    if (
+      /^\/bracket-challenge\/[^/]+\/bracket\/?$/.test(pathname)
+    ) {
+      return "draft";
+    }
+
+    if (
+      /^\/bracket-challenge\/[^/]+\/live\/?$/.test(pathname)
+    ) {
+      return "live";
     }
 
     if (
@@ -607,6 +655,14 @@ function AppNavContent() {
       }
 
       return "/nba-skins";
+    }
+
+
+    if (
+      sportKey ===
+      "bracket-challenge"
+    ) {
+      return "/bracket-challenge";
     }
 
 
@@ -752,6 +808,14 @@ function AppNavContent() {
           "ncaa" &&
         destination ===
           "/ncaa-pickem" &&
+        currentSection !==
+          "home"
+      ) ||
+      (
+        sportKey ===
+          "bracket-challenge" &&
+        destination ===
+          "/bracket-challenge" &&
         currentSection !==
           "home"
       );
@@ -1011,6 +1075,13 @@ function AppNavContent() {
         ? "app-mobile-nav-active bg-slate-800 text-sky-300 ring-1 ring-sky-500/20"
         : "app-mobile-nav-idle text-slate-400 hover:bg-slate-800/70 hover:text-slate-100"
     }`;
+  }
+
+  function shouldPrefetchMobileLink(href: string) {
+    return !(
+      activeSport === "golf" &&
+      (href === "/lineups/draft" || href === "/lineups/scores")
+    );
   }
 
   const mobileMoreLinks = activeSport === "golf"
@@ -1573,6 +1644,7 @@ function AppNavContent() {
                   ? link.href
                   : getLinkHref(link.href)
               }
+              prefetch={shouldPrefetchMobileLink(link.href)}
               className={mobileLinkClass(link.href)}
             >
               <span className="text-lg leading-none">{link.icon}</span>

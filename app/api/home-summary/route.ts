@@ -164,7 +164,9 @@ export async function GET(request: Request) {
     const sportParam = searchParams.get("sport");
 
     if (sportParam === "golf") {
-      return getGolfHomeSummary();
+      return getGolfHomeSummary({
+        liveOnly: searchParams.get("view") === "live",
+      });
     }
 
     const sport =

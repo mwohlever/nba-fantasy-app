@@ -22,27 +22,27 @@ test('Golf derives the canonical mobile nav for both Golf and shared profile rou
   const visit = node => { if (ts.isVariableDeclaration(node)) declarations.set(node.name.getText(ast), node.initializer); ts.forEachChild(node, visit); };
   visit(ast);
   const main = Function(`return (${declarations.get('mainLinks').getText(ast)})`)();
-  const getLinks = Function('isNbaSkins', 'isNcaaPickEm', 'activeSport', 'mainLinks', `return (${declarations.get('displayedMainLinks').getText(ast)})`);
+  const getLinks = Function('isNbaSkins', 'isNcaaPickEm', 'isBracketChallenge', 'bracketContestId', 'activeSport', 'mainLinks', `return (${declarations.get('displayedMainLinks').getText(ast)})`);
   const getSharedRouteSport = Function('sportParam', `return (${declarations.get('sharedRouteSport').getText(ast)})`);
   const getRouteSport = Function('pathname', 'sharedRouteSport', `return (${declarations.get('routeSport').getText(ast)})`);
   const getActiveSport = Function('routeSport', 'selectedSport', `return (${declarations.get('activeSport').getText(ast)})`);
   const getMoreLinks = Function('activeSport', `return (${declarations.get('mobileMoreLinks').getText(ast)})`);
   const getMoreIsActive = Function('pathname', `return (${declarations.get('moreIsActive').getText(ast)})`);
-  const golf = getLinks(false, false, 'golf', main);
+  const golf = getLinks(false, false, false, null, 'golf', main);
   const profileRouteSport = getRouteSport('/profile', getSharedRouteSport('golf'));
   const profileActiveSport = getActiveSport(profileRouteSport, 'nba');
   assert.equal(profileActiveSport, 'golf');
   assert.deepEqual(golf.map(x => x.label), ['Home', 'Lineup', 'Scores', 'Live']);
-  assert.deepEqual(getLinks(false, false, profileActiveSport, main).map(x => x.label), ['Home', 'Lineup', 'Scores', 'Live']);
+  assert.deepEqual(getLinks(false, false, false, null, profileActiveSport, main).map(x => x.label), ['Home', 'Lineup', 'Scores', 'Live']);
   assert.equal(golf[2].href, '/lineups/scores');
   assert.equal(golf[3].href, '/golf/live');
   assert.deepEqual(getMoreLinks('golf').map(x => x.label), ['Standings', 'Player History']);
   assert.equal(getMoreIsActive('/standings'), true);
   assert.equal(getMoreIsActive('/player-history'), true);
   assert.equal(getMoreIsActive('/profile'), false);
-  assert.deepEqual(getLinks(false, false, 'nba', main).map(x => x.label), ['Home', 'Draft', 'Scores']);
-  assert.deepEqual(getLinks(false, false, 'nfl', main).map(x => x.label), ['Home', 'Draft', 'Scores', 'Live']);
-  assert.deepEqual(getLinks(false, true, 'ncaa', main).map(x => x.href), ['/ncaa-pickem', '/ncaa-pickem/scores', '/ncaa-pickem/standings']);
+  assert.deepEqual(getLinks(false, false, false, null, 'nba', main).map(x => x.label), ['Home', 'Draft', 'Scores']);
+  assert.deepEqual(getLinks(false, false, false, null, 'nfl', main).map(x => x.label), ['Home', 'Draft', 'Scores', 'Live']);
+  assert.deepEqual(getLinks(false, true, false, null, 'ncaa', main).map(x => x.href), ['/ncaa-pickem', '/ncaa-pickem/scores', '/ncaa-pickem/standings']);
   assert.match(source, /!isNcaaPickEm && !isNbaSkins \? \(/);
   assert.doesNotMatch(fs.readFileSync('components/MobileAccountMenu.tsx', 'utf8'), /player-history|Player History/);
   assert.match(fs.readFileSync('app/lineups/scores/page.tsx', 'utf8'), /defaultViewMode="scoring"/);
@@ -126,6 +126,32 @@ test('shared Scores owns one initial availability request and mobile account UI 
   assert.match(builder, /const \[lineupsResponse, statsResponse, resultsResponse\] = await Promise\.all/);
   assert.doesNotMatch(mobileMenu, /fetch\("\/api\/me"/);
   assert.match(nav, /<MobileAccountMenu\s+currentUser=\{currentUser\}\s+isLoading=\{isUserLoading\}/);
+});
+
+test('Golf mobile tabs skip only expensive Draft and Scores prefetches', () => {
+  const nav = fs.readFileSync('components/AppNav.tsx', 'utf8');
+  assert.match(nav, /function shouldPrefetchMobileLink\(href: string\)/);
+  assert.match(nav, /activeSport === "golf"/);
+  assert.match(nav, /href === "\/lineups\/draft" \|\| href === "\/lineups\/scores"/);
+  assert.match(nav, /prefetch=\{shouldPrefetchMobileLink\(link\.href\)\}/);
+  assert.doesNotMatch(nav, /prefetch=\{false\}[^\n]*className=\{desktopLinkClass/);
+});
+
+test('Golf Live requests the lightweight accepted-summary variant before Home-only fantasy work', () => {
+  const route = fs.readFileSync('app/api/home-summary/route.ts', 'utf8');
+  const live = fs.readFileSync('components/golf/GolfLivePage.tsx', 'utf8');
+  const summary = fs.readFileSync('lib/home/golfHomeSummary.ts', 'utf8');
+  const liveReturn = summary.indexOf('if (liveOnly) {');
+  const fantasyBoard = summary.indexOf('const canonicalFantasy = latestSlate ? await loadGolfFantasy');
+
+  assert.match(live, /\/api\/home-summary\?sport=golf&view=live/);
+  assert.match(route, /liveOnly: searchParams\.get\("view"\) === "live"/);
+  assert.ok(liveReturn >= 0 && liveReturn < fantasyBoard, 'Live returns before building the canonical fantasy board');
+  assert.match(summary, /const avatarByTeamId = liveOnly/);
+  assert.match(summary, /const latestRows = !liveOnly && latestSlate/);
+  assert.match(summary, /const seasonSnapshot = liveOnly \? \[\]/);
+  assert.match(summary, /latestGolfTournamentIsFinal,\s+tournamentLeaderboard,\s+projectedCut,\s+liveTournamentRound/s);
+  assert.match(live, /playerStatsCacheRef\.current = null/);
 });
 
 test('compact setup renders six choices, selected states and derived cap', () => {

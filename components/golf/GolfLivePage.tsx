@@ -77,7 +77,7 @@ export default function GolfLivePage() {
     try {
       setIsLoading(true);
       setMessage("");
-      const response = await fetch("/api/home-summary?sport=golf", {
+      const response = await fetch("/api/home-summary?sport=golf&view=live", {
         cache: "no-store",
       });
       const result = await response.json();
