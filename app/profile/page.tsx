@@ -12,6 +12,7 @@ import PushDeviceControls from "@/components/profile/PushDeviceControls";
 import ChangePinForm from "@/components/profile/ChangePinForm";
 import { useSelectedSport } from "@/components/providers/SportProvider";
 import ProfilePictureSettings from "@/components/profile/ProfilePictureSettings";
+import DisplayNameSettings from "@/components/profile/DisplayNameSettings";
 import NbaProfileOverview from "@/components/profile/NbaProfileOverview";
 import NflProfileOverview from "@/components/profile/NflProfileOverview";
 import GolfProfileOverview from "@/components/profile/GolfProfileOverview";
@@ -922,32 +923,59 @@ function ProfilePageContent() {
                     </section>
 
                     {activeSettingsTab === "profile" && user ? (
-                      <ProfilePictureSettings
-                        displayName={user.displayName}
-                        avatarUrl={user.avatarUrl}
-                        fallbackUrl={fallbackHeadshot}
-                        onAvatarChanged={(avatarUrl) => {
-                          setUser((current) =>
-                            current
-                              ? {
-                                  ...current,
-                                  avatarUrl,
-                                }
-                              : current
-                          );
+                      <div className="space-y-6">
+                        <DisplayNameSettings
+                          displayName={user.displayName}
+                          onDisplayNameChanged={(displayName) => {
+                            setUser((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    displayName,
+                                  }
+                                : current
+                            );
 
-                          window.dispatchEvent(
-                            new CustomEvent(
-                              "profile-avatar-updated",
-                              {
-                                detail: {
-                                  avatarUrl,
-                                },
-                              }
-                            )
-                          );
-                        }}
-                      />
+                            window.dispatchEvent(
+                              new CustomEvent(
+                                "profile-display-name-updated",
+                                {
+                                  detail: {
+                                    displayName,
+                                  },
+                                }
+                              )
+                            );
+                          }}
+                        />
+
+                        <ProfilePictureSettings
+                          displayName={user.displayName}
+                          avatarUrl={user.avatarUrl}
+                          fallbackUrl={fallbackHeadshot}
+                          onAvatarChanged={(avatarUrl) => {
+                            setUser((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    avatarUrl,
+                                  }
+                                : current
+                            );
+
+                            window.dispatchEvent(
+                              new CustomEvent(
+                                "profile-avatar-updated",
+                                {
+                                  detail: {
+                                    avatarUrl,
+                                  },
+                                }
+                              )
+                            );
+                          }}
+                        />
+                      </div>
                     ) : null}
 
                     {activeSettingsTab === "notifications" ? (
