@@ -1,7 +1,15 @@
 import { possessionTeamId } from "@/lib/live-scores/possession";
 import { normalizeBroadcast } from "@/lib/live-scores/metadata";
 import { selectFootballOdds as selectNcaaOdds } from "@/lib/live-scores/odds";
+import {
+  normalizeNcaaEspnTeamDirectory,
+  type NcaaEspnDirectoryTeam,
+} from "@/lib/providers/ncaaTeams";
 export { selectFootballOdds as selectNcaaOdds } from "@/lib/live-scores/odds";
+export {
+  normalizeNcaaEspnTeamDirectory,
+  type NcaaEspnDirectoryTeam,
+} from "@/lib/providers/ncaaTeams";
 const ESPN_CFB_BASE =
   "https://site.api.espn.com/apis/site/v2/sports/football/college-football";
 
@@ -61,6 +69,24 @@ export type NcaaEspnWeek = {
     rankedTeams: number;
   };
 };
+
+/**
+ * Broad FBS directory for server-side admin tooling. This preserves the same
+ * ESPN IDs/name/abbreviation/logo semantics used by NCAA Pick'em scoreboards.
+ */
+export async function fetchNcaaEspnTeamDirectory(): Promise<NcaaEspnDirectoryTeam[]> {
+  const params = new URLSearchParams({ groups: "80", limit: "500" });
+  const response = await fetch(`${ESPN_CFB_BASE}/teams?${params.toString()}`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`ESPN NCAA team directory failed: ${response.status}`);
+  }
+
+  return normalizeNcaaEspnTeamDirectory(await response.json());
+}
 
 type RankingResult = {
   ranksByTeamId: Map<string, number>;

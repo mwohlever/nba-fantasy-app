@@ -14,8 +14,17 @@ type Game = {
   sourceBSeed: number | null;
 };
 
+type Team = {
+  seed: number;
+  providerTeamId: string;
+  displayName: string;
+  abbreviation: string | null;
+  logoUrl: string | null;
+};
+
 type Props = {
   games: Game[];
+  teams?: Team[];
   picks?: Record<
     string,
     string | null | undefined
@@ -38,26 +47,9 @@ const ROUND_LABELS: Record<
   championship: "Championship",
 };
 
-function teamLabel(
-  teamId: string,
-  seed: number | null,
-) {
-  if (/^seed-\d+$/.test(teamId)) {
-    return seed
-      ? `Seed ${seed}`
-      : teamId.replace(
-          "seed-",
-          "Seed ",
-        );
-  }
-
-  return seed
-    ? `#${seed} ${teamId}`
-    : teamId;
-}
-
 export default function BracketTopologyPreview({
   games,
+  teams = [],
   picks = {},
   editable = false,
   savingGameKey = null,
@@ -70,19 +62,32 @@ export default function BracketTopologyPreview({
     ]),
   );
 
+  const teamById = new Map(
+    teams.map((team) => [
+      team.providerTeamId,
+      team,
+    ]),
+  );
+
   function resolvedSource(
     teamId: string | null,
     sourceGameId: number | null,
     seed: number | null,
   ) {
     if (teamId) {
+      const team = teamById.get(teamId);
+
       return {
         teamId,
-        seed,
-        label: teamLabel(
-          teamId,
-          seed,
-        ),
+        seed: seed ?? team?.seed ?? null,
+        label:
+          team?.displayName ??
+          (seed !== null
+            ? `Seed ${seed}`
+            : teamId),
+        abbreviation:
+          team?.abbreviation ?? null,
+        logoUrl: team?.logoUrl ?? null,
       };
     }
 
@@ -96,6 +101,8 @@ export default function BracketTopologyPreview({
           seed: null,
           label:
             "Previous game winner",
+          abbreviation: null,
+          logoUrl: null,
         };
       }
 
@@ -103,13 +110,19 @@ export default function BracketTopologyPreview({
         picks[sourceGame.gameKey];
 
       if (pickedTeamId) {
+        const team =
+          teamById.get(pickedTeamId);
+
         return {
           teamId: pickedTeamId,
-          seed: null,
-          label: teamLabel(
+          seed: team?.seed ?? null,
+          label:
+            team?.displayName ??
             pickedTeamId,
-            null,
-          ),
+          abbreviation:
+            team?.abbreviation ?? null,
+          logoUrl:
+            team?.logoUrl ?? null,
         };
       }
 
@@ -117,6 +130,8 @@ export default function BracketTopologyPreview({
         teamId: null,
         seed: null,
         label: `Winner of ${sourceGame.gameKey.toUpperCase()}`,
+        abbreviation: null,
+        logoUrl: null,
       };
     }
 
@@ -124,6 +139,8 @@ export default function BracketTopologyPreview({
       teamId: null,
       seed: null,
       label: "TBD",
+      abbreviation: null,
+      logoUrl: null,
     };
   }
 
@@ -175,16 +192,25 @@ export default function BracketTopologyPreview({
           </span>
         ) : null}
 
+        {source.logoUrl ? (
+          <img
+            src={source.logoUrl}
+            alt=""
+            className="h-6 w-6 shrink-0 object-contain"
+          />
+        ) : null}
+
         <span
-          className={`min-w-0 flex-1 text-sm font-bold ${
+          className={`min-w-0 flex-1 truncate text-sm font-bold ${
             selected
               ? "text-blue-100"
               : source.teamId
                 ? "text-slate-100"
                 : "text-slate-500"
           }`}
+          title={source.label}
         >
-          {source.label}
+          {source.abbreviation ?? source.label}
         </span>
 
         {selected ? (

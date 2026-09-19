@@ -26,6 +26,14 @@ export type BracketChallengeGame = {
   winnerTeamId: string | null;
 };
 
+export type BracketChallengeTeam = {
+  seed: number;
+  providerTeamId: string;
+  displayName: string;
+  abbreviation: string | null;
+  logoUrl: string | null;
+};
+
 export type BracketChallengeDetail = {
   group: {
     id: string;
@@ -38,6 +46,7 @@ export type BracketChallengeDetail = {
     slug: string;
   };
   canAdministerGroup: boolean;
+  canManageCompetitionField: boolean;
   contest: {
     id: string;
     status: string;
@@ -58,6 +67,7 @@ export type BracketChallengeDetail = {
     topologyVersion: number;
   };
   games: BracketChallengeGame[];
+  teams: BracketChallengeTeam[];
 };
 
 type ContestRow = {
@@ -122,7 +132,7 @@ export async function getBracketChallengeDetail(
 
   if (!contest) return null;
 
-  const [competitionResult, gamesResult] =
+  const [competitionResult, gamesResult, teamsResult] =
     await Promise.all([
       supabaseAdmin
         .from("bracket_competitions")
@@ -140,6 +150,14 @@ export async function getBracketChallengeDetail(
         .eq("competition_id", contest.competition_id)
         .order("round_order", { ascending: true })
         .order("game_order", { ascending: true }),
+
+      supabaseAdmin
+        .from("bracket_competition_teams")
+        .select(
+          "seed, provider_team_id, display_name, abbreviation, logo_url",
+        )
+        .eq("competition_id", contest.competition_id)
+        .order("seed", { ascending: true }),
     ]);
 
   if (competitionResult.error) {
@@ -151,6 +169,12 @@ export async function getBracketChallengeDetail(
   if (gamesResult.error) {
     throw new Error(
       `Failed to load bracket topology: ${gamesResult.error.message}`,
+    );
+  }
+
+  if (teamsResult.error) {
+    throw new Error(
+      `Failed to load bracket field: ${teamsResult.error.message}`,
     );
   }
 
@@ -180,6 +204,8 @@ export async function getBracketChallengeDetail(
     },
     canAdministerGroup:
       access.context.canAdministerGroup,
+    canManageCompetitionField:
+      user.systemRole === "super_admin",
     contest: {
       id: contest.id,
       status: contest.status,
@@ -202,6 +228,13 @@ export async function getBracketChallengeDetail(
       topologyVersion:
         competition.topology_version,
     },
+    teams: (teamsResult.data ?? []).map((team) => ({
+      seed: Number(team.seed),
+      providerTeamId: String(team.provider_team_id),
+      displayName: String(team.display_name),
+      abbreviation: team.abbreviation ?? null,
+      logoUrl: team.logo_url ?? null,
+    })),
     games: rows.map((game) => ({
       id: Number(game.id),
       gameKey: game.game_key,
