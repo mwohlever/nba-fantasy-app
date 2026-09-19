@@ -303,6 +303,11 @@ type EspnCompetitor = {
   uid?: string;
   order?: number;
   score?: string;
+  status?: {
+    displayValue?: string;
+    detail?: string;
+    type?: EspnStatusType;
+  };
   athlete?: {
     fullName?: string;
     displayName?: string;
@@ -660,6 +665,22 @@ function inferCompetitorStatus(input: {
   return "active";
 }
 
+/** ESPN carries terminal golfer state on the competitor, not its round rows. */
+function terminalCompetitorStatus(competitor: EspnCompetitor): GolfCompetitorStatus | null {
+  const label = [
+    competitor.status?.displayValue,
+    competitor.status?.detail,
+    competitor.status?.type?.description,
+    competitor.status?.type?.detail,
+    competitor.status?.type?.shortDetail,
+  ].filter((value): value is string => typeof value === "string").join(" ").toUpperCase();
+  if (/\bWD\b|WITHDRAW/.test(label)) return "withdrawn";
+  if (/\bDQ\b|DISQUAL/.test(label)) return "disqualified";
+  if (/\bDNS\b|DID\s+NOT\s+START/.test(label)) return "did_not_start";
+  if (/\bMC\b|MISSED\s+CUT|\bCUT\b/.test(label)) return "cut";
+  return null;
+}
+
 function parseRound(round: EspnRound): GolfRound | null {
   const roundNumber = Number(round.period);
 
@@ -854,7 +875,7 @@ function parseCompetitor(
     currentRound,
     lastHole,
 
-    status: inferCompetitorStatus({
+    status: terminalCompetitorStatus(competitor) ?? inferCompetitorStatus({
       tournamentStatus,
       tournamentCurrentRound,
       rounds,

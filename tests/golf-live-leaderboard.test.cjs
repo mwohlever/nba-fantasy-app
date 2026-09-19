@@ -130,14 +130,14 @@ test("Golf Live reuses accepted ordering and both ownership stores", () => {
   assert.ok(nextSlateIndex >= 0 && nextSlateIndex < completedSlateIndex, 'upcoming slate precedes a completed event');
 });
 
-test("relevant ownership period follows retained lifecycle facts", () => {
+test("Weekend acquisition stays private until accepted R3 activates it", () => {
   const split = { sport: "golf", rosterPeriods: { type: "split_after_round_2" } };
   const opening = { period_key: "opening", opened_at: "2026-09-10T00:00:00Z" };
   const unavailableWeekend = { period_key: "weekend", opened_at: null, started_rounds: [] };
   assert.equal(relevantGolfRosterPeriodKey(split, [opening, unavailableWeekend]), "opening");
   assert.equal(
     relevantGolfRosterPeriodKey(split, [opening, { ...unavailableWeekend, opened_at: "2026-09-12T00:00:00Z" }]),
-    "weekend",
+    "opening",
   );
   assert.equal(
     relevantGolfRosterPeriodKey(split, [opening, { ...unavailableWeekend, started_rounds: [3] }]),

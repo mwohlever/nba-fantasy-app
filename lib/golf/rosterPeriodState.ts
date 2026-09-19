@@ -104,7 +104,9 @@ export function evaluateGolfRosterPeriodState(input: {
   else if (!r1Started) weekend = make('weekend', 'unavailable', 'awaiting_round_1_start');
   else weekend = make('weekend', 'open', 'weekend_field_ready');
   return { rosterPeriodType: type,
-    currentPeriod: e.tournamentComplete === true ? null : (r3Started || weekend.state === 'open' ? 'weekend' : 'opening') as GolfPeriod,
+    // Availability is private acquisition state. Only accepted R3 play makes
+    // Weekend the active scoring/display period.
+    currentPeriod: e.tournamentComplete === true ? null : (r3Started ? 'weekend' : 'opening') as GolfPeriod,
     periods: [opening, weekend],
   };
 }

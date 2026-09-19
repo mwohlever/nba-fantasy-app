@@ -112,6 +112,17 @@ test('temporarily absent golfer is unchanged, never retracted or withdrawn',()=>
  const state=fixture(),result=run(state,{observedAt:t(5),events:[],holes:[]});
  assert.equal(result.events[0].status,'active');assert.equal(roundOf(result).golf_holes.length,1);assert.equal(result.teamWrites.length,0);
 });
+test('explicit ESPN WD supersedes round_complete without retracting accepted R1 scoring',()=>{
+ const state=fixture();
+ Object.assign(state.events[0], { status: 'round_complete', holes_completed: 18, rounds_completed: 1, official_score_to_par: 7, fantasy_score: 7 });
+ Object.assign(state.events[0].golf_rounds[0], { holes_completed: 18, strokes: 79, score_to_par: 7, status: 'finished' });
+ const [tournament] = parseGolfTournamentsFromPayload({events:[{id:'1',name:'Fixture',status:{type:{state:'in'}},competitions:[{status:{period:2,type:{state:'post'}},competitors:[{id:'100',athlete:{displayName:'Golfer'},score:'+7',status:{displayValue:'WD',detail:'-(WD)',type:{description:'Withdrawn'}},linescores:[]}]}]}]});
+ assert.equal(tournament.competitors[0].status, 'withdrawn');
+ const result=run(state,{observedAt:t(2),events:[{player_id:100,status:tournament.competitors[0].status,holes_completed:0,rounds_completed:0,current_round:1,last_hole:null}],holes:[]});
+ assert.equal(result.events[0].status,'withdrawn');
+ assert.equal(result.events[0].official_score_to_par,7);
+ assert.equal(result.events[0].holes_completed,18);
+});
 test('repeated refreshes converge; provenance confirmations do not rewrite team results or change round revision',()=>{
  const first=run(fixture(),espn(5));const state={...fixture(),events:first.events,teams:first.teamRows};
  const repeated=run(state,espn(5,3),3);assert.equal(repeated.teamWrites.length,0);

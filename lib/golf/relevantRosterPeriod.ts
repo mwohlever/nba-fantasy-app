@@ -7,7 +7,9 @@ export type GolfRosterPeriodFact = {
   started_rounds?: number[] | null;
 };
 
-/** Resolve display/acquisition ownership from retained lifecycle facts. */
+/** Resolve the active public/scoring period from retained lifecycle facts.
+ * Weekend being opened only grants its owner a private acquisition window.
+ */
 export function relevantGolfRosterPeriodKey(
   snapshot: LeagueSettingsInput | null | undefined,
   periods: readonly GolfRosterPeriodFact[],
@@ -17,8 +19,7 @@ export function relevantGolfRosterPeriodKey(
 
   const weekend = periods.find((period) => period.period_key === "weekend");
   return weekend &&
-    (weekend.opened_at ||
-      weekend.completed_at ||
+    (weekend.completed_at ||
       (weekend.started_rounds ?? []).some((round) => round >= 3))
     ? "weekend" as const
     : "opening" as const;

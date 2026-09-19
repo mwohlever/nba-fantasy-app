@@ -45,7 +45,7 @@ test('split maps rounds; pre-tournament opening open and weekend unavailable',()
  const r=run();assert.deepEqual(r.periods.map(p=>p.regulationRounds),[[1,2],[3,4]]);assert.equal(r.periods[0].canBuildRoster,true);assert.equal(r.periods[1].canBuildRoster,false);
 });
 test('R1 play locks Opening and opens Weekend without R2/cut confirmation',()=>{
- const result=run({startedRounds:[1],round2Complete:false,cut:'pending',fieldComplete:false,players:[]});assert.equal(result.periods[0].locked,true);assert.equal(result.periods[1].state,'open');
+ const result=run({startedRounds:[1],round2Complete:false,cut:'pending',fieldComplete:false,players:[]});assert.equal(result.periods[0].locked,true);assert.equal(result.periods[1].state,'open');assert.equal(result.currentPeriod,'opening');
 });
 test('R2 keeps Weekend open regardless of cut confirmation',()=>{
  const result=run({startedRounds:[1,2],round2Complete:false,cut:'pending',fieldComplete:false,players:[]});assert.equal(result.periods[1].state,'open');
@@ -55,7 +55,7 @@ test('Saturday/suspension/calendar rollover has no effect',()=>{
 });
 test('R2/cut state alone does not open Weekend before authoritative R1 play',()=>assert.equal(weekend({round2Complete:true,cut:'confirmed'}).state,'unavailable'));
 test('confirmed R2/cut/complete field opens weekend',()=>{
- const r=run({...ready,startedRounds:[1]});assert.equal(r.periods[1].state,'open');assert.equal(r.currentPeriod,'weekend');assert.equal(r.periods[0].state,'completed');
+ const r=run({...ready,startedRounds:[1]});assert.equal(r.periods[1].state,'open');assert.equal(r.currentPeriod,'opening');assert.equal(r.periods[0].state,'completed');
 });
 test('cut classification does not control the R1-open acquisition window',()=>assert.equal(weekend({startedRounds:[1],cut:'unknown',players:[{playerId:1,eligibility:'unknown'}]}).state,'open'));
 test('explicit R3 start locks even before cut confirmation',()=>assert.equal(weekend({startedRounds:[3]}).reason,'round_3_started'));

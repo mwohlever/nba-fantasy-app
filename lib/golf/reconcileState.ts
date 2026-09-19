@@ -129,7 +129,10 @@ export function reconcileGolfState(state: GolfAcceptedState, batch: GolfObservat
     if (newerEvent) {
       for (const key of ["leaderboard_order", "tee_time", "tee_time_raw"]) if (eventInput[key] != null) event[key] = eventInput[key];
       // An incomplete refresh cannot move progress backward or unfinish a terminal golfer.
-      if (eventInput.holes_completed >= oldEvent.holes_completed) {
+      // An explicit provider terminal status must not be suppressed merely
+      // because that provider omitted/retracted prior round-card detail.
+      // Existing accepted scoring remains monotonic below.
+      if (eventInput.holes_completed >= oldEvent.holes_completed || terminal.has(eventInput.status)) {
         for (const key of ["status", "current_round", "last_hole"]) {
           if (key !== "status" || !terminal.has(event.status) || terminal.has(eventInput.status)) event[key] = eventInput[key];
         }

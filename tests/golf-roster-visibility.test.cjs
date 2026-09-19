@@ -6,6 +6,7 @@ const path = require('node:path');
 const ts = require('typescript');
 require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }, fileName: filename }).outputText, filename);
 const { canViewerSeeGolfRosterPeriod } = require('../lib/golf/rosterVisibility.ts');
+const { relevantGolfRosterPeriodKey } = require('../lib/golf/relevantRosterPeriod.ts');
 const salary = { draft: { type: 'salary_cap' }, roster: { slots: [{ position: 'GOLFER', slotCount: 4 }] }, rosterPeriods: { type: 'split_after_round_2' } };
 const snake = { ...salary, draft: { type: 'snake' } };
 const open = period_key => ({ period_key: period_key, locked_at: null, completed_at: null, started_rounds: [], evidence_snapshot: { acquisitionDeadline: '2026-09-17T12:00:00Z' } });
@@ -21,7 +22,7 @@ test('Salary Cap roster visibility is owner-aware and period-scoped', () => {
   assert.equal(can(salary, weekend, 2, 1), false);
   assert.equal(can(salary, weekend, 1, 1), true);
   assert.equal(can(salary, { ...weekend, started_rounds: [3] }, 2, 1), true);
-  assert.equal(can(salary, { ...weekend, evidence_snapshot: { acquisitionDeadline: '2026-09-17T10:00:00Z' } }, 2, 1), true);
+  assert.equal(can(salary, { ...weekend, evidence_snapshot: { acquisitionDeadline: '2026-09-17T10:00:00Z' } }, 2, 1), false);
 });
 
 test('Full Tournament, Standard, and Best Ball use the same Salary Cap privacy boundary', () => {
@@ -40,6 +41,17 @@ test('Opening visibility is retained while a Split Weekend roster remains privat
   const weekend = open('weekend');
   assert.equal(can(salary, opening, 2, 1), true);
   assert.equal(can(salary, weekend, 2, 1), false);
+});
+
+test('R1-open Weekend remains owner-editable but inactive and private until accepted R3', () => {
+  const opening = { ...open('opening'), locked_at: '2026-09-17T12:00:00Z', started_rounds: [1] };
+  const weekend = { ...open('weekend'), opened_at: '2026-09-17T12:05:00Z', started_rounds: [1] };
+  assert.equal(relevantGolfRosterPeriodKey(salary, [opening, weekend]), 'opening');
+  assert.equal(can(salary, weekend, 1, 1), true, 'owner can retrieve Weekend to edit');
+  assert.equal(can(salary, weekend, 2, 1), false, 'another team receives no Weekend identities');
+  const r3 = { ...weekend, locked_at: '2026-09-19T12:05:00Z', started_rounds: [1, 2, 3] };
+  assert.equal(relevantGolfRosterPeriodKey(salary, [opening, r3]), 'weekend');
+  assert.equal(can(salary, r3, 2, 1), true, 'normal locked-roster visibility begins at R3');
 });
 
 test('Snake draft roster visibility retains its existing public behavior', () => {
