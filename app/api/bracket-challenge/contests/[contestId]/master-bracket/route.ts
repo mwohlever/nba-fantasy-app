@@ -5,6 +5,7 @@ import { getBracketChallengeDetail } from "@/lib/bracket/challenge.server";
 import {
   getOrCreateMasterBracket,
   saveMasterBracketPick,
+  saveMasterBracketTiebreaker,
 } from "@/lib/bracket/masterBracket.server";
 
 export const dynamic = "force-dynamic";
@@ -127,41 +128,42 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const gameKey =
-      typeof body?.gameKey ===
-      "string"
-        ? body.gameKey.trim()
-        : "";
+    const hasTiebreaker =
+      body?.tiebreakerValue !== undefined;
 
-    const teamId =
-      typeof body?.teamId ===
-      "string"
-        ? body.teamId.trim()
-        : "";
-
-    if (!gameKey || !teamId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            "gameKey and teamId are required.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const result =
-      await saveMasterBracketPick(
-        resolved.user,
-        {
-          competitionId:
-            resolved.challenge
-              .competition.id,
-          bracketNumber: 1,
-          gameKey,
-          teamId,
-        },
-      );
+    const result = hasTiebreaker
+      ? await saveMasterBracketTiebreaker(
+          resolved.user,
+          {
+            competitionId:
+              resolved.challenge
+                .competition.id,
+            bracketNumber: 1,
+            tiebreakerValue:
+              Number(
+                body.tiebreakerValue,
+              ),
+          },
+        )
+      : await saveMasterBracketPick(
+          resolved.user,
+          {
+            competitionId:
+              resolved.challenge
+                .competition.id,
+            bracketNumber: 1,
+            gameKey:
+              typeof body?.gameKey ===
+              "string"
+                ? body.gameKey.trim()
+                : "",
+            teamId:
+              typeof body?.teamId ===
+              "string"
+                ? body.teamId.trim()
+                : "",
+          },
+        );
 
     return NextResponse.json(
       {

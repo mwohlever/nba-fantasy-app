@@ -478,7 +478,7 @@ function AppNavContent() {
                 icon: "⌂",
               },
             ]
-        : activeSport === "nfl"
+        : activeSport === "nfl" || activeSport === "nba"
           ? [...mainLinks, { href: "/live-scores", label: "Live", icon: "◫" }]
           : activeSport === "golf"
             ? [
@@ -1057,8 +1057,26 @@ function AppNavContent() {
     );
   }
 
+  function isDisplayedMainLinkActive(href: string) {
+    if (isBracketChallenge && bracketContestId) {
+      const normalizedPathname =
+        pathname.length > 1 && pathname.endsWith("/")
+          ? pathname.slice(0, -1)
+          : pathname;
+
+      const normalizedHref =
+        href.length > 1 && href.endsWith("/")
+          ? href.slice(0, -1)
+          : href;
+
+      return normalizedPathname === normalizedHref;
+    }
+
+    return isLinkActive(href);
+  }
+
   function desktopLinkClass(href: string) {
-    const active = isLinkActive(href);
+    const active = isDisplayedMainLinkActive(href);
 
     return `app-desktop-link rounded-full border px-4 py-2 text-sm font-medium ${
       active
@@ -1068,7 +1086,7 @@ function AppNavContent() {
   }
 
   function mobileLinkClass(href: string) {
-    const active = isLinkActive(href);
+    const active = isDisplayedMainLinkActive(href);
 
     return `app-mobile-nav-item flex flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-0.5 text-xs font-medium transition ${
       active

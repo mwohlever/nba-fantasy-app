@@ -232,6 +232,66 @@ export async function getOrCreateMasterBracket(
   };
 }
 
+export async function saveMasterBracketTiebreaker(
+  user: AppUser,
+  input: {
+    competitionId: number;
+    bracketNumber: number;
+    tiebreakerValue: number;
+  },
+) {
+  const master =
+    await getOrCreateMasterBracket(
+      user,
+      input.competitionId,
+      input.bracketNumber,
+    );
+
+  if (master.status !== "draft") {
+    throw new Error(
+      "This bracket can no longer be edited.",
+    );
+  }
+
+  if (
+    !Number.isInteger(input.tiebreakerValue) ||
+    input.tiebreakerValue < 0 ||
+    input.tiebreakerValue > 999
+  ) {
+    throw new Error(
+      "Championship total must be a whole number from 0 to 999.",
+    );
+  }
+
+  const updateResult = await supabaseAdmin
+    .from("bracket_master_brackets")
+    .update({
+      tiebreaker_value:
+        input.tiebreakerValue,
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq("id", master.id)
+    .eq(
+      "competition_id",
+      input.competitionId,
+    );
+
+  if (updateResult.error) {
+    throw new Error(
+      `Failed to save championship total: ${updateResult.error.message}`,
+    );
+  }
+
+  return {
+    masterBracketId: master.id,
+    bracketNumber:
+      master.bracketNumber,
+    tiebreakerValue:
+      input.tiebreakerValue,
+  };
+}
+
 export async function saveMasterBracketPick(
   user: AppUser,
   input: {
