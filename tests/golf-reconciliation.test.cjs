@@ -34,6 +34,7 @@ require.extensions[".ts"] = function compileTypeScript(module, filename) {
 const { acceptGolfHole, shotcastObservation } = require('../lib/golf/holeAcceptance.ts');
 const { reconcileGolfState } = require('../lib/golf/reconcileState.ts');
 const { parseGolfTournamentsFromPayload } = require('../lib/providers/golf.ts');
+const { createCompactScoreboard, mergeLeaderboardCompetitorStatuses } = require('../lib/client/refreshGolfFromBrowser.ts');
 const t = n => `2026-09-08T12:${String(n).padStart(2,'0')}:00.000Z`;
 const hole = (strokes = 4, source = 'espn', minute = 1, number = 1) => ({
   round_id: 10, hole_number: number, strokes, relative_to_par: strokes - 4,
@@ -122,6 +123,16 @@ test('explicit ESPN WD supersedes round_complete without retracting accepted R1 
  assert.equal(result.events[0].status,'withdrawn');
  assert.equal(result.events[0].official_score_to_par,7);
  assert.equal(result.events[0].holes_completed,18);
+});
+test('the browser refresh payload preserves ESPN competitor WD through the production parser',()=>{
+ const raw={events:[{id:'401850914',name:'Fixture',status:{type:{state:'in'}},competitions:[{status:{period:2,type:{state:'post'}},competitors:[{id:'11253',athlete:{displayName:'Rasmus Højgaard'},score:'+7',linescores:[{period:1,value:79,displayValue:'+7',linescores:[]}]}]}]}]};
+ const leaderboard={events:[{id:'401850914',competitions:[{competitors:[{id:'11253',status:{displayValue:'WD',detail:'-(WD)',type:{description:'Withdrawn',shortDetail:'WD'}}}]}]}]};
+ const compact=createCompactScoreboard(mergeLeaderboardCompetitorStatuses(raw,leaderboard,'401850914'),'401850914');
+ const competitor=compact.events[0].competitions[0].competitors[0];
+ assert.equal(competitor.status.displayValue,'WD');
+ assert.equal(competitor.status.type.description,'Withdrawn');
+ const [tournament]=parseGolfTournamentsFromPayload(compact);
+ assert.equal(tournament.competitors[0].status,'withdrawn');
 });
 test('repeated refreshes converge; provenance confirmations do not rewrite team results or change round revision',()=>{
  const first=run(fixture(),espn(5));const state={...fixture(),events:first.events,teams:first.teamRows};

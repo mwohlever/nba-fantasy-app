@@ -65,6 +65,14 @@ function safeArray(
     : [];
 }
 
+function recordValue(
+  value: unknown,
+): UnknownRecord {
+  return typeof value === "object" && value !== null
+    ? value as UnknownRecord
+    : {};
+}
+
 function trimStatus(
   status: unknown,
 ) {
@@ -381,6 +389,13 @@ function trimCompetitor(
       ? athlete.flag as UnknownRecord
       : {};
 
+  const status =
+    typeof competitor.status ===
+      "object" &&
+    competitor.status !== null
+      ? competitor.status as UnknownRecord
+      : {};
+
   return {
     id:
       competitor.id,
@@ -394,6 +409,17 @@ function trimCompetitor(
       "string"
         ? competitor.score
         : undefined,
+    status: {
+      displayValue:
+        typeof status.displayValue === "string"
+          ? status.displayValue
+          : undefined,
+      detail:
+        typeof status.detail === "string"
+          ? status.detail
+          : undefined,
+      type: trimStatus(status).type,
+    },
     athlete: {
       displayName:
         typeof athlete.displayName ===
@@ -434,7 +460,7 @@ function trimCompetitor(
   };
 }
 
-function createCompactScoreboard(
+export function createCompactScoreboard(
   rawScoreboard: unknown,
   eventId: string,
 ) {
@@ -497,6 +523,49 @@ function createCompactScoreboard(
   };
 }
 
+/**
+ * The PGA scoreboard omits competitor terminal state. The Golf leaderboard
+ * supplies that explicit state, so carry it into the same compact payload
+ * consumed by the normal refresh parser. No status is inferred here.
+ */
+export function mergeLeaderboardCompetitorStatuses(
+  scoreboardPayload: unknown,
+  leaderboardPayload: unknown,
+  eventId: string,
+) {
+  const scoreboard = recordValue(scoreboardPayload);
+  const leaderboard = recordValue(leaderboardPayload);
+  const leaderboardEvent = safeArray(leaderboard.events)
+    .find((event) => String(event.id ?? "") === String(eventId));
+  const leaderboardCompetitors = safeArray(
+    recordValue(leaderboardEvent).competitions,
+  ).flatMap((competition) => safeArray(competition.competitors));
+  const statusByCompetitorId = new Map(
+    leaderboardCompetitors.flatMap((competitor) =>
+      typeof competitor.status === "object" && competitor.status !== null
+        ? [[String(competitor.id ?? ""), competitor.status] as const]
+        : [],
+    ),
+  );
+
+  return {
+    ...scoreboard,
+    events: safeArray(scoreboard.events).map((event) => {
+      if (String(event.id ?? "") !== String(eventId)) return event;
+      return {
+        ...event,
+        competitions: safeArray(event.competitions).map((competition) => ({
+          ...competition,
+          competitors: safeArray(competition.competitors).map((competitor) => {
+            const status = statusByCompetitorId.get(String(competitor.id ?? ""));
+            return status ? { ...competitor, status } : competitor;
+          }),
+        })),
+      };
+    }),
+  };
+}
+
 export async function fetchGolfScoreboardFromBrowser(
   slateId: number,
 ): Promise<{ scoreboardPayload: unknown; observedAt: string }> {
@@ -555,19 +624,15 @@ export async function fetchGolfScoreboardFromBrowser(
     `&event=${encodeURIComponent(
       config.eventId,
     )}`;
+  const leaderboardUrl =
+    "https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard" +
+    `?event=${encodeURIComponent(config.eventId)}`;
 
   const observedAt = new Date().toISOString();
-  const espnResponse =
-    await fetch(
-      espnUrl,
-      {
-        cache: "no-store",
-        headers: {
-          Accept:
-            "application/json, text/plain, */*",
-        },
-      },
-    );
+  const [espnResponse, leaderboardResponse] = await Promise.all([
+    fetch(espnUrl, { cache: "no-store", headers: { Accept: "application/json, text/plain, */*" } }),
+    fetch(leaderboardUrl, { cache: "no-store", headers: { Accept: "application/json, text/plain, */*" } }),
+  ]);
 
   if (!espnResponse.ok) {
     throw new Error(
@@ -575,12 +640,18 @@ export async function fetchGolfScoreboardFromBrowser(
     );
   }
 
+  if (!leaderboardResponse.ok) {
+    throw new Error(`ESPN Golf leaderboard request failed with ${leaderboardResponse.status} ${leaderboardResponse.statusText}.`);
+  }
+
   const rawScoreboard: unknown =
     await espnResponse.json();
+  const rawLeaderboard: unknown =
+    await leaderboardResponse.json();
 
   const scoreboardPayload =
     createCompactScoreboard(
-      rawScoreboard,
+      mergeLeaderboardCompetitorStatuses(rawScoreboard, rawLeaderboard, config.eventId),
       config.eventId,
     );
 
