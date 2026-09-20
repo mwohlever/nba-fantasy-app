@@ -5,11 +5,12 @@ import {
   useEffect,
   useState,
 } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import AppNav from "@/components/AppNav";
 import BracketMakePicks from "@/components/bracket/BracketMakePicks";
 import BracketTopologyPreview from "@/components/bracket/BracketTopologyPreview";
+import { canEditBracketGame } from "@/lib/bracket/lifecycle";
 
 type Game = {
   id: number;
@@ -23,6 +24,8 @@ type Game = {
   sourceBTeamId: string | null;
   sourceBGameId: number | null;
   sourceBSeed: number | null;
+  lockAt: string | null;
+  status: string;
 };
 
 type ChallengeResponse = {
@@ -38,6 +41,7 @@ type ChallengeResponse = {
     status: string;
     lockAt: string | null;
     maxBracketsPerEntrant: number;
+    managedEntrantsAllowed: boolean;
     rulesVersion: number;
     rulesSnapshot: Record<
       string,
@@ -83,9 +87,22 @@ export default function BracketChallengeDetailPage() {
   const params = useParams<{
     contestId: string;
   }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const contestId =
     params.contestId;
+
+  const entrantIdFromUrl =
+    searchParams.get("entrantId") ?? "";
+  const bracketNumberFromUrl = (() => {
+    const value = Number(
+      searchParams.get("bracket") ?? "1",
+    );
+    return Number.isInteger(value) && value > 0
+      ? value
+      : 1;
+  })();
 
   const [data, setData] =
     useState<ChallengeResponse | null>(
@@ -99,6 +116,11 @@ export default function BracketChallengeDetailPage() {
     useState<Record<string, string | null | undefined>>({});
   const [masterBracketId, setMasterBracketId] =
     useState<string | null>(null);
+  const [entrants, setEntrants] = useState<{ id: string; kind: "account" | "managed"; displayName: string }[]>([]);
+  const [selectedEntrantId, setSelectedEntrantId] =
+    useState(entrantIdFromUrl);
+  const [bracketNumber, setBracketNumber] =
+    useState(bracketNumberFromUrl);
   const [savingGameKey, setSavingGameKey] =
     useState<string | null>(null);
   const [saveError, setSaveError] =
@@ -111,6 +133,24 @@ export default function BracketChallengeDetailPage() {
     useState("");
   const [savingTiebreaker, setSavingTiebreaker] =
     useState(false);
+
+  useEffect(() => {
+    if (
+      entrantIdFromUrl &&
+      entrantIdFromUrl !== selectedEntrantId
+    ) {
+      setSelectedEntrantId(entrantIdFromUrl);
+    }
+
+    if (bracketNumberFromUrl !== bracketNumber) {
+      setBracketNumber(bracketNumberFromUrl);
+    }
+  }, [
+    entrantIdFromUrl,
+    bracketNumberFromUrl,
+    selectedEntrantId,
+    bracketNumber,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,7 +175,7 @@ export default function BracketChallengeDetailPage() {
           fetch(
             `/api/bracket-challenge/contests/${encodeURIComponent(
               contestId,
-            )}/master-bracket`,
+            )}/master-bracket?${new URLSearchParams({ ...(selectedEntrantId ? { entrantId: selectedEntrantId } : {}), bracketNumber: String(bracketNumber) })}`,
             {
               cache: "no-store",
             },
@@ -157,6 +197,8 @@ export default function BracketChallengeDetailPage() {
                 string | null | undefined
               >;
             };
+            entrants?: { id: string; kind: "account" | "managed"; displayName: string }[];
+            selectedEntrantId?: string;
           };
 
         if (!response.ok) {
@@ -183,6 +225,8 @@ export default function BracketChallengeDetailPage() {
             masterResult.masterBracket
               ?.id ?? null,
           );
+          setEntrants(masterResult.entrants ?? []);
+          setSelectedEntrantId(masterResult.selectedEntrantId ?? selectedEntrantId);
           setTiebreakerValue(
             masterResult.masterBracket
               ?.tiebreakerValue != null
@@ -216,7 +260,46 @@ export default function BracketChallengeDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [contestId]);
+  }, [contestId, selectedEntrantId, bracketNumber]);
+
+  function selectBracket(
+    entrantId: string,
+    nextBracketNumber: number,
+  ) {
+    setSelectedEntrantId(entrantId);
+    setBracketNumber(nextBracketNumber);
+
+    const nextParams = new URLSearchParams(
+      searchParams.toString(),
+    );
+
+    if (entrantId) {
+      nextParams.set("entrantId", entrantId);
+    } else {
+      nextParams.delete("entrantId");
+    }
+
+    if (nextBracketNumber > 1) {
+      nextParams.set(
+        "bracket",
+        String(nextBracketNumber),
+      );
+    } else {
+      nextParams.delete("bracket");
+    }
+
+    const query = nextParams.toString();
+    router.replace(
+      query
+        ? `/bracket-challenge/${encodeURIComponent(
+            contestId,
+          )}/bracket?${query}`
+        : `/bracket-challenge/${encodeURIComponent(
+            contestId,
+          )}/bracket`,
+      { scroll: false },
+    );
+  }
 
   async function handlePick(
     gameKey: string,
@@ -250,6 +333,8 @@ export default function BracketChallengeDetailPage() {
             body: JSON.stringify({
               gameKey,
               teamId,
+              entrantId: selectedEntrantId,
+              bracketNumber,
             }),
           },
         );
@@ -383,6 +468,8 @@ export default function BracketChallengeDetailPage() {
           },
           body: JSON.stringify({
             tiebreakerValue: parsed,
+            entrantId: selectedEntrantId,
+            bracketNumber,
           }),
         },
       );
@@ -419,11 +506,30 @@ export default function BracketChallengeDetailPage() {
     }
   }
 
+  async function handleAddManagedEntrant() {
+    const displayName = window.prompt("Managed entrant name");
+    if (!displayName?.trim()) return;
+    const response = await fetch(`/api/bracket-challenge/contests/${encodeURIComponent(contestId)}/master-bracket`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "createManagedEntrant", displayName }),
+    });
+    const result = await response.json() as { error?: string; entrant?: { id: string; kind: "account" | "managed"; displayName: string } };
+    if (!response.ok || !result.entrant) { setSaveError(result.error ?? "Unable to add entrant."); return; }
+    setEntrants((current) => [...current, result.entrant!]);
+    selectBracket(result.entrant.id, 1);
+  }
+
   const competition =
     data?.competition;
   const contest = data?.contest;
   const games = data?.games ?? [];
   const teams = data?.teams ?? [];
+  const contestLocked = Boolean(
+    contest &&
+      (["locked", "in_progress", "final"].includes(contest.status) ||
+        (contest.lockAt && new Date(contest.lockAt).getTime() <= Date.now())),
+  );
+  const editableGameKeys = new Set(games.filter((game) => contest && canEditBracketGame({ contest: { contestStatus: contest.status, contestLockAt: contest.lockAt }, gameLockAt: game.lockAt, gameStatus: game.status })).map((game) => game.gameKey));
   const completedPicks =
     games.filter((game) =>
       Boolean(picks[game.gameKey]),
@@ -509,6 +615,15 @@ export default function BracketChallengeDetailPage() {
                     <h2 className="mt-1 text-xl font-black text-white">
                       {completedPicks} of {games.length} picks
                     </h2>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <select value={selectedEntrantId} onChange={(event) => { selectBracket(event.target.value, 1); }} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
+                        {entrants.map((entrant) => <option key={entrant.id} value={entrant.id}>{entrant.displayName}{entrant.kind === "managed" ? " (managed)" : ""}</option>)}
+                      </select>
+                      {contest.maxBracketsPerEntrant > 1 ? <select value={bracketNumber} onChange={(event) => selectBracket(selectedEntrantId, Number(event.target.value))} className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-bold text-slate-100">
+                        {Array.from({ length: contest.maxBracketsPerEntrant }, (_, index) => index + 1).map((number) => <option key={number} value={number}>Bracket {number}</option>)}
+                      </select> : null}
+                      {contest.managedEntrantsAllowed && !contestLocked ? <button type="button" onClick={() => void handleAddManagedEntrant()} className="rounded-lg border border-blue-400/50 px-2 py-1.5 text-xs font-black text-blue-200">Add entrant</button> : null}
+                    </div>
                   </div>
 
                   <div className="flex rounded-xl border border-slate-700 bg-slate-900 p-1">
@@ -559,7 +674,9 @@ export default function BracketChallengeDetailPage() {
                 </div>
 
                 <p className="mt-3 text-sm text-slate-400">
-                  Picks save automatically. You can change them while the bracket is editable.
+                  {contestLocked
+                    ? "This bracket is locked. Your submitted picks can no longer be changed."
+                    : "Picks save automatically. You can change them while the bracket is editable."}
                 </p>
               </div>
 
@@ -567,8 +684,10 @@ export default function BracketChallengeDetailPage() {
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-bold text-slate-400">
                     {masterBracketId
-                      ? "Bracket #1 · Auto-save on"
-                      : "Preparing Bracket #1…"}
+                      ? contestLocked
+                        ? `Bracket #${bracketNumber} · Locked`
+                        : `Bracket #${bracketNumber} · Auto-save on`
+                      : `Preparing Bracket #${bracketNumber}…`}
                   </span>
 
                   {saveError ? (
@@ -583,9 +702,8 @@ export default function BracketChallengeDetailPage() {
                     games={games}
                     teams={teams}
                     picks={picks}
-                    editable={Boolean(
-                      masterBracketId,
-                    )}
+                    editable={Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
+                    editableGameKeys={editableGameKeys}
                     savingGameKey={
                       savingGameKey
                     }
@@ -596,9 +714,8 @@ export default function BracketChallengeDetailPage() {
                     games={games}
                     teams={teams}
                     picks={picks}
-                    editable={Boolean(
-                      masterBracketId,
-                    )}
+                    editable={Boolean(masterBracketId) && ["setup", "open"].includes(contest.status)}
+                    editableGameKeys={editableGameKeys}
                     savingGameKey={
                       savingGameKey
                     }

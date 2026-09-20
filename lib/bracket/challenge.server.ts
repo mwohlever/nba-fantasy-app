@@ -52,6 +52,7 @@ export type BracketChallengeDetail = {
     status: string;
     lockAt: string | null;
     maxBracketsPerEntrant: number;
+    managedEntrantsAllowed: boolean;
     rulesVersion: number;
     rulesSnapshot: Record<string, unknown>;
   };
@@ -77,6 +78,7 @@ type ContestRow = {
   status: string;
   lock_at: string | null;
   max_brackets_per_entrant: number;
+  managed_entrants_allowed: boolean;
   rules_version: number;
   rules_snapshot: Record<string, unknown> | null;
 };
@@ -115,7 +117,7 @@ export async function getBracketChallengeDetail(
   const contestResult = await supabaseAdmin
     .from("bracket_contests")
     .select(
-      "id, league_id, competition_id, status, lock_at, max_brackets_per_entrant, rules_version, rules_snapshot",
+      "id, league_id, competition_id, status, lock_at, max_brackets_per_entrant, managed_entrants_allowed, rules_version, rules_snapshot",
     )
     .eq("id", contestId)
     .eq("league_id", access.league.id)
@@ -212,6 +214,8 @@ export async function getBracketChallengeDetail(
       lockAt: contest.lock_at,
       maxBracketsPerEntrant:
         contest.max_brackets_per_entrant,
+      managedEntrantsAllowed:
+        contest.managed_entrants_allowed,
       rulesVersion: contest.rules_version,
       rulesSnapshot:
         contest.rules_snapshot ?? {},

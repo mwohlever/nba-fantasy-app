@@ -30,6 +30,7 @@ type Props = {
     string | null | undefined
   >;
   editable: boolean;
+  editableGameKeys?: Set<string>;
   savingGameKey: string | null;
   onPick: (
     gameKey: string,
@@ -49,6 +50,7 @@ export default function BracketMakePicks({
   teams,
   picks,
   editable,
+  editableGameKeys,
   savingGameKey,
   onPick,
 }: Props) {
@@ -197,6 +199,7 @@ export default function BracketMakePicks({
 
     const canPick =
       editable &&
+      (editableGameKeys?.has(game.gameKey) ?? true) &&
       source.teamId !== null;
 
     const content = (

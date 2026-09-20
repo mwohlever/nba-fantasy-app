@@ -30,6 +30,7 @@ type Props = {
     string | null | undefined
   >;
   editable?: boolean;
+  editableGameKeys?: Set<string>;
   savingGameKey?: string | null;
   onPick?: (
     gameKey: string,
@@ -52,6 +53,7 @@ export default function BracketTopologyPreview({
   teams = [],
   picks = {},
   editable = false,
+  editableGameKeys,
   savingGameKey = null,
   onPick,
 }: Props) {
@@ -181,6 +183,7 @@ export default function BracketTopologyPreview({
 
     const canPick =
       editable &&
+      (editableGameKeys?.has(game.gameKey) ?? true) &&
       source.teamId !== null &&
       Boolean(onPick);
 
