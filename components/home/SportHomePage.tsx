@@ -120,6 +120,15 @@ type HomeSummaryResponse = {
   latestGolfTournamentIsFinal?: boolean;
 };
 
+function isHomeSummaryResponse(value: unknown): value is HomeSummaryResponse {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "latestSlate" in value &&
+      "latestSlateRows" in value,
+  );
+}
+
 type SlateRosterModalState = {
   slateId: number;
   teamId: number;
@@ -404,6 +413,16 @@ function HomePageContent() {
     groupContext?.group.id ??
     null;
 
+  /*
+   * A concrete Group ID is sufficient to scope Home safely. GroupProvider may
+   * still be finishing ancillary context work, but Home must not wait forever
+   * on that flag once it already has an active Group to send to the server-side
+   * Group resolver.
+   */
+  const isHomeGroupContextPending =
+    !activeGroupId &&
+    isGroupLoading;
+
   const searchParams = useSearchParams();
   const sportFromUrl = searchParams.get("sport");
   const sport =
@@ -492,10 +511,9 @@ function HomePageContent() {
   const homeMountedRef = useRef(true);
   const homeLoadRef = useRef(0);
   const homeDataScope = useRef(createRefreshScope(""));
-  homeDataScope.current.update(JSON.stringify([activeGroupId, sport, isGroupLoading, isSwitchingGroup]));
-  const renderDataCurrent = homeDataScope.current.capture();
+  homeDataScope.current.update(JSON.stringify([activeGroupId, sport, isHomeGroupContextPending, isSwitchingGroup]));
   const homeRefreshScope = useRef(createRefreshScope(""));
-  const homeScopeKey = JSON.stringify([activeGroupId, sport, data?.latestSlate?.id, isGroupLoading, isSwitchingGroup]);
+  const homeScopeKey = JSON.stringify([activeGroupId, sport, data?.latestSlate?.id, isHomeGroupContextPending, isSwitchingGroup]);
   homeRefreshScope.current.update(homeScopeKey);
   const renderRefreshCurrent = homeRefreshScope.current.capture();
   const [homeFeedback, setHomeFeedback] = useState<{ scope: string; text: string } | null>(null);
@@ -583,7 +601,7 @@ function HomePageContent() {
     return refreshSlateStatsById(latestSlate.id);
   }
 
-  async function loadHomeSummary(isCurrent = renderDataCurrent): Promise<RefreshOutcome> {
+  async function loadHomeSummary(isCurrent?: () => boolean): Promise<RefreshOutcome> {
     /*
      * Capture the sport this request belongs to.
      *
@@ -594,6 +612,8 @@ function HomePageContent() {
     const requestedSport = sport;
     const requestedGroupId =
       activeGroupId;
+    const requestScopeIsCurrent =
+      isCurrent ?? homeDataScope.current.capture();
 
     /*
      * GroupProvider briefly has no resolved Group during initial
@@ -604,8 +624,22 @@ function HomePageContent() {
       return { status: "skipped" };
     }
     const requestId = ++homeLoadRef.current;
-    const requestIsCurrent = () => homeMountedRef.current && requestId === homeLoadRef.current && isCurrent() &&
-      activeHomeSportRef.current === requestedSport && activeHomeGroupIdRef.current === requestedGroupId;
+    const requestIsCurrent = () => homeMountedRef.current &&
+      requestId === homeLoadRef.current &&
+      requestScopeIsCurrent() &&
+      activeHomeSportRef.current === requestedSport &&
+      activeHomeGroupIdRef.current === requestedGroupId;
+
+    /*
+     * dataSport/dataGroupId are also the rendered Home scope acknowledgement.
+     * Record a terminal error against its request scope just as a successful
+     * response does; otherwise an error can clear isLoading while the UI still
+     * treats the response as belonging to no sport/group forever.
+     */
+    const acknowledgeRequestScope = () => {
+      setDataSport(requestedSport);
+      setDataGroupId(requestedGroupId);
+    };
 
     try {
       setIsLoading(true);
@@ -616,31 +650,53 @@ function HomePageContent() {
         { cache: "no-store" }
       );
 
-      const result = await response.json();
+      let result: unknown;
+      try {
+        result = await response.json();
+      } catch {
+        if (!requestIsCurrent()) return { status: "skipped" };
+        setData(null);
+        acknowledgeRequestScope();
+        setMessage("Home summary returned an invalid response.");
+        return { status: "error", message: "Home summary returned an invalid response." };
+      }
 
       if (!requestIsCurrent()) return { status: "skipped" };
       if (!response.ok) {
-        const message = result.error || "Failed to load home summary.";
+        const message =
+          typeof (result as { error?: unknown })?.error === "string"
+            ? (result as { error: string }).error
+            : "Failed to load home summary.";
+        setData(null);
+        acknowledgeRequestScope();
         setMessage(message);
         return { status: "error", message };
+      }
+
+      if (!isHomeSummaryResponse(result)) {
+        setData(null);
+        acknowledgeRequestScope();
+        setMessage("Home summary returned an invalid response.");
+        return { status: "error", message: "Home summary returned an invalid response." };
       }
 
       /*
        * A different sport may have been selected while this
        * request was in flight.
        */
-      setData(result);
-      setDataSport(requestedSport);
-      setDataGroupId(requestedGroupId);
+      const summary = result;
+      const latestSlateId = summary.latestSlate?.id ?? null;
+      setData(summary);
+      acknowledgeRequestScope();
 
       if (
         requestedSport === "golf" &&
-        result.latestSlate?.id
+        latestSlateId
       ) {
         void (async () => {
           try {
           const statsResponse = await fetch(
-            `/api/player-stats?slateId=${result.latestSlate.id}`,
+            `/api/player-stats?slateId=${latestSlateId}`,
             { cache: "no-store" },
           );
 
@@ -672,20 +728,32 @@ function HomePageContent() {
       }
 
       if (requestedSport === "nba") {
-        const awardsResponse = await fetch(
-          `/api/season-awards?sport=${requestedSport}`,
-          {
-          cache: "no-store",
-        });
-        const awardsResult = await awardsResponse.json();
-        if (!requestIsCurrent()) return { status: "skipped" };
-
-        if (awardsResponse.ok) {
-          setSeasonAwards(awardsResult);
-        } else {
-          console.error("Failed to load season awards", awardsResult);
-          setSeasonAwards(null);
-        }
+        /*
+         * Awards are supplementary. They must not hold the Group-scoped
+         * current-slate surface in its loading state when the awards query is
+         * slow or unavailable.
+         */
+        void (async () => {
+          try {
+            const awardsResponse = await fetch(
+              `/api/season-awards?sport=${requestedSport}`,
+              { cache: "no-store" },
+            );
+            const awardsResult = await awardsResponse.json();
+            if (!requestIsCurrent()) return;
+            if (awardsResponse.ok) {
+              setSeasonAwards(awardsResult);
+            } else {
+              console.error("Failed to load season awards", awardsResult);
+              setSeasonAwards(null);
+            }
+          } catch (awardsError) {
+            if (requestIsCurrent()) {
+              console.error("Failed to load season awards", awardsError);
+              setSeasonAwards(null);
+            }
+          }
+        })();
       } else {
         setSeasonAwards(null);
       }
@@ -693,6 +761,8 @@ function HomePageContent() {
     } catch (error) {
       if (!requestIsCurrent()) return { status: "skipped" };
       console.error(error);
+      setData(null);
+      acknowledgeRequestScope();
       setMessage("Something went wrong while loading the home page.");
       return { status: "error", message: "Could not reload Home." };
     } finally {
@@ -716,13 +786,19 @@ function HomePageContent() {
     ++homeLoadRef.current;
     setIsLoading(true);
 
-    if (activeGroupId && !isGroupLoading && !isSwitchingGroup) {
-      void loadHomeSummary();
+    if (activeGroupId && !isSwitchingGroup) {
+      void loadHomeSummary(homeDataScope.current.capture());
+    } else if (!isHomeGroupContextPending && !isSwitchingGroup) {
+      /* A resolved absence of Group context is terminal, not a loading state. */
+      setDataSport(sport);
+      setDataGroupId(null);
+      setMessage("No active Group is available.");
+      setIsLoading(false);
     }
   }, [
     sport,
     activeGroupId,
-    isGroupLoading,
+    isHomeGroupContextPending,
     isSwitchingGroup,
   ]);
 
@@ -795,7 +871,7 @@ function HomePageContent() {
   const seasonSnapshot = data?.seasonSnapshot ?? [];
   const funFacts = data?.funFacts ?? [];
   const latestSeason = data?.latestSeason ?? new Date().getFullYear();
-  const isHomeScopeLoading = isLoading || isGroupLoading || isSwitchingGroup || dataSport !== sport || dataGroupId !== activeGroupId;
+  const isHomeScopeLoading = isLoading || isHomeGroupContextPending || isSwitchingGroup || dataSport !== sport || dataGroupId !== activeGroupId;
 
   const leader = latestSlateRows[0] ?? null;
 
@@ -959,7 +1035,7 @@ function HomePageContent() {
     : "No slate";
 
   const homePullEnabled = (sport === "nba" || sport === "nfl" || sport === "golf") && Boolean(activeGroupId && latestSlate?.id) &&
-    dataSport === sport && dataGroupId === activeGroupId && !isLoading && !isGroupLoading && !isSwitchingGroup && !profileTeam && !activeFantasyProfile;
+    dataSport === sport && dataGroupId === activeGroupId && !isLoading && !isHomeGroupContextPending && !isSwitchingGroup && !profileTeam && !activeFantasyProfile;
   async function refreshHomeManually(): Promise<RefreshOutcome> {
     if (!homePullEnabled || !homeMountedRef.current || !renderRefreshCurrent() || homeGolfRefreshInFlightRef.current) return { status: "skipped" };
     const isCurrent = homeRefreshScope.current.capture();
@@ -1117,6 +1193,18 @@ function HomePageContent() {
           {isHomeScopeLoading ? (
             <div className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
               Loading current slate...
+            </div>
+          ) : !data && message ? (
+            <div role="alert" className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-5 text-sm text-orange-800">
+              <p className="font-semibold">Could not load current slate.</p>
+              <p className="mt-1 text-xs">{message}</p>
+              <button
+                type="button"
+                onClick={() => void loadHomeSummary()}
+                className="mt-3 rounded-lg border border-orange-300 bg-white px-3 py-2 text-xs font-bold text-orange-800 transition hover:bg-orange-100"
+              >
+                Try again
+              </button>
             </div>
           ) : latestSlateRows.length === 0 && isGolf && latestSlate ? (
             <div className="rounded-2xl border border-emerald-800/70 bg-slate-950/60 px-4 py-4 text-sm text-slate-300">

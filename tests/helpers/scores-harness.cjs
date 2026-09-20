@@ -26,7 +26,7 @@ const mockedReact = { ...React,
     const host = current, i = host.cursor++;
     const previous = host.values[i];
     if (!previous || !deps || deps.some((v, j) => !Object.is(v, previous.deps?.[j]))) {
-      host.effects.push(() => { previous?.cleanup?.(); host.values[i] = { deps, cleanup: fn() }; });
+      host.effects.push(() => { previous?.cleanup?.(); host.values[i] = { deps, setup: fn, cleanup: fn() }; });
     }
   },
 };
@@ -56,6 +56,13 @@ function host(component) {
       try { tree = component(props); } finally { current = null; }
       if (effects) state.effects.forEach(fn => fn());
       return tree;
+    },
+    strictReplayEffects() {
+      state.values.forEach(value => {
+        if (!value?.setup) return;
+        value.cleanup?.();
+        value.cleanup = value.setup();
+      });
     },
     unmount() { state.values.forEach(value => value?.cleanup?.()); },
   };

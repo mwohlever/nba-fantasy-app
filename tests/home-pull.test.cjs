@@ -19,6 +19,82 @@ async function setup(sport) {
   calls.length = 0;
   return {h, tree, calls};
 }
+
+test('NBA Home exits the loading scope for a valid no-slate response', async () => {
+  context.sport = 'nba'; context.group = 'no-slate-group'; context.loading = false; context.switching = false;
+  global.fetch = async url => reply(url.startsWith('/api/home-summary') ? {
+    success: true, latestSlate: null, nextSlate: null, latestSlateRows: [], seasonSnapshot: [], funFacts: [], latestSeason: 2026,
+  } : {});
+  const h = host(Home().props.children.type);
+  h.render({}, true); await tick();
+  let tree = h.render({}, true); await tick(); tree = h.render({});
+  assert.equal(nodes(tree).some(n => n.props?.children === 'Loading current slate...'), false);
+  assert.ok(nodes(tree).some(n => n.props?.children === 'No current slate data available yet.'));
+  h.unmount();
+});
+
+test('NBA Home acknowledges a failed summary response and exposes retry instead of loading forever', async () => {
+  context.sport = 'nba'; context.group = 'error-group'; context.loading = false; context.switching = false;
+  global.fetch = async url => reply(url.startsWith('/api/home-summary') ? {error: 'NBA summary unavailable'} : {}, false);
+  const h = host(Home().props.children.type);
+  h.render({}, true); await tick();
+  let tree = h.render({}, true); await tick(); tree = h.render({});
+  assert.equal(nodes(tree).some(n => n.props?.children === 'Loading current slate...'), false);
+  assert.ok(nodes(tree).some(n => n.props?.children === 'Could not load current slate.'));
+  assert.ok(nodes(tree).some(n => n.props?.children === 'Try again'));
+  h.unmount();
+});
+
+test('NBA Home treats a resolved absence of an active Group as an error state, not an endless slate load', async () => {
+  context.sport = 'nba'; context.group = null; context.loading = false; context.switching = false;
+  const calls = [];
+  global.fetch = async url => { calls.push(url); return reply({}); };
+  const h = host(Home().props.children.type);
+  h.render({}, true); await tick();
+  let tree = h.render({}, true); await tick(); tree = h.render({});
+  assert.equal(calls.some(url => url.startsWith('/api/home-summary')), false);
+  assert.equal(nodes(tree).some(n => n.props?.children === 'Loading current slate...'), false);
+  assert.ok(nodes(tree).some(n => n.props?.children === 'No active Group is available.'));
+  h.unmount(); context.group = 'group-a';
+});
+
+test('NBA Home initiates its scoped summary request when a Group ID is present before GroupProvider clears its loading flag', async () => {
+  context.sport = 'nba'; context.group = 'resolved-group'; context.loading = true; context.switching = false;
+  const pending = [];
+  global.fetch = url => new Promise(resolve => pending.push({url, resolve}));
+  const h = host(Home().props.children.type);
+  h.render({}, true);
+  assert.ok(pending.some(request => request.url === '/api/home-summary?sport=nba'));
+
+  // The Group loading flag may settle after the scoped request has started.
+  // That transition must not invalidate this request or strand Home loading.
+  context.loading = false;
+  h.render({}, true);
+  for (const request of pending) request.resolve(reply(request.url.startsWith('/api/home-summary') ? summary : {}));
+  await tick();
+  const tree = h.render({}, true);
+  assert.equal(nodes(tree).some(n => n.props?.children === 'Loading current slate...'), false);
+  h.unmount(); context.group = 'group-a'; context.loading = false;
+});
+
+test('NBA Home accepts the current response after development Strict Mode replays effects', async () => {
+  context.sport = 'nba'; context.group = 'strict-group'; context.loading = false; context.switching = false;
+  const pending = [];
+  global.fetch = url => new Promise(resolve => pending.push({url, resolve}));
+  const h = host(Home().props.children.type);
+  h.render({}, true);
+  h.strictReplayEffects();
+  assert.equal(pending.filter(request => request.url === '/api/home-summary?sport=nba').length, 2);
+
+  // The first request belongs to the pre-replay scope. The second must capture
+  // the post-cleanup scope and therefore remain eligible to apply its response.
+  pending[0].resolve(reply(summary));
+  pending[1].resolve(reply(summary));
+  await tick(); await tick();
+  const tree = h.render({}, true);
+  assert.equal(nodes(tree).some(n => n.props?.children === 'Loading current slate...'), false);
+  h.unmount(); context.group = 'group-a';
+});
 for (const sport of ['nba','nfl']) test(`${sport} pull and compact fallback share existing provider and summary refresh; concurrent actions skip`, async () => {
   const {h, tree, calls} = await setup(sport);
   assert.equal(context.pullOptions.enabled, true);

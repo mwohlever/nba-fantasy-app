@@ -1665,7 +1665,7 @@ function AppNavContent() {
               ? "grid-cols-3"
               : isNbaSkins
                 ? "grid-cols-3"
-                : activeSport === "nfl" || activeSport === "golf" ? "grid-cols-5" : "grid-cols-4"
+                : activeSport === "nfl" || activeSport === "golf" || activeSport === "nba" ? "grid-cols-5" : "grid-cols-4"
           }`}
         >
           {displayedMainLinks.map((link) => (
