@@ -848,11 +848,13 @@ export default function GameCenterModal({
   game,
   apiBase,
   fantasyScope,
+  detailQuery,
   onClose,
 }: {
   game: LiveScoreGame;
   fantasyScope?: { groupId: string; leagueId: string } | null;
   apiBase: string;
+  detailQuery?: string;
   onClose: () => void;
 }) {
   const [tab, setTab] = useState<"summary" | "pbp" | "stats">("summary");
@@ -891,7 +893,7 @@ export default function GameCenterModal({
         const response = await fetch(
           `${apiBase}/game-detail?eventId=${encodeURIComponent(
             game.espnEventId,
-          )}${fantasyScope ? `&groupId=${encodeURIComponent(fantasyScope.groupId)}` : ""}`,
+          )}${fantasyScope ? `&groupId=${encodeURIComponent(fantasyScope.groupId)}` : ""}${detailQuery ? `&${detailQuery}` : ""}`,
           { cache: "no-store", signal: controller.signal },
         );
 
@@ -920,7 +922,7 @@ export default function GameCenterModal({
         }
       }
     },
-    [game.espnEventId, apiBase, fantasyScope?.groupId, fantasyScope?.leagueId],
+    [game.espnEventId, apiBase, fantasyScope?.groupId, fantasyScope?.leagueId, detailQuery],
   );
 
   useEffect(() => {

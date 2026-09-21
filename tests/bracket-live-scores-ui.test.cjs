@@ -62,11 +62,12 @@ test("Live Scores page is round-first, uses the new API, retains AppNav, and pol
   assert.match(source, /\/api\/bracket-challenge\/contests\/\$\{encodeURIComponent\(contestId\)\}\/live/);
   assert.match(source, /rounds\.slice\(\)\.sort\(\(left, right\) => left\.order - right\.order\)/);
   assert.match(source, /orderedRoundGames\(data\.games, round\.key\)/);
-  assert.match(source, /<BracketLiveScoreCard game=\{game\} \/>/);
+  assert.match(source, /<BracketLiveScoreCard game=\{game\} onOpenGameCenter=/);
   assert.match(source, /game\.provider\.mappingState === "valid"/);
   assert.match(source, /game\.provider\.game\?\.status === "in"/);
   assert.match(source, /window\.setInterval\(\(\) => \{ void load\(\); \}, 20_000\)/);
   assert.match(source, /<AppNav \/>/);
   assert.match(source, /mx-auto max-w-5xl space-y-6/);
-  assert.doesNotMatch(source, /NcaaGameCenterModal|game-detail|ncaa-pickem/);
+  assert.match(source, /BracketGameCenterModal/);
+  assert.doesNotMatch(source, /NcaaGameCenterModal|ncaa-pickem/);
 });

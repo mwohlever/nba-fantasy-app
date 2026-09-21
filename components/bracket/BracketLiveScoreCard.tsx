@@ -64,14 +64,27 @@ function ParticipantRow({ participant }: { participant: BracketLiveParticipant }
 }
 
 /** Official graph fallback; fully validated ESPN games stay on the shared card. */
-export default function BracketLiveScoreCard({ game }: { game: BracketLiveScoreCardGame }) {
+export default function BracketLiveScoreCard({
+  game,
+  onOpenGameCenter,
+}: {
+  game: BracketLiveScoreCardGame;
+  onOpenGameCenter?: (game: LiveScoreGame) => void;
+}) {
   if (game.provider.mappingState === "valid" && game.provider.game) {
     const seeds = [game.participants.a, game.participants.b].flatMap((participant) => participant.team ? [`#${participant.team.seed} ${participant.team.abbreviation ?? participant.team.displayName}`] : []);
 
     return (
       <div className="space-y-1.5">
         {seeds.length ? <p className="px-1 text-[10px] font-black uppercase tracking-[0.12em] text-blue-200">CFP seeds · {seeds.join(" vs ")}</p> : null}
-        <LiveScoreCard game={game.provider.game} />
+        <LiveScoreCard
+          game={game.provider.game}
+          onClick={
+            onOpenGameCenter
+              ? () => onOpenGameCenter(game.provider.game!)
+              : undefined
+          }
+        />
       </div>
     );
   }

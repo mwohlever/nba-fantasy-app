@@ -7,6 +7,9 @@ import AppNav from "@/components/AppNav";
 import BracketLiveScoreCard, {
   type BracketLiveScoreCardGame,
 } from "@/components/bracket/BracketLiveScoreCard";
+import BracketGameCenterDevHarness from "@/components/bracket/BracketGameCenterDevHarness";
+import BracketGameCenterModal from "@/components/bracket/BracketGameCenterModal";
+import type { LiveScoreGame } from "@/components/live-scores/LiveScoreCard";
 
 type LiveScoresResponse = {
   success?: boolean;
@@ -51,6 +54,10 @@ export default function BracketChallengeLivePage() {
   const [data, setData] = useState<LiveScoresResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedGame, setSelectedGame] = useState<{
+    game: LiveScoreGame;
+    developmentHarness: boolean;
+  } | null>(null);
   const requestRef = useRef<AbortController | null>(null);
 
   const load = useCallback(async (initial = false) => {
@@ -119,6 +126,7 @@ export default function BracketChallengeLivePage() {
 
         {data.provider.availability === "unavailable" ? <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-sm text-amber-100">Live game data is temporarily unavailable. The official tournament schedule is still shown below.</p> : null}
         {error ? <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-sm text-amber-100">Live game data could not be refreshed. Showing the latest available tournament slate.</p> : null}
+        <BracketGameCenterDevHarness onOpen={(game) => setSelectedGame({ game, developmentHarness: true })} />
 
         {rounds.length ? <section className="space-y-7">
           {rounds.map((round) => {
@@ -136,7 +144,7 @@ export default function BracketChallengeLivePage() {
                   previousDate = gameDate;
                   return <div key={game.bracketGameId} className="min-w-0">
                     {showDate && game.scheduledAt ? <p className="mb-1 px-1 text-[11px] font-black uppercase tracking-wide text-slate-500">{dateLabel(game.scheduledAt)}</p> : null}
-                    <BracketLiveScoreCard game={game} />
+                    <BracketLiveScoreCard game={game} onOpenGameCenter={(providerGame) => setSelectedGame({ game: providerGame, developmentHarness: false })} />
                   </div>;
                 })}
               </div>
@@ -144,6 +152,7 @@ export default function BracketChallengeLivePage() {
           })}
         </section> : <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-400">Tournament games are not available yet.</section>}
       </div>
+      {selectedGame ? <BracketGameCenterModal contestId={contestId} game={selectedGame.game} developmentHarness={selectedGame.developmentHarness} onClose={() => setSelectedGame(null)} /> : null}
     </main>
   );
 }
