@@ -40,7 +40,7 @@ test('NBA scoreboard normalizes scheduled, live, and final games with optional m
 test('NBA play normalizer retains general PBP but only maps verified field-goal coordinates', () => {
   const plays = normalizeNbaPlays([
     { id: 'fg', period: { number: 1 }, clock: { displayValue: '10:00' }, text: 'Shooter makes three point jumper', shootingPlay: true, pointsAttempted: 3, scoreValue: 3, coordinate: { x: 30, y: 25 }, participants: [{ athlete: { id: '42' } }], awayScore: 3, homeScore: 0 },
-    { id: 'ft', text: 'Shooter makes free throw', shootingPlay: true, pointsAttempted: 1, scoreValue: 1, coordinate: { x: -214748340, y: -214748365 } },
+    { id: 'ft', text: 'Shooter makes free throw', shootingPlay: true, pointsAttempted: 1, scoreValue: 1, type: { text: 'Free Throw - 1 of 2' }, coordinate: { x: -214748340, y: -214748365 } },
     { id: 'turnover', text: 'Turnover', shootingPlay: false, coordinate: { x: 25, y: 25 } },
     { id: 'outside', text: 'Misses jumper', shootingPlay: true, pointsAttempted: 2, coordinate: { x: 51, y: 20 } },
     { id: 'missing', text: 'Misses jumper', shootingPlay: true, pointsAttempted: 2 },
@@ -48,6 +48,7 @@ test('NBA play normalizer retains general PBP but only maps verified field-goal 
   ]);
   assert.equal(plays.length, 5); assert.deepEqual(plays[0].coordinate, { x: 30, y: 25 }); assert.equal(plays[0].shooterId, '42');
   for (const play of plays.slice(1)) assert.equal(play.coordinate, null);
+  assert.equal(plays[1].isFreeThrow, true);
   assert.deepEqual(nbaFullCourtMarker({ ...plays[0], teamId: 'HME' }, { awayTeamId: 'AWY', homeTeamId: 'HME' }), { left: 30.25, top: 30, basket: 'left', made: true });
   assert.deepEqual(nbaFullCourtMarker({ ...plays[0], id: 'layup', teamId: 'HME', pointsAttempted: 2, coordinate: { x: 24, y: 1 } }, { awayTeamId: 'AWY', homeTeamId: 'HME' }), { left: 6.25, top: 24, basket: 'left', made: true });
   assert.deepEqual(nbaFullCourtMarker({ ...plays[0], id: 'midrange', teamId: 'AWY', pointsAttempted: 2, coordinate: { x: 31, y: 15 } }, { awayTeamId: 'AWY', homeTeamId: 'HME' }), { left: 73.75, top: 31, basket: 'right', made: true });
@@ -60,6 +61,23 @@ test('NBA play normalizer retains general PBP but only maps verified field-goal 
   assert.equal(defaultNbaPlayPeriod(periodPlays, false, null), 5);
   assert.equal(defaultNbaPlayPeriod(periodPlays, true, 4), 4);
   assert.equal(latestMeaningfulNbaPlay([{ ...plays[0], text: 'Actual play' }, { ...plays[0], id: 'end', text: 'End of Game' }]).id, 'fg');
+});
+
+test('NBA free throws use structured metadata and regulation origins instead of ESPN sentinels', () => {
+  const [homeMade, awayMiss, nonFreeThrow] = normalizeNbaPlays([
+    { id: 'home-ft', shootingPlay: true, pointsAttempted: 1, scoreValue: 1, type: { text: 'Free Throw - 2 of 2' }, team: { id: 'HME' }, coordinate: { x: -214748340, y: -214748365 } },
+    { id: 'away-ft', shootingPlay: true, pointsAttempted: 1, scoreValue: 0, type: { text: 'Technical Free Throw' }, team: { id: 'AWY' }, coordinate: { x: -214748340, y: -214748365 } },
+    { id: 'one-point-non-shot', shootingPlay: true, pointsAttempted: 1, scoreValue: 1, type: { text: 'Other scoring play' }, team: { id: 'HME' }, coordinate: { x: -214748340, y: -214748365 } },
+  ]);
+  const context = { awayTeamId: 'AWY', homeTeamId: 'HME' };
+  assert.equal(homeMade.isFreeThrow, true);
+  assert.equal(awayMiss.isFreeThrow, true);
+  assert.equal(nonFreeThrow.isFreeThrow, false);
+  assert.equal(homeMade.coordinate, null);
+  assert.equal(awayMiss.coordinate, null);
+  assert.deepEqual(nbaFullCourtMarker(homeMade, context), { left: 19, top: 25, basket: 'left', made: true });
+  assert.deepEqual(nbaFullCourtMarker(awayMiss, context), { left: 75, top: 25, basket: 'right', made: false });
+  assert.equal(nbaFullCourtMarker(nonFreeThrow, context), null);
 });
 
 test('NBA date selection keeps exact calendar dates and YYYYMMDD API keys', () => {

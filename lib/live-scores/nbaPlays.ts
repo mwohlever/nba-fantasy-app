@@ -12,6 +12,7 @@ export type NbaPlay = {
   scoreValue: number;
   pointsAttempted: number | null;
   shootingPlay: boolean;
+  isFreeThrow: boolean;
   type: string | null;
   teamId: string | null;
   shooterId: string | null;
@@ -29,6 +30,13 @@ const coordinateInDomain = (coordinate: unknown): coordinate is { x: number; y: 
 
 const numberOrNull = (value: unknown) => Number.isFinite(Number(value)) ? Number(value) : null;
 
+// ESPN identifies free throws with structured shooting metadata and a typed play
+// label. Their coordinate values are sentinels, not floor locations.
+const isStructuredFreeThrow = (raw: Raw) => raw.shootingPlay === true
+  && Number(raw.pointsAttempted) === 1
+  && typeof raw.type?.text === "string"
+  && /\bfree throw\b/i.test(raw.type.text);
+
 export function normalizeNbaPlays(input: unknown): NbaPlay[] {
   if (!Array.isArray(input)) return [];
   const seen = new Set<string>();
@@ -37,12 +45,13 @@ export function normalizeNbaPlays(input: unknown): NbaPlay[] {
     const key = String(raw.id ?? `${raw.sequenceNumber ?? ""}|${raw.period?.number ?? ""}|${raw.clock?.displayValue ?? ""}|${raw.text ?? ""}`);
     if (!key || seen.has(key)) continue;
     seen.add(key);
+    const isFreeThrow = isStructuredFreeThrow(raw);
     const fieldGoal = raw.shootingPlay === true && Number(raw.pointsAttempted) !== 1 && coordinateInDomain(raw.coordinate);
     plays.push({
       id: key, period: numberOrNull(raw.period?.number), clock: typeof raw.clock?.displayValue === "string" ? raw.clock.displayValue : null,
       text: typeof raw.text === "string" ? raw.text : "Game event", shortDescription: typeof raw.shortDescription === "string" ? raw.shortDescription : null,
       awayScore: numberOrNull(raw.awayScore), homeScore: numberOrNull(raw.homeScore), scoringPlay: raw.scoringPlay === true,
-      scoreValue: numberOrNull(raw.scoreValue) ?? 0, pointsAttempted: numberOrNull(raw.pointsAttempted), shootingPlay: raw.shootingPlay === true,
+      scoreValue: numberOrNull(raw.scoreValue) ?? 0, pointsAttempted: numberOrNull(raw.pointsAttempted), shootingPlay: raw.shootingPlay === true, isFreeThrow,
       type: typeof raw.type?.text === "string" ? raw.type.text : null,
       teamId: raw.team?.id != null ? String(raw.team.id) : null,
       shooterId: raw.participants?.[0]?.athlete?.id != null ? String(raw.participants[0].athlete.id) : null,
@@ -76,11 +85,15 @@ export type NbaShotMarker = { left: number; top: number; basket: "left" | "right
  * deliberately displays home shots at the left basket and away shots at the right.
  */
 export function nbaFullCourtMarker(play: NbaPlay, context: { awayTeamId?: string; homeTeamId?: string }): NbaShotMarker | null {
-  if (!play.coordinate || !play.shootingPlay || play.pointsAttempted === 1) return null;
-  const { x, y } = play.coordinate;
-  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 50 || y < 0 || y > 50) return null;
+  if (!play.shootingPlay) return null;
   const basket = play.teamId === context.homeTeamId ? "left" : play.teamId === context.awayTeamId ? "right" : null;
   if (!basket) return null;
+  // These are the regulation free-throw-line centers already drawn by CourtEnd.
+  // They deliberately bypass ESPN's free-throw coordinate sentinels.
+  if (play.isFreeThrow) return { left: basket === "left" ? 19 : 75, top: 25, basket, made: play.scoreValue > 0 };
+  if (!play.coordinate || play.pointsAttempted === 1) return null;
+  const { x, y } = play.coordinate;
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > 50 || y < 0 || y > 50) return null;
   const hoopX = basket === "left" ? 5.25 : 88.75;
   return { left: hoopX + (basket === "left" ? y : -y), top: x, basket, made: play.scoreValue > 0 };
 }
